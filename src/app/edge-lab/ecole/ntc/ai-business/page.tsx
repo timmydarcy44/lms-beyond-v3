@@ -174,7 +174,7 @@ export default function NtcAiBusinessPage() {
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/ecole/candidater?specialization=ai_business"
+                href="/ecole/candidater?track=ntc&specialization=ai_business"
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-[#070b1f] transition hover:bg-white/90"
               >
                 Candidater
@@ -500,7 +500,7 @@ export default function NtcAiBusinessPage() {
                 des admissions.
               </p>
               <a
-                href="/ecole/candidater?specialization=ai_business"
+                href="/ecole/candidater?track=ntc&specialization=ai_business"
                 className="mt-8 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-[#070b1f] transition hover:bg-white/90"
               >
                 Démarrer ma candidature

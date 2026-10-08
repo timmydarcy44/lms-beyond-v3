@@ -7,6 +7,7 @@ import {
   type CfaApplicationStatus,
 } from "@/lib/cfa-applications";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { cfaEmailTemplate } from "@/lib/cfa-emails";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CFA_ADMIN_EMAIL = "timmydarcy44@gmail.com";
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     !isSpecialization(specialization)
   ) {
     return NextResponse.json(
-      { error: "Complète tous les champs du profil avec des informations valides." },
+      { error: "Complétez tous les champs du profil avec des informations valides." },
       { status: 400 },
     );
   }
@@ -135,14 +136,24 @@ export async function POST(request: Request) {
   await Promise.all([
     sendCfaEmail({
       to: email,
-      subject: "Ton profil est créé",
-      html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Ton profil est créé.</h1><p>Tu peux reprendre ton challenge et suivre ta candidature à tout moment avec ce lien personnel.</p><p><a href="${resumeUrl}" style="display:inline-block;margin-top:16px;background:#fff;color:#070b1f;padding:14px 22px;border-radius:999px;text-decoration:none;font-weight:700">Continuer ma candidature</a></p></div>`,
+      subject: "Votre profil Byound est créé",
+      html: cfaEmailTemplate({
+        eyebrow: "Votre candidature",
+        title: "Votre profil est créé.",
+        body: "<p>Vous pouvez reprendre votre challenge et suivre votre candidature à tout moment grâce à votre lien personnel.</p>",
+        cta: { label: "Continuer ma candidature", href: resumeUrl },
+      }),
     }),
     sendCfaEmail({
       to: CFA_ADMIN_EMAIL,
       reply_to: email,
       subject: `[CFA] Nouveau profil — ${firstName} ${lastName}`,
-      html: `<p><strong>${escapeHtml(firstName)} ${escapeHtml(lastName)}</strong> vient de créer son profil candidat.</p><p>Spécialisation : ${escapeHtml(getCfaSpecializationLabel(specialization))}<br>Email : ${escapeHtml(email)}</p><p><a href="${publicUrl}/super/crm/cfa">Ouvrir le CRM CFA</a></p>`,
+      html: cfaEmailTemplate({
+        eyebrow: "Nouvelle candidature CFA",
+        title: `${escapeHtml(firstName)} ${escapeHtml(lastName)}`,
+        body: `<p>Un nouveau profil candidat vient d’être créé.</p><p><strong>Spécialisation :</strong> ${escapeHtml(getCfaSpecializationLabel(specialization))}<br><strong>Email :</strong> ${escapeHtml(email)}</p>`,
+        cta: { label: "Ouvrir le CRM CFA", href: `${publicUrl}/super/crm/cfa` },
+      }),
     }),
   ]);
 
@@ -183,7 +194,7 @@ export async function PATCH(request: Request) {
     );
     if (Object.values(answers).some((answer) => answer.length < 20)) {
       return NextResponse.json(
-        { error: "Développe chaque réponse en quelques phrases avant de continuer." },
+        { error: "Développez chaque réponse en quelques phrases avant de continuer." },
         { status: 400 },
       );
     }
@@ -202,7 +213,7 @@ export async function PATCH(request: Request) {
       !["company_found", "searching"].includes(alternanceStatus)
     ) {
       return NextResponse.json(
-        { error: "Complète ton parcours, ta motivation et ta situation d’alternance." },
+        { error: "Complétez votre parcours, votre motivation et votre situation d’alternance." },
         { status: 400 },
       );
     }
@@ -232,6 +243,8 @@ export async function PATCH(request: Request) {
       "priorSituation",
       "lastClass",
       "highestDiploma",
+      "rqth",
+      "highLevelAthlete",
     ];
     const cerfaData = Object.fromEntries(
       [...requiredFields, "specialStatus"].map((field) => [field, clean(rawCerfa[field], 1000)]),
@@ -242,7 +255,7 @@ export async function PATCH(request: Request) {
       ["identity", "social_security", "diploma"].some((kind) => !documents[kind])
     ) {
       return NextResponse.json(
-        { error: "Complète les informations CERFA et ajoute les trois justificatifs." },
+        { error: "Complétez les informations CERFA et ajoutez les trois justificatifs." },
         { status: 400 },
       );
     }
@@ -251,7 +264,7 @@ export async function PATCH(request: Request) {
   } else if (action === "financing" && current.status === "admitted") {
     const financingPath = clean(body.financingPath, 40);
     if (!["alternance", "byound_start"].includes(financingPath)) {
-      return NextResponse.json({ error: "Choisis une situation." }, { status: 400 });
+      return NextResponse.json({ error: "Choisissez une situation." }, { status: 400 });
     }
     patch.financing_path = financingPath;
     patch.alternance_status = financingPath === "alternance" ? "company_found" : "searching";
@@ -282,14 +295,26 @@ export async function PATCH(request: Request) {
     await Promise.all([
       sendCfaEmail({
         to: String(data.email),
-        subject: "Ton dossier Byound est complet",
-        html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Ton dossier est bien enregistré.</h1><p>Un membre du comité de projet va te contacter dans les plus brefs délais afin d’organiser ton entretien d’admission.</p><p>À très vite,<br/>L’équipe Byound</p></div>`,
+        subject: "Votre dossier Byound est complet",
+        html: cfaEmailTemplate({
+          eyebrow: "Dossier reçu",
+          title: "Votre dossier est bien enregistré.",
+          body: "<p>Un membre du comité de projet vous contactera dans les plus brefs délais afin d’organiser votre entretien d’admission.</p><p>À très bientôt,<br>L’équipe Byound</p>",
+        }),
       }),
       sendCfaEmail({
         to: CFA_ADMIN_EMAIL,
         reply_to: String(data.email),
         subject: `[CFA] Dossier complet — ${data.first_name} ${data.last_name}`,
-        html: `<div style="font-family:Arial,sans-serif;color:#111"><h1>Nouveau dossier CFA complet</h1><p><strong>${escapeHtml(data.first_name)} ${escapeHtml(data.last_name)}</strong><br/>${escapeHtml(data.email)} · ${escapeHtml(data.phone || "Téléphone non renseigné")}<br/>Âge : ${escapeHtml(data.age)} · Niveau : ${escapeHtml(data.education_level)}<br/>Spécialisation : ${escapeHtml(getCfaSpecializationLabel(data.specialization))}<br/>Alternance : ${data.alternance_status === "company_found" ? "Entreprise trouvée" : "En recherche"}</p><h2>Parcours scolaire</h2><p>${escapeHtml(data.school_background)}</p><h2>Expériences</h2><p>${escapeHtml(data.experiences || "—")}</p><h2>Pourquoi Byound ?</h2><p>${escapeHtml(data.motivation_text || "Voir le média joint au dossier")}</p><h2>Byound Challenge</h2>${challengeSummary}<p><a href="${(process.env.NEXT_PUBLIC_APP_URL || "https://edgebs.fr").replace(/\/$/, "")}/super/crm/cfa">Ouvrir le dossier dans le CRM CFA</a></p></div>`,
+        html: cfaEmailTemplate({
+          eyebrow: "Dossier CFA complet",
+          title: `${escapeHtml(data.first_name)} ${escapeHtml(data.last_name)}`,
+          body: `<p>${escapeHtml(data.email)} · ${escapeHtml(data.phone || "Téléphone non renseigné")}<br>Âge : ${escapeHtml(data.age)} · Niveau : ${escapeHtml(data.education_level)}<br>Spécialisation : ${escapeHtml(getCfaSpecializationLabel(data.specialization))}<br>Alternance : ${data.alternance_status === "company_found" ? "Entreprise trouvée" : "En recherche"}</p><h2 style="font-size:18px">Parcours scolaire</h2><p>${escapeHtml(data.school_background)}</p><h2 style="font-size:18px">Expériences</h2><p>${escapeHtml(data.experiences || "—")}</p><h2 style="font-size:18px">Pourquoi Byound ?</h2><p>${escapeHtml(data.motivation_text || "Voir le média joint au dossier")}</p><h2 style="font-size:18px">Byound Challenge</h2>${challengeSummary}`,
+          cta: {
+            label: "Ouvrir le dossier",
+            href: `${(process.env.NEXT_PUBLIC_APP_URL || "https://edgebs.fr").replace(/\/$/, "")}/super/crm/cfa`,
+          },
+        }),
       }),
     ]);
   }

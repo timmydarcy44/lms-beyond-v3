@@ -32,10 +32,10 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
     : "";
 
   const ctaBlock = params.cta
-    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:48px auto 0;">
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:36px auto 0;">
         <tr><td align="center">
           <a href="${params.cta.href}" target="_blank" rel="noopener noreferrer"
-             style="display:inline-block;padding:18px 40px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:999px;background:#050505;letter-spacing:-0.02em;">
+             style="display:inline-block;padding:16px 32px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:999px;background:#5B5CF6;letter-spacing:-0.02em;">
             ${escapeEdgeEmailHtml(params.cta.label)}
           </a>
         </td></tr>
@@ -53,18 +53,18 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
 <body style="margin:0;padding:0;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
   ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}</div>` : ""}
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#FFFFFF;">
-    <tr><td align="center" style="padding:64px 24px 80px;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
-        <tr><td align="center" style="padding:28px 24px;background:#070B1F;border-radius:24px;">
-          <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="112" style="display:block;width:112px;height:auto;margin:0 auto;" />
+    <tr><td align="center" style="padding:56px 24px 80px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;">
+        <tr><td align="center" style="padding:12px 24px;">
+          <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="118" style="display:block;width:118px;height:auto;margin:0 auto;filter:invert(1);" />
         </td></tr>
-        <tr><td style="height:48px;line-height:48px;font-size:1px;">&nbsp;
+        <tr><td style="height:42px;line-height:42px;font-size:1px;">&nbsp;
         </td></tr>
         <tr><td align="center" style="padding:0;">
-          <h1 style="margin:0 0 32px;font-size:36px;font-weight:700;line-height:1.12;letter-spacing:-0.04em;color:#050505;text-align:center;">
+          <h1 style="margin:0 auto 32px;max-width:560px;font-size:42px;font-weight:800;line-height:1.05;letter-spacing:-0.045em;color:#050505;text-align:center;">
             ${title}
           </h1>
-          <div style="font-size:17px;line-height:1.75;color:#050505;text-align:center;letter-spacing:-0.01em;">
+          <div style="max-width:500px;margin:0 auto;font-size:17px;line-height:1.65;color:#29292E;text-align:left;letter-spacing:-0.01em;">
             ${params.bodyHtml}
           </div>
           ${ctaBlock}

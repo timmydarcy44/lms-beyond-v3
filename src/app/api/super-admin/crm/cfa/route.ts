@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CFA_APPLICATION_STATUSES } from "@/lib/cfa-applications";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { cfaEmailTemplate } from "@/lib/cfa-emails";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -184,8 +185,13 @@ export async function PATCH(request: NextRequest) {
     const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
     emailSent = await sendCandidateEmail({
       to: String(data.email),
-      subject: "Finalise ton inscription Byound",
-      html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Dernière étape avant ton inscription.</h1><p>Bonjour ${escapeHtml(data.first_name)}, complète les informations nécessaires au CERFA puis dépose :</p><ul><li>ta pièce d’identité ;</li><li>ton attestation de droits à la Sécurité sociale ou ta carte Vitale ;</li><li>ton relevé de notes du bac, ton attestation de réussite ou ton dernier diplôme.</li></ul><p>Les frais d’inscription sont de <strong>250 €</strong>. Ils seront remboursés à la signature de ton contrat d’alternance, après validation de la période d’essai.</p><p><a href="${resumeUrl}" style="display:inline-block;margin-top:16px;background:#fff;color:#070b1f;padding:14px 22px;border-radius:999px;text-decoration:none;font-weight:700">Finaliser mon inscription</a></p></div>`,
+      subject: "Finalisez votre inscription Byound",
+      html: cfaEmailTemplate({
+        eyebrow: "Dernière étape",
+        title: "Finalisez votre inscription.",
+        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Complétez les informations nécessaires au CERFA, puis déposez :</p><ul style="padding-left:20px;line-height:1.8"><li>votre pièce d’identité ;</li><li>votre attestation de droits à la Sécurité sociale ou votre carte Vitale ;</li><li>votre relevé de notes du bac, votre attestation de réussite ou votre dernier diplôme.</li></ul><p>Les frais d’inscription sont de <strong>250 €</strong>. Ils seront remboursés à la signature de votre contrat d’alternance, après validation de la période d’essai.</p>`,
+        cta: { label: "Finaliser mon inscription", href: resumeUrl },
+      }),
     });
   }
 
@@ -200,8 +206,12 @@ export async function PATCH(request: NextRequest) {
       : "";
     emailSent = await sendCandidateEmail({
       to: String(data.email),
-      subject: "Ton entretien d’admission Byound",
-      html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1>Ton entretien est planifié.</h1><p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<p style="margin-top:28px">À très vite,<br/>L’équipe Byound</p></div>`,
+      subject: "Votre entretien d’admission Byound",
+      html: cfaEmailTemplate({
+        eyebrow: "Entretien d’admission",
+        title: "Votre entretien est planifié.",
+        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<p style="margin-top:28px">À très bientôt,<br>L’équipe Byound</p>`,
+      }),
     });
   }
 
@@ -214,8 +224,13 @@ export async function PATCH(request: NextRequest) {
     const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
     emailSent = await sendCandidateEmail({
       to: String(data.email),
-      subject: "Welcome to Byound. You’re in.",
-      html: `<div style="background:#070b1f;color:#fff;padding:40px;font-family:Arial,sans-serif"><p style="color:#8c86ff;text-transform:uppercase;letter-spacing:.16em">Byound School</p><h1 style="font-size:40px;line-height:1">Welcome to Byound.<br/>You’re in.</h1><p>Félicitations ${escapeHtml(data.first_name)}. Ton admission est confirmée.</p><p><a href="${resumeUrl}" style="display:inline-block;margin-top:16px;background:#fff;color:#070b1f;padding:14px 22px;border-radius:999px;text-decoration:none;font-weight:700">Voir mes prochaines étapes</a></p></div>`,
+      subject: "Bienvenue chez Byound. Vous êtes admis.",
+      html: cfaEmailTemplate({
+        eyebrow: "Décision d’admission",
+        title: "Bienvenue chez Byound.<br>Vous êtes admis.",
+        body: `<p>Félicitations ${escapeHtml(data.first_name)}. Votre admission est confirmée.</p><p>Votre espace candidat contient désormais toutes vos prochaines étapes.</p>`,
+        cta: { label: "Voir mes prochaines étapes", href: resumeUrl },
+      }),
     });
   }
 

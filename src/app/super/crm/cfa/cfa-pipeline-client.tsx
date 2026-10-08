@@ -59,7 +59,8 @@ const CERFA_LABELS = [
   ["priorSituation", "Situation avant contrat"],
   ["lastClass", "Dernière classe"],
   ["highestDiploma", "Diplôme le plus élevé"],
-  ["specialStatus", "RQTH / sportif haut niveau"],
+  ["rqth", "RQTH"],
+  ["highLevelAthlete", "Sportif de haut niveau"],
 ] as const;
 
 const ADMIN_DOCUMENT_LABELS: Record<string, string> = {
@@ -246,7 +247,8 @@ export function CfaPipelineClient() {
           <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
         </div>
       ) : (
-        <div className="grid min-w-0 gap-4 xl:grid-cols-3 2xl:grid-cols-6">
+        <div className="-mx-3 min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-2 sm:-mx-6">
+          <div className="flex w-max min-w-full flex-nowrap gap-4 px-3 pb-5 sm:px-6">
           {columns.map((column) => {
             const items = applications.filter((application) =>
               column.statuses.includes(application.status),
@@ -254,9 +256,9 @@ export function CfaPipelineClient() {
             return (
               <section
                 key={column.id}
-                className="super-glass-panel min-w-0 rounded-2xl border border-white/10 p-3"
+                className="super-glass-panel flex h-[min(72vh,760px)] w-[280px] min-w-[280px] max-w-[280px] shrink-0 flex-col rounded-2xl border border-white/10 p-3"
               >
-                <header className="flex items-center justify-between px-1 py-2">
+                <header className="flex shrink-0 items-center justify-between px-1 py-2">
                   <div className="flex items-center gap-2">
                     <span className={cn("h-2 w-2 rounded-full", column.accent)} />
                     <h2 className="text-sm font-semibold text-gray-800">{column.label}</h2>
@@ -265,7 +267,7 @@ export function CfaPipelineClient() {
                     {items.length}
                   </span>
                 </header>
-                <div className="mt-2 space-y-3">
+                <div className="mt-2 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                   {items.map((application) => (
                     <article
                       key={application.id}
@@ -334,6 +336,7 @@ export function CfaPipelineClient() {
               </section>
             );
           })}
+          </div>
         </div>
       )}
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>

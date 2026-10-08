@@ -19,7 +19,6 @@ const ISSUER = {
   name: "Jessica CONTENTIN",
   title: "Professeure et psychopédagogue certifiée",
   siren: "SIREN 981 184 898",
-  rpps: "N°RPPS : 10109804632",
   address1: "134 rue Elise Deroche",
   address2: "14760 Bretteville-sur-odon",
   phone: "0683477174",
@@ -84,11 +83,10 @@ export function buildJessicaInvoicePdf(input: JessicaInvoicePdfInput): jsPDF {
   doc.setFontSize(9);
   doc.text(ISSUER.title, margin, 30);
   doc.text(ISSUER.siren, margin, 36);
-  doc.text(ISSUER.rpps, margin, 41);
-  doc.text(ISSUER.address1, margin, 48);
-  doc.text(ISSUER.address2, margin, 53);
-  doc.text(ISSUER.phone, margin, 58);
-  doc.text(ISSUER.email, margin, 63);
+  doc.text(ISSUER.address1, margin, 42);
+  doc.text(ISSUER.address2, margin, 47);
+  doc.text(ISSUER.phone, margin, 52);
+  doc.text(ISSUER.email, margin, 57);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);

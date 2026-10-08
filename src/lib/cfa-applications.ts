@@ -1,7 +1,17 @@
 export const CFA_SPECIALIZATIONS = [
-  { value: "ai_business", label: "AI Business" },
-  { value: "sport_business", label: "Sport Business" },
-  { value: "real_estate", label: "Real Estate" },
+  { value: "ai_business", label: "AI Business", group: "NTC · Business & Sales" },
+  { value: "sport_business", label: "Business Sport", group: "NTC · Business & Sales" },
+  { value: "real_estate", label: "Real Estate", group: "NTC · Business & Sales" },
+  { value: "retail_experience", label: "Retail Experience", group: "MEM · Retail & Luxury" },
+  { value: "merchandising", label: "Merchandising", group: "MEM · Retail & Luxury" },
+  { value: "luxury_premium", label: "Luxury & Premium", group: "MEM · Retail & Luxury" },
+  { value: "ai_management", label: "AI Management", group: "REM · Management" },
+  { value: "business_performance", label: "Business Performance", group: "REM · Management" },
+  { value: "transition_innovation", label: "Transition & Innovation", group: "REM · Management" },
+  { value: "growth_acquisition", label: "Growth & Acquisition", group: "RDC · Business Development" },
+  { value: "entrepreneurship", label: "Entrepreneurship", group: "RDC · Business Development" },
+  { value: "international_business", label: "International Business", group: "RDC · Business Development" },
+  { value: "strategic_partnerships", label: "Strategic Partnerships", group: "RDC · Business Development" },
 ] as const;
 
 export type CfaSpecialization = (typeof CFA_SPECIALIZATIONS)[number]["value"];

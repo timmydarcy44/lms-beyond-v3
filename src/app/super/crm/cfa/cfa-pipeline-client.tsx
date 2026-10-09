@@ -198,7 +198,7 @@ export function CfaPipelineClient() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500">
-            CRM · CFA
+            CRM Apprenant · CFA
           </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-950">
             Admissions Byound School

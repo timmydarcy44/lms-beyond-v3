@@ -56,20 +56,31 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 
 const SIDEBAR_COLLAPSE_KEY = "crm-sidebar-collapsed-sections";
 
-const CRM_LINKS: CrmNavLink[] = [
-  { href: "/super/utilisateurs", label: "Contacts", icon: Users, section: "commercial" },
+const CFA_LINKS: CrmNavLink[] = [
   {
-    href: "/super/crm/pipeline",
-    label: "Business",
-    icon: Kanban,
-    match: "/super/crm/pipeline",
+    href: "/super/crm/cfa",
+    label: "CRM Apprenant",
+    icon: GraduationCap,
     featured: true,
     section: "commercial",
   },
   {
-    href: "/super/crm/cfa",
-    label: "CFA",
-    icon: GraduationCap,
+    href: "/super/crm/cfa/entreprises",
+    label: "CRM Entreprise",
+    icon: Building2,
+    featured: true,
+    section: "commercial",
+  },
+  { href: "/super/experts", label: "Formateurs", icon: Users, section: "formation" },
+];
+
+const CRM_LINKS: CrmNavLink[] = [
+  { href: "/super/utilisateurs", label: "Contacts", icon: Users, section: "commercial" },
+  {
+    href: "/super/crm/pipeline",
+    label: "Pipeline",
+    icon: Kanban,
+    match: "/super/crm/pipeline",
     featured: true,
     section: "commercial",
   },
@@ -116,6 +127,15 @@ function isLinkActive(
   }
   if (isPrescripteur) {
     return pathname.startsWith("/super/crm/pipeline/prescripteurs");
+  }
+  if (item.href === "/super/crm/cfa") {
+    return pathname === "/super/crm/cfa";
+  }
+  if (item.href === "/super/crm/cfa/entreprises") {
+    return pathname.startsWith("/super/crm/cfa/entreprises");
+  }
+  if (item.href === "/super/experts") {
+    return pathname.startsWith("/super/experts");
   }
   if (item.href === "/super/crm/formations") {
     return pathname.startsWith("/super/crm/formations");
@@ -174,7 +194,10 @@ export function CrmSidebar() {
 
   const isJerome = userEmail === "jerome.picot@edgebs.fr";
 
+  const isCfa = pathname.startsWith("/super/crm/cfa") || pathname.startsWith("/super/experts");
+
   const links = useMemo(() => {
+    if (isCfa) return CFA_LINKS;
     let filtered = CRM_LINKS;
     if (isJerome) {
       filtered = filtered.filter((l) => {
@@ -188,7 +211,7 @@ export function CrmSidebar() {
       filtered = filtered.filter((l) => !l.prescripteurOnly);
     }
     return filtered;
-  }, [isJerome, userEmail]);
+  }, [isCfa, isJerome, userEmail]);
 
   const sections = useMemo(() => {
     return SECTION_ORDER.map((key) => ({

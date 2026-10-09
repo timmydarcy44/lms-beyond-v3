@@ -11,7 +11,8 @@ function isCrmPath(pathname: string | null): boolean {
   return (
     pathname.startsWith("/super/utilisateurs") ||
     pathname.startsWith("/super/crm") ||
-    pathname.startsWith("/super/organisations")
+    pathname.startsWith("/super/organisations") ||
+    pathname.startsWith("/super/experts")
   );
 }
 

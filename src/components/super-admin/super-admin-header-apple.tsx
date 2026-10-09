@@ -20,7 +20,18 @@ type NavItem = {
   children?: NavItem[];
   icon?: string;
   isSubItem?: boolean;
+  exact?: boolean;
+  activePrefixes?: string[];
 };
+
+function itemIsActive(item: NavItem, pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (item.exact) return pathname === item.href;
+  if (item.activePrefixes?.length) {
+    return item.activePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  }
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/super" },
@@ -36,11 +47,24 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    label: "CRM",
-    href: "/super/crm/pipeline",
+    label: "CFA",
+    href: "/super/crm/cfa",
+    activePrefixes: ["/super/crm/cfa", "/super/experts"],
     children: [
-      { label: "Business", href: "/super/crm/pipeline" },
-      { label: "CFA", href: "/super/crm/cfa" },
+      { label: "CRM Apprenant", href: "/super/crm/cfa", exact: true },
+      { label: "CRM Entreprise", href: "/super/crm/cfa/entreprises" },
+      { label: "Formateurs", href: "/super/experts" },
+    ],
+  },
+  {
+    label: "Business",
+    href: "/super/crm/pipeline",
+    activePrefixes: ["/super/crm/pipeline", "/super/utilisateurs", "/super/organisations", "/super/crm/emails"],
+    children: [
+      { label: "Pipeline", href: "/super/crm/pipeline" },
+      { label: "Contacts", href: "/super/utilisateurs", exact: true },
+      { label: "Organisations", href: "/super/organisations" },
+      { label: "Emails", href: "/super/crm/emails" },
     ],
   },
   { label: "IA", href: "/super/ia" },
@@ -88,6 +112,8 @@ export function SuperAdminHeaderApple() {
             "Chiffre d'affaires",
             "Statistiques",
             "CRM",
+            "CFA",
+            "Business",
             "Utilisateurs",
             "IA",
           ];
@@ -128,7 +154,7 @@ export function SuperAdminHeaderApple() {
           {/* Navigation Items - Centré */}
           <div className="flex items-center gap-0 flex-1 justify-center">
             {filteredNavItems.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+              const isActive = itemIsActive(item, pathname);
               const hasChildren = item.children && item.children.length > 0;
               const isHovered = hoveredItem === item.label;
               const iconName = item.icon;
@@ -175,7 +201,7 @@ export function SuperAdminHeaderApple() {
                         {item.label === "Gestion" ? (
                           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                             {item.children.map((child) => {
-                              const isChildActive = pathname === child.href || pathname?.startsWith(child.href + "/");
+                              const isChildActive = itemIsActive(child, pathname);
                               return (
                                 <Link
                                   key={child.href}
@@ -211,7 +237,7 @@ export function SuperAdminHeaderApple() {
                           </div>
                         ) : (
                           item.children.map((child) => {
-                            const isChildActive = pathname === child.href || pathname?.startsWith(child.href + "/");
+                            const isChildActive = itemIsActive(child, pathname);
                             return (
                               <Link
                                 key={child.href}

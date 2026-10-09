@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/super/formations",
     children: [
       { label: "Gestion des formations", href: "/super/formations" },
+      { label: "Formation Byound", href: "/super/formations-byound" },
       { label: "Référentiel métier", href: "/super/metiers" },
       { label: "Experts / Formateurs", href: "/super/experts" },
       { label: "Open badge", href: "/super/open-badges/badgeclasses" },

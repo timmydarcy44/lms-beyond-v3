@@ -133,6 +133,15 @@ export default async function SuperDashboard() {
       category: "Certifications",
       color: "from-amber-500/20 via-amber-400/30 to-transparent",
     },
+    {
+      title: "Formation Byound",
+      description: "Modifier rythme, lieu, places et rentrée des fiches école.",
+      href: "/super/formations-byound",
+      image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80",
+      icon: GraduationCap,
+      category: "École",
+      color: "from-indigo-500/20 via-indigo-400/30 to-transparent",
+    },
   ];
 
   const quickActions = isContentin ? contentinQuickActions : defaultQuickActions;

@@ -210,7 +210,7 @@ export async function PATCH(request: NextRequest) {
       html: cfaEmailTemplate({
         eyebrow: "Entretien d’admission",
         title: "Votre entretien est planifié.",
-        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<p style="margin-top:28px">À très bientôt,<br>L’équipe Byound</p>`,
+        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<div style="margin-top:24px;padding:18px;border-radius:16px;background:#f7f7f8;line-height:1.7"><strong>Adresse</strong><br/>Byound School<br/>134 Rue Elise Déroche<br/>14760 - Bretteville sur Odon</div><p style="margin-top:28px">À très bientôt,<br>L’équipe Byound</p>`,
       }),
     });
   }

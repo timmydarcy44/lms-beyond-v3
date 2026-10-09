@@ -11,7 +11,9 @@ import {
   GraduationCap,
 } from "lucide-react";
 
+import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
+import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 
 export const metadata: Metadata = {
@@ -124,7 +126,8 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function NtcAiBusinessPage() {
+export default async function NtcAiBusinessPage() {
+  const facts = await getByoundProgramFacts("ai_business");
   return (
     <EdgePremiumShell overlayNav showTopBar={false}>
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
@@ -191,6 +194,12 @@ export default function NtcAiBusinessPage() {
         </div>
       </section>
 
+      <div className="px-5 py-6 xl:hidden">
+        <div className="mx-auto max-w-md">
+          <ProgramFactsCard facts={facts} />
+        </div>
+      </div>
+
       <nav className="sticky top-16 z-30 border-b border-black/[0.06] bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl gap-7 overflow-x-auto px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 sm:px-8 lg:px-10">
           <a className="whitespace-nowrap transition hover:text-black" href="#programme">
@@ -208,7 +217,14 @@ export default function NtcAiBusinessPage() {
         </div>
       </nav>
 
-      <section className="bg-[#f7f7f5] py-20 sm:py-28">
+      <div className="relative">
+      <aside className="pointer-events-none absolute inset-y-0 right-6 z-40 hidden w-[320px] xl:block">
+        <div className="pointer-events-auto sticky top-28 py-8">
+          <ProgramFactsCard facts={facts} />
+        </div>
+      </aside>
+
+      <section className="bg-[#f7f7f5] py-20 sm:py-28 xl:pr-[360px]">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div>
@@ -265,7 +281,7 @@ export default function NtcAiBusinessPage() {
         </div>
       </section>
 
-      <section id="specialisation" className="relative overflow-hidden bg-[#070b1f] py-20 text-white sm:py-28">
+      <section id="specialisation" className="relative overflow-hidden bg-[#070b1f] py-20 text-white sm:py-28 xl:pr-[360px]">
         <div
           className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(83,72,255,.32),transparent_32%),radial-gradient(circle_at_88%_75%,rgba(29,96,255,.18),transparent_38%)]"
           aria-hidden
@@ -335,7 +351,7 @@ export default function NtcAiBusinessPage() {
         </div>
       </section>
 
-      <section id="programme" className="scroll-mt-28 bg-white py-20 sm:py-28">
+      <section id="programme" className="scroll-mt-28 bg-white py-20 sm:py-28 xl:pr-[360px]">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <SectionEyebrow>Le programme</SectionEyebrow>
           <h2 className="mt-4 text-[clamp(2.4rem,4vw,4rem)] font-semibold tracking-[-0.05em] text-[#070b1f]">
@@ -363,7 +379,7 @@ export default function NtcAiBusinessPage() {
         </div>
       </section>
 
-      <section id="certification" className="scroll-mt-28 bg-[#f7f7f5] py-20 sm:py-28">
+      <section id="certification" className="scroll-mt-28 bg-[#f7f7f5] py-20 sm:py-28 xl:pr-[360px]">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <SectionEyebrow>Référentiel NTC</SectionEyebrow>
           <h2 className="mt-4 text-[clamp(2.4rem,4vw,4rem)] font-semibold tracking-[-0.05em] text-[#070b1f]">
@@ -417,7 +433,7 @@ export default function NtcAiBusinessPage() {
         </div>
       </section>
 
-      <section className="bg-white py-20 sm:py-28">
+      <section className="bg-white py-20 sm:py-28 xl:pr-[360px]">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-2 lg:px-10">
           <div>
             <SectionEyebrow>Apprendre en faisant</SectionEyebrow>
@@ -464,7 +480,7 @@ export default function NtcAiBusinessPage() {
         </div>
       </section>
 
-      <section id="admission" className="scroll-mt-28 bg-[#070b1f] py-20 text-white sm:py-28">
+      <section id="admission" className="scroll-mt-28 bg-[#070b1f] py-20 text-white sm:py-28 xl:pr-[360px]">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="grid gap-12 lg:grid-cols-[1fr_.8fr] lg:items-end">
             <div>
@@ -515,6 +531,7 @@ export default function NtcAiBusinessPage() {
           </div>
         </div>
       </section>
+      </div>
     </EdgePremiumShell>
   );
 }

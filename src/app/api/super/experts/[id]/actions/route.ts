@@ -93,8 +93,10 @@ export async function POST(
     if (action === "set_assignments") {
       revalidatePath("/ecole/ntc/ai-business");
       revalidatePath("/ecole/ntc/business-sport");
+      revalidatePath("/ecole/ntc/real-estate");
       revalidatePath("/edge-lab/ecole/ntc/ai-business");
       revalidatePath("/edge-lab/ecole/ntc/business-sport");
+      revalidatePath("/edge-lab/ecole/ntc/real-estate");
     }
 
     return NextResponse.json({ success: true });

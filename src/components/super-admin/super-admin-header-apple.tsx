@@ -174,7 +174,7 @@ export function SuperAdminHeaderApple() {
                 return (
                   <div
                     key={item.label}
-                    className="relative"
+                    className={cn("relative", isHovered && "z-[90]")}
                     onMouseEnter={() => openMenu(item.label)}
                     onMouseLeave={closeMenuSoon}
                   >
@@ -198,7 +198,10 @@ export function SuperAdminHeaderApple() {
 
                     {/* Dropdown Menu - Zone grisée pour les menus normaux */}
                     {isHovered && item.children && (
-                      <div className="absolute left-1/2 top-full z-[80] -translate-x-1/2 pt-2">
+                      <div
+                        className="absolute left-1/2 top-full z-[90] -translate-x-1/2 pt-3"
+                        onMouseEnter={() => openMenu(item.label)}
+                      >
                       <div 
                         className={cn(
                           item.label === "Gestion"

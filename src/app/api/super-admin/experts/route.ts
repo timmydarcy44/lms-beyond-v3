@@ -155,7 +155,9 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   revalidatePath("/ecole/ntc/ai-business");
   revalidatePath("/ecole/ntc/business-sport");
+  revalidatePath("/ecole/ntc/real-estate");
   revalidatePath("/edge-lab/ecole/ntc/ai-business");
   revalidatePath("/edge-lab/ecole/ntc/business-sport");
+  revalidatePath("/edge-lab/ecole/ntc/real-estate");
   return NextResponse.json({ id: auth.userId });
 }

@@ -100,6 +100,43 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ company: data });
 }
 
+function companyFields(body: Record<string, unknown>) {
+  const companyName = clean(body.companyName);
+  const siret = clean(body.siret).replace(/\s/g, "");
+  const firstName = clean(body.firstName);
+  const lastName = clean(body.lastName);
+  const apprenticesWanted = Number(body.apprenticesWanted);
+  const track1 = clean(body.apprenticeTrack1);
+  const status = clean(body.status);
+
+  if (!companyName) return { error: "Le nom de l’entreprise est requis." };
+  if (!/^\d{14}$/.test(siret)) return { error: "Le SIRET doit contenir 14 chiffres." };
+  if (!firstName || !lastName) return { error: "Le prénom et le nom du contact sont requis." };
+  if (!Number.isInteger(apprenticesWanted) || apprenticesWanted < 1 || apprenticesWanted > 30) {
+    return { error: "Indique une quantité entre 1 et 30." };
+  }
+  if (!isTrack(track1)) return { error: "Choisis le cursus demandé." };
+  if (status && !isCfaCompanyStatus(status)) return { error: "Statut invalide." };
+
+  return {
+    row: {
+      company_name: companyName,
+      siret,
+      contact_first_name: firstName,
+      contact_last_name: lastName,
+      contact_name: `${firstName} ${lastName}`,
+      contact_role: clean(body.contactRole) || null,
+      email: clean(body.email) || null,
+      phone: clean(body.phone) || null,
+      company_address: clean(body.companyAddress) || null,
+      soft_skills: clean(body.softSkills) || null,
+      apprentices_wanted: apprenticesWanted,
+      apprentice_track_1: track1,
+      ...(status ? { status } : {}),
+    },
+  };
+}
+
 export async function PATCH(request: NextRequest) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
@@ -109,18 +146,32 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const id = clean(body.id);
-  const status = clean(body.status);
-  if (!id || !isCfaCompanyStatus(status)) {
-    return NextResponse.json({ error: "Dossier ou statut invalide." }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "Dossier invalide." }, { status: 400 });
+
+  const editing = body.companyName !== undefined;
+  let update: Record<string, unknown>;
+  if (editing) {
+    const parsed = companyFields(body);
+    if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    update = { ...parsed.row, updated_at: new Date().toISOString() };
+  } else {
+    const status = clean(body.status);
+    if (!isCfaCompanyStatus(status)) {
+      return NextResponse.json({ error: "Dossier ou statut invalide." }, { status: 400 });
+    }
+    update = { status, updated_at: new Date().toISOString() };
   }
 
-  const { data, error } = await db
-    .from("cfa_companies")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("*")
-    .single();
+  const { data, error } = await db.from("cfa_companies").update(update).eq("id", id).select("*").single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    if (error.code === "42P01" || error.code === "42703") {
+      return NextResponse.json(
+        { error: "Applique la migration 20261010120000_cfa_companies_contact.sql pour modifier cette fiche." },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
   return NextResponse.json({ company: data });
 }

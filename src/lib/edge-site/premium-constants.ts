@@ -159,7 +159,7 @@ export function getEdgePremiumConfig(host?: string | null) {
           links: [
             { label: "AI Business", href: R.ecoleNtcAiBusiness },
             { label: "Business Sport", href: R.ecoleNtcBusinessSport },
-            { label: "Real Estate", href: `${R.alternance}#ntc-real-estate` },
+            { label: "Real Estate", href: R.ecoleNtcRealEstate },
           ],
         },
         {

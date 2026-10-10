@@ -1,6 +1,5 @@
 import Image from "next/image";
 
-import { CONTRIBUTOR_ROLE_LABELS } from "@/lib/expert/contributor-profile";
 import type { ProgramContributor } from "@/lib/expert/program-contributors";
 
 export function ProgramContributorsSection({
@@ -23,23 +22,19 @@ export function ProgramContributorsSection({
         </h2>
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {people.map((person) => (
-            <article key={person.id} className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5">
-              <div className="relative h-28 w-28 overflow-hidden rounded-2xl bg-black">
-                {person.photoUrl ? (
-                  <Image src={person.photoUrl} alt="" fill sizes="112px" className="object-cover" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-2xl font-semibold text-white/70">
-                    {person.name.slice(0, 1)}
-                  </div>
-                )}
+            <article key={person.id} className="relative aspect-[3/4] overflow-hidden rounded-[28px] bg-[#111]">
+              {person.photoUrl ? (
+                <Image src={person.photoUrl} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover" />
+              ) : (
+                <div className="flex h-full items-center justify-center bg-[#161616] text-6xl font-semibold text-white/30">
+                  {person.name.slice(0, 1)}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <h3 className="text-lg font-semibold tracking-[-0.02em] text-white">{person.name}</h3>
+                {person.jobTitle ? <p className="mt-1 text-sm leading-snug text-white/85">{person.jobTitle}</p> : null}
               </div>
-              <h3 className="mt-5 text-base font-semibold tracking-[-0.02em] text-white">{person.name}</h3>
-              {person.jobTitle ? <p className="mt-1 text-sm leading-snug text-white/60">{person.jobTitle}</p> : null}
-              {person.roles.length > 0 ? (
-                <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8c86ff]">
-                  {person.roles.map((role) => CONTRIBUTOR_ROLE_LABELS[role]).join(" · ")}
-                </p>
-              ) : null}
             </article>
           ))}
         </div>

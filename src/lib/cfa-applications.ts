@@ -117,3 +117,13 @@ export type CfaApplication = {
 export function getCfaSpecializationLabel(value: string): string {
   return CFA_SPECIALIZATIONS.find((item) => item.value === value)?.label ?? value;
 }
+
+export type CfaProgramDownload = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  created_at: string;
+};

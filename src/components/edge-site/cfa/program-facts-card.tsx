@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Download } from "lucide-react";
 
@@ -19,6 +19,10 @@ const rows = [
 
 export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
   const [open, setOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [lead, setLead] = useState({ lastName: "", firstName: "", email: "", phone: "" });
 
   useEffect(() => {
     const mobileQuery = window.matchMedia("(max-width: 639px)");
@@ -40,6 +44,27 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  async function requestPdf(event: FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const response = await fetch("/api/ecole/program-brochure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...lead, specialization: facts.specialization }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Téléchargement impossible.");
+      setFormOpen(false);
+      window.open(String(result.downloadUrl), "_blank", "noopener,noreferrer");
+    } catch (cause) {
+      setFormError(cause instanceof Error ? cause.message : "Téléchargement impossible.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-40 sm:bottom-6 sm:right-6">
@@ -63,22 +88,19 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
               <ArrowRight className="h-4 w-4" />
             </Link>
 
-            {facts.programPdfUrl ? (
-              <a
-                href={facts.programPdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-black/10 bg-[#f4f7fb] px-5 text-sm font-semibold text-[#3b82f6] transition hover:bg-[#ebf2fb]"
-              >
-                <Download className="h-4 w-4" />
-                Télécharger le programme PDF
-              </a>
-            ) : (
-              <span className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-black/10 bg-[#f4f7fb] px-5 text-sm font-semibold text-[#3b82f6]">
-                <Download className="h-4 w-4" />
-                Télécharger le programme PDF
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setFormError(
+                  facts.programPdfUrl ? "" : "Le programme n’est pas encore disponible au téléchargement.",
+                );
+                setFormOpen(true);
+              }}
+              className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-black/10 bg-[#f4f7fb] px-5 text-sm font-semibold text-[#3b82f6] transition hover:bg-[#ebf2fb]"
+            >
+              <Download className="h-4 w-4" />
+              Télécharger le programme en PDF
+            </button>
           </div>
 
           <details className="rounded-[24px] border border-black/[0.08] bg-white px-5 py-3 text-sm shadow-sm">
@@ -111,6 +133,62 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
           Infos & candidature
         </button>
       )}
+      {formOpen ? (
+        <div
+          className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-[#070b1f]/55 p-4 sm:items-center"
+          onClick={() => setFormOpen(false)}
+        >
+          <form
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={(event) => void requestPdf(event)}
+            className="w-full max-w-md rounded-[28px] bg-white p-6 text-[#070b1f] shadow-2xl"
+          >
+            <h2 className="text-lg font-semibold tracking-[-0.02em]">Télécharger le programme</h2>
+            <p className="mt-1 text-sm text-black/55">
+              Indiquez vos coordonnées pour recevoir la fiche du cursus.
+            </p>
+            <div className="mt-5 grid gap-3">
+              {(
+                [
+                  ["lastName", "Nom", "text"],
+                  ["firstName", "Prénom", "text"],
+                  ["email", "Adresse mail", "email"],
+                  ["phone", "Téléphone", "tel"],
+                ] as const
+              ).map(([key, label, type]) => (
+                <label key={key} className="text-sm font-medium">
+                  {label}
+                  <input
+                    required
+                    type={type}
+                    autoComplete={key === "email" ? "email" : key === "phone" ? "tel" : key === "firstName" ? "given-name" : "family-name"}
+                    value={lead[key]}
+                    onChange={(event) => setLead({ ...lead, [key]: event.target.value })}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-[#f7f8fb] px-3 text-sm font-normal outline-none focus:border-[#3b82f6]"
+                  />
+                </label>
+              ))}
+            </div>
+            {formError ? <p className="mt-3 text-sm text-rose-600">{formError}</p> : null}
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="h-11 flex-1 rounded-full border border-black/10 text-sm font-semibold"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || !facts.programPdfUrl}
+                className="h-11 flex-1 rounded-full bg-[#3b82f6] text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {submitting ? "Envoi…" : "Télécharger"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GraduationCap, Loader2, Save } from "lucide-react";
+import { FileUp, GraduationCap, Loader2, Save } from "lucide-react";
 
 import type { ByoundProgramFacts } from "@/lib/byound-school/program-facts";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ const FIELDS: { key: keyof ByoundProgramFacts; label: string }[] = [
   { key: "location", label: "Lieu" },
   { key: "level", label: "Niveau" },
   { key: "seatsAvailable", label: "Places disponibles" },
-  { key: "programPdfUrl", label: "Lien du programme PDF" },
 ];
 
 export function ByoundFormationsAdminClient() {
@@ -24,6 +23,7 @@ export function ByoundFormationsAdminClient() {
   const [draft, setDraft] = useState<ByoundProgramFacts | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
 
@@ -56,6 +56,33 @@ export function ByoundFormationsAdminClient() {
     setDraft(program);
     setSaved("");
     setError("");
+  }
+
+  async function uploadPdf(file: File | null) {
+    if (!draft || !file) return;
+    setUploadingPdf(true);
+    setError("");
+    setSaved("");
+    try {
+      const body = new FormData();
+      body.set("specialization", draft.specialization);
+      body.set("file", file);
+      const response = await fetch("/api/super-admin/byound-programs/pdf", {
+        method: "POST",
+        body,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Envoi du PDF impossible.");
+      setPrograms(result.programs ?? []);
+      const next = result.program ?? { ...draft, programPdfUrl: result.programPdfUrl };
+      setDraft(next);
+      setSelected(next);
+      setSaved("PDF enregistré. Le lien de téléchargement est créé.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Envoi du PDF impossible.");
+    } finally {
+      setUploadingPdf(false);
+    }
   }
 
   async function save() {
@@ -175,6 +202,33 @@ export function ByoundFormationsAdminClient() {
                 />
               </label>
             ))}
+            <label className="text-sm text-white/70 sm:col-span-2">
+              Lien de téléchargement PDF
+              <span className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
+                {uploadingPdf ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />
+                ) : (
+                  <FileUp className="h-4 w-4 text-indigo-300" />
+                )}
+                {uploadingPdf ? "Envoi du PDF…" : "Choisir un fichier PDF"}
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  className="sr-only"
+                  disabled={uploadingPdf}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    event.target.value = "";
+                    void uploadPdf(file);
+                  }}
+                />
+              </span>
+              <span className="mt-2 block text-xs text-white/45">
+                {draft.programPdfUrl
+                  ? "Lien créé. Le bouton public proposera ce fichier après les coordonnées."
+                  : "Aucun PDF pour le moment."}
+              </span>
+            </label>
           </div>
         </div>
       ) : null}

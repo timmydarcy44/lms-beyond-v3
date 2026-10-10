@@ -106,7 +106,21 @@ export async function GET() {
       };
     }),
   );
-  return NextResponse.json({ applications });
+  const downloadsQuery = await db
+    .from("cfa_program_downloads")
+    .select("id,first_name,last_name,email,phone,specialization,created_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  const downloadsMissing = downloadsQuery.error?.code === "42P01";
+  if (downloadsQuery.error && !downloadsMissing) {
+    return NextResponse.json({ error: downloadsQuery.error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    applications,
+    downloads: downloadsMissing ? [] : (downloadsQuery.data ?? []),
+    downloadsMigrationRequired: downloadsMissing,
+  });
 }
 
 export async function PATCH(request: NextRequest) {

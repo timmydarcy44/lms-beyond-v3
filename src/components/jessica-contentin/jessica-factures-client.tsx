@@ -294,6 +294,7 @@ export function JessicaFacturesClient({
       title="Factures"
       subtitle="Créer une facture acquittée — prestations multiples, tarifs modifiables"
       narrow
+      className="jessica-invoice-sheet"
     >
       <JessicaSuperCard className="mb-8">
         <div className="mb-4 flex items-center justify-between gap-2">

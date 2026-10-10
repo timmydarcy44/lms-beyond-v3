@@ -194,8 +194,8 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                   </div>
                 )}
                 {contributor.companyLogoUrl ? (
-                  <span className="absolute bottom-1 right-1 z-10 flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-white bg-white p-0.5 shadow">
-                    <img src={contributor.companyLogoUrl} alt="" className="h-full w-full object-contain" />
+                  <span className="absolute bottom-1.5 right-1.5 z-10 flex h-11 w-11 items-center justify-center">
+                    <img src={contributor.companyLogoUrl} alt="" className="h-full w-full object-contain drop-shadow-sm" />
                   </span>
                 ) : null}
               </div>

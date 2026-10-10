@@ -82,45 +82,6 @@ function draftFromCompany(company: CfaCompany): CompanyDraft {
   };
 }
 
-type CompanyDraft = {
-  companyName: string;
-  companyAddress: string;
-  siret: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  contactRole: string;
-  quantity: number;
-  track1: string;
-  softSkills: string[];
-  status: CfaCompanyStatus;
-};
-
-function splitSkills(value: string | null): string[] {
-  return (value ?? "")
-    .split("·")
-    .map((skill) => skill.trim())
-    .filter(Boolean);
-}
-
-function draftFromCompany(company: CfaCompany): CompanyDraft {
-  return {
-    companyName: company.company_name,
-    companyAddress: company.company_address ?? "",
-    siret: company.siret ?? "",
-    firstName: company.contact_first_name ?? "",
-    lastName: company.contact_last_name ?? "",
-    email: company.email ?? "",
-    phone: company.phone ?? "",
-    contactRole: company.contact_role ?? "",
-    quantity: company.apprentices_wanted ?? 1,
-    track1: company.apprentice_track_1 ?? "",
-    softSkills: splitSkills(company.soft_skills),
-    status: company.status,
-  };
-}
-
 export function CfaCompanyPipelineClient() {
   const [companies, setCompanies] = useState<CfaCompany[]>([]);
   const [loading, setLoading] = useState(true);

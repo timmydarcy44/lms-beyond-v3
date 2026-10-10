@@ -17,7 +17,7 @@ export default async function SuperExpertDetailPage({ params }: Props) {
   if (!expert) notFound();
 
   return (
-    <div className="bg-[#f8f9fb] p-6 lg:p-8">
+    <div className="p-6 lg:p-8">
       <SuperExpertCrmDetail expert={expert} basePath="/super/experts" />
     </div>
   );

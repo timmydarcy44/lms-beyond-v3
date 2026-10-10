@@ -3,8 +3,13 @@ create table if not exists public.cfa_companies (
   company_name text not null,
   siret text,
   contact_name text,
+  contact_first_name text,
+  contact_last_name text,
+  contact_role text,
   email text,
   phone text,
+  company_address text,
+  soft_skills text,
   apprentices_wanted integer,
   apprentice_track_1 text,
   apprentice_track_2 text,
@@ -25,7 +30,7 @@ create table if not exists public.cfa_companies (
     )
   ),
   constraint cfa_companies_apprentices_check check (
-    apprentices_wanted is null or apprentices_wanted between 1 and 2
+    apprentices_wanted is null or apprentices_wanted between 1 and 30
   )
 );
 

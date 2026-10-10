@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Loader2, RefreshCw } from "lucide-react";
+import { Building2, Loader2, Plus, RefreshCw, X } from "lucide-react";
 
 import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
 import {
@@ -16,10 +16,12 @@ type CfaCompany = {
   company_name: string;
   siret: string | null;
   contact_name: string | null;
+  contact_role: string | null;
   email: string | null;
+  phone: string | null;
+  soft_skills: string | null;
   apprentices_wanted: number | null;
   apprentice_track_1: string | null;
-  apprentice_track_2: string | null;
   status: CfaCompanyStatus;
   created_at: string;
 };
@@ -44,14 +46,19 @@ export function CfaCompanyPipelineClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [migrationRequired, setMigrationRequired] = useState(false);
+  const [open, setOpen] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [companyAddress, setCompanyAddress] = useState("");
   const [siret, setSiret] = useState("");
-  const [contactName, setContactName] = useState("");
+  const [lookup, setLookup] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [apprenticesWanted, setApprenticesWanted] = useState<1 | 2>(1);
+  const [contactRole, setContactRole] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [track1, setTrack1] = useState("");
-  const [track2, setTrack2] = useState("");
+  const [softSkills, setSoftSkills] = useState("");
 
   async function load() {
     setLoading(true);
@@ -103,6 +110,39 @@ export function CfaCompanyPipelineClient() {
     }
   }
 
+  function resetForm() {
+    setCompanyName("");
+    setCompanyAddress("");
+    setSiret("");
+    setLookup("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setContactRole("");
+    setQuantity(1);
+    setTrack1("");
+    setSoftSkills("");
+  }
+
+  async function lookupSiret(value: string) {
+    const digits = value.replace(/\s/g, "");
+    setSiret(digits);
+    setLookup("");
+    if (!/^\d{14}$/.test(digits)) return;
+    setLookup("Recherche du SIRET…");
+    try {
+      const response = await fetch(`/api/super-admin/crm/cfa/companies/lookup?siret=${digits}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Entreprise introuvable");
+      if (result.companyName) setCompanyName(result.companyName);
+      if (result.address) setCompanyAddress(result.address);
+      setLookup(result.companyName ? `Entreprise trouvée : ${result.companyName}` : "SIRET reconnu");
+    } catch (lookupError) {
+      setLookup(lookupError instanceof Error ? lookupError.message : "Recherche impossible");
+    }
+  }
+
   async function createCompany(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -113,26 +153,23 @@ export function CfaCompanyPipelineClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyName,
+          companyAddress,
           siret,
-          contactName,
+          firstName,
+          lastName,
+          contactRole,
           email,
           phone,
-          apprenticesWanted,
+          apprenticesWanted: quantity,
           apprenticeTrack1: track1,
-          apprenticeTrack2: apprenticesWanted === 2 ? track2 : "",
+          softSkills,
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Création impossible");
       setCompanies((current) => [result.company, ...current]);
-      setCompanyName("");
-      setSiret("");
-      setContactName("");
-      setEmail("");
-      setPhone("");
-      setApprenticesWanted(1);
-      setTrack1("");
-      setTrack2("");
+      resetForm();
+      setOpen(false);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Création impossible");
     } finally {
@@ -150,74 +187,125 @@ export function CfaCompanyPipelineClient() {
             Du premier contact au recrutement des alternants.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          Actualiser
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              setOpen(true);
+            }}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#635BFF] px-4 text-sm font-semibold text-white hover:bg-[#554ee6]"
+          >
+            <Plus className="h-4 w-4" />
+            Entreprise
+          </button>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/15 bg-[#10243f] px-4 text-sm font-semibold text-[#f8fbff] hover:bg-[#16325c]"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            Actualiser
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={(event) => void createCompany(event)} className="grid gap-3 rounded-2xl border border-white/10 bg-white/80 p-4 md:grid-cols-2 xl:grid-cols-4">
-        <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required placeholder="Entreprise" className={fieldClass} />
-        <input
-          value={siret}
-          onChange={(event) => setSiret(event.target.value)}
-          required
-          inputMode="numeric"
-          minLength={14}
-          maxLength={17}
-          placeholder="SIRET (14 chiffres)"
-          className={fieldClass}
-        />
-        <input value={contactName} onChange={(event) => setContactName(event.target.value)} placeholder="Contact" className={fieldClass} />
-        <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="Email" className={fieldClass} />
-        <input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Téléphone" className={fieldClass} />
-        <label className="block text-xs font-semibold text-gray-500">
-          Alternant(s) souhaité(s)
-          <select
-            value={apprenticesWanted}
-            onChange={(event) => {
-              const next = Number(event.target.value) === 2 ? 2 : 1;
-              setApprenticesWanted(next);
-              if (next === 1) setTrack2("");
-            }}
-            className={cn(fieldClass, "mt-1")}
-          >
-            <option value={1}>1</option>
-            <option value={2}>2</option>
-          </select>
-        </label>
-        <label className="block text-xs font-semibold text-gray-500">
-          Alternant 1
-          <select value={track1} onChange={(event) => setTrack1(event.target.value)} required className={cn(fieldClass, "mt-1")}>
-            <option value="">Choisir le cursus</option>
-            {CFA_SPECIALIZATIONS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.group} — {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {apprenticesWanted === 2 && track1 ? (
-          <label className="block text-xs font-semibold text-gray-500">
-            Alternant 2
-            <select value={track2} onChange={(event) => setTrack2(event.target.value)} required className={cn(fieldClass, "mt-1")}>
-              <option value="">Choisir le cursus</option>
-              {CFA_SPECIALIZATIONS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.group} — {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <button type="submit" disabled={saving} className="h-10 self-end rounded-lg bg-[#070b1f] px-4 text-sm font-semibold text-white disabled:opacity-60">
-          {saving ? "Ajout…" : "Ajouter l’entreprise"}
-        </button>
-      </form>
+      {open ? (
+        <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
+          <form onSubmit={(event) => void createCompany(event)} className="super-nav-dropdown my-8 w-full max-w-2xl rounded-2xl p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">CRM Entreprise</p>
+                <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">Nouvelle entreprise</h2>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
+                Numéro SIRET
+                <input
+                  value={siret}
+                  onChange={(event) => void lookupSiret(event.target.value)}
+                  required
+                  inputMode="numeric"
+                  minLength={14}
+                  maxLength={14}
+                  placeholder="14 chiffres"
+                  className={cn(fieldClass, "mt-1")}
+                />
+                {lookup ? <span className="mt-1 block text-[11px] font-medium text-indigo-200">{lookup}</span> : null}
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
+                Entreprise
+                <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required placeholder="Raison sociale" className={cn(fieldClass, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2]">
+                Prénom
+                <input value={firstName} onChange={(event) => setFirstName(event.target.value)} required className={cn(fieldClass, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2]">
+                Nom
+                <input value={lastName} onChange={(event) => setLastName(event.target.value)} required className={cn(fieldClass, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2]">
+                Adresse mail
+                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className={cn(fieldClass, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2]">
+                Numéro de téléphone
+                <input value={phone} onChange={(event) => setPhone(event.target.value)} className={cn(fieldClass, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2]">
+                Qualité
+                <input value={contactRole} onChange={(event) => setContactRole(event.target.value)} placeholder="Dirigeant, RH, tuteur…" className={cn(fieldClass, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2]">
+                Quantité
+                <input
+                  value={quantity}
+                  onChange={(event) => setQuantity(Math.min(30, Math.max(1, Number(event.target.value) || 1)))}
+                  type="number"
+                  min={1}
+                  max={30}
+                  required
+                  className={cn(fieldClass, "mt-1")}
+                />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
+                Besoin cursus
+                <select value={track1} onChange={(event) => setTrack1(event.target.value)} required className={cn(fieldClass, "mt-1")}>
+                  <option value="">Choisir le cursus</option>
+                  {CFA_SPECIALIZATIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.group} — {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
+                Soft skills pour le ou les postes
+                <textarea
+                  value={softSkills}
+                  onChange={(event) => setSoftSkills(event.target.value)}
+                  rows={3}
+                  placeholder="Relationnel, autonomie, aisance orale…"
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400"
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg px-4 text-sm font-semibold text-[#d5e0f2] hover:bg-white/10">
+                Annuler
+              </button>
+              <button type="submit" disabled={saving} className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white disabled:opacity-60">
+                {saving ? "Création…" : "Créer l’entreprise"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-4">
         {[
@@ -235,7 +323,7 @@ export function CfaCompanyPipelineClient() {
 
       {migrationRequired ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Applique les migrations CFA entreprises, dont 20261010100000_cfa_companies_recruitment.sql.
+          Applique la migration 20261010120000_cfa_companies_contact.sql.
         </div>
       ) : null}
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
@@ -269,10 +357,11 @@ export function CfaCompanyPipelineClient() {
                           <Building2 className="h-4 w-4 shrink-0 text-indigo-500" />
                         </div>
                         <div className="mt-3 space-y-1 text-xs text-gray-600">
-                          <p>Alternant 1 · {company.apprentice_track_1 ? getCfaSpecializationLabel(company.apprentice_track_1) : "Cursus à préciser"}</p>
-                          {company.apprentices_wanted === 2 ? (
-                            <p>Alternant 2 · {company.apprentice_track_2 ? getCfaSpecializationLabel(company.apprentice_track_2) : "Cursus à préciser"}</p>
-                          ) : null}
+                          <p>{company.contact_name || "Contact à préciser"}{company.contact_role ? ` · ${company.contact_role}` : ""}</p>
+                          <p>
+                            {company.apprentices_wanted ?? "—"} · {company.apprentice_track_1 ? getCfaSpecializationLabel(company.apprentice_track_1) : "Cursus à préciser"}
+                          </p>
+                          {company.soft_skills ? <p className="line-clamp-2">{company.soft_skills}</p> : null}
                         </div>
                         <div className="mt-4 border-t border-gray-100 pt-3">
                           <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Statut</label>

@@ -11,7 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AlertsBadge } from "./alerts-badge";
 
 type NavItem = {
@@ -77,6 +77,17 @@ export function SuperAdminHeaderApple() {
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const closeTimer = useRef<number | null>(null);
+
+  const openMenu = (label: string) => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    setHoveredItem(label);
+  };
+
+  const closeMenuSoon = () => {
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setHoveredItem(null), 220);
+  };
 
   useEffect(() => {
     const fetchUserEmail = async () => {
@@ -164,8 +175,8 @@ export function SuperAdminHeaderApple() {
                   <div
                     key={item.label}
                     className="relative"
-                    onMouseEnter={() => setHoveredItem(item.label)}
-                    onMouseLeave={() => setHoveredItem(null)}
+                    onMouseEnter={() => openMenu(item.label)}
+                    onMouseLeave={closeMenuSoon}
                   >
                     <Link
                       href={item.href}
@@ -187,14 +198,15 @@ export function SuperAdminHeaderApple() {
 
                     {/* Dropdown Menu - Zone grisée pour les menus normaux */}
                     {isHovered && item.children && (
+                      <div className="absolute left-1/2 top-full z-[80] -translate-x-1/2 pt-2">
                       <div 
                         className={cn(
                           item.label === "Gestion"
-                            ? "absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[min(720px,calc(100vw-2rem))] rounded-2xl border backdrop-blur-xl shadow-xl p-4"
-                            : "absolute left-1/2 -translate-x-1/2 top-full mt-1 min-w-[200px] rounded-lg border backdrop-blur-xl shadow-lg py-1.5",
+                            ? "w-[min(720px,calc(100vw-2rem))] rounded-2xl border p-4 shadow-xl"
+                            : "min-w-[220px] rounded-lg border py-1.5 shadow-lg",
                           isContentin
                             ? "border-[#D2B48C]/50 bg-[#E8E8D3]/95"
-                            : "border-gray-200/50 bg-gray-50/95"
+                            : "super-nav-dropdown border-white/15"
                         )}
                         style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
                       >
@@ -210,7 +222,7 @@ export function SuperAdminHeaderApple() {
                                     "group rounded-xl border px-4 py-3 transition",
                                     isContentin
                                       ? "border-[#D2B48C]/40 bg-white/60 hover:bg-white"
-                                      : "border-gray-200/60 bg-white/70 hover:bg-white",
+                                      : "border-white/10 bg-[#16325c] hover:bg-[#1c3d6e]",
                                   )}
                                   onClick={() => setHoveredItem(null)}
                                 >
@@ -259,6 +271,7 @@ export function SuperAdminHeaderApple() {
                             );
                           })
                         )}
+                      </div>
                       </div>
                     )}
 

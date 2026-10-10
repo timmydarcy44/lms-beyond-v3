@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
+import { AddExpertDialog } from "@/components/admin/experts/add-expert-dialog";
 
 const FILTERS = [
   { id: "all", label: "Tous" },
@@ -18,7 +19,7 @@ const FILTERS = [
 function statusBadgeClass(status: string | null | undefined): string {
   switch (status) {
     case "approved":
-      return "border-[#635BFF]/25 bg-[#635BFF]/10 text-[#4f46e5]";
+      return "border-[#635BFF]/30 bg-[#e0e7ff] text-[#312e81]";
     case "rejected":
       return "border-red-200 bg-red-50 text-red-700";
     case "needs_info":
@@ -67,9 +68,12 @@ export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/exp
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Experts / Formateurs</h1>
-        <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts Byound.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Experts / Formateurs</h1>
+          <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts Byound.</p>
+        </div>
+        {basePath.startsWith("/super") ? <AddExpertDialog /> : null}
       </div>
 
       <div className="relative max-w-md">
@@ -79,7 +83,7 @@ export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/exp
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher par nom, email, spécialité…"
-          className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-[#635BFF]/40"
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 outline-none focus:border-[#635BFF]/40"
         />
       </div>
 

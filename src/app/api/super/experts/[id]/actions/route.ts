@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
@@ -24,7 +25,7 @@ export async function POST(
 
     const { data: expert, error: fetchError } = await supabase
       .from("experts")
-      .select("id,is_active,references,certification_status,is_certified_beyond,is_care_expert")
+      .select("id,is_active,references,specialties,certification_status,is_certified_beyond,is_care_expert")
       .eq("id", id)
       .maybeSingle();
 
@@ -42,6 +43,23 @@ export async function POST(
       patch.is_certified_beyond = true;
     } else if (action === "toggle_care") {
       patch.is_care_expert = !Boolean(expert.is_care_expert);
+    } else if (action === "set_assignments") {
+      const known = new Map(CFA_SPECIALIZATIONS.map((item) => [item.value, item.label]));
+      const knownLabels = new Set(known.values());
+      const selected = Array.isArray(body.cursus)
+        ? body.cursus.map((value: unknown) => String(value)).filter((value: string) => known.has(value))
+        : [];
+      const kept = Array.isArray(expert.specialties)
+        ? expert.specialties.filter((item: unknown) => !knownLabels.has(String(item)))
+        : [];
+      patch.specialties = [...kept, ...selected.map((value: string) => known.get(value))];
+      const badges = Array.isArray(body.openBadges) ? body.openBadges : [];
+      patch.open_badges = badges
+        .map((badge: { id?: unknown; name?: unknown }) => ({
+          id: String(badge?.id ?? ""),
+          name: String(badge?.name ?? ""),
+        }))
+        .filter((badge: { id: string; name: string }) => badge.id && badge.name);
     } else if (action === "add_note") {
       const note = typeof body.note === "string" ? body.note.trim() : "";
       if (!note) {

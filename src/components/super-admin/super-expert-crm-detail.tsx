@@ -38,6 +38,7 @@ import {
   getExpertPortfolioUrl,
 } from "@/lib/expert/expert-crm-utils";
 import { EDGE_CHIP_CLASSES, EDGE_STATUS_CLASSES } from "@/lib/edge-site/design-system";
+import { ExpertAssignmentsPanel } from "@/components/admin/experts/expert-assignments-panel";
 
 function statusStyles(status: string | null | undefined) {
   const key = status as keyof typeof EDGE_STATUS_CLASSES;
@@ -369,6 +370,14 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <ExpertAssignmentsPanel
+          expertId={expert.id}
+          specialties={expert.specialties}
+          openBadges={expert.open_badges}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">

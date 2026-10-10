@@ -8,10 +8,10 @@ export {
   parseExpertInternalNotes,
 } from "@/lib/expert/admin-expert-types";
 
-const ADMIN_EXPERT_SELECT_LEGACY = ADMIN_EXPERT_SELECT.replace(",is_care_expert", "");
+const ADMIN_EXPERT_SELECT_LEGACY = ADMIN_EXPERT_SELECT.replace(",is_care_expert", "").replace(",open_badges", "");
 
-function isMissingCareColumn(message: string | undefined) {
-  return Boolean(message && /is_care_expert/i.test(message));
+function isMissingOptionalColumn(message: string | undefined) {
+  return Boolean(message && /is_care_expert|open_badges/i.test(message));
 }
 
 export async function getAdminExperts(status?: string | null): Promise<AdminExpertRow[]> {
@@ -31,7 +31,7 @@ export async function getAdminExperts(status?: string | null): Promise<AdminExpe
   };
 
   let { data, error } = await run(ADMIN_EXPERT_SELECT);
-  if (error && isMissingCareColumn(error.message)) {
+  if (error && isMissingOptionalColumn(error.message)) {
     ({ data, error } = await run(ADMIN_EXPERT_SELECT_LEGACY));
   }
   if (error) {
@@ -51,7 +51,7 @@ export async function getAdminExpertById(id: string): Promise<AdminExpertRow | n
     .eq("id", id)
     .maybeSingle();
 
-  if (error && isMissingCareColumn(error.message)) {
+  if (error && isMissingOptionalColumn(error.message)) {
     ({ data, error } = await supabase
       .from("experts")
       .select(ADMIN_EXPERT_SELECT_LEGACY)

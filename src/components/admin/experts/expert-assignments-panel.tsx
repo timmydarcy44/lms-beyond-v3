@@ -59,11 +59,7 @@ export function ExpertAssignmentsPanel({
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
   }
 
-  async function save() {
-    if (roles.length === 0) {
-      setMessage("Choisissez Expert, Formateur, ou les deux.");
-      return;
-    }
+  async function save(nextRoles: ContributorRole[] = roles, nextCursus: string[] = cursus) {
     setSaving(true);
     setMessage("");
     try {
@@ -72,15 +68,19 @@ export function ExpertAssignmentsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "set_assignments",
-          cursus,
+          cursus: nextCursus,
           openBadges: badges.filter((badge) => selectedBadges.includes(badge.id)),
-          roles,
+          roles: nextRoles,
           jobTitle,
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Enregistrement impossible");
-      setMessage("Cursus et open badges enregistrés.");
+      setMessage(
+        nextRoles.length && nextCursus.length
+          ? "Enregistré. La personne apparaît dans « Ils ont co-construit le référentiel »."
+          : "Enregistré.",
+      );
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Enregistrement impossible");
@@ -103,7 +103,11 @@ export function ExpertAssignmentsPanel({
               <input
                 type="checkbox"
                 checked={roles.includes(role)}
-                onChange={() => toggle(roles, role, (next) => setRoles(next as ContributorRole[]))}
+                onChange={() => {
+                  const next = (roles.includes(role) ? roles.filter((item) => item !== role) : [...roles, role]) as ContributorRole[];
+                  setRoles(next);
+                  void save(next, cursus);
+                }}
                 className="h-4 w-4 accent-[#635BFF]"
               />
               {CONTRIBUTOR_ROLE_LABELS[role]}
@@ -130,7 +134,11 @@ export function ExpertAssignmentsPanel({
                 <input
                   type="checkbox"
                   checked={cursus.includes(item.value)}
-                  onChange={() => toggle(cursus, item.value, setCursus)}
+                  onChange={() => {
+                    const next = cursus.includes(item.value) ? cursus.filter((value) => value !== item.value) : [...cursus, item.value];
+                    setCursus(next);
+                    void save(roles, next);
+                  }}
                   className="h-4 w-4 accent-[#635BFF]"
                 />
                 {item.group} — {item.label}

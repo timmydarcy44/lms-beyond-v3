@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
@@ -152,5 +153,9 @@ export async function POST(request: NextRequest) {
     ({ error } = await db.from("experts").upsert(withoutBadges, { onConflict: "id" }));
   }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  revalidatePath("/ecole/ntc/ai-business");
+  revalidatePath("/ecole/ntc/business-sport");
+  revalidatePath("/edge-lab/ecole/ntc/ai-business");
+  revalidatePath("/edge-lab/ecole/ntc/business-sport");
   return NextResponse.json({ id: auth.userId });
 }

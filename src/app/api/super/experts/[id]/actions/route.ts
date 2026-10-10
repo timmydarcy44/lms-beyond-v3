@@ -90,6 +90,12 @@ export async function POST(
     revalidatePath(`/super/experts/${id}`);
     revalidatePath("/admin/experts");
     revalidatePath(`/admin/experts/${id}`);
+    if (action === "set_assignments") {
+      revalidatePath("/ecole/ntc/ai-business");
+      revalidatePath("/ecole/ntc/business-sport");
+      revalidatePath("/edge-lab/ecole/ntc/ai-business");
+      revalidatePath("/edge-lab/ecole/ntc/business-sport");
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Building2, Loader2, Plus, RefreshCw, X } from "lucide-react";
 
 import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
+import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 import {
   CFA_COMPANY_STATUSES,
   CFA_COMPANY_STATUS_LABELS,
@@ -16,9 +17,12 @@ type CfaCompany = {
   company_name: string;
   siret: string | null;
   contact_name: string | null;
+  contact_first_name: string | null;
+  contact_last_name: string | null;
   contact_role: string | null;
   email: string | null;
   phone: string | null;
+  company_address: string | null;
   soft_skills: string | null;
   apprentices_wanted: number | null;
   apprentice_track_1: string | null;
@@ -58,7 +62,8 @@ export function CfaCompanyPipelineClient() {
   const [contactRole, setContactRole] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [track1, setTrack1] = useState("");
-  const [softSkills, setSoftSkills] = useState("");
+  const [softSkills, setSoftSkills] = useState<string[]>([]);
+  const [selected, setSelected] = useState<CfaCompany | null>(null);
 
   async function load() {
     setLoading(true);
@@ -122,7 +127,11 @@ export function CfaCompanyPipelineClient() {
     setContactRole("");
     setQuantity(1);
     setTrack1("");
-    setSoftSkills("");
+    setSoftSkills([]);
+  }
+
+  function toggleSkill(skill: string) {
+    setSoftSkills((current) => (current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill]));
   }
 
   async function lookupSiret(value: string) {
@@ -162,7 +171,7 @@ export function CfaCompanyPipelineClient() {
           phone,
           apprenticesWanted: quantity,
           apprenticeTrack1: track1,
-          softSkills,
+          softSkills: softSkills.join(" · "),
         }),
       });
       const result = await response.json();
@@ -284,16 +293,27 @@ export function CfaCompanyPipelineClient() {
                   ))}
                 </select>
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                Soft skills pour le ou les postes
-                <textarea
-                  value={softSkills}
-                  onChange={(event) => setSoftSkills(event.target.value)}
-                  rows={3}
-                  placeholder="Relationnel, autonomie, aisance orale…"
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-400"
-                />
-              </label>
+              <fieldset className="sm:col-span-2">
+                <legend className="text-xs font-semibold text-[#d5e0f2]">Soft skills pour le ou les postes</legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {SOFT_SKILLS.map((skill) => {
+                    const active = softSkills.includes(skill.titre);
+                    return (
+                      <button
+                        key={skill.id}
+                        type="button"
+                        onClick={() => toggleSkill(skill.titre)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-xs font-medium",
+                          active ? "border-[#635BFF] bg-[#635BFF] text-white" : "border-white/15 text-[#d5e0f2] hover:bg-white/10",
+                        )}
+                      >
+                        {skill.titre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg px-4 text-sm font-semibold text-[#d5e0f2] hover:bg-white/10">
@@ -304,6 +324,49 @@ export function CfaCompanyPipelineClient() {
               </button>
             </div>
           </form>
+        </div>
+      ) : null}
+
+      {selected ? (
+        <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
+          <div className="super-nav-dropdown my-8 w-full max-w-lg rounded-2xl p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">Fiche entreprise</p>
+                <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">{selected.company_name}</h2>
+                <p className="mt-1 text-sm text-[#9eb0cc]">{selected.siret}</p>
+              </div>
+              <button type="button" onClick={() => setSelected(null)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="mt-5 space-y-3 text-sm text-[#d5e0f2]">
+              {[
+                ["Contact", [selected.contact_first_name, selected.contact_last_name].filter(Boolean).join(" ") || selected.contact_name],
+                ["Qualité", selected.contact_role],
+                ["Email", selected.email],
+                ["Téléphone", selected.phone],
+                ["Adresse", selected.company_address],
+                ["Cursus", selected.apprentice_track_1 ? getCfaSpecializationLabel(selected.apprentice_track_1) : null],
+                ["Quantité", selected.apprentices_wanted ? String(selected.apprentices_wanted) : null],
+                ["Statut", CFA_COMPANY_STATUS_LABELS[selected.status]],
+              ].map(([label, value]) => (
+                <div key={String(label)}>
+                  <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9eb0cc]">{label}</dt>
+                  <dd className="mt-0.5 text-[#f8fbff]">{value || "—"}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="mt-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9eb0cc]">Soft skills</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(selected.soft_skills ?? "").split("·").map((skill) => skill.trim()).filter(Boolean).map((skill) => (
+                  <span key={skill} className="rounded-full bg-[#635BFF] px-3 py-1 text-xs font-medium text-white">{skill}</span>
+                ))}
+                {!selected.soft_skills ? <span className="text-sm text-[#9eb0cc]">Aucune soft skill</span> : null}
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -348,7 +411,19 @@ export function CfaCompanyPipelineClient() {
                   </header>
                   <div className="mt-2 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                     {items.map((company) => (
-                      <article key={company.id} className="rounded-xl border border-white/10 bg-[#10284d]/80 p-4 shadow-sm">
+                      <article
+                        key={company.id}
+                        onClick={() => setSelected(company)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelected(company);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer rounded-xl border border-white/10 bg-[#10284d]/80 p-4 text-left shadow-sm hover:border-[#635BFF]/50"
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <h3 className="truncate text-sm font-semibold text-gray-950">{company.company_name}</h3>
@@ -361,9 +436,11 @@ export function CfaCompanyPipelineClient() {
                           <p>
                             {company.apprentices_wanted ?? "—"} · {company.apprentice_track_1 ? getCfaSpecializationLabel(company.apprentice_track_1) : "Cursus à préciser"}
                           </p>
-                          {company.soft_skills ? <p className="line-clamp-2">{company.soft_skills}</p> : null}
+                          {company.soft_skills ? (
+                            <p className="line-clamp-2">{company.soft_skills}</p>
+                          ) : null}
                         </div>
-                        <div className="mt-4 border-t border-gray-100 pt-3">
+                        <div className="mt-4 border-t border-gray-100 pt-3" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
                           <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Statut</label>
                           <select
                             value={company.status}

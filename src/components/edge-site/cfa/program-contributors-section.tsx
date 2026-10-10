@@ -31,7 +31,13 @@ export function ProgramContributorsSection({
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-5">
+              {person.companyLogoUrl ? (
+                <span className="absolute bottom-5 right-5 z-10 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-lg">
+                  {/* Logos can be SVG; next/image does not render them reliably. */}
+                  <img src={person.companyLogoUrl} alt="" className="h-full w-full object-contain" />
+                </span>
+              ) : null}
+              <div className={person.companyLogoUrl ? "absolute inset-x-0 bottom-0 p-5 pr-24" : "absolute inset-x-0 bottom-0 p-5"}>
                 <h3 className="text-lg font-semibold tracking-[-0.02em] text-white">{person.name}</h3>
                 {person.jobTitle ? <p className="mt-1 text-sm leading-snug text-white/85">{person.jobTitle}</p> : null}
               </div>

@@ -193,6 +193,11 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                     {(firstName[0] ?? "?").toUpperCase()}
                   </div>
                 )}
+                {contributor.companyLogoUrl ? (
+                  <span className="absolute bottom-1 right-1 z-10 flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border border-white bg-white p-0.5 shadow">
+                    <img src={contributor.companyLogoUrl} alt="" className="h-full w-full object-contain" />
+                  </span>
+                ) : null}
               </div>
               <div className="pb-1">
                 <div className="flex flex-wrap items-center gap-2">

@@ -114,6 +114,7 @@ const YANNICK_GRELIN: ProgramContributor = {
   name: "Yannick GRELIN",
   jobTitle: "Responsable commercial hospitalité, Racing 92",
   photoUrl: null,
+  companyLogoUrl: null,
   roles: ["expert"],
 };
 

@@ -18,12 +18,21 @@ const rows = [
 ] as const;
 
 export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 639px)");
+    const isMobile = () => mobileQuery.matches;
+    if (!isMobile()) setOpen(true);
+
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
+      if (isMobile()) {
+        if (y > 24 && Math.abs(y - last) > 4) setOpen(false);
+        last = y;
+        return;
+      }
       if (y < 12) setOpen(true);
       else if (Math.abs(y - last) > 4) setOpen(false);
       last = y;

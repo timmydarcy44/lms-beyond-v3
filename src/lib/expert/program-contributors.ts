@@ -10,6 +10,7 @@ export type ProgramContributor = {
   name: string;
   jobTitle: string;
   photoUrl: string | null;
+  companyLogoUrl: string | null;
   roles: ContributorRole[];
 };
 
@@ -35,6 +36,7 @@ export async function getProgramContributors(cursusLabel: string): Promise<Progr
       name,
       jobTitle: profile.jobTitle,
       photoUrl: row.photo_url || row.avatar_url || null,
+      companyLogoUrl: profile.companyLogoUrl,
       roles: profile.roles,
     }];
   });
@@ -61,6 +63,7 @@ export async function getContributorByLastName(lastName: string): Promise<Progra
     name,
     jobTitle: profile.jobTitle,
     photoUrl: row.photo_url || row.avatar_url || null,
+    companyLogoUrl: profile.companyLogoUrl,
     roles: profile.roles,
   };
 }

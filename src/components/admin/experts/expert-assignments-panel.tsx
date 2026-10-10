@@ -45,6 +45,8 @@ export function ExpertAssignmentsPanel({
   const initialProfile = parseContributorProfile(references, headline);
   const [roles, setRoles] = useState<ContributorRole[]>(initialProfile.roles);
   const [jobTitle, setJobTitle] = useState(initialProfile.jobTitle);
+  const [logoUrl, setLogoUrl] = useState(initialProfile.companyLogoUrl);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -115,6 +117,69 @@ export function ExpertAssignmentsPanel({
             <span className="mt-1 block pl-6 text-xs text-[#9eb0cc]">{CONTRIBUTOR_ROLE_HELP[role]}</span>
           </label>
         ))}
+      </div>
+      <div className="mt-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">Logo entreprise</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {logoUrl ? (
+            <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5">
+              <img src={logoUrl} alt="" className="h-full w-full object-contain" />
+            </span>
+          ) : (
+            <span className="flex h-14 w-14 items-center justify-center rounded-xl border border-dashed border-white/20 text-[10px] text-[#9eb0cc]">Logo</span>
+          )}
+          <label className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-white/15 px-3 text-sm font-semibold text-[#f8fbff] hover:bg-white/10">
+            {uploadingLogo ? "Envoi…" : "Choisir un logo"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/svg+xml"
+              className="sr-only"
+              disabled={uploadingLogo}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                setUploadingLogo(true);
+                setMessage("");
+                const body = new FormData();
+                body.set("logo", file);
+                void fetch(`/api/super/experts/${expertId}/company-logo`, { method: "POST", body })
+                  .then(async (response) => {
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || "Envoi impossible");
+                    setLogoUrl(result.companyLogoUrl ?? null);
+                    setMessage("Logo enregistré. Il apparaît en bas à droite de la photo.");
+                    router.refresh();
+                  })
+                  .catch((error) => setMessage(error instanceof Error ? error.message : "Envoi impossible"))
+                  .finally(() => setUploadingLogo(false));
+              }}
+            />
+          </label>
+          {logoUrl ? (
+            <button
+              type="button"
+              disabled={uploadingLogo}
+              onClick={() => {
+                setUploadingLogo(true);
+                setMessage("");
+                void fetch(`/api/super/experts/${expertId}/company-logo`, { method: "DELETE" })
+                  .then(async (response) => {
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || "Suppression impossible");
+                    setLogoUrl(null);
+                    setMessage("Logo retiré.");
+                    router.refresh();
+                  })
+                  .catch((error) => setMessage(error instanceof Error ? error.message : "Suppression impossible"))
+                  .finally(() => setUploadingLogo(false));
+              }}
+              className="h-10 rounded-lg px-3 text-sm font-semibold text-[#d5e0f2] hover:bg-white/10"
+            >
+              Retirer
+            </button>
+          ) : null}
+        </div>
       </div>
       <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">
         Poste sous la photo

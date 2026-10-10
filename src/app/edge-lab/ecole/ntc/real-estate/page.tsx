@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, CheckCircle2, GraduationCap, Trophy } from "lucide-react";
 
@@ -18,30 +19,37 @@ export const metadata: Metadata = {
 const HERO =
   "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1800&q=80";
 
+const REAL_ESTATE_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Real%20Estate/real-estate.png";
+
 const badges = [
   {
     code: "RE",
     title: "Real Estate Ecosystem",
     description: "Comprendre et analyser l’écosystème économique de l’immobilier.",
-    items: ["Acteurs et métiers", "Marchés immobiliers", "Transaction", "Promotion", "Construction", "Gestion", "Investissement", "Financement", "PropTech", "Modèles économiques"],
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Real%20Estate/real-estate-ecosystem.png",
   },
   {
     code: "BD",
     title: "Real Estate Business Development",
     description: "Identifier et développer des opportunités commerciales dans l’immobilier.",
-    items: ["Prospection", "Détection d’opportunités", "Portefeuille", "Qualification", "Réseau et prescription", "Apporteurs d’affaires", "Partenariats", "Stratégie commerciale"],
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Real%20Estate/real-estate-business-development.png",
   },
   {
     code: "CX",
     title: "Real Estate Customer Experience",
     description: "Construire une expérience client adaptée aux parcours immobiliers.",
-    items: ["Découverte du projet", "Qualification des besoins", "Parcours client", "Proposition de valeur", "Argumentation", "Suivi", "Relation long terme", "Fidélisation"],
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Real%20Estate/real-estate-customer-experience.png",
   },
   {
     code: "PT",
     title: "PropTech & Digital Business",
     description: "Utiliser les technologies et la data pour développer le business immobilier.",
-    items: ["PropTech", "CRM immobilier", "Acquisition digitale", "Lead generation", "Automatisation", "Data immobilière", "IA appliquée à l’immobilier", "Visibilité digitale"],
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Real%20Estate/proptech-digital-business.png",
   },
 ] as const;
 
@@ -134,9 +142,10 @@ export default async function NtcRealEstatePage() {
               </div>
             </div>
             <div className="hidden rounded-[28px] border border-white/10 bg-white/[0.06] p-6 backdrop-blur lg:block">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">Open Badge</p>
-              <p className="mt-3 text-2xl font-semibold tracking-[-0.03em]">PropTech & Digital Business</p>
-              <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Alternance · Caen</p>
+              <div className="relative mx-auto aspect-square w-full max-w-[220px]">
+                <Image src={badges[3].image} alt="Open Badge PropTech & Digital Business" fill sizes="220px" className="object-contain" />
+              </div>
+              <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">Alternance · Caen</p>
               <p className="mt-2 text-xl font-semibold tracking-[-0.03em]">Développer le business de l’immobilier.</p>
             </div>
           </div>
@@ -184,8 +193,15 @@ export default async function NtcRealEstatePage() {
           <div className="grid gap-8 lg:grid-cols-[.85fr_1.15fr] lg:gap-16">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8c86ff]">Spécialisation Byound</p>
-              <h2 className="mt-5 text-[clamp(2.5rem,5vw,5rem)] font-semibold leading-[0.92] tracking-[-0.055em]">Real Estate.</h2>
-              <p className="mt-3 max-w-md text-base leading-relaxed text-white/55">Comprendre le marché. Développer les opportunités.</p>
+              <div className="mt-5 flex items-center gap-5">
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image src={REAL_ESTATE_BADGE} alt="Badge de spécialisation Byound Real Estate" fill sizes="112px" className="object-contain" />
+                </div>
+                <div>
+                  <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-semibold leading-[0.92] tracking-[-0.055em]">Real Estate.</h2>
+                  <p className="mt-3 max-w-md text-base leading-relaxed text-white/55">Comprendre le marché. Développer les opportunités.</p>
+                </div>
+              </div>
             </div>
             <div className="text-base leading-relaxed text-white/60">
               <p>
@@ -199,25 +215,14 @@ export default async function NtcRealEstatePage() {
           <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {badges.map((badge) => (
               <article key={badge.code} className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5">
-                <p className="text-xs font-semibold tracking-[0.18em] text-[#8c86ff]">{badge.code}</p>
-                <h3 className="mt-4 text-base font-semibold">{badge.title}</h3>
-                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">Open Badge</p>
-                <p className="mt-3 text-sm leading-relaxed text-white/60">{badge.description}</p>
-                <ul className="mt-4 space-y-1.5">
-                  {badge.items.map((item) => (
-                    <li key={item} className="text-xs leading-snug text-white/45">{item}</li>
-                  ))}
-                </ul>
+                <div className="relative mx-auto aspect-square w-full max-w-[140px]">
+                  <Image src={badge.image} alt={`Open Badge ${badge.title}`} fill sizes="140px" className="object-contain" />
+                </div>
+                <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">Open Badge · {badge.code}</p>
+                <h3 className="mt-2 text-base font-semibold">{badge.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/50">{badge.description}</p>
               </article>
             ))}
-          </div>
-          <div className="mt-6 grid gap-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 sm:grid-cols-[auto_1fr] sm:items-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 text-lg font-semibold">B</div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8c86ff]">Badge de spécialisation Byound</p>
-              <h3 className="mt-1 text-xl font-semibold">Real Estate</h3>
-              <p className="mt-1 text-sm text-white/55">Attribué après validation de l’ensemble des compétences de la spécialisation. Conçu avec des professionnels de l’immobilier, des experts du développement commercial et des acteurs de la PropTech.</p>
-            </div>
           </div>
         </div>
       </section>

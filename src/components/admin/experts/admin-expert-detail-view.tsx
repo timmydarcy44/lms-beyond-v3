@@ -59,7 +59,7 @@ export function AdminExpertDetailView({ expert, basePath = "/admin/experts" }: P
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out?.error || "Erreur");
-      toast.success("Action enregistrée — email envoyé si applicable.");
+      toast.success(out.emailed ? "Action enregistrée — email envoyé." : "Modifications enregistrées.");
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Action impossible.");

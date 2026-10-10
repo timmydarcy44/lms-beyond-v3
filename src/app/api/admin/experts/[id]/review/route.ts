@@ -52,7 +52,7 @@ export async function POST(
 
   const { data: expert, error: fetchError } = await supabase
     .from("experts")
-    .select("id,email,first_name,last_name,references")
+    .select("id,email,first_name,last_name,references,review_status")
     .eq("id", id)
     .maybeSingle();
 
@@ -72,7 +72,9 @@ export async function POST(
 
   let review_status: string;
   let is_active: boolean;
+  let emailed = false;
   let references = Array.isArray(expert.references) ? [...expert.references] : [];
+  const alreadyApproved = expert.review_status === "approved";
 
   if (action === "approve") {
     review_status = "approved";
@@ -80,8 +82,11 @@ export async function POST(
 
     await supabase.from("profiles").upsert({ id: expert.id, email, role: "expert" }, { onConflict: "id" });
 
-    const template = getExpertApprovedEmail({ firstName, dashboardLink });
-    await sendEmail({ to: email, subject: template.subject, html: template.html, from: EDGE_COCKPIT_FROM });
+    if (!alreadyApproved) {
+      const template = getExpertApprovedEmail({ firstName, dashboardLink });
+      await sendEmail({ to: email, subject: template.subject, html: template.html, from: EDGE_COCKPIT_FROM });
+      emailed = true;
+    }
   } else if (action === "reject") {
     review_status = "rejected";
     is_active = false;
@@ -91,6 +96,7 @@ export async function POST(
     ];
     const template = getExpertRejectedEmail({ firstName, reason: message });
     await sendEmail({ to: email, subject: template.subject, html: template.html, from: EDGE_COCKPIT_FROM });
+    emailed = true;
   } else {
     review_status = "needs_info";
     is_active = false;
@@ -100,6 +106,7 @@ export async function POST(
     ];
     const template = getExpertNeedsInfoEmail({ firstName, message });
     await sendEmail({ to: email, subject: template.subject, html: template.html, from: EDGE_COCKPIT_FROM });
+    emailed = true;
   }
 
   const { error: updateError } = await supabase
@@ -117,5 +124,5 @@ export async function POST(
   revalidatePath(`/super/experts/${id}`);
   revalidatePath("/dashboard/expert");
 
-  return NextResponse.json({ success: true, review_status, is_active });
+  return NextResponse.json({ success: true, review_status, is_active, emailed });
 }

@@ -155,51 +155,69 @@ export function getEdgePremiumConfig(host?: string | null) {
       ],
       columns: [
         {
-          title: "Business & Sales",
-          links: [
-            { label: "AI Business", href: R.ecoleNtcAiBusiness },
-            { label: "Business Sport", href: R.ecoleNtcBusinessSport },
-            { label: "Real Estate", href: R.ecoleNtcRealEstate },
+          title: "Après le bac",
+          links: [],
+          groups: [
+            {
+              title: "Business et sales",
+              links: [
+                { label: "AI Business", href: R.ecoleNtcAiBusiness },
+                { label: "Business Sport", href: R.ecoleNtcBusinessSport },
+                { label: "Real Estate", href: R.ecoleNtcRealEstate },
+              ],
+            },
+            {
+              title: "Retail et luxury",
+              links: [
+                { label: "Retail Experience", href: `${R.alternance}#mem-retail-experience` },
+                { label: "Merchandising", href: `${R.alternance}#mem-merchandising` },
+                { label: "Luxury & Premium", href: `${R.alternance}#mem-luxury-premium` },
+                { label: "Sport Retail", href: `${R.alternance}#mem-sport-retail` },
+              ],
+            },
           ],
         },
         {
-          title: "Retail & Luxury",
-          links: [
-            { label: "Retail Experience", href: `${R.alternance}#mem-retail-experience` },
-            { label: "Merchandising", href: `${R.alternance}#mem-merchandising` },
-            { label: "Luxury & Premium", href: `${R.alternance}#mem-luxury-premium` },
-            { label: "Sport Retail", href: `${R.alternance}#mem-sport-retail` },
+          title: "Après le BTS ou équivalent",
+          links: [],
+          groups: [
+            {
+              title: "Management",
+              links: [
+                { label: "AI Management", href: `${R.alternance}#rem-ai-management` },
+                { label: "Business Performance", href: `${R.alternance}#rem-business-performance` },
+                { label: "Transition & Innovation", href: `${R.alternance}#rem-transition-innovation` },
+              ],
+            },
+            {
+              title: "Business Development",
+              links: [
+                { label: "Growth & Acquisition", href: `${R.alternance}#rdc-growth-acquisition` },
+                { label: "Entrepreneurship", href: `${R.alternance}#rdc-entrepreneurship` },
+                { label: "International Business", href: `${R.alternance}#rdc-international-business` },
+                { label: "Strategic Partnerships", href: `${R.alternance}#rdc-strategic-partnerships` },
+              ],
+            },
           ],
         },
         {
-          title: "Management",
-          links: [
-            { label: "AI Management", href: `${R.alternance}#rem-ai-management` },
-            { label: "Business Performance", href: `${R.alternance}#rem-business-performance` },
-            { label: "Transition & Innovation", href: `${R.alternance}#rem-transition-innovation` },
-          ],
-        },
-        {
-          title: "Business Development",
-          links: [
-            { label: "Growth & Acquisition", href: `${R.alternance}#rdc-growth-acquisition` },
-            { label: "Entrepreneurship", href: `${R.alternance}#rdc-entrepreneurship` },
-            { label: "International Business", href: `${R.alternance}#rdc-international-business` },
-            { label: "Strategic Partnerships", href: `${R.alternance}#rdc-strategic-partnerships` },
-          ],
-        },
-        {
-          title: "Candidater",
-          links: [
-            { label: "Déposer ma candidature", href: R.ecoleCandidater },
-            { label: "Prendre rendez-vous", href: R.contact },
-          ],
-        },
-        {
-          title: "Financement",
-          links: [
-            { label: "Financer ma formation", href: R.financement },
-            { label: "Découvrir les aides", href: R.financement },
+          title: "",
+          links: [],
+          groups: [
+            {
+              title: "Candidater",
+              links: [
+                { label: "Déposer ma candidature", href: R.ecoleCandidater },
+                { label: "Prendre rendez-vous", href: R.contact },
+              ],
+            },
+            {
+              title: "Financement",
+              links: [
+                { label: "Financer ma formation", href: R.financement },
+                { label: "Découvrir les aides", href: R.financement },
+              ],
+            },
           ],
         },
       ],
@@ -339,9 +357,10 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
     {
       id: "alternants",
       label: "École",
-      links: config.megaApprenants.columns.flatMap((col) =>
-        col.links.map((link) => ({ label: link.label, href: link.href })),
-      ),
+      links: config.megaApprenants.columns.flatMap((col) => {
+        const grouped = "groups" in col ? col.groups.flatMap((group) => group.links) : [];
+        return [...col.links, ...grouped].map((link) => ({ label: link.label, href: link.href }));
+      }),
     },
     {
       id: "entreprises",

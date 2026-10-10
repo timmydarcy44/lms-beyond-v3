@@ -141,10 +141,11 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
           <form
             onClick={(event) => event.stopPropagation()}
             onSubmit={(event) => void requestPdf(event)}
-            className="w-full max-w-md rounded-[28px] bg-white p-6 text-[#070b1f] shadow-2xl"
+            className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#0c1730] p-6 text-white shadow-[0_30px_80px_rgba(0,6,20,0.45)]"
           >
-            <h2 className="text-lg font-semibold tracking-[-0.02em]">Télécharger le programme</h2>
-            <p className="mt-1 text-sm text-black/55">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">Byound School</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">Télécharger le programme</h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/60">
               Indiquez vos coordonnées pour recevoir la fiche du cursus.
             </p>
             <div className="mt-5 grid gap-3">
@@ -156,7 +157,7 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
                   ["phone", "Téléphone", "tel"],
                 ] as const
               ).map(([key, label, type]) => (
-                <label key={key} className="text-sm font-medium">
+                <label key={key} className="text-sm font-medium text-white/80">
                   {label}
                   <input
                     required
@@ -164,24 +165,24 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
                     autoComplete={key === "email" ? "email" : key === "phone" ? "tel" : key === "firstName" ? "given-name" : "family-name"}
                     value={lead[key]}
                     onChange={(event) => setLead({ ...lead, [key]: event.target.value })}
-                    className="mt-1.5 h-11 w-full rounded-xl border border-black/10 bg-[#f7f8fb] px-3 text-sm font-normal outline-none focus:border-[#3b82f6]"
+                    className="mt-1.5 h-11 w-full rounded-xl border border-white/10 bg-[#071225] px-3 text-sm font-normal text-white outline-none placeholder:text-white/30 focus:border-[#6f6cff]"
                   />
                 </label>
               ))}
             </div>
-            {formError ? <p className="mt-3 text-sm text-rose-600">{formError}</p> : null}
+            {formError ? <p className="mt-3 text-sm text-rose-300">{formError}</p> : null}
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={() => setFormOpen(false)}
-                className="h-11 flex-1 rounded-full border border-black/10 text-sm font-semibold"
+                className="h-11 flex-1 rounded-full border border-white/15 text-sm font-semibold text-white/80"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={submitting || !facts.programPdfUrl}
-                className="h-11 flex-1 rounded-full bg-[#3b82f6] text-sm font-semibold text-white disabled:opacity-50"
+                className="h-11 flex-1 rounded-full bg-[#5b5cf6] text-sm font-semibold text-white disabled:opacity-50"
               >
                 {submitting ? "Envoi…" : "Télécharger"}
               </button>

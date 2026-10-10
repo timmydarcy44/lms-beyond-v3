@@ -22,6 +22,7 @@ export type ByoundProgramFacts = {
   level: string;
   seatsAvailable: string;
   programPdfUrl: string;
+  heroImageUrl: string;
   candidaterHref: string;
 };
 
@@ -58,6 +59,7 @@ export function defaultByoundProgramFacts(
     level: familyLevel(specialization),
     seatsAvailable: "15",
     programPdfUrl: "",
+    heroImageUrl: "",
     candidaterHref: candidaterHref(specialization),
   };
 }
@@ -87,5 +89,6 @@ export function mergeByoundProgramFacts(
     level: text("level", defaults.level),
     seatsAvailable: text("seats_available", defaults.seatsAvailable),
     programPdfUrl: String(row.program_pdf_url ?? "").trim(),
+    heroImageUrl: String(row.hero_image_url ?? "").trim(),
   };
 }

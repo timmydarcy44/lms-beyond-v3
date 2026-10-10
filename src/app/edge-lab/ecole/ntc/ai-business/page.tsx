@@ -139,7 +139,7 @@ export default async function NtcAiBusinessPage() {
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
         <div
           className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-30 lg:w-[58%]"
-          style={{ backgroundImage: `url("${EDGE_PREMIUM_IMAGES.business}")` }}
+          style={{ backgroundImage: `url("${facts.heroImageUrl || EDGE_PREMIUM_IMAGES.business}")` }}
           aria-hidden
         />
         <div

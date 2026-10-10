@@ -7,6 +7,39 @@ type CfaEmailTemplateOptions = {
   cta?: { label: string; href: string };
 };
 
+export function cfaDarkEmailTemplate({
+  eyebrow,
+  title,
+  body,
+}: CfaEmailTemplateOptions): string {
+  return `<!doctype html>
+<html lang="fr">
+  <body style="margin:0;background:#071225;color:#f8fbff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#071225">
+      <tr>
+        <td align="center" style="padding:32px 16px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#10243f;border-radius:28px;overflow:hidden">
+            <tr>
+              <td align="center" style="padding:40px 32px 8px">
+                <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="118" style="display:block;width:118px;height:auto;margin:0 auto" />
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:20px 36px 44px">
+                ${eyebrow ? `<p style="margin:0 0 16px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#8c86ff">${eyebrow}</p>` : ""}
+                <h1 style="max-width:460px;margin:0 auto;font-size:36px;line-height:1.05;letter-spacing:-1.4px;font-weight:800;color:#ffffff">${title}</h1>
+                <div style="max-width:440px;margin:24px auto 0;font-size:16px;line-height:1.6;color:#d5e0f2;text-align:left">${body}</div>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#91a6c8">Byound School · edgebs.fr</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 export function cfaEmailTemplate({
   eyebrow,
   title,

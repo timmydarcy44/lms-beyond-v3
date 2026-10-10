@@ -10,7 +10,6 @@ import {
   getCfaSpecializationLabel,
   type CfaApplication,
   type CfaApplicationStatus,
-  type CfaProgramDownload,
 } from "@/lib/cfa-applications";
 import { cn } from "@/lib/utils";
 import {
@@ -21,18 +20,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const downloadColumn = {
-  id: "brochure",
-  label: "Téléchargement fiche cursus",
-  accent: "bg-cyan-400",
-} as const;
-
 const columns: {
-  id: "application" | "interview" | "review" | "administrative" | "admitted" | "rejected";
+  id: "brochure" | "application" | "interview" | "review" | "administrative" | "admitted" | "rejected";
   label: string;
   statuses: CfaApplicationStatus[];
   accent: string;
 }[] = [
+  {
+    id: "brochure",
+    label: "Téléchargement fiche cursus",
+    statuses: ["brochure"],
+    accent: "bg-cyan-400",
+  },
   {
     id: "application",
     label: "Application",
@@ -80,13 +79,10 @@ const ADMIN_DOCUMENT_LABELS: Record<string, string> = {
 
 export function CfaPipelineClient() {
   const [applications, setApplications] = useState<CfaApplication[]>([]);
-  const [downloads, setDownloads] = useState<CfaProgramDownload[]>([]);
-  const [selectedDownload, setSelectedDownload] = useState<CfaProgramDownload | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [migrationRequired, setMigrationRequired] = useState(false);
-  const [downloadsMigrationRequired, setDownloadsMigrationRequired] = useState(false);
   const [selected, setSelected] = useState<CfaApplication | null>(null);
   const [interviewAt, setInterviewAt] = useState("");
   const [interviewNotes, setInterviewNotes] = useState("");
@@ -100,9 +96,7 @@ export function CfaPipelineClient() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Chargement impossible");
       setApplications(result.applications ?? []);
-      setDownloads(result.downloads ?? []);
       setMigrationRequired(Boolean(result.migrationRequired));
-      setDownloadsMigrationRequired(Boolean(result.downloadsMigrationRequired));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Chargement impossible");
     } finally {
@@ -248,11 +242,6 @@ export function CfaPipelineClient() {
           Applique la migration CFA pour activer le pipeline des candidatures.
         </div>
       ) : null}
-      {downloadsMigrationRequired ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Applique la migration 20261010180000_cfa_program_downloads.sql pour afficher les téléchargements de fiches.
-        </div>
-      ) : null}
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           {error}
@@ -266,49 +255,6 @@ export function CfaPipelineClient() {
       ) : (
         <div className="-mx-3 min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-2 sm:-mx-6">
           <div className="flex w-max min-w-full flex-nowrap gap-4 px-3 pb-5 sm:px-6">
-          <section className="super-glass-panel flex h-[min(72vh,760px)] w-[280px] min-w-[280px] max-w-[280px] shrink-0 flex-col rounded-2xl border border-white/10 p-3">
-            <header className="flex shrink-0 items-center justify-between px-1 py-2">
-              <div className="flex items-center gap-2">
-                <span className={cn("h-2 w-2 rounded-full", downloadColumn.accent)} />
-                <h2 className="text-sm font-semibold text-gray-800">{downloadColumn.label}</h2>
-              </div>
-              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-gray-500">
-                {downloads.length}
-              </span>
-            </header>
-            <div className="mt-2 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-              {downloads.map((download) => (
-                <article
-                  key={download.id}
-                  onClick={() => setSelectedDownload(download)}
-                  className="cursor-pointer rounded-xl border border-white/10 bg-[#10284d]/80 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-[#153461] hover:shadow-xl"
-                >
-                  <h3 className="truncate text-sm font-semibold text-gray-950">
-                    {download.first_name} {download.last_name}
-                  </h3>
-                  <p className="mt-1 truncate text-xs text-gray-500">
-                    {getCfaSpecializationLabel(download.specialization)}
-                  </p>
-                  <div className="mt-4 space-y-2 text-xs text-gray-500">
-                    <p className="flex items-center gap-2 truncate">
-                      <Mail className="h-3.5 w-3.5 shrink-0" />
-                      {download.email}
-                    </p>
-                    <p className="truncate">{download.phone}</p>
-                    <p className="flex items-center gap-2">
-                      <Clock3 className="h-3.5 w-3.5 shrink-0" />
-                      {new Date(download.created_at).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
-                </article>
-              ))}
-              {downloads.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-200 px-3 py-8 text-center text-xs text-gray-400">
-                  Aucun téléchargement
-                </div>
-              ) : null}
-            </div>
-          </section>
           {columns.map((column) => {
             const items = applications.filter((application) =>
               column.statuses.includes(application.status),
@@ -389,7 +335,7 @@ export function CfaPipelineClient() {
                   ))}
                   {items.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-gray-200 px-3 py-8 text-center text-xs text-gray-400">
-                      Aucun candidat
+                      {column.id === "brochure" ? "Aucun téléchargement" : "Aucun candidat"}
                     </div>
                   ) : null}
                 </div>
@@ -399,27 +345,6 @@ export function CfaPipelineClient() {
           </div>
         </div>
       )}
-      <Dialog open={Boolean(selectedDownload)} onOpenChange={(open) => !open && setSelectedDownload(null)}>
-        <DialogContent className="cfa-revolut-sheet border-0 sm:max-w-md">
-          {selectedDownload ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedDownload.first_name} {selectedDownload.last_name}
-                </DialogTitle>
-                <DialogDescription>Téléchargement fiche cursus</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2 text-sm text-gray-200">
-                <p><strong>Nom :</strong> {selectedDownload.last_name}</p>
-                <p><strong>Prénom :</strong> {selectedDownload.first_name}</p>
-                <p><strong>Adresse mail :</strong> {selectedDownload.email}</p>
-                <p><strong>Téléphone :</strong> {selectedDownload.phone}</p>
-                <p><strong>Cursus :</strong> {getCfaSpecializationLabel(selectedDownload.specialization)}</p>
-              </div>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="cfa-revolut-sheet cfa-print-sheet max-h-[92vh] overflow-y-auto border-0 p-0 sm:max-w-3xl">
           {selected ? (

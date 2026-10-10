@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FileUp, GraduationCap, Loader2, Save } from "lucide-react";
+import { FileUp, GraduationCap, ImagePlus, Loader2, Save } from "lucide-react";
 
 import type { ByoundProgramFacts } from "@/lib/byound-school/program-facts";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ export function ByoundFormationsAdminClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
 
@@ -82,6 +83,33 @@ export function ByoundFormationsAdminClient() {
       setError(cause instanceof Error ? cause.message : "Envoi du PDF impossible.");
     } finally {
       setUploadingPdf(false);
+    }
+  }
+
+  async function uploadHero(file: File | null) {
+    if (!draft || !file) return;
+    setUploadingHero(true);
+    setError("");
+    setSaved("");
+    try {
+      const body = new FormData();
+      body.set("specialization", draft.specialization);
+      body.set("file", file);
+      const response = await fetch("/api/super-admin/byound-programs/hero", {
+        method: "POST",
+        body,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Envoi de l’image impossible.");
+      setPrograms(result.programs ?? []);
+      const next = result.program ?? { ...draft, heroImageUrl: result.heroImageUrl };
+      setDraft(next);
+      setSelected(next);
+      setSaved("Image de couverture enregistrée.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Envoi de l’image impossible.");
+    } finally {
+      setUploadingHero(false);
     }
   }
 
@@ -227,6 +255,33 @@ export function ByoundFormationsAdminClient() {
                 {draft.programPdfUrl
                   ? "Lien créé. Le bouton public proposera ce fichier après les coordonnées."
                   : "Aucun PDF pour le moment."}
+              </span>
+            </label>
+            <label className="text-sm text-white/70 sm:col-span-2">
+              Image de couverture
+              <span className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
+                {uploadingHero ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />
+                ) : (
+                  <ImagePlus className="h-4 w-4 text-indigo-300" />
+                )}
+                {uploadingHero ? "Envoi de l’image…" : "Choisir une image"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={uploadingHero}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    event.target.value = "";
+                    void uploadHero(file);
+                  }}
+                />
+              </span>
+              <span className="mt-2 block text-xs text-white/45">
+                {draft.heroImageUrl
+                  ? "Cette image remplace le visuel en transparence de la page."
+                  : "Sans image, la page garde son visuel actuel."}
               </span>
             </label>
           </div>

@@ -140,7 +140,7 @@ export default async function NtcBusinessSportPage() {
   return (
     <EdgePremiumShell overlayNav showTopBar={false}>
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
-        <div className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-35 lg:w-[58%]" style={{ backgroundImage: `url("${HERO}")` }} aria-hidden />
+        <div className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-35 lg:w-[58%]" style={{ backgroundImage: `url("${facts.heroImageUrl || HERO}")` }} aria-hidden />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.96)_40%,rgba(7,11,31,.38)_78%,rgba(7,11,31,.7)_100%)]" aria-hidden />
         <div className="relative mx-auto flex min-h-[92svh] max-w-7xl items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20 lg:px-10 lg:pb-24">
           <div className="grid w-full items-end gap-10 lg:grid-cols-[1.15fr_.85fr]">

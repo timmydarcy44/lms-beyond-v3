@@ -42,12 +42,21 @@ export async function PATCH(request: NextRequest) {
     level: String(body?.level ?? "").trim(),
     seats_available: String(body?.seatsAvailable ?? "").trim(),
     program_pdf_url: String(body?.programPdfUrl ?? "").trim(),
+    hero_image_url: String(body?.heroImageUrl ?? "").trim(),
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await db.from("byound_school_programs").upsert(patch, {
+  let { error } = await db.from("byound_school_programs").upsert(patch, {
     onConflict: "specialization",
   });
+  if (error && (error.code === "42703" || error.message.includes("hero_image_url"))) {
+    const withoutHero = { ...patch };
+    delete withoutHero.hero_image_url;
+    const retry = await db.from("byound_school_programs").upsert(withoutHero, {
+      onConflict: "specialization",
+    });
+    error = retry.error;
+  }
 
   if (error) {
     return NextResponse.json(

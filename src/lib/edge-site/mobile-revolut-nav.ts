@@ -32,13 +32,21 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
       label: "École",
       discoverHref: routes.alternance,
       discoverLabel: megaApprenants.headerTitle,
-      sections: megaApprenants.columns.map((col) => ({
-        title: col.title,
-        links: col.links.map((link) => ({
-          label: link.label,
-          href: link.href,
-        })),
-      })),
+      sections: megaApprenants.columns.flatMap((col) => {
+        const groups = "groups" in col ? col.groups : [];
+        if (groups.length > 0) {
+          return groups.map((group) => ({
+            title: col.title ? `${col.title} · ${group.title}` : group.title,
+            links: group.links.map((link) => ({ label: link.label, href: link.href })),
+          }));
+        }
+        return [
+          {
+            title: col.title,
+            links: col.links.map((link) => ({ label: link.label, href: link.href })),
+          },
+        ];
+      }),
       editorialTitle: "CFA Byound — rentrée 2027",
       editorialCtaLabel: "Manifestez votre intérêt",
       editorialCtaHref: routes.contact,

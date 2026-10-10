@@ -88,42 +88,58 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose, light = false }: Pa
         </div>
 
         <div className={`mt-11 grid gap-10 ${gridClass} lg:gap-12`}>
-          {data.columns.map((col) => (
-            <div key={col.title}>
-              <p
-                className={cn(
-                  "text-[11px] font-semibold uppercase tracking-[0.2em]",
-                  light ? "text-neutral-500" : "text-white/45",
-                )}
-              >
-                {col.title}
-              </p>
-              <ul className="mt-5 space-y-1">
-                {col.links.map((link) => {
-                  const featured = "featured" in link && link.featured;
-                  return (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className={cn(
-                          "block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                          featured
-                            ? "edge-mega-featured relative overflow-hidden text-white"
-                            : light
-                              ? "text-neutral-800 hover:bg-black/[0.04] hover:text-neutral-950"
-                              : "text-white hover:bg-white/[0.08] hover:text-white",
-                        )}
-                        role="menuitem"
-                        onClick={onClose}
-                      >
-                        <span className="relative z-[1]">{link.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+          {data.columns.map((col) => {
+            const groups = "groups" in col ? col.groups : [{ title: col.title, links: col.links }];
+            return (
+              <div key={col.title || groups.map((group) => group.title).join("-")}>
+                {col.title ? (
+                  <p
+                    className={cn(
+                      "text-[11px] font-semibold uppercase tracking-[0.2em]",
+                      light ? "text-neutral-500" : "text-white/45",
+                    )}
+                  >
+                    {col.title}
+                  </p>
+                ) : null}
+                <div className={cn("space-y-7", col.title && "mt-5")}>
+                  {groups.map((group) => (
+                    <div key={group.title}>
+                      {"groups" in col ? (
+                        <p className={cn("text-sm font-semibold", light ? "text-neutral-950" : "text-white")}>
+                          {group.title}
+                        </p>
+                      ) : null}
+                      <ul className={cn("space-y-1", "groups" in col && "mt-2")}>
+                        {group.links.map((link) => {
+                          const featured = "featured" in link && link.featured;
+                          return (
+                            <li key={link.label}>
+                              <Link
+                                href={link.href}
+                                className={cn(
+                                  "block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                                  featured
+                                    ? "edge-mega-featured relative overflow-hidden text-white"
+                                    : light
+                                      ? "text-neutral-800 hover:bg-black/[0.04] hover:text-neutral-950"
+                                      : "text-white/80 hover:bg-white/[0.08] hover:text-white",
+                                )}
+                                role="menuitem"
+                                onClick={onClose}
+                              >
+                                <span className="relative z-[1]">{link.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

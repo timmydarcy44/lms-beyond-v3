@@ -26,6 +26,7 @@ export type CfaPrivateFile = {
 };
 
 export const CFA_APPLICATION_STATUSES = [
+  "brochure",
   "profile",
   "challenge",
   "dossier",
@@ -39,6 +40,7 @@ export const CFA_APPLICATION_STATUSES = [
 export type CfaApplicationStatus = (typeof CFA_APPLICATION_STATUSES)[number];
 
 export const CFA_STATUS_LABELS: Record<CfaApplicationStatus, string> = {
+  brochure: "Téléchargement fiche cursus",
   profile: "Application",
   challenge: "Challenge",
   dossier: "Dossier",

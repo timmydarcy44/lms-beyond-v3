@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
+import { CONTRIBUTOR_ROLE_HELP, CONTRIBUTOR_ROLE_LABELS, CONTRIBUTOR_ROLES } from "@/lib/expert/contributor-profile";
 
 type BadgeOption = { id: string; name: string };
 
@@ -58,15 +59,15 @@ export function AddExpertDialog() {
         className="inline-flex h-10 items-center gap-2 rounded-full bg-[#635BFF] px-4 text-sm font-semibold text-white hover:bg-[#554ee6]"
       >
         <Plus className="h-4 w-4" />
-        Formateur
+        Expert / formateur
       </button>
       {open ? (
         <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
           <form onSubmit={(event) => void submit(event)} className="super-nav-dropdown my-8 w-full max-w-2xl rounded-2xl p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">Formateurs</p>
-                <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">Ajouter un formateur</h2>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">Experts et formateurs</p>
+                <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">Ajouter une personne</h2>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
                 <X className="h-4 w-4" />
@@ -80,6 +81,10 @@ export function AddExpertDialog() {
               <label className="block text-xs font-semibold text-[#d5e0f2]">
                 Nom
                 <input name="lastName" required className={fieldClass} />
+              </label>
+              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
+                Poste
+                <input name="jobTitle" placeholder="Responsable commercial hospitalité, Racing 92" className={fieldClass} />
               </label>
               <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
                 Adresse mail
@@ -97,6 +102,20 @@ export function AddExpertDialog() {
                 {photoName ? <span className="mt-1 block text-[11px] text-indigo-200">{photoName}</span> : null}
               </label>
             </div>
+            <fieldset className="mt-5">
+              <legend className="text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">Rôle</legend>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {CONTRIBUTOR_ROLES.map((role) => (
+                  <label key={role} className="rounded-xl border border-white/10 bg-[#071225] px-3 py-3 text-sm text-[#f8fbff]">
+                    <span className="flex items-center gap-2 font-semibold">
+                      <input type="checkbox" name="roles" value={role} className="h-4 w-4 accent-[#635BFF]" />
+                      {CONTRIBUTOR_ROLE_LABELS[role]}
+                    </span>
+                    <span className="mt-1 block pl-6 text-xs text-[#9eb0cc]">{CONTRIBUTOR_ROLE_HELP[role]}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <fieldset className="mt-5">
               <legend className="text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">Cursus</legend>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -126,7 +145,7 @@ export function AddExpertDialog() {
                 Annuler
               </button>
               <button type="submit" disabled={saving} className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white disabled:opacity-60">
-                {saving ? "Création…" : "Créer le formateur"}
+                {saving ? "Création…" : "Créer la fiche"}
               </button>
             </div>
           </form>

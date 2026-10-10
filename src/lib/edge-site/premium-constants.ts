@@ -158,7 +158,7 @@ export function getEdgePremiumConfig(host?: string | null) {
           title: "Business & Sales",
           links: [
             { label: "AI Business", href: R.ecoleNtcAiBusiness },
-            { label: "Business Sport", href: `${R.alternance}#ntc-business-sport` },
+            { label: "Business Sport", href: R.ecoleNtcBusinessSport },
             { label: "Real Estate", href: `${R.alternance}#ntc-real-estate` },
           ],
         },

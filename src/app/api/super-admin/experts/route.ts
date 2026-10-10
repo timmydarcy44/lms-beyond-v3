@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
+import { isContributorRole, withContributorProfile, type ContributorRole } from "@/lib/expert/contributor-profile";
 import { provisionExpertAuthUser } from "@/lib/expert/provision-expert-auth";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -85,10 +86,15 @@ export async function POST(request: NextRequest) {
   const email = clean(form.get("email")).toLowerCase();
   const cursus = form.getAll("cursus").map((value) => String(value)).filter((value) => CURSUS.has(value));
   const badgeIds = form.getAll("badges").map((value) => String(value));
+  const roles = form.getAll("roles").map((value) => String(value)).filter(isContributorRole);
+  const jobTitle = clean(form.get("jobTitle"));
   const photo = form.get("photo");
 
   if (!firstName || !lastName || !email.includes("@")) {
     return NextResponse.json({ error: "Prénom, nom et email sont requis." }, { status: 400 });
+  }
+  if (roles.length === 0) {
+    return NextResponse.json({ error: "Choisissez Expert, Formateur, ou les deux." }, { status: 400 });
   }
 
   const auth = await provisionExpertAuthUser(db, {
@@ -128,7 +134,7 @@ export async function POST(request: NextRequest) {
     email,
     first_name: firstName,
     last_name: lastName,
-    headline: "Formateur CFA",
+    headline: jobTitle || null,
     photo_url: photoUrl,
     avatar_url: photoUrl,
     specialties: cursus.map((value) => CURSUS.get(value) ?? value),
@@ -136,7 +142,7 @@ export async function POST(request: NextRequest) {
     review_status: "approved",
     is_active: true,
     wants_certification: false,
-    references: [],
+    references: withContributorProfile([], { roles: roles as ContributorRole[], jobTitle }),
   };
 
   let { error } = await db.from("experts").upsert(row, { onConflict: "id" });

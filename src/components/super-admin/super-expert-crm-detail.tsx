@@ -39,6 +39,7 @@ import {
 } from "@/lib/expert/expert-crm-utils";
 import { EDGE_CHIP_CLASSES, EDGE_STATUS_CLASSES } from "@/lib/edge-site/design-system";
 import { ExpertAssignmentsPanel } from "@/components/admin/experts/expert-assignments-panel";
+import { CONTRIBUTOR_ROLE_LABELS, contributorDisplayName, parseContributorProfile } from "@/lib/expert/contributor-profile";
 
 function statusStyles(status: string | null | undefined) {
   const key = status as keyof typeof EDGE_STATUS_CLASSES;
@@ -120,6 +121,7 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
   const photo = expert.photo_url || expert.avatar_url;
   const firstName = expert.first_name ?? "";
   const lastName = expert.last_name ?? "";
+  const contributor = parseContributorProfile(expert.references, expert.headline);
 
   const runReview = async (action: "approve" | "reject" | "needs_info") => {
     if ((action === "reject" || action === "needs_info") && !message.trim()) {
@@ -219,9 +221,14 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
                   ) : null}
                 </div>
                 <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  {firstName} {lastName}
+                  {contributorDisplayName(firstName, lastName)}
                 </h1>
-                <p className="mt-1 text-base text-slate-600">{expert.headline || "—"}</p>
+                <p className="mt-1 text-base text-slate-600">{contributor.jobTitle || "Poste à préciser"}</p>
+                {contributor.roles.length > 0 ? (
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#635BFF]">
+                    {contributor.roles.map((role) => CONTRIBUTOR_ROLE_LABELS[role]).join(" · ")}
+                  </p>
+                ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
                   {expert.email ? (
                     <a href={`mailto:${expert.email}`} className="inline-flex items-center gap-1.5 hover:text-[#635BFF]">
@@ -377,6 +384,10 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
           expertId={expert.id}
           specialties={expert.specialties}
           openBadges={expert.open_badges}
+          references={expert.references}
+          headline={expert.headline}
+          firstName={expert.first_name}
+          lastName={expert.last_name}
         />
       </div>
 

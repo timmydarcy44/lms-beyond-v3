@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
+import {
+  CONTRIBUTOR_ROLE_HELP,
+  CONTRIBUTOR_ROLE_LABELS,
+  CONTRIBUTOR_ROLES,
+  contributorDisplayName,
+  parseContributorProfile,
+  type ContributorRole,
+} from "@/lib/expert/contributor-profile";
 
 type BadgeOption = { id: string; name: string };
 
@@ -10,10 +18,18 @@ export function ExpertAssignmentsPanel({
   expertId,
   specialties,
   openBadges,
+  references,
+  headline,
+  firstName,
+  lastName,
 }: {
   expertId: string;
   specialties: string[] | null;
   openBadges: unknown;
+  references: unknown;
+  headline: string | null;
+  firstName: string | null;
+  lastName: string | null;
 }) {
   const router = useRouter();
   const [badges, setBadges] = useState<BadgeOption[]>([]);
@@ -26,6 +42,9 @@ export function ExpertAssignmentsPanel({
       .map((badge) => (badge && typeof badge === "object" ? String((badge as { id?: string }).id ?? "") : ""))
       .filter(Boolean);
   });
+  const initialProfile = parseContributorProfile(references, headline);
+  const [roles, setRoles] = useState<ContributorRole[]>(initialProfile.roles);
+  const [jobTitle, setJobTitle] = useState(initialProfile.jobTitle);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -41,6 +60,10 @@ export function ExpertAssignmentsPanel({
   }
 
   async function save() {
+    if (roles.length === 0) {
+      setMessage("Choisissez Expert, Formateur, ou les deux.");
+      return;
+    }
     setSaving(true);
     setMessage("");
     try {
@@ -51,6 +74,8 @@ export function ExpertAssignmentsPanel({
           action: "set_assignments",
           cursus,
           openBadges: badges.filter((badge) => selectedBadges.includes(badge.id)),
+          roles,
+          jobTitle,
         }),
       });
       const result = await response.json();
@@ -66,8 +91,37 @@ export function ExpertAssignmentsPanel({
 
   return (
     <section className="rounded-2xl border border-white/10 bg-[#10243f] p-5">
-      <h2 className="text-base font-semibold text-[#f8fbff]">Cursus et open badges</h2>
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+      <h2 className="text-base font-semibold text-[#f8fbff]">Rôle, légende et cursus</h2>
+      <p className="mt-2 text-sm text-[#d5e0f2]">
+        {contributorDisplayName(firstName, lastName) || "Nom à préciser"}
+        {jobTitle ? ` — ${jobTitle}` : ""}
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {CONTRIBUTOR_ROLES.map((role) => (
+          <label key={role} className="rounded-xl border border-white/10 bg-[#071225] px-3 py-3 text-sm text-[#f8fbff]">
+            <span className="flex items-center gap-2 font-semibold">
+              <input
+                type="checkbox"
+                checked={roles.includes(role)}
+                onChange={() => toggle(roles, role, (next) => setRoles(next as ContributorRole[]))}
+                className="h-4 w-4 accent-[#635BFF]"
+              />
+              {CONTRIBUTOR_ROLE_LABELS[role]}
+            </span>
+            <span className="mt-1 block pl-6 text-xs text-[#9eb0cc]">{CONTRIBUTOR_ROLE_HELP[role]}</span>
+          </label>
+        ))}
+      </div>
+      <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">
+        Poste sous la photo
+        <input
+          value={jobTitle}
+          onChange={(event) => setJobTitle(event.target.value)}
+          placeholder="Responsable commercial hospitalité, Racing 92"
+          className="mt-1 h-10 w-full rounded-lg border border-white/15 bg-[#071225] px-3 text-sm font-normal normal-case tracking-normal text-[#f8fbff] outline-none focus:border-[#635BFF]"
+        />
+      </label>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <fieldset>
           <legend className="text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">Cursus</legend>
           <div className="mt-2 space-y-2">

@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 
 import { NtcEvaluationSection } from "@/components/edge-site/cfa/ntc-evaluation-section";
+import { ProgramContributorsSection } from "@/components/edge-site/cfa/program-contributors-section";
 import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card";
+import { getProgramContributors } from "@/lib/expert/program-contributors";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
@@ -128,7 +130,10 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
 }
 
 export default async function NtcAiBusinessPage() {
-  const facts = await getByoundProgramFacts("ai_business");
+  const [facts, contributors] = await Promise.all([
+    getByoundProgramFacts("ai_business"),
+    getProgramContributors("AI Business"),
+  ]);
   return (
     <EdgePremiumShell overlayNav showTopBar={false}>
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
@@ -340,6 +345,8 @@ export default async function NtcAiBusinessPage() {
           </div>
         </div>
       </section>
+
+      <ProgramContributorsSection people={contributors} />
 
       <section id="programme" className="scroll-mt-28 bg-white py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">

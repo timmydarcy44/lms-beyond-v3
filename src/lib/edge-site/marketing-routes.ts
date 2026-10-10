@@ -10,6 +10,7 @@ export const EDGE_MARKETING_PATHS = {
   formationsBachelor: "/formations/bachelor",
   formationsMastere: "/formations/mastere",
   ecoleNtcAiBusiness: "/ecole/ntc/ai-business",
+  ecoleNtcBusinessSport: "/ecole/ntc/business-sport",
   ecoleCandidater: "/ecole/candidater",
   alternance: "/alternance",
   admissions: "/admissions",

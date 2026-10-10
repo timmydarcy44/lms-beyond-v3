@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { contributorDisplayName, CONTRIBUTOR_ROLE_LABELS, parseContributorProfile } from "@/lib/expert/contributor-profile";
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
 import { AddExpertDialog } from "@/components/admin/experts/add-expert-dialog";
@@ -126,10 +127,19 @@ export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/exp
               </tr>
             ) : (
               filteredExperts.map((expert) => {
-                const name = `${expert.first_name ?? ""} ${expert.last_name ?? ""}`.trim() || "—";
+                const profile = parseContributorProfile(expert.references, expert.headline);
+                const name = contributorDisplayName(expert.first_name, expert.last_name) || "—";
                 return (
                   <tr key={expert.id} className="border-t border-slate-100">
-                    <td className="px-4 py-3 font-medium text-slate-900">{name}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {name}
+                      {profile.jobTitle ? <p className="mt-0.5 text-xs font-normal text-slate-500">{profile.jobTitle}</p> : null}
+                      {profile.roles.length > 0 ? (
+                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#635BFF]">
+                          {profile.roles.map((role) => CONTRIBUTOR_ROLE_LABELS[role]).join(" · ")}
+                        </p>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{expert.email ?? "—"}</td>
                     <td className="px-4 py-3 text-slate-500">
                       {(expert.specialties ?? []).slice(0, 2).join(", ") || "—"}

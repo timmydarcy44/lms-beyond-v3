@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
+import { isContributorRole, withContributorProfile, type ContributorRole } from "@/lib/expert/contributor-profile";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
@@ -60,6 +61,12 @@ export async function POST(
           name: String(badge?.name ?? ""),
         }))
         .filter((badge: { id: string; name: string }) => badge.id && badge.name);
+      const roles = Array.isArray(body.roles)
+        ? body.roles.map((value: unknown) => String(value)).filter(isContributorRole)
+        : [];
+      const jobTitle = typeof body.jobTitle === "string" ? body.jobTitle.trim() : "";
+      patch.headline = jobTitle || null;
+      patch.references = withContributorProfile(references, { roles: roles as ContributorRole[], jobTitle });
     } else if (action === "add_note") {
       const note = typeof body.note === "string" ? body.note.trim() : "";
       if (!note) {

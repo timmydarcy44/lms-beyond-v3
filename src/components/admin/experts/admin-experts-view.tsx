@@ -74,7 +74,17 @@ export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/exp
           <h1 className="text-2xl font-bold text-slate-900">Experts / Formateurs</h1>
           <p className="mt-1 text-sm text-slate-600">Validation des candidatures formateurs et experts Byound.</p>
         </div>
-        {basePath.startsWith("/super") ? <AddExpertDialog /> : null}
+        {basePath.startsWith("/super") ? (
+          <div className="flex flex-wrap gap-2">
+            <AddExpertDialog />
+            <Link
+              href="/super/open-badges/badgeclasses/new"
+              className="inline-flex h-10 items-center rounded-full border border-[#635BFF] px-4 text-sm font-semibold text-[#635BFF] hover:bg-[#635BFF]/10"
+            >
+              Créer un open badge
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <div className="relative max-w-md">

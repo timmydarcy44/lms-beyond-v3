@@ -16,7 +16,7 @@ import { ProgramContributorsSection } from "@/components/edge-site/cfa/program-c
 import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
-import { getProgramContributors } from "@/lib/expert/program-contributors";
+import { getContributorByLastName, getProgramContributors, type ProgramContributor } from "@/lib/expert/program-contributors";
 
 export const metadata: Metadata = {
   title: "NTC · Business Sport — Byound School",
@@ -109,15 +109,32 @@ const ecosystem = [
 
 const projectSteps = ["Analyser", "Cartographier", "Cibler", "Construire l’offre", "Prospecter", "Négocier", "Activer et mesurer"] as const;
 
+const YANNICK_GRELIN: ProgramContributor = {
+  id: "yannick-grelin",
+  name: "Yannick GRELIN",
+  jobTitle: "Responsable commercial hospitalité, Racing 92",
+  photoUrl: null,
+  roles: ["expert"],
+};
+
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#5146e5]">{children}</p>;
 }
 
 export default async function NtcBusinessSportPage() {
-  const [facts, contributors] = await Promise.all([
+  const [facts, contributors, yannick] = await Promise.all([
     getByoundProgramFacts("sport_business"),
     getProgramContributors("Business Sport"),
+    getContributorByLastName("grelin"),
   ]);
+  const referenced = yannick
+    ? {
+        ...yannick,
+        jobTitle: yannick.jobTitle && yannick.jobTitle !== "Formateur CFA" ? yannick.jobTitle : YANNICK_GRELIN.jobTitle,
+        photoUrl: yannick.photoUrl || YANNICK_GRELIN.photoUrl,
+      }
+    : YANNICK_GRELIN;
+  const coBuilders = [referenced, ...contributors.filter((person) => person.id !== referenced.id && !person.name.toLowerCase().includes("grelin"))];
 
   return (
     <EdgePremiumShell overlayNav showTopBar={false}>
@@ -246,7 +263,7 @@ export default async function NtcBusinessSportPage() {
         </div>
       </section>
 
-      <ProgramContributorsSection people={contributors} />
+      <ProgramContributorsSection people={coBuilders} title="Ils ont co-construit le référentiel." />
 
       <section id="programme" className="scroll-mt-28 bg-white py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">

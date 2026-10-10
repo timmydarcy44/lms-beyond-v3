@@ -280,6 +280,12 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
             </div>
 
             <div className="flex shrink-0 flex-wrap gap-2">
+              <Link
+                href="/super/open-badges/badgeclasses/new"
+                className="inline-flex items-center rounded-xl bg-[#070b1f] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#152A4A]"
+              >
+                Créer un open badge
+              </Link>
               <button
                 type="button"
                 disabled={loading !== null}

@@ -339,11 +339,69 @@ export const MARKETING_PAGES = {
   }),
 
   businessCompetences: page({
-    meta: { title: "Gestion des compétences — Byound", description: DEFAULT_TAGLINE },
-    label: "Gestion des compétences",
-    hero: { title: "Cartographiez et développez les compétences.", subtitle: "Identifiez les écarts, construisez les parcours, mesurez les progrès.", tone: "dark" },
-    sections: [{ title: "Pilotage", body: "Une vision claire des compétences présentes et à développer." }],
-    ctas: [{ label: "Demander une démo", href: P.businessDemo, variant: "primary" }],
+    meta: {
+      title: "Plateforme de compétences — Byound",
+      description: "Évaluez, développez et valorisez les compétences de vos équipes.",
+    },
+    label: "Plateforme de compétences",
+    hero: {
+      title: "Évaluez, développez et valorisez les compétences de vos équipes.",
+      subtitle:
+        "La plateforme regroupe l'évaluation, le suivi des progrès, les parcours de formation et la valorisation des acquis.",
+      tone: "dark",
+    },
+    sections: [
+      {
+        title: "Évaluation des compétences",
+        body: "Les diagnostics situent le niveau de chaque collaborateur et mettent en évidence les écarts à combler.",
+      },
+      {
+        title: "Suivi des progrès",
+        body: "Les tableaux de bord montrent l'avancement des équipes et les compétences en cours d'acquisition.",
+      },
+      {
+        title: "Parcours de formation",
+        body: "Les résultats orientent vers des formations en intelligence artificielle appliquée, commerce, relation client ou management, en session dédiée ou sur les sessions programmées.",
+      },
+      {
+        title: "Valorisation des acquis",
+        body: "Les Open Badges attestent les compétences validées et les rendent partageables auprès de l'entreprise.",
+      },
+    ],
+    ctas: [{ label: "Parlons de vos besoins", href: P.contact, variant: "primary" }],
+  }),
+
+  lifeReconversion: page({
+    meta: {
+      title: "Reconversion professionnelle — Byound",
+      description: "Préparez un nouveau métier avec un parcours structuré.",
+    },
+    label: "Reconversion professionnelle",
+    hero: {
+      title: "Préparez un nouveau métier avec un parcours structuré.",
+      subtitle:
+        "Des parcours individuels pour changer de métier, avec des prérequis clairs, des modalités explicites et une validation des acquis.",
+      tone: "dark",
+    },
+    sections: [
+      {
+        title: "Parcours",
+        body: "Chaque reconversion suit un enchaînement de formations courtes : intelligence artificielle, prospection, négociation, prise de parole et compétences métier du parcours choisi.",
+      },
+      {
+        title: "Prérequis",
+        body: "Le niveau attendu, l'expérience et les disponibilités sont indiqués avant l'inscription, afin de vérifier que le parcours correspond à votre situation.",
+      },
+      {
+        title: "Modalités",
+        body: "Les parcours se suivent à titre individuel, en présentiel, à distance ou en blended, selon le calendrier des sessions programmées.",
+      },
+      {
+        title: "Validations visées",
+        body: "La progression est attestée par des Open Badges et, lorsque le parcours le prévoit, par une certification. Les outils d'intelligence artificielle servent à s'entraîner et à situer vos acquis.",
+      },
+    ],
+    ctas: [{ label: "Trouver ma formation", href: P.onlineFormations, variant: "primary" }],
   }),
 
   businessRecrutement: page({

@@ -16,7 +16,9 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose, light = false }: Pa
   const gridClass =
     columnCount >= 4
       ? "sm:grid-cols-2 lg:grid-cols-4"
-      : "sm:grid-cols-2 lg:grid-cols-3";
+      : columnCount === 1
+        ? "max-w-xl grid-cols-1"
+        : "sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <div
@@ -128,7 +130,21 @@ export function EdgePremiumMegaColumnsPanel({ data, onClose, light = false }: Pa
                                 role="menuitem"
                                 onClick={onClose}
                               >
-                                <span className="relative z-[1]">{link.label}</span>
+                                <span className="relative z-[1] block">{link.label}</span>
+                                {"description" in link && link.description ? (
+                                  <span
+                                    className={cn(
+                                      "relative z-[1] mt-1 block text-xs font-normal leading-relaxed",
+                                      featured
+                                        ? "text-white/75"
+                                        : light
+                                          ? "text-neutral-500"
+                                          : "text-white/45",
+                                    )}
+                                  >
+                                    {link.description}
+                                  </span>
+                                ) : null}
                               </Link>
                             </li>
                           );

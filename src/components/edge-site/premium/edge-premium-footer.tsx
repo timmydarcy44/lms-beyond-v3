@@ -19,21 +19,17 @@ export function EdgePremiumFooter() {
     {
       title: "Particulier",
       links: [
-        { label: "Formations", href: R.formations },
-        { label: "Certifications", href: R.certifications },
-        { label: "Byound Online", href: R.particulierEdgeOnline },
-        { label: "Financement", href: R.financement },
-        { label: "Contact", href: R.contact },
+        { label: "Formations courtes", href: R.onlineFormations },
+        { label: "Reconversion professionnelle", href: R.particulierReconversion },
+        { label: "Trouver ma formation", href: R.onlineFormations },
       ],
     },
     {
       title: "Business",
       links: [
-        { label: "Solutions", href: R.businessSolutions },
-        { label: "Cas clients", href: R.businessCasClients },
-        { label: "Ressources", href: R.ressources },
-        { label: "Tarifs", href: R.tarifs },
-        { label: "Démo", href: R.businessDemo },
+        { label: "Former vos équipes", href: R.businessFormerEquipes },
+        { label: "Plateforme de compétences", href: R.businessPlateformeCompetences },
+        { label: "Parlons de vos besoins", href: R.contact },
       ],
     },
     {

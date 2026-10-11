@@ -1,7 +1,6 @@
 import { getEdgeMarketingRoutes, type EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
 import { getPillarMegaMenus } from "@/lib/edge-site/pillar-mega-menu-data";
-import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 
 /** Logo navbar / footer — Byound blanc (chrome sombre). */
 export const EDGE_LOGO_PATH =
@@ -224,103 +223,48 @@ export function getEdgePremiumConfig(host?: string | null) {
     },
     megaBusiness: {
       headerTitle: "Byound Business",
-      headerSubtitle:
-        "Former, développer, recruter et piloter les compétences de vos équipes.",
       headerHref: R.business,
       columns: [
         {
-          title: "Former",
+          title: "Offres",
           links: [
-            { label: "Former vos équipes", href: R.businessFormerEquipes, featured: true },
-            { label: "Parcours sur mesure", href: R.businessParcoursSurMesure },
-            { label: "Intra-entreprise", href: R.businessFormerEquipes },
-            { label: "Inter-entreprises", href: R.businessFormerEquipes },
-            { label: "Blended learning", href: R.businessPresentielDistanciel },
-          ],
-        },
-        {
-          title: "Développer",
-          links: [
-            { label: "Diagnostics de compétences", href: R.businessDiagnostics, featured: true },
-            { label: "Cartographier les compétences", href: R.businessCompetences },
-            { label: "Plans de progression", href: R.businessPlansProgression },
-            { label: "Certifications", href: R.businessCertificationsBiz },
-            { label: "Open Badges", href: R.businessOpenBadges, featured: true },
-          ],
-        },
-        {
-          title: "Recruter",
-          links: [
-            { label: "Identifier les talents", href: R.businessIdentifierTalents },
-            { label: "Évaluer les compétences", href: R.businessEvaluerCompetences },
-            { label: "Matching compétences", href: R.businessRecrutement },
-            { label: "Onboarding", href: R.businessOnboarding },
-          ],
-        },
-        {
-          title: "Piloter",
-          links: [
-            { label: "Tableaux de bord", href: R.businessTableauxDeBord },
-            { label: "Analytics", href: R.businessAnalytics },
-            { label: "ROI formation", href: R.businessRoiFormation },
-            { label: "Aide à la décision", href: R.businessAideDecision },
-          ],
-        },
-        {
-          title: "Aide",
-          links: [
-            { label: "Demander une démo", href: R.businessDemo },
-            { label: "Parler à un conseiller", href: R.contact },
-            { label: "Cas clients", href: R.businessCasClients },
-            { label: "Tarifs", href: R.tarifs },
+            {
+              label: "Former vos équipes",
+              href: R.businessFormerEquipes,
+              description:
+                "Des formations concrètes pour développer les compétences de vos collaborateurs.",
+            },
+            {
+              label: "Plateforme de compétences",
+              href: R.businessPlateformeCompetences,
+              description: "Évaluez, développez et valorisez les compétences de vos équipes.",
+            },
           ],
         },
       ],
+      actions: [{ label: "Parlons de vos besoins", href: R.contact, primary: true }],
     },
     megaParticulier: {
       headerTitle: "Byound Life",
-      headerSubtitle:
-        "Bootcamps, formations courtes et parcours pour développer vos compétences — aujourd’hui et à venir.",
       headerHref: R.particulier,
       columns: [
         {
-          title: "Thématiques",
+          title: "Offres",
           links: [
-            { label: "Certifications pro", href: R.particulierCertifications },
-            { label: "IA", href: R.particulierIA },
-            { label: "Management", href: R.particulierManagement },
-            { label: "Vente", href: R.particulierVente },
-            { label: "RH", href: R.particulierRh },
-            { label: "Soft Skills", href: R.particulierSoftSkills },
-          ],
-        },
-        {
-          title: "Développer mes compétences",
-          links: [
-            { label: "Développer mes compétences", href: R.particulierDevelopper },
-            { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL },
-            { label: "Micro-certifications", href: R.particulierMicroCertifications },
-            { label: "Open Badges", href: R.particulierOpenBadges, featured: true },
-          ],
-        },
-        {
-          title: "Financer",
-          links: [
-            { label: "CPF", href: R.particulierCpf },
-            { label: "France Travail", href: R.particulierFranceTravail },
-            { label: "OPCO", href: R.particulierOpco },
-            { label: "Financement personnel", href: R.particulierFinancementPerso },
-          ],
-        },
-        {
-          title: "Évolution pro",
-          links: [
-            { label: "Reconversion", href: R.particulierReconversion },
-            { label: "Coaching", href: R.particulierCoaching },
-            { label: "Accompagnement individuel", href: R.particulierAccompagnement },
+            {
+              label: "Formations courtes",
+              href: R.onlineFormations,
+              description: "Développez une compétence concrète pour avancer dans votre parcours.",
+            },
+            {
+              label: "Reconversion professionnelle",
+              href: R.particulierReconversion,
+              description: "Préparez un nouveau métier avec un parcours structuré.",
+            },
           ],
         },
       ],
+      actions: [{ label: "Trouver ma formation", href: R.onlineFormations, primary: true }],
     },
     routes: R,
   };

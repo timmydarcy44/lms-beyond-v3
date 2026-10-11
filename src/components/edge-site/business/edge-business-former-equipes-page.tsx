@@ -18,8 +18,11 @@ import type { TrainingCoursePublic } from "@/lib/training-courses/types";
 
 const SEARCH_SUGGESTIONS = ["Management", "IA", "Soft skills", "Communication", "RH", "Leadership"];
 
+type Audience = "business" | "life";
+
 type Props = {
   initialCourses: TrainingCoursePublic[];
+  audience?: Audience;
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -38,7 +41,12 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function FormationCard({ course }: { course: TrainingCoursePublic }) {
+function nextDatesLabel(course: TrainingCoursePublic) {
+  const next = course.sessions?.map((session) => session.date).find(Boolean);
+  return next ? `Prochaines dates : ${next}` : "Prochaines dates : sur demande";
+}
+
+function FormationCard({ course, audience }: { course: TrainingCoursePublic; audience: Audience }) {
   const href = edgeMarketingHref(formationDetailPath(course.slug));
   const photoUrl =
     course.cover_url ??
@@ -89,7 +97,9 @@ function FormationCard({ course }: { course: TrainingCoursePublic }) {
 
         <p className="mt-3 flex items-center gap-1.5 text-xs text-[#050505]/45">
           <Users className="h-3.5 w-3.5" />
-          {course.companies_count} entreprises formées · Jusqu&apos;à {course.max_intra_participants ?? 12} participants
+          {audience === "life"
+            ? nextDatesLabel(course)
+            : `${course.companies_count} entreprises formées · Jusqu'à ${course.max_intra_participants ?? 12} participants`}
         </p>
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-5">
@@ -106,7 +116,8 @@ function FormationCard({ course }: { course: TrainingCoursePublic }) {
   );
 }
 
-export function EdgeBusinessFormerEquipesPage({ initialCourses }: Props) {
+export function EdgeBusinessFormerEquipesPage({ initialCourses, audience = "business" }: Props) {
+  const life = audience === "life";
   const { links } = useEdgePremiumConfig();
   const [searchQuery, setSearchQuery] = useState("");
   const [chipId, setChipId] = useState("all");
@@ -124,12 +135,18 @@ export function EdgeBusinessFormerEquipesPage({ initialCourses }: Props) {
           aria-hidden
         />
         <div className="relative mx-auto max-w-4xl text-center">
-          <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-edge-accent-light">Former</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-edge-accent-light">
+            {life ? "Formations courtes" : "Former vos équipes"}
+          </p>
           <h1 className="mt-4 text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white">
-            Formez vos équipes sur les compétences qui font la différence.
+            {life
+              ? "Développez une compétence concrète pour avancer dans votre parcours."
+              : "Des formations concrètes pour développer les compétences de vos collaborateurs."}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/60">
-            Parcours concrets, animés par des spécialistes — trouvez la formation adaptée à vos enjeux.
+            {life
+              ? "Intelligence artificielle, prospection, négociation, prise de parole : chaque formation indique son programme, sa durée, son prix et ses prochaines dates."
+              : "Intelligence artificielle appliquée, commerce, relation client et management. Session dédiée à votre entreprise, ou inscription de salariés aux sessions programmées."}
           </p>
         </div>
       </section>
@@ -197,7 +214,7 @@ export function EdgeBusinessFormerEquipesPage({ initialCourses }: Props) {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {visibleCourses.map((course) => (
-                <FormationCard key={course.slug} course={course} />
+                <FormationCard key={course.slug} course={course} audience={audience} />
               ))}
             </div>
           )}
@@ -206,16 +223,17 @@ export function EdgeBusinessFormerEquipesPage({ initialCourses }: Props) {
 
       <section className="border-t border-[#050505]/8 bg-white px-5 py-14 sm:px-8 lg:px-10">
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <p className="text-lg font-semibold">Besoin d&apos;aide pour choisir ?</p>
+          <p className="text-lg font-semibold">
+            {life ? "Besoin d'aide pour choisir ?" : "Besoin d'une session adaptée à votre entreprise ?"}
+          </p>
           <p className="mt-2 text-sm text-[#050505]/55">
-            Nos conseillers vous orientent vers la formation la plus adaptée à vos équipes.
+            {life
+              ? "Chaque fiche détaille le programme. Les Open Badges attestent la compétence une fois la formation validée."
+              : "Les diagnostics et les Open Badges s'intègrent aux formations : ils situent le niveau de départ et attestent les compétences acquises."}
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <EdgePremiumButton href={links.conseiller} shape="revolut">
-              Parler à un conseiller
-            </EdgePremiumButton>
-            <EdgePremiumButton href={links.demo} variant="secondary-light" shape="revolut">
-              Demander une démo
+            <EdgePremiumButton href={links.contact} shape="revolut">
+              {life ? "Parler de mon projet" : "Parlons de vos besoins"}
             </EdgePremiumButton>
           </div>
         </div>

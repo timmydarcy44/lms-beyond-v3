@@ -177,7 +177,7 @@ function CourseMetadataFormContent() {
   }, [thematics, general.category, general.category_id, thematicSourceSlug, updateGeneral]);
 
   useEffect(() => {
-    if (organizations.length || loadingOrgs) return;
+    let ignore = false;
     setLoadingOrgs(true);
     fetch("/api/formateur/organizations", { credentials: "include" })
       .then(async (r) => {
@@ -188,16 +188,20 @@ function CourseMetadataFormContent() {
         return (await r.json()) as { organizations?: unknown };
       })
       .then((data) => {
+        if (ignore) return;
         const list = Array.isArray(data?.organizations) ? data.organizations : [];
         setOrganizations(list as Array<{ id: string; name: string; slug?: string }>);
       })
       .catch(() => {
-        setOrganizations([]);
+        if (!ignore) setOrganizations([]);
       })
       .finally(() => {
-        setLoadingOrgs(false);
+        if (!ignore) setLoadingOrgs(false);
       });
-  }, [organizations.length, loadingOrgs]);
+    return () => {
+      ignore = true;
+    };
+  }, []);
   const objectives = useCourseBuilder((state) => state.snapshot.objectives);
   const skills = useCourseBuilder((state) => state.snapshot.skills);
   const addObjective = useCourseBuilder((state) => state.addObjective);
@@ -240,15 +244,20 @@ function CourseMetadataFormContent() {
           <div className="grid gap-4 sm:grid-cols-2 md:col-span-2">
             <label className="flex flex-col gap-2 text-sm sm:col-span-2">
               <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
-                Assigner à une Galaxie
+                Entreprise
               </span>
               <select
                 className="w-full rounded-xl border border-white/15 bg-white p-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-white/25"
                 value={selectedOrgId}
                 onChange={(e) => {
                   const next = e.target.value;
+                  const org = organizations.find((item) => item.id === next);
                   setSelectedOrgId(next);
-                  updateGeneral({ assigned_organization_id: next || undefined });
+                  updateGeneral({
+                    assigned_organization_id: next || undefined,
+                    assigned_organization_slug: org?.slug ?? undefined,
+                    assignment_type: next ? "organization" : "no_school",
+                  });
                 }}
               >
                 <option value="">—</option>
@@ -301,7 +310,7 @@ function CourseMetadataFormContent() {
                     ? thematics === null
                       ? "Chargement…"
                       : "—"
-                    : "Choisissez une galaxie"}
+                    : "Choisissez une entreprise"}
                 </option>
                 {(thematics ?? [])
                   .filter((c) => c.id)

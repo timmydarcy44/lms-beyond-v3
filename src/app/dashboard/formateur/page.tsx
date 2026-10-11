@@ -2,14 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CalendarDays, Clock, NotebookPen, Users } from "lucide-react";
+import { BookOpen, CalendarDays, CalendarX, NotebookPen, QrCode } from "lucide-react";
 
-import {
-  APPRENANT_CARD_BODY,
-  APPRENANT_CARD_KICKER,
-  APPRENANT_CARD_MUTED,
-  APPRENANT_CARD_TITLE,
-} from "@/lib/apprenant/connect-nav";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { cn } from "@/lib/utils";
@@ -139,146 +133,174 @@ export default function FormateurDashboardPage() {
     return formatRange(overview.nextSlot.starts_at, overview.nextSlot.ends_at);
   }, [overview.nextSlot]);
 
-  return (
-    <div className="space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white">
-          Bonjour {firstName}
-        </h1>
-        <p className="text-[14px] text-white/40">Votre espace Expert Byound</p>
-      </header>
+  const weekDays = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const hasCourse = overview.upcoming.some((slot) => {
+        const slotDate = new Date(slot.starts_at);
+        return (
+          slotDate.getFullYear() === date.getFullYear() &&
+          slotDate.getMonth() === date.getMonth() &&
+          slotDate.getDate() === date.getDate()
+        );
+      });
+      const labels = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
+      return { date, label: labels[date.getDay()], hasCourse, today: index === 0 };
+    });
+  }, [overview.upcoming]);
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className={APPRENANT_CARD_BODY}>
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-[#3D7BFF]" />
-            <p className={APPRENANT_CARD_KICKER}>Prochain cours</p>
-          </div>
-          {overview.nextSlot && nextMeta ? (
-            <>
-              <p className="text-[12px] text-white/45">
-                {isToday(overview.nextSlot.starts_at) ? "Aujourd'hui" : nextMeta.day}
-              </p>
-              <p className={APPRENANT_CARD_TITLE}>{nextMeta.time}</p>
-              <p className="text-[14px] font-semibold text-white">
-                {overview.nextSlot.module?.name ?? "Séance"}
-              </p>
-              <p className={APPRENANT_CARD_MUTED}>{overview.nextSlot.class?.name ?? "Classe"}</p>
-              <Link
-                href={`/dashboard/formateur/emargement?slotId=${overview.nextSlot.id}`}
-                className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#3D7BFF] hover:text-[#5B93FF]"
-              >
-                Ouvrir le cours <ArrowRight className="h-3.5 w-3.5" />
+  const actions = [
+    { href: "/dashboard/formateur/formations", label: "Mes cours", icon: BookOpen },
+    { href: "/dashboard/formateur/emargement", label: "Émargement", icon: QrCode, primary: true },
+    { href: "/dashboard/formateur/cahier-de-texte", label: "Cahier de texte", icon: NotebookPen },
+    { href: "/dashboard/formateur/planning", label: "Planning", icon: CalendarDays },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-6">
+        <div>
+          <p className="text-[15px] text-[var(--expert-muted)]">Bonjour {firstName}</p>
+          <p className="expert-title mt-2 text-[64px] leading-none tracking-[-0.05em]">
+            {loading ? "…" : overview.upcomingHours}
+            <span className="ml-2 text-[32px]">h</span>
+          </p>
+          <p className="expert-muted mt-2 text-[15px]">de cours sur les 30 prochains jours</p>
+        </div>
+        <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-1">
+          {actions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link key={action.href} href={action.href} className="flex w-[76px] shrink-0 flex-col items-center gap-2">
+                <span className={cn("expert-action", action.primary && "is-primary")}>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-center text-[12px] font-medium text-[var(--expert-text)]">{action.label}</span>
               </Link>
-            </>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="expert-glass lg:col-span-2">
+          <p className="expert-kicker">Prochain cours</p>
+          {overview.nextSlot && nextMeta ? (
+            <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+              <div className="min-w-0 space-y-1">
+                <p className="expert-title text-[28px]">{overview.nextSlot.module?.name ?? "Séance"}</p>
+                <p className="expert-muted text-[14px] capitalize">
+                  {isToday(overview.nextSlot.starts_at) ? "Aujourd'hui" : nextMeta.day} · {nextMeta.time}
+                </p>
+                <p className="text-[14px] text-[var(--expert-text)]">{overview.nextSlot.class?.name ?? "Classe"}</p>
+              </div>
+              <Link href={`/dashboard/formateur/emargement?slotId=${overview.nextSlot.id}`} className="expert-pill px-5 py-2.5 text-[13px]">
+                Ouvrir l&apos;émargement
+              </Link>
+            </div>
           ) : (
-            <p className={cn(APPRENANT_CARD_MUTED, "pt-2")}>
-              {loading ? "Chargement…" : "Aucun cours à venir"}
-            </p>
+            <div className="mt-5 flex items-center gap-4">
+              <span className="expert-icon-tile">
+                <CalendarX className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[16px] font-bold">{loading ? "Chargement…" : "Aucun cours planifié"}</p>
+                {loading ? null : (
+                  <Link href="/dashboard/formateur/planning" className="mt-1 inline-block text-[14px] font-semibold text-[var(--expert-text)]">
+                    Voir le planning →
+                  </Link>
+                )}
+              </div>
+            </div>
           )}
         </div>
 
-        <div className={APPRENANT_CARD_BODY}>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-[#3D7BFF]" />
-            <p className={APPRENANT_CARD_KICKER}>Heures à venir</p>
+        <div className="grid gap-4 lg:grid-rows-2">
+          <div className="expert-glass h-full">
+            <p className="expert-kicker">Apprenants</p>
+            <p className="expert-title mt-3 text-[36px] leading-none">{loading ? "…" : overview.learnerCount}</p>
+            <p className="expert-muted mt-2 text-[14px]">dans vos classes et formations</p>
           </div>
-          <p className="text-[32px] font-bold tracking-tight text-white">
-            {loading ? "…" : overview.upcomingHours}
-            <span className="ml-1 text-[16px] font-semibold text-white/40">h</span>
-          </p>
-          <p className={APPRENANT_CARD_MUTED}>sur les 30 prochains jours</p>
-        </div>
-
-        <div className={APPRENANT_CARD_BODY}>
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-[#3D7BFF]" />
-            <p className={APPRENANT_CARD_KICKER}>Apprenants</p>
+          <div className="expert-glass h-full">
+            <p className="expert-kicker">Cahier de texte</p>
+            <div className="mt-3 flex items-center gap-2">
+              <p className="expert-title text-[36px] leading-none">{loading ? "…" : overview.journalsPending}</p>
+              {!loading && overview.journalsPending > 0 ? <span className="expert-dot" /> : null}
+            </div>
+            <p className="expert-muted mt-2 text-[14px]">séances à compléter</p>
+            <Link href="/dashboard/formateur/cahier-de-texte" className="mt-3 inline-block text-[14px] font-semibold text-[var(--expert-text)]">
+              Voir le cahier →
+            </Link>
           </div>
-          <p className="text-[32px] font-bold tracking-tight text-white">
-            {loading ? "…" : overview.learnerCount}
-          </p>
-          <p className={APPRENANT_CARD_MUTED}>dans vos classes / formations</p>
-        </div>
-
-        <div className={APPRENANT_CARD_BODY}>
-          <div className="flex items-center gap-2">
-            <NotebookPen className="h-4 w-4 text-[#3D7BFF]" />
-            <p className={APPRENANT_CARD_KICKER}>Cahier de texte</p>
-          </div>
-          <p className="text-[32px] font-bold tracking-tight text-white">
-            {loading ? "…" : overview.journalsPending}
-          </p>
-          <p className={APPRENANT_CARD_MUTED}>séances à compléter</p>
-          <Link
-            href="/dashboard/formateur/cahier-de-texte"
-            className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#3D7BFF] hover:text-[#5B93FF]"
-          >
-            Voir le cahier <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
         </div>
       </div>
 
-      <section className="space-y-3">
+      <section className="expert-glass">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[15px] font-semibold text-white/90">Mon planning</h2>
-          <Link
-            href="/dashboard/formateur/planning"
-            className="text-[12px] font-semibold text-white/40 hover:text-white"
-          >
+          <h2 className="expert-title text-[22px]">Mon planning</h2>
+          <Link href="/dashboard/formateur/planning" className="text-[14px] font-semibold text-[var(--expert-text)]">
             Voir tout
           </Link>
         </div>
+        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+          {weekDays.map((day) => (
+            <div
+              key={`${day.date.getFullYear()}-${day.date.getMonth()}-${day.date.getDate()}`}
+              className={cn(
+                "flex min-w-[52px] flex-col items-center rounded-2xl px-2 py-2 text-[12px]",
+                day.today ? "expert-pill" : "text-[var(--expert-muted)]",
+              )}
+            >
+              <span className="uppercase">{day.label}</span>
+              <span className="text-[16px] font-extrabold">{day.date.getDate()}</span>
+              <span className={cn("mt-1 h-1.5 w-1.5 rounded-full", day.hasCourse ? "bg-[var(--expert-accent)]" : "bg-transparent")} />
+            </div>
+          ))}
+        </div>
         {overview.upcoming.length === 0 ? (
-          <p className={cn(APPRENANT_CARD_MUTED, "py-4")}>
-            {loading ? "Chargement du planning…" : "Aucun créneau planifié pour le moment."}
-          </p>
+          <div className="mt-8 flex flex-col items-center gap-3 py-6 text-center">
+            <span className="expert-icon-tile">
+              <CalendarX className="h-5 w-5" />
+            </span>
+            <p className="expert-muted text-[14px]">
+              {loading ? "Chargement du planning…" : "Aucun créneau planifié pour le moment"}
+            </p>
+            {loading ? null : (
+              <Link href="/dashboard/formateur/planning" className="expert-pill-ghost px-5 py-2.5 text-[13px]">
+                Ouvrir le planning
+              </Link>
+            )}
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="mt-5 space-y-3">
             {overview.upcoming.map((slot) => {
               const meta = formatRange(slot.starts_at, slot.ends_at);
+              const start = new Date(slot.starts_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
               return (
-                <div key={slot.id} className={cn(APPRENANT_CARD_BODY, "flex-row items-center justify-between gap-4")}>
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="text-[12px] capitalize text-white/40">{meta.day}</p>
-                    <p className="text-[14px] font-semibold text-white">{meta.time}</p>
-                    <p className="truncate text-[13px] text-white/70">
-                      {slot.module?.name ?? "Séance"}
+                <div key={slot.id} className="flex items-center gap-4">
+                  <p className="w-14 shrink-0 text-[14px] font-semibold text-[var(--expert-muted)]">{start}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-bold">{slot.module?.name ?? "Séance"}</p>
+                    <p className="expert-muted truncate text-[13px] capitalize">
+                      {meta.day}
                       {slot.class?.name ? ` · ${slot.class.name}` : ""}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-[13px] font-semibold text-[#3D7BFF]">
-                      {Number(slot.duration_hours ?? 0)} h
-                    </p>
-                    <Link
-                      href={`/dashboard/formateur/cahier-de-texte?slot=${slot.id}`}
-                      className="text-[11px] font-medium text-white/40 hover:text-white"
-                    >
-                      Cahier
-                    </Link>
-                  </div>
+                  <span className="expert-chip px-3 py-1">{Number(slot.duration_hours ?? 0)} h</span>
+                  <Link
+                    href={`/dashboard/formateur/cahier-de-texte?slot=${slot.id}`}
+                    className="shrink-0 text-[12px] font-semibold text-[var(--expert-text)]"
+                  >
+                    Cahier
+                  </Link>
                 </div>
               );
             })}
           </div>
         )}
-      </section>
-
-      <section className="flex flex-wrap gap-3">
-        <Link
-          href="/dashboard/formateur/formations"
-          className="inline-flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-2.5 text-[13px] font-semibold text-white/70 transition hover:border-[#3D7BFF]/30 hover:text-white"
-        >
-          <BookOpen className="h-4 w-4 text-[#3D7BFF]" />
-          Mes cours
-        </Link>
-        <Link
-          href="/dashboard/formateur/emargement"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#3D7BFF] px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#5B93FF]"
-        >
-          Émargement
-        </Link>
       </section>
     </div>
   );

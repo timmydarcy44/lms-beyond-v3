@@ -34,6 +34,19 @@ export const FORMATEUR_NAV_ITEMS: FormateurNavItem[] = [
   { label: "Messages", href: "/dashboard/student/community", icon: MessageCircle },
 ];
 
+const navByLabel = (label: string) => FORMATEUR_NAV_ITEMS.find((item) => item.label === label)!;
+
+export const FORMATEUR_NAV_SECTIONS: Array<{ label: string; items: FormateurNavItem[] }> = [
+  {
+    label: "Enseigner",
+    items: ["Planning", "Mes cours", "Parcours", "Cahier de texte", "Émargement", "Tests"].map(navByLabel),
+  },
+  {
+    label: "Outils",
+    items: ["Ressources", "Drive", "To-Do", "Messages"].map(navByLabel),
+  },
+];
+
 export function resolveFormateurActiveLabel(pathname: string | null): string {
   if (!pathname) return "Accueil";
   const match = FORMATEUR_NAV_ITEMS.filter((item) => item.href !== "/dashboard/formateur")

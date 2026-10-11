@@ -1062,6 +1062,23 @@ export const getFormateurOrganizations = async (): Promise<FormateurOrganization
       return mapOrgRows(data as any[]);
     };
 
+    const withAffiliatedCompany = async (rows: FormateurOrganization[]) => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_id, org_id")
+        .eq("id", scope.userId)
+        .maybeSingle();
+      const extraIds = [profile?.company_id, profile?.org_id]
+        .map((id) => String(id ?? "").trim())
+        .filter((id) => id && !rows.some((row) => row.id === id));
+      if (!extraIds.length) return rows;
+      const db = serviceOnly ?? supabase;
+      const { data } = await db.from("organizations").select("id, name, slug").in("id", extraIds);
+      return [...mapOrgRows((data ?? []) as any[]), ...rows].sort((a, b) =>
+        a.name.localeCompare(b.name, "fr", { sensitivity: "base" }),
+      );
+    };
+
     if (scope.fullCatalog) {
       if (serviceOnly) {
         const { data: orgs, error: oErr } = await serviceOnly
@@ -1071,25 +1088,26 @@ export const getFormateurOrganizations = async (): Promise<FormateurOrganization
           .limit(500);
 
         if (!oErr && orgs?.length) {
-          return mapOrgRows(orgs as any[]);
+          return withAffiliatedCompany(mapOrgRows(orgs as any[]));
         }
       }
       const fromRpc = await tryOrganizationsCatalogueRpc();
-      if (fromRpc?.length) return fromRpc;
-      return [];
+      if (fromRpc?.length) return withAffiliatedCompany(fromRpc);
+      return withAffiliatedCompany([]);
     }
 
-    if (!scope.orgIds?.length) return [];
+    const membershipIds = scope.orgIds ?? [];
+    if (!membershipIds.length) return withAffiliatedCompany([]);
 
     const db = serviceOnly ?? supabase;
     const { data: orgs, error: oErr } = await db
       .from("organizations")
       .select("id, name, slug")
-      .in("id", scope.orgIds)
+      .in("id", membershipIds)
       .order("name", { ascending: true });
 
-    if (oErr || !orgs) return [];
-    return mapOrgRows(orgs as any[]);
+    if (oErr || !orgs) return withAffiliatedCompany([]);
+    return withAffiliatedCompany(mapOrgRows(orgs as any[]));
   } catch (e) {
     console.warn("[formateur] Error fetching organizations", e);
     return [];

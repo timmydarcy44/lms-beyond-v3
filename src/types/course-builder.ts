@@ -130,6 +130,7 @@ export type CourseBuilderGeneralInfo = {
   price?: number;
   assignment_type?: "no_school" | "organization";
   assigned_organization_id?: string;
+  assigned_organization_slug?: string | null;
   access_start_date?: string | null;
   access_end_date?: string | null;
   linear_progression?: boolean;

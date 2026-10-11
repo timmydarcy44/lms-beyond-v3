@@ -247,7 +247,7 @@ export function FormateurFormationBuilderWhite({
   }, []);
 
   useEffect(() => {
-    if (organizationsLoading || organizations.length) return;
+    let ignore = false;
     setOrganizationsLoading(true);
     fetch("/api/formateur/organizations", { credentials: "include" })
       .then(async (r) => {
@@ -258,18 +258,37 @@ export function FormateurFormationBuilderWhite({
         return r.json();
       })
       .then((data) => {
+        if (ignore) return;
         const list = Array.isArray(data?.organizations) ? data.organizations : [];
         if (lockedOrgId && !list.some((o: { id?: string }) => o?.id === lockedOrgId)) {
-          list.unshift({ id: lockedOrgId, name: "Mon organisation" });
+          list.unshift({ id: lockedOrgId, name: "Mon entreprise" });
         }
         setOrganizations(list);
       })
       .catch(() => {
-        if (lockedOrgId) setOrganizations([{ id: lockedOrgId, name: "Mon organisation" }]);
+        if (ignore) return;
+        if (lockedOrgId) setOrganizations([{ id: lockedOrgId, name: "Mon entreprise" }]);
         else setOrganizations([]);
       })
-      .finally(() => setOrganizationsLoading(false));
-  }, [organizations.length, organizationsLoading, lockedOrgId]);
+      .finally(() => {
+        if (!ignore) setOrganizationsLoading(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [lockedOrgId]);
+
+  useEffect(() => {
+    if (orgIsLocked || organizations.length !== 1) return;
+    const only = organizations[0];
+    const current = String((snapshot.general as { assigned_organization_id?: string })?.assigned_organization_id ?? "").trim();
+    if (current === only.id) return;
+    updateGeneral({
+      assigned_organization_id: only.id,
+      assigned_organization_slug: only.slug ?? null,
+      assignment_type: "organization",
+    } as never);
+  }, [organizations, orgIsLocked, snapshot.general, updateGeneral]);
 
   useEffect(() => {
     let cancelled = false;
@@ -373,13 +392,6 @@ export function FormateurFormationBuilderWhite({
           .filter((p: any) => p.id && p.title);
         if (cancelled) return;
         setAvailablePaths(cleaned);
-        // Création org (école/entreprise) : liste vide = normal, pas de toast alarmiste
-        if (!cleaned.length && !orgIsLocked) {
-          toast.message("Aucun parcours listé pour cette galaxie", {
-            description:
-              "Soit il n’existe pas encore de parcours `org_id`, soit les politiques RLS ne renvoient rien pour votre compte.",
-          });
-        }
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -1241,7 +1253,7 @@ export function FormateurFormationBuilderWhite({
                               ? availablePathsLoading
                                 ? "Chargement…"
                                 : "—"
-                              : "Choisissez d’abord une galaxie"}
+                              : "Choisissez d’abord une entreprise"}
                           </option>
                           {availablePaths.map((p) => (
                             <option key={p.id} value={p.id}>
@@ -1250,7 +1262,7 @@ export function FormateurFormationBuilderWhite({
                           ))}
                         </select>
                         <p className="text-xs text-slate-500">
-                          Ce parcours doit appartenir à la galaxie de la formation.
+                          Ce parcours doit appartenir à l’entreprise de la formation.
                         </p>
                       </div>
                     ) : null}
@@ -1331,19 +1343,25 @@ export function FormateurFormationBuilderWhite({
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2 sm:col-span-3">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-black/40">
-                      {orgIsLocked ? "Organisation (verrouillée)" : "Assigner à une Galaxie"}
+                      {orgIsLocked || organizations.length === 1 ? "Entreprise" : "Entreprise de la formation"}
                     </label>
                     <select
-                      className="w-full rounded-xl border border-slate-200/90 bg-white p-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300/40 disabled:opacity-60"
+                      className="w-full rounded-xl border border-slate-200/90 bg-white p-3 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-300/40 disabled:opacity-60"
+                      style={{ colorScheme: "light" }}
                       value={String((snapshot.general as any)?.assigned_organization_id ?? lockedOrgId ?? "")}
                       onChange={(e) => {
                         if (orgIsLocked) return;
                         const v = e.target.value;
-                        updateGeneral({ assigned_organization_id: v || null } as any);
+                        const org = organizations.find((item) => item.id === v);
+                        updateGeneral({
+                          assigned_organization_id: v || null,
+                          assigned_organization_slug: org?.slug ?? null,
+                          assignment_type: v ? "organization" : "no_school",
+                        } as any);
                       }}
-                      disabled={organizationsLoading || orgIsLocked}
+                      disabled={organizationsLoading || orgIsLocked || organizations.length === 1}
                     >
-                      <option value="">{organizationsLoading ? "Chargement…" : "—"}</option>
+                      <option value="">{organizationsLoading ? "Chargement…" : "Choisir une entreprise"}</option>
                       {organizations.map((o) => (
                         <option key={o.id} value={o.id}>
                           {o.name}
@@ -1351,7 +1369,9 @@ export function FormateurFormationBuilderWhite({
                       ))}
                     </select>
                     {!organizationsLoading && organizations.length === 0 ? (
-                      <p className="text-xs text-slate-500">Aucune galaxie n’est rattachée à ce compte.</p>
+                      <p className="text-xs text-slate-500">Aucune entreprise n’est rattachée à ce compte.</p>
+                    ) : organizations.length === 1 ? (
+                      <p className="text-xs text-slate-500">La formation est rattachée à votre entreprise.</p>
                     ) : null}
                   </div>
                 <div className="space-y-2">
@@ -1377,7 +1397,7 @@ export function FormateurFormationBuilderWhite({
                         ? thematics === null
                           ? "Chargement…"
                           : "—"
-                        : "Choisissez une galaxie"}
+                        : "Choisissez une entreprise"}
                     </option>
                     {(thematics ?? [])
                       .filter((c) => c.id)

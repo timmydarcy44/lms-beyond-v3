@@ -1,68 +1,114 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
-
-import { ConnectCockpitBackdrop } from "@/components/apprenant/connect-cockpit-backdrop";
-import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
-import { getConnectShellTheme } from "@/lib/apprenant/connect-theme";
-import { FORMATEUR_NAV_ITEMS } from "@/lib/formateur/formateur-nav";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Bell, Menu, MessageCircle, Search, X } from "lucide-react";
 
-/**
- * Shell Formateur = même App Shell Byound que l'apprenant :
- * ConnectCockpitBackdrop + sidebar intégrée + main transparent.
- * Pas de container de page autour du contenu — seules les cartes ont une surface.
- */
+import { FormateurAppSwitcher } from "@/components/formateur/formateur-app-switcher";
+import { FormateurSidebar } from "@/components/formateur/formateur-sidebar";
+import {
+  FORMATEUR_APP_BY_ID,
+  resolveFormateurAppFromPathname,
+  setStoredFormateurAppId,
+  type FormateurAppId,
+} from "@/lib/formateur/expert-apps";
+
 function isFormationWorkspace(pathname: string | null) {
   if (!pathname) return false;
   return /\/dashboard\/formateur\/formations\/(?:new(?:\/|$)|[^/]+\/preview(?:\/|$))/.test(pathname);
 }
 
 export function FormateurConnectShell({ children }: { children: React.ReactNode }) {
-  const theme = getConnectShellTheme("edge");
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeAppId, setActiveAppId] = useState<FormateurAppId | "">("");
   const workspace = isFormationWorkspace(pathname);
+  const appItems = activeAppId ? FORMATEUR_APP_BY_ID[activeAppId].navItems : null;
+
+  useEffect(() => {
+    const fromPath = resolveFormateurAppFromPathname(pathname);
+    setActiveAppId(fromPath ?? "");
+    if (fromPath) setStoredFormateurAppId(fromPath);
+  }, [pathname]);
+
+  const handleAppChange = useCallback(
+    (id: FormateurAppId) => {
+      setActiveAppId(id);
+      setStoredFormateurAppId(id);
+      const href = FORMATEUR_APP_BY_ID[id]?.homeHref;
+      if (href) router.push(href);
+      setMobileOpen(false);
+    },
+    [router],
+  );
 
   return (
-    <div data-connect-shell={theme.shellAttr} className={theme.rootClass}>
-      <ConnectCockpitBackdrop />
-      <div className="relative z-10 flex h-screen overflow-hidden font-['Inter',system-ui,sans-serif]">
+    <div className="expert-revolut">
+      <div className="relative z-10 flex h-screen gap-4 overflow-hidden p-4 max-lg:p-0">
         {workspace ? null : (
-          <div className="hidden lg:block">
+          <div className="hidden h-full shrink-0 lg:block">
             <FormateurSidebar
               collapsed={collapsed}
-              onToggleCollapse={() => setCollapsed((v) => !v)}
+              onToggleCollapse={() => setCollapsed((value) => !value)}
+              items={appItems}
             />
           </div>
         )}
 
-        <main className={theme.mainClass}>
+        <div className="flex min-w-0 flex-1 flex-col">
           {workspace ? null : (
-            <div className={theme.mobileHeaderClass}>
+            <header className="mb-4 flex items-center gap-3 px-4 lg:mb-6 lg:px-0">
               <button
                 type="button"
-                className={theme.mobileMenuBtnClass}
+                className="expert-icon-btn inline-flex lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 aria-label="Ouvrir le menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <p className={theme.mobileTitleClass}>Byound Expert</p>
-              <div className="w-10" />
-            </div>
+              <Link href="/dashboard/formateur" className="shrink-0" aria-label="Byound">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png"
+                  alt="Byound"
+                  className="h-8 w-auto"
+                />
+              </Link>
+              <label className="expert-search hidden min-w-0 flex-1 items-center gap-2 px-4 py-2.5 sm:flex">
+                <Search className="h-4 w-4 shrink-0 text-[var(--expert-muted)]" />
+                <input
+                  type="search"
+                  placeholder="Rechercher un cours, une classe, un apprenant…"
+                  className="w-full bg-transparent text-[14px] text-[var(--expert-text)] outline-none placeholder:text-[var(--expert-muted)]"
+                />
+              </label>
+              <div className="ml-auto flex items-center gap-2">
+                <FormateurAppSwitcher activeAppId={activeAppId} onAppChange={handleAppChange} />
+                <button type="button" className="expert-icon-btn relative inline-flex" aria-label="Notifications">
+                  <Bell className="h-4 w-4" />
+                  <span className="expert-dot absolute right-2.5 top-2.5 !h-2 !w-2" />
+                </button>
+                <Link
+                  href="/dashboard/student/community"
+                  className="expert-icon-btn inline-flex"
+                  aria-label="Messages"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </Link>
+              </div>
+            </header>
           )}
 
-          <div className={workspace ? "h-full w-full overflow-y-auto" : "mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"}>
+          <main className={workspace ? "h-full overflow-y-auto" : "min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pb-8 lg:px-0"}>
             {children}
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
 
-      {mobileOpen ? (
+      {mobileOpen && !workspace ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
@@ -70,42 +116,18 @@ export function FormateurConnectShell({ children }: { children: React.ReactNode 
             aria-label="Fermer"
             onClick={() => setMobileOpen(false)}
           />
-          <div className={`absolute inset-y-0 left-0 flex w-[280px] flex-col ${theme.mobileSheetClass}`}>
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
-              <p className="text-sm font-semibold text-white">Menu Expert</p>
-              <button
-                type="button"
-                className={theme.mobileMenuBtnClass}
-                onClick={() => setMobileOpen(false)}
-              >
-                <X className="h-5 w-5" />
+          <div
+            className="absolute inset-y-0 left-0 flex w-[min(100%,320px)] flex-col p-4"
+            onClick={(event) => {
+              if (event.target instanceof Element && event.target.closest("a")) setMobileOpen(false);
+            }}
+          >
+            <div className="mb-3 flex justify-end">
+              <button type="button" className="expert-icon-btn inline-flex" onClick={() => setMobileOpen(false)} aria-label="Fermer le menu">
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-              {FORMATEUR_NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const active =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard/formateur" && pathname?.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium ${
-                      active ? theme.mobileNavActive : theme.mobileNavInactive
-                    }`}
-                  >
-                    <Icon
-                      className={`h-[18px] w-[18px] ${
-                        active ? theme.mobileNavIconActive : theme.mobileNavIconInactive
-                      }`}
-                    />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+            <FormateurSidebar items={appItems} layout="sheet" />
           </div>
         </div>
       ) : null}

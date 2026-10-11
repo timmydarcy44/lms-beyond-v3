@@ -3,34 +3,62 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
-import { getConnectShellTheme } from "@/lib/apprenant/connect-theme";
 import {
   FORMATEUR_NAV_ITEMS,
+  FORMATEUR_NAV_SECTIONS,
   resolveFormateurActiveLabel,
+  type FormateurNavItem,
 } from "@/lib/formateur/formateur-nav";
 
 type FormateurSidebarProps = {
-  /** @deprecated Le pathname détermine l'actif ; conservé pour compat. */
   activeItem?: string;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  /** Nav de l’application active. Sans valeur : menu complet de l’accueil. */
+  items?: FormateurNavItem[] | null;
+  layout?: "dock" | "sheet";
 };
+
+function NavLink({
+  item,
+  active,
+  collapsed,
+}: {
+  item: FormateurNavItem;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      className={`expert-nav-item w-full gap-3 px-3 ${collapsed ? "justify-center px-0" : ""} ${
+        active ? "is-active" : "is-idle"
+      }`}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" />
+      {collapsed ? null : <span className="truncate">{item.label}</span>}
+    </Link>
+  );
+}
 
 export function FormateurSidebar({
   activeItem,
   collapsed = false,
   onToggleCollapse,
+  items = null,
+  layout = "dock",
 }: FormateurSidebarProps) {
   const pathname = usePathname();
-  const theme = getConnectShellTheme("edge");
   const [initials, setInitials] = useState("?");
   const [displayName, setDisplayName] = useState("Expert");
-
   const resolvedActive = activeItem || resolveFormateurActiveLabel(pathname);
+  const accueil = FORMATEUR_NAV_ITEMS[0];
 
   useEffect(() => {
     let ignore = false;
@@ -80,86 +108,59 @@ export function FormateurSidebar({
 
   return (
     <aside
-      data-connect-sidebar
-      className={`${theme.sidebarClass} ${collapsed ? "w-[76px]" : "w-[240px]"}`}
+      className={`expert-glass flex shrink-0 flex-col !p-4 ${
+        layout === "sheet" ? "min-h-0 w-full flex-1" : `h-full ${collapsed ? "w-[76px]" : "w-[248px]"}`
+      }`}
     >
-      <div className={`flex shrink-0 items-center gap-2 px-2.5 h-[52px] ${theme.sidebarHeaderBorder}`}>
-        {!collapsed ? (
-          <div className="min-w-0 flex-1 leading-tight">
-            <div className="text-[11px] font-semibold tracking-[0.18em] text-white">Byound</div>
-            <p className="text-[9px] tracking-[0.1em] text-white/20">Espace Expert</p>
-          </div>
-        ) : (
-          <div className={theme.brandCollapsedClass}>E</div>
-        )}
-        {onToggleCollapse ? (
+      {onToggleCollapse ? (
+        <div className={`mb-3 flex items-center px-1 ${collapsed ? "justify-center" : "justify-end"}`}>
           <button
             type="button"
             onClick={onToggleCollapse}
-            className={theme.collapseBtnClass}
+            className="expert-icon-btn inline-flex !h-8 !w-8"
             aria-label={collapsed ? "Développer le menu" : "Réduire le menu"}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
-        ) : null}
-      </div>
-
-      {!collapsed ? (
-        <div className="px-2 pt-3">
-          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-            <div
-              className={`flex h-9 w-9 items-center justify-center rounded-full border ${theme.profileBorder} ${theme.profileAvatarBg} ${theme.profileInitialClass}`}
-            >
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <div className={theme.profileNameClass}>{displayName}</div>
-              <div className={theme.profileRoleClass}>Expert Byound</div>
-            </div>
-          </div>
-          <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.03] px-3 py-2 text-sm text-white/50">
-            <Search className="h-3.5 w-3.5 shrink-0 text-white/35" />
-            <input
-              type="text"
-              placeholder="Rechercher…"
-              className="w-full bg-transparent text-[12px] text-white/70 outline-none placeholder:text-white/30"
-            />
-          </div>
         </div>
       ) : null}
 
-      <nav
-        className={`min-h-0 flex-1 overflow-y-auto py-2 ${
-          collapsed ? "px-1.5" : "px-2"
-        } [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]`}
-      >
-        <div className="space-y-0.5">
-          {FORMATEUR_NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.label === resolvedActive;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
-                  collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
-                } ${isActive ? theme.navActiveClass : theme.navInactiveClass}`}
-              >
-                <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? theme.navIconActive : theme.navIconInactive}`} />
-                {!collapsed ? <span>{item.label}</span> : null}
-              </Link>
-            );
-          })}
-        </div>
+      <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+        <NavLink item={accueil} active={resolvedActive === accueil.label} collapsed={collapsed} />
+        {items?.length ? (
+          <div className="space-y-1">
+            {items.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={resolvedActive === item.label || pathname === item.href || pathname?.startsWith(`${item.href}/`)}
+                collapsed={collapsed}
+              />
+            ))}
+          </div>
+        ) : (
+          FORMATEUR_NAV_SECTIONS.map((section) => (
+            <div key={section.label} className="space-y-1">
+              {collapsed ? null : <p className="expert-kicker px-3 pb-1">{section.label}</p>}
+              {section.items.map((item) => (
+                <NavLink key={item.href} item={item} active={resolvedActive === item.label} collapsed={collapsed} />
+              ))}
+            </div>
+          ))
+        )}
       </nav>
 
-      {!collapsed ? (
-        <div className={theme.sidebarFooterClass}>
-          <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/25">
-            Contenu organisation
-          </p>
+      <div className={`mt-3 flex items-center gap-3 px-1 ${collapsed ? "justify-center" : ""}`}>
+        <div className="expert-icon-btn inline-flex !h-9 !w-9 text-[12px] font-bold">
+          {initials}
         </div>
-      ) : null}
+        {collapsed ? null : (
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-bold text-[var(--expert-text)]">{displayName}</p>
+            <p className="expert-muted truncate text-[11px]">Expert Byound</p>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

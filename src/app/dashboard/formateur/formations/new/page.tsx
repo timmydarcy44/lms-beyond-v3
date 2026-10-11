@@ -1329,8 +1329,7 @@ export function FormateurFormationBuilderWhite({
                 className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
               />
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
-                {isTimmy || orgIsLocked ? (
-                  <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-3">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-black/40">
                       {orgIsLocked ? "Organisation (verrouillée)" : "Assigner à une Galaxie"}
                     </label>
@@ -1351,8 +1350,10 @@ export function FormateurFormationBuilderWhite({
                         </option>
                       ))}
                     </select>
+                    {!organizationsLoading && organizations.length === 0 ? (
+                      <p className="text-xs text-slate-500">Aucune galaxie n’est rattachée à ce compte.</p>
+                    ) : null}
                   </div>
-                ) : null}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-black/40">Thématique</label>
                   <select

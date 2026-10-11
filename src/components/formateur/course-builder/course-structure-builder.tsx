@@ -392,7 +392,7 @@ export function CourseStructureBuilder({
         open={Boolean(expandedSelection) && isEditorOpen}
         onOpenChange={(open) => (open ? setIsEditorOpen(true) : handleCloseEditor())}
       >
-        <DialogContent className={isLight ? "w-full max-w-[1400px] sm:max-w-[92vw] md:max-w-[90vw] xl:max-w-[1400px] border-0 bg-white p-0 shadow-2xl" : "w-full max-w-[1400px] sm:max-w-[92vw] md:max-w-[90vw] xl:max-w-[1400px] border border-white/10 bg-[#0a0a0a] p-0 shadow-2xl"}>
+        <DialogContent className={isLight ? "flex h-[min(92vh,980px)] w-[min(1480px,96vw)] !max-w-[min(1480px,96vw)] flex-col border-0 bg-white p-0 shadow-2xl" : "flex h-[min(92vh,980px)] w-[min(1480px,96vw)] !max-w-[min(1480px,96vw)] flex-col border border-white/10 bg-[#0a0a0a] p-0 shadow-2xl"}>
           <DialogHeader className={isLight ? "flex flex-row items-start justify-between gap-4 px-6 py-4" : "flex flex-row items-start justify-between gap-4 border-b border-white/10 px-6 py-4"}>
             <div>
               <DialogTitle className={isLight ? "text-base font-extrabold text-slate-950" : "text-base font-semibold text-white"}>
@@ -417,7 +417,7 @@ export function CourseStructureBuilder({
               <X className="h-4 w-4" />
             </Button>
           </DialogHeader>
-          <div className="max-h-[calc(100vh-7rem)] min-h-[70vh] overflow-y-auto px-6 pb-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
             <EditorPanel courseId={courseId} selectionOverride={expandedSelection} isLight={isLight} />
           </div>
         </DialogContent>

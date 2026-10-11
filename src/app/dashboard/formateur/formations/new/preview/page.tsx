@@ -34,7 +34,7 @@ export default function FormateurFormationPreviewPage() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8">
+      <div className="w-full px-4 py-6 md:px-8">
         <CourseLearnerPreview />
       </div>
     </DashboardShell>

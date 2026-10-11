@@ -33,6 +33,7 @@ import {
   groupLessonsForOutline,
   outlineKeysContainingLesson,
 } from "@/lib/apprenant/lesson-outline-groups";
+import { extractStandaloneHtmlDocument, isHtmlGameUrl } from "@/lib/course-builder/html-game";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -89,33 +90,29 @@ function isInterviewLikeLesson(lesson: unknown): boolean {
 const extractYouTubeId = (url: string): string | null => {
   try {
     const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    const isYouTube =
+      host === "youtube.com" ||
+      host.endsWith(".youtube.com") ||
+      host === "youtu.be" ||
+      host === "youtube-nocookie.com" ||
+      host.endsWith(".youtube-nocookie.com");
+    if (!isYouTube) return null;
 
-    if (host.includes('youtube.com')) {
-      if (parsed.pathname.startsWith('/embed/')) {
-        const id = parsed.pathname.split('/')[2];
-        if (id && id.length >= 11) {
-          return id.slice(0, 11);
-        }
-      }
-      const v = parsed.searchParams.get('v');
-      if (v) {
-        return v;
-      }
+    if (host === "youtu.be") {
+      const id = parsed.pathname.split("/").filter(Boolean)[0];
+      return id || null;
     }
 
-    if (host.includes('youtu.be')) {
-      const pathParts = parsed.pathname.split('/').filter(Boolean);
-      if (pathParts[0]) {
-        return pathParts[0];
-      }
+    if (parsed.pathname.startsWith("/embed/") || parsed.pathname.startsWith("/shorts/")) {
+      const id = parsed.pathname.split("/")[2];
+      return id || null;
     }
+
+    return parsed.searchParams.get("v");
   } catch {
-    // Fallback to regex below
+    return null;
   }
-
-  const fallbackMatch = url.match(/(?:v=|\/)([A-Za-z0-9_-]{11})(?:[&?]|\b|$)/);
-  return fallbackMatch ? fallbackMatch[1] : null;
 };
 
 const CHAPTER_UUID_RE =
@@ -819,11 +816,21 @@ export function LessonPlayView({
     setTestFlowMeta({ title: "", minScore: 70 });
   }, [activeLesson.id]);
 
+  const standaloneGameDocument = useMemo(
+    () => extractStandaloneHtmlDocument(rawContent),
+    [rawContent],
+  );
+  const isInteractiveGame =
+    activeLesson.type === "interactive_game" ||
+    isHtmlGameUrl(videoSrc) ||
+    Boolean(standaloneGameDocument);
+
   const { normalizedVideoSrc, sanitizedContent } = useMemo(() => {
-    const urlsInContent = rawContent ? rawContent.match(/https?:\/\/[^\s"'<>]+/g) ?? [] : [];
+    const urlsInContent =
+      isInteractiveGame || !rawContent ? [] : rawContent.match(/https?:\/\/[^\s"'<>]+/g) ?? [];
     const youtubeUrls = urlsInContent.filter((url: string) => Boolean(extractYouTubeId(url)));
 
-    let candidateUrl = videoSrc ?? null;
+    let candidateUrl = isInteractiveGame ? null : videoSrc ?? null;
     let cleanedContent = rawContent;
 
     if (youtubeUrls.length > 0) {
@@ -856,7 +863,7 @@ export function LessonPlayView({
       normalizedVideoSrc: normalized,
       sanitizedContent: cleanedContent,
     };
-  }, [videoSrc, rawContent]);
+  }, [videoSrc, rawContent, isInteractiveGame]);
 
   // Déterminer si le contenu est vidéo/audio ou textuel
   const hasMedia = normalizedVideoSrc && (
@@ -1656,13 +1663,22 @@ export function LessonPlayView({
             ) : null}
           </div>
 
-          {activeLesson.type === "interactive_game" && normalizedVideoSrc ? (
+          {isInteractiveGame ? (
             <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-slate-950">
               <iframe
-                src={normalizedVideoSrc}
+                src={
+                  videoSrc && (activeLesson.type === "interactive_game" || isHtmlGameUrl(videoSrc))
+                    ? videoSrc
+                    : undefined
+                }
+                srcDoc={
+                  videoSrc && (activeLesson.type === "interactive_game" || isHtmlGameUrl(videoSrc))
+                    ? undefined
+                    : standaloneGameDocument ?? undefined
+                }
                 title={activeLesson.title || "Jeu interactif"}
-                className="h-[70vh] min-h-[480px] w-full border-0"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                className="h-[78vh] min-h-[560px] w-full border-0"
+                sandbox="allow-scripts allow-forms allow-popups allow-modals"
                 allow="fullscreen"
               />
             </div>
@@ -1823,7 +1839,7 @@ export function LessonPlayView({
               resourceId={embeddedResourceId}
               title={activeLesson.title}
             />
-          ) : hasTextContent ? (
+          ) : hasTextContent && !isInteractiveGame ? (
             <LessonSmartAssist
               hideAssistantPanel={isFocus}
               courseId={courseId}
@@ -1886,7 +1902,7 @@ export function LessonPlayView({
                 </motion.div>
               </AnimatePresence>
             </LessonSmartAssist>
-          ) : !isMediaContent ? (
+          ) : !isMediaContent && !isInteractiveGame ? (
             <LessonSmartAssist
               hideAssistantPanel={isFocus}
               courseId={courseId}

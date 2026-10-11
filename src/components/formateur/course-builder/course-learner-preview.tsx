@@ -9,6 +9,7 @@ import { CourseBuilderSnapshot } from "@/types/course-builder";
 import { useEffect, useMemo, useState } from "react";
 import { ExperientialInterviewView } from "@/components/apprenant/experiential-interview-view";
 import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
+import { extractStandaloneHtmlDocument, isHtmlGameUrl } from "@/lib/course-builder/html-game";
 
 type CourseLearnerPreviewProps = {
   snapshot?: CourseBuilderSnapshot;
@@ -170,23 +171,37 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
                   <p className="text-xs text-slate-500">{active.chapterTitle}</p>
                 </div>
 
-                {active.kind === "game" && active.mediaUrl ? (
-                  <iframe
-                    src={active.mediaUrl}
-                    title={active.title}
-                    className="mt-6 h-[70vh] min-h-[480px] w-full rounded-2xl border border-slate-200"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-                    allow="fullscreen"
-                  />
-                ) : active.mediaUrl ? (
-                  <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Média</p>
-                    <p className="mt-2 truncate text-sm text-slate-700">{active.mediaUrl}</p>
-                  </div>
-                ) : null}
+                {(() => {
+                  const gameDocument = extractStandaloneHtmlDocument(active.html);
+                  const gameSrc =
+                    (active.kind === "game" || isHtmlGameUrl(active.mediaUrl)) && active.mediaUrl
+                      ? active.mediaUrl
+                      : "";
+                  if (gameSrc || gameDocument) {
+                    return (
+                      <iframe
+                        src={gameSrc || undefined}
+                        srcDoc={gameSrc ? undefined : gameDocument ?? undefined}
+                        title={active.title}
+                        className="mt-6 h-[70vh] min-h-[480px] w-full rounded-2xl border border-slate-200 bg-black"
+                        sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                        allow="fullscreen"
+                      />
+                    );
+                  }
+                  if (active.mediaUrl) {
+                    return (
+                      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Média</p>
+                        <p className="mt-2 truncate text-sm text-slate-700">{active.mediaUrl}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 <div className="mt-6 flex-1 overflow-y-auto pr-2">
-                  {active.html ? (
+                  {extractStandaloneHtmlDocument(active.html) || (active.kind === "game" && active.mediaUrl) ? null : active.html ? (
                     <div
                       className="prose prose-slate max-w-none prose-h1:text-[30px] prose-h1:leading-tight prose-h2:text-[30px] prose-h2:leading-tight prose-h3:text-[30px] prose-h3:leading-tight prose-headings:text-slate-950 prose-p:text-slate-700 prose-strong:text-slate-900 prose-a:text-[#6633CC] prose-a:underline prose-li:text-slate-700 [&_*]:max-w-full"
                       dangerouslySetInnerHTML={{ __html: active.html }}

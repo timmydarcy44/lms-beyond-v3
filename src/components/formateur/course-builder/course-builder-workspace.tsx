@@ -246,7 +246,7 @@ export function CourseBuilderWorkspace({ initialData, previewHref, courseId, the
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-[1fr_380px] gap-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
           {isMounted && isHydrated ? (
             <>

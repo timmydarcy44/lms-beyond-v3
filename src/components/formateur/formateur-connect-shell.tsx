@@ -15,38 +15,48 @@ import { usePathname } from "next/navigation";
  * ConnectCockpitBackdrop + sidebar intégrée + main transparent.
  * Pas de container de page autour du contenu — seules les cartes ont une surface.
  */
+function isFormationWorkspace(pathname: string | null) {
+  if (!pathname) return false;
+  return /\/dashboard\/formateur\/formations\/(?:new(?:\/|$)|[^/]+\/preview(?:\/|$))/.test(pathname);
+}
+
 export function FormateurConnectShell({ children }: { children: React.ReactNode }) {
   const theme = getConnectShellTheme("edge");
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const workspace = isFormationWorkspace(pathname);
 
   return (
     <div data-connect-shell={theme.shellAttr} className={theme.rootClass}>
       <ConnectCockpitBackdrop />
       <div className="relative z-10 flex h-screen overflow-hidden font-['Inter',system-ui,sans-serif]">
-        <div className="hidden lg:block">
-          <FormateurSidebar
-            collapsed={collapsed}
-            onToggleCollapse={() => setCollapsed((v) => !v)}
-          />
-        </div>
+        {workspace ? null : (
+          <div className="hidden lg:block">
+            <FormateurSidebar
+              collapsed={collapsed}
+              onToggleCollapse={() => setCollapsed((v) => !v)}
+            />
+          </div>
+        )}
 
         <main className={theme.mainClass}>
-          <div className={theme.mobileHeaderClass}>
-            <button
-              type="button"
-              className={theme.mobileMenuBtnClass}
-              onClick={() => setMobileOpen(true)}
-              aria-label="Ouvrir le menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <p className={theme.mobileTitleClass}>Byound Expert</p>
-            <div className="w-10" />
-          </div>
+          {workspace ? null : (
+            <div className={theme.mobileHeaderClass}>
+              <button
+                type="button"
+                className={theme.mobileMenuBtnClass}
+                onClick={() => setMobileOpen(true)}
+                aria-label="Ouvrir le menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <p className={theme.mobileTitleClass}>Byound Expert</p>
+              <div className="w-10" />
+            </div>
+          )}
 
-          <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div className={workspace ? "h-full w-full overflow-y-auto" : "mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8"}>
             {children}
           </div>
         </main>

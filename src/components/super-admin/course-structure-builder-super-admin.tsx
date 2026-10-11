@@ -21,6 +21,7 @@ import {
   Clapperboard,
   FileText,
   GripVertical,
+  Gamepad2,
   Headphones,
   Plus,
   Text,
@@ -54,6 +55,7 @@ import { CourseStructureGeneratorModalSuperAdmin } from "@/components/super-admi
 import { toast } from "sonner";
 import { RichTextEditor } from "@/components/formateur/course-builder/rich-text-editor";
 import { MediaUploader } from "@/components/formateur/course-builder/media-uploader";
+import { InteractiveGameUploader } from "@/components/formateur/course-builder/interactive-game-uploader";
 
 type ContentTypeOption = {
   value: BuilderContentType;
@@ -67,6 +69,7 @@ const CONTENT_TYPE_OPTIONS: ContentTypeOption[] = [
   { value: "audio", label: "Audio", icon: Headphones, accent: "from-[#FF512F] to-[#DD2476]" },
   { value: "document", label: "Document", icon: FileText, accent: "from-[#8E2DE2] to-[#4A00E0]" },
   { value: "text", label: "Texte", icon: Text, accent: "from-[#6EE7B7] to-[#3B82F6]" },
+  { value: "interactive_game", label: "Jeu interactif", icon: Gamepad2, accent: "from-[#F59E0B] to-[#EF4444]" },
 ];
 
 const CONTENT_TYPE_MAP = Object.fromEntries(
@@ -650,6 +653,13 @@ function EditorPanel() {
           className="min-h-[120px] resize-none bg-gray-50 border-black text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-black"
         />
         
+        {nodes.chapter.type === "interactive_game" ? (
+          <InteractiveGameUploader
+            light
+            value={nodes.chapter.mediaUrl ?? ""}
+            onChange={(url) => updateChapter(selection.sectionId, selection.chapterId, { mediaUrl: url })}
+          />
+        ) : null}
         {/* Éditeur selon le type de contenu */}
         {(nodes.chapter.type === "video" || nodes.chapter.type === "audio") ? (
           <MediaUploader
@@ -714,6 +724,15 @@ function EditorPanel() {
           className="min-h-[120px] resize-none bg-gray-50 border-black text-sm text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-black"
         />
         
+        {nodes.subchapter.type === "interactive_game" ? (
+          <InteractiveGameUploader
+            light
+            value={nodes.subchapter.mediaUrl ?? ""}
+            onChange={(url) =>
+              updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, { mediaUrl: url })
+            }
+          />
+        ) : null}
         {/* Éditeur selon le type de contenu */}
         {(nodes.subchapter.type === "video" || nodes.subchapter.type === "audio") ? (
           <MediaUploader

@@ -63,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Gestion des formations", icon: BookOpen, href: "/super/formations" },
+  { label: "Online", icon: BookOpen, href: "/super/formations-online" },
   { label: "Formation Byound", icon: GraduationCap, href: "/super/formations-byound" },
   { label: "Référentiel métiers", icon: BookOpen, href: "/super/metiers" },
   { label: "Experts / Formateurs", icon: Users, href: "/super/experts" },

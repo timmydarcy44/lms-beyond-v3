@@ -168,7 +168,10 @@ function stateToPayload(state: CmsState) {
   };
 }
 
-export function TrainingCoursesCms() {
+type Catalog = "business" | "online";
+
+export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog }) {
+  const online = catalog === "online";
   const [courses, setCourses] = useState<TrainingCourseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -400,11 +403,17 @@ export function TrainingCoursesCms() {
         <div>
           <div className="flex items-center gap-2 text-[#635BFF]">
             <BookOpen className="h-5 w-5" />
-            <span className="text-xs font-semibold uppercase tracking-wider">CMS Formations Byound</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              {online ? "CMS Online" : "CMS Formations Byound"}
+            </span>
           </div>
-          <h1 className="mt-2 text-2xl font-semibold text-gray-900">Gestion des formations</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-gray-900">
+            {online ? "Formations Online" : "Gestion des formations"}
+          </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Créez des fiches formation professionnelles — structure publique, sans contenu LMS.
+            {online
+              ? "Reprenez toutes les formations accessibles aux particuliers : programme, durée, prix et prochaines dates."
+              : "Créez des fiches formation professionnelles — structure publique, sans contenu LMS."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -525,7 +534,11 @@ export function TrainingCoursesCms() {
                     Améliorer
                   </button>
                   <Link
-                    href={`/edge-lab/business/formations/${state.slug}`}
+                    href={
+                      online
+                        ? "/edge-lab/online/formations"
+                        : `/edge-lab/business/formations/${state.slug}`
+                    }
                     target="_blank"
                     className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
@@ -572,7 +585,9 @@ export function TrainingCoursesCms() {
                       checked={state.is_active}
                       onChange={(e) => patch("is_active", e.target.checked)}
                     />
-                    Formation active (visible sur le site public)
+                    {online
+                      ? "Visible dans Formations courtes"
+                      : "Formation active (visible sur le site public)"}
                   </label>
                 </div>
               )}

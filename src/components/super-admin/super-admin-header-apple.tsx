@@ -38,8 +38,17 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Gestion",
     href: "/super/formations",
+    activePrefixes: [
+      "/super/formations",
+      "/super/formations-byound",
+      "/super/formations-online",
+      "/super/metiers",
+      "/super/experts",
+      "/super/open-badges",
+    ],
     children: [
-      { label: "Gestion des formations", href: "/super/formations" },
+      { label: "Gestion des formations", href: "/super/formations", exact: true },
+      { label: "Online", href: "/super/formations-online" },
       { label: "Formation Byound", href: "/super/formations-byound" },
       { label: "Référentiel métier", href: "/super/metiers" },
       { label: "Experts / Formateurs", href: "/super/experts" },

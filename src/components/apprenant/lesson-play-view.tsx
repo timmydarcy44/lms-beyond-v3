@@ -1656,6 +1656,18 @@ export function LessonPlayView({
             ) : null}
           </div>
 
+          {activeLesson.type === "interactive_game" && normalizedVideoSrc ? (
+            <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-slate-950">
+              <iframe
+                src={normalizedVideoSrc}
+                title={activeLesson.title || "Jeu interactif"}
+                className="h-[70vh] min-h-[480px] w-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                allow="fullscreen"
+              />
+            </div>
+          ) : null}
+
           {isMediaContent && normalizedVideoSrc ? (
             <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-black transition">
               {normalizedVideoSrc &&

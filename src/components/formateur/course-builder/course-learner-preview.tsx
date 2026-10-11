@@ -22,7 +22,7 @@ type PreviewNode = {
   mediaUrl?: string;
   sectionTitle: string;
   chapterTitle: string;
-  kind: "content" | "quiz" | "interview" | "resource";
+  kind: "content" | "quiz" | "interview" | "resource" | "game";
   interviewContext?: string;
   interviewObjectives?: string;
 };
@@ -67,7 +67,16 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
               mediaUrl,
               sectionTitle: section.title || `Section ${sIdx + 1}`,
               chapterTitle: chapter.title || `Chapitre ${cIdx + 1}`,
-              kind: isQuiz ? "quiz" : isInterview ? "interview" : isResource ? "resource" : "content",
+              kind:
+                sub.type === "interactive_game"
+                  ? "game"
+                  : isQuiz
+                    ? "quiz"
+                    : isInterview
+                      ? "interview"
+                      : isResource
+                        ? "resource"
+                        : "content",
               interviewContext:
                 interviewContext || (isInterview ? chapterPlain.slice(0, 14_000) : undefined),
               interviewObjectives: interviewObjectives || undefined,
@@ -88,7 +97,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
             mediaUrl,
             sectionTitle: section.title || `Section ${sIdx + 1}`,
             chapterTitle: chapter.title || `Chapitre ${cIdx + 1}`,
-            kind: isQuiz ? "quiz" : "content",
+            kind: chapter.type === "interactive_game" ? "game" : isQuiz ? "quiz" : "content",
           });
         }
       });
@@ -161,7 +170,15 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
                   <p className="text-xs text-slate-500">{active.chapterTitle}</p>
                 </div>
 
-                {active.mediaUrl ? (
+                {active.kind === "game" && active.mediaUrl ? (
+                  <iframe
+                    src={active.mediaUrl}
+                    title={active.title}
+                    className="mt-6 h-[70vh] min-h-[480px] w-full rounded-2xl border border-slate-200"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                    allow="fullscreen"
+                  />
+                ) : active.mediaUrl ? (
                   <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Média</p>
                     <p className="mt-2 truncate text-sm text-slate-700">{active.mediaUrl}</p>

@@ -27,6 +27,7 @@ import {
   Headphones,
   ListChecks,
   Plus,
+  Gamepad2,
   Text,
   Trash2,
   Trophy,
@@ -67,6 +68,7 @@ import { SubchapterGenerationModal } from "@/components/formateur/ai/subchapter-
 import { toast } from "sonner";
 import { RichTextEditor } from "./rich-text-editor";
 import { MediaUploader } from "./media-uploader";
+import { InteractiveGameUploader } from "./interactive-game-uploader";
 import { FlashcardsManager } from "./flashcards-manager";
 import { ChapterAssessmentActions } from "./chapter-assessment-actions";
 import { ExperientialInterviewView } from "@/components/apprenant/experiential-interview-view";
@@ -94,6 +96,7 @@ const CONTENT_TYPE_OPTIONS: ContentTypeOption[] = [
   { value: "audio", label: "Audio", icon: Headphones },
   { value: "document", label: "Document", icon: FileText },
   { value: "text", label: "Texte", icon: Text },
+  { value: "interactive_game", label: "Jeu interactif", icon: Gamepad2 },
 ];
 
 const CONTENT_TYPE_MAP = Object.fromEntries(
@@ -127,6 +130,9 @@ function arborescenceNodeStatus(opts: {
   }
   if (opts.isResource) {
     return opts.resourceId ? "complete" : "empty";
+  }
+  if (opts.type === "interactive_game") {
+    return opts.mediaUrl ? "complete" : "empty";
   }
   if ((opts as { isInterview?: boolean }).isInterview) {
     const ctx = String((opts as { interviewContext?: string }).interviewContext ?? "").trim();
@@ -1471,6 +1477,13 @@ function EditorPanel({
             mediaType={nodes.chapter.type}
           />
         ) : null}
+        {nodes.chapter.type === "interactive_game" ? (
+          <InteractiveGameUploader
+            light={isLight}
+            value={nodes.chapter.mediaUrl ?? ""}
+            onChange={(url) => updateChapter(selection.sectionId, selection.chapterId, { mediaUrl: url })}
+          />
+        ) : null}
 
         <RichTextEditor
           content={nodes.chapter.content ?? ""}
@@ -1660,6 +1673,15 @@ function EditorPanel({
               updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, { mediaUrl: url } as any)
             }
             mediaType={nodes.subchapter.type}
+          />
+        ) : null}
+        {nodes.subchapter.type === "interactive_game" ? (
+          <InteractiveGameUploader
+            light={isLight}
+            value={nodes.subchapter.mediaUrl ?? ""}
+            onChange={(url) =>
+              updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, { mediaUrl: url })
+            }
           />
         ) : null}
 

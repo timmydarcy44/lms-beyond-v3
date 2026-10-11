@@ -1,4 +1,4 @@
-export type BuilderContentType = "video" | "audio" | "document" | "text";
+export type BuilderContentType = "video" | "audio" | "document" | "text" | "interactive_game";
 
 export type CourseBuilderSubchapterKind = "quiz" | "experiential_interview" | "resource";
 

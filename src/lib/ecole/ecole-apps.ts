@@ -52,6 +52,15 @@ const APPRENANTS_NAV: EcoleNavItem[] = [
       { label: "Prospection", href: "/dashboard/ecole/prospection" },
     ],
   },
+  {
+    type: "group",
+    label: "Recrutement CFA",
+    icon: UserPlus,
+    children: [
+      { label: "Candidatures", href: "/dashboard/ecole/recrutement/prospects" },
+      { label: "Entreprises CFA", href: "/dashboard/ecole/recrutement/entreprises" },
+    ],
+  },
 ];
 
 const FORMATEURS_NAV: EcoleNavItem[] = [

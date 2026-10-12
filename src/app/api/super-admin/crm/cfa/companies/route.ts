@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CFA_SPECIALIZATIONS, type CfaSpecialization } from "@/lib/cfa-applications";
 import { isCfaCompanyStatus } from "@/lib/cfa-companies";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { loadCfaCompanies } from "@/lib/cfa/load-cfa-crm";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 const TRACKS = new Set<string>(CFA_SPECIALIZATIONS.map((item) => item.value));
@@ -22,18 +23,9 @@ export async function GET() {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  const { data, error } = await db
-    .from("cfa_companies")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    if (error.code === "42P01" || error.code === "42703") {
-      return NextResponse.json({ companies: [], migrationRequired: true });
-    }
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-  return NextResponse.json({ companies: data ?? [] });
+  const board = await loadCfaCompanies(db);
+  if ("error" in board && board.error) return NextResponse.json({ error: board.error }, { status: 400 });
+  return NextResponse.json(board);
 }
 
 export async function POST(request: NextRequest) {

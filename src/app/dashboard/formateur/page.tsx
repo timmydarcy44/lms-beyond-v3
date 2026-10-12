@@ -161,7 +161,7 @@ export default function FormateurDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-6">
+      <section className="flex flex-col items-center space-y-6 text-center">
         <div>
           <p className="text-[15px] text-[var(--expert-muted)]">Bonjour {firstName}</p>
           <p className="expert-title mt-2 text-[64px] leading-none tracking-[-0.05em]">
@@ -170,7 +170,7 @@ export default function FormateurDashboardPage() {
           </p>
           <p className="expert-muted mt-2 text-[15px]">de cours sur les 30 prochains jours</p>
         </div>
-        <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-1">
+        <div className="flex w-full justify-center gap-4 overflow-x-auto pb-1">
           {actions.map((action) => {
             const Icon = action.icon;
             return (

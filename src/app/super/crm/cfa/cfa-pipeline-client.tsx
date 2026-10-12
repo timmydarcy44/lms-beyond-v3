@@ -77,7 +77,13 @@ const ADMIN_DOCUMENT_LABELS: Record<string, string> = {
   diploma: "Diplôme / relevé de notes",
 };
 
-export function CfaPipelineClient() {
+export function CfaPipelineClient({
+  apiPath = "/api/super-admin/crm/cfa",
+  readOnly = false,
+}: {
+  apiPath?: string;
+  readOnly?: boolean;
+} = {}) {
   const [applications, setApplications] = useState<CfaApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -92,7 +98,7 @@ export function CfaPipelineClient() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa", { cache: "no-store" });
+      const response = await fetch(apiPath, { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Chargement impossible");
       setApplications(result.applications ?? []);
@@ -124,7 +130,7 @@ export function CfaPipelineClient() {
     setUpdating(application.id);
     setError("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa", {
+      const response = await fetch(apiPath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: application.id, status }),
@@ -168,7 +174,7 @@ export function CfaPipelineClient() {
     setUpdating(selected.id);
     setAppointmentMessage("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa", {
+      const response = await fetch(apiPath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -312,24 +318,28 @@ export function CfaPipelineClient() {
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                           Statut
                         </label>
-                        <select
-                          value={application.status}
-                          disabled={updating === application.id}
-                          onChange={(event) =>
-                            void changeStatus(
-                              application,
-                              event.target.value as CfaApplicationStatus,
-                            )
-                          }
-                          onClick={(event) => event.stopPropagation()}
-                          className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-gray-700 outline-none focus:border-indigo-400"
-                        >
-                          {CFA_APPLICATION_STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                              {CFA_STATUS_LABELS[status]}
-                            </option>
-                          ))}
-                        </select>
+                        {readOnly ? (
+                          <p className="mt-1 text-xs font-medium text-gray-700">{CFA_STATUS_LABELS[application.status]}</p>
+                        ) : (
+                          <select
+                            value={application.status}
+                            disabled={updating === application.id}
+                            onChange={(event) =>
+                              void changeStatus(
+                                application,
+                                event.target.value as CfaApplicationStatus,
+                              )
+                            }
+                            onClick={(event) => event.stopPropagation()}
+                            className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-gray-700 outline-none focus:border-indigo-400"
+                          >
+                            {CFA_APPLICATION_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {CFA_STATUS_LABELS[status]}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </article>
                   ))}
@@ -442,6 +452,7 @@ export function CfaPipelineClient() {
                     </p>
                   </section>
                 ) : null}
+                {readOnly ? null : (
                 <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
                   <div className="flex items-center gap-2 font-semibold text-indigo-950">
                     <CalendarDays className="h-4 w-4" />
@@ -463,6 +474,7 @@ export function CfaPipelineClient() {
                     {appointmentMessage ? <p className={cn("text-xs", appointmentMessage.includes("envoyé au candidat") ? "text-emerald-700" : "text-rose-600")}>{appointmentMessage}</p> : null}
                   </div>
                 </section>
+                )}
               </div>
             </div>
           ) : null}

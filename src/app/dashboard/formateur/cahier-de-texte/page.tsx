@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { CheckCircle2, NotebookPen, X } from "lucide-react";
+import { CheckCircle2, Mic, NotebookPen, Paperclip, Square, X } from "lucide-react";
 
 import {
   APPRENANT_CARD_BODY,
@@ -13,6 +13,16 @@ import {
   APPRENANT_CARD_TITLE,
 } from "@/lib/apprenant/connect-nav";
 import { cn } from "@/lib/utils";
+
+type Resource = { type?: string; url?: string; label?: string };
+
+type CourseJournal = {
+  id: string;
+  title: string;
+  status?: string | null;
+  journal_content?: string;
+  journal_resources?: Resource[];
+};
 
 type Session = {
   id: string;
@@ -43,16 +53,22 @@ function CahierInner() {
   const searchParams = useSearchParams();
   const focusSlot = searchParams.get("slot");
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [courses, setCourses] = useState<CourseJournal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Session | null>(null);
+  const [editingCourse, setEditingCourse] = useState<CourseJournal | null>(null);
   const [form, setForm] = useState({
     lesson_content: "",
     lesson_objectives: [] as string[],
     lesson_homework: "",
     lesson_resources: "",
+    files: [] as Resource[],
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +82,7 @@ function CahierInner() {
     }
     const list: Session[] = json.sessions ?? [];
     setSessions(list);
+    setCourses(Array.isArray(json.courses) ? json.courses : []);
     if (focusSlot) {
       const found = list.find((s) => s.id === focusSlot);
       if (found) openEditor(found);
@@ -83,35 +100,58 @@ function CahierInner() {
       lesson_objectives: Array.isArray(s.lesson_objectives) ? s.lesson_objectives : [],
       lesson_homework: s.lesson_homework ?? "",
       lesson_resources: Array.isArray(s.lesson_resources)
-        ? (s.lesson_resources as Array<{ url?: string; label?: string }>)
+        ? (s.lesson_resources as Resource[])
+            .filter((r) => r.type !== "file")
             .map((r) => r.url || r.label || "")
             .filter(Boolean)
             .join("\n")
         : "",
+      files: Array.isArray(s.lesson_resources) ? (s.lesson_resources as Resource[]).filter((r) => r.type === "file") : [],
     });
   };
 
+  const openCourse = (course: CourseJournal) => {
+    setEditing(null);
+    setEditingCourse(course);
+    const resources = Array.isArray(course.journal_resources) ? course.journal_resources : [];
+    setForm({
+      lesson_content: course.journal_content ?? "",
+      lesson_objectives: [],
+      lesson_homework: "",
+      lesson_resources: resources
+        .filter((r) => r.type !== "file")
+        .map((r) => r.url || r.label || "")
+        .filter(Boolean)
+        .join("\n"),
+      files: resources.filter((r) => r.type === "file"),
+    });
+  };
+
+  const collectedResources = () => [
+    ...form.files.filter((file) => file.url),
+    ...form.lesson_resources
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => ({ type: "link", url: line, label: line })),
+  ];
+
   const save = async () => {
-    if (!editing) return;
+    if (!editing && !editingCourse) return;
     setSaving(true);
     setError(null);
-    const resources = form.lesson_resources
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((line) => ({ type: "link", url: line, label: line }));
-
     const res = await fetch("/api/dashboard/formateur/cahier-de-texte", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
-        slot_id: editing.id,
+        slot_id: editing?.id,
+        course_id: editingCourse?.id,
         lesson_content: form.lesson_content,
         lesson_objectives: form.lesson_objectives,
         lesson_homework: form.lesson_homework || null,
-        lesson_resources: resources,
-        complete: true,
+        lesson_resources: collectedResources(),
+        complete: Boolean(editing),
       }),
     });
     const json = await res.json();
@@ -120,8 +160,71 @@ function CahierInner() {
       setError(json.error || "Enregistrement impossible");
       return;
     }
+    stopDictation();
     setEditing(null);
+    setEditingCourse(null);
     await load();
+  };
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    setError(null);
+    const body = new FormData();
+    body.set("file", file);
+    const res = await fetch("/api/dashboard/formateur/cahier-de-texte", {
+      method: "POST",
+      credentials: "include",
+      body,
+    });
+    const json = await res.json().catch(() => ({}));
+    setUploading(false);
+    if (!res.ok || !json.url) {
+      setError(json.error || "Envoi du fichier impossible");
+      return;
+    }
+    setForm((current) => ({
+      ...current,
+      files: [...current.files, { type: "file", url: String(json.url), label: String(json.label || file.name) }],
+    }));
+  };
+
+  const stopDictation = () => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setListening(false);
+  };
+
+  const toggleDictation = () => {
+    if (listening) {
+      stopDictation();
+      return;
+    }
+    const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionConstructor) {
+      setError("La dictée n'est pas disponible dans ce navigateur.");
+      return;
+    }
+    const recognition = new SpeechRecognitionConstructor();
+    recognition.lang = "fr-FR";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let spoken = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        if (event.results[index].isFinal) spoken += `${event.results[index][0]?.transcript ?? ""} `;
+      }
+      const text = spoken.trim();
+      if (!text) return;
+      setForm((current) => ({
+        ...current,
+        lesson_content: current.lesson_content ? `${current.lesson_content.trim()} ${text}` : text,
+      }));
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
   };
 
   const pending = useMemo(() => sessions.filter((s) => !s.lesson_completed_at), [sessions]);
@@ -133,7 +236,7 @@ function CahierInner() {
         <p className={APPRENANT_CARD_KICKER}>Pédagogie</p>
         <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white">Cahier de texte</h1>
         <p className="text-[14px] text-white/40">
-          Séances issues du planning — complétez le contenu pour valider les heures réalisées.
+          Vos cours assignés. Écrivez, déposez un fichier ou dictez le contenu de la séance.
         </p>
       </header>
 
@@ -145,7 +248,35 @@ function CahierInner() {
 
       <section className="space-y-3">
         <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/35">
-          À compléter ({pending.length})
+          Cours assignés ({courses.length})
+        </h2>
+        {loading ? <p className={APPRENANT_CARD_MUTED}>Chargement…</p> : null}
+        {!loading && courses.length === 0 ? (
+          <p className={APPRENANT_CARD_MUTED}>Aucun cours ne vous est assigné pour le moment.</p>
+        ) : null}
+        {courses.map((course) => (
+          <div key={course.id} className={cn(APPRENANT_CARD_BODY, "sm:flex-row sm:items-center sm:justify-between")}>
+            <div className="min-w-0 space-y-1">
+              <p className={APPRENANT_CARD_TITLE}>{course.title}</p>
+              <p className={APPRENANT_CARD_MUTED}>
+                {course.journal_content?.trim() ? "Cahier commencé" : "Rien d'écrit pour le moment"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openCourse(course)}
+              className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#3D7BFF] px-4 py-2 text-[13px] font-semibold text-white sm:mt-0"
+            >
+              <NotebookPen className="h-4 w-4" />
+              Ouvrir
+            </button>
+          </div>
+        ))}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/35">
+          Séances à compléter ({pending.length})
         </h2>
         {loading ? <p className={APPRENANT_CARD_MUTED}>Chargement…</p> : null}
         {!loading && pending.length === 0 ? (
@@ -209,21 +340,31 @@ function CahierInner() {
         })}
       </section>
 
-      {editing ? (
+      {editing || editingCourse ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#12121A] p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-white">Cahier de texte</h3>
                 <p className="mt-1 text-sm text-white/45">
-                  {editing.module?.name ?? "Séance"} · {editing.class?.name ?? ""}
+                  {editingCourse?.title ?? editing?.module?.name ?? "Séance"}
+                  {editing?.class?.name ? ` · ${editing.class.name}` : ""}
                 </p>
-                <p className="mt-0.5 text-xs text-white/35">
-                  {formatSession(editing).day} · {formatSession(editing).time} ·{" "}
-                  {Number(editing.duration_hours ?? 0)} h
-                </p>
+                {editing ? (
+                  <p className="mt-0.5 text-xs text-white/35">
+                    {formatSession(editing).day} · {formatSession(editing).time} · {Number(editing.duration_hours ?? 0)} h
+                  </p>
+                ) : null}
               </div>
-              <button type="button" onClick={() => setEditing(null)} className="text-white/40 hover:text-white">
+              <button
+                type="button"
+                onClick={() => {
+                  stopDictation();
+                  setEditing(null);
+                  setEditingCourse(null);
+                }}
+                className="text-white/40 hover:text-white"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -236,18 +377,53 @@ function CahierInner() {
                 <textarea
                   className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#3D7BFF]/40"
                   rows={5}
-                  placeholder="Décrivez les notions abordées, les activités réalisées et l'avancement du groupe…"
+                  placeholder="Écrivez ou dictez les notions abordées, les activités et l'avancement du groupe…"
                   value={form.lesson_content}
                   onChange={(e) => setForm({ ...form, lesson_content: e.target.value })}
                 />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={toggleDictation}
+                    className="inline-flex items-center gap-2 rounded-full bg-white/[0.08] px-3 py-2 text-[12px] font-semibold text-white"
+                  >
+                    {listening ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                    {listening ? "Arrêter la dictée" : "Dicter"}
+                  </button>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-white/[0.08] px-3 py-2 text-[12px] font-semibold text-white">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {uploading ? "Envoi…" : "Uploader"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={uploading}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void uploadFile(file);
+                      }}
+                    />
+                  </label>
+                </div>
+                {form.files.length ? (
+                  <ul className="space-y-1 pt-1 text-[12px] text-white/60">
+                    {form.files.map((file) => (
+                      <li key={file.url}>
+                        <a href={file.url} target="_blank" rel="noreferrer" className="hover:text-white">
+                          {file.label || file.url}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </label>
 
-              {(editing.module_objectives?.length || 0) > 0 ? (
+              {(editing?.module_objectives?.length || 0) > 0 ? (
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">
                     Objectifs travaillés
                   </p>
-                  {editing.module_objectives!.map((obj) => {
+                  {editing!.module_objectives!.map((obj) => {
                     const checked = form.lesson_objectives.includes(obj);
                     return (
                       <label key={obj} className="flex items-start gap-2 text-sm text-white/70">
@@ -300,7 +476,11 @@ function CahierInner() {
               <button
                 type="button"
                 className="rounded-xl px-3 py-2 text-sm text-white/50"
-                onClick={() => setEditing(null)}
+                onClick={() => {
+                  stopDictation();
+                  setEditing(null);
+                  setEditingCourse(null);
+                }}
               >
                 Annuler
               </button>

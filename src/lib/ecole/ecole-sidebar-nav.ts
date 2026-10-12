@@ -76,6 +76,7 @@ export const ECOLE_SIDEBAR_NAV: EcoleNavItem[] = [
     icon: Briefcase,
     children: [
       { label: "Prospects étudiants", href: "/dashboard/ecole/recrutement/prospects" },
+      { label: "Entreprises CFA", href: "/dashboard/ecole/recrutement/entreprises" },
       { label: "Post formation", href: "/dashboard/ecole/recrutement/post-formation" },
     ],
   },

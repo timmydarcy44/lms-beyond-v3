@@ -82,7 +82,13 @@ function draftFromCompany(company: CfaCompany): CompanyDraft {
   };
 }
 
-export function CfaCompanyPipelineClient() {
+export function CfaCompanyPipelineClient({
+  apiPath = "/api/super-admin/crm/cfa/companies",
+  readOnly = false,
+}: {
+  apiPath?: string;
+  readOnly?: boolean;
+} = {}) {
   const [companies, setCompanies] = useState<CfaCompany[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -111,7 +117,7 @@ export function CfaCompanyPipelineClient() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa/companies", { cache: "no-store" });
+      const response = await fetch(apiPath, { cache: "no-store" });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Chargement impossible");
       setCompanies(result.companies ?? []);
@@ -142,7 +148,7 @@ export function CfaCompanyPipelineClient() {
     setUpdating(company.id);
     setError("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa/companies", {
+      const response = await fetch(apiPath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: company.id, status }),
@@ -204,7 +210,7 @@ export function CfaCompanyPipelineClient() {
     setEditMessage("");
     setError("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa/companies", {
+      const response = await fetch(apiPath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -243,7 +249,7 @@ export function CfaCompanyPipelineClient() {
     if (!/^\d{14}$/.test(digits)) return;
     setLookup("Recherche du SIRET…");
     try {
-      const response = await fetch(`/api/super-admin/crm/cfa/companies/lookup?siret=${digits}`);
+      const response = await fetch(`${apiPath}/lookup?siret=${digits}`);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Entreprise introuvable");
       if (result.companyName) setCompanyName(result.companyName);
@@ -259,7 +265,7 @@ export function CfaCompanyPipelineClient() {
     setSaving(true);
     setError("");
     try {
-      const response = await fetch("/api/super-admin/crm/cfa/companies", {
+      const response = await fetch(apiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -299,6 +305,7 @@ export function CfaCompanyPipelineClient() {
           </p>
         </div>
         <div className="flex gap-2">
+          {readOnly ? null : (
           <button
             type="button"
             onClick={() => {
@@ -310,6 +317,7 @@ export function CfaCompanyPipelineClient() {
             <Plus className="h-4 w-4" />
             Entreprise
           </button>
+          )}
           <button
             type="button"
             onClick={() => void load()}
@@ -602,6 +610,9 @@ export function CfaCompanyPipelineClient() {
                         </div>
                         <div className="mt-4 border-t border-gray-100 pt-3" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
                           <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Statut</label>
+                          {readOnly ? (
+                            <p className="mt-1 text-xs font-medium text-gray-700">{CFA_COMPANY_STATUS_LABELS[company.status]}</p>
+                          ) : (
                           <select
                             value={company.status}
                             disabled={updating === company.id}
@@ -612,6 +623,7 @@ export function CfaCompanyPipelineClient() {
                               <option key={status} value={status}>{CFA_COMPANY_STATUS_LABELS[status]}</option>
                             ))}
                           </select>
+                          )}
                         </div>
                       </article>
                     ))}

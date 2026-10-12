@@ -66,6 +66,16 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    label: "École",
+    href: "/super/ecole/planning",
+    activePrefixes: ["/super/ecole/planning"],
+    children: [
+      { label: "Emploi du temps", href: "/super/ecole/planning", exact: true },
+      { label: "Cahier de texte", href: "/super/ecole/planning/cahier-de-texte" },
+      { label: "Émargement / Absences", href: "/super/ecole/planning/absences" },
+    ],
+  },
+  {
     label: "Business",
     href: "/super/crm/pipeline",
     activePrefixes: ["/super/crm/pipeline", "/super/utilisateurs", "/super/organisations", "/super/crm/emails"],

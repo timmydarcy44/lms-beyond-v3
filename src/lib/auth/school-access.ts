@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import {
   isEcoleHandicapSectionPath,
   shouldRestrictSchoolDashboardToHandicapOnly,
@@ -97,8 +99,30 @@ export async function fetchSchoolGateProfile(
   return mapGateRow(row);
 }
 
+/** École qui porte déjà le planning (mêmes créneaux que /dashboard/ecole). */
+async function resolvePrimarySchoolId(service: SupabaseClient): Promise<string | null> {
+  const { data: slot } = await service
+    .from("school_planning_slots")
+    .select("school_id")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const fromSlot = (slot as { school_id?: string } | null)?.school_id;
+  if (fromSlot) return String(fromSlot);
+
+  const { data: year } = await service
+    .from("school_years")
+    .select("school_id")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const fromYear = (year as { school_id?: string } | null)?.school_id;
+  return fromYear ? String(fromYear) : null;
+}
+
 /**
  * CFA : `profiles.school_id`, sinon premier org staff dans `org_memberships`.
+ * Le gérant Byound Business voit l'école qui porte le planning, pas une autre organisation.
  */
 export async function resolveSchoolIdForEcoleDashboard(
   userId: string,
@@ -106,9 +130,15 @@ export async function resolveSchoolIdForEcoleDashboard(
   supabaseUser: SupabaseClient,
 ): Promise<string | null> {
   const gate = await fetchSchoolGateProfile(userId, email, supabaseUser);
+  const service = await getServiceRoleClientOrFallback();
+
+  if (service && isByoundBusinessManager(email)) {
+    const primary = await resolvePrimarySchoolId(service);
+    if (primary) return primary;
+  }
+
   if (gate?.school_id) return gate.school_id;
 
-  const service = await getServiceRoleClientOrFallback();
   if (!service) return null;
 
   const staffRoles = ["admin", "instructor", "tutor"];
@@ -135,6 +165,10 @@ export async function resolveSchoolIdForEcoleDashboard(
       .limit(5);
     const oid = (alt?.[0] as { organisation_id?: string })?.organisation_id;
     if (oid) return String(oid);
+  }
+
+  if (isSuperAdminEmailAllowlisted(email)) {
+    return resolvePrimarySchoolId(service);
   }
 
   return null;

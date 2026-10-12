@@ -33,7 +33,7 @@ import {
   groupLessonsForOutline,
   outlineKeysContainingLesson,
 } from "@/lib/apprenant/lesson-outline-groups";
-import { extractStandaloneHtmlDocument, isHtmlGameUrl } from "@/lib/course-builder/html-game";
+import { extractStandaloneHtmlDocument, isHtmlGameUrl, toInteractiveGameFrameSrc } from "@/lib/course-builder/html-game";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -1668,7 +1668,7 @@ export function LessonPlayView({
               <iframe
                 src={
                   videoSrc && (activeLesson.type === "interactive_game" || isHtmlGameUrl(videoSrc))
-                    ? videoSrc
+                    ? toInteractiveGameFrameSrc(videoSrc)
                     : undefined
                 }
                 srcDoc={

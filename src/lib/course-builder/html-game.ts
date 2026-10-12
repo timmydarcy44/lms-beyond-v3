@@ -34,3 +34,23 @@ export function isHtmlGameUrl(url: string | null | undefined) {
     return /\.html?(?:$|[?#])/i.test(value);
   }
 }
+
+/**
+ * Le stockage public sert souvent les .html en texte brut.
+ * On les relit via l'application pour que l'iframe exécute le jeu.
+ */
+export function toInteractiveGameFrameSrc(url: string | null | undefined): string | undefined {
+  const value = String(url ?? "").trim();
+  if (!value || !/^https?:\/\//i.test(value)) return undefined;
+  const marker = "/interactive-games/";
+  const index = value.indexOf(marker);
+  if (index < 0) return value;
+  const relative = value.slice(index + marker.length).split(/[?#]/)[0] ?? "";
+  if (!relative || relative.includes("..")) return undefined;
+  const encoded = relative
+    .split("/")
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  return encoded ? `/api/course-builder/interactive-game/play/${encoded}` : undefined;
+}

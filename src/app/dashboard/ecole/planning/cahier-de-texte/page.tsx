@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
 export default function EcoleCahierDeTextePage() {
@@ -21,6 +22,10 @@ export default function EcoleCahierDeTextePage() {
   const [status, setStatus] = useState<"all" | "pending" | "completed">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pathname = usePathname();
+  const planningHref = pathname.startsWith("/super")
+    ? "/super/ecole/planning"
+    : "/dashboard/ecole/planning";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,7 +55,7 @@ export default function EcoleCahierDeTextePage() {
             Contenus de séance saisis par les formateurs — alimentent les heures réalisées.
           </p>
         </div>
-        <Link href="/dashboard/ecole/planning" className="text-sm font-semibold text-[#3D7BFF]">
+        <Link href={planningHref} className="text-sm font-semibold text-[#3D7BFF]">
           ← Planning
         </Link>
       </header>

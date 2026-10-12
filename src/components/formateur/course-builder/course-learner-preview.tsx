@@ -9,7 +9,7 @@ import { CourseBuilderSnapshot } from "@/types/course-builder";
 import { useEffect, useMemo, useState } from "react";
 import { ExperientialInterviewView } from "@/components/apprenant/experiential-interview-view";
 import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
-import { extractStandaloneHtmlDocument, isHtmlGameUrl } from "@/lib/course-builder/html-game";
+import { extractStandaloneHtmlDocument, isHtmlGameUrl, toInteractiveGameFrameSrc } from "@/lib/course-builder/html-game";
 
 type CourseLearnerPreviewProps = {
   snapshot?: CourseBuilderSnapshot;
@@ -175,7 +175,7 @@ export function CourseLearnerPreview({ snapshot }: CourseLearnerPreviewProps) {
                   const gameDocument = extractStandaloneHtmlDocument(active.html);
                   const gameSrc =
                     (active.kind === "game" || isHtmlGameUrl(active.mediaUrl)) && active.mediaUrl
-                      ? active.mediaUrl
+                      ? toInteractiveGameFrameSrc(active.mediaUrl) ?? ""
                       : "";
                   if (gameSrc || gameDocument) {
                     return (

@@ -1,6 +1,8 @@
-import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
+import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 import { resolveEnterpriseViewerDisplay } from "@/lib/entreprise/resolve-viewer-display";
+import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const MANAGER_ROLES = new Set(["entreprise", "admin_hr", "rh", "manager", "admin"]);
 
@@ -138,7 +140,10 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
     nom: viewerResolved.nom,
   };
 
-  const organizationId = profile.company_id?.trim() || null;
+  const organizationId =
+    isByoundBusinessManager(viewer.email) || isByoundBusinessManager(user.email)
+      ? EDGEBS_ORG_ID
+      : profile.company_id?.trim() || null;
   if (!organizationId) {
     if (isSuperAdminProfile(profile)) {
       return { ok: true, superAdminPreview: true, userId: user.id, viewer };

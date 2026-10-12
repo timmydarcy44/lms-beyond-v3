@@ -6,7 +6,6 @@ export const PSG_DEMO_VIEWER_EMAILS = new Set([
   "demo@psg.fr",
   "demoapprenant@psg.fr",
   "demoecole@psg.fr",
-  "timmydarcy44@gmail.com",
   "jerome.picot@edgebs.fr",
   "contact@edgebs.fr",
 ]);

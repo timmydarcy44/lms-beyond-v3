@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { PaywallLMS } from "@/components/paywalls/paywall-lms";
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 
@@ -10,7 +11,11 @@ export default async function StudentSuiteLayout({ children }: { children: React
     redirect("/login?from=lms");
   }
 
-  if (isUniversalAdminRole(profile?.role)) {
+  if (
+    isUniversalAdminRole(profile?.role) ||
+    isByoundBusinessManager(user.email) ||
+    isByoundBusinessManager(profile?.email)
+  ) {
     return <>{children}</>;
   }
 

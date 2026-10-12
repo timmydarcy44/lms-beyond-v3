@@ -7,6 +7,7 @@ import "@/styles/edge-connect.css";
 import "@/styles/jessica-connect.css";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import { ApprenantConnectShell } from "@/components/apprenant/apprenant-connect-shell";
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { getSession } from "@/lib/auth/session";
@@ -78,7 +79,11 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
 
   const variant = resolveApprenantVariant(hostname, profile);
 
-  if (isUniversalAdminRole(profile?.role)) {
+  if (
+    isUniversalAdminRole(profile?.role) ||
+    isByoundBusinessManager(user.email) ||
+    isByoundBusinessManager(profile?.email)
+  ) {
     return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
   }
 

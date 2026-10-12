@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { isClubOnlyAccount, canAccessClubDashboard } from "@/lib/auth/club-access";
@@ -497,7 +498,7 @@ async function runMiddleware(request: NextRequest) {
 
     const isSuperAdmin =
       isUniversalAdminRole(role) || roleType === "super_admin" || role === "super_admin";
-    if (isSuperAdmin) {
+    if (isSuperAdmin || isByoundBusinessManager(user.email)) {
       return response;
     }
 
@@ -566,7 +567,7 @@ async function runMiddleware(request: NextRequest) {
         .maybeSingle();
       const pe = profileEcole as { role?: string | null; role_type?: string | null } | null;
       const roleEcole = String(pe?.role ?? "").trim().toLowerCase();
-      if (!isUniversalAdminRole(roleEcole)) {
+      if (!isUniversalAdminRole(roleEcole) && !isByoundBusinessManager(userEcole.email)) {
         if (
           shouldRestrictSchoolDashboardToHandicapOnly({
             profileRole: pe?.role,

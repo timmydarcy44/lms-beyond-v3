@@ -1,5 +1,7 @@
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 
 /** Rôles RH entreprise autorisés (exclut admin plateforme / super_admin). */
 const MANAGER_ROLES = new Set(["entreprise", "admin_hr", "rh", "manager"]);
@@ -13,6 +15,11 @@ export async function resolveEntrepriseAssistantAccess(): Promise<EntrepriseAssi
   const { user, profile } = await getCurrentProfileWithAccess();
   if (!user?.id || !profile) {
     return { ok: false, error: "Non authentifié", status: 401 };
+  }
+
+  const managerEmail = user.email ?? profile.email ?? null;
+  if (isByoundBusinessManager(managerEmail)) {
+    return { ok: true, userId: user.id, organizationId: EDGEBS_ORG_ID };
   }
 
   if (await isSuperAdmin()) {

@@ -51,7 +51,9 @@ export type LearnerInterviewSession = {
   id: string;
   courseId: string | null;
   lessonId: string;
-  interviewStyle: "coaching" | "experiential";
+  interviewStyle: "coaching" | "experiential" | "mise_en_situation";
+  score?: number | null;
+  ending?: string | null;
   chapterTitle: string | null;
   courseTitle: string | null;
   status: string;

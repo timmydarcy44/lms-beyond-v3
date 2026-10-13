@@ -1,6 +1,6 @@
 export type InterviewAudience = "professional" | "parent";
 
-export type InterviewStyle = "experiential" | "coaching";
+export type InterviewStyle = "experiential" | "coaching" | "mise_en_situation";
 
 export type InterviewPlayTheme = "edge" | "jessica";
 
@@ -91,7 +91,7 @@ export function resolveLessonInterviewConfig(
 ): { style: InterviewStyle; audience: InterviewAudience } {
   const rawStyle = String(lesson.interview_style ?? "").trim();
   let style: InterviewStyle;
-  if (rawStyle === "coaching" || rawStyle === "experiential") {
+  if (rawStyle === "coaching" || rawStyle === "experiential" || rawStyle === "mise_en_situation") {
     style = rawStyle;
   } else {
     style = options?.jessicaSite ? "coaching" : "experiential";
@@ -104,5 +104,7 @@ export function resolveLessonInterviewConfig(
 }
 
 export function interviewBlockTitle(style: InterviewStyle): string {
-  return style === "coaching" ? "Se faire coacher" : "Entretien expérientiel";
+  if (style === "coaching") return "Se faire coacher";
+  if (style === "mise_en_situation") return "Mise en situation";
+  return "Entretien expérientiel";
 }

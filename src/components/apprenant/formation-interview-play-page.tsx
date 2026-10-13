@@ -8,6 +8,7 @@ import {
   resolveInterviewParentChapterTitle,
 } from "@/lib/apprenant/interview-revision-outline";
 import { resolveLessonInterviewConfig } from "@/lib/apprenant/interview-audience";
+import type { SituationPublic } from "@/lib/interview/situation-schema";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
 type FormationInterviewPlayPageProps = {
@@ -102,6 +103,9 @@ export async function FormationInterviewPlayPage({
           theme={isJessica ? "jessica" : "edge"}
           interviewStyle={interviewStyle}
           audience={audience}
+          situation={
+            (activeLesson as { situation_public?: SituationPublic | null }).situation_public ?? null
+          }
         />
       </div>
       </LearningSessionTracker>

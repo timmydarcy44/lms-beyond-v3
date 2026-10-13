@@ -8,10 +8,12 @@ import { InterviewCinematicTransition } from "@/components/apprenant/interview-c
 import { InterviewFeedbackPanel } from "@/components/apprenant/interview-feedback-panel";
 import { InterviewReadinessGate } from "@/components/apprenant/interview-readiness-gate";
 import { InterviewRevisionPanel } from "@/components/apprenant/interview-revision-panel";
+import { SituationInterviewPlay } from "@/components/apprenant/situation-interview-play";
 import { Button } from "@/components/ui/button";
 import type { InterviewFeedbackPayload } from "@/app/api/ai/experiential-interview/feedback/route";
 import type { RevisionLessonItem } from "@/lib/apprenant/interview-revision-outline";
 import type { InterviewAudience, InterviewPlayTheme, InterviewStyle } from "@/lib/apprenant/interview-audience";
+import type { SituationPublic } from "@/lib/interview/situation-schema";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -29,6 +31,7 @@ type InterviewPlayClientProps = {
   theme?: InterviewPlayTheme;
   audience?: InterviewAudience;
   interviewStyle?: InterviewStyle;
+  situation?: SituationPublic | null;
 };
 
 async function fetchOpeningMessage(
@@ -62,7 +65,22 @@ async function fetchOpeningMessage(
   }
 }
 
-export function InterviewPlayClient({
+export function InterviewPlayClient(props: InterviewPlayClientProps) {
+  if (props.interviewStyle === "mise_en_situation" && props.situation && props.courseId) {
+    return (
+      <SituationInterviewPlay
+        courseId={props.courseId}
+        lessonId={props.lessonId}
+        returnHref={props.returnHref}
+        scenario={props.situation}
+        theme={props.theme}
+      />
+    );
+  }
+  return <ClassicInterviewPlay {...props} />;
+}
+
+function ClassicInterviewPlay({
   contextText,
   interviewObjectives,
   chapterTitle,

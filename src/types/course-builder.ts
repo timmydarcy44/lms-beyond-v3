@@ -22,7 +22,18 @@ export type CourseBuilderSubchapter = {
   /** Objectifs pédagogiques guidant les questions de l’entretien. */
   interview_objectives?: string;
   /** experiential = vécu (pro ou parent) ; coaching = questions sur le contenu du cours. */
-  interview_style?: "experiential" | "coaching";
+  interview_style?: "experiential" | "coaching" | "mise_en_situation";
+  /** Champs visibles de la mise en situation. Les prompts restent hors du snapshot. */
+  situation_public?: {
+    title: string;
+    character: { name: string; role: string; initials: string };
+    learnerBrief: string;
+    minTurns: number;
+    maxTurns: number;
+    passingScore: number;
+    criteria: { id: string; label: string; max: number }[];
+    endings: { id: string; min: number; title: string }[];
+  };
   /** Thématique de l'entretien expérientiel uniquement. */
   interview_audience?: "professional" | "parent";
 };

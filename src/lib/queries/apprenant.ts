@@ -222,7 +222,17 @@ export type LearnerLesson = {
   resource_id?: string;
   interview_context?: string;
   interview_objectives?: string;
-  interview_style?: "experiential" | "coaching";
+  interview_style?: "experiential" | "coaching" | "mise_en_situation";
+  situation_public?: {
+    title: string;
+    character: { name: string; role: string; initials: string };
+    learnerBrief: string;
+    minTurns: number;
+    maxTurns: number;
+    passingScore: number;
+    criteria: { id: string; label: string; max: number }[];
+    endings: { id: string; min: number; title: string }[];
+  };
   interview_audience?: "professional" | "parent";
   /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
   dbChapterId?: string | null;
@@ -1218,8 +1228,13 @@ export async function getLearnerContentDetail(
                       interview_objectives: interviewObjectives || undefined,
                       interview_style:
                         subchapter.interview_style === "coaching" ||
-                        subchapter.interview_style === "experiential"
+                        subchapter.interview_style === "experiential" ||
+                        subchapter.interview_style === "mise_en_situation"
                           ? subchapter.interview_style
+                          : undefined,
+                      situation_public:
+                        subchapter.situation_public && typeof subchapter.situation_public === "object"
+                          ? subchapter.situation_public
                           : undefined,
                       interview_audience:
                         subchapter.interview_audience === "parent" ||

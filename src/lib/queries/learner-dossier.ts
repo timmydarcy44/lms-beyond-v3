@@ -254,7 +254,7 @@ export async function getLearnerDossier(userId: string): Promise<LearnerDossier 
         supabase
           .from("experiential_interview_sessions")
           .select(
-            "id, course_id, lesson_id, interview_style, chapter_title, course_title, status, user_turn_count, duration_seconds, completed_at, feedback",
+            "id, course_id, lesson_id, interview_style, chapter_title, course_title, status, user_turn_count, duration_seconds, completed_at, feedback, score, ending, passed, feedback_md",
           )
           .eq("user_id", userId)
           .order("completed_at", { ascending: false })
@@ -650,13 +650,24 @@ export async function getLearnerDossier(userId: string): Promise<LearnerDossier 
         duration_seconds?: number;
         completed_at?: string;
         feedback?: Record<string, unknown> | null;
+        score?: number | null;
+        ending?: string | null;
+        feedback_md?: string | null;
       };
       const fb = r.feedback as LearnerInterviewSession["feedback"];
+      const style =
+        r.interview_style === "coaching"
+          ? "coaching"
+          : r.interview_style === "mise_en_situation"
+            ? "mise_en_situation"
+            : "experiential";
       return {
         id: r.id,
         courseId: r.course_id ?? null,
         lessonId: r.lesson_id ?? "",
-        interviewStyle: r.interview_style === "coaching" ? "coaching" : "experiential",
+        interviewStyle: style,
+        score: r.score ?? null,
+        ending: r.ending ?? null,
         chapterTitle: r.chapter_title ?? null,
         courseTitle: r.course_title ?? null,
         status: r.status ?? "completed",
@@ -684,13 +695,18 @@ export async function getLearnerDossier(userId: string): Promise<LearnerDossier 
 
     for (const session of interviewSessions) {
       const isCoaching = session.interviewStyle === "coaching";
+      const isSituation = session.interviewStyle === "mise_en_situation";
       coachingActivities.unshift({
         id: session.id,
         type: "ai_lesson",
-        title: isCoaching
-          ? `Se faire coacher — ${session.chapterTitle ?? "Leçon"}`
-          : `Entretien expérientiel — ${session.chapterTitle ?? "Leçon"}`,
-        detail: session.feedback?.summary ?? `${session.userTurnCount} échanges · ${formatLearnerDuration(session.durationSeconds)}`,
+        title: isSituation
+          ? `Mise en situation — ${session.chapterTitle ?? "Leçon"}`
+          : isCoaching
+            ? `Se faire coacher — ${session.chapterTitle ?? "Leçon"}`
+            : `Entretien expérientiel — ${session.chapterTitle ?? "Leçon"}`,
+        detail: isSituation
+          ? `${session.score ?? "—"}/100 · ${session.ending ?? "en cours"} · ${session.userTurnCount} échanges`
+          : session.feedback?.summary ?? `${session.userTurnCount} échanges · ${formatLearnerDuration(session.durationSeconds)}`,
         status: session.status,
         occurredAt: session.completedAt,
         strengths: session.feedback?.bien_dit ?? [],

@@ -43,6 +43,7 @@ import {
   FileText,
   Headphones,
   PlayCircle,
+  X,
   ClipboardCheck,
   ChevronDown,
   ChevronLeft,
@@ -324,6 +325,8 @@ export function LessonPlayView({
   const [testFlowMeta, setTestFlowMeta] = useState<{ title: string; minScore: number }>({ title: "", minScore: 70 });
   const [isLoadingTest, setIsLoadingTest] = useState(false);
   const [quizNavTick, setQuizNavTick] = useState(0);
+  const [gameOpen, setGameOpen] = useState(false);
+  const gameFrameRef = useRef<HTMLDivElement | null>(null);
   const [isBeyondFlashOpen, setIsBeyondFlashOpen] = useState(false);
   const [beyondFlashStorageEpoch, setBeyondFlashStorageEpoch] = useState(0);
   const [fetchedFlashcards, setFetchedFlashcards] = useState<LearnerFlashcard[]>([]);
@@ -814,6 +817,7 @@ export function LessonPlayView({
     setTestStarted(false);
     setTestQuestions([]);
     setTestFlowMeta({ title: "", minScore: 70 });
+    setGameOpen(false);
   }, [activeLesson.id]);
 
   const standaloneGameDocument = useMemo(
@@ -824,6 +828,34 @@ export function LessonPlayView({
     activeLesson.type === "interactive_game" ||
     isHtmlGameUrl(videoSrc) ||
     Boolean(standaloneGameDocument);
+  const gameFrameSrc =
+    isInteractiveGame && videoSrc && (activeLesson.type === "interactive_game" || isHtmlGameUrl(videoSrc))
+      ? toInteractiveGameFrameSrc(videoSrc)
+      : undefined;
+
+  useEffect(() => {
+    if (!gameOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = gameFrameRef.current;
+    frame?.requestFullscreen?.().catch(() => undefined);
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) setGameOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setGameOpen(false);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      window.removeEventListener("keydown", onKey);
+      if (document.fullscreenElement === frame) {
+        document.exitFullscreen?.().catch(() => undefined);
+      }
+    };
+  }, [gameOpen]);
 
   const { normalizedVideoSrc, sanitizedContent } = useMemo(() => {
     const urlsInContent =
@@ -1664,25 +1696,48 @@ export function LessonPlayView({
           </div>
 
           {isInteractiveGame ? (
-            <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-slate-950">
-              <iframe
-                src={
-                  videoSrc && (activeLesson.type === "interactive_game" || isHtmlGameUrl(videoSrc))
-                    ? toInteractiveGameFrameSrc(videoSrc)
-                    : undefined
-                }
-                srcDoc={
-                  videoSrc && (activeLesson.type === "interactive_game" || isHtmlGameUrl(videoSrc))
-                    ? undefined
-                    : standaloneGameDocument ?? undefined
-                }
-                title={activeLesson.title || "Jeu interactif"}
-                className="h-[78vh] min-h-[560px] w-full border-0"
-                sandbox="allow-scripts allow-forms allow-popups allow-modals"
-                allow="fullscreen"
-              />
+            <div className="mb-6 flex min-h-[420px] flex-col items-start justify-center gap-6 rounded-3xl border border-slate-200 bg-[#0B1020] px-8 py-12 text-white sm:px-12">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Jeu interactif</p>
+              <div className="max-w-xl space-y-3">
+                <h3 className="text-3xl font-black tracking-tight sm:text-4xl">{activeLesson.title || "Jeu"}</h3>
+                <p className="text-sm leading-relaxed text-white/70">
+                  Le jeu s&apos;ouvre en plein écran. Vous pouvez le quitter à tout moment pour revenir au chapitre.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setGameOpen(true)}
+                className="h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"
+              >
+                <PlayCircle className="mr-2 h-4 w-4" aria-hidden />
+                Commencer le jeu
+              </Button>
             </div>
           ) : null}
+
+          {isInteractiveGame && gameOpen && mounted
+            ? createPortal(
+                <div ref={gameFrameRef} className="fixed inset-0 z-[200] bg-black">
+                  <iframe
+                    src={gameFrameSrc}
+                    srcDoc={gameFrameSrc ? undefined : standaloneGameDocument ?? undefined}
+                    title={activeLesson.title || "Jeu interactif"}
+                    className="h-full w-full border-0"
+                    sandbox="allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock"
+                    allow="fullscreen"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setGameOpen(false)}
+                    className="absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white ring-1 ring-white/20 backdrop-blur hover:bg-black"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                    Quitter
+                  </button>
+                </div>,
+                document.body,
+              )
+            : null}
 
           {isMediaContent && normalizedVideoSrc ? (
             <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-black transition">

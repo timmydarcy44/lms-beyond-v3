@@ -5,8 +5,9 @@ import {
 } from "@/lib/queries/apprenant";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { SectionSlider } from "@/components/dashboard/section-slider";
-import { FormationDetailView, type Episode } from "./view";
+import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { FormationStudio } from "./formation-studio";
+import type { Episode } from "./view";
 import { edgeOnlinePublicHref, type EdgeOnlineHrefPrefix } from "@/lib/edge-online-public-path";
 
 const CATEGORY_LABEL: Record<LearnerCategory, string> = {
@@ -43,15 +44,12 @@ export async function renderFormationDetailPage(args: {
     notFound();
   }
 
-  const { card: rawCard, detail: info, related = [] } = detail;
+  const { card: rawCard, detail: info } = detail;
   const formationBaseHref =
     edgeOnlineHrefPrefix !== undefined
       ? edgeOnlinePublicHref(`/formations/${encodeURIComponent(slug)}`, edgeOnlineHrefPrefix)
       : rawCard.href;
   const card = { ...rawCard, href: formationBaseHref };
-  const lessons = info.modules.flatMap((module) => module.lessons ?? []);
-  const firstLesson = lessons[0];
-  const playHref = firstLesson ? `${formationBaseHref}/play/${firstLesson.id}` : formationBaseHref;
 
   const formationsIndexHref =
     edgeOnlineHrefPrefix !== undefined ? edgeOnlinePublicHref("/", edgeOnlineHrefPrefix) : null;
@@ -73,18 +71,6 @@ export async function renderFormationDetailPage(args: {
         { label: CATEGORY_LABEL[category] },
         { label: info.title },
       ];
-
-  const relatedForSlider =
-    edgeOnlineHrefPrefix !== undefined && related.length > 0
-      ? related.map((rc) => {
-          const rs = String(rc.slug ?? rc.id ?? "").trim();
-          if (!rs) return rc;
-          return {
-            ...rc,
-            href: edgeOnlinePublicHref(`/formations/${encodeURIComponent(rs)}`, edgeOnlineHrefPrefix),
-          };
-        })
-      : related;
 
   const contentType = "course";
 
@@ -135,29 +121,15 @@ export async function renderFormationDetailPage(args: {
           hideSidebar
           mainClassName="!m-0 !ml-0 !mt-0 !p-0 !px-0 !pl-0 !pt-0 w-full max-w-none"
         >
-          <FormationDetailView
-            card={card}
-            info={info}
-            related={relatedForSlider}
-            playHref={playHref}
+          <FormationStudio
+            title={info.title}
+            description={String((info as { presentation?: string; description?: string }).presentation || (info as { description?: string }).description || "")}
+            playBase={card.href}
+            backHref={breadcrumbs.find((crumb) => crumb.href)?.href ?? "/dashboard/apprenant"}
+            snapshot={((info as { builder_snapshot?: CourseBuilderSnapshot | null }).builder_snapshot ?? null) as CourseBuilderSnapshot | null}
+            skills={Array.isArray((info as { skills?: string[] }).skills) ? (info as { skills?: string[] }).skills ?? [] : []}
             episodes={episodes}
-            breadcrumbs={breadcrumbs}
-            orgSlug={orgSlug}
           />
-          {relatedForSlider.length > 0 && (
-            <SectionSlider
-              title="Vous aimerez aussi"
-              cards={relatedForSlider.map((card) => ({
-                ...card,
-                cta: card.cta ?? undefined,
-                meta: card.meta ?? undefined,
-                progress: card.progress ?? undefined,
-              }))}
-              accent="learner"
-              theme="dark"
-              variant="compact"
-            />
-          )}
         </DashboardShell>
       </div>
     </LearningSessionTracker>

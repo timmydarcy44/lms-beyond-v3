@@ -599,6 +599,14 @@ export function LessonPlayView({
     }
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("certify") !== "1") return;
+    void openCertificationOverlay();
+    // Ouverture demandée depuis la page chapitre.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId]);
+
   const fireConfetti = async () => {
     // Best-effort confetti: uses canvas-confetti if available, else fallback particles.
     try {

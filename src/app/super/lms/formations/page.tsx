@@ -1,15 +1,20 @@
 import Link from "next/link";
 
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { SuperLmsFormationsBoard } from "./formations-board";
 
 export const dynamic = "force-dynamic";
 
 type CourseRow = {
   id: string;
   title: string | null;
+  slug: string | null;
   status: string | null;
+  cover_image: string | null;
   updated_at: string | null;
-  builder_snapshot?: { general?: { publisher?: string } } | null;
+  builder_snapshot?: {
+    general?: { publisher?: string; title?: string; subtitle?: string; cover_image?: string; heroImage?: string };
+  } | null;
 };
 
 export default async function SuperLmsFormationsPage() {
@@ -18,7 +23,7 @@ export default async function SuperLmsFormationsPage() {
   if (db) {
     const { data } = await db
       .from("courses")
-      .select("id, title, status, updated_at, builder_snapshot")
+      .select("id, title, slug, status, cover_image, updated_at, builder_snapshot")
       .order("updated_at", { ascending: false })
       .limit(400);
     courses = ((data ?? []) as CourseRow[]).filter(
@@ -53,28 +58,20 @@ export default async function SuperLmsFormationsPage() {
           </div>
         </header>
 
-        {courses.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
-            <p className="text-lg font-semibold">Aucune formation Byound</p>
-            <p className="mt-2 text-sm text-slate-500">Créez la première avec le même éditeur que l’espace formateur.</p>
-          </div>
-        ) : (
-          <ul className="grid gap-3">
-            {courses.map((course) => (
-              <li key={course.id}>
-                <Link
-                  href={`/super/lms/formations/${course.id}`}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 hover:border-slate-300"
-                >
-                  <span className="font-semibold">{course.title || "Sans titre"}</span>
-                  <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                    {course.status === "published" ? "Publiée" : "Brouillon"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <SuperLmsFormationsBoard
+          courses={courses.map((course) => {
+            const general = course.builder_snapshot?.general;
+            const image = general?.cover_image || general?.heroImage || course.cover_image || null;
+            return {
+              id: course.id,
+              title: general?.title?.trim() || course.title || "Sans titre",
+              status: course.status || "draft",
+              image,
+              href: `/super/lms/formations/${course.id}`,
+              catalogHref: course.slug ? `/catalog/formations/${course.slug}` : null,
+            };
+          })}
+        />
       </div>
     </div>
   );

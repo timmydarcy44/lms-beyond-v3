@@ -61,6 +61,7 @@ const NAV_ITEMS: NavItem[] = [
     activePrefixes: ["/super/crm/cfa", "/super/experts"],
     children: [
       { label: "CRM Apprenant", href: "/super/crm/cfa", exact: true },
+      { label: "Cursus", href: "/super/crm/cfa/cursus" },
       { label: "CRM Entreprise", href: "/super/crm/cfa/entreprises" },
       { label: "Formateurs", href: "/super/experts" },
     ],

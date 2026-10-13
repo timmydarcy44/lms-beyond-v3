@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { ensureWebsiteCursus } from "@/lib/cfa/website-cursus";
 import { resolveSchoolIdForEcoleDashboard } from "@/lib/auth/school-access";
 import { getSession } from "@/lib/auth/session";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
@@ -37,6 +38,7 @@ export async function GET() {
   const ctx = await authorize();
   if ("error" in ctx) return ctx.error;
   const { db, schoolId } = ctx;
+  await ensureWebsiteCursus(db, schoolId);
 
   const [{ data: curricula }, { data: modules }, { data: classes }, { data: courses }, { data: applications }] =
     await Promise.all([

@@ -65,6 +65,13 @@ const CFA_LINKS: CrmNavLink[] = [
     section: "commercial",
   },
   {
+    href: "/super/crm/cfa/cursus",
+    label: "Cursus",
+    icon: ClipboardList,
+    featured: true,
+    section: "commercial",
+  },
+  {
     href: "/super/crm/cfa/entreprises",
     label: "CRM Entreprise",
     icon: Building2,

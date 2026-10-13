@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { ensureWebsiteCursus } from "@/lib/cfa/website-cursus";
 import { resolveSchoolIdForEcoleDashboard } from "@/lib/auth/school-access";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -24,6 +25,7 @@ export async function GET() {
     schoolId: string;
     db: NonNullable<ReturnType<typeof getServiceRoleClient>> | Awaited<ReturnType<typeof getServerClient>>;
   };
+  if (db) await ensureWebsiteCursus(db, schoolId);
 
   const { data: curricula, error } = await db
     .from("school_curricula")

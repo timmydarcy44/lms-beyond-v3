@@ -71,7 +71,7 @@ export function CfaCursusBoard() {
         <section className="space-y-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CRM CFA</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">Cursus</h1>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Cursus</h1>
             <p className="mt-2 text-sm text-slate-500">
               Même logique que l’école : un cursus regroupe des formations, puis vous y associez un apprenant.
             </p>
@@ -127,15 +127,15 @@ export function CfaCursusBoard() {
           {selected ? (
             <div className="space-y-8">
               <div>
-                <h2 className="text-2xl font-bold">{selected.name}</h2>
+                <h2 className="text-2xl font-bold text-slate-900">{selected.name}</h2>
                 {selected.code ? <p className="mt-1 text-sm text-slate-500">{selected.code}</p> : null}
               </div>
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Formations du cursus</h3>
                 <ul className="mt-3 space-y-2">
                   {selected.modules.map((module) => (
-                    <li key={module.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm">
-                      {module.courseTitle || module.name}
+                    <li key={module.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900">
+                      {module.courseTitle || module.name || "Formation"}
                     </li>
                   ))}
                   {selected.modules.length === 0 ? <li className="text-sm text-slate-400">Aucune formation rattachée.</li> : null}
@@ -167,7 +167,7 @@ export function CfaCursusBoard() {
                 <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Apprenants</h3>
                 <ul className="mt-3 space-y-2">
                   {selected.learners.map((learner) => (
-                    <li key={learner.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm">
+                    <li key={learner.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900">
                       {learner.name}
                       <span className="ml-2 text-xs text-slate-400">{learner.email}</span>
                     </li>
@@ -198,7 +198,7 @@ export function CfaCursusBoard() {
                       onClick={() => void post({ action: "assign_learner", curriculumId: selected.id, email: candidate.email })}
                       className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-left text-sm hover:bg-slate-50"
                     >
-                      <span>{candidate.name}</span>
+                      <span className="font-medium text-slate-900">{candidate.name}</span>
                       <span className="text-xs text-slate-400">{candidate.status}</span>
                     </button>
                   ))}

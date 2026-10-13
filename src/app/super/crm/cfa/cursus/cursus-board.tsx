@@ -13,18 +13,22 @@ type Cursus = {
   learners: LearnerRow[];
 };
 type CourseOption = { id: string; title: string };
+type PathOption = { id: string; title: string; courseCount: number };
 type Candidate = { id: string; name: string; email: string; status: string };
 
 export function CfaCursusBoard() {
   const [curricula, setCurricula] = useState<Cursus[]>([]);
   const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [paths, setPaths] = useState<PathOption[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [pathId, setPathId] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -39,6 +43,7 @@ export function CfaCursusBoard() {
     setError("");
     setCurricula(payload.curricula ?? []);
     setCourses(payload.courses ?? []);
+    setPaths(payload.paths ?? []);
     setCandidates(payload.candidates ?? []);
     setSelectedId((current) => current ?? payload.curricula?.[0]?.id ?? null);
   }, []);
@@ -52,6 +57,7 @@ export function CfaCursusBoard() {
 
   const post = async (body: Record<string, unknown>) => {
     setError("");
+    setNotice("");
     const response = await fetch("/api/super/cfa/cursus", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -61,6 +67,13 @@ export function CfaCursusBoard() {
     if (!response.ok) {
       setError(payload.error || "Action impossible");
       return;
+    }
+    if (typeof payload.added === "number") {
+      setNotice(
+        payload.added > 0
+          ? `${payload.added} formation(s) de « ${payload.pathTitle || "parcours"} » ajoutée(s) au cursus.`
+          : `Les formations de « ${payload.pathTitle || "parcours"} » sont déjà dans ce cursus.`,
+      );
     }
     await load();
   };
@@ -162,6 +175,29 @@ export function CfaCursusBoard() {
                     Ajouter
                   </button>
                 </div>
+                <div className="mt-3 flex gap-2">
+                  <select
+                    value={pathId}
+                    onChange={(event) => setPathId(event.target.value)}
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                  >
+                    <option value="">Choisir un parcours LMS</option>
+                    {paths.map((path) => (
+                      <option key={path.id} value={path.id}>
+                        {path.title}
+                        {path.courseCount ? ` · ${path.courseCount} formation(s)` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!pathId}
+                    onClick={() => void post({ action: "attach_path", curriculumId: selected.id, pathId })}
+                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                  >
+                    Ajouter
+                  </button>
+                </div>
               </div>
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Apprenants</h3>
@@ -208,6 +244,7 @@ export function CfaCursusBoard() {
           ) : (
             <p className="text-sm text-slate-400">{loading ? "Chargement…" : "Créez un cursus pour y placer des formations et des apprenants."}</p>
           )}
+          {notice ? <p className="mt-4 text-sm font-medium text-slate-900">{notice}</p> : null}
           {error ? <p className="mt-4 text-sm text-rose-600">{error}</p> : null}
         </section>
       </div>

@@ -27,6 +27,20 @@ async function authorize() {
   return { db, schoolId };
 }
 
+function courseIdsFromPath(snapshot: unknown): string[] {
+  if (!snapshot || typeof snapshot !== "object") return [];
+  const snap = snapshot as { steps?: unknown[]; selectedCourses?: unknown[] };
+  const fromSteps = Array.isArray(snap.steps)
+    ? snap.steps.flatMap((step) => {
+        if (!step || typeof step !== "object") return [];
+        const row = step as { content_kind?: string; content_id?: string | null };
+        return row.content_kind === "course" && row.content_id ? [String(row.content_id)] : [];
+      })
+    : [];
+  const selected = Array.isArray(snap.selectedCourses) ? snap.selectedCourses.map((id) => String(id)) : [];
+  return [...new Set([...fromSteps, ...selected].filter(Boolean))];
+}
+
 function personName(row: { full_name?: string | null; first_name?: string | null; last_name?: string | null; email?: string | null }) {
   const full = String(row.full_name ?? "").trim();
   if (full) return full;
@@ -69,6 +83,19 @@ export async function GET() {
       return { id: course.id, title: general?.title?.trim() || course.title || "Sans titre" };
     });
   const courseTitle = new Map(byoundCourses.map((course) => [course.id, course.title]));
+  const pathResult = await db.from("paths").select("id, title, path_snapshot").limit(200);
+  const paths = pathResult.error
+    ? []
+    : (pathResult.data ?? [])
+        .filter((path) => (path.path_snapshot as { publisher?: string } | null)?.publisher === "byound")
+        .map((path) => {
+          const snap = path.path_snapshot as { title?: string } | null;
+          return {
+            id: path.id,
+            title: snap?.title?.trim() || path.title || "Sans titre",
+            courseCount: courseIdsFromPath(path.path_snapshot).length,
+          };
+        });
 
   const payload = (curricula ?? []).map((curriculum) => {
     const curriculumClasses = (classes ?? []).filter((row) => row.curriculum_id === curriculum.id);
@@ -101,6 +128,7 @@ export async function GET() {
   return NextResponse.json({
     curricula: payload,
     courses: byoundCourses,
+    paths,
     candidates: (applications ?? []).map((row) => ({
       id: row.id,
       name: `${row.first_name ?? ""} ${row.last_name ?? ""}`.trim() || row.email,
@@ -190,6 +218,63 @@ export async function POST(request: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     }
     return NextResponse.json({ ok: true });
+  }
+
+  if (action === "attach_path") {
+    const curriculumId = String(body?.curriculumId ?? "");
+    const pathId = String(body?.pathId ?? "");
+    if (!curriculumId || !pathId) return NextResponse.json({ error: "Cursus ou parcours manquant." }, { status: 400 });
+    const { data: path } = await db.from("paths").select("id, title, path_snapshot").eq("id", pathId).maybeSingle();
+    if (!path) return NextResponse.json({ error: "Parcours introuvable" }, { status: 404 });
+    const courseIds = courseIdsFromPath(path.path_snapshot);
+    if (!courseIds.length) {
+      return NextResponse.json({ error: "Ce parcours ne contient aucune formation." }, { status: 400 });
+    }
+    const { data: linkedCourses } = await db.from("courses").select("id, title, builder_snapshot").in("id", courseIds);
+    const courseById = new Map((linkedCourses ?? []).map((course) => [course.id, course]));
+    const { data: existing } = await db
+      .from("school_curriculum_modules")
+      .select("online_course_id, sort_order")
+      .eq("curriculum_id", curriculumId);
+    const have = new Set((existing ?? []).map((row) => row.online_course_id).filter(Boolean));
+    let sortOrder = (existing ?? []).reduce((max, row) => Math.max(max, Number(row.sort_order) || 0), 0);
+    let added = 0;
+    for (const courseId of courseIds) {
+      if (have.has(courseId)) continue;
+      const course = courseById.get(courseId);
+      if (!course) continue;
+      const general = (course.builder_snapshot as { general?: { title?: string } } | null)?.general;
+      const title = general?.title?.trim() || course.title || "Formation";
+      sortOrder += 1;
+      const { error } = await db.from("school_curriculum_modules").insert({
+        curriculum_id: curriculumId,
+        school_id: schoolId,
+        name: title,
+        online_course_id: courseId,
+        planned_hours_total: 0,
+        sort_order: sortOrder,
+      });
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      added += 1;
+    }
+
+    const { data: classes } = await db.from("school_classes").select("id").eq("school_id", schoolId).eq("curriculum_id", curriculumId);
+    const classIds = (classes ?? []).map((row) => row.id);
+    if (classIds.length) {
+      const { data: classRows } = await db.from("class_enrollments").select("student_id").in("class_id", classIds);
+      const studentIds = [...new Set((classRows ?? []).map((row) => row.student_id))];
+      for (const studentId of studentIds) {
+        await enrollInCourses(db, studentId, courseIds);
+      }
+    }
+
+    const snap = path.path_snapshot as { title?: string } | null;
+    return NextResponse.json({
+      ok: true,
+      added,
+      total: courseIds.length,
+      pathTitle: snap?.title?.trim() || path.title || "Parcours",
+    });
   }
 
   if (action === "assign_learner") {

@@ -1,5 +1,7 @@
 import { headers } from "next/headers";
 
+import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 import { getServerClient } from "@/lib/supabase/server";
 
 /** Logo public Playmakers (aligné Hero / nav). */
@@ -45,6 +47,10 @@ export async function getOrganizationNavBrandingForUser(options?: {
         .eq("slug", slug)
         .maybeSingle();
       orgId = String((bySlug as { id?: string } | null)?.id ?? "").trim() || null;
+    }
+
+    if (!orgId && isByoundBusinessManager(auth.user.email)) {
+      orgId = EDGEBS_ORG_ID;
     }
 
     if (!orgId) {

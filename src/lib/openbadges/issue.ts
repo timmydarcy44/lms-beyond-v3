@@ -5,6 +5,7 @@ import { buildAssertion } from "@/lib/openbadges/v2/builders";
 import { getBaseUrl } from "@/lib/openbadges/urls";
 import { bakePng } from "@/lib/openbadges/baking/png";
 import { uploadBuffer } from "@/lib/storage/s3";
+import { readCourseLearnerProgress } from "@/lib/courses/course-completion";
 
 export const issueBadge = async (_request: Request, assessmentId: string) => {
   const assessment = await prisma.assessment.findUnique({
@@ -24,6 +25,13 @@ export const issueBadge = async (_request: Request, assessmentId: string) => {
   }
   if (assessment.badgeClass.status !== BadgeClassStatus.ACTIVE) {
     throw new Error("BADGECLASS_NOT_ACTIVE");
+  }
+  const requiredCourseId = assessment.badgeClass.requiredCourseId;
+  if (requiredCourseId) {
+    const completion = await readCourseLearnerProgress(assessment.earnerId, requiredCourseId);
+    if (!completion.complete) {
+      throw new Error("FORMATION_INCOMPLETE");
+    }
   }
 
   const assertionId = crypto.randomUUID();

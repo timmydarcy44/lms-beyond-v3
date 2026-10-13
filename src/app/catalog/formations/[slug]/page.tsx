@@ -122,6 +122,7 @@ export async function renderFormationDetailPage(args: {
           mainClassName="!m-0 !ml-0 !mt-0 !p-0 !px-0 !pl-0 !pt-0 w-full max-w-none"
         >
           <FormationStudio
+            courseId={card.id}
             title={info.title}
             description={String((info as { presentation?: string; description?: string }).presentation || (info as { description?: string }).description || "")}
             playBase={card.href}

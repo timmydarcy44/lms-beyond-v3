@@ -1693,15 +1693,6 @@ export function LessonPlayView({
                 Chapitre suivant
               </Link>
             ) : null}
-            {!nextLesson ? (
-              <Button
-                type="button"
-                onClick={openCertificationOverlay}
-                className="rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-5 py-2 text-xs font-bold uppercase tracking-[0.25em] text-black shadow-[0_20px_60px_-35px_rgba(212,175,55,0.6)] hover:opacity-95"
-              >
-                Passer la certification
-              </Button>
-            ) : null}
           </div>
 
           {isInteractiveGame ? (
@@ -2065,15 +2056,6 @@ export function LessonPlayView({
               >
                 Chapitre suivant
               </Link>
-            ) : null}
-            {!nextLesson ? (
-              <Button
-                type="button"
-                onClick={openCertificationOverlay}
-                className="rounded-full bg-gradient-to-r from-[#D4AF37] to-[#B8860B] px-5 py-2 text-xs font-bold uppercase tracking-[0.25em] text-black shadow-[0_20px_60px_-35px_rgba(212,175,55,0.6)] hover:opacity-95"
-              >
-                Passer la certification
-              </Button>
             ) : null}
           </div>
           <div className="hidden justify-end lg:flex">

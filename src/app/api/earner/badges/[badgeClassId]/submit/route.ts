@@ -12,6 +12,7 @@ import {
   getPlaygroundMaxAttempts,
   resolveMethodConfigsForBadge,
 } from "@/lib/openbadges/badge-method-config";
+import { readCourseLearnerProgress } from "@/lib/courses/course-completion";
 import {
   appendOpenBadgeEarnerSubmission,
   countPlaygroundAttemptsInSubmissions,
@@ -100,6 +101,16 @@ export async function POST(
     const enrolled = await isLearnerEnrolled(auth.user.id, rowOrg, requiredCourseId);
     if (!enrolled) {
       return NextResponse.json({ error: "ENROLLMENT_REQUIRED" }, { status: 403 });
+    }
+  }
+
+  if (requiredCourseId) {
+    const completion = await readCourseLearnerProgress(auth.user.id, requiredCourseId);
+    if (!completion.complete) {
+      return NextResponse.json(
+        { error: "FORMATION_INCOMPLETE", message: "Termine tous les chapitres pour débloquer la certification." },
+        { status: 403 },
+      );
     }
   }
 

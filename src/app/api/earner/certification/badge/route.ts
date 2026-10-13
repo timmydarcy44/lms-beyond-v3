@@ -27,6 +27,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message, code: (error as any)?.code }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, badge: data ?? null });
+  const { data: submission } = await supabase
+    .from("badge_submissions")
+    .select("id, status, created_at")
+    .eq("course_id", courseId)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return NextResponse.json({ success: true, badge: data ?? null, submission: submission ?? null });
 }
 

@@ -111,7 +111,10 @@ const MAX_BASE64_COVER_CHARS = 120_000;
  * Clone JSON-safe (rejette références circulaires) et retire les data-URL géantes
  * (couverture uploadée en base64) pour éviter timeout / 500 côté API.
  */
-function prepareSnapshotForSaveApi(snapshot: CourseBuilderSnapshot): CourseBuilderSnapshot {
+function prepareSnapshotForSaveApi(
+  snapshot: CourseBuilderSnapshot,
+  byoundOwned = false,
+): CourseBuilderSnapshot {
   let copy: CourseBuilderSnapshot;
   try {
     copy = JSON.parse(JSON.stringify(snapshot)) as CourseBuilderSnapshot;
@@ -149,6 +152,14 @@ function prepareSnapshotForSaveApi(snapshot: CourseBuilderSnapshot): CourseBuild
     });
   }
 
+  if (byoundOwned) {
+    copy.general = {
+      ...copy.general,
+      publisher: "byound",
+      instructor_ids: [],
+    };
+  }
+
   return copy;
 }
 
@@ -157,12 +168,18 @@ export function FormateurFormationBuilderWhite({
   lockedOrgId = null,
   returnTo = null,
   embed = false,
+  byoundOwned = false,
+  editorBase = null,
 }: {
   initialCourseId?: string;
   /** Force la formation dans cette organisation (création école / entreprise). */
   lockedOrgId?: string | null;
   returnTo?: string | null;
   embed?: boolean;
+  /** Création depuis /super : pas de formateur, la formation appartient à Byound. */
+  byoundOwned?: boolean;
+  /** Préfixe des URLs d'édition, ex. /super/lms/formations */
+  editorBase?: string | null;
 }) {
   const router = useRouter();
   const updateGeneral = useCourseBuilder((s) => s.updateGeneral);
@@ -828,7 +845,7 @@ export function FormateurFormationBuilderWhite({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const snapshotForApi = prepareSnapshotForSaveApi(snapshot);
+      const snapshotForApi = prepareSnapshotForSaveApi(snapshot, byoundOwned);
       // Normaliser validated_by_peer_id (évite "" côté API)
       if ((snapshotForApi.general as any)?.validated_by_peer_id === "") {
         (snapshotForApi.general as any).validated_by_peer_id = null;
@@ -898,7 +915,9 @@ export function FormateurFormationBuilderWhite({
       if (data?.courseId && !courseId) {
         const id = String(data.courseId);
         setCourseId(id);
-        router.replace(returnTo || `/dashboard/formateur/formations/${id}`);
+        router.replace(
+          editorBase ? `${editorBase.replace(/\/$/, "")}/${id}` : returnTo || `/dashboard/formateur/formations/${id}`,
+        );
         // On navigue → overlay inutile ici.
         toast.success("Enregistré", {
           description: data?.message || "Le cours a été sauvegardé.",
@@ -1044,7 +1063,7 @@ export function FormateurFormationBuilderWhite({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const snapshotForApi = prepareSnapshotForSaveApi(snapshot);
+      const snapshotForApi = prepareSnapshotForSaveApi(snapshot, byoundOwned);
       if ((snapshotForApi.general as any)?.validated_by_peer_id === "") {
         (snapshotForApi.general as any).validated_by_peer_id = null;
       }
@@ -1133,15 +1152,16 @@ export function FormateurFormationBuilderWhite({
   const backHref =
     returnTo ||
     (orgIsLocked ? "/dashboard/entreprise/formations/gerer" : "/dashboard/formateur");
+  const formationsHref = editorBase || "/dashboard/formateur/formations";
 
   return (
     <DashboardShell
       title="Création de formation"
       breadcrumbs={[
         { label: "Dashboard", href: backHref },
-        { label: "Formateur", href: "/dashboard/formateur" },
-        { label: "Formations", href: "/dashboard/formateur/formations" },
-        { label: "Nouvelle formation" },
+        { label: byoundOwned ? "Byound" : "Formateur", href: byoundOwned ? "/super/lms/formations" : "/dashboard/formateur" },
+        { label: "Formations", href: formationsHref },
+        { label: initialCourseId ? "Formation" : "Nouvelle formation" },
       ]}
       initialCollapsed
       forcedTheme="light"
@@ -1626,7 +1646,13 @@ export function FormateurFormationBuilderWhite({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label className="text-slate-950 font-bold">Formateur(s)</Label>
+              <Label className="text-slate-950 font-bold">{byoundOwned ? "Éditeur" : "Formateur(s)"}</Label>
+              {byoundOwned ? (
+                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Cette formation appartient à Byound. Elle n’est pas rattachée à un formateur.
+                </p>
+              ) : (
+              <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -1674,6 +1700,8 @@ export function FormateurFormationBuilderWhite({
               <p className="text-xs text-slate-600">
                 Les IDs sélectionnés sont sauvegardés dans le snapshot (`general.instructor_ids`).
               </p>
+              </>
+              )}
             </div>
 
             <div className="space-y-2 md:col-span-2">

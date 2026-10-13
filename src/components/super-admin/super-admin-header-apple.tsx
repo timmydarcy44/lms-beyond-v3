@@ -66,6 +66,15 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    label: "LMS",
+    href: "/super/lms/formations",
+    activePrefixes: ["/super/lms"],
+    children: [
+      { label: "Formations", href: "/super/lms/formations", exact: true },
+      { label: "Parcours", href: "/super/lms/parcours", exact: true },
+    ],
+  },
+  {
     label: "École",
     href: "/super/ecole/planning",
     activePrefixes: ["/super/ecole/planning"],
@@ -73,6 +82,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Emploi du temps", href: "/super/ecole/planning", exact: true },
       { label: "Cahier de texte", href: "/super/ecole/planning/cahier-de-texte" },
       { label: "Émargement / Absences", href: "/super/ecole/planning/absences" },
+      { label: "Résultats des jeux", href: "/dashboard/ecole/jeux" },
     ],
   },
   {

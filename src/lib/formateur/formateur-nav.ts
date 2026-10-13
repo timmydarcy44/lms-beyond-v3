@@ -5,6 +5,7 @@ import {
   CheckSquare,
   ClipboardCheck,
   FolderOpen,
+  Gamepad2,
   HardDrive,
   Home,
   Layers,
@@ -30,6 +31,7 @@ export const FORMATEUR_NAV_ITEMS: FormateurNavItem[] = [
   { label: "Ressources", href: "/dashboard/formateur/ressources", icon: FolderOpen },
   { label: "Drive", href: "/dashboard/formateur/drive", icon: HardDrive },
   { label: "Tests", href: "/dashboard/formateur/tests", icon: ClipboardCheck },
+  { label: "Résultats des jeux", href: "/dashboard/ecole/jeux", icon: Gamepad2 },
   { label: "To-Do", href: "/dashboard/formateur/todo", icon: CheckSquare },
   { label: "Messages", href: "/dashboard/student/community", icon: MessageCircle },
 ];
@@ -39,7 +41,7 @@ const navByLabel = (label: string) => FORMATEUR_NAV_ITEMS.find((item) => item.la
 export const FORMATEUR_NAV_SECTIONS: Array<{ label: string; items: FormateurNavItem[] }> = [
   {
     label: "Enseigner",
-    items: ["Planning", "Mes cours", "Parcours", "Cahier de texte", "Émargement", "Tests"].map(navByLabel),
+    items: ["Planning", "Mes cours", "Parcours", "Cahier de texte", "Émargement", "Tests", "Résultats des jeux"].map(navByLabel),
   },
   {
     label: "Outils",

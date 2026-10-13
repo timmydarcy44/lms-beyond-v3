@@ -30,6 +30,7 @@ type Props = {
   /** Verrouille le parcours sur une organisation (dashboard école / entreprise). */
   lockedOrgId?: string | null;
   returnTo?: string | null;
+  byoundOwned?: boolean;
 };
 
 export function FormateurPathBuilderWorkspace({
@@ -38,6 +39,7 @@ export function FormateurPathBuilderWorkspace({
   initialData,
   lockedOrgId = null,
   returnTo = null,
+  byoundOwned = false,
 }: Props) {
   const orgOptions = useMemo(() => {
     if (lockedOrgId) {
@@ -95,6 +97,7 @@ export function FormateurPathBuilderWorkspace({
       additionalFields={additionalFields}
       extraHeaderSlot={extraHeaderSlot}
       returnTo={returnTo}
+      byoundOwned={byoundOwned}
     />
   );
 }

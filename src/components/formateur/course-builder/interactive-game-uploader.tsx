@@ -45,8 +45,22 @@ export function InteractiveGameUploader({ value, onChange, light = false }: Prop
         if (item.path === entry) entryUrl = payload.url;
       }
       if (!entryUrl) throw new Error("Le point d'entrée index.html n'a pas été publié.");
+      const manifestFile = files.find((item) => /(^|\/)jeu\.json$/i.test(item.path));
+      const manifest = manifestFile ? new TextDecoder().decode(manifestFile.data) : null;
+      const registered = await fetch("/api/course-builder/interactive-game/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manifest, entryUrl }),
+      });
+      const registration = (await registered.json().catch(() => null)) as { ok?: boolean; reason?: string } | null;
       onChange(entryUrl);
-      toast.success("Jeu interactif importé.");
+      if (registration?.ok) {
+        toast.success("Jeu interactif importé.");
+      } else {
+        toast.success("Jeu interactif importé.", {
+          description: registration?.reason || "La fiche jeu.json n'a pas été enregistrée. Les parties seront suivies sans contrôle des résultats.",
+        });
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "L'import du jeu a échoué.");
     } finally {

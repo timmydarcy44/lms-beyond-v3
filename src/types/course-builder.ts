@@ -125,6 +125,8 @@ export type CourseBuilderGeneralInfo = {
   /** Preuves attendues (liste à puces). */
   badge_expected_proofs?: string;
   instructor_ids?: string[];
+  /** Formation créée depuis /super : elle appartient à Byound, pas à un formateur. */
+  publisher?: "byound";
   objectifs?: string[];
   target_audience?: "pro" | "apprenant" | "all";
   price?: number;

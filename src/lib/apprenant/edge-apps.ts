@@ -8,6 +8,7 @@ import {
   Clock3,
   Dumbbell,
   FileCheck2,
+  Gamepad2,
   FileWarning,
   GraduationCap,
   HeartPulse,
@@ -115,6 +116,7 @@ const SKILLS_NAV: ApprenantNavItem[] = [
 
 const LEARNING_NAV: ApprenantNavItem[] = [
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
+  { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
   { label: "Mes parcours", href: "/dashboard/apprenant/parcours", icon: BookMarked },
   { label: "Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Statistiques", href: "/dashboard/apprenant/statistiques", icon: GraduationCap },
@@ -254,6 +256,7 @@ export function resolveEdgeAppFromPathname(pathname: string | null | undefined):
 
   if (
     p.startsWith("/dashboard/apprenant/formations") ||
+    p.startsWith("/dashboard/apprenant/jeux") ||
     p.startsWith("/dashboard/apprenant/parcours") ||
     p.startsWith("/dashboard/apprenant/online") ||
     p.startsWith("/dashboard/apprenant/statistiques") ||

@@ -33,6 +33,7 @@ import {
   groupLessonsForOutline,
   outlineKeysContainingLesson,
 } from "@/lib/apprenant/lesson-outline-groups";
+import { GameBlockPlayer } from "@/components/serious-games/GameBlockPlayer";
 import { extractStandaloneHtmlDocument, isHtmlGameUrl, toInteractiveGameFrameSrc } from "@/lib/course-builder/html-game";
 import { cn } from "@/lib/utils";
 import {
@@ -1718,14 +1719,25 @@ export function LessonPlayView({
           {isInteractiveGame && gameOpen && mounted
             ? createPortal(
                 <div ref={gameFrameRef} className="fixed inset-0 z-[200] bg-black">
-                  <iframe
-                    src={gameFrameSrc}
-                    srcDoc={gameFrameSrc ? undefined : standaloneGameDocument ?? undefined}
-                    title={activeLesson.title || "Jeu interactif"}
-                    className="h-full w-full border-0"
-                    sandbox="allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock"
-                    allow="fullscreen"
-                  />
+                  {gameFrameSrc ? (
+                    <GameBlockPlayer
+                      src={gameFrameSrc}
+                      title={activeLesson.title || "Jeu interactif"}
+                      blockId={String(activeLesson.id)}
+                      courseId={courseId}
+                      lessonId={String(activeLesson.id)}
+                      reviewBasePath="/dashboard/apprenant/jeux"
+                      fill
+                    />
+                  ) : (
+                    <iframe
+                      srcDoc={standaloneGameDocument ?? undefined}
+                      title={activeLesson.title || "Jeu interactif"}
+                      className="h-full w-full border-0"
+                      sandbox="allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock"
+                      allow="fullscreen"
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => setGameOpen(false)}

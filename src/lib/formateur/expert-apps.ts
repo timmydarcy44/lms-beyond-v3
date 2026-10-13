@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, CalendarDays, FolderOpen, HardDrive, Layers, NotebookPen, QrCode } from "lucide-react";
+import { BookOpen, CalendarDays, FolderOpen, Gamepad2, HardDrive, Layers, NotebookPen, QrCode } from "lucide-react";
 
 import type { FormateurNavItem } from "@/lib/formateur/formateur-nav";
 
@@ -33,6 +33,7 @@ export const FORMATEUR_APPS: FormateurAppDefinition[] = [
       { label: "Mes cours", href: "/dashboard/formateur/formations", icon: BookOpen },
       { label: "Parcours", href: "/dashboard/formateur/parcours", icon: Layers },
       { label: "Ressources", href: "/dashboard/formateur/ressources", icon: FolderOpen },
+      { label: "Résultats des jeux", href: "/dashboard/ecole/jeux", icon: Gamepad2 },
     ],
   },
   {

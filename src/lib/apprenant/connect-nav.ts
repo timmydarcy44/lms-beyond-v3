@@ -24,6 +24,8 @@ import {
 
   ClipboardList,
 
+  Gamepad2,
+
 } from "lucide-react";
 
 
@@ -76,6 +78,7 @@ const BASE: ApprenantNavItem[] = [
     action: "share-profile",
   },
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
+  { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
   { label: "Byound Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Parcours", href: PARCOURS_HREF, icon: BookMarked },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },

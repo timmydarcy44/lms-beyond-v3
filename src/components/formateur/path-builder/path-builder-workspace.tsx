@@ -66,6 +66,8 @@ type PathBuilderWorkspaceProps = {
   additionalFields?: () => Record<string, unknown>;
   extraHeaderSlot?: ReactNode;
   returnTo?: string | null;
+  /** Parcours créé depuis /super : il appartient à Byound. */
+  byoundOwned?: boolean;
 };
 
 type WorkflowStepType = "action" | "trigger";
@@ -110,6 +112,7 @@ type PathBuilderSnapshotV2 = {
   tools?: string[];
   badgeId?: string | null;
   instructor_ids?: string[];
+  publisher?: "byound";
   assignment?: { learnerIds: string[]; groupIds: string[] };
   steps: WorkflowStep[];
   updatedAt: string;
@@ -130,6 +133,7 @@ export function PathBuilderWorkspace({
   additionalFields,
   extraHeaderSlot,
   returnTo = null,
+  byoundOwned = false,
 }: PathBuilderWorkspaceProps) {
   const router = useRouter();
 
@@ -769,7 +773,11 @@ export function PathBuilderWorkspace({
 
     try {
       setSteps(normalizedSteps);
-      const builderSnapshot = { ...getSnapshotV2(), steps: normalizedSteps };
+      const builderSnapshot = {
+        ...getSnapshotV2(),
+        steps: normalizedSteps,
+        ...(byoundOwned ? { publisher: "byound", instructor_ids: [] as string[] } : {}),
+      };
       const extraPayload = getAdditionalFields();
 
       const isUpdate = Boolean(savedPathId);
@@ -1093,24 +1101,32 @@ export function PathBuilderWorkspace({
               </Select>
             </div>
             <div className="space-y-2 text-sm">
-              <span className="uppercase tracking-[0.3em] text-xs text-slate-500">Formateurs</span>
-              <Select
-                value={selectedInstructorIds[0] ?? "none"}
-                onValueChange={(value) => setSelectedInstructorIds(value === "none" ? [] : [value])}
-              >
-                <SelectTrigger className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
-                  <SelectValue placeholder="Sélectionner un formateur" />
-                </SelectTrigger>
-                <SelectContent className="border border-slate-200 bg-white text-slate-900">
-                  <SelectItem value="none">Aucun</SelectItem>
-                  {instructorOptions.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500">(MVP) un seul formateur pour l’instant.</p>
+              <span className="uppercase tracking-[0.3em] text-xs text-slate-500">{byoundOwned ? "Éditeur" : "Formateurs"}</span>
+              {byoundOwned ? (
+                <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Ce parcours appartient à Byound. Il n’est pas rattaché à un formateur.
+                </p>
+              ) : (
+                <>
+                  <Select
+                    value={selectedInstructorIds[0] ?? "none"}
+                    onValueChange={(value) => setSelectedInstructorIds(value === "none" ? [] : [value])}
+                  >
+                    <SelectTrigger className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
+                      <SelectValue placeholder="Sélectionner un formateur" />
+                    </SelectTrigger>
+                    <SelectContent className="border border-slate-200 bg-white text-slate-900">
+                      <SelectItem value="none">Aucun</SelectItem>
+                      {instructorOptions.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">(MVP) un seul formateur pour l’instant.</p>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

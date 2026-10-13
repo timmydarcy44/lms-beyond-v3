@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckSquare,
   ClipboardList,
+  Gamepad2,
   GraduationCap,
   LayoutDashboard,
   MonitorPlay,
@@ -79,6 +80,7 @@ const FORMATIONS_NAV: EcoleNavItem[] = [
   { type: "link", label: "Vue d'ensemble", href: "/dashboard/ecole/formations", icon: LayoutDashboard },
   { type: "link", label: "Cursus", href: "/dashboard/ecole/formations/cursus", icon: GraduationCap },
   { type: "link", label: "Byound Online", href: "/dashboard/ecole/formations/online", icon: MonitorPlay },
+  { type: "link", label: "Résultats des jeux", href: "/dashboard/ecole/jeux", icon: Gamepad2 },
 ];
 
 export const ECOLE_APPS: EcoleAppDefinition[] = [
@@ -160,6 +162,7 @@ export function resolveEcoleAppFromPathname(pathname: string | null | undefined)
   if (p.startsWith("/dashboard/ecole/planning")) return "planning";
   if (
     p.startsWith("/dashboard/ecole/formations") ||
+    p.startsWith("/dashboard/ecole/jeux") ||
     p.startsWith("/dashboard/ecole/formations-suivi") ||
     p.startsWith("/dashboard/ecole/referentiels")
   ) {

@@ -5,7 +5,7 @@ import { buildAssertion } from "@/lib/openbadges/v2/builders";
 import { getBaseUrl } from "@/lib/openbadges/urls";
 import { bakePng } from "@/lib/openbadges/baking/png";
 import { uploadBuffer } from "@/lib/storage/s3";
-import { readCourseLearnerProgress } from "@/lib/courses/course-completion";
+import { getCertificationStatus } from "@/lib/courses/course-completion";
 
 export const issueBadge = async (_request: Request, assessmentId: string) => {
   const assessment = await prisma.assessment.findUnique({
@@ -28,8 +28,8 @@ export const issueBadge = async (_request: Request, assessmentId: string) => {
   }
   const requiredCourseId = assessment.badgeClass.requiredCourseId;
   if (requiredCourseId) {
-    const completion = await readCourseLearnerProgress(assessment.earnerId, requiredCourseId);
-    if (!completion.complete) {
+    const completion = await getCertificationStatus(assessment.earnerId, requiredCourseId);
+    if (completion.status === "locked") {
       throw new Error("FORMATION_INCOMPLETE");
     }
   }

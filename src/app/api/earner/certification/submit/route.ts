@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readCourseLearnerProgress } from "@/lib/courses/course-completion";
+import { getCertificationStatus } from "@/lib/courses/course-completion";
 import { getServerClient } from "@/lib/supabase/server";
 
 type Payload = {
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
   if (!badgeId) return NextResponse.json({ success: false, error: "badgeId requis" }, { status: 400 });
   if (!evaluationType) return NextResponse.json({ success: false, error: "evaluationType requis" }, { status: 400 });
 
-  const completion = await readCourseLearnerProgress(user.id, courseId);
-  if (!completion.complete) {
+  const completion = await getCertificationStatus(user.id, courseId);
+  if (completion.status === "locked") {
     return NextResponse.json(
       { success: false, error: "Termine tous les chapitres pour débloquer la certification." },
       { status: 403 },

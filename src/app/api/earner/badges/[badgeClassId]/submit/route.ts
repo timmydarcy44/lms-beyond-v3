@@ -12,7 +12,7 @@ import {
   getPlaygroundMaxAttempts,
   resolveMethodConfigsForBadge,
 } from "@/lib/openbadges/badge-method-config";
-import { readCourseLearnerProgress } from "@/lib/courses/course-completion";
+import { getCertificationStatus } from "@/lib/courses/course-completion";
 import {
   appendOpenBadgeEarnerSubmission,
   countPlaygroundAttemptsInSubmissions,
@@ -105,8 +105,8 @@ export async function POST(
   }
 
   if (requiredCourseId) {
-    const completion = await readCourseLearnerProgress(auth.user.id, requiredCourseId);
-    if (!completion.complete) {
+    const completion = await getCertificationStatus(auth.user.id, requiredCourseId);
+    if (completion.status === "locked") {
       return NextResponse.json(
         { error: "FORMATION_INCOMPLETE", message: "Termine tous les chapitres pour débloquer la certification." },
         { status: 403 },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { getCertificationStatus } from "@/lib/courses/course-completion";
 import {
   collectProgressLeafIds,
   computeOutlineLearnerProgress,
@@ -89,6 +90,69 @@ async function fetchSessionAggregatesByContentId(
     }
   }
   return map;
+}
+
+function parisKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
+function addDays(key: string, delta: number): string {
+  const [year, month, day] = key.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+
+async function fetchCourseActivity(client: SupabaseClient, userId: string, contentIds: string[]) {
+  const empty = {
+    available: false,
+    totalActiveSeconds: 0,
+    weekSeconds: [0, 0, 0, 0, 0, 0, 0],
+    previousWeekSeconds: 0,
+    streakDays: 0,
+  };
+  const unique = [...new Set(contentIds.filter((value) => isUuidLike(value)))];
+  if (!unique.length) return empty;
+  const { data, error } = await client
+    .from("learning_sessions")
+    .select("started_at, duration_active_seconds")
+    .eq("user_id", userId)
+    .in("content_id", unique)
+    .limit(5000);
+  if (error || !data?.length) return empty;
+
+  const today = parisKey(new Date());
+  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  const monday = addDays(today, mondayOffset);
+  const weekKeys = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
+  const previousKeys = new Set(Array.from({ length: 7 }, (_, index) => addDays(monday, index - 7)));
+  const weekIndex = new Map(weekKeys.map((key, index) => [key, index]));
+  const weekSeconds = [0, 0, 0, 0, 0, 0, 0];
+  let previousWeekSeconds = 0;
+  let totalActiveSeconds = 0;
+  const days = new Set<string>();
+
+  for (const row of data) {
+    const started = new Date(String((row as { started_at?: string }).started_at ?? ""));
+    if (Number.isNaN(started.getTime())) continue;
+    const key = parisKey(started);
+    const active = Math.max(0, Number((row as { duration_active_seconds?: number }).duration_active_seconds ?? 0) || 0);
+    totalActiveSeconds += active;
+    days.add(key);
+    const index = weekIndex.get(key);
+    if (index != null) weekSeconds[index] += active;
+    else if (previousKeys.has(key)) previousWeekSeconds += active;
+  }
+
+  let cursor = days.has(today) ? today : addDays(today, -1);
+  let streakDays = 0;
+  while (days.has(cursor)) {
+    streakDays += 1;
+    cursor = addDays(cursor, -1);
+  }
+
+  return { available: true, totalActiveSeconds, weekSeconds, previousWeekSeconds, streakDays };
 }
 
 export async function GET(_req: Request, { params }: RouteParams) {
@@ -197,7 +261,9 @@ export async function GET(_req: Request, { params }: RouteParams) {
       }),
     }));
 
-    const res = NextResponse.json({ sections: sectionsOut, learnerProgress, courseCover });
+    const activity = await fetchCourseActivity(client, user.id, [id, ...leafIds]);
+    const certification = await getCertificationStatus(user.id, id);
+    const res = NextResponse.json({ sections: sectionsOut, learnerProgress, courseCover, activity, certification });
     res.headers.set("Cache-Control", "private, max-age=60");
     return res;
   } catch (error) {

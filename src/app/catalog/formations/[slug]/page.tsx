@@ -6,6 +6,7 @@ import {
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { FormationStudio } from "./formation-studio";
 import type { Episode } from "./view";
 import { edgeOnlinePublicHref, type EdgeOnlineHrefPrefix } from "@/lib/edge-online-public-path";
@@ -121,6 +122,7 @@ export async function renderFormationDetailPage(args: {
           hideSidebar
           mainClassName="!m-0 !ml-0 !mt-0 !p-0 !px-0 !pl-0 !pt-0 w-full max-w-none"
         >
+          <DyslexiaModeProvider>
           <FormationStudio
             courseId={card.id}
             title={info.title}
@@ -131,6 +133,7 @@ export async function renderFormationDetailPage(args: {
             skills={Array.isArray((info as { skills?: string[] }).skills) ? (info as { skills?: string[] }).skills ?? [] : []}
             episodes={episodes}
           />
+          </DyslexiaModeProvider>
         </DashboardShell>
       </div>
     </LearningSessionTracker>

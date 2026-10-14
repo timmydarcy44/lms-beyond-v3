@@ -118,3 +118,32 @@ export async function readCourseLearnerProgress(userId: string, courseId: string
     totalChapters,
   };
 }
+
+const EARNED_STATUSES = new Set(["approved", "validated", "issued", "accepted", "obtenu"]);
+
+export type CertificationView = CourseCompletion & {
+  status: "locked" | "unlocked" | "earned";
+  earnedAt: string | null;
+};
+
+export async function getCertificationStatus(userId: string, formationId: string): Promise<CertificationView> {
+  const progress = await readCourseLearnerProgress(userId, formationId);
+  const client = await getServiceRoleClientOrFallback();
+  let earnedAt: string | null = null;
+  if (client) {
+    const { data } = await client
+      .from("badge_submissions")
+      .select("status, created_at")
+      .eq("course_id", formationId)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    const earned = (data ?? []).find((row) => EARNED_STATUSES.has(String(row.status ?? "").toLowerCase()));
+    earnedAt = earned?.created_at ? String(earned.created_at) : null;
+  }
+  return {
+    ...progress,
+    status: earnedAt ? "earned" : progress.complete ? "unlocked" : "locked",
+    earnedAt,
+  };
+}

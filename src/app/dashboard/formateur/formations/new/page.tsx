@@ -225,6 +225,7 @@ export function FormateurFormationBuilderWhite({
 
   const [isBeyondIAOpen, setIsBeyondIAOpen] = useState(false);
   const [iaPrompt, setIaPrompt] = useState("");
+  const [iaMode, setIaMode] = useState<"prompt" | "paste">("prompt");
   const [isPending, startTransition] = useTransition();
   const [isPersisting, setIsPersisting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -746,13 +747,14 @@ export function FormateurFormationBuilderWhite({
           body: JSON.stringify({
             title: latestSnapshot.general.title.trim(),
             prompt: iaPrompt.trim(),
+            mode: iaMode,
             openBadgeId: selectedOpenBadgeId !== "none" ? selectedOpenBadgeId : null,
           }),
         });
 
         const data = await response.json().catch(() => null);
         if (!response.ok || !data?.success) {
-          throw new Error(data?.error || "Erreur lors de la génération Beyond IA");
+          throw new Error(data?.error || "Erreur lors de la génération Byound AI");
         }
 
         const objectifs = Array.isArray(data?.structure?.objectifs) ? data.structure.objectifs : [];
@@ -819,7 +821,7 @@ export function FormateurFormationBuilderWhite({
         });
         setIsBeyondIAOpen(false);
       } catch (e) {
-        toast.error("Beyond IA", {
+        toast.error("Byound AI", {
           description: e instanceof Error ? e.message : "Impossible de générer la structure.",
         });
       }
@@ -1347,7 +1349,7 @@ export function FormateurFormationBuilderWhite({
                 className="rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 py-2 text-sm font-bold text-white shadow-sm hover:opacity-95"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Beyond IA
+                Byound AI
               </Button>
             </div>
           </CardHeader>
@@ -1739,18 +1741,27 @@ export function FormateurFormationBuilderWhite({
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
           <DialogContent className="border-0 bg-white text-slate-950 shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-slate-950 font-extrabold tracking-tight">Beyond IA</DialogTitle>
+              <DialogTitle className="text-slate-950 font-extrabold tracking-tight">Byound AI</DialogTitle>
               <DialogDescription className="text-slate-600">
-                Décrivez la structure attendue. Nous générons une proposition Sections/Chapitres.
+                Décrivez la formation à créer, ou collez un contenu déjà écrit pour le découper en sections et chapitres.
               </DialogDescription>
             </DialogHeader>
 
+            <div className="flex gap-2">
+              <Button type="button" variant={iaMode === "prompt" ? "default" : "ghost"} className="rounded-full" onClick={() => setIaMode("prompt")}>
+                Prompt
+              </Button>
+              <Button type="button" variant={iaMode === "paste" ? "default" : "ghost"} className="rounded-full" onClick={() => setIaMode("paste")}>
+                Contenu déjà écrit
+              </Button>
+            </div>
+
             <div className="space-y-2">
-              <Label className="text-slate-950 font-bold">Prompt</Label>
+              <Label className="text-slate-950 font-bold">{iaMode === "paste" ? "Contenu" : "Prompt"}</Label>
               <Textarea
                 value={iaPrompt}
                 onChange={(e) => setIaPrompt(e.target.value)}
-                placeholder="Ex : Construis une formation de 3 sections sur la négociation..."
+                placeholder={iaMode === "paste" ? "Collez ici le texte, le plan ou le cours déjà rédigé..." : "Ex : Construis une formation de 3 sections sur la négociation..."}
                 className="min-h-[140px] rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
               />
             </div>
@@ -1774,7 +1785,7 @@ export function FormateurFormationBuilderWhite({
                 className="relative z-[999] pointer-events-auto rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 font-bold text-white hover:opacity-95"
               >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Générer
+                {iaMode === "paste" ? "Structurer" : "Générer"}
               </Button>
             </DialogFooter>
           </DialogContent>

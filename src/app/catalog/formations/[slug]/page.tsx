@@ -130,6 +130,7 @@ export async function renderFormationDetailPage(args: {
             code={/^[a-z0-9]{2,10}$/i.test(slug.split("-")[0] ?? "") ? (slug.split("-")[0] ?? "").toUpperCase() : (slug.split("-")[0] ?? "Formation").toUpperCase()}
             title={info.title}
             description={String((info as { presentation?: string; description?: string }).presentation || (info as { description?: string }).description || "")}
+            cover={info.backgroundImage || null}
             playBase={card.href}
             backHref={breadcrumbs.find((crumb) => crumb.href)?.href ?? "/dashboard/apprenant"}
             snapshot={((info as { builder_snapshot?: CourseBuilderSnapshot | null }).builder_snapshot ?? null) as CourseBuilderSnapshot | null}

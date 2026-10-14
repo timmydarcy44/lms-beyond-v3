@@ -119,7 +119,10 @@ async function fetchCourseActivity(client: SupabaseClient, userId: string, conte
     .eq("user_id", userId)
     .in("content_id", unique)
     .limit(5000);
-  if (error || !data?.length) return empty;
+  if (error) return empty;
+  if (!data?.length) {
+    return { ...empty, available: true };
+  }
 
   const today = parisKey(new Date());
   const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();

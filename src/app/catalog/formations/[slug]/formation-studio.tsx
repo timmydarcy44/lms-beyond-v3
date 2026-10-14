@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Manrope } from "next/font/google";
-import { ArrowRight, Bell, Check, ChevronRight, Lock, Menu, Play, Search, Shield } from "lucide-react";
+import { ArrowRight, Bell, Check, ChevronRight, Lock, Menu, MoreHorizontal, NotebookPen, Play, Search, Shield, Sparkles } from "lucide-react";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -37,6 +37,7 @@ type Leaf = {
   href: string;
   progress: ItemProgress;
   locked: boolean;
+  lockReason?: string;
 };
 type Node = {
   id: string;
@@ -44,6 +45,7 @@ type Node = {
   duration: string;
   progress: ItemProgress;
   locked: boolean;
+  lockReason?: string;
   href: string;
   leaves: Leaf[];
 };
@@ -82,6 +84,24 @@ function typeLabel(raw: { type?: string; kind?: string }): string {
   return "Lecture";
 }
 
+function lockExplanation(previousTitle: string, condition?: string): string {
+  const target = previousTitle.trim() || "l'élément précédent";
+  if (condition === "previous_quiz_score") {
+    return `Verrouillé : obtenez le score requis au quiz de « ${target} ».`;
+  }
+  return `Verrouillé : terminez « ${target} » pour continuer.`;
+}
+
+function plainText(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .trim();
+}
+
 function hidesChapterKicker(title: string): boolean {
   return Boolean(title.match(/^chapitre\s*\d+/i));
 }
@@ -112,6 +132,8 @@ export function FormationStudio({
   courseId,
   code,
   title,
+  description,
+  cover,
   playBase,
   backHref,
   snapshot,
@@ -120,6 +142,7 @@ export function FormationStudio({
   code: string;
   title: string;
   description?: string;
+  cover?: string | null;
   playBase: string;
   backHref: string;
   snapshot: CourseBuilderSnapshot | null;
@@ -133,6 +156,7 @@ export function FormationStudio({
   const [query, setQuery] = useState("");
   const [drawer, setDrawer] = useState(false);
   const [strategyOpen, setStrategyOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [orgName, setOrgName] = useState("Byound");
   const [userInitials, setUserInitials] = useState("BY");
   const [outline, setOutline] = useState<ItemProgress>(EMPTY_PROGRESS);
@@ -147,10 +171,12 @@ export function FormationStudio({
     const linear = Boolean(snapshot?.general?.linear_progression);
     const built: Chapter[] = [];
     let previousDone = true;
+    let previousTitle = "";
     (snapshot?.sections ?? []).forEach((section, sectionIndex) => {
       const nodes: Node[] = [];
       (section.chapters ?? []).forEach((chapter, chapterIndex) => {
         const locked = (linear || Boolean(chapter.unlock_condition)) && !(sectionIndex === 0 && chapterIndex === 0) && !previousDone;
+        const lockReason = locked ? lockExplanation(previousTitle, chapter.unlock_condition) : undefined;
         const leaves: Leaf[] = (chapter.subchapters ?? []).map((sub) => ({
           id: String(sub.id),
           title: sub.title?.trim() || "Sans titre",
@@ -159,16 +185,19 @@ export function FormationStudio({
           href: `${playBase}/play/${encodeURIComponent(sub.id)}`,
           progress: progressById.get(String(sub.id)) ?? EMPTY_PROGRESS,
           locked,
+          lockReason,
         }));
         const own = progressById.get(String(chapter.id)) ?? EMPTY_PROGRESS;
         const done = leaves.length ? leaves.every((leaf) => isDone(leaf.progress)) : isDone(own);
         previousDone = done;
+        previousTitle = chapter.title?.trim() || previousTitle;
         nodes.push({
           id: String(chapter.id),
           title: chapter.title?.trim() || "Sans titre",
           duration: chapter.duration?.trim() || "",
           progress: own,
           locked,
+          lockReason,
           href: `${playBase}/play/${encodeURIComponent(chapter.id)}`,
           leaves,
         });
@@ -189,7 +218,7 @@ export function FormationStudio({
         chapter.nodes.flatMap((node) =>
           node.leaves.length
             ? node.leaves.map((leaf) => ({ ...leaf, chapterId: chapter.id, nodeId: node.id }))
-            : [{ id: node.id, title: node.title, duration: node.duration, typeLabel: "Lecture", href: node.href, progress: node.progress, locked: node.locked, chapterId: chapter.id, nodeId: node.id }],
+            : [{ id: node.id, title: node.title, duration: node.duration, typeLabel: "Lecture", href: node.href, progress: node.progress, locked: node.locked, lockReason: node.lockReason, chapterId: chapter.id, nodeId: node.id }],
         ),
       ),
     [chapters],
@@ -346,6 +375,7 @@ export function FormationStudio({
         href: node.leaves.length ? levelHref(selectedChapter?.id, node.id) : node.href,
         progress: nodeProgress(node),
         locked: node.locked,
+        lockReason: node.lockReason,
       }));
   const levelDone = levelRows.filter((row) => isDone(row.progress)).length;
   const levelNext = levelRows.find((row) => !row.locked && !isDone(row.progress)) ?? null;
@@ -356,6 +386,9 @@ export function FormationStudio({
   const levelTitle = selectedNode?.title ?? selectedChapter?.title ?? title;
   const levelLabel = levelDone === 0 ? "Commencer" : levelNext ? "Reprendre" : "Chapitre suivant";
   const showIndicatorTabs = Boolean(activity?.available);
+  const presentation = plainText(snapshot?.general?.presentation || snapshot?.general?.description || description || "");
+  const objectives = [...new Set([...(snapshot?.general?.objectifs ?? []), ...(snapshot?.objectives ?? [])].map((item) => item.trim()).filter(Boolean))];
+  const coverUrl = [cover, snapshot?.general?.cover_image, snapshot?.general?.heroImage].find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() ?? "";
   const badge = certification ?? {
     status: formationPercent >= 100 ? "unlocked" : "locked",
     percent: formationPercent,
@@ -423,13 +456,13 @@ export function FormationStudio({
                       const nodeDone = node.leaves.filter((leaf) => isDone(leaf.progress)).length;
                       if (!node.leaves.length) {
                         return (
-                          <Link key={node.id} href={node.locked ? levelHref(chapter.id) : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
+                          <Link key={node.id} href={node.locked ? levelHref(chapter.id) : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} title={node.lockReason} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
                             <span className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.id === resume?.id ? "next" : node.progress.state === "percent" ? "progress" : undefined} />
                             <span className="formation-studio__leaf-copy">
                               <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
                               <span className="formation-studio__meta">{joinMeta([node.duration, node.locked ? null : isDone(node.progress) ? "Terminé" : "À faire"])}</span>
                             </span>
-                            <span className="formation-studio__lock">{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
+                            <span className="formation-studio__lock" title={node.lockReason} aria-label={node.lockReason}>{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                           </Link>
                         );
                       }
@@ -439,6 +472,7 @@ export function FormationStudio({
                           <button
                             type="button"
                             className="formation-studio__node"
+                            title={node.lockReason}
                             data-locked={node.locked || undefined}
                             aria-expanded={isOpen(node.id)}
                             aria-current={selectedNode?.id === node.id ? "page" : undefined}
@@ -453,7 +487,7 @@ export function FormationStudio({
                               <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
                               <span className="formation-studio__meta">{joinMeta([node.duration, `${nodeDone}/${node.leaves.length}`])}</span>
                             </span>
-                            <span className="formation-studio__lock">{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
+                            <span className="formation-studio__lock" title={node.lockReason} aria-label={node.lockReason}>{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                           </button>
                           {isOpen(node.id) ? (
                             <div id={nodePanel} className="formation-studio__children">
@@ -462,6 +496,7 @@ export function FormationStudio({
                                   key={leaf.id}
                                   href={leaf.locked ? levelHref(chapter.id, node.id) : leaf.href}
                                   className="formation-studio__leaf"
+                                  title={leaf.lockReason}
                                   data-locked={leaf.locked || undefined}
                                   aria-disabled={leaf.locked || undefined}
                                   onClick={(event) => {
@@ -473,7 +508,7 @@ export function FormationStudio({
                                     <span className="formation-studio__leaf-title" title={leaf.title}>{leaf.title}</span>
                                     <span className="formation-studio__meta">{joinMeta([leaf.duration, leaf.locked ? null : isDone(leaf.progress) ? "Terminé" : "À faire"])}</span>
                                   </span>
-                                  <span className="formation-studio__lock">{leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
+                                  <span className="formation-studio__lock" title={leaf.lockReason} aria-label={leaf.lockReason}>{leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                                 </Link>
                               ))}
                             </div>
@@ -532,7 +567,33 @@ export function FormationStudio({
           </div>
         </header>
 
-        <div className="formation-studio__hero" data-compact="true">
+        {coverUrl || presentation || objectives.length ? (
+          <section className="formation-studio__intro" data-layout={coverUrl && (presentation || objectives.length) ? "split" : "single"}>
+            {coverUrl ? <img className="formation-studio__cover" src={coverUrl} alt="" /> : null}
+            {presentation || objectives.length ? (
+              <div className="formation-studio__intro-copy">
+                {presentation ? (
+                  <div>
+                    <h2>Présentation</h2>
+                    <p>{presentation}</p>
+                  </div>
+                ) : null}
+                {objectives.length ? (
+                  <div>
+                    <h2>Objectifs pédagogiques</h2>
+                    <ul>
+                      {objectives.map((objective) => (
+                        <li key={objective}>{objective}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        <div className="formation-studio__hero">
           {showIndicatorTabs ? (
             <div className="formation-studio__tabs" role="tablist" aria-label="Indicateur">
               <button type="button" role="tab" aria-selected={tab === "completion"} onClick={() => setTab("completion")}>
@@ -581,6 +642,39 @@ export function FormationStudio({
               </span>
               {actionLabel}
             </Link>
+            <Link href={actionHref} className="formation-studio__action" aria-label="Coach IA">
+              <span className="formation-studio__round formation-studio__round--quiet">
+                <Sparkles size={22} strokeWidth={2} />
+              </span>
+              Coach IA
+            </Link>
+            <Link href="/beyond-note-app" className="formation-studio__action" aria-label="Mes notes">
+              <span className="formation-studio__round formation-studio__round--quiet">
+                <NotebookPen size={22} strokeWidth={2} />
+              </span>
+              Mes notes
+            </Link>
+            <div className="formation-studio__more">
+              <button type="button" className="formation-studio__action" aria-expanded={moreOpen} aria-label="Plus" onClick={() => setMoreOpen((open) => !open)}>
+                <span className="formation-studio__round formation-studio__round--quiet">
+                  <MoreHorizontal size={22} strokeWidth={2} />
+                </span>
+                Plus
+              </button>
+              {moreOpen ? (
+                <div className="formation-studio__more-menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setStrategyOpen(true);
+                    }}
+                  >
+                    Stratégie d&apos;apprentissage
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -681,6 +775,7 @@ export function FormationStudio({
                   <li key={leaf.id}>
                     <Link
                       href={leaf.locked ? playBase : leaf.href}
+                      title={leaf.lockReason}
                       className="formation-studio__row"
                       data-next={next || undefined}
                       aria-disabled={leaf.locked || undefined}

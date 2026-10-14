@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Manrope } from "next/font/google";
 import { ArrowRight, Bell, Check, ChevronRight, Lock, Menu, Play, Search, Shield } from "lucide-react";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
@@ -81,6 +82,20 @@ function typeLabel(raw: { type?: string; kind?: string }): string {
   return "Lecture";
 }
 
+function joinMeta(parts: Array<string | false | null | undefined>): string {
+  return parts.map((part) => (typeof part === "string" ? part.trim() : "")).filter(Boolean).join(" · ");
+}
+
+function nodeProgress(node: Node): ItemProgress {
+  if (!node.leaves.length) return node.progress;
+  const done = node.leaves.filter((leaf) => isDone(leaf.progress)).length;
+  if (done === node.leaves.length) return { state: "completed", percent: 100 };
+  if (done > 0 || node.leaves.some((leaf) => leaf.progress.state === "percent")) {
+    return { state: "percent", percent: Math.round((done / node.leaves.length) * 100) };
+  }
+  return node.progress.state === "none" ? { state: "none", percent: null } : node.progress;
+}
+
 function formatActive(seconds: number): { value: string; unit: string } {
   const minutes = Math.max(0, Math.round(seconds / 60));
   if (minutes < 60) return { value: String(minutes), unit: "min" };
@@ -91,12 +106,14 @@ function formatActive(seconds: number): { value: string; unit: string } {
 
 export function FormationStudio({
   courseId,
+  code,
   title,
   playBase,
   backHref,
   snapshot,
 }: {
   courseId: string;
+  code: string;
   title: string;
   description?: string;
   playBase: string;
@@ -106,6 +123,8 @@ export function FormationStudio({
   episodes?: { id: string; progress?: number | null }[];
 }) {
   const supabase = useSupabase();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { isDyslexiaMode, toggleDyslexiaMode } = useDyslexiaMode();
   const [query, setQuery] = useState("");
   const [drawer, setDrawer] = useState(false);
@@ -119,8 +138,6 @@ export function FormationStudio({
   const [tab, setTab] = useState<"completion" | "time" | "streak">("completion");
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [treeReady, setTreeReady] = useState(false);
-  const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const chapters = useMemo(() => {
     const linear = Boolean(snapshot?.general?.linear_progression);
@@ -176,13 +193,25 @@ export function FormationStudio({
   const resume = flatLeaves.find((leaf) => !leaf.locked && !isDone(leaf.progress)) ?? null;
   const doneLeaves = flatLeaves.filter((leaf) => isDone(leaf.progress)).length;
   const formationPercent = outline.state === "completed" ? 100 : Math.max(0, Math.min(100, outline.percent ?? 0));
+  const chapterParam = searchParams.get("chapitre");
+  const niveauParam = searchParams.get("niveau");
   const resumeChapter = chapters.find((chapter) => chapter.id === resume?.chapterId) ?? chapters[0] ?? null;
-  const selectedChapter = chapters.find((chapter) => chapter.id === selectedChapterId) ?? resumeChapter;
-  const selectedNode = selectedChapter?.nodes.find((node) => node.id === selectedNodeId) ?? selectedChapter?.nodes[0] ?? null;
+  const selectedChapter =
+    chapters.find((chapter) => chapter.id === chapterParam) ??
+    chapters.find((chapter) => chapter.nodes.some((node) => node.id === niveauParam)) ??
+    resumeChapter;
+  const selectedNode = niveauParam ? selectedChapter?.nodes.find((node) => node.id === niveauParam) ?? null : null;
+  const levelHref = (chapterId?: string | null, nodeId?: string | null) => {
+    const params = new URLSearchParams();
+    if (chapterId) params.set("chapitre", chapterId);
+    if (nodeId) params.set("niveau", nodeId);
+    const query = params.toString();
+    return query ? `${playBase}?${query}` : playBase;
+  };
   const nextChapter = chapters[chapters.findIndex((chapter) => chapter.id === resumeChapter?.id) + 1] ?? null;
   const nextHref = nextChapter?.nodes[0]?.leaves[0]?.href || nextChapter?.nodes[0]?.href || null;
   const actionHref = resume?.href ?? nextHref ?? playBase;
-  const actionLabel = !resume ? "Suivant" : doneLeaves === 0 ? "Commencer" : resume.chapterId === selectedChapter?.id ? "Reprendre" : "Chapitre suivant";
+  const actionLabel = !resume ? "Suivant" : doneLeaves === 0 ? "Commencer" : "Reprendre";
   const storageKey = `formation-tree:${courseId}`;
   const treeInit = useRef(false);
 
@@ -295,13 +324,6 @@ export function FormationStudio({
     }
   }, [openIds, storageKey, treeReady]);
 
-  useEffect(() => {
-    if (!selectedChapterId && resumeChapter) {
-      setSelectedChapterId(resumeChapter.id);
-      setSelectedNodeId(resume?.nodeId ?? resumeChapter.nodes[0]?.id ?? null);
-    }
-  }, [resume?.nodeId, resumeChapter, selectedChapterId]);
-
   const toggle = (id: string) => {
     setOpenIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
@@ -310,10 +332,22 @@ export function FormationStudio({
   const weekTotal = (activity?.weekSeconds ?? []).reduce((sum, value) => sum + value, 0);
   const weekMax = Math.max(1, ...(activity?.weekSeconds ?? [0]));
   const delta = weekTotal - (activity?.previousWeekSeconds ?? 0);
-  const listLeaves = selectedChapter
-    ? selectedChapter.nodes.flatMap((node) => (node.leaves.length ? node.leaves : [{ id: node.id, title: node.title, duration: node.duration, typeLabel: "Lecture", href: node.href, progress: node.progress, locked: node.locked }]))
-    : [];
-  const listDone = listLeaves.filter((leaf) => isDone(leaf.progress)).length;
+  const levelRows: Leaf[] = selectedNode
+    ? selectedNode.leaves
+    : (selectedChapter?.nodes ?? []).map((node) => ({
+        id: node.id,
+        title: node.title,
+        duration: node.duration,
+        typeLabel: node.leaves.length ? "" : "Lecture",
+        href: node.leaves.length ? levelHref(selectedChapter?.id, node.id) : node.href,
+        progress: nodeProgress(node),
+        locked: node.locked,
+      }));
+  const levelDone = levelRows.filter((row) => isDone(row.progress)).length;
+  const levelNext = levelRows.find((row) => !row.locked && !isDone(row.progress)) ?? null;
+  const levelTitle = selectedNode?.title ?? selectedChapter?.title ?? title;
+  const levelLabel = levelDone === 0 ? "Commencer" : levelNext ? "Reprendre" : "Chapitre suivant";
+  const showIndicatorTabs = Boolean(activity?.available);
   const badge = certification ?? {
     status: formationPercent >= 100 ? "unlocked" : "locked",
     percent: formationPercent,
@@ -358,8 +392,7 @@ export function FormationStudio({
                   aria-controls={panelId}
                   onClick={() => {
                     toggle(chapter.id);
-                    setSelectedChapterId(chapter.id);
-                    setSelectedNodeId(chapter.nodes[0]?.id ?? null);
+                    router.push(levelHref(chapter.id));
                   }}
                 >
                   <ChevronRight className="formation-studio__chevron" size={16} strokeWidth={2} aria-hidden />
@@ -377,16 +410,13 @@ export function FormationStudio({
                       const nodeDone = node.leaves.filter((leaf) => isDone(leaf.progress)).length;
                       if (!node.leaves.length) {
                         return (
-                          <Link key={node.id} href={node.href} className="formation-studio__leaf" aria-current={node.id === selectedNodeId ? "page" : undefined}>
-                            <i className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.progress.state === "percent" ? "progress" : undefined} />
+                          <Link key={node.id} href={node.locked ? levelHref(chapter.id) : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
+                            <span className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.progress.state === "percent" ? "progress" : undefined} />
                             <span className="formation-studio__leaf-copy">
                               <span className="formation-studio__leaf-title">{node.title}</span>
-                              <span className="formation-studio__meta">
-                                {node.duration ? `${node.duration} · ` : ""}
-                                {node.locked ? "Verrouillé" : isDone(node.progress) ? "Terminé" : "À faire"}
-                              </span>
+                              <span className="formation-studio__meta">{joinMeta([node.duration, node.locked ? null : isDone(node.progress) ? "Terminé" : "À faire"])}</span>
                             </span>
-                            {node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}
+                            <span className="formation-studio__lock">{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                           </Link>
                         );
                       }
@@ -396,43 +426,41 @@ export function FormationStudio({
                           <button
                             type="button"
                             className="formation-studio__node"
+                            data-locked={node.locked || undefined}
                             aria-expanded={isOpen(node.id)}
                             aria-controls={nodePanel}
                             onClick={() => {
                               toggle(node.id);
-                              setSelectedChapterId(chapter.id);
-                              setSelectedNodeId(node.id);
+                              router.push(levelHref(chapter.id, node.id));
                             }}
                           >
                             <ChevronRight className="formation-studio__chevron" size={14} strokeWidth={2} aria-hidden />
                             <span className="formation-studio__leaf-copy">
                               <span className="formation-studio__leaf-title">{node.title}</span>
-                              <span className="formation-studio__meta">
-                                {node.duration || "—"} · {nodeDone}/{node.leaves.length}
-                              </span>
+                              <span className="formation-studio__meta">{joinMeta([node.duration, `${nodeDone}/${node.leaves.length}`])}</span>
                             </span>
+                            <span className="formation-studio__lock">{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                           </button>
                           {isOpen(node.id) ? (
                             <div id={nodePanel} className="formation-studio__children">
                               {node.leaves.map((leaf) => (
                                 <Link
                                   key={leaf.id}
-                                  href={leaf.locked ? playBase : leaf.href}
+                                  href={leaf.locked ? levelHref(chapter.id, node.id) : leaf.href}
                                   className="formation-studio__leaf"
+                                  data-locked={leaf.locked || undefined}
                                   aria-current={leaf.id === resume?.id ? "page" : undefined}
                                   aria-disabled={leaf.locked || undefined}
                                   onClick={(event) => {
                                     if (leaf.locked) event.preventDefault();
                                   }}
                                 >
-                                  <i className="formation-studio__dot" data-state={leaf.locked ? undefined : isDone(leaf.progress) ? "done" : leaf.progress.state === "percent" ? "progress" : undefined} />
+                                  <span className="formation-studio__dot" data-state={leaf.locked ? undefined : isDone(leaf.progress) ? "done" : leaf.progress.state === "percent" ? "progress" : undefined} />
                                   <span className="formation-studio__leaf-copy">
                                     <span className="formation-studio__leaf-title">{leaf.title}</span>
-                                    <span className="formation-studio__meta">
-                                      {[leaf.duration, leaf.locked ? "Verrouillé" : isDone(leaf.progress) ? "Terminé" : "À faire"].filter(Boolean).join(" · ")}
-                                    </span>
+                                    <span className="formation-studio__meta">{joinMeta([leaf.duration, leaf.locked ? null : isDone(leaf.progress) ? "Terminé" : "À faire"])}</span>
                                   </span>
-                                  {leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}
+                                  <span className="formation-studio__lock">{leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                                 </Link>
                               ))}
                             </div>
@@ -447,6 +475,14 @@ export function FormationStudio({
           })}
           {!filteredChapters.length ? <p className="formation-studio__meta">Aucun chapitre ne correspond.</p> : null}
         </div>
+        <div className="formation-studio__chips">
+          <button type="button" aria-pressed={isDyslexiaMode} onClick={() => toggleDyslexiaMode()}>
+            Neuro
+          </button>
+          <button type="button" onClick={() => setStrategyOpen(true)}>
+            + Stratégie
+          </button>
+        </div>
       </aside>
 
       <section className="formation-studio__main">
@@ -458,19 +494,18 @@ export function FormationStudio({
             <ChevronRight size={18} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
           </Link>
           <nav className="formation-studio__crumbs" aria-label="Fil d'Ariane">
-            <Link href={playBase}>{title}</Link>
-            {selectedChapter ? (
+            {selectedChapter ? <Link href={playBase}>{code}</Link> : <span aria-current="page">{code}</span>}
+            {selectedChapter && selectedNode ? (
               <>
                 <span aria-hidden>/</span>
-                <button type="button" onClick={() => setSelectedChapterId(selectedChapter.id)}>
-                  Chapitre {selectedChapter.number}
-                </button>
-              </>
-            ) : null}
-            {selectedNode ? (
-              <>
+                <Link href={levelHref(selectedChapter.id)}>Chapitre {selectedChapter.number}</Link>
                 <span aria-hidden>/</span>
                 <span aria-current="page">{selectedNode.title}</span>
+              </>
+            ) : selectedChapter ? (
+              <>
+                <span aria-hidden>/</span>
+                <span aria-current="page">Chapitre {selectedChapter.number}</span>
               </>
             ) : null}
           </nav>
@@ -484,43 +519,39 @@ export function FormationStudio({
           </div>
         </header>
 
-        <div className="formation-studio__hero">
-          <div className="formation-studio__tabs" role="tablist" aria-label="Indicateur">
-            <button type="button" role="tab" aria-selected={tab === "completion"} onClick={() => setTab("completion")}>
-              Complétion
-            </button>
-            {activity?.available ? (
+        <div className="formation-studio__hero" data-compact="true">
+          {showIndicatorTabs ? (
+            <div className="formation-studio__tabs" role="tablist" aria-label="Indicateur">
+              <button type="button" role="tab" aria-selected={tab === "completion"} onClick={() => setTab("completion")}>
+                Complétion
+              </button>
               <button type="button" role="tab" aria-selected={tab === "time"} onClick={() => setTab("time")}>
                 Temps passé
               </button>
-            ) : null}
-            {activity?.available ? (
               <button type="button" role="tab" aria-selected={tab === "streak"} onClick={() => setTab("streak")}>
                 Série
               </button>
-            ) : null}
-          </div>
-          {tab === "time" && activity?.available ? (
+            </div>
+          ) : null}
+          {tab === "time" && showIndicatorTabs ? (
             <>
-              <p className="formation-studio__legend">Temps passé</p>
               <p className="formation-studio__score">
                 {time.value}
                 {time.unit ? <span>{time.unit}</span> : null}
               </p>
               <p className="formation-studio__context">Depuis le début de la formation</p>
             </>
-          ) : tab === "streak" && activity?.available ? (
+          ) : tab === "streak" && showIndicatorTabs ? (
             <>
-              <p className="formation-studio__legend">Série</p>
               <p className="formation-studio__score">
-                {activity.streakDays}
-                <span>{activity.streakDays > 1 ? "jours" : "jour"}</span>
+                {activity?.streakDays ?? 0}
+                <span>{(activity?.streakDays ?? 0) > 1 ? "jours" : "jour"}</span>
               </p>
               <p className="formation-studio__context">Reviens demain pour continuer ta série</p>
             </>
           ) : (
             <>
-              <p className="formation-studio__legend">Complétion</p>
+              {showIndicatorTabs ? null : <p className="formation-studio__legend">Complétion</p>}
               <p className="formation-studio__score">
                 {formationPercent}
                 <span>%</span>
@@ -546,14 +577,12 @@ export function FormationStudio({
             <span className="formation-studio__orb formation-studio__orb--b" aria-hidden />
             <p className="formation-studio__kicker">Chapitre en cours</p>
             <p>
-              {resumeChapter
-                ? `${resumeChapter.nodes.flatMap((node) => (node.leaves.length ? node.leaves : [node])).filter((item) => isDone("progress" in item ? item.progress : EMPTY_PROGRESS)).length}/${resumeChapter.nodes.flatMap((node) => (node.leaves.length ? node.leaves : [node])).length}`
-                : "0/0"}
+              {levelDone}/{levelRows.length}
             </p>
-            <h2>{resumeChapter?.title || title}</h2>
-            <p>Prochain : {resume?.title || "Formation terminée"}</p>
-            <Link href={actionHref} className="formation-studio__pill">
-              {actionLabel}
+            <h2>{levelTitle}</h2>
+            <p>{levelNext ? `Prochain : ${levelNext.title}` : "Tous les éléments de ce niveau sont terminés."}</p>
+            <Link href={levelNext?.href ?? nextHref ?? playBase} className="formation-studio__pill">
+              {levelLabel}
             </Link>
           </article>
 
@@ -585,7 +614,7 @@ export function FormationStudio({
                 <span className="formation-studio__seal">
                   <Check size={22} strokeWidth={2} />
                 </span>
-                <h2>Badge {title}</h2>
+                <h2>Badge {code}</h2>
                 <p>{badge.earnedAt ? `Obtenu le ${new Date(badge.earnedAt).toLocaleDateString("fr-FR")}.` : "Certification validée."}</p>
                 <Link href="/dashboard/apprenant/badges" className="formation-studio__pill">
                   Voir mon badge
@@ -599,7 +628,7 @@ export function FormationStudio({
                 <span className="formation-studio__seal">
                   <Shield size={22} strokeWidth={2} />
                 </span>
-                <h2>Badge {title}</h2>
+                <h2>Badge {code}</h2>
                 <p>Tous les chapitres sont terminés.</p>
                 <Link href={`${actionHref}${actionHref.includes("?") ? "&" : "?"}certify=1`} className="formation-studio__gold-btn">
                   Passer la certification
@@ -610,7 +639,7 @@ export function FormationStudio({
                 <span className="formation-studio__seal">
                   <Lock size={22} strokeWidth={2} />
                 </span>
-                <h2>Badge {title}</h2>
+                <h2>Badge {code}</h2>
                 <p>Se débloque quand tous les chapitres sont terminés.</p>
                 <div className="formation-studio__gauge" aria-hidden>
                   <span style={{ width: `${badge.totalChapters ? Math.round((badge.doneChapters / badge.totalChapters) * 100) : 0}%` }} />
@@ -623,15 +652,15 @@ export function FormationStudio({
           </article>
 
           <article className="formation-studio__card formation-studio__wide">
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <div className="formation-studio__list-head">
               <h3>Sous-chapitres</h3>
-              <span className="formation-studio__meta">
-                {listDone} sur {listLeaves.length}
+              <span>
+                {levelDone} sur {levelRows.length}
               </span>
             </div>
             <ol className="formation-studio__list">
-              {listLeaves.map((leaf, index) => {
-                const next = resume?.id === leaf.id;
+              {levelRows.map((leaf, index) => {
+                const next = levelNext?.id === leaf.id;
                 const done = isDone(leaf.progress);
                 return (
                   <li key={leaf.id}>
@@ -652,7 +681,7 @@ export function FormationStudio({
                         <span className="formation-studio__meta">{[leaf.typeLabel, leaf.duration].filter(Boolean).join(" · ")}</span>
                       </span>
                       <span className="formation-studio__status" data-state={done ? "done" : next ? "next" : undefined}>
-                        {leaf.locked ? "Verrouillé" : done ? "Terminé" : next ? "Prochain" : "À faire"}
+                        {done ? "Terminé" : next ? "Prochain" : "À faire"}
                       </span>
                       <ChevronRight size={16} strokeWidth={2} aria-hidden />
                     </Link>
@@ -674,14 +703,6 @@ export function FormationStudio({
         </div>
       </section>
 
-      <div className="formation-studio__chips">
-        <button type="button" aria-pressed={isDyslexiaMode} onClick={() => toggleDyslexiaMode()}>
-          Neuro
-        </button>
-        <button type="button" onClick={() => setStrategyOpen(true)}>
-          + Stratégie
-        </button>
-      </div>
       <LearningStrategyModal isOpen={strategyOpen} onClose={() => setStrategyOpen(false)} />
     </div>
   );

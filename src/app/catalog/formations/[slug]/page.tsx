@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import {
   getLearnerContentDetail,
@@ -123,8 +124,10 @@ export async function renderFormationDetailPage(args: {
           mainClassName="!m-0 !ml-0 !mt-0 !p-0 !px-0 !pl-0 !pt-0 w-full max-w-none"
         >
           <DyslexiaModeProvider>
+          <Suspense fallback={null}>
           <FormationStudio
             courseId={card.id}
+            code={/^[a-z0-9]{2,10}$/i.test(slug.split("-")[0] ?? "") ? (slug.split("-")[0] ?? "").toUpperCase() : (slug.split("-")[0] ?? "Formation").toUpperCase()}
             title={info.title}
             description={String((info as { presentation?: string; description?: string }).presentation || (info as { description?: string }).description || "")}
             playBase={card.href}
@@ -133,6 +136,7 @@ export async function renderFormationDetailPage(args: {
             skills={Array.isArray((info as { skills?: string[] }).skills) ? (info as { skills?: string[] }).skills ?? [] : []}
             episodes={episodes}
           />
+          </Suspense>
           </DyslexiaModeProvider>
         </DashboardShell>
       </div>

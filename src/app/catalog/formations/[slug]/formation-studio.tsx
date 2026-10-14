@@ -82,6 +82,10 @@ function typeLabel(raw: { type?: string; kind?: string }): string {
   return "Lecture";
 }
 
+function hidesChapterKicker(title: string): boolean {
+  return Boolean(title.match(/^chapitre\s*\d+/i));
+}
+
 function joinMeta(parts: Array<string | false | null | undefined>): string {
   return parts.map((part) => (typeof part === "string" ? part.trim() : "")).filter(Boolean).join(" · ");
 }
@@ -345,6 +349,10 @@ export function FormationStudio({
       }));
   const levelDone = levelRows.filter((row) => isDone(row.progress)).length;
   const levelNext = levelRows.find((row) => !row.locked && !isDone(row.progress)) ?? null;
+  const partTotal = selectedChapter?.nodes.length ?? 0;
+  const partDone = (selectedChapter?.nodes ?? []).filter((node) =>
+    node.leaves.length ? node.leaves.every((leaf) => isDone(leaf.progress)) : isDone(node.progress),
+  ).length;
   const levelTitle = selectedNode?.title ?? selectedChapter?.title ?? title;
   const levelLabel = levelDone === 0 ? "Commencer" : levelNext ? "Reprendre" : "Chapitre suivant";
   const showIndicatorTabs = Boolean(activity?.available);
@@ -380,15 +388,18 @@ export function FormationStudio({
         </label>
         <div className="formation-studio__tree">
           {filteredChapters.map((chapter) => {
-            const leaves = chapter.nodes.flatMap((node) => (node.leaves.length ? node.leaves : [node]));
-            const done = leaves.filter((item) => isDone(item.progress)).length;
+            const partsDone = chapter.nodes.filter((node) =>
+              node.leaves.length ? node.leaves.every((leaf) => isDone(leaf.progress)) : isDone(node.progress),
+            ).length;
             const panelId = `chapter-panel-${chapter.id}`;
+            const chapterCurrent = chapter.id === selectedChapter?.id && !selectedNode;
             return (
               <div key={chapter.id}>
                 <button
                   type="button"
                   className="formation-studio__chapter"
                   aria-expanded={isOpen(chapter.id)}
+                  aria-current={chapterCurrent ? "page" : undefined}
                   aria-controls={panelId}
                   onClick={() => {
                     toggle(chapter.id);
@@ -397,11 +408,13 @@ export function FormationStudio({
                 >
                   <ChevronRight className="formation-studio__chevron" size={16} strokeWidth={2} aria-hidden />
                   <span className="formation-studio__chapter-copy">
-                    <span className="formation-studio__kicker">Chapitre {chapter.number}</span>
-                    <span className="formation-studio__chapter-title">{chapter.title}</span>
+                    {hidesChapterKicker(chapter.title) ? null : <span className="formation-studio__kicker">Chapitre {chapter.number}</span>}
+                    <span className="formation-studio__chapter-title" title={chapter.title}>
+                      {chapter.title}
+                    </span>
                   </span>
                   <span className="formation-studio__count">
-                    {done}/{leaves.length}
+                    {partsDone}/{chapter.nodes.length}
                   </span>
                 </button>
                 {isOpen(chapter.id) ? (
@@ -411,9 +424,9 @@ export function FormationStudio({
                       if (!node.leaves.length) {
                         return (
                           <Link key={node.id} href={node.locked ? levelHref(chapter.id) : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
-                            <span className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.progress.state === "percent" ? "progress" : undefined} />
+                            <span className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.id === resume?.id ? "next" : node.progress.state === "percent" ? "progress" : undefined} />
                             <span className="formation-studio__leaf-copy">
-                              <span className="formation-studio__leaf-title">{node.title}</span>
+                              <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
                               <span className="formation-studio__meta">{joinMeta([node.duration, node.locked ? null : isDone(node.progress) ? "Terminé" : "À faire"])}</span>
                             </span>
                             <span className="formation-studio__lock">{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
@@ -428,6 +441,7 @@ export function FormationStudio({
                             className="formation-studio__node"
                             data-locked={node.locked || undefined}
                             aria-expanded={isOpen(node.id)}
+                            aria-current={selectedNode?.id === node.id ? "page" : undefined}
                             aria-controls={nodePanel}
                             onClick={() => {
                               toggle(node.id);
@@ -436,7 +450,7 @@ export function FormationStudio({
                           >
                             <ChevronRight className="formation-studio__chevron" size={14} strokeWidth={2} aria-hidden />
                             <span className="formation-studio__leaf-copy">
-                              <span className="formation-studio__leaf-title">{node.title}</span>
+                              <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
                               <span className="formation-studio__meta">{joinMeta([node.duration, `${nodeDone}/${node.leaves.length}`])}</span>
                             </span>
                             <span className="formation-studio__lock">{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
@@ -449,15 +463,14 @@ export function FormationStudio({
                                   href={leaf.locked ? levelHref(chapter.id, node.id) : leaf.href}
                                   className="formation-studio__leaf"
                                   data-locked={leaf.locked || undefined}
-                                  aria-current={leaf.id === resume?.id ? "page" : undefined}
                                   aria-disabled={leaf.locked || undefined}
                                   onClick={(event) => {
                                     if (leaf.locked) event.preventDefault();
                                   }}
                                 >
-                                  <span className="formation-studio__dot" data-state={leaf.locked ? undefined : isDone(leaf.progress) ? "done" : leaf.progress.state === "percent" ? "progress" : undefined} />
+                                  <span className="formation-studio__dot" data-state={leaf.locked ? undefined : isDone(leaf.progress) ? "done" : leaf.id === resume?.id ? "next" : leaf.progress.state === "percent" ? "progress" : undefined} />
                                   <span className="formation-studio__leaf-copy">
-                                    <span className="formation-studio__leaf-title">{leaf.title}</span>
+                                    <span className="formation-studio__leaf-title" title={leaf.title}>{leaf.title}</span>
                                     <span className="formation-studio__meta">{joinMeta([leaf.duration, leaf.locked ? null : isDone(leaf.progress) ? "Terminé" : "À faire"])}</span>
                                   </span>
                                   <span className="formation-studio__lock">{leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
@@ -577,7 +590,7 @@ export function FormationStudio({
             <span className="formation-studio__orb formation-studio__orb--b" aria-hidden />
             <p className="formation-studio__kicker">Chapitre en cours</p>
             <p>
-              {levelDone}/{levelRows.length}
+              {partDone}/{partTotal}
             </p>
             <h2>{levelTitle}</h2>
             <p>{levelNext ? `Prochain : ${levelNext.title}` : "Tous les éléments de ce niveau sont terminés."}</p>
@@ -650,10 +663,12 @@ export function FormationStudio({
               </>
             )}
           </article>
+        </div>
 
-          <article className="formation-studio__card formation-studio__wide">
+        <div className="formation-studio__follow">
+          <article className="formation-studio__card">
             <div className="formation-studio__list-head">
-              <h3>Sous-chapitres</h3>
+              <h3>{selectedNode ? "Sous-chapitres" : "Parties"}</h3>
               <span>
                 {levelDone} sur {levelRows.length}
               </span>
@@ -692,7 +707,7 @@ export function FormationStudio({
           </article>
 
           {nextChapter && nextHref ? (
-            <article className="formation-studio__card formation-studio__wide">
+            <article className="formation-studio__card">
               <p className="formation-studio__kicker">Chapitre suivant</p>
               <h3>{nextChapter.title}</h3>
               <Link href={nextHref} className="formation-studio__icon-btn" aria-label={`Ouvrir ${nextChapter.title}`} style={{ marginTop: 16 }}>

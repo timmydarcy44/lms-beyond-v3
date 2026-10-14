@@ -358,6 +358,69 @@
   padding-left: 18px;
 }
 
+.formation-studio__text-btn {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.formation-studio__sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.formation-studio__sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.formation-studio__sheet-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(640px, 100%);
+  max-height: min(80dvh, 720px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--surface);
+}
+
+.formation-studio__sheet-panel h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.formation-studio__sheet-panel p,
+.formation-studio__sheet-panel li {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.formation-studio__sheet-panel ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.formation-studio__sheet-panel .formation-studio__pill {
+  align-self: flex-start;
+}
+
 .formation-studio__lock[title] {
   cursor: help;
 }

@@ -92,6 +92,12 @@ function lockExplanation(previousTitle: string, condition?: string): string {
   return `Verrouillé : terminez « ${target} » pour continuer.`;
 }
 
+function excerpt(value: string, max = 180): string {
+  const flat = value.replace(/\s+/g, " ").trim();
+  if (flat.length <= max) return flat;
+  return `${flat.slice(0, max).replace(/\s+\S*$/, "")}…`;
+}
+
 function plainText(value: string): string {
   return value
     .replace(/<br\s*\/?>/gi, "\n")
@@ -157,6 +163,7 @@ export function FormationStudio({
   const [drawer, setDrawer] = useState(false);
   const [strategyOpen, setStrategyOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState<"presentation" | "objectives" | null>(null);
   const [orgName, setOrgName] = useState("Byound");
   const [userInitials, setUserInitials] = useState("BY");
   const [outline, setOutline] = useState<ItemProgress>(EMPTY_PROGRESS);
@@ -575,17 +582,23 @@ export function FormationStudio({
                 {presentation ? (
                   <div>
                     <h2>Présentation</h2>
-                    <p>{presentation}</p>
+                    <p>{excerpt(presentation)}</p>
+                    <button type="button" className="formation-studio__text-btn" onClick={() => setDetailOpen("presentation")}>
+                      Lire la présentation
+                    </button>
                   </div>
                 ) : null}
                 {objectives.length ? (
                   <div>
                     <h2>Objectifs pédagogiques</h2>
                     <ul>
-                      {objectives.map((objective) => (
+                      {objectives.slice(0, 2).map((objective) => (
                         <li key={objective}>{objective}</li>
                       ))}
                     </ul>
+                    <button type="button" className="formation-studio__text-btn" onClick={() => setDetailOpen("objectives")}>
+                      Voir les {objectives.length} objectifs
+                    </button>
                   </div>
                 ) : null}
               </div>
@@ -813,6 +826,24 @@ export function FormationStudio({
         </div>
       </section>
 
+      {detailOpen ? (
+        <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label={detailOpen === "presentation" ? "Présentation" : "Objectifs pédagogiques"}>
+          <button type="button" className="formation-studio__sheet-backdrop" aria-label="Fermer" onClick={() => setDetailOpen(null)} />
+          <div className="formation-studio__sheet-panel">
+            <h2>{detailOpen === "presentation" ? "Présentation" : "Objectifs pédagogiques"}</h2>
+            {detailOpen === "presentation" ? <p>{presentation}</p> : (
+              <ul>
+                {objectives.map((objective) => (
+                  <li key={objective}>{objective}</li>
+                ))}
+              </ul>
+            )}
+            <button type="button" className="formation-studio__pill" onClick={() => setDetailOpen(null)}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      ) : null}
       <LearningStrategyModal isOpen={strategyOpen} onClose={() => setStrategyOpen(false)} />
     </div>
   );

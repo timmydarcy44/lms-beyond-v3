@@ -1739,7 +1739,7 @@ export function FormateurFormationBuilderWhite({
         />
 
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
-          <DialogContent className="border-0 bg-white text-slate-950 shadow-xl">
+          <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-white text-slate-950 shadow-xl">
             <DialogHeader>
               <DialogTitle className="text-slate-950 font-extrabold tracking-tight">Byound AI</DialogTitle>
               <DialogDescription className="text-slate-600">
@@ -1762,11 +1762,14 @@ export function FormateurFormationBuilderWhite({
                 value={iaPrompt}
                 onChange={(e) => setIaPrompt(e.target.value)}
                 placeholder={iaMode === "paste" ? "Collez ici le texte, le plan ou le cours déjà rédigé..." : "Ex : Construis une formation de 3 sections sur la négociation..."}
-                className="min-h-[140px] rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
+                className="max-h-[28dvh] min-h-[96px] rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
               />
             </div>
 
-            <DialogFooter>
+            <p className="text-xs font-semibold text-orange-600">
+              Avant de valider, donnez un titre à la formation pour guider l&apos;IA.
+            </p>
+            <DialogFooter className="sticky bottom-0 bg-white pt-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -1776,16 +1779,13 @@ export function FormateurFormationBuilderWhite({
               >
                 Annuler
               </Button>
-              <p className="mr-auto text-xs font-semibold text-orange-600">
-                ⚠️ Avant de générer, assurez-vous d'avoir donné un titre à votre formation pour guider l'IA.
-              </p>
               <Button
                 type="button"
                 onClick={handleGenerateWithBeyondIA}
                 className="relative z-[999] pointer-events-auto rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 font-bold text-white hover:opacity-95"
               >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {iaMode === "paste" ? "Structurer" : "Générer"}
+                Valider
               </Button>
             </DialogFooter>
           </DialogContent>

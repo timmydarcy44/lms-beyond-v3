@@ -14,6 +14,7 @@ import "katex/dist/katex.min.css";
 
 import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-resource";
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
+import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { LessonReaderShell, type ReaderPart } from "@/components/apprenant/lesson-reader-shell";
@@ -791,6 +792,9 @@ export function LessonPlayView({
             }
           }
         }
+        for (const leafId of readLeafDone(courseId)) {
+          next[leafId] = { state: "completed", percent: 100 };
+        }
         setProgressMap(next);
       })
       .catch(() => undefined);
@@ -1511,6 +1515,17 @@ export function LessonPlayView({
     if (prev) router.push(prev.href);
   };
   const goReaderNext = () => {
+    const currentId = String(activeLesson.id ?? "");
+    if (courseId && currentId) {
+      markLeafDone(courseId, currentId);
+      setProgressMap((prev) => ({ ...prev, [currentId]: { state: "completed", percent: 100 } }));
+      void fetch("/api/learning/leaf-completion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ courseId, leafId: currentId, leafTitle: activeLesson.title }),
+      });
+    }
     const nextInPart = reader.current?.items[reader.localIndex + 1];
     const partIndex = reader.parts.findIndex((part) => part.id === reader.current?.id);
     const nextPart = reader.parts[partIndex + 1];

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Manrope } from "next/font/google";
 import { ArrowRight, Bell, Check, ChevronRight, Lock, Menu, MoreHorizontal, NotebookPen, Play, Search, Shield, Sparkles } from "lucide-react";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
+import { readLeafDone } from "@/lib/learning/leaf-done";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
@@ -343,6 +344,9 @@ export function FormationStudio({
                 if (sub?.id && sub.learnerProgress) next.set(String(sub.id), sub.learnerProgress);
               }
             }
+          }
+          for (const leafId of readLeafDone(courseId)) {
+            next.set(leafId, { state: "completed", percent: 100 });
           }
           setProgressById(next);
           if (payload.learnerProgress) setOutline(payload.learnerProgress);

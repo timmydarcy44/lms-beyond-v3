@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   AudioLines,
@@ -16,6 +16,8 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+
+import ReactMarkdown from "react-markdown";
 
 import { MindmapViewer } from "@/components/apprenant/mindmap-viewer";
 import { TimelineTube } from "@/components/apprenant/timeline-tube";
@@ -99,39 +101,12 @@ function keywordList(result: ResultState["result"]): string[] {
   return Array.isArray(source) ? source.map((item) => String(item).trim()).filter(Boolean) : [];
 }
 
-function inlineMarkup(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
-    part.startsWith("**") && part.endsWith("**") ? <strong key={index}>{part.slice(2, -2)}</strong> : <span key={index}>{part}</span>,
-  );
-}
-
 function RichText({ text }: { text: string }) {
-  const lines = text.replace(/\r/g, "").split("\n");
-  const blocks: ReactNode[] = [];
-  let items: string[] = [];
-  const flush = () => {
-    if (!items.length) return;
-    const list = items;
-    items = [];
-    blocks.push(
-      <ul key={`list-${blocks.length}`}>
-        {list.map((item, index) => (
-          <li key={`${item}-${index}`}>{inlineMarkup(item)}</li>
-        ))}
-      </ul>,
-    );
-  };
-  lines.forEach((line) => {
-    const match = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/);
-    if (match) {
-      items.push(match[1]);
-      return;
-    }
-    flush();
-    if (line.trim()) blocks.push(<p key={`p-${blocks.length}`}>{inlineMarkup(line)}</p>);
-  });
-  flush();
-  return <div className="byound-ai-modal__prose">{blocks}</div>;
+  return (
+    <div className="byound-ai-modal__prose">
+      <ReactMarkdown>{text}</ReactMarkdown>
+    </div>
+  );
 }
 
 function periodOf(iso: string): string {

@@ -299,24 +299,30 @@ export function useLearningSession(config: LearningSessionConfig) {
     if (!s.sessionId) return;
     const now = Date.now();
     const totalSeconds = Math.floor((now - s.startTime) / 1000);
+    let newActiveDuration = s.activeDuration;
+    if (!s.isIdle) {
+      const elapsed = Math.floor((now - s.lastActivityTime) / 1000);
+      newActiveDuration = s.activeDuration + elapsed;
+    }
 
-    setState((prev) => {
-      let newActiveDuration = prev.activeDuration;
-      if (!prev.isIdle) {
-        const elapsed = Math.floor((now - prev.lastActivityTime) / 1000);
-        newActiveDuration = prev.activeDuration + elapsed;
-      }
-
-      return {
-        ...prev,
-        totalDuration: totalSeconds,
-        activeDuration: newActiveDuration,
-        lastActivityTime: now,
-      };
-    });
-
+    stateRef.current = {
+      ...s,
+      totalDuration: totalSeconds,
+      activeDuration: newActiveDuration,
+      lastActivityTime: now,
+    };
+    setState(stateRef.current);
     try {
-      // Sync côté serveur désactivée pour l’instant (colonnes non stabilisées en DB).
+      await fetch("/api/learning-sessions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId: s.sessionId,
+          duration_seconds: totalSeconds,
+          duration_active_seconds: newActiveDuration,
+        }),
+      });
     } catch (error) {
       console.error("[useLearningSession] Error updating session:", error);
     }
@@ -335,8 +341,24 @@ export function useLearningSession(config: LearningSessionConfig) {
       finalActiveDuration = s.activeDuration + elapsed;
     }
 
+    stateRef.current = {
+      ...s,
+      totalDuration: totalSeconds,
+      activeDuration: finalActiveDuration,
+      lastActivityTime: now,
+    };
     try {
-      // Sync côté serveur désactivée pour l’instant (pas de ended_at / colonnes fin).
+      await fetch("/api/learning-sessions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        keepalive: true,
+        body: JSON.stringify({
+          sessionId: s.sessionId,
+          duration_seconds: totalSeconds,
+          duration_active_seconds: finalActiveDuration,
+        }),
+      });
     } catch (error) {
       console.error("[useLearningSession] Error ending session:", error);
     }

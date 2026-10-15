@@ -39,6 +39,21 @@ function itemProgressForContentId(stats: Map<string, SessionAgg>, contentUuid: s
   });
 }
 
+function withNextClick(id: string, base: ItemLearnerProgress, clicked: Set<string>): ItemLearnerProgress {
+  if (id && clicked.has(id)) return { state: "completed", percent: 100 };
+  return base;
+}
+
+async function fetchClickedLeafIds(client: SupabaseClient, userId: string, courseId: string): Promise<Set<string>> {
+  const { data, error } = await client
+    .from("learner_leaf_completions")
+    .select("leaf_id")
+    .eq("user_id", userId)
+    .eq("course_id", courseId);
+  if (error || !data) return new Set();
+  return new Set(data.map((row) => String((row as { leaf_id?: string }).leaf_id ?? "")).filter(Boolean));
+}
+
 async function fetchEnrollmentProgress(
   client: SupabaseClient,
   userId: string,
@@ -236,19 +251,20 @@ export async function GET(_req: Request, { params }: RouteParams) {
     });
 
     const courseCover = pickCourseCover((snapshot as any)?.general);
+    const clickedLeaves = await fetchClickedLeafIds(client, user.id, id);
 
     const sectionsOut = sections.map((s) => ({
       id: s.id,
       title: s.title,
       chapters: (s.chapters ?? []).map((ch) => {
         const chId = String(ch.id ?? "").trim();
-        const chapterOwn = itemProgressForContentId(sessionStats, chId);
+        const chapterOwn = withNextClick(chId, itemProgressForContentId(sessionStats, chId), clickedLeaves);
         const subs = (ch.subchapters ?? []).map((sub) => {
           const sid = String(sub.id ?? "").trim();
           return {
             id: sid || String(sub.id),
             title: sub.title,
-            learnerProgress: itemProgressForContentId(sessionStats, sid),
+            learnerProgress: withNextClick(sid, itemProgressForContentId(sessionStats, sid), clickedLeaves),
           };
         });
         const chapterLearnerProgress = mergeChapterProgress(

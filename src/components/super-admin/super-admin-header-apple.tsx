@@ -74,6 +74,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "Formations", href: "/super/lms/formations", exact: true },
       { label: "Parcours", href: "/super/lms/parcours", exact: true },
+      { label: "Suivi apprenants", href: "/super/lms/suivi" },
     ],
   },
   {

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Loader2, MailPlus, UserPlus } from "lucide-react";
 
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { viewerIsJade } from "@/lib/demo/jade-account";
+import { JADE_CANDIDATES } from "@/lib/demo/jade-dashboard-mocks";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 
 type InviteResult = {
@@ -24,6 +26,11 @@ export default function EntrepriseNewCandidatePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<InviteResult | null>(null);
+  const [showExamples, setShowExamples] = useState(false);
+
+  useEffect(() => {
+    void viewerIsJade().then(setShowExamples);
+  }, []);
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -89,6 +96,19 @@ export default function EntrepriseNewCandidatePage() {
             Creez une fiche de candidat distincte des salaries et envoyez-lui un lien pour creer son profil.
           </p>
         </header>
+
+        {showExamples ? (
+          <section className="mb-8 grid gap-3 md:grid-cols-3">
+            {JADE_CANDIDATES.map((candidate) => (
+              <article key={candidate.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Nouveau</p>
+                <h2 className="mt-2 text-lg font-semibold">{candidate.name}</h2>
+                <p className="text-sm text-gray-500">{candidate.role} · {candidate.city}</p>
+                <p className="mt-3 text-sm font-semibold text-gray-900">Matching {candidate.match} %</p>
+              </article>
+            ))}
+          </section>
+        ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">

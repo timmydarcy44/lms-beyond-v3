@@ -211,9 +211,102 @@ export const JADE_HARD_SKILLS: Array<{ name: string; level: "Débutant" | "Inter
 ];
 
 export const JADE_JOB_OFFERS = [
-  { id: "jade-job-1", title: "Commerciale B2B", city: "Le Havre", contract_type: "CDI", salary_range: "32–38 k€", description: "Développer un portefeuille de comptes formation.", company_name: "Byound Business", company_hidden_from_learner: false },
-  { id: "jade-job-2", title: "Business developer", city: "Paris", contract_type: "CDI", salary_range: "36–42 k€", description: "Prospection et closing de parcours entreprise.", company_name: "NTC Partners", company_hidden_from_learner: false },
-  { id: "jade-job-3", title: "Chargée de clientèle", city: "Rouen", contract_type: "Alternance", salary_range: "Selon grille", description: "Suivi des apprenants et relances commerciales.", company_name: "CFA Byound", company_hidden_from_learner: false },
+  { id: "jade-job-1", title: "Commerciale B2B", city: "Le Havre", contract_type: "CDI", salary_range: "32–38 k€", description: "Développer un portefeuille de comptes formation. Le matching repose sur la prospection, le closing et un profil Influent.", company_name: "Byound Business", company_hidden_from_learner: false, match: 86, skills: ["Prospection", "Closing", "CRM"] },
+  { id: "jade-job-2", title: "Business developer", city: "Paris", contract_type: "CDI", salary_range: "36–42 k€", description: "Prospection et closing de parcours entreprise. Écart principal : négociation complexe.", company_name: "NTC Partners", company_hidden_from_learner: false, match: 74, skills: ["Négociation", "Pipeline", "Prise de parole"] },
+  { id: "jade-job-3", title: "Chargée de clientèle", city: "Rouen", contract_type: "Alternance", salary_range: "Selon grille", description: "Suivi des apprenants et relances. Bon alignement soft skills et rythme d'alternance.", company_name: "CFA Byound", company_hidden_from_learner: false, match: 91, skills: ["Écoute", "Relance", "Organisation"] },
+];
+
+export const JADE_METIERS = [
+  { id: "jade-role-1", title: "Commerciale B2B", description: "Portefeuille, rendez-vous et closing.", hard_skills: ["CRM", "Prospection", "Closing"], soft_skills: ["Influence", "Écoute", "Résilience"] },
+  { id: "jade-role-2", title: "Business developer", description: "Ouverture de comptes et négociation.", hard_skills: ["Pipeline", "Négociation"], soft_skills: ["Assertivité", "Adaptation"] },
+];
+
+export const JADE_SKILL_NEEDS = [
+  { id: "need-1", skill: "Négociation", metier_id: "jade-role-1", metier_title: "Commerciale B2B", department: "Ventes", target: 12, avg_observed: 8, avg_gap: -4, evaluated_count: 7, under_target_count: 4, under_target_pct: 57, scope_label: "Équipe", scope: "team", representative: true, insufficient_reason: null, priority_score: 82 },
+  { id: "need-2", skill: "Closing", metier_id: "jade-role-1", metier_title: "Commerciale B2B", department: "Ventes", target: 12, avg_observed: 9, avg_gap: -3, evaluated_count: 7, under_target_count: 3, under_target_pct: 43, scope_label: "Équipe", scope: "team", representative: true, insufficient_reason: null, priority_score: 70 },
+];
+
+export const JADE_EQUIPE_AGGREGAT = {
+  id: "jade-agg",
+  equipe_id: "jade-equipe",
+  organisation_id: "jade-org",
+  periode_debut: new Date(Date.now() - 7 * 86400000).toISOString(),
+  periode_fin: new Date().toISOString(),
+  nb_membres_actifs: 10,
+  nb_diagnostics_completes: 7,
+  idmc_moyen: 74,
+  idmc_zone: "optimal" as const,
+  stress_moyen: 38,
+  stress_signal: "modere" as const,
+  disc_d_pct: 22,
+  disc_i_pct: 41,
+  disc_s_pct: 18,
+  disc_c_pct: 19,
+  taux_completion_moyen: 64,
+  nb_abandons_semaine: 0,
+  connexions_hors_horaires: 2,
+  gaps_competences: ["Négociation", "Closing"],
+  modules_recommandes: ["Closing B2B", "Objection prix"],
+  nb_signaux_attention: 2,
+  nb_signaux_critique: 0,
+  insight_principal: "L'équipe est surtout Influente. Le gap prioritaire est la négociation : 4 personnes sont sous la cible.",
+  cohesion_score: 78,
+  profil_manquant: "Profil Stable peu représenté",
+  insuffisant: false,
+  created_at: new Date().toISOString(),
+};
+
+export const JADE_ORG_COURSES = [
+  { id: "jade-course-1", title: "Closing B2B", status: "published", slug: "closing-b2b", updatedAt: new Date().toISOString(), enrollmentsCount: 6 },
+  { id: "jade-course-2", title: "Prospection multicanale", status: "published", slug: "prospection", updatedAt: new Date().toISOString(), enrollmentsCount: 8 },
+  { id: "jade-course-3", title: "Entretien de vente", status: "draft", slug: null, updatedAt: new Date().toISOString(), enrollmentsCount: 0 },
+];
+
+export const JADE_ORG_LEARNERS = [
+  { id: "jade-emp-1", full_name: "Léa Bernard", email: "lea.bernard@byound.fr" },
+  { id: "jade-emp-2", full_name: "Hugo Martin", email: "hugo.martin@byound.fr" },
+  { id: "jade-emp-3", full_name: "Inès Morel", email: "ines.morel@byound.fr" },
+];
+
+export const JADE_ORG_STATS = {
+  orgId: "jade-org",
+  coursesCount: 3,
+  publishedCount: 2,
+  enrollmentsCount: 14,
+  completedCount: 5,
+  avgCompletionPercent: 64,
+  testsPassedCount: 9,
+  totalConnectionSeconds: 18600,
+  totalConnectionLabel: "5 h 10",
+  activeLearnersCount: 8,
+  quizRecent: [
+    { id: "q1", userId: "jade-emp-1", userName: "Léa Bernard", score: 82, testTitle: "Quiz closing", createdAt: new Date().toISOString() },
+  ],
+  topFormations: [
+    { courseId: "jade-course-1", title: "Closing B2B", seconds: 8400, label: "2 h 20" },
+    { courseId: "jade-course-2", title: "Prospection multicanale", seconds: 6200, label: "1 h 43" },
+  ],
+};
+
+export const JADE_ENTREPRISE_OFFERS = [
+  { id: "jade-offer-1", title: "Commerciale B2B", description: "Portefeuille Normandie, 4 rendez-vous par semaine.", city: "Le Havre", salary_range: "32–38 k€", contract_type: "CDI", status: "active", applications_count: 6 },
+  { id: "jade-offer-2", title: "Business developer", description: "Ouverture de comptes formation.", city: "Paris", salary_range: "36–42 k€", contract_type: "CDI", status: "active", applications_count: 3 },
+];
+
+export const JADE_CANDIDATES = [
+  { id: "cand-1", name: "Chloé Lambert", role: "Commerciale B2B", match: 88, city: "Le Havre" },
+  { id: "cand-2", name: "Yanis Robert", role: "Business developer", match: 76, city: "Rouen" },
+  { id: "cand-3", name: "Sarah Cohen", role: "Commerciale B2B", match: 81, city: "Paris" },
+];
+
+export const JADE_HR_THREADS = [
+  { employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", last_message: "Je bloque sur l'objection prix.", last_at: new Date().toISOString(), unread_from_employee: 1 },
+  { employee_id: "jade-emp-3", employee_name: "Inès Morel", employee_job_title: "Business developer", last_message: "Le quiz closing est terminé.", last_at: new Date(Date.now() - 86400000).toISOString(), unread_from_employee: 0 },
+];
+
+export const JADE_HR_MESSAGES = [
+  { id: "msg-1", org_id: "jade-org", employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", sender_role: "employee" as const, sender_user_id: null, content: "Je bloque sur l'objection prix.", created_at: new Date().toISOString() },
+  { id: "msg-2", org_id: "jade-org", employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", sender_role: "rh" as const, sender_user_id: null, content: "Reprends le module Closing, partie objection.", created_at: new Date(Date.now() - 3600000).toISOString() },
 ];
 
 export function jadePlanningSlots(weekStart: Date) {

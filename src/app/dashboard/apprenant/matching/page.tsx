@@ -25,6 +25,8 @@ type JobOffer = {
   description?: string | null;
   company_name?: string | null;
   company_hidden_from_learner?: boolean | null;
+  match?: number;
+  skills?: string[];
 };
 
 export default function ApprenantMatchingPage() {
@@ -132,7 +134,7 @@ export default function ApprenantMatchingPage() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {offers.map((offer) => (
                 <article key={offer.id} className={APPRENANT_CARD_BODY}>
-                  <p className={APPRENANT_CARD_KICKER}>Offre</p>
+                  <p className={APPRENANT_CARD_KICKER}>{offer.match ? `Matching ${offer.match} %` : "Offre"}</p>
                   <div className={APPRENANT_CARD_TITLE}>
                     {offer.title || "Offre en recrutement"}
                   </div>
@@ -149,6 +151,15 @@ export default function ApprenantMatchingPage() {
                   <p className="mt-4 line-clamp-3 text-sm text-white/55">
                     {offer.description || "Description non disponible."}
                   </p>
+                  {offer.skills?.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {offer.skills.map((skill) => (
+                        <span key={skill} className="rounded-full border border-white/15 px-2 py-1 text-[11px] text-white/70">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>

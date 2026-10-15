@@ -812,6 +812,16 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
         </DialogContent>
       </Dialog>
 
+      {transformationResult && !showResultModal ? (
+        <button
+          type="button"
+          onClick={() => setShowResultModal(true)}
+          className="fixed bottom-6 right-5 z-40 rounded-full bg-black px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
+        >
+          Revoir la transformation
+        </button>
+      ) : null}
+
       {transformationResult && (
         <TextTransformationResultModal
           open={showResultModal}

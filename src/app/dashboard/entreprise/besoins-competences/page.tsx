@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
+import { viewerIsJade } from "@/lib/demo/jade-account";
+import { JADE_SKILL_NEEDS } from "@/lib/demo/jade-dashboard-mocks";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { formatGap, formatScoreOn15 } from "@/lib/entreprise/metier-skill-gaps";
 import { cn } from "@/lib/utils";
@@ -107,6 +109,17 @@ export default function BesoinsCompetencesPage() {
       setLoading(true);
       setError(null);
       try {
+        if (await viewerIsJade()) {
+          if (!cancelled) {
+            setData({
+              needs_with_actions: JADE_SKILL_NEEDS,
+              priority_needs: JADE_SKILL_NEEDS,
+              stats: { employees_total: 10, employees_with_scores: 7, needs_count: JADE_SKILL_NEEDS.length },
+              demo_enriched: true,
+            });
+          }
+          return;
+        }
         const res = await fetch("/api/dashboard/entreprise/besoins-competences");
         const text = await res.text();
         const json = text ? (JSON.parse(text) as Payload) : {};

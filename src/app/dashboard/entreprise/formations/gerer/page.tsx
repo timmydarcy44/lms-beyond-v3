@@ -1,14 +1,23 @@
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { OrgFormationsManageView } from "@/components/org/org-formations-manage-view";
 import { OrgFormationsShell } from "@/components/org/org-formations-shell";
+import { getSession } from "@/lib/auth/session";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_ORG_COURSES, JADE_ORG_LEARNERS } from "@/lib/demo/jade-dashboard-mocks";
 import { listOrgCourses, listOrgLearners } from "@/lib/org/org-formations";
 import { requireEntrepriseOrgId } from "@/lib/org/require-dashboard-org";
 
 export const dynamic = "force-dynamic";
 
 export default async function EntrepriseFormationsGererPage() {
-  const { orgId } = await requireEntrepriseOrgId("/dashboard/entreprise/formations/gerer");
-  const [courses, learners] = await Promise.all([listOrgCourses(orgId), listOrgLearners(orgId)]);
+  const session = await getSession();
+  const jade = isJadeDemoEmail(session?.email);
+  const { orgId } = jade
+    ? { orgId: "jade-org" }
+    : await requireEntrepriseOrgId("/dashboard/entreprise/formations/gerer");
+  const [courses, learners] = jade
+    ? [JADE_ORG_COURSES, JADE_ORG_LEARNERS]
+    : await Promise.all([listOrgCourses(orgId), listOrgLearners(orgId)]);
 
   return (
     <div className="flex min-h-screen bg-[#0b0a12] text-white">

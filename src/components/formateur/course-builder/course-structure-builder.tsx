@@ -1217,6 +1217,7 @@ function EditorPanel({
   const updateSubchapter = useCourseBuilder((state) => state.updateSubchapter);
   const addChapter = useCourseBuilder((state) => state.addChapter);
   const addSubchapter = useCourseBuilder((state) => state.addSubchapter);
+  const appendSubchapterBlock = useCourseBuilder((state) => state.appendSubchapterBlock);
   const [showChapterModal, setShowChapterModal] = useState(false);
   const [showSubchapterModal, setShowSubchapterModal] = useState(false);
   const [selectedQuizId, setSelectedQuizId] = useState<string>("none");
@@ -1605,6 +1606,22 @@ function EditorPanel({
           courseId={courseId}
         />
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => {
+              appendSubchapterBlock(selection.sectionId, selection.chapterId, {
+                title: "Jeu interactif",
+                type: "interactive_game",
+                duration: "",
+                summary: "",
+                content: "",
+              });
+              toast.success("Jeu ajouté", { description: "Importez le fichier du jeu dans le bloc qui vient de s'ouvrir." });
+            }}
+            className="rounded-full border border-black bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-black hover:bg-slate-50"
+          >
+            Ajouter un jeu interactif
+          </Button>
           <Button
             type="button"
             onClick={() =>

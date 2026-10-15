@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { viewerIsJade } from "@/lib/demo/jade-account";
+import { JADE_METIERS } from "@/lib/demo/jade-dashboard-mocks";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { GLOBAL_SKILL_REFERENTIAL, referentialItemName } from "@/lib/profile/competency-referential";
 
@@ -173,6 +175,10 @@ export default function EntrepriseMetiersPage() {
     setLoading(true);
     setError(null);
     try {
+      if (await viewerIsJade()) {
+        setRoles(JADE_METIERS);
+        return;
+      }
       const response = await fetch("/api/dashboard/entreprise/metiers", { credentials: "include" });
       const payload = (await response.json()) as { roles?: JobRole[]; error?: string };
       if (!response.ok) throw new Error(payload.error || "Impossible de charger les metiers");

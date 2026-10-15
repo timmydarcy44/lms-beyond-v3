@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness, Plus } from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { OffresFormationsSection } from "@/components/enterprise/offres-formations-section";
+import { viewerIsJade } from "@/lib/demo/jade-account";
+import { JADE_ENTREPRISE_OFFERS } from "@/lib/demo/jade-dashboard-mocks";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +44,10 @@ function OfferCardGrid() {
       setLoading(true);
       setError(null);
       try {
+        if (await viewerIsJade()) {
+          setOffers(JADE_ENTREPRISE_OFFERS);
+          return;
+        }
         const response = await fetch("/api/dashboard/entreprise/job-offers", { credentials: "include" });
         const payload = (await response.json()) as { offers?: OfferCard[]; error?: string };
         if (!response.ok) {

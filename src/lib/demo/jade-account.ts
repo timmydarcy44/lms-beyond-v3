@@ -4,6 +4,17 @@ export function isJadeDemoEmail(email?: string | null): boolean {
   return String(email ?? "").trim().toLowerCase() === JADE_DEMO_EMAIL;
 }
 
+export async function viewerIsJade(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/dashboard/entreprise/viewer", { credentials: "include" });
+    if (!response.ok) return false;
+    const json = (await response.json()) as { email?: string | null };
+    return isJadeDemoEmail(json.email);
+  } catch {
+    return false;
+  }
+}
+
 export const JADE_DEMO_SPACES = [
   { id: "apprenant", label: "Apprenant", href: "/dashboard/apprenant" },
   { id: "student", label: "Étudiant", href: "/dashboard/student" },

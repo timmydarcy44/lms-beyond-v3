@@ -40,7 +40,7 @@ export default async function SuperLayout({
 
   return (
     <BrandingProvider initialBranding={branding}>
-      <div className="super-theme min-h-screen">
+      <div className={isContentin ? "min-h-screen bg-white text-black" : "super-theme min-h-screen"}>
         {!isContentin && <CfaEntryNotifier />}
         {isContentin ? <JessicaHeader /> : <SuperAdminHeaderApple />}
         <CrmAreaWrapper>

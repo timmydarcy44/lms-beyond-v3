@@ -18,6 +18,8 @@ import { DiscRadarChart } from "@/components/radar-equipe/disc-radar-chart";
 import { GaugeMetric } from "@/components/radar-equipe/gauge-metric";
 import { RgpdBanner } from "@/components/radar-equipe/rgpd-banner";
 import { SignauxFaibles } from "@/components/radar-equipe/signaux-faibles";
+import { viewerIsJade } from "@/lib/demo/jade-account";
+import { JADE_EQUIPE_AGGREGAT } from "@/lib/demo/jade-dashboard-mocks";
 import type { EquipeAggregat } from "@/lib/radar-equipe/types";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
@@ -68,6 +70,12 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
       setLoading(true);
       setLoadError(null);
       try {
+        if (await viewerIsJade()) {
+          setEquipes([{ id: "jade-equipe", name: "Équipe commerciale" }]);
+          setEquipeId("jade-equipe");
+          setAggregat(JADE_EQUIPE_AGGREGAT);
+          return;
+        }
         await loadEquipes();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Chargement impossible";
@@ -80,7 +88,7 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
   }, [loadEquipes]);
 
   useEffect(() => {
-    if (!equipeId) return;
+    if (!equipeId || equipeId.startsWith("jade-")) return;
     void (async () => {
       try {
         await loadAggregat(equipeId);

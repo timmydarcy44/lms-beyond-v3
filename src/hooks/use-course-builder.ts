@@ -49,7 +49,11 @@ type CourseBuilderState = {
     chapterId: string,
     targetIndex?: number,
   ) => void;
-  addSubchapter: (sectionId: string, chapterId: string) => void;
+  addSubchapter: (
+    sectionId: string,
+    chapterId: string,
+    draft?: Partial<CourseBuilderSubchapter>,
+  ) => string;
   /** Ajoute un sous-chapitre spécial (quiz, entretien, …) en fin de chapitre. */
   appendSubchapterBlock: (
     sectionId: string,
@@ -357,7 +361,8 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
         selection: ensureSelection(state.selection, sections),
       };
     }),
-  addSubchapter: (sectionId, chapterId) =>
+  addSubchapter: (sectionId, chapterId, draft) => {
+    const id = draft?.id?.trim() || nanoid();
     set((state) => ({
       snapshot: {
         ...state.snapshot,
@@ -370,12 +375,13 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
                     ? {
                         ...chapter,
                         subchapters: insertLearningSubchapter(chapter.subchapters, {
-                          id: nanoid(),
-                          title: "Nouveau sous-chapitre",
-                          duration: "",
-                          type: "text",
-                          summary: "Précisez la promesse pédagogique.",
-                          content: "",
+                          id,
+                          title: draft?.title?.trim() || "Nouveau sous-chapitre",
+                          duration: draft?.duration ?? "",
+                          type: draft?.type ?? "text",
+                          summary: draft?.summary ?? "Précisez la promesse pédagogique.",
+                          content: draft?.content ?? "",
+                          mediaUrl: draft?.mediaUrl,
                         }),
                       }
                     : chapter,
@@ -384,7 +390,12 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
             : section,
         ),
       },
-    })),
+      selection: draft
+        ? { type: "subchapter", sectionId, chapterId, subchapterId: id }
+        : state.selection,
+    }));
+    return id;
+  },
   appendSubchapterBlock: (sectionId, chapterId, block, options) => {
     const newId = block.id?.trim() || nanoid();
     const replaceKind = block.kind ? String(block.kind) : undefined;

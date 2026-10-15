@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
+import { viewerIsJade } from "@/lib/demo/jade-account";
+import { JADE_HR_MESSAGES, JADE_HR_THREADS } from "@/lib/demo/jade-dashboard-mocks";
 import type { EntrepriseHrMessage, EntrepriseHrThread } from "@/lib/entreprise/hr-messages";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +66,12 @@ export default function EntrepriseMessagesPage() {
     setLoading(true);
     setError(null);
     try {
+      if (await viewerIsJade()) {
+        setThreads(JADE_HR_THREADS);
+        setEmployees(JADE_HR_THREADS.map((thread) => ({ id: thread.employee_id, job_title: thread.employee_job_title, first_name: thread.employee_name })));
+        setSelectedId(JADE_HR_THREADS[0]?.employee_id ?? null);
+        return;
+      }
       const res = await fetch("/api/dashboard/entreprise/messages");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -105,6 +113,10 @@ export default function EntrepriseMessagesPage() {
   useEffect(() => {
     if (!selectedId) {
       setMessages([]);
+      return;
+    }
+    if (selectedId.startsWith("jade-")) {
+      setMessages(JADE_HR_MESSAGES.filter((message) => message.employee_id === selectedId));
       return;
     }
     void loadConversation(selectedId);

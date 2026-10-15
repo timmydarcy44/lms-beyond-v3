@@ -207,6 +207,22 @@ const normalizeVideoUrl = (url?: string | null): string | null => {
   return trimmed;
 };
 
+/** Le bloc vidéo de l'éditeur est un div vide : l'iframe n'existe que dans l'éditeur. */
+const hydrateStoredVideos = (html: string): string => {
+  if (!html || !/data-video-block|data-youtube-video/i.test(html)) return html;
+  return html.replace(/<div\b([^>]*\bdata-video-block\b[^>]*)>\s*<\/div>/gi, (_full, attrs: string) => {
+    const src = String(attrs).match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1]?.trim();
+    if (!src) return "";
+    const provider = String(attrs).match(/\bprovider\s*=\s*["']([^"']+)["']/i)?.[1] ?? "";
+    const url = normalizeVideoUrl(src) ?? src;
+    const safeUrl = url.replace(/"/g, "&quot;");
+    if (provider === "file" || /\.(mp4|webm|mov)(\?|$)/i.test(url)) {
+      return `<video controls playsinline src="${safeUrl}" style="width:100%;border-radius:16px"></video>`;
+    }
+    return `<div class="lesson-reader__inline-video"><iframe src="${safeUrl}" title="Vidéo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+  });
+};
+
 const stripYoutubeLinkFromContent = (content: string, url: string): string => {
   if (!content || !url) return content;
   let updated = content;
@@ -288,9 +304,9 @@ const stripYoutubeEmbedsFromHtml = (html: string): string => {
       /<div\b[^>]*\bstyle\s*=\s*["'][^"']*padding-bottom[^"']*56\.25%[^"']*height\s*:\s*0[^"']*["'][^>]*>[\s\S]*?<\/div>/gi,
       "",
     );
-    s = s.replace(/<div\b[^>]*>\s*<\/div>/gi, "");
-    s = s.replace(/<div\b[^>]*\bdata-youtube-video\b[^>]*>\s*<\/div>/gi, "");
-    s = s.replace(/<div\b[^>]*\bdata-video-block\b[^>]*>\s*<\/div>/gi, "");
+    s = s.replace(/<div\b(?![^>]*\bsrc\s*=)[^>]*>\s*<\/div>/gi, "");
+    s = s.replace(/<div\b(?![^>]*\bsrc\s*=)[^>]*\bdata-youtube-video\b[^>]*>\s*<\/div>/gi, "");
+    s = s.replace(/<div\b(?![^>]*\bsrc\s*=)[^>]*\bdata-video-block\b[^>]*>\s*<\/div>/gi, "");
     s = s.replace(/<p\b[^>]*>\s*<\/p>/gi, "");
     if (s === before) break;
   }
@@ -957,36 +973,13 @@ export function LessonPlayView({
   }, [gameOpen]);
 
   const { normalizedVideoSrc, sanitizedContent } = useMemo(() => {
-    const urlsInContent =
-      isInteractiveGame || !rawContent ? [] : rawContent.match(/https?:\/\/[^\s"'<>]+/g) ?? [];
-    const youtubeUrls = urlsInContent.filter((url: string) => Boolean(extractYouTubeId(url)));
+    let cleanedContent = isInteractiveGame ? rawContent : hydrateStoredVideos(rawContent);
+    const dedicatedUrl = isInteractiveGame ? null : videoSrc ?? null;
+    const normalized = normalizeVideoUrl(dedicatedUrl);
 
-    let candidateUrl = isInteractiveGame ? null : videoSrc ?? null;
-    let cleanedContent = rawContent;
-
-    if (youtubeUrls.length > 0) {
-      cleanedContent = youtubeUrls.reduce(
-        (acc: string, url: string) => stripYoutubeLinkFromContent(acc, url),
-        cleanedContent,
-      );
-      if (!candidateUrl) {
-        candidateUrl = youtubeUrls[0];
-      }
-    }
-
-    const normalized = normalizeVideoUrl(candidateUrl);
-
-    // Si candidateUrl n'était pas une URL YouTube, vérifier malgré tout si le contenu contient cette URL pour éviter d'afficher le lien brut
-    if (candidateUrl) {
-      cleanedContent = stripYoutubeLinkFromContent(cleanedContent, candidateUrl);
-    }
-
-    if (
-      /<iframe/i.test(cleanedContent) ||
-      /<embed/i.test(cleanedContent) ||
-      /<object/i.test(cleanedContent) ||
-      /youtube\.com|youtu\.be|youtube-nocookie/i.test(cleanedContent)
-    ) {
+    // Le lecteur du haut existe déjà : on retire seulement le doublon de CETTE url.
+    if (normalized && extractYouTubeId(normalized)) {
+      cleanedContent = stripYoutubeLinkFromContent(cleanedContent, dedicatedUrl ?? normalized);
       cleanedContent = stripYoutubeEmbedsFromHtml(cleanedContent);
     }
 
@@ -1879,15 +1872,27 @@ export function LessonPlayView({
                   </div>
                   <p className="text-sm text-slate-600">Contenu audio</p>
                 </div>
-              ) : neo ? (
+                ) : neo ? (
                 normalizedVideoSrc && (normalizedVideoSrc.startsWith("http://") || normalizedVideoSrc.startsWith("https://")) ? (
-                  <iframe
-                    src={normalizedVideoSrc}
-                    className="border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title="Vidéo du cours"
-                  />
+                  <>
+                    <iframe
+                      src={normalizedVideoSrc}
+                      className="border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="Vidéo du cours"
+                    />
+                    {extractYouTubeId(normalizedVideoSrc) ? (
+                      <a
+                        className="lesson-reader__video-link"
+                        href={`https://www.youtube.com/watch?v=${extractYouTubeId(normalizedVideoSrc)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Ouvrir sur YouTube
+                      </a>
+                    ) : null}
+                  </>
                 ) : (
                   <video controls playsInline>
                     <source src={normalizedVideoSrc ?? undefined} type="video/mp4" />

@@ -193,6 +193,40 @@
   transition: transform 200ms ease;
 }
 
+.formation-studio__node-toggle,
+.formation-studio__node-read {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.formation-studio__node-toggle {
+  display: flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.formation-studio__node-toggle .formation-studio__chevron {
+  margin-top: 0;
+}
+
+.formation-studio__node-read {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: flex-start;
+  padding: 0;
+  cursor: pointer;
+}
+
 .formation-studio__chapter[aria-expanded="true"] .formation-studio__chevron,
 .formation-studio__node[aria-expanded="true"] .formation-studio__chevron {
   transform: rotate(90deg);

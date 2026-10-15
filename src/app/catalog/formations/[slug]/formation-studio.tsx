@@ -49,6 +49,7 @@ type Node = {
   locked: boolean;
   lockReason?: string;
   href: string;
+  readingHref?: string;
   leaves: Leaf[];
 };
 type Chapter = {
@@ -191,14 +192,26 @@ export function FormationStudio({
           locked,
           lockReason,
         }));
-        const chapterText = plainText(String(chapter.content ?? ""));
-        if ((chapterText.length > 12 || Boolean(chapter.mediaUrl?.trim())) && leaves.length) {
+        const readingBlob = [
+          chapter.content,
+          chapter.summary,
+          (chapter as { description?: string }).description,
+          chapter.mediaUrl,
+          (chapter as { videoUrl?: string }).videoUrl,
+        ]
+          .map((value) => String(value ?? ""))
+          .join("\n");
+        const readingHref =
+          plainText(readingBlob).length > 12 || /youtube|youtu\.be|data-video-block|<iframe|<video/i.test(readingBlob)
+            ? `${playBase}/play/${encodeURIComponent(chapter.id)}`
+            : undefined;
+        if (readingHref && leaves.length) {
           leaves.unshift({
             id: `${chapter.id}-reading`,
-            title: "Contenu du chapitre",
+            title: "Lire le chapitre",
             duration: chapter.duration?.trim() || "",
             typeLabel: typeLabel(chapter),
-            href: `${playBase}/play/${encodeURIComponent(chapter.id)}`,
+            href: readingHref,
             progress: progressById.get(String(chapter.id)) ?? EMPTY_PROGRESS,
             locked,
             lockReason,
@@ -216,6 +229,7 @@ export function FormationStudio({
           locked,
           lockReason,
           href: `${playBase}/play/${encodeURIComponent(chapter.id)}`,
+          readingHref,
           leaves,
         });
       });
@@ -391,8 +405,11 @@ export function FormationStudio({
         title: node.title,
         duration: node.duration,
         typeLabel: node.leaves.length ? "" : "Lecture",
-        href: node.leaves.length ? playBase : node.href,
-        openLevel: node.leaves.length && selectedChapter ? { chapterId: selectedChapter.id, nodeId: node.id } : undefined,
+        href: node.readingHref || (node.leaves.length ? playBase : node.href),
+        openLevel:
+          node.readingHref || !node.leaves.length || !selectedChapter
+            ? undefined
+            : { chapterId: selectedChapter.id, nodeId: node.id },
         progress: nodeProgress(node),
         locked: node.locked,
         lockReason: node.lockReason,
@@ -493,26 +510,50 @@ export function FormationStudio({
                       const nodePanel = `node-panel-${node.id}`;
                       return (
                         <div key={node.id}>
-                          <button
-                            type="button"
+                          <div
                             className="formation-studio__node"
-                            title={node.lockReason}
                             data-locked={node.locked || undefined}
                             aria-expanded={isOpen(node.id)}
                             aria-current={selectedNode?.id === node.id ? "page" : undefined}
-                            aria-controls={nodePanel}
-                            onClick={() => {
-                              toggle(node.id);
-                              goLevel(chapter.id, node.id);
-                            }}
                           >
-                            <ChevronRight className="formation-studio__chevron" size={14} strokeWidth={2} aria-hidden />
-                            <span className="formation-studio__leaf-copy">
-                              <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
-                              <span className="formation-studio__meta">{joinMeta([node.duration, `${nodeDone}/${node.leaves.length}`])}</span>
-                            </span>
+                            <button
+                              type="button"
+                              className="formation-studio__node-toggle"
+                              aria-label={isOpen(node.id) ? "Replier" : "Déployer"}
+                              aria-controls={nodePanel}
+                              title={node.lockReason}
+                              onClick={() => {
+                                toggle(node.id);
+                                goLevel(chapter.id, node.id);
+                              }}
+                            >
+                              <ChevronRight className="formation-studio__chevron" size={14} strokeWidth={2} aria-hidden />
+                            </button>
+                            {node.readingHref && !node.locked ? (
+                              <Link href={node.readingHref} className="formation-studio__node-read" title={node.title}>
+                                <span className="formation-studio__leaf-copy">
+                                  <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
+                                  <span className="formation-studio__meta">{joinMeta([node.duration, `${nodeDone}/${node.leaves.length}`])}</span>
+                                </span>
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                className="formation-studio__node-read"
+                                title={node.lockReason}
+                                onClick={() => {
+                                  toggle(node.id);
+                                  goLevel(chapter.id, node.id);
+                                }}
+                              >
+                                <span className="formation-studio__leaf-copy">
+                                  <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
+                                  <span className="formation-studio__meta">{joinMeta([node.duration, `${nodeDone}/${node.leaves.length}`])}</span>
+                                </span>
+                              </button>
+                            )}
                             <span className="formation-studio__lock" title={node.lockReason} aria-label={node.lockReason}>{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
-                          </button>
+                          </div>
                           {isOpen(node.id) ? (
                             <div id={nodePanel} className="formation-studio__children">
                               {node.leaves.map((leaf) => (

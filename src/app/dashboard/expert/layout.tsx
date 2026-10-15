@@ -4,6 +4,7 @@ import { ExpertRouteGuard } from "@/components/expert/expert-route-guard";
 import { expertSetPasswordPath } from "@/lib/expert/signup-redirect";
 import { loadOrCreateExpertProfile } from "@/lib/expert/load-expert-profile";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_EXPERT } from "@/lib/demo/jade-dashboard-mocks";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -14,7 +15,13 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
   }
 
   if (isJadeDemoEmail(session.email)) {
-    return <div className="min-h-screen bg-[#070b1f] text-white">{children}</div>;
+    return (
+      <ExpertAccessProvider expert={JADE_EXPERT} emailConfirmed>
+        <div className="min-h-screen bg-[#070b1f] text-white">
+          <ExpertRouteGuard>{children}</ExpertRouteGuard>
+        </div>
+      </ExpertAccessProvider>
+    );
   }
 
   const supabase = await getServerClient();

@@ -9,6 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type PraticienProfile = {
   id: string;
@@ -87,6 +89,34 @@ export function PraticienProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
+      const browser = createSupabaseBrowserClient();
+      const { data: auth } = browser ? await browser.auth.getUser() : { data: { user: null } };
+      if (isJadeDemoEmail(auth.user?.email)) {
+        const today = new Date().toISOString().slice(0, 10);
+        setData({
+          praticien: {
+            id: "jade-demo",
+            prenom: "Jade",
+            nom: "Martin",
+            photo_url: null,
+            titre: "Praticienne",
+            biographie: "Compte démo",
+            specialites: ["Coaching", "Bilan"],
+            tarif_session: 120,
+            duree_session: 60,
+            bct_certified: true,
+            stripe_onboarding_complete: true,
+            note_moyenne: 4.9,
+            nombre_avis: 18,
+          },
+          stats: { sessionsMois: 11, aVenir: 3, revenusMois: "1 840 €", noteMoyenne: 4.9, nombreAvis: 18 },
+          prochainesSessions: [
+            { id: "jade-seance", date_session: today, heure_debut: "16:00", duree_minutes: 60, status: "confirmed", profiles: { first_name: "Camille", full_name: "Camille Bernard" }, montantLabel: "120 €" },
+          ],
+          creneaux: [{ id: "jade-slot", date: today, heure_debut: "16:00", heure_fin: "17:00", disponible: true }],
+        });
+        return;
+      }
       const q = new URLSearchParams({
         year: String(calendarMonth.getFullYear()),
         month: String(calendarMonth.getMonth()),

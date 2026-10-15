@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 
 import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { edgeOnlinePublicHref } from "@/lib/edge-online-public-path";
 import { getEdgeOnlineHrefPrefixServer } from "@/lib/edge-online-public-path.server";
@@ -51,14 +50,6 @@ export default async function EdgeOnlineFormationLessonPlayPage({
   return (
     <DyslexiaModeProvider>
       <LearningSessionTracker contentType="course" contentId={card.id} showIndicator={false}>
-        <div className="min-h-screen bg-white text-slate-900">
-          <DashboardShell
-            title={String(activeLesson.title ?? "")}
-            breadcrumbs={[{ label: String(activeLesson.title ?? "") }]}
-            initialCollapsed
-            forcedTheme="light"
-            className="bg-white text-slate-900"
-          >
             <LessonPlayView
               detail={detail}
               modules={modules as never}
@@ -72,8 +63,6 @@ export default async function EdgeOnlineFormationLessonPlayPage({
               courseId={card.id}
               courseTitle={card.title}
             />
-          </DashboardShell>
-        </div>
       </LearningSessionTracker>
     </DyslexiaModeProvider>
   );

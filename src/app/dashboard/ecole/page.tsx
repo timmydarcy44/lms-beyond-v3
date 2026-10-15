@@ -14,8 +14,8 @@ import { PSG_ORG_ID } from "@/lib/entreprise/psg-demo-data";
 import { getMiddlewarePathname } from "@/lib/http/request-pathname";
 import { getServerClient } from "@/lib/supabase/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
-import { JadeDemoHome } from "@/components/demo/jade-demo-home";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { buildPsgEcoleDemoOverview } from "@/lib/entreprise/psg-demo-data";
 import { SchoolDashboard } from "@/components/beyond-connect/school-dashboard";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,21 @@ export default async function SchoolDashboardPage() {
     redirect("/login?next=/dashboard/ecole");
   }
   if (isJadeDemoEmail(session.email)) {
-    return <JadeDemoHome space="ecole" />;
+    const overview = buildPsgEcoleDemoOverview();
+    return (
+      <SchoolDashboard
+        apprenants={overview.apprenants as never}
+        entreprises={overview.entreprises as never}
+        effectifTotal={overview.effectifTotal}
+        alternancesSignees={overview.alternancesSignees}
+        apprenantsEnRecherche={overview.apprenantsEnRecherche}
+        offersCount={overview.offersCount}
+        latestOffers={overview.latestOffers as never}
+        latestConnected={overview.latestConnected as never}
+        recentActivities={overview.recentActivities as never}
+        fullName="Jade Martin"
+      />
+    );
   }
 
   const supabase = await getServerClient();

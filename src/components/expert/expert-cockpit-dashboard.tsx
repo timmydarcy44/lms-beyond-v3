@@ -35,6 +35,7 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 import { byoundCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-certification";
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
 import { computeProfileCompletion, parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
+import { JADE_EXPERT_MISSIONS } from "@/lib/demo/jade-dashboard-mocks";
 import { cn } from "@/lib/utils";
 
 type MissionRow = {
@@ -173,6 +174,10 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      if (expert.id === "jade-demo") {
+        if (!cancelled) setMissions(JADE_EXPERT_MISSIONS);
+        return;
+      }
       const { data: rows } = await supabase
         .from("action_requests")
         .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")

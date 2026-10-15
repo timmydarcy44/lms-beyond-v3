@@ -29,6 +29,7 @@ type Props = {
   profileCompletionPct: number;
   catalogHref: string;
   primaryParcours?: ApprenantPrimaryParcours | null;
+  courses?: Array<{ title: string; href: string; progress: string }>;
   badgesHref: string;
   resultsHref: string;
   matchingHref: string;
@@ -50,6 +51,7 @@ export function ApprenantConnectOverview({
   profileCompletionPct,
   catalogHref,
   primaryParcours,
+  courses = [],
   badgesHref,
   resultsHref,
   matchingHref,
@@ -227,6 +229,23 @@ export function ApprenantConnectOverview({
           Explorer votre espace
         </p>
       )}
+
+      {courses.length ? (
+        <section className={t.cardBody}>
+          <p className={t.cardKicker}>Formations</p>
+          <p className={t.cardTitle}>Cours en cours</p>
+          <ul className="mt-4 space-y-2">
+            {courses.map((course) => (
+              <li key={course.title}>
+                <Link href={course.href} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3">
+                  <span className="font-semibold">{course.title}</span>
+                  <span className="text-sm text-white/60">{course.progress}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <ApprenantEdgeWalletSection badges={earnedOpenBadges} />
 

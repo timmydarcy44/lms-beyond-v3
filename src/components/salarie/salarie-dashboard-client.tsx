@@ -14,6 +14,8 @@ import { ProfilPartageConsent } from "@/components/radar-equipe/profil-partage-c
 import { buildPersonalizedActionPlan } from "@/lib/learner/personalized-action-plan";
 import { APPRENANT_PAGE_KICKER, APPRENANT_PAGE_TITLE } from "@/lib/apprenant/connect-nav";
 import { SALARIE_PAGE_SHELL } from "@/lib/salarie/connect-nav";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_EXPERT_MISSIONS } from "@/lib/demo/jade-dashboard-mocks";
 import { cn } from "@/lib/utils";
 
 const PersonalizedActionPlanSection = dynamic(
@@ -167,11 +169,28 @@ export function SalarieDashboardClient() {
   }, []);
 
   useEffect(() => {
-    if (!snapshot?.userId) return;
     let cancelled = false;
     async function loadRequests() {
       setRequestsLoading(true);
       try {
+        const { data: auth } = await supabase.auth.getUser();
+        if (isJadeDemoEmail(auth.user?.email)) {
+          if (!cancelled) {
+            setRequests(
+              JADE_EXPERT_MISSIONS.map((mission) => ({
+                id: mission.id,
+                action_type: mission.action_type,
+                target_label: mission.target_label,
+                status: mission.status,
+                created_at: mission.created_at,
+                scheduled_at: mission.scheduled_at,
+                metadata: { requester_type: "employee" },
+              })),
+            );
+          }
+          return;
+        }
+        if (!snapshot?.userId) return;
         const { data, error } = await supabase
           .from("action_requests")
           .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")

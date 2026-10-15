@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { JadeDemoGate } from "@/components/demo/jade-demo-gate";
 import { Heart, MessageCircle, Share2 } from "lucide-react";
 import { PartenaireLayout } from "@/components/partenaire/partenaire-layout";
 import { ClassementWidget } from "@/components/club/classement-widget";
@@ -88,14 +87,6 @@ const categoryStyles: Record<string, string> = {
 };
 
 export default function PartenaireDashboardPage() {
-  return (
-    <JadeDemoGate space="partenaire">
-      <PartenaireDashboardInner />
-    </JadeDemoGate>
-  );
-}
-
-function PartenaireDashboardInner() {
   return (
     <PartenaireLayout
       activeItem="Tableau de bord"

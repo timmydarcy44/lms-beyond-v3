@@ -2,19 +2,11 @@ import { notFound } from "next/navigation";
 
 import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import {
   getLearnerContentDetail,
   isLearnerCategory,
   type LearnerCategory,
 } from "@/lib/queries/apprenant";
-
-const CATEGORY_LABEL: Record<LearnerCategory, string> = {
-  formations: "Formation",
-  parcours: "Parcours",
-  ressources: "Ressource",
-  tests: "Test",
-};
 
 interface LearnerPlayPageProps {
   params: Promise<{
@@ -56,22 +48,8 @@ export default async function LearnerPlayPage({ params }: LearnerPlayPageProps) 
   const flashcards = activeLesson.flashcards ?? [];
 
   // Breadcrumbs simplifiés (juste le nom du chapitre)
-  const breadcrumbs = [
-    { label: activeLesson.title },
-  ];
-
   return (
     <DyslexiaModeProvider>
-      <div className="min-h-screen bg-[#f5f5f7] text-slate-900">
-        <DashboardShell
-          title={activeLesson.title}
-          subtitle={activeModule ? `${activeModule.title} • ${activeLesson.duration}` : undefined}
-          breadcrumbs={breadcrumbs}
-          initialCollapsed
-          compactHeader
-          forcedTheme="light"
-          className="bg-[#f5f5f7] text-slate-900"
-        >
         <LessonPlayView
           detail={detail}
           modules={modules}
@@ -87,8 +65,6 @@ export default async function LearnerPlayPage({ params }: LearnerPlayPageProps) 
           courseId={card.id}
           courseTitle={card.title}
         />
-        </DashboardShell>
-      </div>
     </DyslexiaModeProvider>
   );
 }

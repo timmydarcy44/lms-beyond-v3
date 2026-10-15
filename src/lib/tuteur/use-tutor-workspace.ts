@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_TUTOR_WORKSPACE } from "@/lib/demo/jade-dashboard-mocks";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { TutorWorkspacePayload } from "@/lib/tuteur/workspace-server";
 
 export function useTutorWorkspace() {
@@ -12,6 +15,13 @@ export function useTutorWorkspace() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
+      const browser = createSupabaseBrowserClient();
+      const { data: auth } = browser ? await browser.auth.getUser() : { data: { user: null } };
+      if (isJadeDemoEmail(auth.user?.email)) {
+        setData(JADE_TUTOR_WORKSPACE);
+        setError(null);
+        return;
+      }
       const res = await fetch("/api/tuteur/workspace", { cache: "no-store" });
       if (res.status === 401 || res.status === 403) {
         setError("auth");

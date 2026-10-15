@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BookOpen, CalendarDays, CalendarX, NotebookPen, QrCode } from "lucide-react";
 
-import { JadeDemoGate } from "@/components/demo/jade-demo-gate";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_FORMATEUR_SLOTS } from "@/lib/demo/jade-dashboard-mocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { cn } from "@/lib/utils";
@@ -42,14 +43,6 @@ function isToday(iso: string) {
 }
 
 export default function FormateurDashboardPage() {
-  return (
-    <JadeDemoGate space="formateur">
-      <FormateurDashboardInner />
-    </JadeDemoGate>
-  );
-}
-
-function FormateurDashboardInner() {
   const [firstName, setFirstName] = useState("Expert");
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<Overview>({
@@ -66,6 +59,7 @@ function FormateurDashboardInner() {
       setLoading(true);
       try {
         const supabase = createSupabaseBrowserClient();
+        if (!supabase) return;
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -82,6 +76,22 @@ function FormateurDashboardInner() {
           email: profile?.email ?? user.email,
         });
         if (!ignore) setFirstName(name || "Expert");
+
+        if (isJadeDemoEmail(user.email)) {
+          const slots = JADE_FORMATEUR_SLOTS;
+          const hours = slots.reduce((sum, slot) => sum + slot.duration_hours, 0);
+          if (!ignore) {
+            setOverview({
+              nextSlot: slots[0],
+              upcomingHours: hours,
+              learnerCount: 24,
+              journalsPending: 3,
+              upcoming: slots,
+            });
+            setLoading(false);
+          }
+          return;
+        }
 
         const [emargementRes, coursesRes, journalRes] = await Promise.all([
           fetch("/api/dashboard/formateur/emargement", { credentials: "include" }),

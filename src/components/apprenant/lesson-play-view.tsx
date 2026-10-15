@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -16,6 +16,7 @@ import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-r
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
+import { LessonReaderShell, type ReaderPart } from "@/components/apprenant/lesson-reader-shell";
 import { CaseStudyWorkspace } from "@/components/apprenant/CaseStudyWorkspace";
 import { FlashcardPlayer, type FlashcardItem } from "@/components/beyond-flash/FlashcardPlayer";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
@@ -61,6 +62,29 @@ import type {
   LearnerLesson,
   LearnerModule,
 } from "@/lib/queries/apprenant";
+
+function stripLessonNumber(title: string) {
+  return title.replace(/^\d+(?:\.\d+)*\s*[—–\-:.]*\s*/, "").trim() || title;
+}
+
+function partCodeFromTitle(title: string, index: number) {
+  const match = title.match(/^(\d+(?:\.\d+)?)/);
+  return match?.[1] ?? String(index + 1);
+}
+
+function prepareReadingHtml(html: string, title: string) {
+  const plain = stripLessonNumber(title).toLowerCase();
+  const withoutDuplicate = html.replace(/^\s*<(h1|h2)[^>]*>([\s\S]*?)<\/\1>/i, (block, _tag, inner) => {
+    const text = String(inner).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+    const stripped = stripLessonNumber(text).toLowerCase();
+    return stripped === plain || text === plain ? "" : block;
+  });
+  return withoutDuplicate.replace(
+    /<(h2|h3|p|strong)[^>]*>\s*(?:<strong>)?\s*À retenir\s*(?:<\/strong>)?\s*<\/\1>\s*((?:<p[\s\S]*?<\/p>|<ul[\s\S]*?<\/ul>|<div[\s\S]*?<\/div>)?)/i,
+    (_all, _tag, body) =>
+      `<aside class="lesson-reader__callout"><span class="lesson-reader__callout-icon" aria-hidden="true">💡</span><div><p class="lesson-reader__callout-label">À retenir</p>${body || ""}</div></aside>`,
+  );
+}
 import TestFlow from "@/app/dashboard/student/learning/tests/[slug]/test-flow";
 import type { TestQuestion } from "@/hooks/use-test-sessions";
 import { normalizeTestQuestions } from "@/lib/tests/normalize-test-questions";
@@ -301,6 +325,7 @@ export function LessonPlayView({
     name: null,
   });
   const [showMobileOutline, setShowMobileOutline] = useState(false);
+  const [progressMap, setProgressMap] = useState<Record<string, string>>({});
   const [showCertificationOverlay, setShowCertificationOverlay] = useState(false);
   const [badgeConfig, setBadgeConfig] = useState<any>(null);
   const [caseAiAnalysis, setCaseAiAnalysis] = useState<string | null>(null);
@@ -524,7 +549,7 @@ export function LessonPlayView({
               scopeSet.has(String(f.local_chapter_ref ?? "")),
           )
           .map((f: any, idx: number) => ({
-            id: String(f.id ?? `local-${scopeId}-${idx}`),
+            id: String(f.id ?? `local-${idx}`),
             front: String(f.front ?? f.question ?? ""),
             back: String(f.back ?? f.answer ?? ""),
           }))
@@ -718,6 +743,59 @@ export function LessonPlayView({
   }, [pomodoroState.phase, pomodoroState.isActive]);
 
   const lessonHref = useMemo(() => (lessonId: string) => `${cardHref}/play/${lessonId}`, [cardHref]);
+
+  useEffect(() => {
+    if (!courseId) return;
+    let ignore = false;
+    fetch(`/api/courses/${courseId}/structure`, { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((json) => {
+        if (ignore || !json) return;
+        const next: Record<string, string> = {};
+        for (const section of json.sections ?? []) {
+          for (const chapter of section.chapters ?? []) {
+            if (chapter?.id) next[String(chapter.id)] = String(chapter.learnerProgress?.state ?? "none");
+            for (const sub of chapter.subchapters ?? []) {
+              if (sub?.id) next[String(sub.id)] = String(sub.learnerProgress?.state ?? "none");
+            }
+          }
+        }
+        setProgressMap(next);
+      })
+      .catch(() => undefined);
+    return () => {
+      ignore = true;
+    };
+  }, [courseId, activeLesson.id]);
+
+  const reader = useMemo(() => {
+    const moduleIndex = Math.max(0, modules.findIndex((module) => module.id === activeModule?.id));
+    const groups = groupLessonsForOutline(activeModule?.lessons ?? []);
+    const parts: ReaderPart[] = groups.map((group, index) => {
+      const source = group.items.length ? group.items : group.chapter ? [group.chapter] : [];
+      const done = source.filter((item) => progressMap[item.id] === "completed").length;
+      return {
+        id: group.key,
+        title: stripLessonNumber(group.chapter?.title || source[0]?.title || `Partie ${index + 1}`),
+        done,
+        total: source.length,
+        items: source.map((item) => ({
+          id: item.id,
+          href: lessonHref(item.id),
+          title: stripLessonNumber(item.title),
+          status: item.id === activeLesson.id ? "current" : progressMap[item.id] === "completed" ? "done" : "todo",
+        })),
+      };
+    });
+    const current = parts.find((part) => part.items.some((item) => item.id === activeLesson.id)) ?? parts[0];
+    const flat = parts.flatMap((part) => part.items);
+    const position = Math.max(0, flat.findIndex((item) => item.id === activeLesson.id));
+    const localIndex = Math.max(0, current?.items.findIndex((item) => item.id === activeLesson.id) ?? 0);
+    const chapterDone = parts.reduce((sum, part) => sum + part.done, 0);
+    const chapterTotal = parts.reduce((sum, part) => sum + part.total, 0);
+    const code = partCodeFromTitle(groups.find((group) => group.key === current?.id)?.chapter?.title || current?.title || "", Math.max(0, parts.findIndex((part) => part.id === current?.id)));
+    return { moduleIndex, parts, current, flat, position, localIndex, chapterDone, chapterTotal, code };
+  }, [activeLesson.id, activeModule?.id, activeModule?.lessons, lessonHref, modules, progressMap]);
   const entretienHref = `${lessonHref(activeLesson.id)}/entretien`;
 
   const isQuizLikeLesson = (lesson: unknown) => {
@@ -1401,12 +1479,27 @@ export function LessonPlayView({
 
   const neuroToggle = renderNeuroToggle("light");
 
+  const goReaderPrev = () => {
+    const prev = reader.flat[reader.position - 1];
+    if (prev) router.push(prev.href);
+  };
+  const goReaderNext = () => {
+    const nextInPart = reader.current?.items[reader.localIndex + 1];
+    const partIndex = reader.parts.findIndex((part) => part.id === reader.current?.id);
+    const nextPart = reader.parts[partIndex + 1];
+    router.push(nextInPart?.href ?? nextPart?.items[0]?.href ?? cardHref);
+  };
+  const readerNextLabel = reader.current && reader.localIndex < (reader.current.items.length - 1) ? "Suivant" : "Terminer";
+  const readingHeading = stripLessonNumber(activeLesson.title);
+  const readingDuration = String(activeLesson.duration || "3 min").replace(/\s+/g, " ").trim();
+
   const renderLayout = (isFocus: boolean) => {
-    const showDesktopOutline = !isFocus && !outlineCollapsed;
+    const neo = !isJessica;
+    const showDesktopOutline = !isFocus && !outlineCollapsed && !neo;
 
     return (
       <>
-      <style jsx global>{`
+      {neo ? null : <style jsx global>{`
         @keyframes lessonFadeIn {
           from {
             opacity: 0;
@@ -1511,8 +1604,8 @@ export function LessonPlayView({
           padding: 0 !important;
           overflow: hidden !important;
         }
-      `}</style>
-      <div className="flex items-center justify-between gap-3 lg:hidden">
+      `}</style>}
+      {neo ? null : <div className="flex items-center justify-between gap-3 lg:hidden">
         <Button
           variant="outline"
           className="flex-1 rounded-2xl border-slate-200 bg-white text-slate-900 shadow-sm hover:bg-slate-50"
@@ -1534,7 +1627,7 @@ export function LessonPlayView({
         >
           Neuro
         </Button>
-      </div>
+      </div>}
 
       <div
         className={cn(
@@ -1548,7 +1641,7 @@ export function LessonPlayView({
             isJessica
               ? "border-slate-200/90 bg-white text-slate-900 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)]"
               : "border-slate-200 bg-[#0F111A] text-white backdrop-blur-xl",
-            isFocus ? "hidden" : "hidden lg:flex lg:flex-col",
+            isFocus || neo ? "hidden" : "hidden lg:flex lg:flex-col",
             !isJessica &&
               "before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-40 before:bg-gradient-to-b before:from-red-600/30 before:via-red-600/5 before:to-transparent before:pointer-events-none after:content-[''] after:absolute after:bottom-0 after:right-0 after:h-64 after:w-64 after:bg-red-500/10 after:blur-[80px] after:pointer-events-none",
             "shrink-0 overflow-hidden transition-[width,min-width,max-width,padding,opacity] duration-300 ease-in-out",
@@ -1610,14 +1703,16 @@ export function LessonPlayView({
 
         <section
           className={cn(
-            "relative order-2 min-w-0 flex-1 space-y-8 rounded-3xl border border-slate-200 !bg-white p-4 sm:p-6 lg:order-2 shadow-sm",
-            "transition-[max-width,margin] duration-300 ease-in-out",
-            showDesktopOutline ? "lg:max-w-[calc(100vw-min(360px,32vw)-3rem)]" : "lg:max-w-none",
-            isFocus && "ring-1 ring-slate-900/10",
+            neo
+              ? "min-w-0"
+              : "relative order-2 min-w-0 flex-1 space-y-8 rounded-3xl border border-slate-200 !bg-white p-4 shadow-sm sm:p-6 lg:order-2",
+            !neo && "transition-[max-width,margin] duration-300 ease-in-out",
+            !neo && (showDesktopOutline ? "lg:max-w-[calc(100vw-min(360px,32vw)-3rem)]" : "lg:max-w-none"),
+            !neo && isFocus && "ring-1 ring-slate-900/10",
           )}
         >
-          <div className="h-[2px] w-full rounded-full bg-gradient-to-r from-[#E50914] via-purple-600 to-pink-500" />
-          <div className="flex w-full max-w-6xl flex-col items-start gap-3 pl-1 text-left apprenant-force-text text-slate-500 sm:pl-2 lg:pl-11">
+          {neo ? null : <div className="h-[2px] w-full rounded-full bg-gradient-to-r from-[#E50914] via-purple-600 to-pink-500" />}
+          {neo ? null : <div className="flex w-full max-w-6xl flex-col items-start gap-3 pl-1 text-left apprenant-force-text text-slate-500 sm:pl-2 lg:pl-11">
             <div className="flex w-full items-center justify-between gap-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-500">
                 {activeModule ? "Module" : detail.tags && detail.tags.length > 0 ? detail.tags.join(" • ") : "Formation"}
@@ -1642,9 +1737,9 @@ export function LessonPlayView({
               <Clock className="h-4 w-4 text-slate-600" />
               {activeLesson.duration}
             </p>
-          </div>
+          </div>}
 
-          <div className="flex w-full max-w-6xl flex-wrap items-start justify-start gap-3 pl-1 sm:pl-2 lg:pl-11">
+          {neo ? null : <div className="flex w-full max-w-6xl flex-wrap items-start justify-start gap-3 pl-1 sm:pl-2 lg:pl-11">
             {previousLesson ? (
               <Link
                 href={lessonHref(previousLesson.id)}
@@ -1693,24 +1788,28 @@ export function LessonPlayView({
                 Chapitre suivant
               </Link>
             ) : null}
-          </div>
+          </div>}
 
           {isInteractiveGame ? (
-            <div className="mb-6 flex min-h-[420px] flex-col items-start justify-center gap-6 rounded-3xl border border-slate-200 bg-[#0B1020] px-8 py-12 text-white sm:px-12">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50">Jeu interactif</p>
+            <div className={neo ? "lesson-reader__game" : "mb-6 flex min-h-[420px] flex-col items-start justify-center gap-6 rounded-3xl border border-slate-200 bg-[#0B1020] px-8 py-12 text-white sm:px-12"}>
+              <p className={neo ? "lesson-reader__game-tag" : "text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50"}>
+                {neo ? "Jeu interactif · plein écran" : "Jeu interactif"}
+              </p>
               <div className="max-w-xl space-y-3">
-                <h3 className="text-3xl font-black tracking-tight sm:text-4xl">{activeLesson.title || "Jeu"}</h3>
-                <p className="text-sm leading-relaxed text-white/70">
-                  Le jeu s&apos;ouvre en plein écran. Vous pouvez le quitter à tout moment pour revenir au chapitre.
+                <h3 className={neo ? undefined : "text-3xl font-black tracking-tight sm:text-4xl"}>{activeLesson.title || "Jeu"}</h3>
+                <p className={neo ? undefined : "text-sm leading-relaxed text-white/70"}>
+                  {neo
+                    ? "Tu peux quitter le jeu à tout moment pour revenir au chapitre."
+                    : "Le jeu s'ouvre en plein écran. Vous pouvez le quitter à tout moment pour revenir au chapitre."}
                 </p>
               </div>
               <Button
                 type="button"
                 onClick={() => setGameOpen(true)}
-                className="h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"
+                className={neo ? "lesson-reader__play" : "h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"}
               >
                 <PlayCircle className="mr-2 h-4 w-4" aria-hidden />
-                Commencer le jeu
+                {neo ? "Lancer le jeu" : "Commencer le jeu"}
               </Button>
             </div>
           ) : null}
@@ -1751,7 +1850,7 @@ export function LessonPlayView({
             : null}
 
           {isMediaContent && normalizedVideoSrc ? (
-            <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-black transition">
+            <div className={neo ? "lesson-reader__video" : "relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-black transition"}>
               {normalizedVideoSrc &&
               (normalizedVideoSrc.includes('.mp3') ||
                 normalizedVideoSrc.includes('.wav') ||
@@ -1835,11 +1934,11 @@ export function LessonPlayView({
               )}
             </div>
           ) : isTestFlow ? (
-            <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div className={neo ? "lesson-reader__quiz" : "space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"}>
               {!testStarted ? (
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>
+                    {neo ? null : <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>}
                     <p className="text-slate-600">
                       {isQuizLesson
                         ? "Ce quiz vérifie votre compréhension des notions vues dans ce module."
@@ -1921,29 +2020,29 @@ export function LessonPlayView({
                   exit={{ opacity: 0, filter: "blur(20px)", scale: 1.02 }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   className={cn(
-                    "mx-auto w-full max-w-4xl space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm",
+                    neo ? "lesson-reader__prose" : "mx-auto w-full max-w-4xl space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm",
                     hideYoutubeEmbedDupesInBody && "lesson-body-dedupe-youtube",
                   )}
                 >
                   <div className="space-y-4">
-                    <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>
+                    {neo ? null : <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>}
                     {isHtmlContent ? (
                       <div
                         data-dyslexia-content="true"
-                        className="text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"
-                        style={{
+                        className={neo ? "lesson-reader__prose" : "text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"}
+                        style={neo ? undefined : {
                           isolation: "isolate",
                           whiteSpace: "pre-wrap",
                         }}
                         dangerouslySetInnerHTML={{
-                          __html: sanitizedContent,
+                          __html: neo ? prepareReadingHtml(sanitizedContent, readingHeading) : sanitizedContent,
                         }}
                       />
                     ) : (
                       <div
                         data-dyslexia-content="true"
-                        className="text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"
-                        style={{
+                        className={neo ? "lesson-reader__prose" : "text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"}
+                        style={neo ? undefined : {
                           isolation: "isolate",
                           whiteSpace: "pre-wrap",
                         }}
@@ -1951,13 +2050,33 @@ export function LessonPlayView({
                         <ReactMarkdown
                           rehypePlugins={[rehypeRaw, rehypeKatex]}
                           remarkPlugins={[remarkGfm, remarkMath]}
-                          components={{
-                            h1: (props) => <h1 {...props} className="font-bold text-slate-900 tracking-tight mb-4" />,
-                            h2: (props) => <h2 {...props} className="font-bold text-slate-900 tracking-tight mb-3" />,
-                            h3: (props) => <h3 {...props} className="font-bold text-slate-900 mb-3" />,
-                            p: (props) => <p {...props} className="font-light text-slate-900 opacity-100 leading-relaxed mb-2" />,
-                            strong: (props) => <strong {...props} className="font-semibold text-slate-900" />,
-                            li: (props) => <li {...props} className="text-slate-900 opacity-100" />,
+                          components={neo ? {
+                            h1: ({ children }: { children?: ReactNode }) => {
+                              const text = stripLessonNumber(String(children ?? "")).toLowerCase();
+                              if (text === readingHeading.toLowerCase()) return null;
+                              return <h2>{children}</h2>;
+                            },
+                            h2: (props: { children?: ReactNode }) => <h2 {...props} />,
+                            h3: (props: { children?: ReactNode }) => <h3 {...props} />,
+                            p: (props: { children?: ReactNode }) => <p {...props} />,
+                            strong: (props: { children?: ReactNode }) => <strong {...props} />,
+                            li: (props: { children?: ReactNode }) => <li {...props} />,
+                            blockquote: ({ children }: { children?: ReactNode }) => (
+                              <aside className="lesson-reader__callout">
+                                <span className="lesson-reader__callout-icon" aria-hidden>💡</span>
+                                <div>
+                                  <p className="lesson-reader__callout-label">À retenir</p>
+                                  {children}
+                                </div>
+                              </aside>
+                            ),
+                          } : {
+                            h1: (props: { children?: ReactNode }) => <h1 {...props} className="font-bold text-slate-900 tracking-tight mb-4" />,
+                            h2: (props: { children?: ReactNode }) => <h2 {...props} className="font-bold text-slate-900 tracking-tight mb-3" />,
+                            h3: (props: { children?: ReactNode }) => <h3 {...props} className="font-bold text-slate-900 mb-3" />,
+                            p: (props: { children?: ReactNode }) => <p {...props} className="font-light text-slate-900 opacity-100 leading-relaxed mb-2" />,
+                            strong: (props: { children?: ReactNode }) => <strong {...props} className="font-semibold text-slate-900" />,
+                            li: (props: { children?: ReactNode }) => <li {...props} className="text-slate-900 opacity-100" />,
                           }}
                         >
                           {sanitizedContent}
@@ -2008,7 +2127,7 @@ export function LessonPlayView({
             </div>
           ) : null}
 
-          <div className="flex w-full max-w-5xl flex-wrap items-start justify-start gap-3 pl-1 sm:pl-2 lg:pl-11">
+          {neo ? null : <div className="flex w-full max-w-5xl flex-wrap items-start justify-start gap-3 pl-1 sm:pl-2 lg:pl-11">
             {previousLesson ? (
               <Link
                 href={lessonHref(previousLesson.id)}
@@ -2057,10 +2176,10 @@ export function LessonPlayView({
                 Chapitre suivant
               </Link>
             ) : null}
-          </div>
-          <div className="hidden justify-end lg:flex">
+          </div>}
+          {neo ? null : <div className="hidden justify-end lg:flex">
             {neuroToggle}
-          </div>
+          </div>}
 
         </section>
 
@@ -2432,7 +2551,7 @@ export function LessonPlayView({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showMobileOutline} onOpenChange={setShowMobileOutline}>
+      {neo ? null : <Dialog open={showMobileOutline} onOpenChange={setShowMobileOutline}>
         <DialogContent
           className={cn(
             "max-h-[min(85vh,640px)] max-w-md overflow-y-auto rounded-3xl border shadow-[0_25px_80px_-20px_rgba(0,0,0,0.15)]",
@@ -2460,7 +2579,7 @@ export function LessonPlayView({
           </div>
           {renderOutline()}
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
       {mounted && isBeyondFlashOpen
         ? createPortal(
@@ -2482,7 +2601,7 @@ export function LessonPlayView({
         onFocusModeChange={setFocusMode}
       />
 
-      {mounted &&
+      {!neo && mounted &&
         createPortal(
           <div
             className={cn(
@@ -2535,6 +2654,39 @@ export function LessonPlayView({
       </>
     );
   };
+
+  if (!isJessica) {
+    const total = Math.max(1, reader.current?.items.length ?? 1);
+    return (
+      <TooltipProvider>
+        <LessonReaderShell
+          backHref={cardHref}
+          kicker={`Chapitre ${reader.moduleIndex + 1} · ${reader.code}`}
+          partTitle={reader.current?.title || stripLessonNumber(activeModule?.title || detail.title)}
+          courseTitle={courseTitle || detail.title}
+          chapterTitle={stripLessonNumber(activeModule?.title || `Chapitre ${reader.moduleIndex + 1}`)}
+          chapterDone={reader.chapterDone}
+          chapterTotal={reader.chapterTotal}
+          chip={`Sous-chapitre ${reader.localIndex + 1} sur ${total} · ${readingDuration}`}
+          heading={readingHeading}
+          segments={(reader.current?.items ?? []).map((item) => (item.status === "done" || item.status === "current" ? item.status : "todo"))}
+          index={reader.localIndex + 1}
+          total={total}
+          prevDisabled={reader.position <= 0}
+          nextLabel={readerNextLabel}
+          onPrev={goReaderPrev}
+          onNext={goReaderNext}
+          dyslexia={isDyslexiaMode}
+          onToggleDyslexia={() => toggleDyslexiaMode()}
+          onOpenStrategy={handleOpenLearningStrategy}
+          parts={reader.parts}
+          initialOpenPartId={reader.current?.id ?? null}
+        >
+          {renderLayout(false)}
+        </LessonReaderShell>
+      </TooltipProvider>
+    );
+  }
 
   if (focusMode) {
     return (

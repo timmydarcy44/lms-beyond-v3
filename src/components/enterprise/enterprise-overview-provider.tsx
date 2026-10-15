@@ -11,6 +11,9 @@ import {
   type ReactNode,
 } from "react";
 import type { EntrepriseOverviewData } from "@/lib/entreprise/overview-types";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_ENTREPRISE_OVERVIEW } from "@/lib/demo/jade-dashboard-mocks";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type EnterpriseOverviewContextValue = {
   loading: boolean;
@@ -106,7 +109,15 @@ export function EnterpriseOverviewProvider({ children }: { children: ReactNode }
 
     try {
       const result = await inflight;
-      if (mounted.current) setData(result);
+      let next = result;
+      try {
+        const browser = createSupabaseBrowserClient();
+        const { data: auth } = browser ? await browser.auth.getUser() : { data: { user: null } };
+        if (isJadeDemoEmail(auth.user?.email)) next = JADE_ENTREPRISE_OVERVIEW;
+      } catch {
+        /* ignore */
+      }
+      if (mounted.current) setData(next);
     } catch (e) {
       if (mounted.current) {
         setFetchError(e instanceof Error ? e.message : "Erreur de chargement");

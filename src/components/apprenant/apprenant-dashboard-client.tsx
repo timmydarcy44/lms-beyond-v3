@@ -141,12 +141,14 @@ function parseBioAiText(raw: unknown): string {
 export function ApprenantDashboardClient({
   initialView,
   primaryParcours = null,
+  courses = [],
   visibleOpenBadges = [],
   earnedOpenBadges = [],
   homeHref = "/dashboard/apprenant",
 }: {
   initialView: "home" | "profil";
   primaryParcours?: ApprenantPrimaryParcours | null;
+  courses?: Array<{ title: string; href: string; progress: string }>;
   visibleOpenBadges?: LearnerVisibleOpenBadge[];
   earnedOpenBadges?: LearnerEarnedOpenBadge[];
   homeHref?: string;
@@ -1326,6 +1328,7 @@ export function ApprenantDashboardClient({
             profileCompletionPct={profileCompletion.score}
             catalogHref={EDGE_LAB_ONLINE_CATALOG_HREF}
             primaryParcours={primaryParcours}
+            courses={courses}
             badgesHref="/dashboard/apprenant/badges"
             resultsHref="/dashboard/apprenant/results"
             matchingHref="/dashboard/apprenant/matching"

@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { getLearnerContentDetail } from "@/lib/queries/apprenant";
 import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 
 /**
@@ -39,21 +38,9 @@ export default async function FormationLessonPlayPage({
   const nextLesson = activeIndex >= 0 && activeIndex < allLessons.length - 1 ? allLessons[activeIndex + 1] : null;
   const flashcards = activeLesson.flashcards ?? [];
 
-  const breadcrumbs = [
-    { label: activeLesson.title },
-  ];
-
   return (
     <DyslexiaModeProvider>
       <LearningSessionTracker contentType="course" contentId={card.id} showIndicator={false}>
-      <div className="min-h-screen bg-white text-slate-900">
-        <DashboardShell
-          title={activeLesson.title}
-          breadcrumbs={breadcrumbs}
-          initialCollapsed={true}
-          forcedTheme="light"
-          className="bg-white text-slate-900"
-        >
         <LessonPlayView
           detail={detail}
           modules={modules}
@@ -67,8 +54,6 @@ export default async function FormationLessonPlayPage({
           courseId={card.id}
           courseTitle={card.title}
         />
-        </DashboardShell>
-      </div>
       </LearningSessionTracker>
     </DyslexiaModeProvider>
   );

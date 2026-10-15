@@ -53,6 +53,36 @@ function isTableMissing(error?: { code?: string | null }): boolean {
   return !!error && error.code === TABLE_NOT_FOUND_CODE;
 }
 
+function isDuplicate(error?: { code?: string | null }): boolean {
+  return !!error && error.code === "23505";
+}
+
+async function rememberUserTransformation(
+  supabase: NonNullable<Awaited<ReturnType<typeof getServerClient>>>,
+  payload: Record<string, unknown>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const attempts: Array<Record<string, unknown>> = [payload];
+  if ("chapter_local_id" in payload) {
+    const { chapter_local_id: _chapter, ...withoutChapter } = payload;
+    attempts.push(withoutChapter);
+  }
+
+  let lastError = "Enregistrement impossible";
+  for (const row of attempts) {
+    const conflict = "chapter_local_id" in row
+      ? "user_id,transformation_id,lesson_id,chapter_local_id"
+      : "user_id,lesson_id,transformation_id";
+    const upserted = await supabase.from(USER_HISTORY_TABLE).upsert(row, { onConflict: conflict });
+    if (!upserted.error || isDuplicate(upserted.error)) return { ok: true };
+    const inserted = await supabase.from(USER_HISTORY_TABLE).insert(row);
+    if (!inserted.error || isDuplicate(inserted.error)) return { ok: true };
+    lastError = inserted.error.message || upserted.error.message || lastError;
+    const missingColumn = inserted.error.code === "42703" || upserted.error.code === "42703";
+    if (!missingColumn) break;
+  }
+  return { ok: false, error: lastError };
+}
+
 function sortObject<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map((item) => sortObject(item)) as T;
@@ -104,7 +134,7 @@ function normalizeOptions(action: string, options?: TransformationOptions): Tran
       break;
     }
     case "insights": {
-      normalized.promptVersion = SENTENCE_CASE_PROMPT_VERSION;
+      normalized.promptVersion = "keywords-v1";
       break;
     }
     case "synthesis": {
@@ -179,6 +209,8 @@ export async function POST(request: NextRequest) {
     let transformationId: string | null = null;
     let cacheAvailable = true;
     let speechGenerated = false;
+    let historySaved = false;
+    let historySaveError: string | null = null;
     let cachedTransformation: {
       id: string;
       format: string;
@@ -329,7 +361,13 @@ export async function POST(request: NextRequest) {
 
         if (insertError) {
           console.warn("[ai] Écriture cache transformation ignorée", insertError.code, insertError.message);
-          cacheAvailable = false;
+          const { data: recovered } = await supabase
+            .from(TRANSFORMATION_TABLE)
+            .select("id")
+            .eq("input_hash", inputHash)
+            .maybeSingle();
+          transformationId = recovered?.id ?? null;
+          if (!transformationId) cacheAvailable = false;
         } else {
           transformationId = inserted?.id ?? null;
         }
@@ -365,13 +403,12 @@ export async function POST(request: NextRequest) {
         historyPayload.chapter_local_id = chapterLocalId;
       }
 
-      const { error: historyError } = await supabase.from(USER_HISTORY_TABLE).upsert(historyPayload, {
-        onConflict: "user_id,transformation_id,lesson_id,chapter_local_id",
-      });
-
-      if (historyError && !isTableMissing(historyError)) {
-        console.error("[ai] Error saving transformation history", historyError);
+      const saved = await rememberUserTransformation(supabase, historyPayload);
+      if (!saved.ok) {
+        console.error("[ai] Error saving transformation history", saved.error);
       }
+      historySaved = saved.ok;
+      historySaveError = saved.ok ? null : saved.error;
     }
 
     if (!cached) {
@@ -417,6 +454,8 @@ export async function POST(request: NextRequest) {
       audio,
       cached,
       transformationId,
+      saved: historySaved,
+      saveError: historySaveError,
       options: normalizedOptions,
     });
   } catch (error) {
@@ -481,7 +520,40 @@ export async function GET(request: NextRequest) {
       query = query.eq("course_id", courseId);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+    if (error?.code === "42703") {
+      let fallback = supabase
+        .from(USER_HISTORY_TABLE)
+        .select(
+          `
+          id,
+          created_at,
+          lesson_id,
+          course_id,
+          selection_excerpt,
+          action,
+          options,
+          transformation:${TRANSFORMATION_TABLE}(
+            id,
+            format,
+            result_text,
+            result_json,
+            audio_base64,
+            audio_mime_type,
+            audio_voice,
+            options
+          )
+          `,
+        )
+        .eq("user_id", authData.user.id)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (lessonId) fallback = fallback.eq("lesson_id", lessonId);
+      else if (courseId) fallback = fallback.eq("course_id", courseId);
+      const recovered = await fallback;
+      data = recovered.data;
+      error = recovered.error;
+    }
     if (error) {
       if (isTableMissing(error)) {
         return NextResponse.json({

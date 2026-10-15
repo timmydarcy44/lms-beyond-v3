@@ -73,17 +73,14 @@ export async function PATCH(request: NextRequest) {
   if (status === "admitted") {
     const { data: eligibility } = await db
       .from("cfa_applications")
-      .select("administrative_documents_submitted_at,registration_fee_paid_at")
+      .select("administrative_documents_submitted_at")
       .eq("id", id)
       .maybeSingle();
-    if (
-      !eligibility?.administrative_documents_submitted_at ||
-      !eligibility.registration_fee_paid_at
-    ) {
+    if (!eligibility?.administrative_documents_submitted_at) {
       return NextResponse.json(
         {
           error:
-            "Les informations administratives, les justificatifs et le paiement doivent être finalisés avant l’admission.",
+            "Les informations administratives et les justificatifs doivent être déposés avant l’admission. Le paiement des frais peut être encaissé ensuite, y compris par chèque.",
         },
         { status: 409 },
       );

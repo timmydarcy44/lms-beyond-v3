@@ -201,29 +201,21 @@ Réponds uniquement avec le JSON, sans texte additionnel.`;
 }
 
 export function buildInsightsPrompt(text: string): string {
-  return `Analyse le texte suivant et extrais des insights pédagogiques :
+  return `Extrais les mots-clés du texte suivant :
 
 "${text}"
 
 Format JSON attendu :
 {
-  "keyConcepts": ["concept1", "concept2"],
-  "examples": ["exemple concret 1", "exemple concret 2"],
-  "analogies": ["analogie pour faciliter la compréhension"],
-  "reviewQuestions": [
-    {
-      "question": "Question de révision",
-      "answer": "Réponse suggérée"
-    }
-  ],
-  "connections": ["Lien avec d'autres concepts", "Application pratique"]
+  "keywords": ["mot-clé", "autre mot-clé"],
+  "keyConcepts": ["mot-clé", "autre mot-clé"]
 }
 
-Les insights doivent être :
-- Actionnables et concrets
-- Adaptés à l'apprentissage
-- Variés et complémentaires
-- Fourni en casse phrase, sans capitaliser chaque mot
+Règles :
+- Produis 8 à 14 mots-clés
+- Chaque mot-clé fait un à quatre mots, sans phrase ni définition
+- keywords et keyConcepts contiennent la même liste
+- ${SENTENCE_CASE_RULE}
 
 Réponds uniquement avec le JSON, sans texte additionnel.`;
 }

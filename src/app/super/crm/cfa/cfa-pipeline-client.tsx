@@ -448,7 +448,7 @@ export function CfaPipelineClient({
                       </div>
                     ) : null}
                     <p className={cn("text-xs font-semibold", selected.registration_fee_paid_at ? "text-emerald-700" : "text-amber-700")}>
-                      Frais d’inscription : {selected.registration_fee_paid_at ? "250 € payés" : "paiement en attente"}
+                      Frais d’inscription : {selected.registration_fee_paid_at ? "250 € payés" : "paiement en attente, chèque accepté. Cela n’empêche pas l’admission."}
                     </p>
                   </section>
                 ) : null}

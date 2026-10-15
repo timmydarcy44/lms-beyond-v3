@@ -109,10 +109,14 @@
 }
 
 .byound-ai__actions {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: flex;
   justify-content: space-between;
   margin-top: 22px;
-  padding: 0 14px;
+  padding: 8px 14px;
+  background: var(--ai-bg);
 }
 
 .byound-ai__action {
@@ -643,7 +647,7 @@
 
 @media (max-width: 1023px) {
   .byound-ai-recall {
-    display: none;
+    margin-bottom: 12px;
   }
 }
 
@@ -670,5 +674,83 @@
 
   .byound-ai-trigger__label {
     display: inline;
+  }
+}
+
+.byound-ai__keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+.byound-ai__keywords span {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.byound-ai-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+}
+
+.byound-ai-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(7, 8, 11, 0.55);
+}
+
+.byound-ai-modal__card {
+  position: relative;
+  z-index: 1;
+  width: min(640px, 100%);
+  max-height: min(82vh, 760px);
+  overflow: auto;
+  border-radius: 28px;
+  color: #fff;
+  padding: 22px;
+}
+
+.byound-ai-modal__card h3,
+.byound-ai-modal__card p,
+.byound-ai-modal__card li,
+.byound-ai-modal__card strong {
+  color: #fff;
+}
+
+.byound-ai-modal__card h3 {
+  margin: 8px 0 14px;
+  font-size: 28px;
+  letter-spacing: -0.4px;
+}
+
+.byound-ai-modal__prose p {
+  margin: 0 0 12px;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.byound-ai-modal__prose ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+
+.byound-ai-modal__prose li {
+  margin: 4px 0;
+  line-height: 1.45;
+}
+
+@media (min-width: 1024px) {
+  .byound-ai-modal {
+    place-items: center;
   }
 }

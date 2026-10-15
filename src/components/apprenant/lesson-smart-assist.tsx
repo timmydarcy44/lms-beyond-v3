@@ -171,6 +171,7 @@ export function LessonSmartAssist({
   const [transformationResult, setTransformationResult] = useState<TransformationResultState | null>(null);
   const [resultFresh, setResultFresh] = useState(false);
   const [transformError, setTransformError] = useState<string | null>(null);
+  const [persisted, setPersisted] = useState(false);
   const lastLaunchRef = useRef<{ action: AIAction; options: Record<string, any>; text: string } | null>(null);
   const { isDyslexiaMode } = useDyslexiaMode();
 
@@ -387,10 +388,11 @@ const executeAction = async (actionId: AIAction, options: Record<string, any> = 
       originalText: textToTransform,
       audio: data.audio ?? null,
     });
-    if (actionId === "audio") {
-      setShowVoiceSettings(true);
-    }
     setResultFresh(true);
+    setPersisted(Boolean(data.saved));
+    if (!data.saved) {
+      toast.error(typeof data.saveError === "string" && data.saveError ? data.saveError : "Transformation affichée, enregistrement impossible");
+    }
     setSelection(null);
     setSelectionExcerpt("");
     void fetchHistory();
@@ -469,6 +471,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
       audio: audioData,
     });
     setResultFresh(false);
+    setPersisted(true);
     setTransformError(null);
   };
 
@@ -485,15 +488,24 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
           : JSON.stringify(value, null, 2);
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("Copi�");
+      toast.success("Copié");
     } catch {
       toast.error("Impossible de copier");
     }
   };
 
   const saveResult = () => {
+    if (!persisted) {
+      const last = lastLaunchRef.current;
+      if (!last) {
+        toast.error("Rien à enregistrer");
+        return;
+      }
+      void executeAction(last.action, last.options, last.text);
+      return;
+    }
     void fetchHistory();
-    toast.success("Transformation enregistr�e");
+    toast.success("Transformation enregistrée");
   };
 
   const regenerate = () => {

@@ -852,12 +852,18 @@
     flex: 1;
   }
 
+  .lesson-reader__stage:has(.lesson-reader__ai-dock:not(:empty)) {
+    padding-right: min(440px, 34vw);
+  }
+
   .lesson-reader__ai-dock:not(:empty) {
-    position: sticky;
+    position: fixed;
     top: 88px;
-    flex: 1 1 400px;
+    right: 12px;
+    z-index: 30;
+    width: min(420px, 34vw);
     max-width: 460px;
-    height: calc(100dvh - 88px);
+    height: calc(100dvh - 100px);
     overflow: auto;
   }
 

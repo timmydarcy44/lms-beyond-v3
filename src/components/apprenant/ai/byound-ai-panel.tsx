@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import {
   AudioLines,
@@ -29,7 +29,7 @@ export const BYOUND_AI_ACTIONS = [
   { id: "audio" as const, short: "Audio", aria: "Transformer en audio", hint: "Version audio du sous-chapitre", icon: AudioLines, tint: "#3A2414", vivid: "#E7782C", ink: "#FFAA6B", dys: "#FDEBDD" },
   { id: "mindmap" as const, short: "Map", aria: "Transformer en carte mentale", hint: "Carte mentale du sous-chapitre", icon: Map, tint: "#3A1832", vivid: "#D9459E", ink: "#FF8AD0", dys: "#FBE3F1" },
   { id: "translate" as const, short: "Traduire", aria: "Traduire", hint: "Dans la langue de ton choix", icon: Languages, tint: "#36301A", vivid: "#C99A12", ink: "#F2CF6B", dys: "#FBF1D6" },
-  { id: "insights" as const, short: "Analyser", aria: "Analyser", hint: "Points clés et notions à revoir", icon: ScanSearch, tint: "#12301F", vivid: "#1F9D57", ink: "#6BE39B", dys: "#DEF5E7" },
+  { id: "insights" as const, short: "Analyser", aria: "Analyser", hint: "Mots-clés du sous-chapitre", icon: ScanSearch, tint: "#12301F", vivid: "#1F9D57", ink: "#6BE39B", dys: "#DEF5E7" },
 ];
 
 const PRIMARY = ["rephrase", "synthesis", "schema", "audio"] as const;
@@ -92,22 +92,46 @@ function readStoredAction(): AIAction {
   return "synthesis";
 }
 
-function pointsFrom(result: ResultState["result"], action: AIAction): string[] {
-  if (!result) return [];
-  if (typeof result === "string") {
-    const lines = result
-      .split(/\n+/)
-      .map((line) => line.replace(/^#{1,6}\s+/, "").replace(/^[-*•]\s+/, "").replace(/^\d+[.)]\s+/, "").trim())
-      .filter((line) => line.length > 12 && line.length < 180);
-    return lines.slice(0, 5);
-  }
+function keywordList(result: ResultState["result"]): string[] {
+  if (!result || typeof result !== "object") return [];
   const record = result as Record<string, unknown>;
-  if (action === "insights" && Array.isArray(record.keyConcepts)) return record.keyConcepts.map(String).slice(0, 5);
-  if (action === "schema" && Array.isArray(record.steps)) {
-    return record.steps.map((step) => String((step as { title?: string }).title ?? "")).filter(Boolean).slice(0, 5);
-  }
-  if (action === "audio" && typeof record.script === "string") return pointsFrom(record.script, "rephrase");
-  return [];
+  const source = record.keywords ?? record.keyConcepts;
+  return Array.isArray(source) ? source.map((item) => String(item).trim()).filter(Boolean) : [];
+}
+
+function inlineMarkup(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+    part.startsWith("**") && part.endsWith("**") ? <strong key={index}>{part.slice(2, -2)}</strong> : <span key={index}>{part}</span>,
+  );
+}
+
+function RichText({ text }: { text: string }) {
+  const lines = text.replace(/\r/g, "").split("\n");
+  const blocks: ReactNode[] = [];
+  let items: string[] = [];
+  const flush = () => {
+    if (!items.length) return;
+    const list = items;
+    items = [];
+    blocks.push(
+      <ul key={`list-${blocks.length}`}>
+        {list.map((item, index) => (
+          <li key={`${item}-${index}`}>{inlineMarkup(item)}</li>
+        ))}
+      </ul>,
+    );
+  };
+  lines.forEach((line) => {
+    const match = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/);
+    if (match) {
+      items.push(match[1]);
+      return;
+    }
+    flush();
+    if (line.trim()) blocks.push(<p key={`p-${blocks.length}`}>{inlineMarkup(line)}</p>);
+  });
+  flush();
+  return <div className="byound-ai-modal__prose">{blocks}</div>;
 }
 
 function periodOf(iso: string): string {
@@ -171,6 +195,7 @@ export function ByoundAiPanel(props: Props) {
   const [tab, setTab] = useState<"transform" | "history">("transform");
   const [selected, setSelected] = useState<AIAction>("synthesis");
   const [more, setMore] = useState(false);
+  const [resultOpen, setResultOpen] = useState(false);
   const [host, setHost] = useState<{ trigger: HTMLElement | null; dock: HTMLElement | null }>({ trigger: null, dock: null });
 
   useEffect(() => {
@@ -214,9 +239,8 @@ export function ByoundAiPanel(props: Props) {
   };
 
   useEffect(() => {
-    if (!props.processing && !props.error && !props.result) return;
-    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [props.processing, props.error, props.result]);
+    if (props.processing || props.result?.fresh) setResultOpen(true);
+  }, [props.processing, props.result?.fresh, props.result?.result, props.result?.action]);
 
   useEffect(() => {
     if (!open || desktop) return;
@@ -392,6 +416,26 @@ export function ByoundAiPanel(props: Props) {
         </button>
       ) : null}
       {open && docked && host.dock ? createPortal(panel, host.dock) : null}
+      {resultOpen && (props.processing || props.result || props.error)
+        ? createPortal(
+            <div className="byound-ai-modal" role="dialog" aria-modal="true" aria-label="Contenu transformé">
+              <button type="button" className="byound-ai-modal__backdrop" aria-label="Fermer" onClick={() => setResultOpen(false)} />
+              <ResultCard
+                cardRef={cardRef}
+                tone={tone}
+                processing={props.processing}
+                error={props.error}
+                result={props.result}
+                onSave={props.onSave}
+                onCopy={props.onCopy}
+                onRegenerate={props.onRegenerate}
+                onRetry={props.onRetry}
+                onClose={() => setResultOpen(false)}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
       {open && !docked ? (
         <div className="byound-ai-sheet" role="dialog" aria-modal="true" aria-labelledby={titleId}>
           <button type="button" className="byound-ai-sheet__backdrop" aria-label="Fermer" onClick={() => setPanel(false)} />
@@ -412,6 +456,7 @@ function ResultCard({
   onCopy,
   onRegenerate,
   onRetry,
+  onClose,
 }: {
   cardRef: RefObject<HTMLElement | null>;
   tone: ByoundAiTone;
@@ -422,13 +467,15 @@ function ResultCard({
   onCopy: () => void;
   onRegenerate: () => void;
   onRetry: () => void;
+  onClose?: () => void;
 }) {
   if (!processing && !error && !result) return null;
   const active = byoundAiTone(result?.action ?? tone.id);
-  const points = result ? pointsFrom(result.result, result.action) : [];
+  const keywords = result?.action === "insights" ? keywordList(result.result) : [];
+  const prose = typeof result?.result === "string" ? result.result : result?.action === "audio" && result.result && typeof result.result === "object" && typeof (result.result as { script?: string }).script === "string" ? (result.result as { script: string }).script : "";
   const audioSrc = result?.audio?.base64 ? `data:${result.audio.mimeType};base64,${result.audio.base64}` : null;
   return (
-    <article ref={cardRef} className="byound-ai__card" data-error={error ? "true" : undefined} style={{ background: error ? "#2A1416" : active.vivid }}>
+    <article ref={cardRef} className={onClose ? "byound-ai__card byound-ai-modal__card" : "byound-ai__card"} data-error={error ? "true" : undefined} style={{ background: error ? "#2A1416" : active.vivid }}>
       <span className="byound-ai__blob byound-ai__blob--a" aria-hidden />
       <span className="byound-ai__blob byound-ai__blob--b" aria-hidden />
       <div className="byound-ai__card-body">
@@ -457,14 +504,12 @@ function ResultCard({
               <div className="byound-ai__embed"><MindmapViewer data={result.result as never} /></div>
             ) : null}
             {audioSrc ? <audio className="byound-ai__audio" controls src={audioSrc} /> : null}
-            {points.length ? (
-              <ol className="byound-ai__points">
-                {points.map((point, index) => (
-                  <li key={`${point}-${index}`}><span className="byound-ai__num">{index + 1}</span><span>{point}</span></li>
-                ))}
-              </ol>
-            ) : result.action !== "schema" && result.action !== "mindmap" && !audioSrc ? (
-              <p className="byound-ai__prose">{typeof result.result === "string" ? result.result : ""}</p>
+            {keywords.length ? (
+              <div className="byound-ai__keywords">
+                {keywords.map((word) => <span key={word}>{word}</span>)}
+              </div>
+            ) : prose ? (
+              <RichText text={prose} />
             ) : null}
           </>
         ) : null}
@@ -476,6 +521,7 @@ function ResultCard({
               <button type="button" className="byound-ai__save" disabled={processing} onClick={onSave}>Enregistrer</button>
               <button type="button" className="byound-ai__round" aria-label="Copier" disabled={processing} onClick={onCopy}><Copy size={18} strokeWidth={2} /></button>
               <button type="button" className="byound-ai__round" aria-label="Régénérer" disabled={processing} onClick={onRegenerate}><RefreshCw size={18} strokeWidth={2} /></button>
+              {onClose ? <button type="button" className="byound-ai__round" aria-label="Fermer" onClick={onClose}><X size={18} strokeWidth={2} /></button> : null}
             </>
           )}
         </div>
@@ -492,7 +538,10 @@ export function historyMetric(action: AIAction, result: unknown): string {
     return children ? `${children} branches` : "Carte";
   }
   if (action === "schema" && Array.isArray(record?.steps)) return `${record.steps.length} étapes`;
-  if (action === "insights" && Array.isArray(record?.keyConcepts)) return `${record.keyConcepts.length} points`;
+  if (action === "insights") {
+    const count = keywordList(result as ResultState["result"]).length;
+    return count ? `${count} mots-clés` : "Mots-clés";
+  }
   if (action === "synthesis") {
     const count = typeof result === "string" ? result.split(/\n+/).filter((line) => line.trim().length > 12).length : 0;
     return count ? `${Math.min(count, 6)} points` : "Fiche";

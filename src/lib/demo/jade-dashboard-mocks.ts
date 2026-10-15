@@ -44,9 +44,27 @@ export const JADE_FORMATEUR_SLOTS = [
 ];
 
 export const JADE_COURSES = [
-  { title: "CCP1 — Stratégie de prospection", href: "/catalog/formations", progress: "62 %" },
-  { title: "NTC AI Business", href: "/catalog/formations", progress: "40 %" },
-  { title: "Négociation commerciale", href: "/catalog/formations", progress: "18 %" },
+  {
+    title: "CCP1 — Stratégie de prospection",
+    href: "/catalog/formations",
+    progress: "62 %",
+    percent: 62,
+    cover: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "NTC AI Business",
+    href: "/catalog/formations",
+    progress: "40 %",
+    percent: 40,
+    cover: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    title: "Négociation commerciale",
+    href: "/catalog/formations",
+    progress: "18 %",
+    percent: 18,
+    cover: "https://images.unsplash.com/photo-1552581234-26160f608093?auto=format&fit=crop&w=1200&q=80",
+  },
 ];
 
 export const JADE_ENTREPRISE_OVERVIEW: EntrepriseOverviewData = {

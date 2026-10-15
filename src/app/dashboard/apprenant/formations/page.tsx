@@ -9,6 +9,8 @@ import {
   APPRENANT_PAGE_SHELL,
   APPRENANT_PAGE_TITLE,
 } from "@/lib/apprenant/connect-nav";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_COURSES } from "@/lib/demo/jade-dashboard-mocks";
 import { getSession } from "@/lib/auth/session";
 import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
@@ -20,7 +22,24 @@ export default async function ApprenantMesFormationsPage() {
   if (!session) redirect("/login?next=/dashboard/apprenant/formations");
 
   const data = await getApprenantDashboardData();
-  const formations = data?.formations ?? [];
+  const realFormations = data?.formations ?? [];
+  const jade = isJadeDemoEmail(session.email);
+  const formations =
+    realFormations.length > 0
+      ? realFormations
+      : jade
+        ? JADE_COURSES.map((course, index) => ({
+            id: `jade-course-${index}`,
+            title: course.title,
+            href: course.href,
+            cover_url: course.cover,
+            image: course.cover,
+            cover_image: course.cover,
+            progress: course.percent,
+            meta: null,
+            presentation: null,
+          }))
+        : [];
 
   return (
     <div className={APPRENANT_PAGE_SHELL}>
@@ -54,16 +73,33 @@ export default async function ApprenantMesFormationsPage() {
             const href =
               f.href?.startsWith("http") || f.href?.startsWith("/")
                 ? f.href
-                : `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/${f.slug || f.id}`;
+                : `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/${"slug" in f ? f.slug || f.id : f.id}`;
+            const cover = f.cover_url || f.cover_image || f.image || null;
+            const percent = Math.max(0, Math.min(100, Math.round(Number(f.progress ?? 0)) || 0));
             return (
-              <Link key={f.id} href={href} className={`${APPRENANT_CARD_BODY} hover:border-sky-400/30`}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#60a5fa]">
-                  Formation
-                </p>
-                <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-white">{f.title}</h2>
-                {f.meta || f.presentation ? (
-                  <p className="line-clamp-3 text-[13px] text-white/40">{f.meta || f.presentation}</p>
-                ) : null}
+              <Link key={f.id} href={href} className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] hover:border-sky-400/30">
+                <div className="relative aspect-[16/10] bg-[#12141a]">
+                  {cover ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={cover} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-white/30">
+                      <BookOpen className="h-8 w-8" />
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3 p-4">
+                  <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-white">{f.title}</h2>
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-white/70">
+                      <span>Complétion</span>
+                      <span>{percent} %</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-[#6E5BFF]" style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                </div>
               </Link>
             );
           })}

@@ -692,6 +692,30 @@ export async function getApprenantDashboardData(
       }
     }
 
+    try {
+      const { data: progressRows, error: progressError } = await galaxyReadClient
+        .from("enrollments")
+        .select("course_id, progress")
+        .eq("user_id", user.id);
+      if (!progressError && progressRows) {
+        const byCourse = new Map<string, number>();
+        for (const row of progressRows as Array<{ course_id?: string; progress?: unknown }>) {
+          const id = String(row.course_id ?? "");
+          if (!id || row.progress == null || row.progress === "") continue;
+          const value = Number(row.progress);
+          if (!Number.isFinite(value)) continue;
+          byCourse.set(id, Math.max(0, Math.min(100, Math.round(value))));
+        }
+        if (byCourse.size) {
+          formations = formations.map((card) =>
+            byCourse.has(card.id) ? { ...card, progress: byCourse.get(card.id) ?? card.progress ?? 0 } : card,
+          );
+        }
+      }
+    } catch {
+      /* colonne progress absente : les cartes restent à 0 */
+    }
+
     console.log("[apprenant] Total formations found:", formations.length);
 
     const parcours: LearnerCard[] = [];

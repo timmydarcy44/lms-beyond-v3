@@ -214,6 +214,61 @@
   border-radius: 18px;
 }
 
+/* Schémas, encarts et tableaux gardent leur fond clair et leur texte foncé. */
+.lesson-reader__prose [style*="background"] strong,
+.lesson-reader__prose [style*="background"] p,
+.lesson-reader__prose [style*="background"] li,
+.lesson-reader__prose [style*="background"] h2,
+.lesson-reader__prose [style*="background"] h3,
+.lesson-reader__prose [style*="background"] h4,
+.lesson-reader__prose .bg-red-50,
+.lesson-reader__prose .bg-red-50 p,
+.lesson-reader__prose .bg-red-50 li,
+.lesson-reader__prose .bg-green-50,
+.lesson-reader__prose .bg-green-50 p,
+.lesson-reader__prose .bg-green-50 li {
+  color: #0f172a;
+}
+
+.lesson-reader__prose .bg-red-50,
+.lesson-reader__prose .bg-red-50 strong {
+  color: #7f1d1d;
+}
+
+.lesson-reader__prose .bg-green-50,
+.lesson-reader__prose .bg-green-50 strong {
+  color: #14532d;
+}
+
+.lesson-reader__prose table {
+  width: 100%;
+  margin: 16px 0 20px;
+  border-collapse: collapse;
+  background: #fff;
+  color: #0f172a;
+}
+
+.lesson-reader__prose th,
+.lesson-reader__prose td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  color: #0f172a;
+  text-align: left;
+}
+
+.lesson-body-dedupe-youtube .lesson-reader__prose iframe,
+.lesson-body-dedupe-youtube .lesson-reader__prose embed,
+.lesson-body-dedupe-youtube .lesson-reader__prose object,
+.lesson-body-dedupe-youtube .lesson-reader__prose div[data-youtube-video],
+.lesson-body-dedupe-youtube .lesson-reader__prose div[data-video-block],
+.lesson-body-dedupe-youtube .lesson-reader__prose div[style*="padding-bottom"] {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
 .lesson-reader[data-reading-theme="dys"] .lesson-reader__prose,
 .lesson-reader[data-reading-theme="dys"] .lesson-reader__prose p,
 .lesson-reader[data-reading-theme="dys"] .lesson-reader__prose li {
@@ -335,9 +390,25 @@
 
 .lesson-reader__video iframe,
 .lesson-reader__video video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.lesson-reader__video:has(.lesson-reader__audio) {
+  height: auto;
+  aspect-ratio: auto;
+  background: var(--r-surface);
+  padding: 16px;
+}
+
+.lesson-reader__audio {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--r-text);
 }
 
 .lesson-reader__quiz {
@@ -598,9 +669,33 @@
   border-left: 1px solid var(--r-border);
 }
 
+.lesson-reader__mark {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+}
+
+.lesson-reader__mark[data-mark="quiz"] {
+  background: #ece7ff;
+  color: #4b3bd1;
+}
+
+.lesson-reader__mark[data-mark="game"] {
+  background: #1e2130;
+  color: #c9c2ff;
+}
+
+.lesson-reader__mark[data-mark="interview"] {
+  background: #e7f8ef;
+  color: #0f7a45;
+}
+
 .lesson-reader__leaves a {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr);
   gap: 4px 10px;
   min-height: 52px;
   align-items: center;

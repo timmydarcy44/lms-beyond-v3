@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Atkinson_Hyperlegible, Manrope } from "next/font/google";
-import { ChevronLeft, ChevronRight, List, Lock, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Gamepad2, List, ListChecks, Lock, MessagesSquare, MoreHorizontal } from "lucide-react";
 import "./lesson-reader.css";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
@@ -18,6 +18,7 @@ export type ReaderLeaf = {
   href: string;
   title: string;
   status: "done" | "current" | "todo" | "locked";
+  mark?: "quiz" | "game" | "interview";
 };
 
 export type ReaderPart = {
@@ -189,7 +190,21 @@ export function LessonReaderShell({
                 {part.items.map((item) => (
                   <li key={item.id}>
                     <Link href={item.href} aria-current={item.status === "current" ? "page" : undefined} onClick={() => setSheetOpen(false)}>
-                      {item.status === "locked" ? <Lock size={14} strokeWidth={2} aria-hidden /> : <i className="lesson-reader__dot" data-status={item.status} />}
+                      {item.mark ? (
+                        <span className="lesson-reader__mark" data-mark={item.mark} aria-hidden>
+                          {item.mark === "quiz" ? (
+                            <ListChecks size={13} strokeWidth={2} />
+                          ) : item.mark === "game" ? (
+                            <Gamepad2 size={13} strokeWidth={2} />
+                          ) : (
+                            <MessagesSquare size={13} strokeWidth={2} />
+                          )}
+                        </span>
+                      ) : item.status === "locked" ? (
+                        <Lock size={14} strokeWidth={2} aria-hidden />
+                      ) : (
+                        <i className="lesson-reader__dot" data-status={item.status} />
+                      )}
                       <b>{item.title}</b>
                       <small data-status={item.status}>
                         {item.status === "done" ? "Terminé" : item.status === "current" ? "En cours" : item.status === "locked" ? "Verrouillé" : "À faire"}

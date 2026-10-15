@@ -72,6 +72,15 @@ function partCodeFromTitle(title: string, index: number) {
   return match?.[1] ?? String(index + 1);
 }
 
+function readerMark(lesson: LearnerLesson): "quiz" | "game" | "interview" | undefined {
+  const type = String(lesson.type ?? "");
+  const title = String(lesson.title ?? "");
+  if (lesson.kind === "quiz" || type === "quiz" || lesson.quiz_id || extractLinkedQuizTestId(lesson)) return "quiz";
+  if (isInterviewLikeLesson(lesson)) return "interview";
+  if (type === "interactive_game" || /jeu\s+interactif/i.test(title)) return "game";
+  return undefined;
+}
+
 function prepareReadingHtml(html: string, title: string) {
   const plain = stripLessonNumber(title).toLowerCase();
   const withoutDuplicate = html.replace(/^\s*<(h1|h2)[^>]*>([\s\S]*?)<\/\1>/i, (block, _tag, inner) => {
@@ -80,7 +89,7 @@ function prepareReadingHtml(html: string, title: string) {
     return stripped === plain || text === plain ? "" : block;
   });
   return withoutDuplicate.replace(
-    /<(h2|h3|p|strong)[^>]*>\s*(?:<strong>)?\s*À retenir\s*(?:<\/strong>)?\s*<\/\1>\s*((?:<p[\s\S]*?<\/p>|<ul[\s\S]*?<\/ul>|<div[\s\S]*?<\/div>)?)/i,
+    /<(h2|h3|p|strong)[^>]*>\s*(?:<strong>)?\s*À retenir\s*(?:<\/strong>)?\s*<\/\1>\s*((?:<p[\s\S]*?<\/p>|<ul[\s\S]*?<\/ul>)?)/i,
     (_all, _tag, body) =>
       `<aside class="lesson-reader__callout"><span class="lesson-reader__callout-icon" aria-hidden="true">💡</span><div><p class="lesson-reader__callout-label">À retenir</p>${body || ""}</div></aside>`,
   );
@@ -280,6 +289,8 @@ const stripYoutubeEmbedsFromHtml = (html: string): string => {
       "",
     );
     s = s.replace(/<div\b[^>]*>\s*<\/div>/gi, "");
+    s = s.replace(/<div\b[^>]*\bdata-youtube-video\b[^>]*>\s*<\/div>/gi, "");
+    s = s.replace(/<div\b[^>]*\bdata-video-block\b[^>]*>\s*<\/div>/gi, "");
     s = s.replace(/<p\b[^>]*>\s*<\/p>/gi, "");
     if (s === before) break;
   }
@@ -784,6 +795,7 @@ export function LessonPlayView({
           href: lessonHref(item.id),
           title: stripLessonNumber(item.title),
           status: item.id === activeLesson.id ? "current" : progressMap[item.id] === "completed" ? "done" : "todo",
+          mark: readerMark(item),
         })),
       };
     });
@@ -1856,7 +1868,7 @@ export function LessonPlayView({
                 normalizedVideoSrc.includes('.wav') ||
                 normalizedVideoSrc.includes('.ogg') ||
                 normalizedVideoSrc.includes('.m4a')) ? (
-                <div className="flex aspect-video w-full flex-col items-center justify-center gap-4 bg-slate-50 p-8">
+                <div className={neo ? "lesson-reader__audio" : "flex aspect-video w-full flex-col items-center justify-center gap-4 bg-slate-50 p-8"}>
                   <div className="w-full max-w-md">
                     <audio controls className="w-full">
                       <source src={normalizedVideoSrc} type="audio/mpeg" />
@@ -1867,6 +1879,23 @@ export function LessonPlayView({
                   </div>
                   <p className="text-sm text-slate-600">Contenu audio</p>
                 </div>
+              ) : neo ? (
+                normalizedVideoSrc && (normalizedVideoSrc.startsWith("http://") || normalizedVideoSrc.startsWith("https://")) ? (
+                  <iframe
+                    src={normalizedVideoSrc}
+                    className="border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Vidéo du cours"
+                  />
+                ) : (
+                  <video controls playsInline>
+                    <source src={normalizedVideoSrc ?? undefined} type="video/mp4" />
+                    <source src={normalizedVideoSrc ?? undefined} type="video/webm" />
+                    <source src={normalizedVideoSrc ?? undefined} type="video/quicktime" />
+                    Votre navigateur ne supporte pas la lecture vidéo.
+                  </video>
+                )
               ) : (
                 <div className="relative aspect-video w-full overflow-hidden">
                   {normalizedVideoSrc && (normalizedVideoSrc.startsWith('http://') || normalizedVideoSrc.startsWith('https://')) ? (

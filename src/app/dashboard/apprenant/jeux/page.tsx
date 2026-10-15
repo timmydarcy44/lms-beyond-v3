@@ -82,33 +82,33 @@ export default async function MyGamesDashboard() {
           const got = new Set([...(cols ?? []).filter((c: any) => c.game_id === slug).flatMap((c: any) => c.collection?.badges ?? []), ...fin.flatMap((r) => (r.badges ?? []).map((b) => b.id))]);
           const tb = totalBadges(slug);
           return (
-            <article key={slug} className="flex flex-col gap-5 rounded-[28px] border bg-card p-5 sm:p-6">
+            <article key={slug} className="flex flex-col gap-5 rounded-[28px] border border-slate-200 bg-white p-5 text-slate-900 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-xl font-bold">{title(slug)}</h2>
-                  <p className="text-sm text-muted-foreground">{fin.length} partie{fin.length > 1 ? "s" : ""} terminée{fin.length > 1 ? "s" : ""} · dernière le {fmtDate(last.completed_at ?? last.started_at, false)}</p>
+                  <h2 className="text-xl font-bold text-slate-900">{title(slug)}</h2>
+                  <p className="text-sm text-slate-500">{fin.length} partie{fin.length > 1 ? "s" : ""} terminée{fin.length > 1 ? "s" : ""} · dernière le {fmtDate(last.completed_at ?? last.started_at, false)}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-indigo-600 dark:text-indigo-300"><Sparkline values={fin.map((r) => r.score ?? 0)} /></div>
-                  <div className="text-right"><div className="text-4xl font-extrabold tabular-nums">{best ?? "-"}</div><div className="text-xs text-muted-foreground">meilleur score</div></div>
+                  <div className="text-right"><div className="text-4xl font-extrabold text-slate-900 tabular-nums">{best ?? "-"}</div><div className="text-xs text-slate-500">meilleur score</div></div>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="flex justify-between text-sm"><span className="font-semibold">Badges</span><span className="text-muted-foreground">{got.size}{tb ? ` / ${tb}` : ""}</span></div>
+                <div className="flex justify-between text-sm"><span className="font-semibold text-slate-900">Badges</span><span className="text-slate-500">{got.size}{tb ? ` / ${tb}` : ""}</span></div>
                 <Bar value={got.size} max={tb ?? Math.max(1, got.size)} />
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[520px] text-sm">
-                  <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2 pr-3 font-medium">Date</th><th className="py-2 pr-3 font-medium">Résultat</th><th className="py-2 pr-3 text-right font-medium">Score</th><th className="py-2" /></tr></thead>
+                  <thead className="text-left text-xs text-slate-500"><tr><th className="py-2 pr-3 font-medium">Date</th><th className="py-2 pr-3 font-medium">Résultat</th><th className="py-2 pr-3 text-right font-medium">Score</th><th className="py-2" /></tr></thead>
                   <tbody>
                     {[...list].reverse().map((r) => (
-                      <tr key={r.id} className="border-t">
-                        <td className="py-2.5 pr-3 tabular-nums">{fmtDate(r.started_at)}</td>
-                        <td className="py-2.5 pr-3">{r.status === "completed" ? <>{r.ending_title}{r.passed && <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Validé</span>}</> : <span className="text-muted-foreground">En cours</span>}</td>
-                        <td className="py-2.5 pr-3 text-right font-bold tabular-nums">{r.score ?? "-"}</td>
+                      <tr key={r.id} className="border-t border-slate-200">
+                        <td className="py-2.5 pr-3 text-slate-700 tabular-nums">{fmtDate(r.started_at)}</td>
+                        <td className="py-2.5 pr-3 text-slate-800">{r.status === "completed" ? <>{r.ending_title}{r.passed && <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700">Validé</span>}</> : <span className="text-slate-500">En cours</span>}</td>
+                        <td className="py-2.5 pr-3 text-right font-bold text-slate-900 tabular-nums">{r.score ?? "-"}</td>
                         <td className="py-2.5 text-right whitespace-nowrap">
-                          <Link className="underline" href={`/dashboard/apprenant/jeux/${r.id}`}>Revoir</Link>
-                          {r.pdf_path && <a className="ml-3 underline" href={`/api/serious-games/deliverable/${r.id}`}>PDF</a>}
+                          <Link className="font-semibold text-slate-900 underline" href={`/dashboard/apprenant/jeux/${r.id}`}>Revoir</Link>
+                          {r.pdf_path && <a className="ml-3 font-semibold text-slate-900 underline" href={`/api/serious-games/deliverable/${r.id}`}>PDF</a>}
                         </td>
                       </tr>
                     ))}

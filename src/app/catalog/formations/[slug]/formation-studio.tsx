@@ -192,19 +192,7 @@ export function FormationStudio({
           locked,
           lockReason,
         }));
-        const readingBlob = [
-          chapter.content,
-          chapter.summary,
-          (chapter as { description?: string }).description,
-          chapter.mediaUrl,
-          (chapter as { videoUrl?: string }).videoUrl,
-        ]
-          .map((value) => String(value ?? ""))
-          .join("\n");
-        const readingHref =
-          plainText(readingBlob).length > 12 || /youtube|youtu\.be|data-video-block|<iframe|<video/i.test(readingBlob)
-            ? `${playBase}/play/${encodeURIComponent(chapter.id)}`
-            : undefined;
+        const readingHref = `${playBase}/play/${encodeURIComponent(chapter.id)}`;
         if (readingHref && leaves.length) {
           leaves.unshift({
             id: `${chapter.id}-reading`,
@@ -256,7 +244,14 @@ export function FormationStudio({
   );
   const resume = flatLeaves.find((leaf) => !leaf.locked && !isDone(leaf.progress)) ?? null;
   const doneLeaves = flatLeaves.filter((leaf) => isDone(leaf.progress)).length;
-  const formationPercent = outline.state === "completed" ? 100 : Math.max(0, Math.min(100, outline.percent ?? 0));
+  const leafScore = flatLeaves.length
+    ? Math.round(
+        flatLeaves.reduce((sum, leaf) => sum + (isDone(leaf.progress) ? 100 : leaf.progress.percent ?? 0), 0) /
+          flatLeaves.length,
+      )
+    : 0;
+  const formationPercent =
+    outline.state === "completed" ? 100 : Math.max(0, Math.min(100, Math.max(outline.percent ?? 0, leafScore)));
   const resumeChapter = chapters.find((chapter) => chapter.id === resume?.chapterId) ?? chapters[0] ?? null;
   const selectedChapter =
     chapters.find((chapter) => chapter.id === chapterParam) ??
@@ -343,7 +338,7 @@ export function FormationStudio({
           const next = new Map<string, ItemProgress>();
           for (const section of payload.sections ?? []) {
             for (const chapter of section.chapters ?? []) {
-              if (chapter?.id && chapter.learnerProgress) next.set(String(chapter.id), chapter.learnerProgress);
+              if (chapter?.id) next.set(String(chapter.id), chapter.ownProgress ?? chapter.learnerProgress ?? EMPTY_PROGRESS);
               for (const sub of chapter.subchapters ?? []) {
                 if (sub?.id && sub.learnerProgress) next.set(String(sub.id), sub.learnerProgress);
               }
@@ -571,7 +566,7 @@ export function FormationStudio({
                                   <span className="formation-studio__dot" data-state={leaf.locked ? undefined : isDone(leaf.progress) ? "done" : leaf.id === resume?.id ? "next" : leaf.progress.state === "percent" ? "progress" : undefined} />
                                   <span className="formation-studio__leaf-copy">
                                     <span className="formation-studio__leaf-title" title={leaf.title}>{leaf.title}</span>
-                                    <span className="formation-studio__meta">{joinMeta([leaf.duration, leaf.locked ? null : isDone(leaf.progress) ? "Terminé" : "À faire"])}</span>
+                                    <span className="formation-studio__meta">{joinMeta([leaf.duration, leaf.locked ? null : isDone(leaf.progress) ? "Terminé" : leaf.progress.percent ? `${leaf.progress.percent} %` : "À faire"])}</span>
                                   </span>
                                   <span className="formation-studio__lock" title={leaf.lockReason} aria-label={leaf.lockReason}>{leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                                 </Link>

@@ -78,6 +78,13 @@ const CFA_LINKS: CrmNavLink[] = [
     featured: true,
     section: "commercial",
   },
+  {
+    href: "/super/crm/cfa/admis",
+    label: "Étudiants admis",
+    icon: UserCheck,
+    featured: true,
+    section: "commercial",
+  },
   { href: "/super/experts", label: "Formateurs", icon: Users, section: "formation" },
 ];
 
@@ -140,6 +147,9 @@ function isLinkActive(
   }
   if (item.href === "/super/crm/cfa/entreprises") {
     return pathname.startsWith("/super/crm/cfa/entreprises");
+  }
+  if (item.href === "/super/crm/cfa/admis") {
+    return pathname.startsWith("/super/crm/cfa/admis");
   }
   if (item.href === "/super/experts") {
     return pathname.startsWith("/super/experts");

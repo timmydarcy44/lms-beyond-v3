@@ -18,12 +18,14 @@ export type ReaderLeaf = {
   href: string;
   title: string;
   status: "done" | "current" | "todo" | "locked";
+  percent?: number | null;
   mark?: "quiz" | "game" | "interview";
 };
 
 export type ReaderPart = {
   id: string;
   title: string;
+  href?: string;
   done: number;
   total: number;
   items: ReaderLeaf[];
@@ -37,6 +39,7 @@ type Props = {
   chapterTitle: string;
   chapterDone: number;
   chapterTotal: number;
+  chapterPercent: number;
   chip: string;
   heading: string;
   segments: Array<"done" | "current" | "todo">;
@@ -72,6 +75,7 @@ export function LessonReaderShell({
   chapterTitle,
   chapterDone,
   chapterTotal,
+  chapterPercent,
   chip,
   heading,
   segments,
@@ -162,29 +166,40 @@ export function LessonReaderShell({
         <header>
           <h3>{chapterTitle}</h3>
           <span>
-            {chapterDone}/{chapterTotal}
+            {chapterPercent} % · {chapterDone}/{chapterTotal}
           </span>
         </header>
         <i>
-          <b style={{ width: `${chapterTotal ? Math.round((chapterDone / chapterTotal) * 100) : 0}%` }} />
+          <b style={{ width: `${Math.max(0, Math.min(100, chapterPercent))}%` }} />
         </i>
       </article>
       {parts.map((part) => {
         const open = openPartId === part.id;
         return (
           <div key={part.id}>
-            <button
-              type="button"
-              className="lesson-reader__part-btn"
-              aria-expanded={open}
-              onClick={() => setOpenPartId(open ? null : part.id)}
-            >
-              <ChevronRight className="lesson-reader__chevron" size={16} strokeWidth={2} aria-hidden />
-              <strong>{part.title}</strong>
+            <div className="lesson-reader__part-btn" data-open={open || undefined}>
+              <button
+                type="button"
+                className="lesson-reader__part-toggle"
+                aria-expanded={open}
+                aria-label={open ? "Replier" : "Déployer"}
+                onClick={() => setOpenPartId(open ? null : part.id)}
+              >
+                <ChevronRight className="lesson-reader__chevron" size={16} strokeWidth={2} aria-hidden />
+              </button>
+              {part.href ? (
+                <Link href={part.href} className="lesson-reader__part-link">
+                  <strong>{part.title}</strong>
+                </Link>
+              ) : (
+                <button type="button" className="lesson-reader__part-link" onClick={() => setOpenPartId(open ? null : part.id)}>
+                  <strong>{part.title}</strong>
+                </button>
+              )}
               <em>
                 {part.done}/{part.total}
               </em>
-            </button>
+            </div>
             {open ? (
               <ul className="lesson-reader__leaves">
                 {part.items.map((item) => (
@@ -207,7 +222,17 @@ export function LessonReaderShell({
                       )}
                       <b>{item.title}</b>
                       <small data-status={item.status}>
-                        {item.status === "done" ? "Terminé" : item.status === "current" ? "En cours" : item.status === "locked" ? "Verrouillé" : "À faire"}
+                        {item.status === "done"
+                          ? "Terminé"
+                          : item.status === "current"
+                            ? item.percent
+                              ? `${item.percent} %`
+                              : "En cours"
+                            : item.status === "locked"
+                              ? "Verrouillé"
+                              : item.percent
+                                ? `${item.percent} %`
+                                : "À faire"}
                       </small>
                     </Link>
                   </li>
@@ -245,6 +270,7 @@ export function LessonReaderShell({
               <p className="lesson-reader__kicker">{kicker}</p>
               <p className="lesson-reader__part">{partTitle}</p>
             </div>
+            <div id="byound-ai-trigger" className="lesson-reader__ai-trigger" />
             <button type="button" className="lesson-reader__icon-btn" aria-label="Sommaire" onClick={() => {
               if (window.matchMedia("(min-width: 1024px)").matches) setDesktopOutline((value) => !value);
               else setSheetOpen(true);
@@ -283,11 +309,14 @@ export function LessonReaderShell({
             </div>
           ) : null}
         </header>
-        <main className="lesson-reader__main">
-          <p className="lesson-reader__chip">{chip}</p>
-          <h1 className="lesson-reader__h1">{heading}</h1>
-          {children}
-        </main>
+        <div className="lesson-reader__body">
+          <main className="lesson-reader__main">
+            <p className="lesson-reader__chip">{chip}</p>
+            <h1 className="lesson-reader__h1">{heading}</h1>
+            {children}
+          </main>
+          <div id="byound-ai-dock" className="lesson-reader__ai-dock" />
+        </div>
         <div className="lesson-reader__bar">
           <button type="button" className="lesson-reader__bar-prev" aria-label="Sous-chapitre précédent" disabled={prevDisabled} aria-disabled={prevDisabled} onClick={onPrev}>
             <ChevronLeft size={18} strokeWidth={2} />

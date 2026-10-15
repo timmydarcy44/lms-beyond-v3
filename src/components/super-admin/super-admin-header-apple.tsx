@@ -63,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: "CRM Apprenant", href: "/super/crm/cfa", exact: true },
       { label: "Cursus", href: "/super/crm/cfa/cursus" },
       { label: "CRM Entreprise", href: "/super/crm/cfa/entreprises" },
+      { label: "Étudiants admis", href: "/super/crm/cfa/admis" },
       { label: "Formateurs", href: "/super/experts" },
     ],
   },

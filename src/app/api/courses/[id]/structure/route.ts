@@ -259,6 +259,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
           id: chId || String(ch.id),
           title: ch.title,
           learnerProgress: chapterLearnerProgress,
+          ownProgress: chapterOwn,
           subchapters: subs,
         };
       }),

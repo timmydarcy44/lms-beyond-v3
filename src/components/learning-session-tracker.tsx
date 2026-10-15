@@ -16,6 +16,24 @@ interface LearningSessionTrackerProps {
  * Composant wrapper qui track automatiquement le temps de session
  * et le temps actif basé sur les mouvements de souris et l'activité utilisateur
  */
+const LESSON_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Temps actif du chapitre ou du sous-chapitre, en plus du temps de la formation. */
+export function LessonLeafSessionTracker({
+  lessonId,
+  children,
+}: {
+  lessonId: string;
+  children: ReactNode;
+}) {
+  if (!LESSON_UUID.test(lessonId)) return <>{children}</>;
+  return (
+    <LearningSessionTracker contentType="course" contentId={lessonId} showIndicator={false}>
+      {children}
+    </LearningSessionTracker>
+  );
+}
+
 export function LearningSessionTracker({
   contentType,
   contentId,

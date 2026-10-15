@@ -142,11 +142,27 @@
   background: var(--accent);
 }
 
+.lesson-reader__ai-trigger:empty {
+  display: none;
+}
+
+.lesson-reader__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+}
+
 .lesson-reader__main {
   width: 100%;
   max-width: 720px;
+  flex: 999 1 560px;
   margin: 0 auto;
   padding: 22px 20px 132px;
+}
+
+.lesson-reader__ai-dock:empty {
+  display: none;
 }
 
 .lesson-reader__chip {
@@ -690,7 +706,32 @@
   transition: transform 160ms ease;
 }
 
-.lesson-reader__part-btn[aria-expanded="true"] .lesson-reader__chevron {
+.lesson-reader__part-toggle {
+  display: flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.lesson-reader__part-link {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lesson-reader__part-link strong {
+  flex: 1;
+}
+
+.lesson-reader__part-btn[data-open="true"] .lesson-reader__chevron {
   transform: rotate(90deg);
 }
 
@@ -811,13 +852,23 @@
     flex: 1;
   }
 
+  .lesson-reader__ai-dock:not(:empty) {
+    position: sticky;
+    top: 88px;
+    flex: 1 1 400px;
+    max-width: 460px;
+    height: calc(100dvh - 88px);
+    overflow: auto;
+  }
+
   .lesson-reader__sheet {
     display: none;
   }
 }
 
 @media (max-width: 1023px) {
-  .lesson-reader__sidebar {
+  .lesson-reader__sidebar,
+  .lesson-reader__ai-dock {
     display: none;
   }
 }

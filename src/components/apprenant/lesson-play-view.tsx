@@ -352,7 +352,7 @@ export function LessonPlayView({
     name: null,
   });
   const [showMobileOutline, setShowMobileOutline] = useState(false);
-  const [progressMap, setProgressMap] = useState<Record<string, string>>({});
+  const [progressMap, setProgressMap] = useState<Record<string, { state: string; percent: number | null }>>({});
   const [showCertificationOverlay, setShowCertificationOverlay] = useState(false);
   const [badgeConfig, setBadgeConfig] = useState<any>(null);
   const [caseAiAnalysis, setCaseAiAnalysis] = useState<string | null>(null);
@@ -778,12 +778,16 @@ export function LessonPlayView({
       .then((response) => (response.ok ? response.json() : null))
       .then((json) => {
         if (ignore || !json) return;
-        const next: Record<string, string> = {};
+        const next: Record<string, { state: string; percent: number | null }> = {};
+        const readProgress = (row: { state?: string; percent?: number | null } | null | undefined) => ({
+          state: String(row?.state ?? "none"),
+          percent: typeof row?.percent === "number" ? row.percent : null,
+        });
         for (const section of json.sections ?? []) {
           for (const chapter of section.chapters ?? []) {
-            if (chapter?.id) next[String(chapter.id)] = String(chapter.learnerProgress?.state ?? "none");
+            if (chapter?.id) next[String(chapter.id)] = readProgress(chapter.ownProgress ?? { state: "none", percent: null });
             for (const sub of chapter.subchapters ?? []) {
-              if (sub?.id) next[String(sub.id)] = String(sub.learnerProgress?.state ?? "none");
+              if (sub?.id) next[String(sub.id)] = readProgress(sub.learnerProgress);
             }
           }
         }
@@ -799,19 +803,29 @@ export function LessonPlayView({
     const moduleIndex = Math.max(0, modules.findIndex((module) => module.id === activeModule?.id));
     const groups = groupLessonsForOutline(activeModule?.lessons ?? []);
     const parts: ReaderPart[] = groups.map((group, index) => {
-      const source = group.items.length ? group.items : group.chapter ? [group.chapter] : [];
-      const done = source.filter((item) => progressMap[item.id] === "completed").length;
+      const children = group.items.filter((item) => item.id !== group.chapter?.id);
+      const chapter = group.chapter;
+      const source = chapter ? [chapter, ...children] : children;
+      const scoreOf = (id: string) => {
+        const row = progressMap[id];
+        if (!row || row.state === "none") return 0;
+        if (row.state === "completed") return 100;
+        return row.percent ?? 0;
+      };
+      const done = source.filter((item) => progressMap[item.id]?.state === "completed").length;
       return {
         id: group.key,
-        title: stripLessonNumber(group.chapter?.title || source[0]?.title || `Partie ${index + 1}`),
+        title: stripLessonNumber(chapter?.title || source[0]?.title || `Partie ${index + 1}`),
+        href: chapter ? lessonHref(chapter.id) : undefined,
         done,
         total: source.length,
-        items: source.map((item) => ({
+        items: source.map((item, itemIndex) => ({
           id: item.id,
           href: lessonHref(item.id),
-          title: stripLessonNumber(item.title),
-          status: item.id === activeLesson.id ? "current" : progressMap[item.id] === "completed" ? "done" : "todo",
-          mark: readerMark(item),
+          title: chapter && item.id === chapter.id && children.length ? "Lire le chapitre" : stripLessonNumber(item.title),
+          percent: scoreOf(item.id) || null,
+          status: item.id === activeLesson.id ? "current" : progressMap[item.id]?.state === "completed" ? "done" : "todo",
+          mark: itemIndex === 0 && chapter && item.id === chapter.id && children.length ? undefined : readerMark(item),
         })),
       };
     });
@@ -821,8 +835,16 @@ export function LessonPlayView({
     const localIndex = Math.max(0, current?.items.findIndex((item) => item.id === activeLesson.id) ?? 0);
     const chapterDone = parts.reduce((sum, part) => sum + part.done, 0);
     const chapterTotal = parts.reduce((sum, part) => sum + part.total, 0);
+    const chapterPercent = chapterTotal
+      ? Math.round(
+          parts.reduce(
+            (sum, part) => sum + part.items.reduce((inner, item) => inner + (item.status === "done" ? 100 : item.percent ?? 0), 0),
+            0,
+          ) / chapterTotal,
+        )
+      : 0;
     const code = partCodeFromTitle(groups.find((group) => group.key === current?.id)?.chapter?.title || current?.title || "", Math.max(0, parts.findIndex((part) => part.id === current?.id)));
-    return { moduleIndex, parts, current, flat, position, localIndex, chapterDone, chapterTotal, code };
+    return { moduleIndex, parts, current, flat, position, localIndex, chapterDone, chapterTotal, chapterPercent, code };
   }, [activeLesson.id, activeModule?.id, activeModule?.lessons, lessonHref, modules, progressMap]);
   const entretienHref = `${lessonHref(activeLesson.id)}/entretien`;
 
@@ -2701,6 +2723,7 @@ export function LessonPlayView({
           chapterTitle={stripLessonNumber(activeModule?.title || `Chapitre ${reader.moduleIndex + 1}`)}
           chapterDone={reader.chapterDone}
           chapterTotal={reader.chapterTotal}
+          chapterPercent={reader.chapterPercent}
           chip={`Sous-chapitre ${reader.localIndex + 1} sur ${total} · ${readingDuration}`}
           heading={readingHeading}
           segments={(reader.current?.items ?? []).map((item) => (item.status === "done" || item.status === "current" ? item.status : "todo"))}

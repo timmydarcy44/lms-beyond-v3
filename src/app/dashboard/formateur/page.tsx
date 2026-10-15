@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BookOpen, CalendarDays, CalendarX, NotebookPen, QrCode } from "lucide-react";
 
+import { JadeDemoGate } from "@/components/demo/jade-demo-gate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,14 @@ function isToday(iso: string) {
 }
 
 export default function FormateurDashboardPage() {
+  return (
+    <JadeDemoGate space="formateur">
+      <FormateurDashboardInner />
+    </JadeDemoGate>
+  );
+}
+
+function FormateurDashboardInner() {
   const [firstName, setFirstName] = useState("Expert");
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<Overview>({

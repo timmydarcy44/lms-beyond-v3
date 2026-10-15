@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { JadeDemoGate } from "@/components/demo/jade-demo-gate";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ClubLayout } from "@/components/club/club-layout";
@@ -79,6 +80,14 @@ const activities = [
 ];
 
 export default function ClubDashboardPage() {
+  return (
+    <JadeDemoGate space="club">
+      <ClubDashboardInner />
+    </JadeDemoGate>
+  );
+}
+
+function ClubDashboardInner() {
   const [club, setClub] = useState<any>(demoClub);
   const [partners, setPartners] = useState<any[]>(clubPartners);
   const [news, setNews] = useState<any[]>([]);

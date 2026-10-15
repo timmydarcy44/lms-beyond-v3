@@ -381,7 +381,7 @@
   position: absolute;
   inset: 0;
   border: 0;
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  background: rgba(7, 8, 11, 0.82);
 }
 
 .formation-studio__sheet-panel {
@@ -389,32 +389,98 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: min(640px, 100%);
+  width: min(720px, 100%);
   max-height: min(80dvh, 720px);
   overflow: auto;
-  padding: 24px;
+  padding: 28px;
   border: 1px solid var(--border);
   border-radius: 26px;
   background: var(--surface);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.formation-studio__sheet-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.formation-studio__sheet-panel::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
 }
 
 .formation-studio__sheet-panel h2 {
   margin: 0;
-  font-size: 20px;
+  color: var(--text);
+  font-size: 22px;
   font-weight: 800;
 }
 
-.formation-studio__sheet-panel p,
-.formation-studio__sheet-panel li {
-  color: var(--text-muted);
-  font-size: 15px;
-  line-height: 1.55;
+.formation-studio__sheet-panel p {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
-.formation-studio__sheet-panel ul {
+.formation-studio__goal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
+  counter-reset: goal;
+}
+
+.formation-studio__goal-list li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.formation-studio__goal-list li::before {
+  content: counter(goal);
+  counter-increment: goal;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.formation-studio__docs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 20px 0;
+}
+
+.formation-studio__doc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.formation-studio__doc-actions button {
+  min-height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.formation-studio__doc-actions button:disabled {
+  opacity: 0.45;
 }
 
 .formation-studio__sheet-panel .formation-studio__pill {

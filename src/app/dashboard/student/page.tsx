@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { JadeDemoHome } from "@/components/demo/jade-demo-home";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getSession } from "@/lib/auth/session";
 
 export default async function StudentDashboardPage() {
   const session = await getSession();
+  if (isJadeDemoEmail(session?.email)) {
+    return <JadeDemoHome space="student" />;
+  }
   if (session?.role === "demo") {
     return (
       <div className="min-h-screen bg-[#0a0a0a] px-6 py-10 text-white">

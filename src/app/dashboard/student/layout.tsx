@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { PaywallLMS } from "@/components/paywalls/paywall-lms";
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 
@@ -13,6 +14,9 @@ export default async function StudentSuiteLayout({ children }: { children: React
 
   if (
     isUniversalAdminRole(profile?.role) ||
+    isJadeDemoEmail(user.email) ||
+    isJadeDemoEmail(profile?.email) ||
+    String(profile?.role ?? "").toLowerCase() === "demo" ||
     isByoundBusinessManager(user.email) ||
     isByoundBusinessManager(profile?.email)
   ) {

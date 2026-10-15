@@ -14,6 +14,8 @@ import { PSG_ORG_ID } from "@/lib/entreprise/psg-demo-data";
 import { getMiddlewarePathname } from "@/lib/http/request-pathname";
 import { getServerClient } from "@/lib/supabase/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { JadeDemoHome } from "@/components/demo/jade-demo-home";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { SchoolDashboard } from "@/components/beyond-connect/school-dashboard";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,9 @@ export default async function SchoolDashboardPage() {
   const session = await getSession();
   if (!session) {
     redirect("/login?next=/dashboard/ecole");
+  }
+  if (isJadeDemoEmail(session.email)) {
+    return <JadeDemoHome space="ecole" />;
   }
 
   const supabase = await getServerClient();

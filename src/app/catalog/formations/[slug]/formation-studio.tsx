@@ -92,12 +92,6 @@ function lockExplanation(previousTitle: string, condition?: string): string {
   return `Verrouillé : terminez « ${target} » pour continuer.`;
 }
 
-function excerpt(value: string, max = 180): string {
-  const flat = value.replace(/\s+/g, " ").trim();
-  if (flat.length <= max) return flat;
-  return `${flat.slice(0, max).replace(/\s+\S*$/, "")}…`;
-}
-
 function plainText(value: string): string {
   return value
     .replace(/<br\s*\/?>/gi, "\n")
@@ -386,6 +380,10 @@ export function FormationStudio({
       }));
   const levelDone = levelRows.filter((row) => isDone(row.progress)).length;
   const levelNext = levelRows.find((row) => !row.locked && !isDone(row.progress)) ?? null;
+  const chaptersDone = chapters.filter((chapter) => {
+    const leaves = chapter.nodes.flatMap((node) => (node.leaves.length ? node.leaves : [node]));
+    return leaves.length > 0 && leaves.every((item) => isDone(item.progress));
+  }).length;
   const partTotal = selectedChapter?.nodes.length ?? 0;
   const partDone = (selectedChapter?.nodes ?? []).filter((node) =>
     node.leaves.length ? node.leaves.every((leaf) => isDone(leaf.progress)) : isDone(node.progress),
@@ -394,7 +392,7 @@ export function FormationStudio({
   const levelLabel = levelDone === 0 ? "Commencer" : levelNext ? "Reprendre" : "Chapitre suivant";
   const showIndicatorTabs = Boolean(activity?.available);
   const presentation = plainText(snapshot?.general?.presentation || snapshot?.general?.description || description || "");
-  const objectives = [...new Set([...(snapshot?.general?.objectifs ?? []), ...(snapshot?.objectives ?? [])].map((item) => item.trim()).filter(Boolean))];
+  const objectives = [...new Set([...(snapshot?.general?.objectifs ?? []), ...(snapshot?.objectives ?? [])].flatMap((item) => item.split(/\n+/)).map((item) => item.trim()).filter(Boolean))];
   const coverUrl = [cover, snapshot?.general?.cover_image, snapshot?.general?.heroImage].find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() ?? "";
   const badge = certification ?? {
     status: formationPercent >= 100 ? "unlocked" : "locked",
@@ -574,38 +572,6 @@ export function FormationStudio({
           </div>
         </header>
 
-        {coverUrl || presentation || objectives.length ? (
-          <section className="formation-studio__intro" data-layout={coverUrl && (presentation || objectives.length) ? "split" : "single"}>
-            {coverUrl ? <img className="formation-studio__cover" src={coverUrl} alt="" /> : null}
-            {presentation || objectives.length ? (
-              <div className="formation-studio__intro-copy">
-                {presentation ? (
-                  <div>
-                    <h2>Présentation</h2>
-                    <p>{excerpt(presentation)}</p>
-                    <button type="button" className="formation-studio__text-btn" onClick={() => setDetailOpen("presentation")}>
-                      Lire la présentation
-                    </button>
-                  </div>
-                ) : null}
-                {objectives.length ? (
-                  <div>
-                    <h2>Objectifs pédagogiques</h2>
-                    <ul>
-                      {objectives.slice(0, 2).map((objective) => (
-                        <li key={objective}>{objective}</li>
-                      ))}
-                    </ul>
-                    <button type="button" className="formation-studio__text-btn" onClick={() => setDetailOpen("objectives")}>
-                      Voir les {objectives.length} objectifs
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
         <div className="formation-studio__hero">
           {showIndicatorTabs ? (
             <div className="formation-studio__tabs" role="tablist" aria-label="Indicateur">
@@ -644,7 +610,7 @@ export function FormationStudio({
                 <span>%</span>
               </p>
               <p className="formation-studio__context">
-                {doneLeaves} sous-chapitre{doneLeaves > 1 ? "s" : ""} terminé{doneLeaves > 1 ? "s" : ""} sur {flatLeaves.length}
+                {chaptersDone} chapitre{chaptersDone > 1 ? "s" : ""} sur {chapters.length}
               </p>
             </>
           )}
@@ -690,6 +656,20 @@ export function FormationStudio({
             </div>
           </div>
         </div>
+
+        {coverUrl || presentation || objectives.length ? (
+          <section className="formation-studio__docs">
+            {coverUrl ? <img className="formation-studio__cover" src={coverUrl} alt="" /> : null}
+            <div className="formation-studio__doc-actions">
+              <button type="button" disabled={!presentation} onClick={() => setDetailOpen("presentation")}>
+                Présentation
+              </button>
+              <button type="button" disabled={!objectives.length} onClick={() => setDetailOpen("objectives")}>
+                Objectifs pédagogiques
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         <div className="formation-studio__grid">
           <article className="formation-studio__card formation-studio__current">
@@ -832,11 +812,11 @@ export function FormationStudio({
           <div className="formation-studio__sheet-panel">
             <h2>{detailOpen === "presentation" ? "Présentation" : "Objectifs pédagogiques"}</h2>
             {detailOpen === "presentation" ? <p>{presentation}</p> : (
-              <ul>
+              <ol className="formation-studio__goal-list">
                 {objectives.map((objective) => (
                   <li key={objective}>{objective}</li>
                 ))}
-              </ul>
+              </ol>
             )}
             <button type="button" className="formation-studio__pill" onClick={() => setDetailOpen(null)}>
               Fermer

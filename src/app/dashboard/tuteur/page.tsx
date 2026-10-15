@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { JadeDemoGate } from "@/components/demo/jade-demo-gate";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -92,6 +93,14 @@ function filterAssignments(list: TutorWorkspaceAssignment[], q: string) {
 }
 
 export default function TutorDashboardPage() {
+  return (
+    <JadeDemoGate space="tuteur">
+      <TutorDashboardInner />
+    </JadeDemoGate>
+  );
+}
+
+function TutorDashboardInner() {
   const { data, error, loading } = useTutorWorkspace();
   const [search, setSearch] = useState("");
 

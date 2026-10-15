@@ -158,6 +158,11 @@ export default async function SuperDashboard() {
           <p className="text-sm text-gray-600 text-center md:text-left">
             {isContentin ? "Gestion de votre catalogue et de votre site" : "Vue d'ensemble du système"}
           </p>
+          {!isContentin ? (
+            <a href="/super/demo" className="mt-3 inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900">
+              Compte démo
+            </a>
+          ) : null}
         </div>
 
         {!isContentin && (

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 import { getTenantFromHostname, isJessicaContentinMarketingHostname } from "@/lib/tenant/config";
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { isClubOnlyAccount, canAccessClubDashboard } from "@/lib/auth/club-access";
@@ -390,7 +391,10 @@ async function runMiddleware(request: NextRequest) {
 
   // Club / partenaire : beyondcenter.fr uniquement (jamais sur EDGE).
   if ((clubDashboardPath || partenaireDashboardPath) && !canServeClubPartenaireDashboards(hostWithoutPort)) {
-    return NextResponse.redirect(new URL("/", request.url));
+    const clubProfile = await fetchProfileForRequest(request);
+    if (!isJadeDemoEmail(clubProfile?.email)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   // Comptes club / partenaire exclusifs → verrouillés sur leur dashboard.
@@ -498,7 +502,7 @@ async function runMiddleware(request: NextRequest) {
 
     const isSuperAdmin =
       isUniversalAdminRole(role) || roleType === "super_admin" || role === "super_admin";
-    if (isSuperAdmin || isByoundBusinessManager(user.email)) {
+    if (isSuperAdmin || isByoundBusinessManager(user.email) || isJadeDemoEmail(user.email)) {
       return response;
     }
 

@@ -3,6 +3,7 @@ import { ExpertAccessProvider } from "@/components/expert/expert-access-provider
 import { ExpertRouteGuard } from "@/components/expert/expert-route-guard";
 import { expertSetPasswordPath } from "@/lib/expert/signup-redirect";
 import { loadOrCreateExpertProfile } from "@/lib/expert/load-expert-profile";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getSession } from "@/lib/auth/session";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -10,6 +11,10 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
   const session = await getSession();
   if (!session?.id) {
     redirect("/login?next=/dashboard/expert");
+  }
+
+  if (isJadeDemoEmail(session.email)) {
+    return <div className="min-h-screen bg-[#070b1f] text-white">{children}</div>;
   }
 
   const supabase = await getServerClient();

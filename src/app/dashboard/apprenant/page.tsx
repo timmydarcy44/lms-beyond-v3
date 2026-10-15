@@ -4,14 +4,19 @@ import {
   buildPsgApprenantDemoParcours,
   isPsgDemoViewer,
 } from "@/lib/entreprise/psg-demo-data";
+import { JadeDemoHome } from "@/components/demo/jade-demo-home";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getSession } from "@/lib/auth/session";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApprenantHomePage() {
-  const data = await getApprenantDashboardData();
   const session = await getSession();
+  if (isJadeDemoEmail(session?.email)) {
+    return <JadeDemoHome space="apprenant" />;
+  }
+  const data = await getApprenantDashboardData();
   const email = session?.email ?? null;
   const isPsgApprenant =
     isPsgDemoViewer(email) && String(email ?? "").toLowerCase().includes("demoapprenant@psg.fr");

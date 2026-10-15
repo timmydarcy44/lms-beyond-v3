@@ -11,6 +11,8 @@ import {
   fetchSoftSkillsRadarForCandidates,
 } from "@/lib/learner/resolve-learner-profile-candidates";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_DISC_SCORES, JADE_IDMC_AXES, JADE_SOFT_SKILLS_RADAR } from "@/lib/demo/jade-dashboard-mocks";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +94,18 @@ export async function GET() {
       userId,
       email,
       profileIds,
+    });
+  }
+
+  if (isJadeDemoEmail(email)) {
+    return NextResponse.json({
+      userId,
+      firstName: firstName || "Jade",
+      jobTitle: "Commerciale",
+      discScores: JADE_DISC_SCORES,
+      idmcAxes: JADE_IDMC_AXES,
+      softSkillsRadar: JADE_SOFT_SKILLS_RADAR,
+      demo_enriched: true,
     });
   }
 

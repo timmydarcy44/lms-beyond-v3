@@ -16,6 +16,8 @@ import {
   getEntrepriseOverviewServiceClient,
   resolveEntrepriseOverviewAccess,
 } from "@/lib/entreprise/overview-route";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_ENTREPRISE_OVERVIEW } from "@/lib/demo/jade-dashboard-mocks";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,10 @@ export async function GET() {
   const access = await resolveEntrepriseOverviewAccess();
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  if (isJadeDemoEmail(access.viewer.email)) {
+    return NextResponse.json(JADE_ENTREPRISE_OVERVIEW);
   }
 
   if ("superAdminPreview" in access && access.superAdminPreview) {

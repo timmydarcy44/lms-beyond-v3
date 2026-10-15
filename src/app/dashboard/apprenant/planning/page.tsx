@@ -9,7 +9,10 @@ import {
   APPRENANT_PAGE_SHELL,
   APPRENANT_PAGE_TITLE,
 } from "@/lib/apprenant/connect-nav";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { jadePlanningSlots } from "@/lib/demo/jade-dashboard-mocks";
 import { formatWeekRangeLabel } from "@/lib/ecole/planning-utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type LearnerSlot = {
@@ -72,6 +75,13 @@ export default function ApprenantPlanningPage() {
     const to = new Date(weekStart);
     to.setDate(to.getDate() + 7);
     try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: userData } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+      if (isJadeDemoEmail(userData.user?.email)) {
+        setSlots(jadePlanningSlots(weekStart));
+        setWarning(null);
+        return;
+      }
       const res = await fetch(
         `/api/dashboard/apprenant/planning?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
         { credentials: "include" },

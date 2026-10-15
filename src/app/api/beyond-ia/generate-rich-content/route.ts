@@ -320,9 +320,11 @@ export async function POST(req: NextRequest) {
       ...structureRules,
       "NE PARLE PAS de neurosciences dans le texte, utilise-les simplement pour rendre le contenu plus mémorisable.",
       "Évite les introductions pompeuses. Entre directement dans le vif du sujet.",
+      "LONGUEUR : rédige un vrai cours, environ 900 à 1400 mots. Plusieurs parties titrées. Chaque notion est expliquée : de quoi il s'agit, pourquoi ça compte, comment ça fonctionne, et un exemple concret dans le texte.",
+      "Interdit de t'arrêter après une introduction et un schéma de quelques lignes.",
       ...(isSchema
         ? [
-            "Mode schéma : le cœur du message est le bloc visuel (frise d’étapes). Les paragraphes hors schéma restent courts ; ne remplace pas le schéma par une longue liste.",
+            "Mode schéma : le schéma illustre le cours, il ne le remplace pas. Le texte autour du schéma reste un cours complet.",
           ]
         : [
             "Contenu à forte valeur ajoutée, exhaustif. Évite autant que possible les bullet points.",
@@ -333,9 +335,10 @@ export async function POST(req: NextRequest) {
       ...(isSchema
         ? [
             "STRUCTURE (mode schéma) :",
-            "- Introduction très courte.",
-            "- Bloc schéma visuel OBLIGATOIRE (voir TYPE DE CONTENU) placé tôt dans le HTML.",
-            "- Puis compléments : paragraphes courts uniquement.",
+            "- Introduction qui pose le sujet et annonce le fil du cours.",
+            "- 3 à 5 parties <h2> ou <h3> qui développent les notions, chacune en plusieurs paragraphes.",
+            "- Bloc schéma visuel OBLIGATOIRE (voir TYPE DE CONTENU), placé après l'explication, pas à la place.",
+            "- Après le schéma, un paragraphe par étape : ce qu'elle signifie, un exemple, ce qu'il faut retenir.",
           ]
         : usePedagogicalCallouts
             ? [
@@ -351,7 +354,7 @@ export async function POST(req: NextRequest) {
                 "- Pas de cycle « définition + exemple encadré » systématique.",
               ]),
       "IMPORTANT : Je ne veux pas de listes de définitions. Pas de catalogue de définitions à la suite.",
-      "Style : évite les gros blocs. Paragraphes courts et resserrés.",
+      "Style : phrases claires. Paragraphes de 4 à 6 phrases. Développe, ne résume pas.",
       "",
       ...(usePedagogicalCallouts
         ? [
@@ -373,7 +376,7 @@ export async function POST(req: NextRequest) {
               "- N’utilise PAS <div class=\"bg-red-50\">, <div class=\"bg-green-50\">, border-red-500, border-green-500.",
               "- N’écris PAS « Définition : » ni « Exemple concret : » comme titres d’encarts colorés.",
               "- Intègre le vocabulaire dans des paragraphes <p> ; les termes clés peuvent être en <strong> dans le flux du texte.",
-              "- N’ajoute pas d’exemples détaillés sauf si l’instruction utilisateur le demande explicitement.",
+              "- Chaque grande partie contient au moins un exemple concret, rédigé dans le texte.",
             ]),
       ...(isSchema
         ? [
@@ -395,7 +398,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt = isScientificEvidence
       ? buildScientificSourcesSystemMessage()
       : pedagogyRules.replaceAll("{prompt}", promptSummary);
-    const completionMaxTokens = isScientificEvidence ? 2000 : 4500;
+    const completionMaxTokens = isScientificEvidence ? 2500 : 7000;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -435,7 +438,15 @@ export async function POST(req: NextRequest) {
     if (isScientificEvidence) {
       userParts.push("DESCRIPTION À RÉDIGER :", prompt, "", userHtmlRules);
     } else {
-      userParts.push("Consignes et sujet à rédiger (priorité absolue):", prompt, "", userHtmlRules, userSchemaReminder);
+      userParts.push(
+        "Consignes et sujet à rédiger (priorité absolue):",
+        prompt,
+        "",
+        "Rédige un cours complet, pas une fiche de quelques lignes. Vise 900 à 1400 mots, avec explications et exemples.",
+        "",
+        userHtmlRules,
+        userSchemaReminder,
+      );
     }
 
     const client = new OpenAI({ apiKey });

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Manrope } from "next/font/google";
 import { ArrowRight, Bell, Check, ChevronRight, Lock, Menu, MoreHorizontal, NotebookPen, Play, Search, Shield, Sparkles } from "lucide-react";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
@@ -38,6 +38,8 @@ type Leaf = {
   progress: ItemProgress;
   locked: boolean;
   lockReason?: string;
+  /** Changement de niveau sur la même page, sans recharger le serveur. */
+  openLevel?: { chapterId: string; nodeId?: string };
 };
 type Node = {
   id: string;
@@ -150,8 +152,9 @@ export function FormationStudio({
   episodes?: { id: string; progress?: number | null }[];
 }) {
   const supabase = useSupabase();
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const [chapterParam, setChapterParam] = useState<string | null>(searchParams.get("chapitre"));
+  const [niveauParam, setNiveauParam] = useState<string | null>(searchParams.get("niveau"));
   const { isDyslexiaMode, toggleDyslexiaMode } = useDyslexiaMode();
   const [query, setQuery] = useState("");
   const [drawer, setDrawer] = useState(false);
@@ -188,6 +191,19 @@ export function FormationStudio({
           locked,
           lockReason,
         }));
+        const chapterText = plainText(String(chapter.content ?? ""));
+        if ((chapterText.length > 12 || Boolean(chapter.mediaUrl?.trim())) && leaves.length) {
+          leaves.unshift({
+            id: `${chapter.id}-reading`,
+            title: "Contenu du chapitre",
+            duration: chapter.duration?.trim() || "",
+            typeLabel: typeLabel(chapter),
+            href: `${playBase}/play/${encodeURIComponent(chapter.id)}`,
+            progress: progressById.get(String(chapter.id)) ?? EMPTY_PROGRESS,
+            locked,
+            lockReason,
+          });
+        }
         const own = progressById.get(String(chapter.id)) ?? EMPTY_PROGRESS;
         const done = leaves.length ? leaves.every((leaf) => isDone(leaf.progress)) : isDone(own);
         previousDone = done;
@@ -227,20 +243,22 @@ export function FormationStudio({
   const resume = flatLeaves.find((leaf) => !leaf.locked && !isDone(leaf.progress)) ?? null;
   const doneLeaves = flatLeaves.filter((leaf) => isDone(leaf.progress)).length;
   const formationPercent = outline.state === "completed" ? 100 : Math.max(0, Math.min(100, outline.percent ?? 0));
-  const chapterParam = searchParams.get("chapitre");
-  const niveauParam = searchParams.get("niveau");
   const resumeChapter = chapters.find((chapter) => chapter.id === resume?.chapterId) ?? chapters[0] ?? null;
   const selectedChapter =
     chapters.find((chapter) => chapter.id === chapterParam) ??
     chapters.find((chapter) => chapter.nodes.some((node) => node.id === niveauParam)) ??
     resumeChapter;
   const selectedNode = niveauParam ? selectedChapter?.nodes.find((node) => node.id === niveauParam) ?? null : null;
-  const levelHref = (chapterId?: string | null, nodeId?: string | null) => {
-    const params = new URLSearchParams();
+  const goLevel = (chapterId?: string | null, nodeId?: string | null) => {
+    setChapterParam(chapterId ?? null);
+    setNiveauParam(nodeId ?? null);
+    const params = new URLSearchParams(window.location.search);
     if (chapterId) params.set("chapitre", chapterId);
+    else params.delete("chapitre");
     if (nodeId) params.set("niveau", nodeId);
+    else params.delete("niveau");
     const query = params.toString();
-    return query ? `${playBase}?${query}` : playBase;
+    window.history.replaceState(null, "", query ? `${window.location.pathname}?${query}` : window.location.pathname);
   };
   const nextChapter = chapters[chapters.findIndex((chapter) => chapter.id === resumeChapter?.id) + 1] ?? null;
   const nextHref = nextChapter?.nodes[0]?.leaves[0]?.href || nextChapter?.nodes[0]?.href || null;
@@ -373,7 +391,8 @@ export function FormationStudio({
         title: node.title,
         duration: node.duration,
         typeLabel: node.leaves.length ? "" : "Lecture",
-        href: node.leaves.length ? levelHref(selectedChapter?.id, node.id) : node.href,
+        href: node.leaves.length ? playBase : node.href,
+        openLevel: node.leaves.length && selectedChapter ? { chapterId: selectedChapter.id, nodeId: node.id } : undefined,
         progress: nodeProgress(node),
         locked: node.locked,
         lockReason: node.lockReason,
@@ -441,7 +460,7 @@ export function FormationStudio({
                   aria-controls={panelId}
                   onClick={() => {
                     toggle(chapter.id);
-                    router.push(levelHref(chapter.id));
+                    goLevel(chapter.id);
                   }}
                 >
                   <ChevronRight className="formation-studio__chevron" size={16} strokeWidth={2} aria-hidden />
@@ -461,7 +480,7 @@ export function FormationStudio({
                       const nodeDone = node.leaves.filter((leaf) => isDone(leaf.progress)).length;
                       if (!node.leaves.length) {
                         return (
-                          <Link key={node.id} href={node.locked ? levelHref(chapter.id) : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} title={node.lockReason} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
+                          <Link key={node.id} href={node.locked ? playBase : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} title={node.lockReason} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
                             <span className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.id === resume?.id ? "next" : node.progress.state === "percent" ? "progress" : undefined} />
                             <span className="formation-studio__leaf-copy">
                               <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
@@ -484,7 +503,7 @@ export function FormationStudio({
                             aria-controls={nodePanel}
                             onClick={() => {
                               toggle(node.id);
-                              router.push(levelHref(chapter.id, node.id));
+                              goLevel(chapter.id, node.id);
                             }}
                           >
                             <ChevronRight className="formation-studio__chevron" size={14} strokeWidth={2} aria-hidden />
@@ -499,7 +518,7 @@ export function FormationStudio({
                               {node.leaves.map((leaf) => (
                                 <Link
                                   key={leaf.id}
-                                  href={leaf.locked ? levelHref(chapter.id, node.id) : leaf.href}
+                                  href={leaf.locked ? playBase : leaf.href}
                                   className="formation-studio__leaf"
                                   title={leaf.lockReason}
                                   data-locked={leaf.locked || undefined}
@@ -547,11 +566,11 @@ export function FormationStudio({
             <ChevronRight size={18} strokeWidth={2} style={{ transform: "rotate(180deg)" }} />
           </Link>
           <nav className="formation-studio__crumbs" aria-label="Fil d'Ariane">
-            {selectedChapter ? <Link href={playBase}>{code}</Link> : <span aria-current="page">{code}</span>}
+            {selectedChapter ? <button type="button" onClick={() => goLevel()}>{code}</button> : <span aria-current="page">{code}</span>}
             {selectedChapter && selectedNode ? (
               <>
                 <span aria-hidden>/</span>
-                <Link href={levelHref(selectedChapter.id)}>Chapitre {selectedChapter.number}</Link>
+                <button type="button" onClick={() => goLevel(selectedChapter.id)}>Chapitre {selectedChapter.number}</button>
                 <span aria-hidden>/</span>
                 <span aria-current="page">{selectedNode.title}</span>
               </>
@@ -773,7 +792,14 @@ export function FormationStudio({
                       data-next={next || undefined}
                       aria-disabled={leaf.locked || undefined}
                       onClick={(event) => {
-                        if (leaf.locked) event.preventDefault();
+                        if (leaf.locked) {
+                          event.preventDefault();
+                          return;
+                        }
+                        if (leaf.openLevel) {
+                          event.preventDefault();
+                          goLevel(leaf.openLevel.chapterId, leaf.openLevel.nodeId);
+                        }
                       }}
                     >
                       <span className="formation-studio__index" data-state={done ? "done" : next ? "next" : undefined}>

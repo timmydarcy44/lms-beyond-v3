@@ -67,25 +67,89 @@ export const JADE_COURSES = [
   },
 ];
 
+export const JADE_DISC_SCORES = { D: 68, I: 82, S: 54, C: 61 };
+
+export const JADE_IDMC_AXES = {
+  A1: 76,
+  A2: 64,
+  A3: 71,
+  A4: 82,
+  A5: 69,
+  A6: 74,
+  A7: 66,
+  A8: 80,
+};
+
+const JADE_SOFT_TITLES = [
+  "Communication interpersonnelle",
+  "Écoute active",
+  "Empathie",
+  "Gestion des conflits",
+  "Leadership",
+  "Collaboration et travail en équipe",
+  "Adaptabilité",
+  "Gestion du stress",
+  "Intelligence émotionnelle",
+  "Confiance en soi",
+  "Résolution des problèmes",
+  "Prise de décision",
+  "Gestion du temps",
+  "Persévérance",
+  "Esprit critique",
+  "Créativité",
+  "Proactivité",
+  "Sens de l'organisation",
+  "Ouverture d'esprit",
+  "Sens des responsabilités",
+];
+
+export const JADE_SOFT_SKILLS_RADAR = JADE_SOFT_TITLES.map((skill, index) => ({
+  skill,
+  score: 58 + ((index * 7) % 34),
+}));
+
+export const JADE_SOFT_SKILLS_RECORD = Object.fromEntries(
+  JADE_SOFT_SKILLS_RADAR.map((row) => [row.skill, row.score]),
+);
+
+const JADE_TEAM = [
+  ["Léa", "Bernard", "Commerciale", "Ventes", true, 78, true],
+  ["Hugo", "Martin", "Account manager", "Ventes", true, 71, true],
+  ["Inès", "Morel", "SDR", "Prospection", false, null, true],
+  ["Noah", "Petit", "Customer success", "Relation client", true, 84, false],
+  ["Camille", "Roux", "Responsable pédagogique", "Formation", true, 81, true],
+  ["Adam", "Garcia", "Talent partner", "Ressources humaines", true, 73, true],
+  ["Zoé", "Laurent", "Cheffe de projet", "Opérations", false, null, true],
+  ["Ethan", "Simon", "Manager d'équipe", "Management", true, 69, true],
+  ["Lina", "David", "Brand manager", "Marketing", true, 77, false],
+  ["Tom", "Moreau", "Formateur interne", "Formation", false, null, false],
+] as const;
+
 export const JADE_ENTREPRISE_OVERVIEW: EntrepriseOverviewData = {
   demo_enriched: true,
   configuration_required: false,
   viewer: { email: "jade@byound.fr", prenom: "Jade", nom: "Martin" },
   organisation: { id: "jade-org", name: "Byound Business" },
   kpis: {
-    employees_total: 32,
-    diagnostics_completed: 24,
-    diagnostics_total: 32,
-    diagnostics_pct: 75,
-    enrollments_active: 18,
+    employees_total: JADE_TEAM.length,
+    diagnostics_completed: JADE_TEAM.filter((row) => row[4]).length,
+    diagnostics_total: JADE_TEAM.length,
+    diagnostics_pct: Math.round((JADE_TEAM.filter((row) => row[4]).length / JADE_TEAM.length) * 100),
+    enrollments_active: JADE_TEAM.filter((row) => row[6]).length,
   },
-  employees: [
-    { id: "e1", first_name: "Léa", last_name: "Bernard", email: "lea@example.com", job_title: "Commerciale", department: "Ventes", created_at: iso(-80), diagnostic_done: true, idmc_score: 78, formation_active: true },
-    { id: "e2", first_name: "Hugo", last_name: "Martin", email: "hugo@example.com", job_title: "Account manager", department: "Ventes", created_at: iso(-60), diagnostic_done: true, idmc_score: 71, formation_active: true },
-    { id: "e3", first_name: "Inès", last_name: "Morel", email: "ines@example.com", job_title: "SDR", department: "Prospection", created_at: iso(-20), diagnostic_done: false, idmc_score: null, formation_active: true },
-    { id: "e4", first_name: "Noah", last_name: "Petit", email: "noah@example.com", job_title: "Customer success", department: "Relation client", created_at: iso(-12), diagnostic_done: true, idmc_score: 84, formation_active: false },
-  ],
-  employees_pending: 1,
+  employees: JADE_TEAM.map((row, index) => ({
+    id: `jade-emp-${index + 1}`,
+    first_name: row[0],
+    last_name: row[1],
+    email: `${row[0].toLowerCase()}.${row[1].toLowerCase()}@byound.fr`,
+    job_title: row[2],
+    department: row[3],
+    created_at: iso(-90 + index * 6),
+    diagnostic_done: row[4],
+    idmc_score: row[5],
+    formation_active: row[6],
+  })),
+  employees_pending: JADE_TEAM.filter((row) => !row[4]).length,
 };
 
 export const JADE_TUTOR_WORKSPACE: TutorWorkspacePayload = {
@@ -136,3 +200,33 @@ export const JADE_TUTOR_WORKSPACE: TutorWorkspacePayload = {
   kpis: { learners: 7, pendingMissionActions: 2, evaluationsTodo: 1, badgesAwarded: 3 },
   todoPreview: [{ id: "td1", title: "Signer le livret de Léa" }],
 };
+
+export const JADE_HARD_SKILLS: Array<{ name: string; level: "Débutant" | "Intermédiaire" | "Confirmé" | "Expert"; category: string }> = [
+  { name: "Prospection", level: "Confirmé", category: "Vente" },
+  { name: "Négociation", level: "Intermédiaire", category: "Vente" },
+  { name: "CRM", level: "Confirmé", category: "CRM" },
+  { name: "Closing", level: "Intermédiaire", category: "Vente" },
+  { name: "Prise de parole", level: "Expert", category: "Communication" },
+  { name: "Qualification de besoin", level: "Confirmé", category: "Vente" },
+];
+
+export const JADE_JOB_OFFERS = [
+  { id: "jade-job-1", title: "Commerciale B2B", city: "Le Havre", contract_type: "CDI", salary_range: "32–38 k€", description: "Développer un portefeuille de comptes formation.", company_name: "Byound Business", company_hidden_from_learner: false },
+  { id: "jade-job-2", title: "Business developer", city: "Paris", contract_type: "CDI", salary_range: "36–42 k€", description: "Prospection et closing de parcours entreprise.", company_name: "NTC Partners", company_hidden_from_learner: false },
+  { id: "jade-job-3", title: "Chargée de clientèle", city: "Rouen", contract_type: "Alternance", salary_range: "Selon grille", description: "Suivi des apprenants et relances commerciales.", company_name: "CFA Byound", company_hidden_from_learner: false },
+];
+
+export function jadePlanningSlots(weekStart: Date) {
+  const at = (dayOffset: number, hour: number, minutes = 90) => {
+    const start = new Date(weekStart);
+    start.setDate(start.getDate() + dayOffset);
+    start.setHours(hour, 0, 0, 0);
+    const end = new Date(start.getTime() + minutes * 60_000);
+    return { starts_at: start.toISOString(), ends_at: end.toISOString() };
+  };
+  return [
+    { id: "jade-slot-1", ...at(0, 9), module: { name: "Veille commerciale", code: "CCP1" }, instructor: { full_name: "Camille Roux" }, room: { name: "Salle 2" }, class: { name: "Promo Jade" } },
+    { id: "jade-slot-2", ...at(1, 14), module: { name: "Closing", code: "CCP2" }, instructor: { full_name: "Hugo Martin" }, room: { name: "Visio" }, class: { name: "Promo Jade" } },
+    { id: "jade-slot-3", ...at(3, 10), module: { name: "Entretien de vente", code: "CCP3" }, instructor: { full_name: "Léa Bernard" }, room: { name: "Salle 1" }, class: { name: "Promo Jade" } },
+  ];
+}

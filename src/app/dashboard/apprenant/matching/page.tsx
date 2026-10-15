@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Building2, Lock } from "lucide-react";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_JOB_OFFERS } from "@/lib/demo/jade-dashboard-mocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   APPRENANT_CARD_BODY,
@@ -29,6 +31,7 @@ export default function ApprenantMatchingPage() {
   const supabase = createSupabaseBrowserClient();
   const [offers, setOffers] = useState<JobOffer[]>([]);
   const [hasOrganisation, setHasOrganisation] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +49,13 @@ export default function ApprenantMatchingPage() {
 
       const userId = userData.user.id;
       const userEmail = userData.user.email ?? "";
+      if (isJadeDemoEmail(userEmail)) {
+        setHasOrganisation(true);
+        setUnlocked(true);
+        setOffers(JADE_JOB_OFFERS);
+        setIsLoading(false);
+        return;
+      }
 
       try {
         let { data: profileData } = await supabase
@@ -111,7 +121,7 @@ export default function ApprenantMatchingPage() {
       ) : null}
 
       <section className="relative">
-        <div className="pointer-events-none select-none blur-[5px] opacity-70">
+        <div className={unlocked ? "" : "pointer-events-none select-none blur-[5px] opacity-70"}>
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -149,7 +159,7 @@ export default function ApprenantMatchingPage() {
           )}
         </div>
 
-        <div className="absolute inset-0 flex items-center justify-center p-6">
+        {unlocked ? null : <div className="absolute inset-0 flex items-center justify-center p-6">
           <div
             className={`${APPRENANT_CARD_BODY} mx-auto w-full max-w-3xl text-center`}
           >
@@ -173,7 +183,7 @@ export default function ApprenantMatchingPage() {
               </span>
             </div>
           </div>
-        </div>
+        </div>}
       </section>
     </div>
   );

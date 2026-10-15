@@ -74,6 +74,23 @@ export function EnterpriseOverviewProvider({ children }: { children: ReactNode }
   const mounted = useRef(true);
 
   const reload = useCallback(async (force = false) => {
+    try {
+      const browser = createSupabaseBrowserClient();
+      const { data: auth } = browser ? await browser.auth.getUser() : { data: { user: null } };
+      if (isJadeDemoEmail(auth.user?.email)) {
+        cachedData = JADE_ENTREPRISE_OVERVIEW;
+        cachedAt = Date.now();
+        if (mounted.current) {
+          setData(JADE_ENTREPRISE_OVERVIEW);
+          setFetchError(null);
+          setLoading(false);
+        }
+        return;
+      }
+    } catch {
+      /* la suite charge le vrai tableau de bord */
+    }
+
     const fresh = !force && cachedData && Date.now() - cachedAt < CACHE_MS;
     if (fresh) {
       setData(cachedData);

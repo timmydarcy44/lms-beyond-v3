@@ -30,6 +30,8 @@ import {
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_HARD_SKILLS } from "@/lib/demo/jade-dashboard-mocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   buildUserObjectiveDisplay,
@@ -97,6 +99,25 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       return;
     }
     setUserId(uid);
+    if (isJadeDemoEmail(userData.user?.email)) {
+      const names = JADE_HARD_SKILLS.map((skill) => skill.name);
+      const nextMeta: Record<string, StoredHardSkillMeta> = {};
+      for (const skill of JADE_HARD_SKILLS) {
+        nextMeta[skill.name] = {
+          level: skill.level,
+          category: skill.category,
+          validated: skill.level === "Expert" || skill.level === "Confirmé",
+          source: "manual",
+        };
+      }
+      setHardSkills(names);
+      setMeta(nextMeta);
+      setBadgeCount(2);
+      setObjectiveLabel("Devenir commerciale confirmée");
+      setCareerTitle("Commerciale B2B");
+      setMatching(null);
+      return;
+    }
 
     const [profileRes, discRes, softRes, idmcRes, expRes, dipRes] = await Promise.all([
       supabase

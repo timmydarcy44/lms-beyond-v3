@@ -45,7 +45,6 @@ import {
   normalizeArchivedSoftSkillScore,
 } from "@/lib/learner/cross-profile-soft-scores";
 import {
-  EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT,
   fetchLatestSoftSkillsResult,
   isCompleteSoftSkillsScores,
   parseSoftSkillsScoreEntries,
@@ -272,13 +271,23 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       }
     }
     resolvedRadar = sortSoftSkillsDescending(resolvedRadar);
-    if (
-      resolvedRadar.length > 0 &&
-      resolvedRadar.length < EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT
-    ) {
+    if (resolvedRadar.length > 0 && resolvedRadar.length < 4) {
       resolvedRadar = [];
     }
+    const snap = snapshotCtx?.snapshot;
+    if (snap) {
+      if (!resolvedDisc && snap.discScores) resolvedDisc = snap.discScores;
+      if (!resolvedIdmcAxes && snap.idmcAxes && hasMeaningfulIdmcAxes(snap.idmcAxes)) {
+        resolvedIdmcAxes = snap.idmcAxes;
+      }
+      if (!resolvedRadar.length && snap.softSkillsRadar?.length) {
+        resolvedRadar = snap.softSkillsRadar;
+      }
+    }
     const resolvedSoft = softRadarToRecord(resolvedRadar);
+    setDiscScores(resolvedDisc);
+    setIdmcAxes(resolvedIdmcAxes);
+    setHasIdmc(Boolean(resolvedIdmcAxes));
     setSoftSkillsRadar(resolvedRadar);
     setHasSoftSkills(isCompleteSoftSkillsScores(resolvedSoft));
     setSoftSkillsScores(resolvedSoft);

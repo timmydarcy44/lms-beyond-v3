@@ -413,10 +413,13 @@ export function EnterpriseDashboardV2() {
             <section className="mt-8">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Diagnostics en attente</h2>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    {overview.demo_enriched ? "Équipe" : "Diagnostics en attente"}
+                  </h2>
                   <p className="text-sm text-gray-400">
-                    {pendingDiagnostics.length} collaborateur
-                    {pendingDiagnostics.length > 1 ? "s" : ""} à relancer
+                    {overview.demo_enriched
+                      ? `${employees.length} collaborateur${employees.length > 1 ? "s" : ""}`
+                      : `${pendingDiagnostics.length} collaborateur${pendingDiagnostics.length > 1 ? "s" : ""} à relancer`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -444,14 +447,14 @@ export function EnterpriseDashboardV2() {
                   description="Importez un fichier CSV ou invitez vos collaborateurs."
                   onAction={() => document.getElementById("entreprise-csv-import")?.click()}
                 />
-              ) : pendingDiagnostics.length === 0 ? (
+              ) : !overview.demo_enriched && pendingDiagnostics.length === 0 ? (
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-5 py-6 text-sm text-emerald-800">
                   Tous les collaborateurs visibles ont complété leur diagnostic.
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                   <ul className="divide-y divide-gray-50">
-                    {pendingDiagnostics.slice(0, 8).map((c) => {
+                    {(overview.demo_enriched ? employees : pendingDiagnostics).slice(0, 8).map((c) => {
                       const fullName =
                         [c.first_name, c.last_name].filter(Boolean).join(" ") || "—";
                       return (
@@ -472,8 +475,13 @@ export function EnterpriseDashboardV2() {
                                 </p>
                               </div>
                             </div>
-                            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-bold uppercase text-gray-500">
-                              En attente
+                            <span
+                              className={cn(
+                                "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase",
+                                c.diagnostic_done ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500",
+                              )}
+                            >
+                              {c.diagnostic_done ? "Diagnostic fait" : "En attente"}
                             </span>
                           </Link>
                         </li>

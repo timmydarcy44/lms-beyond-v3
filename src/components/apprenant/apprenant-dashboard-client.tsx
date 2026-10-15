@@ -6,6 +6,13 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import {
+  JADE_DISC_SCORES,
+  JADE_IDMC_AXES,
+  JADE_SOFT_SKILLS_RADAR,
+  JADE_SOFT_SKILLS_RECORD,
+} from "@/lib/demo/jade-dashboard-mocks";
 import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import {
   GLOBAL_SKILL_REFERENTIAL,
@@ -492,8 +499,21 @@ export function ApprenantDashboardClient({
           setProfile(null);
         }
 
+        const jadeDemo = isJadeDemoEmail(userData.user.email);
+        let foundDisc = false;
+        let foundIdmc = false;
+        let foundSoft = false;
+        if (jadeDemo) {
+          setDiscScores(JADE_DISC_SCORES);
+          setIdmcAxes(JADE_IDMC_AXES);
+          setIdmcData({ scores: JADE_IDMC_AXES, updated_at: new Date().toISOString() });
+          setIdmcUpdatedAt(new Date().toISOString());
+          setSoftSkillsData({ scores: JADE_SOFT_SKILLS_RECORD });
+          setSoftSkillsRadar(JADE_SOFT_SKILLS_RADAR);
+        }
+
         try {
-          if (!useSnapshotTestsRef.current) {
+          if (!useSnapshotTestsRef.current && !jadeDemo) {
           let discResult: { scores?: Record<string, unknown> | null } | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -516,6 +536,7 @@ export function ApprenantDashboardClient({
           if (discResult?.scores && typeof discResult.scores === "object") {
             const parsed = parseStoredDiscScores(discResult.scores as Record<string, unknown>);
             setDiscScores(parsed);
+            foundDisc = Boolean(parsed);
           } else {
             setDiscScores(null);
           }
@@ -525,7 +546,7 @@ export function ApprenantDashboardClient({
         }
 
         try {
-          if (!useSnapshotTestsRef.current) {
+          if (!useSnapshotTestsRef.current && !jadeDemo) {
           let idmcResult: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -549,6 +570,7 @@ export function ApprenantDashboardClient({
           );
           if (axes) {
             setIdmcAxes(axes);
+            foundIdmc = true;
           } else {
             setIdmcAxes(null);
           }
@@ -564,7 +586,7 @@ export function ApprenantDashboardClient({
         }
 
         try {
-          if (!useSnapshotTestsRef.current) {
+          if (!useSnapshotTestsRef.current && !jadeDemo) {
           if (!userId) return;
           let latestSoftSkills: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
@@ -579,12 +601,15 @@ export function ApprenantDashboardClient({
 
           const rawScores = latestSoftSkills?.scores;
           if (rawScores && typeof rawScores === "object" && !Array.isArray(rawScores)) {
-            setSoftSkillsRadar(parseSoftSkillsScoreEntries(rawScores));
+            const entries = parseSoftSkillsScoreEntries(rawScores);
+            setSoftSkillsRadar(entries);
+            foundSoft = entries.length > 0;
           } else if (Array.isArray(rawScores)) {
             const sorted = (rawScores as Array<{ skill: string; score: number }>).sort(
               (a, b) => Number(b.score) - Number(a.score),
             );
             setSoftSkillsRadar(sorted);
+            foundSoft = sorted.length > 0;
           } else {
             setSoftSkillsRadar([]);
           }
@@ -593,6 +618,39 @@ export function ApprenantDashboardClient({
           if (!useSnapshotTestsRef.current) {
             setSoftSkillsData(null);
             setSoftSkillsRadar([]);
+          }
+        }
+
+        if (!jadeDemo && !foundDisc && !foundIdmc && !foundSoft) {
+          try {
+            const snapRes = await fetch("/api/dashboard/learner-snapshot", { credentials: "include" });
+            if (snapRes.ok) {
+              const snap = (await snapRes.json()) as {
+                discScores?: { D: number; I: number; S: number; C: number } | null;
+                idmcAxes?: Record<string, number> | null;
+                softSkillsRadar?: Array<{ skill?: string; title?: string; score?: number }>;
+              };
+              if (snap.discScores) setDiscScores(snap.discScores);
+              if (snap.idmcAxes) {
+                setIdmcAxes(snap.idmcAxes as Record<"A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7" | "A8", number>);
+                setIdmcData({ scores: snap.idmcAxes, updated_at: new Date().toISOString() });
+                setIdmcUpdatedAt(new Date().toISOString());
+              }
+              const radar = (snap.softSkillsRadar ?? [])
+                .map((row) => ({
+                  skill: String(row.skill ?? row.title ?? "").trim(),
+                  score: Number(row.score) || 0,
+                }))
+                .filter((row) => row.skill);
+              if (radar.length) {
+                setSoftSkillsRadar(radar);
+                setSoftSkillsData({
+                  scores: Object.fromEntries(radar.map((row) => [row.skill, row.score])),
+                });
+              }
+            }
+          } catch {
+            /* le navigateur n'a pas vu les lignes, le serveur non plus */
           }
         }
 

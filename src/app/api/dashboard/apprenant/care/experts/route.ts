@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,15 @@ export async function GET() {
   } = await authClient.auth.getUser();
   if (!user?.id) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+
+  if (isJadeDemoEmail(user.email)) {
+    return NextResponse.json({
+      experts: [
+        { id: "jade-care-1", firstName: "Camille", lastName: "Roux", headline: "Accompagnement stress et charge de travail", photoUrl: null, specialties: ["Stress", "Organisation"] },
+        { id: "jade-care-2", firstName: "Noah", lastName: "Petit", headline: "Confiance en entretien", photoUrl: null, specialties: ["Confiance", "Prise de parole"] },
+      ],
+    });
   }
 
   const db = getServiceRoleClient() ?? authClient;

@@ -13,15 +13,15 @@ export function HomeHero({
 }) {
 
   return (
-    <section className="relative overflow-hidden bg-[#070C1C] text-white lg:min-h-[720px]">
-      <div className="relative h-[56vh] min-h-[320px] lg:absolute lg:inset-0 lg:h-auto">
+    <section className="relative min-h-[100svh] overflow-hidden bg-[#070C1C] text-white lg:min-h-[720px]">
+      <div className="absolute inset-0">
         <Image
           src={imageSrc}
           alt="Étudiante Byound souriante, carnet Byound à la main"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[52%_25%] lg:object-[30%_30%]"
+          className="object-cover object-[center_22%] lg:object-[30%_30%]"
         />
         <div
           className="pointer-events-none absolute inset-0 hidden lg:block"
@@ -32,14 +32,22 @@ export function HomeHero({
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-40 lg:h-[160px]"
+          className="pointer-events-none absolute inset-0 lg:hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(7,12,28,0.28) 0%, rgba(7,12,28,0.04) 18%, rgba(7,12,28,0.08) 40%, rgba(7,12,28,0.78) 68%, #070C1C 100%)",
+          }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-40 lg:block"
           style={{ background: "linear-gradient(0deg, #070C1C, transparent)" }}
           aria-hidden
         />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[1240px] px-6 lg:min-h-[720px] lg:items-center">
-        <div className="flex max-w-[600px] flex-col gap-7 py-10 lg:py-28">
+      <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1240px] items-end px-6 pb-8 pt-24 lg:min-h-[720px] lg:items-center lg:py-28">
+        <div className="flex max-w-[600px] flex-col gap-6 lg:gap-7">
         <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold">
           <span className="text-[#6BE39B]" aria-hidden>●</span>
           École et entreprises · Caen

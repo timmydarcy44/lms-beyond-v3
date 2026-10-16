@@ -32,7 +32,7 @@ export function HomeMethod() {
   return (
     <Section className="bg-white">
       <Reveal>
-        <h2 className="max-w-4xl text-[clamp(40px,5.4vw,72px)] font-extrabold leading-[1.02] tracking-[-2px]">
+        <h2 className="max-w-4xl text-[32px] font-extrabold leading-[1.05] tracking-[-1px] sm:text-[clamp(40px,5.4vw,72px)] sm:leading-[1.02] sm:tracking-[-2px]">
           Apprendre. Pratiquer.
           <br />
           Prouver. Évoluer.

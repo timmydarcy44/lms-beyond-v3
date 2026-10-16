@@ -27,12 +27,12 @@ export default function SkillsPreuvesPage() {
     <EdgePageAmbiance ambiance="skills">
       <div className={`${APPRENANT_PAGE_SHELL} max-w-3xl pb-24`}>
         <header className="space-y-3">
-          <SkillsSectionKicker>Mes preuves</SkillsSectionKicker>
+          <SkillsSectionKicker>Portfolio</SkillsSectionKicker>
           <h1 className="text-[30px] font-bold tracking-[-0.03em] text-white sm:text-[36px]">
             Preuves rattachées
           </h1>
           <p className="max-w-lg text-[14px] text-white/40">
-            Chaque preuve est liée à une compétence. Elles alimentent la synthèse Profil.
+            Une preuve documente une compétence, comme une pièce de portfolio. Elle alimente votre profil. Elle ne délivre pas d&apos;Open Badge.
           </p>
           <Link href="/dashboard/apprenant/skills/prove" className={CONNECT_BTN_PRIMARY}>
             Prouver une compétence

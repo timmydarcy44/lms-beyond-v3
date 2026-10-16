@@ -36,6 +36,8 @@ export type LearnerBadgePresentation = {
   validator: LearnerBadgeValidator | null;
   eligible: boolean;
   requiresEnrollment: boolean;
+  /** Critères publiés par un expert. Sans eux, le badge ne peut pas être obtenu. */
+  criteriaReady: boolean;
 };
 
 async function fetchValidator(validatorId: string | null | undefined): Promise<LearnerBadgeValidator | null> {
@@ -149,5 +151,6 @@ export async function getLearnerBadgePresentation(
     validator,
     eligible,
     requiresEnrollment,
+    criteriaReady: criteria.length > 0 || Boolean(String(row.criteriaMarkdown ?? "").trim()),
   };
 }

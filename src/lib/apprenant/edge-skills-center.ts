@@ -183,11 +183,8 @@ export const TRAINING_MODALITY_TYPES = [
 ] as const;
 
 export const PROOF_METHODS = [
-  { id: "realization", label: "Déposer une réalisation", hint: "Lien portfolio / projet" },
-  { id: "document", label: "Ajouter un document", hint: "PDF, image, fichier" },
-  { id: "video", label: "Ajouter une vidéo", hint: "Lien ou fichier vidéo" },
-  { id: "edge_eval", label: "Passer une évaluation Byound", hint: "Analyse guidée" },
-  { id: "roleplay", label: "Réaliser une mise en situation", hint: "Entretien / scénario" },
-  { id: "ask_validation", label: "Demander une validation", hint: "Formateur ou manager" },
-  { id: "certification", label: "Ajouter une certification", hint: "Preuve externe" },
+  { id: "realization", label: "Une réalisation", hint: "Projet, livrable ou lien" },
+  { id: "document", label: "Un document", hint: "PDF, image ou fichier" },
+  { id: "video", label: "Une vidéo", hint: "Lien ou fichier vidéo" },
+  { id: "certification", label: "Une certification externe", hint: "Diplôme ou attestation déjà obtenue ailleurs" },
 ] as const;

@@ -60,7 +60,7 @@ export function HomeDiagnostics({
         <div className="relative flex flex-wrap items-end justify-between gap-8">
           <div className="max-w-3xl">
             <p className="inline-flex rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold">Diagnostics</p>
-            <h2 className="mt-5 text-[clamp(40px,5.4vw,72px)] font-extrabold leading-[1.02] tracking-[-2px]">
+            <h2 className="mt-5 text-[32px] font-extrabold leading-[1.05] tracking-[-1px] sm:text-[clamp(40px,5.4vw,72px)] sm:leading-[1.02] sm:tracking-[-2px]">
               Mesurez les compétences.
               <br />
               <span className="text-[#8B7BFF]">Développez les talents.</span>

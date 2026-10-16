@@ -8,86 +8,11 @@ import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { EdgePremiumLogo } from "@/components/edge-site/premium/edge-premium-logo";
-import {
-  EdgePremiumMegaColumnsPanel,
-  EdgePremiumMegaTrigger,
-} from "@/components/edge-site/premium/edge-premium-mega-menu";
 import { MegaMenu } from "@/components/edge-site/premium/mega-menu";
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
-import { getNeoMegaMenus } from "@/lib/edge-site/neo-mega-menus";
+import { getNeoMegaMenus, type NeoMegaMenuConfig } from "@/lib/edge-site/neo-mega-menus";
 
-type DropdownKey = "plateforme";
-type MegaKey = "alternants" | "entreprises" | "particuliers";
-
-function NavDropdown({
-  label,
-  items,
-  open,
-  onToggle,
-  onClose,
-  scrolled,
-  light,
-}: {
-  label: string;
-  items: readonly { label: string; href: string }[];
-  open: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-  scrolled: boolean;
-  light: boolean;
-}) {
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className={cn(
-          "flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
-          light
-            ? open
-              ? "text-neutral-950"
-              : "text-neutral-700 hover:text-neutral-950"
-            : open
-              ? "text-white"
-              : "text-white/60 hover:text-white",
-        )}
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        {label}
-        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <div
-          className={cn(
-            "absolute left-0 top-full z-50 mt-2 min-w-[220px] rounded-2xl p-2 shadow-2xl backdrop-blur-xl",
-            light
-              ? "border border-black/[0.08] bg-white/95"
-              : cn(
-                  "border border-white/10",
-                  scrolled ? "bg-[#070b1f]/95" : "bg-[#070b1f]/90",
-                ),
-          )}
-        >
-          {items.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                "block rounded-xl px-4 py-2.5 text-sm transition-colors",
-                light
-                  ? "text-neutral-700 hover:bg-black/[0.04] hover:text-neutral-950"
-                  : "text-white/70 hover:bg-white/[0.06] hover:text-white",
-              )}
-              onClick={onClose}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+type MegaKey = NeoMegaMenuConfig["id"];
 
 type NavbarProps = {
   overlay?: boolean;
@@ -101,12 +26,9 @@ export function EdgePremiumNavbar({
   light = false,
 }: NavbarProps) {
   const config = useEdgePremiumConfig();
-  const { links, nav, megaParticulier, routes } = config;
+  const { links, routes } = config;
   const neoMenus = getNeoMegaMenus(routes);
-  const schoolMenu = neoMenus[0];
-  const businessMenu = neoMenus[1];
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const openMegaRef = useRef<MegaKey | null>(null);
@@ -136,13 +58,11 @@ export function EdgePremiumNavbar({
     if (openTimer.current) clearTimeout(openTimer.current);
     openTimer.current = setTimeout(() => {
       setOpenMega(key);
-      setOpenDropdown(null);
     }, 120);
   };
 
   const toggleMega = (key: MegaKey) => {
     clearMegaTimers();
-    setOpenDropdown(null);
     setOpenMega((current) => (current === key ? null : key));
   };
 
@@ -152,14 +72,12 @@ export function EdgePremiumNavbar({
 
   useEffect(() => {
     setOpenMega(null);
-    setOpenDropdown(null);
     setMobileOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (!headerRef.current?.contains(e.target as Node)) {
-        setOpenDropdown(null);
         setOpenMega(null);
       }
     };
@@ -171,7 +89,6 @@ export function EdgePremiumNavbar({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         const current = openMegaRef.current;
-        setOpenDropdown(null);
         setOpenMega(null);
         setMobileOpen(false);
         if (current) triggerRefs.current[current]?.focus();
@@ -182,21 +99,12 @@ export function EdgePremiumNavbar({
   }, []);
 
   const closeAll = () => {
-    setOpenDropdown(null);
     setOpenMega(null);
     setMobileOpen(false);
   };
 
-  const openMegaMenu = (key: MegaKey) => {
-    clearMegaTimers();
-    setOpenMega(key);
-    setOpenDropdown(null);
-  };
-
-  const isSolid = pageScrolled || openDropdown !== null || openMega !== null || mobileOpen;
-
-  const megaData = openMega === "particuliers" ? megaParticulier : null;
-  const neoMenu = openMega === "alternants" ? schoolMenu : openMega === "entreprises" ? businessMenu : null;
+  const isSolid = pageScrolled || openMega !== null || mobileOpen;
+  const neoMenu = neoMenus.find((menu) => menu.id === openMega) ?? null;
 
   return (
     <header
@@ -223,10 +131,8 @@ export function EdgePremiumNavbar({
         <EdgePremiumLogo light={light} />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
-          {([
-            ["alternants", "École"],
-            ["entreprises", "Entreprises"],
-          ] as const).map(([key, label]) => {
+          {neoMenus.map((menu) => {
+            const key = menu.id;
             const open = openMega === key;
             return (
               <button
@@ -251,7 +157,7 @@ export function EdgePremiumNavbar({
                 onMouseLeave={scheduleMegaClose}
                 onClick={() => toggleMega(key)}
               >
-                {label}
+                {menu.label}
                 <ChevronDown
                   className={cn("transition-transform duration-200", open && "rotate-180")}
                   size={14}
@@ -261,24 +167,6 @@ export function EdgePremiumNavbar({
               </button>
             );
           })}
-          <EdgePremiumMegaTrigger
-            label="Particuliers"
-            open={openMega === "particuliers"}
-            onOpen={() => openMegaMenu("particuliers")}
-            light={light}
-          />
-          <NavDropdown
-            label="La plateforme"
-            items={nav.plateforme}
-            open={openDropdown === "plateforme"}
-            scrolled={isSolid}
-            light={light}
-            onToggle={() => {
-              setOpenMega(null);
-              setOpenDropdown((d) => (d === "plateforme" ? null : "plateforme"));
-            }}
-            onClose={() => setOpenDropdown(null)}
-          />
           <Link
             href={routes.aPropos}
             className={cn(
@@ -353,19 +241,6 @@ export function EdgePremiumNavbar({
               onNavigate={() => setOpenMega(null)}
             />
           </div>
-        </div>
-      ) : null}
-
-      {megaData ? (
-        <div
-          className="absolute left-0 right-0 top-full z-50 hidden px-4 pt-3 pb-5 sm:px-6 lg:block lg:px-8"
-          onMouseEnter={cancelMegaClose}
-        >
-          <EdgePremiumMegaColumnsPanel
-            data={megaData}
-            onClose={() => setOpenMega(null)}
-            light={light}
-          />
         </div>
       ) : null}
 

@@ -42,7 +42,8 @@ export default function ApprenantSkillsHomePage() {
               <span className="text-white/55">Prouvez ce que vous savez faire.</span>
             </h1>
             <p className="max-w-md text-[15px] leading-relaxed text-white/40">
-              Votre capital de compétences évolue avec vous.
+              Les preuves constituent votre portfolio. Un Open Badge est délivré à part, lorsque ces
+              preuves correspondent aux critères définis par un expert.
             </p>
           </div>
           <SkillsQuickActionCards />

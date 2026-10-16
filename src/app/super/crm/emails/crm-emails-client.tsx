@@ -31,14 +31,15 @@ export function CrmEmailsClient() {
   const [role, setRole] = useState("learner");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
+  const [title, setTitle] = useState("");
   const [html, setHtml] = useState("");
   const [sending, setSending] = useState(false);
   const [images, setImages] = useState<MailImage[]>([]);
   const [imageHref, setImageHref] = useState("https://www.byound.fr");
 
   const handleSend = async () => {
-    if (!subject.trim() || !html.trim()) {
-      toast.error("Renseignez l'objet et le message");
+    if (!subject.trim() || !title.trim() || !html.trim()) {
+      toast.error("Renseignez l'objet, le titre et le message");
       return;
     }
     if (segment === "single" && !email.trim()) {
@@ -53,7 +54,8 @@ export function CrmEmailsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject,
-          html: `<div style="font-family: system-ui, sans-serif; line-height: 1.5;">${html.replace(/\n/g, "<br/>")}</div>`,
+          title,
+          html,
           images,
           segment,
           role: segment === "role" ? role : undefined,
@@ -135,7 +137,13 @@ export function CrmEmailsClient() {
 
         <div className="space-y-2">
           <Label>Objet</Label>
-          <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+          <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Ce que la personne voit dans sa boîte" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Titre</Label>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Votre prochaine étape" />
+          <p className="text-xs text-gray-500">Affiché en grand et en gras dans le mail, sous le nom Byound.</p>
         </div>
 
         <div className="space-y-2">

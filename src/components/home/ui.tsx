@@ -11,7 +11,7 @@ export function Section({
   id?: string;
 }) {
   return (
-    <section id={id} className={cn("px-6 py-[clamp(72px,9vw,120px)]", className)}>
+    <section id={id} className={cn("px-5 py-16 sm:px-6 sm:py-[clamp(72px,9vw,120px)]", className)}>
       <div className="relative mx-auto w-full max-w-[1240px]">{children}</div>
     </section>
   );
@@ -92,7 +92,7 @@ export function BigTile({
     <Link
       href={href}
       className={cn(
-        "group relative flex min-h-[560px] flex-col overflow-hidden rounded-[36px] p-[clamp(28px,3vw,44px)] text-white no-underline transition-transform duration-200 hover:-translate-y-1",
+        "group relative flex min-h-[420px] flex-col overflow-hidden rounded-[28px] p-7 text-white no-underline transition-transform duration-200 hover:-translate-y-1 sm:min-h-[560px] sm:rounded-[36px] sm:p-[clamp(28px,3vw,44px)]",
         className,
       )}
     >

@@ -35,6 +35,19 @@ export default async function ApprenantOpenBadgeEpreuvePage({ params }: PageProp
     );
   }
 
+  if (!badge.criteriaReady) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#030303] px-6 text-center text-white">
+        <p className="max-w-md text-lg">
+          Ce badge n&apos;a pas encore de critères. L&apos;évaluation ouvrira lorsqu&apos;un expert les aura publiés.
+        </p>
+        <Link href={presentationHref} className="mt-4 text-[#FF3B30] hover:underline">
+          Retour
+        </Link>
+      </div>
+    );
+  }
+
   if (!badge.eligible) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#030303] px-6 text-center text-white">

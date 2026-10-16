@@ -124,6 +124,102 @@ a.neo-mega__tile:focus-visible .neo-mega__cta { gap: 12px; }
 a.neo-mega__tile:hover .neo-mega__cta svg,
 a.neo-mega__tile:focus-visible .neo-mega__cta svg { transform: translateX(4px); }
 
+.neo-mega__steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 14px;
+}
+
+.neo-mega__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.neo-mega__step-arrow {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.neo-mega__progress {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 16px;
+}
+
+.neo-mega__progress-value {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.neo-mega__progress-caption {
+  margin: 8px 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #dadde4;
+}
+
+.neo-mega__progress-track {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.neo-mega__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #8b7bff;
+}
+
+.neo-mega__medals {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.neo-mega__medal {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.neo-mega__medal--award {
+  background: #fff;
+  color: #6e5bff;
+}
+
+.neo-mega__medal--shield {
+  background: #f2cf6b;
+  color: #2a2312;
+}
+
+.neo-mega__medal--plus {
+  border: 1.5px dashed rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+
+.neo-mega__medal-note {
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .neo-mega__bars {
   display: flex;
   flex-direction: column;

@@ -115,7 +115,7 @@ export function SkillsEmptyHint({ children }: { children: React.ReactNode }) {
 const SKILLS_QUICK_ACTIONS = [
   {
     title: "Déposer une preuve",
-    description: "Lien, document ou portfolio pour valider une compétence.",
+    description: "Réalisation, document ou lien dans votre portfolio. Une preuve ne délivre pas d'Open Badge.",
     href: "/dashboard/apprenant/skills/prove",
     icon: Upload,
   },
@@ -127,7 +127,7 @@ const SKILLS_QUICK_ACTIONS = [
   },
   {
     title: "Wallet",
-    description: "Tous vos badges et certifications Byound.",
+    description: "Open Badges délivrés quand vos compétences prouvées correspondent aux critères d'un expert.",
     href: "/dashboard/apprenant/badges",
     icon: Wallet,
   },

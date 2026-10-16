@@ -28,16 +28,6 @@ import {
   SKILL_UX_STATUS,
 } from "@/lib/hard-skills/hard-skills-portfolio";
 
-const VALIDATION_SOURCES = [
-  "Test Byound",
-  "Formation",
-  "Simulation",
-  "Preuve déposée",
-  "Validation formateur",
-  "Validation manager",
-  "Certification",
-];
-
 export default function SkillsSkillDetailPage() {
   const params = useParams();
   const raw = typeof params.skill === "string" ? params.skill : "";
@@ -148,19 +138,12 @@ export default function SkillsSkillDetailPage() {
             </section>
 
             <section className="mt-10 space-y-3">
-              <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">
-                Sources de validation
+              <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">Portfolio</p>
+              <p className="text-[14px] leading-relaxed text-white/50">
+                Une preuve documente cette compétence. Elle ne la certifie pas. L&apos;Open Badge est
+                délivré à part, lorsque les compétences prouvées correspondent aux critères d&apos;un
+                expert.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {VALIDATION_SOURCES.map((src) => (
-                  <span
-                    key={src}
-                    className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[12px] text-white/45"
-                  >
-                    {src}
-                  </span>
-                ))}
-              </div>
             </section>
 
             <div className="mt-12 flex flex-wrap gap-3">

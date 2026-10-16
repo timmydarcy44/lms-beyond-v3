@@ -44,7 +44,7 @@ export function HomeHero({
           <span className="text-[#6BE39B]" aria-hidden>●</span>
           École et entreprises · Caen
         </p>
-        <h1 className="text-[clamp(52px,6.6vw,92px)] font-extrabold leading-[0.98] tracking-[-3px]">
+        <h1 className="text-[36px] font-extrabold leading-[1.02] tracking-[-1.2px] sm:text-[52px] sm:tracking-[-2px] lg:text-[clamp(52px,6.6vw,92px)] lg:leading-[0.98] lg:tracking-[-3px]">
           Vos compétences.
           <br />
           <span className="text-[#A99BFF]">Votre prochaine étape.</span>

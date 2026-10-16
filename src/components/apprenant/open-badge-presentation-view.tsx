@@ -18,7 +18,8 @@ export function OpenBadgePresentationView({
 }) {
   const [tab, setTab] = useState<TabId>("badge");
   const epreuveHref = `/dashboard/apprenant/open-badges/${badge.id}/epreuve`;
-  const methodCount = Math.max(badge.evaluationMethodIds.length, 1);
+  const methodCount = badge.evaluationMethodIds.length;
+  const canStart = badge.eligible && badge.criteriaReady;
 
   return (
     <div className="min-h-screen bg-[#030303] text-white">
@@ -56,16 +57,18 @@ export function OpenBadgePresentationView({
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/65 sm:text-base">
               {badge.description.trim() || "—"}
             </p>
-            {badge.eligible ? (
+            {canStart ? (
               <Link
                 href={epreuveHref}
                 className={`${CONNECT_BTN_PRIMARY} mt-6 inline-flex px-8 py-3 text-xs uppercase tracking-[0.16em]`}
               >
-                Commencer l&apos;épreuve
+                Passer l&apos;évaluation
               </Link>
             ) : (
               <p className="mt-6 text-sm text-amber-200/85">
-                Formation requise avant de commencer l&apos;épreuve.
+                {badge.criteriaReady
+                  ? "Formation requise avant de passer l'évaluation."
+                  : "Ce badge n'est pas encore ouvert : un expert doit d'abord publier les critères."}
               </p>
             )}
           </div>
@@ -141,17 +144,27 @@ export function OpenBadgePresentationView({
                   {badge.criteriaMarkdown}
                 </p>
               ) : (
-                <p className="mt-4 text-sm text-white/45">Critères communiqués pendant l&apos;épreuve.</p>
+                <p className="mt-4 text-sm leading-relaxed text-white/55">
+                  Aucun critère n&apos;a été publié. L&apos;Open Badge reste fermé tant qu&apos;un expert
+                  n&apos;a pas défini ce qu&apos;il faut prouver.
+                </p>
               )}
+              {badge.criteriaReady ? (
+                <p className="mt-5 text-sm leading-relaxed text-white/55">
+                  Le badge est délivré lorsque vos compétences prouvées correspondent à ces critères.
+                  Une preuve de portfolio, seule, ne suffit pas.
+                </p>
+              ) : null}
             </div>
 
+            {badge.criteriaReady && methodCount > 0 ? (
             <div className="rounded-xl border border-[#FF3B30]/20 bg-[#0a0a0a] p-6 sm:p-8">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[#FF3B30]/90">
-                Épreuves
+                Évaluation des critères
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-white/70">
-                Ce badge comporte {methodCount} mode{methodCount > 1 ? "s" : ""} d&apos;évaluation.
-                Vous les réalisez l&apos;une après l&apos;autre, dans l&apos;ordre de votre choix.
+                L&apos;expert a prévu {methodCount} mode{methodCount > 1 ? "s" : ""} pour rapprocher vos
+                preuves de ces critères.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {badge.evaluationMethodIds.map((methodId) => (
@@ -159,16 +172,16 @@ export function OpenBadgePresentationView({
                 ))}
               </div>
             </div>
+            ) : null}
 
             <div className="rounded-xl border border-white/10 bg-[#0a0a0a] p-6 sm:p-8">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/50">
                 Valeur du badge
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-white/70">
-                Obtenir ce badge atteste d&apos;une compétence mesurable et vérifiable auprès de votre
-                organisation. Une fois validé, votre Open Badge peut être partagé sur LinkedIn et
-                conservé dans votre Byound Wallet — un lien public que vous pouvez transmettre à un
-                recruteur ou un partenaire.
+                L&apos;Open Badge atteste que vos compétences prouvées correspondent aux critères de
+                l&apos;expert. Une fois délivré, il se partage sur LinkedIn et se conserve dans le
+                Byound Wallet.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/55">
@@ -187,16 +200,18 @@ export function OpenBadgePresentationView({
             </div>
 
             <div className="flex justify-center pt-2 pb-12">
-              {badge.eligible ? (
+              {canStart ? (
                 <Link
                   href={epreuveHref}
                   className={`${CONNECT_BTN_PRIMARY} px-10 py-3.5 text-xs uppercase tracking-[0.16em]`}
                 >
-                  Commencer l&apos;épreuve
+                  Passer l&apos;évaluation
                 </Link>
               ) : (
                 <p className="text-center text-sm text-amber-200/90">
-                  Inscrivez-vous à la formation requise avant de commencer.
+                  {badge.criteriaReady
+                    ? "Inscrivez-vous à la formation requise avant de passer l'évaluation."
+                    : "L'évaluation ouvrira lorsque l'expert aura publié les critères."}
                 </p>
               )}
             </div>

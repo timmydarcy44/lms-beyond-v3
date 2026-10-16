@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Award, ShieldCheck } from "lucide-react";
 import { Manrope } from "next/font/google";
 import { cn } from "@/lib/utils";
 import type { NeoMegaMenuConfig, NeoPill, NeoTile } from "@/lib/edge-site/neo-mega-menus";
@@ -37,6 +37,39 @@ function TileBody({ tile }: { tile: NeoTile }) {
           {tile.pills.map((pill) => (
             <Pill key={pill.label} pill={pill} tone={tile.tone} />
           ))}
+        </div>
+      ) : null}
+      {tile.steps ? (
+        <div className="neo-mega__steps" aria-hidden>
+          {tile.steps.map((step, index) => (
+            <span key={step.label} className="neo-mega__step">
+              {index > 0 ? <span className="neo-mega__step-arrow" aria-hidden>→</span> : null}
+              <span className={cn("neo-mega__pill", step.featured && "neo-mega__pill--featured")}>{step.label}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {tile.progress ? (
+        <div className="neo-mega__progress" aria-hidden>
+          <p className="neo-mega__progress-value">{tile.progress.value}</p>
+          <p className="neo-mega__progress-caption">{tile.progress.caption}</p>
+          <span className="neo-mega__progress-track">
+            <span className="neo-mega__progress-fill" style={{ width: tile.progress.width }} />
+          </span>
+        </div>
+      ) : null}
+      {tile.medals ? (
+        <div aria-hidden>
+          <div className="neo-mega__medals">
+            {tile.medals.map((medal) => (
+              <span key={medal} className={cn("neo-mega__medal", `neo-mega__medal--${medal}`)}>
+                {medal === "award" ? <Award size={22} strokeWidth={2} /> : null}
+                {medal === "shield" ? <ShieldCheck size={22} strokeWidth={2} /> : null}
+                {medal === "plus" ? "+" : null}
+              </span>
+            ))}
+          </div>
+          {tile.medalNote ? <p className="neo-mega__medal-note">{tile.medalNote}</p> : null}
         </div>
       ) : null}
       {tile.bars ? (

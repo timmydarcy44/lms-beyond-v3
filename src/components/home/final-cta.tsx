@@ -8,7 +8,7 @@ export function HomeFinalCta({ contactHref, demoHref }: { contactHref: string; d
         <div className="relative overflow-hidden rounded-[40px] bg-[#6E5BFF] px-6 py-16 text-center text-white sm:px-12 sm:py-20">
           <span className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full bg-white/12" aria-hidden />
           <span className="pointer-events-none absolute -bottom-20 -right-10 h-64 w-64 rounded-full bg-black/12" aria-hidden />
-          <h2 className="relative mx-auto max-w-[860px] text-[clamp(40px,5.4vw,72px)] font-extrabold leading-[1.02] tracking-[-2px]">
+          <h2 className="relative mx-auto max-w-[860px] text-[32px] font-extrabold leading-[1.05] tracking-[-1px] sm:text-[clamp(40px,5.4vw,72px)] sm:leading-[1.02] sm:tracking-[-2px]">
             Prêt à développer votre potentiel ou celui de vos équipes ?
           </h2>
           <div className="relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

@@ -13,7 +13,7 @@ export function HomeFigures() {
   return (
     <Section className="bg-[#F4F4F1]">
       <Reveal>
-        <h2 className="max-w-5xl text-[clamp(40px,5.4vw,72px)] font-extrabold leading-[1.02] tracking-[-2px] text-[#07080B]">
+        <h2 className="max-w-5xl text-[32px] font-extrabold leading-[1.05] tracking-[-1px] text-[#07080B] sm:text-[clamp(40px,5.4vw,72px)] sm:leading-[1.02] sm:tracking-[-2px]">
           Les entreprises n&apos;embauchent plus seulement des diplômes.
           <br />
           <span className="text-[#6E5BFF]">Elles recherchent des compétences.</span>
@@ -31,7 +31,7 @@ export function HomeFigures() {
             ))}
           </div>
         ) : null}
-        <div className="relative mt-8 min-h-[320px] overflow-hidden rounded-[36px] bg-[#0B1124]" style={{ aspectRatio: "16 / 7" }}>
+        <div className="relative mt-8 aspect-[4/5] min-h-[420px] overflow-hidden rounded-[28px] bg-[#0B1124] sm:aspect-video sm:min-h-0 sm:rounded-[36px] lg:aspect-[16/7]">
           {playing ? (
             <video className="absolute inset-0 h-full w-full object-cover" controls autoPlay playsInline src={HOME_VIDEO.src}>
               <track kind="captions" />
@@ -46,7 +46,7 @@ export function HomeFigures() {
               <Play className="ml-1" fill="currentColor" strokeWidth={2} aria-hidden />
             </button>
           )}
-          <p className="pointer-events-none absolute bottom-8 left-8 max-w-xl text-[clamp(28px,3.4vw,44px)] font-extrabold leading-none text-white">
+          <p className="pointer-events-none absolute bottom-6 left-6 right-6 max-w-xl text-[28px] font-extrabold leading-[1.05] text-white sm:bottom-8 sm:left-8 sm:right-auto sm:text-[clamp(28px,3.4vw,44px)] sm:leading-none">
             {HOME_VIDEO.title}
           </p>
         </div>

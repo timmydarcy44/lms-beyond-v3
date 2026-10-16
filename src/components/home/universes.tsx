@@ -17,7 +17,7 @@ export function HomeUniverses({
   return (
     <Section className="bg-[#F4F4F1]">
       <Reveal>
-        <h2 className="text-[clamp(40px,5.4vw,72px)] font-extrabold leading-[1.02] tracking-[-2px] text-[#07080B]">
+        <h2 className="text-[32px] font-extrabold leading-[1.05] tracking-[-1px] text-[#07080B] sm:text-[clamp(40px,5.4vw,72px)] sm:leading-[1.02] sm:tracking-[-2px]">
           Deux univers.
           <br />
           Une même ambition.
@@ -26,7 +26,7 @@ export function HomeUniverses({
           <BigTile href={schoolHref} className="bg-[#0B1124]">
             <span className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#6E5BFF]/12" aria-hidden />
             <Pill>Byound School</Pill>
-            <p className="mt-6 text-[clamp(36px,4vw,52px)] font-extrabold leading-[1.05] tracking-[-1.5px]">
+            <p className="mt-6 text-[32px] font-extrabold leading-[1.05] tracking-[-1px] sm:text-[clamp(36px,4vw,52px)] sm:tracking-[-1.5px]">
               Construisez votre avenir.
             </p>
             <p className="mt-4 max-w-md text-lg text-[#B5BAC6]">École, alternance et reconversion à Caen.</p>
@@ -51,7 +51,7 @@ export function HomeUniverses({
           <BigTile href={businessHref} className="bg-[#6E5BFF]">
             <span className="pointer-events-none absolute -right-10 bottom-10 h-48 w-48 rounded-full bg-white/12" aria-hidden />
             <span className="inline-flex min-h-9 items-center rounded-full bg-white/15 px-3.5 text-[13px] font-bold">Byound Business</span>
-            <p className="mt-6 text-[clamp(36px,4vw,52px)] font-extrabold leading-[1.05] tracking-[-1.5px]">
+            <p className="mt-6 text-[32px] font-extrabold leading-[1.05] tracking-[-1px] sm:text-[clamp(36px,4vw,52px)] sm:tracking-[-1.5px]">
               Faites progresser vos équipes.
             </p>
             <p className="mt-4 max-w-md text-lg text-white">Formations, diagnostics et suivi des compétences.</p>

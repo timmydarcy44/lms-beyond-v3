@@ -24,8 +24,9 @@ export default function SkillsBadgesPage() {
             Vos réussites
           </h1>
           <p className="max-w-lg text-[14px] text-white/40">
-            Les badges obtenus dans l’écosystème Byound enrichissent votre capital Skills et
-            apparaissent en synthèse dans Profil.
+            Un Open Badge atteste une compétence. Il est délivré lorsque vos preuves correspondent
+            aux critères définis par un expert. Le portfolio, lui, reste un dossier : déposer une
+            preuve ne crée pas de badge.
           </p>
         </header>
 
@@ -43,8 +44,8 @@ export default function SkillsBadgesPage() {
           <Link href="/dashboard/apprenant/badges" className={CONNECT_BTN_PRIMARY}>
             Ouvrir mes badges
           </Link>
-          <Link href="/dashboard/apprenant/skills/prove" className={CONNECT_BTN_SECONDARY}>
-            Ajouter une certification
+          <Link href="/dashboard/apprenant/skills/preuves" className={CONNECT_BTN_SECONDARY}>
+            Voir mon portfolio
           </Link>
         </div>
       </div>

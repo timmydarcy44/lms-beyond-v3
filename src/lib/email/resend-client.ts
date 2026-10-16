@@ -48,6 +48,7 @@ export type EmailOptions = {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   from?: string;
   replyTo?: string;
   bcc?: string | string[];
@@ -55,6 +56,7 @@ export type EmailOptions = {
   attachments?: EmailAttachment[];
   /** Tags Resend (webhook email.opened, analytics). */
   tags?: Record<string, string>;
+  headers?: Record<string, string>;
 };
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
@@ -95,7 +97,9 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       bcc: bccList?.length ? bccList : undefined,
       subject: options.subject,
       html: options.html,
+      text: options.text,
       replyTo: options.replyTo,
+      headers: options.headers,
       tags: tags?.length ? tags : undefined,
       attachments: options.attachments?.map((a) => ({
         filename: a.filename,

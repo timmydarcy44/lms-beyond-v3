@@ -31,7 +31,7 @@ export function EdgePremiumMobileMenu({
   light = false,
 }: Props) {
   const tabs = getMobileRevolutTabs(config).filter(
-    (tab) => tab.id !== "alternants" && tab.id !== "entreprises",
+    (tab) => tab.id === "a-propos",
   );
   const neoMenus = getNeoMegaMenus(config.routes);
   const [openPanel, setOpenPanel] = useState<string | null>(null);

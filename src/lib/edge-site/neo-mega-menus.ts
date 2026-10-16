@@ -15,6 +15,11 @@ export type NeoGroup = {
   pills: NeoPill[];
 };
 
+export type NeoStep = {
+  label: string;
+  featured?: boolean;
+};
+
 export type NeoTile = {
   id: string;
   tone: "navy" | "violet";
@@ -26,6 +31,10 @@ export type NeoTile = {
   pills?: NeoPill[];
   groups?: NeoGroup[];
   bars?: { label: string; width: string }[];
+  steps?: NeoStep[];
+  progress?: { value: string; caption: string; width: string };
+  medals?: Array<"award" | "shield" | "plus">;
+  medalNote?: string;
 };
 
 export type NeoTextLink = {
@@ -46,7 +55,7 @@ export type NeoBarAction = {
 };
 
 export type NeoMegaMenuConfig = {
-  id: "ecole" | "entreprises";
+  id: "ecole" | "entreprises" | "particuliers" | "plateforme";
   label: string;
   tiles: [NeoTile, NeoTile];
   side: NeoTextSection[];
@@ -205,5 +214,96 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
     },
   };
 
-  return [school, business];
+  const particuliers: NeoMegaMenuConfig = {
+    id: "particuliers",
+    label: "Particuliers",
+    tiles: [
+      {
+        id: "courtes",
+        tone: "navy",
+        title: "Formations courtes",
+        description: "Développez une compétence concrète pour avancer dans votre parcours.",
+        href: routes.onlineFormations,
+        cta: "Voir les formations",
+        pills: [
+          { label: "Management", featured: true },
+          { label: "IA" },
+          { label: "Soft skills" },
+          { label: "Communication" },
+          { label: "Leadership" },
+        ],
+      },
+      {
+        id: "reconversion",
+        tone: "violet",
+        title: "Reconversion professionnelle",
+        description: "Préparez un nouveau métier avec un parcours structuré.",
+        href: routes.particulierReconversion,
+        cta: "Préparer ma reconversion",
+        steps: [
+          { label: "Bilan", featured: true },
+          { label: "Formation" },
+          { label: "Nouveau métier" },
+        ],
+      },
+    ],
+    side: [
+      {
+        title: "Pour bien démarrer",
+        links: [
+          { title: "Trouver ma formation", subtitle: "Le bon parcours selon votre projet", href: routes.onlineFormations },
+          { title: "Financer ma formation", subtitle: "Les dispositifs possibles", href: routes.financement },
+          { title: "Prendre rendez-vous", subtitle: "Échanger avec un conseiller", href: routes.contact },
+        ],
+      },
+    ],
+    bar: {
+      note: "Un projet de formation ou de reconversion ? Parlons-en.",
+      textLink: { label: "Byound Life", href: routes.particulier },
+      actions: [{ label: "Trouver ma formation", href: routes.onlineFormations, variant: "primary" }],
+    },
+  };
+
+  const plateforme: NeoMegaMenuConfig = {
+    id: "plateforme",
+    label: "La plateforme",
+    tiles: [
+      {
+        id: "profil",
+        tone: "navy",
+        title: "Profil & progression",
+        description: "Suivez vos compétences et votre progression, chapitre après chapitre.",
+        href: routes.particulier,
+        cta: "Voir le profil",
+        progress: { value: "72 %", caption: "Progression du parcours", width: "72%" },
+      },
+      {
+        id: "badges",
+        tone: "violet",
+        title: "Open Badges",
+        description: "Des compétences certifiées, vérifiables et partageables.",
+        href: routes.businessOpenBadges,
+        cta: "Découvrir les badges",
+        medals: ["award", "shield", "plus"],
+        medalNote: "Partageables sur LinkedIn",
+      },
+    ],
+    side: [
+      {
+        title: "Aussi sur la plateforme",
+        links: [
+          { title: "Diagnostics de compétences", subtitle: "Soft Skills, IDMC, test comportemental", href: routes.businessDiagnostics },
+          { title: "Certifications", subtitle: "Valider officiellement vos acquis", href: routes.certifications },
+          { title: "Tarifs", subtitle: "Les offres et abonnements", href: routes.tarifs },
+        ],
+      },
+    ],
+    bar: {
+      note: "Une plateforme pour apprendre, prouver et évoluer.",
+      textLink: { label: "Découvrir la plateforme", href: routes.businessPlateformeCompetences },
+      actions: [{ label: "Demander une démo", href: routes.businessDemo, variant: "primary" }],
+    },
+  };
+
+  return [school, business, particuliers, plateforme];
 }

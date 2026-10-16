@@ -108,11 +108,11 @@ export default function ProveInner() {
       </button>
 
       <header className="mt-6 space-y-2">
-        <SkillsSectionKicker>Prouver</SkillsSectionKicker>
+        <SkillsSectionKicker>Portfolio</SkillsSectionKicker>
         <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white sm:text-[32px]">
-          {step === 1 && "Quelle compétence prouver ?"}
-          {step === 2 && "Comment souhaitez-vous la prouver ?"}
-          {step === 3 && "Preuve enregistrée"}
+          {step === 1 && "Quelle compétence documenter ?"}
+          {step === 2 && "Quel élément ajouter au portfolio ?"}
+          {step === 3 && "Preuve ajoutée au portfolio"}
         </h1>
         <p className="text-[13px] text-white/35">Étape {Math.min(step, 2)} / 2</p>
       </header>
@@ -213,14 +213,7 @@ export default function ProveInner() {
               {error && <p className="text-[13px] text-rose-300">{error}</p>}
               <button
                 type="button"
-                disabled={
-                  saving ||
-                  (!note.trim() &&
-                    !fileName &&
-                    methodId !== "edge_eval" &&
-                    methodId !== "roleplay" &&
-                    methodId !== "ask_validation")
-                }
+                disabled={saving || (!note.trim() && !fileName)}
                 onClick={() => void submit()}
                 className={cn(CONNECT_BTN_PRIMARY, "disabled:opacity-40")}
               >
@@ -234,8 +227,10 @@ export default function ProveInner() {
       {step === 3 && done && (
         <div className="mt-10 space-y-6">
           <p className="text-[16px] leading-relaxed text-white/70">
-            Votre preuve est rattachée à <span className="font-semibold text-white">{skill}</span>.
-            Elle alimente automatiquement la synthèse de votre Profil.
+            Cette preuve est dans votre portfolio, rattachée à{" "}
+            <span className="font-semibold text-white">{skill}</span>. Elle documente la compétence.
+            Un Open Badge, lui, est délivré seulement lorsqu&apos;un expert a défini des critères et que
+            vos compétences prouvées y correspondent.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link

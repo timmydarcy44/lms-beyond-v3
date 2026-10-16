@@ -1,5 +1,6 @@
 import { sendEmail } from "@/lib/email/resend-client";
 import { pipelineOwnerLabel } from "@/lib/crm/pipeline-btob-owners";
+import { publicAppUrl } from "@/lib/env";
 
 type NewProspectEmailInput = {
   company_name: string;
@@ -22,7 +23,7 @@ export async function sendNewPipelineProspectNotification(
   const contact = [input.contact_first_name, input.email, input.phone].filter(Boolean).join(" · ") || "—";
   const siretLine = input.siret ? `<p><strong>SIRET :</strong> ${input.siret}</p>` : "";
   const opcoLine = input.opco_name ? `<p><strong>OPCO :</strong> ${input.opco_name}</p>` : "";
-  const dealUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://beyond.edgebs.fr"}/super/crm/pipeline-btob/${input.deal_id}`;
+  const dealUrl = `${publicAppUrl()}/super/crm/pipeline-btob/${input.deal_id}`;
 
   const html = `
     <div style="font-family: system-ui, sans-serif; line-height: 1.5; color: #111;">
@@ -43,7 +44,7 @@ export async function sendNewPipelineProspectNotification(
     to: [...NOTIFY_RECIPIENTS],
     subject: `Nouveau prospect : ${input.company_name}`,
     html,
-    from: "Beyond CRM <darcy@edgebs.fr>",
+    from: "Beyond CRM <noreply@byound.fr>",
     skipBcc: true,
   });
 }

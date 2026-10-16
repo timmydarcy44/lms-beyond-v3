@@ -3,8 +3,11 @@ import {
   edgeEmailHighlight,
   edgeEmailParagraph,
 } from "@/lib/emails/edge-email-shell";
+import { publicAppUrl } from "@/lib/env";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://edgebs.fr";
+function APP_URL() {
+  return publicAppUrl();
+}
 
 export function getParticulierWelcomeEmail(params: { firstName: string; confirmationLink: string }) {
   const name = params.firstName.trim();
@@ -35,7 +38,7 @@ export function getParticulierTestCompletedEmail(params: {
     bodyHtml: edgeEmailParagraph(
       `${params.firstName.trim() || "Votre"} test « ${params.testName} » est terminé. Consultez vos résultats dans votre espace Byound.`,
     ),
-    cta: { label: "Voir mes résultats", href: params.dashboardHref ?? `${APP_URL}/dashboard/apprenant` },
+    cta: { label: "Voir mes résultats", href: params.dashboardHref ?? `${APP_URL()}/dashboard/apprenant` },
   });
   return { subject: `Test terminé — ${params.testName}`, html };
 }
@@ -53,7 +56,7 @@ export function getParticulierBadgeEarnedEmail(params: {
       edgeEmailHighlight("Badge Byound", params.badgeName),
       edgeEmailParagraph("Votre badge est disponible dans votre Wallet."),
     ].join(""),
-    cta: { label: "Voir mon Wallet", href: params.walletHref ?? `${APP_URL}/dashboard/apprenant/badges` },
+    cta: { label: "Voir mon Wallet", href: params.walletHref ?? `${APP_URL()}/dashboard/apprenant/badges` },
   });
   return { subject: `Badge obtenu — ${params.badgeName}`, html };
 }
@@ -88,7 +91,7 @@ export function getParticulierSkillAnalysisEmail(params: {
     ].join(""),
     cta: {
       label: "Voir mon portefeuille",
-      href: params.dashboardHref ?? `${APP_URL}/dashboard/apprenant/profil-comportemental/hard-skills`,
+      href: params.dashboardHref ?? `${APP_URL()}/dashboard/apprenant/profil-comportemental/hard-skills`,
     },
   });
 
@@ -112,7 +115,7 @@ export function getParticulierSkillValidatedEmail(params: {
     ].join(""),
     cta: {
       label: "Créer mon badge Byound",
-      href: params.createBadgeHref ?? `${APP_URL}/dashboard/apprenant/badges`,
+      href: params.createBadgeHref ?? `${APP_URL()}/dashboard/apprenant/badges`,
     },
   });
   return { subject: `Compétence validée — ${params.skillName}`, html };
@@ -130,7 +133,7 @@ export function getParticulierNewProofReceivedEmail(params: {
     ),
     cta: {
       label: "Suivre mon analyse",
-      href: `${APP_URL}/dashboard/apprenant/profil-comportemental/hard-skills`,
+      href: `${APP_URL()}/dashboard/apprenant/profil-comportemental/hard-skills`,
     },
   });
   return { subject: `Preuve reçue — ${params.skillName}`, html };

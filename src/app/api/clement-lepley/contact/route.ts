@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const resendKey = process.env.RESEND_API_KEY;
-    const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
+    const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@byound.fr";
 
     if (resendKey && notifyTo) {
       const from = resolveResendFromEmail();

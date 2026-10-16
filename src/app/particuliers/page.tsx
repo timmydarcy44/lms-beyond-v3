@@ -595,8 +595,8 @@ export default function ParticuliersPage() {
             <Link href="/particuliers/login" className="transition hover:text-edge-black">
               Se connecter
             </Link>
-            <Link href="https://edgebs.fr" className="transition hover:text-edge-black">
-              edgebs.fr
+            <Link href="https://www.byound.fr" className="transition hover:text-edge-black">
+              www.byound.fr
             </Link>
           </div>
         </div>

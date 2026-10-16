@@ -67,9 +67,9 @@ export async function POST(request: Request) {
       contact.employmentStatus;
 
     const resendKey = process.env.RESEND_API_KEY;
-    const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
+    const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@byound.fr";
     if (resendKey && notifyTo) {
-      const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>";
+      const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@byound.fr>";
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {

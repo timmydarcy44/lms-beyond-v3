@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     }
 
     const from = resolveResendFromEmail();
-    const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
+    const notifyTo = process.env.CONTACT_EMAIL?.trim() || "contact@byound.fr";
 
     const userHtml = `
       <p>Bonjour ${escapeHtml(firstName)},</p>

@@ -8,6 +8,7 @@ import {
 } from "@/lib/cfa-applications";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
+import { publicAppUrl } from "@/lib/env";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CFA_ADMIN_EMAIL = "timmydarcy44@gmail.com";
@@ -38,7 +39,7 @@ async function sendCfaEmail(payload: Record<string, unknown>): Promise<boolean> 
       method: "POST",
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>",
+        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@byound.fr>",
         ...payload,
       }),
     });
@@ -127,11 +128,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const publicUrl = (
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    "https://edgebs.fr"
-  ).replace(/\/$/, "");
+  const publicUrl = publicAppUrl();
   const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
   await Promise.all([
     sendCfaEmail({
@@ -312,7 +309,7 @@ export async function PATCH(request: Request) {
           body: `<p>${escapeHtml(data.email)} · ${escapeHtml(data.phone || "Téléphone non renseigné")}<br>Âge : ${escapeHtml(data.age)} · Niveau : ${escapeHtml(data.education_level)}<br>Spécialisation : ${escapeHtml(getCfaSpecializationLabel(data.specialization))}<br>Alternance : ${data.alternance_status === "company_found" ? "Entreprise trouvée" : "En recherche"}</p><h2 style="font-size:18px">Parcours scolaire</h2><p>${escapeHtml(data.school_background)}</p><h2 style="font-size:18px">Expériences</h2><p>${escapeHtml(data.experiences || "—")}</p><h2 style="font-size:18px">Pourquoi Byound ?</h2><p>${escapeHtml(data.motivation_text || "Voir le média joint au dossier")}</p><h2 style="font-size:18px">Byound Challenge</h2>${challengeSummary}`,
           cta: {
             label: "Ouvrir le dossier",
-            href: `${(process.env.NEXT_PUBLIC_APP_URL || "https://edgebs.fr").replace(/\/$/, "")}/super/crm/cfa`,
+            href: `${publicAppUrl()}/super/crm/cfa`,
           },
         }),
       }),

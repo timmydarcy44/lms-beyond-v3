@@ -8,7 +8,7 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const CONTACT_TO = "contact@edgebs.fr";
+const CONTACT_TO = "contact@byound.fr";
 const CONTACT_BCC = "timmydarcy44@gmail.com";
 
 function row(label: string, value: string) {

@@ -38,7 +38,7 @@ const FAQ = [
   },
   {
     q: "Comment changer d’abonnement ?",
-    a: "Consultez Tarifs & abonnement, puis contactez contact@edgebs.fr pour un devis ou un changement de formule (Skills, Learning, Learning+).",
+    a: "Consultez Tarifs & abonnement, puis contactez contact@byound.fr pour un devis ou un changement de formule (Skills, Learning, Learning+).",
   },
   {
     q: "Qui peut accéder au dashboard entreprise ?",
@@ -46,7 +46,7 @@ const FAQ = [
   },
   {
     q: "Besoin d’aide urgente ?",
-    a: "Écrivez à contact@edgebs.fr ou utilisez la messagerie interne pour une question RH rapide auprès de vos équipes.",
+    a: "Écrivez à contact@byound.fr ou utilisez la messagerie interne pour une question RH rapide auprès de vos équipes.",
   },
 ] as const;
 
@@ -67,13 +67,13 @@ export default function EntrepriseAidePage() {
 
         <div className="mb-8 grid gap-3 sm:grid-cols-2 max-w-3xl">
           <a
-            href="mailto:contact@edgebs.fr"
+            href="mailto:contact@byound.fr"
             className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-violet-200"
           >
             <Mail className="h-5 w-5 text-violet-600" />
             <div>
               <p className="text-sm font-semibold text-gray-900">Écrire au support</p>
-              <p className="text-xs text-gray-500">contact@edgebs.fr</p>
+              <p className="text-xs text-gray-500">contact@byound.fr</p>
             </div>
           </a>
           <Link

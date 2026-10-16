@@ -78,8 +78,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 });
     }
 
-    const contactEmail = process.env.CONTACT_EMAIL?.trim() || "contact@edgebs.fr";
-    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>";
+    const contactEmail = process.env.CONTACT_EMAIL?.trim() || "contact@byound.fr";
+    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@byound.fr>";
 
     const resendKey = process.env.RESEND_API_KEY;
 

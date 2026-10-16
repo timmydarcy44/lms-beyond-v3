@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,9 @@ import {
   EdgePremiumMegaColumnsPanel,
   EdgePremiumMegaTrigger,
 } from "@/components/edge-site/premium/edge-premium-mega-menu";
+import { MegaMenu } from "@/components/edge-site/premium/mega-menu";
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
+import { getNeoMegaMenus } from "@/lib/edge-site/neo-mega-menus";
 
 type DropdownKey = "plateforme";
 type MegaKey = "alternants" | "entreprises" | "particuliers";
@@ -98,25 +101,60 @@ export function EdgePremiumNavbar({
   light = false,
 }: NavbarProps) {
   const config = useEdgePremiumConfig();
-  const { links, nav, megaApprenants, megaBusiness, megaParticulier, routes } = config;
+  const { links, nav, megaParticulier, routes } = config;
+  const neoMenus = getNeoMegaMenus(routes);
+  const schoolMenu = neoMenus[0];
+  const businessMenu = neoMenus[1];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
   const [openMega, setOpenMega] = useState<MegaKey | null>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const openMegaRef = useRef<MegaKey | null>(null);
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const megaTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathname = usePathname();
+  openMegaRef.current = openMega;
+
+  const clearMegaTimers = () => {
+    if (megaTimer.current) clearTimeout(megaTimer.current);
+    if (openTimer.current) clearTimeout(openTimer.current);
+  };
 
   const scheduleMegaClose = () => {
+    if (openTimer.current) clearTimeout(openTimer.current);
     if (megaTimer.current) clearTimeout(megaTimer.current);
-    megaTimer.current = setTimeout(() => setOpenMega(null), 180);
+    megaTimer.current = setTimeout(() => setOpenMega(null), 200);
   };
 
   const cancelMegaClose = () => {
     if (megaTimer.current) clearTimeout(megaTimer.current);
   };
 
+  const intentOpen = (key: MegaKey) => {
+    cancelMegaClose();
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => {
+      setOpenMega(key);
+      setOpenDropdown(null);
+    }, 120);
+  };
+
+  const toggleMega = (key: MegaKey) => {
+    clearMegaTimers();
+    setOpenDropdown(null);
+    setOpenMega((current) => (current === key ? null : key));
+  };
+
   useEffect(() => {
-    return () => cancelMegaClose();
+    return () => clearMegaTimers();
   }, []);
+
+  useEffect(() => {
+    setOpenMega(null);
+    setOpenDropdown(null);
+    setMobileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -132,9 +170,11 @@ export function EdgePremiumNavbar({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        const current = openMegaRef.current;
         setOpenDropdown(null);
         setOpenMega(null);
         setMobileOpen(false);
+        if (current) triggerRefs.current[current]?.focus();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -148,27 +188,21 @@ export function EdgePremiumNavbar({
   };
 
   const openMegaMenu = (key: MegaKey) => {
-    cancelMegaClose();
+    clearMegaTimers();
     setOpenMega(key);
     setOpenDropdown(null);
   };
 
   const isSolid = pageScrolled || openDropdown !== null || openMega !== null || mobileOpen;
 
-  const megaData =
-    openMega === "alternants"
-      ? megaApprenants
-      : openMega === "entreprises"
-        ? megaBusiness
-        : openMega === "particuliers"
-          ? megaParticulier
-          : null;
+  const megaData = openMega === "particuliers" ? megaParticulier : null;
+  const neoMenu = openMega === "alternants" ? schoolMenu : openMega === "entreprises" ? businessMenu : null;
 
   return (
     <header
       ref={headerRef}
       className={cn(
-        "relative overflow-visible transition-all duration-300",
+        "relative z-50 isolate overflow-visible transition-all duration-300",
         light
           ? cn(
               overlay && !isSolid
@@ -185,22 +219,48 @@ export function EdgePremiumNavbar({
       )}
       onMouseLeave={scheduleMegaClose}
     >
-      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8 lg:gap-4 lg:px-10">
+      <div className="relative z-50 mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8 lg:gap-4 lg:px-10">
         <EdgePremiumLogo light={light} />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
-          <EdgePremiumMegaTrigger
-            label="École"
-            open={openMega === "alternants"}
-            onOpen={() => openMegaMenu("alternants")}
-            light={light}
-          />
-          <EdgePremiumMegaTrigger
-            label="Entreprises"
-            open={openMega === "entreprises"}
-            onOpen={() => openMegaMenu("entreprises")}
-            light={light}
-          />
+          {([
+            ["alternants", "École"],
+            ["entreprises", "Entreprises"],
+          ] as const).map(([key, label]) => {
+            const open = openMega === key;
+            return (
+              <button
+                key={key}
+                ref={(node) => {
+                  triggerRefs.current[key] = node;
+                }}
+                type="button"
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full text-sm transition-colors",
+                  open
+                    ? light
+                      ? "bg-black/5 px-3 py-2 font-bold text-neutral-950"
+                      : "bg-white/10 px-3 py-2 font-bold text-white"
+                    : light
+                      ? "px-2.5 py-2 font-medium text-neutral-700 hover:text-neutral-950 xl:px-3"
+                      : "px-2.5 py-2 font-medium text-white/60 hover:text-white xl:px-3",
+                )}
+                aria-expanded={open}
+                aria-controls={`mega-${key}`}
+                onMouseEnter={() => intentOpen(key)}
+                onMouseLeave={scheduleMegaClose}
+                onClick={() => toggleMega(key)}
+              >
+                {label}
+                <ChevronDown
+                  className={cn("transition-transform duration-200", open && "rotate-180")}
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </button>
+            );
+          })}
           <EdgePremiumMegaTrigger
             label="Particuliers"
             open={openMega === "particuliers"}
@@ -271,6 +331,30 @@ export function EdgePremiumNavbar({
           )}
         </button>
       </div>
+
+      {neoMenu ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 hidden bg-[rgba(7,12,28,0.45)] lg:block"
+          aria-label="Fermer le menu"
+          onClick={() => setOpenMega(null)}
+        />
+      ) : null}
+
+      {neoMenu ? (
+        <div
+          className="absolute left-0 right-0 top-full z-50 hidden pt-3 lg:block"
+          onMouseEnter={cancelMegaClose}
+        >
+          <div className="neo-mega-panel mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+            <MegaMenu
+              menu={neoMenu}
+              id={`mega-${openMega}`}
+              onNavigate={() => setOpenMega(null)}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {megaData ? (
         <div

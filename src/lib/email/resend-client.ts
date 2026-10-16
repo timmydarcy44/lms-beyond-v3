@@ -30,7 +30,7 @@ export async function getResendClient() {
   return resendInstance;
 }
 
-export const EDGE_BCC_ADDRESS = "contact@edgebs.fr";
+export const EDGE_BCC_ADDRESS = "contact@byound.fr";
 
 export function resolveAdminBccEmail(): string | null {
   const admin = process.env.ADMIN_BCC_EMAIL?.trim();

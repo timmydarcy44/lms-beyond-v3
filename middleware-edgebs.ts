@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  BYOUND_PUBLIC_ORIGIN,
+  bareHostname,
+  isByoundCanonicalHost,
+  isByoundMarketingHost,
+} from "@/lib/edge-site/byound-host";
 
 /** Préfixe interne Next.js — ne pas confondre avec les URLs publiques edgebs.fr. */
 export const EDGE_LAB_PREFIX = "/edge-lab";
@@ -34,8 +40,7 @@ const EDGE_BS_PUBLIC_PREFIXES: readonly string[] = [
 const STATIC_FILE_RE = /\.(png|jpe?g|webp|svg|ico|pdf|gif|css|js|mjs|woff2?|ttf|eot|map)$/i;
 
 export function isEdgeBsHostname(host: string): boolean {
-  const h = host.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
-  return h === "edgebs.fr";
+  return isByoundMarketingHost(host);
 }
 
 export function shouldSkipEdgeBsMiddleware(pathname: string): boolean {
@@ -68,6 +73,14 @@ function isEdgeBsOnlineCatalogPath(pathname: string): boolean {
   );
 }
 
+function canonicalPublicPath(pathname: string): string {
+  const marketing = edgeLabToCleanPath(pathname);
+  if (marketing) return marketing;
+  if (pathname === EDGE_LAB_PREFIX || pathname === `${EDGE_LAB_PREFIX}/`) return "/";
+  if (pathname.startsWith(`${EDGE_LAB_PREFIX}/`)) return pathname.slice(EDGE_LAB_PREFIX.length) || "/";
+  return pathname;
+}
+
 /** /edge-lab/foo → /foo si foo est une route marketing publique (pas les assets). */
 export function edgeLabToCleanPath(pathname: string): string | null {
   if (!pathname.startsWith(`${EDGE_LAB_PREFIX}/`)) return null;
@@ -85,6 +98,14 @@ export function edgeLabToCleanPath(pathname: string): string | null {
 export function handleEdgeBsRouting(request: NextRequest): NextResponse | null {
   const url = request.nextUrl;
   const pathname = url.pathname;
+  const host = request.headers.get("host") ?? "";
+
+  const bare = bareHostname(host);
+  const keepOnLegacyHost = pathname.startsWith("/api") || pathname.startsWith("/_next") || STATIC_FILE_RE.test(pathname);
+  if (!keepOnLegacyHost && (bare === "edgebs.fr" || (bare === "byound.fr" && !isByoundCanonicalHost(host)))) {
+    const clean = canonicalPublicPath(pathname);
+    return NextResponse.redirect(new URL(`${clean}${url.search}`, BYOUND_PUBLIC_ORIGIN), 301);
+  }
 
   if (shouldSkipEdgeBsMiddleware(pathname)) {
     return null;

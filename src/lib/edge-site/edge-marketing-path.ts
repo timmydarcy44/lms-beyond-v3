@@ -1,3 +1,4 @@
+import { isByoundMarketingHost } from "@/lib/edge-site/byound-host";
 import { MARKETING_PAGE_REGISTRY } from "@/lib/edge-site/marketing-page-registry";
 
 export const EDGE_LAB_INTERNAL_PREFIX = "/edge-lab";
@@ -16,8 +17,7 @@ export const EDGE_BS_LEGACY_PUBLIC_PREFIXES = [
 ] as const;
 
 export function isEdgeBsPublicHost(host: string | null | undefined): boolean {
-  const h = host?.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
-  return h === "edgebs.fr";
+  return isByoundMarketingHost(host);
 }
 
 /** Préfixe affiché dans les liens : vide sur edgebs.fr, /edge-lab en local. */

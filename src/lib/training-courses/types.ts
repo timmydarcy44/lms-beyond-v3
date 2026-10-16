@@ -64,6 +64,6 @@ export type TrainingCoursePublic = TrainingCourseRow & {
   price_label: string;
 };
 
-export const EDGE_ONLINE_EXTERNAL_URL = "https://edgebs.fr/edgeonline";
+export const EDGE_ONLINE_EXTERNAL_URL = "https://www.byound.fr/edgeonline";
 
 export const TRAINING_FORMATION_BASE_PATH = "/business/formations";

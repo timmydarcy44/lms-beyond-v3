@@ -2,13 +2,13 @@ export const PIPELINE_BTOB_CONTACT_OWNERS = [
   {
     email: "jerome.picot@edgebs.fr",
     label: "Jérôme Picot",
-    catalogueFromEmail: "jerome.picot@edgebs.fr",
+    catalogueFromEmail: "contact@byound.fr",
     catalogueFromName: "Jérôme Picot",
   },
   {
     email: "timmydarcy44@gmail.com",
     label: "Timmy Darcy",
-    catalogueFromEmail: "contact@edgebs.fr",
+    catalogueFromEmail: "contact@byound.fr",
     catalogueFromName: "Timmy Darcy",
   },
 ] as const;
@@ -31,7 +31,7 @@ export function isValidPipelineOwnerEmail(email: string | null | undefined): ema
 
 export function resolveCatalogueFromEmail(ownerEmail: string | null | undefined): string {
   const found = PIPELINE_BTOB_CONTACT_OWNERS.find((o) => o.email === ownerEmail);
-  return found?.catalogueFromEmail ?? "contact@edgebs.fr";
+  return found?.catalogueFromEmail ?? "contact@byound.fr";
 }
 
 export function resolveCatalogueFromName(ownerEmail: string | null | undefined): string {
@@ -50,10 +50,10 @@ export function resolveCatalogueFromForCurrentUser(
 ): { email: string; name: string } {
   const norm = currentUserEmail?.trim().toLowerCase() ?? "";
   if (norm === JEROME_EMAIL) {
-    return { email: JEROME_EMAIL, name: "Jérôme Picot" };
+    return { email: "contact@byound.fr", name: "Jérôme Picot" };
   }
   if (norm === TIMMY_EMAIL) {
-    return { email: "contact@edgebs.fr", name: "Timmy Darcy" };
+    return { email: "contact@byound.fr", name: "Timmy Darcy" };
   }
-  return { email: "contact@edgebs.fr", name: "Byound" };
+  return { email: "contact@byound.fr", name: "Byound" };
 }

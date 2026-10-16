@@ -32,7 +32,7 @@ export function cfaDarkEmailTemplate({
               </td>
             </tr>
           </table>
-          <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#91a6c8">Byound School · edgebs.fr</p>
+          <p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#91a6c8">Byound School · www.byound.fr</p>
         </td>
       </tr>
     </table>

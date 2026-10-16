@@ -98,7 +98,7 @@ export default function EntrepriseAbonnementPage() {
                   ))}
                 </ul>
                 <a
-                  href="mailto:contact@edgebs.fr?subject=Abonnement%20EDGE%20Entreprise"
+                  href="mailto:contact@byound.fr?subject=Abonnement%20EDGE%20Entreprise"
                   className={cn(
                     "mt-6 inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold transition",
                     plan.popular
@@ -119,8 +119,8 @@ export default function EntrepriseAbonnementPage() {
             Consulter l’aide
           </Link>{" "}
           ou écrire à{" "}
-          <a href="mailto:contact@edgebs.fr" className="font-semibold text-violet-600">
-            contact@edgebs.fr
+          <a href="mailto:contact@byound.fr" className="font-semibold text-violet-600">
+            contact@byound.fr
           </a>
           .
         </p>

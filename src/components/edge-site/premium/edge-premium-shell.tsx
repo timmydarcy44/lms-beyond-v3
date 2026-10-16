@@ -10,6 +10,7 @@ type Props = {
   navChrome?: "dark" | "light";
   /** Bandeau secondaire au-dessus de la navigation. */
   showTopBar?: boolean;
+  showFooter?: boolean;
 };
 
 export async function EdgePremiumShell({
@@ -17,6 +18,7 @@ export async function EdgePremiumShell({
   overlayNav = true,
   navChrome = "dark",
   showTopBar = true,
+  showFooter = true,
 }: Props) {
   const host = (await headers()).get("host");
   const config = getEdgePremiumConfig(host);
@@ -27,6 +29,7 @@ export async function EdgePremiumShell({
       overlayNav={overlayNav}
       navChrome={navChrome}
       showTopBar={showTopBar}
+      showFooter={showFooter}
     >
       {children}
     </EdgePremiumShellClient>

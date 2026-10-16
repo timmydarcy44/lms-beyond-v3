@@ -9,8 +9,8 @@ import {
   resolveAuthUserIdByEmail,
   syncCollaboratorProfileAfterInvite,
 } from "@/lib/entreprise/sync-collaborator-profile";
+import { publicAppUrl } from "@/lib/env";
 import { sendCollaboratorInviteEmail } from "@/lib/onboarding/emails";
-import { appOrigin } from "@/lib/onboarding/slug";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -82,12 +82,7 @@ export async function POST(request: NextRequest) {
 
   let inviteSent = false;
   try {
-    const origin = appOrigin();
-    const redirectTo =
-      process.env.NEXT_PUBLIC_URL?.trim() ||
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      origin;
-    const siteBase = redirectTo.replace(/\/$/, "");
+    const siteBase = publicAppUrl();
     const setPasswordUrl = buildCollaboratorSetPasswordUrl(siteBase);
     const inviteMetadata = buildCollaboratorInviteMetadata({
       firstName: first_name,

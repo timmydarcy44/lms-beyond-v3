@@ -211,7 +211,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   const publicUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/p/${slug}`
-      : `https://edgebs.fr/p/${slug}`;
+      : `https://www.byound.fr/p/${slug}`;
 
   const extractIdmcAxes = useCallback((value: unknown): Record<AxisKey, number> | null => {
     if (!value || typeof value !== "object") return null;

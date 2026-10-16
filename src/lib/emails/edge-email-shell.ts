@@ -70,7 +70,7 @@ export function buildEdgeEmailShell(params: EdgeEmailShellParams): string {
           ${ctaBlock}
           ${footer}
           <p style="margin:64px 0 0;padding-top:40px;border-top:1px solid #EFEFEF;font-size:13px;line-height:1.65;color:#8A8A8A;text-align:center;">
-            L'équipe Byound · <a href="https://edgebs.fr" style="color:#050505;text-decoration:none;font-weight:500;">edgebs.fr</a>
+            L'équipe Byound · <a href="https://www.byound.fr" style="color:#050505;text-decoration:none;font-weight:500;">www.byound.fr</a>
           </p>
         </td></tr>
       </table>

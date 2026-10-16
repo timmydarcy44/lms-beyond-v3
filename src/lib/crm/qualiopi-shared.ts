@@ -1,3 +1,5 @@
+import { publicAppUrl } from "@/lib/env";
+
 export const QUALIOPI_DOC_KINDS = ["convention", "reglement", "livret", "autre"] as const;
 export type QualiopiDocKind = (typeof QUALIOPI_DOC_KINDS)[number];
 
@@ -91,5 +93,5 @@ export function formatSignedAt(iso: string | null | undefined) {
 }
 
 export function qualiopiAppBaseUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL || "https://edgebs.fr").replace(/\/$/, "");
+  return publicAppUrl();
 }

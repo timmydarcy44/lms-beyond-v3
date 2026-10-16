@@ -1,3 +1,5 @@
+import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as
   | string
@@ -42,7 +44,9 @@ export function publicAppUrl(): string {
   ];
   for (const value of candidates) {
     const trimmed = value?.trim();
-    if (trimmed) return trimmed.replace(/\/$/, "");
+    if (trimmed) {
+      return trimmed.replace(/\/$/, "").replace(/^https?:\/\/(?:[\w-]+\.)*edgebs\.fr/i, BYOUND_PUBLIC_ORIGIN);
+    }
   }
   return defaultLocalOrigin;
 }

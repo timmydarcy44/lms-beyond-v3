@@ -164,20 +164,21 @@ export async function middleware(request: NextRequest) {
 }
 
 async function runMiddleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/super")) return NextResponse.next();
-  const url = request.nextUrl;
-  const originalUrl = request.nextUrl.clone();
   const hostname = request.headers.get("host") || "";
   const hostWithoutPort = hostname.split(":")[0];
-  const beyondCenterHost = isBeyondCenterHostname(hostWithoutPort);
   const edgeBsHost = isEdgeBsHostname(hostWithoutPort);
-  const edgeOnlineHost = isEdgeOnlineHostname(hostWithoutPort);
-  const tenant = getTenantFromHostname(hostname);
 
   if (edgeBsHost) {
     const edgeBsResponse = handleEdgeBsRouting(request);
     if (edgeBsResponse) return edgeBsResponse;
   }
+
+  if (request.nextUrl.pathname.startsWith("/super")) return NextResponse.next();
+  const url = request.nextUrl;
+  const originalUrl = request.nextUrl.clone();
+  const beyondCenterHost = isBeyondCenterHostname(hostWithoutPort);
+  const edgeOnlineHost = isEdgeOnlineHostname(hostWithoutPort);
+  const tenant = getTenantFromHostname(hostname);
 
   // --- EDGE Online (premium product surface) ---
   // On edgeonline.fr, expose a clean product URL space (/, /parcours, /formations, etc.)

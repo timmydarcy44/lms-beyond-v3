@@ -1,0 +1,38 @@
+.byound-home {
+  --navy: #070c1c;
+  --navy-2: #0b1124;
+  --surface-dark: #12141a;
+  --violet: #6e5bff;
+  --violet-light: #8b7bff;
+  --violet-text: #a99bff;
+  --gold: #f2cf6b;
+  --white: #ffffff;
+  --paper: #f4f4f1;
+  --ink: #07080b;
+  --ink-2: #3a3d45;
+  --ink-3: #6b6f7a;
+  --on-dark: #f4f5f7;
+  --on-dark-2: #dadde4;
+  --on-dark-3: #b5bac6;
+  background: var(--white);
+  color: var(--ink);
+  overflow-x: clip;
+}
+
+.byound-home :where(a, button):focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.home-reveal {
+  animation: home-reveal 300ms ease-out both;
+}
+
+@keyframes home-reveal {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal { animation: none; }
+}

@@ -23,7 +23,7 @@ export type ProcessingRecord = {
 };
 
 export const EDGE_DPO_CONTACT = {
-  email: "contact@edgebs.fr",
+  email: "contact@byound.fr",
   organization: "Byound Business Solutions",
   address: "France",
 };
@@ -106,7 +106,7 @@ export const EDGE_PROCESSING_REGISTER: ProcessingRecord[] = [
     name: "Demandes de formation",
     purpose: "Transmettre les besoins de formation à l’équipe Byound.",
     categories: ["Contact", "Entreprise", "Besoin formation", "Message"],
-    recipients: ["contact@edgebs.fr", "Équipe commerciale / pédagogique Byound"],
+    recipients: ["contact@byound.fr", "Équipe commerciale / pédagogique Byound"],
     retention: "3 ans à compter de la demande.",
     legalBasis: "contract",
     legalBasisLabel: "Mesures précontractuelles / contrat (art. 6.1.b)",

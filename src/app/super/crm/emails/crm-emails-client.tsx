@@ -34,7 +34,7 @@ export function CrmEmailsClient() {
   const [html, setHtml] = useState("");
   const [sending, setSending] = useState(false);
   const [images, setImages] = useState<MailImage[]>([]);
-  const [imageHref, setImageHref] = useState("https://edgebs.fr");
+  const [imageHref, setImageHref] = useState("https://www.byound.fr");
 
   const handleSend = async () => {
     if (!subject.trim() || !html.trim()) {
@@ -140,7 +140,7 @@ export function CrmEmailsClient() {
 
         <div className="space-y-2">
           <Label>Image cliquable</Label>
-          <Input value={imageHref} onChange={(event) => setImageHref(event.target.value)} placeholder="https://edgebs.fr" />
+          <Input value={imageHref} onChange={(event) => setImageHref(event.target.value)} placeholder="https://www.byound.fr" />
           <Input
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"

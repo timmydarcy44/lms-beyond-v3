@@ -19,7 +19,7 @@ export function buildAccompagnementIcs(params: {
 }): string {
   const start = new Date(params.startsAt);
   const end = new Date(start.getTime() + params.durationMinutes * 60 * 1000);
-  const uid = `edge-accompagnement-${params.reservationId}@edgebs.fr`;
+  const uid = `edge-accompagnement-${params.reservationId}@byound.fr`;
   const manageUrl = `${publicAppUrl()}/dashboard/accompagnement/gérer/${params.manageToken}`;
 
   const lines = [
@@ -36,7 +36,7 @@ export function buildAccompagnementIcs(params: {
     `SUMMARY:${params.title} — Byound`,
     `DESCRIPTION:Accompagnement Byound avec ${params.coachName}. Gérer : ${manageUrl}`,
     "LOCATION:Visioconférence (lien envoyé par email)",
-    `ORGANIZER;CN=Byound:mailto:contact@edgebs.fr`,
+    `ORGANIZER;CN=Byound:mailto:contact@byound.fr`,
     `ATTENDEE;CN=Participant;RSVP=TRUE:mailto:${params.userEmail}`,
     "STATUS:CONFIRMED",
     "END:VEVENT",

@@ -60,7 +60,7 @@ export const CASE_STUDIES = [
     tech: "CRM · Pipeline · IA · LMS",
     image:
       "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80&auto=format&fit=crop",
-    href: "https://edgebs.fr",
+    href: "https://www.byound.fr",
   },
   {
     name: "NEVO",

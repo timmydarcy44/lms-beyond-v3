@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
+import { publicAppUrl } from "@/lib/env";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 function getStripe() {
@@ -51,12 +52,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ application: data });
   }
 
-  const origin =
-    request.headers.get("origin") ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "https://edgebs.fr";
-  const returnUrl = `${origin.replace(/\/$/, "")}/ecole/candidater?resume=${encodeURIComponent(token)}`;
+  const returnUrl = `${publicAppUrl()}/ecole/candidater?resume=${encodeURIComponent(token)}`;
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: String(application.email),

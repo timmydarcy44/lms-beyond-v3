@@ -135,7 +135,7 @@ export function OffresFormationsSection() {
               <p className="mt-2 text-sm text-gray-500">{item.description}</p>
               {item.available ? (
                 <a
-                  href="https://edgebs.fr"
+                  href="https://www.byound.fr"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-4 inline-block text-sm font-semibold text-violet-600 hover:text-violet-500"

@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "Vous savez où vous voulez aller.",
     description:
       "Byound construit le chemin le plus rapide pour atteindre votre objectif professionnel.",
-    url: "https://edgebs.fr/particuliers",
+    url: "https://www.byound.fr/particuliers",
     siteName: "Byound",
   },
 };

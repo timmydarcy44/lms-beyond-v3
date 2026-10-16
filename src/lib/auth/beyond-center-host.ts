@@ -17,7 +17,7 @@ export function isLocalDevHostname(host: string | null | undefined): boolean {
 /** Byound product domains — club / partenaire dashboards must not be served here. */
 export function isEdgeProductHostname(host: string | null | undefined): boolean {
   const h = normalizeRequestHost(host);
-  return h === "edgebs.fr" || h === "edgeonline.fr";
+  return h === "edgebs.fr" || h === "byound.fr" || h === "edgeonline.fr";
 }
 
 /**

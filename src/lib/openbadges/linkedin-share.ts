@@ -16,7 +16,7 @@ export function buildOpenBadgeLinkedInShareUrl(params: {
   badgeName: string;
   level?: number | null;
 }): string {
-  const url = String(params.shareUrl ?? "").trim() || "https://edgebs.fr";
+  const url = String(params.shareUrl ?? "").trim() || "https://www.byound.fr";
   const summary = buildOpenBadgeLinkedInShareMessage(params);
   return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(summary)}`;
 }
@@ -27,7 +27,7 @@ export function buildOpenBadgeLinkedInFeedShareUrl(params: {
   badgeName: string;
   level?: number | null;
 }): string {
-  const url = String(params.shareUrl ?? "").trim() || "https://edgebs.fr";
+  const url = String(params.shareUrl ?? "").trim() || "https://www.byound.fr";
   const message = `${buildOpenBadgeLinkedInShareMessage(params)}\n\n${url}`;
   return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(message)}`;
 }

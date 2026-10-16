@@ -378,7 +378,7 @@ export function buildPsgApprenantDemoMissions() {
 }
 
 export function buildPsgApprenantDemoBadges() {
-  const share = (id: string) => `https://edgebs.fr/badgeclasses/${id}/criteria`;
+  const share = (id: string) => `https://www.byound.fr/badgeclasses/${id}/criteria`;
   return {
     earnedOpenBadges: [
       {

@@ -52,10 +52,10 @@ export default function ExpertSettingsPage() {
             <div className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm">
               <p className="text-sm font-medium">Support Byound</p>
               <a
-                href="mailto:cockpit@edgebs.fr"
+                href="mailto:noreply@byound.fr"
                 className="mt-2 inline-block text-sm text-[#A9AEFF] hover:underline"
               >
-                cockpit@edgebs.fr
+                noreply@byound.fr
               </a>
             </div>
           </section>

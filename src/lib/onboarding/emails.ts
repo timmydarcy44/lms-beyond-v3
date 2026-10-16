@@ -1,7 +1,8 @@
 import { sendEmail } from "@/lib/email/resend-client";
 import { appOrigin } from "@/lib/onboarding/slug";
 
-const DARCY_NOTIFY = process.env.ONBOARDING_NOTIFY_EMAIL?.trim() || "darcy@edgebs.fr";
+const configuredNotify = process.env.ONBOARDING_NOTIFY_EMAIL?.trim() || "timmydarcy44@gmail.com";
+const DARCY_NOTIFY = /@edgebs\.fr/i.test(configuredNotify) ? "timmydarcy44@gmail.com" : configuredNotify;
 
 export async function sendOnboardingEmails(params: {
   companyName: string;
@@ -17,7 +18,7 @@ export async function sendOnboardingEmails(params: {
     params.activationLink ?? `${origin}/onboarding/${params.organisationId}`;
 
   await sendEmail({
-    from: "Timmy Darcy <darcy@edgebs.fr>",
+    from: "Timmy Darcy <noreply@byound.fr>",
     to: params.drhEmail,
     subject: `Bienvenue sur Beyond — Votre espace ${params.companyName} est prêt`,
     html: `
@@ -37,7 +38,7 @@ export async function sendOnboardingEmails(params: {
   });
 
   await sendEmail({
-    from: "Beyond <noreply@edgebs.fr>",
+    from: "Beyond <noreply@byound.fr>",
     to: DARCY_NOTIFY,
     subject: `✅ Nouvelle organisation créée : ${params.companyName}`,
     html: `
@@ -57,7 +58,7 @@ export async function sendCollaboratorInviteEmail(params: {
   inviteLink: string;
 }) {
   await sendEmail({
-    from: "Beyond <noreply@edgebs.fr>",
+    from: "Beyond <noreply@byound.fr>",
     to: params.email,
     subject: `${params.companyName} vous invite sur Beyond`,
     html: `

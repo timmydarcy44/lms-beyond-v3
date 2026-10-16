@@ -418,7 +418,7 @@ export function DailyBriefingOverlay({ open, onClose }: DailyBriefingOverlayProp
           to: to.trim(),
           subject,
           body,
-          from: "Timmy Darcy <darcy@edgebs.fr>",
+          from: "Timmy Darcy <noreply@byound.fr>",
         }),
       });
       const json = (await res.json()) as { error?: string };

@@ -23,7 +23,7 @@ export function BadgeDisplay() {
         </div>
       </div>
       <p className="mt-6 border-t border-black/[0.06] pt-4 font-mono text-[11px] text-black/25">
-        badge.edgebs.fr/verify/…
+        www.byound.fr/verify/…
       </p>
     </div>
   );

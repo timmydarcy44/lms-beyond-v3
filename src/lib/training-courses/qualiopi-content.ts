@@ -171,7 +171,7 @@ export function buildQualiopiInfo(
     { label: "Contact référent", value: "Votre conseiller pédagogique Byound." },
     {
       label: "Référent handicap",
-      value: "referent-handicap@edgebs.fr — étude personnalisée de chaque situation.",
+      value: "referent-handicap@byound.fr — étude personnalisée de chaque situation.",
       wide: true,
     },
   ];

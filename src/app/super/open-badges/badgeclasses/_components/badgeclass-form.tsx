@@ -1110,7 +1110,7 @@ export function BadgeClassForm({
               En local, l’URL affiche{" "}
               <span className="font-mono text-xs">{getBaseUrl().replace(/\/$/, "")}</span> ; en
               production, définissez <span className="font-mono text-xs">NEXT_PUBLIC_BASE_URL</span>{" "}
-              (ex. https://edgebs.fr) pour obtenir le domaine public.
+              (ex. https://www.byound.fr) pour obtenir le domaine public.
             </p>
           </div>
           <div className="space-y-2">

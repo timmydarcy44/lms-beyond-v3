@@ -118,7 +118,7 @@ export function ExpertPendingDashboard() {
                   </Link>
                 ))}
                 <a
-                  href="mailto:cockpit@edgebs.fr?subject=Question%20candidature%20EDGE"
+                  href="mailto:noreply@byound.fr?subject=Question%20candidature%20EDGE"
                   className="flex items-center gap-2 rounded-2xl border border-white/[0.07] px-4 py-3 text-sm text-white/70 hover:bg-white/[0.04]"
                 >
                   <Mail className="h-4 w-4 text-[#A9AEFF]" />

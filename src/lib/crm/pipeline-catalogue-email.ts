@@ -165,7 +165,7 @@ export async function sendBtobCatalogueFollowupEmail(deal: CatalogueDealInput): 
     to: recipient,
     subject: "Suite à l'envoi du catalogue Byound",
     html,
-    from: "Byound <contact@edgebs.fr>",
-    replyTo: "contact@edgebs.fr",
+    from: "Byound <contact@byound.fr>",
+    replyTo: "contact@byound.fr",
   });
 }

@@ -6,7 +6,7 @@ export const getBaseUrl = () => {
 
 /**
  * Base URL utilisée pour les liens partagés (LinkedIn, critères publics).
- * En local, définir NEXT_PUBLIC_LINKEDIN_SHARE_BASE_URL=https://edgebs.fr pour que
+ * En local, définir NEXT_PUBLIC_LINKEDIN_SHARE_BASE_URL=https://www.byound.fr pour que
  * LinkedIn puisse charger l’aperçu (og:image) — localhost n’est pas accessible.
  */
 export const getPublicShareBaseUrl = () => {

@@ -116,7 +116,7 @@ export async function sendPipelineWeeklyRecapEmails(): Promise<
         </p>
         ${dealRowsHtml}
         <p style="margin-top:24px;font-size:13px;color:#6b7280;">
-          <a href="https://edgebs.fr/super/crm/pipeline">Ouvrir le pipeline Byound</a>
+          <a href="https://www.byound.fr/super/crm/pipeline">Ouvrir le pipeline Byound</a>
         </p>
       </div>`;
 

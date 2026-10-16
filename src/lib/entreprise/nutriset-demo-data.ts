@@ -243,7 +243,7 @@ export function buildSalarieDemoMissions(email: string) {
 }
 
 export function buildSalarieDemoBadges() {
-  const share = (id: string) => `https://edgebs.fr/badgeclasses/${id}/criteria`;
+  const share = (id: string) => `https://www.byound.fr/badgeclasses/${id}/criteria`;
   return {
     earnedOpenBadges: [
       {

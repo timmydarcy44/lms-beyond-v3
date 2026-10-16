@@ -11,8 +11,8 @@ export default function ExpertSupportPage() {
         <EdgeCard padding="lg" className="border-white/[0.07] bg-[#10173a]/70 text-white shadow-none">
           <Mail className="h-6 w-6 text-[#A9AEFF]" />
           <p className="mt-3 text-sm font-semibold">Email support</p>
-          <a href="mailto:cockpit@edgebs.fr" className="mt-2 block text-sm text-[#A9AEFF] hover:underline">
-            cockpit@edgebs.fr
+          <a href="mailto:noreply@byound.fr" className="mt-2 block text-sm text-[#A9AEFF] hover:underline">
+            noreply@byound.fr
           </a>
         </EdgeCard>
         <EdgeCard padding="lg" className="border-white/[0.07] bg-[#10173a]/70 text-white shadow-none">

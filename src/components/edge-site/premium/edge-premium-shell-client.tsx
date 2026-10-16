@@ -11,6 +11,7 @@ type Props = {
   overlayNav?: boolean;
   navChrome?: "dark" | "light";
   showTopBar?: boolean;
+  showFooter?: boolean;
 };
 
 export function EdgePremiumShellClient({
@@ -19,6 +20,7 @@ export function EdgePremiumShellClient({
   overlayNav = true,
   navChrome = "dark",
   showTopBar = true,
+  showFooter = true,
 }: Props) {
   return (
     <EdgePremiumConfigProvider config={config}>
@@ -35,7 +37,7 @@ export function EdgePremiumShellClient({
           showTopBar={showTopBar}
         />
         <main className={overlayNav ? undefined : "pt-16 lg:pt-[100px]"}>{children}</main>
-        <EdgePremiumFooter />
+        {showFooter ? <EdgePremiumFooter /> : null}
       </div>
     </EdgePremiumConfigProvider>
   );

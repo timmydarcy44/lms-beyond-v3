@@ -15,7 +15,7 @@
  *   STRIPE_PRICE_ID_SIMULATION_PRO=price_…
  *
  * Webhook Stripe Dashboard → URL :
- *   https://edgebs.fr/api/stripe/edge-accompagnement/webhook
+ *   https://www.byound.fr/api/stripe/edge-accompagnement/webhook
  *   Événements : checkout.session.completed, checkout.session.expired
  *
  * Test après configuration :

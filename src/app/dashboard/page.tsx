@@ -250,7 +250,7 @@ function UnknownRoleDashboard({
         ) : null}
       </p>
       <p className="mt-6 text-lg font-medium text-gray-900">Contactez l&apos;administrateur</p>
-      <p className="mt-2 text-sm text-gray-500">darcy@edgebs.fr</p>
+      <p className="mt-2 text-sm text-gray-500">contact@byound.fr</p>
     </div>
   );
 }

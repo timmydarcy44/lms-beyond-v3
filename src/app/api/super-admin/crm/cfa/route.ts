@@ -5,6 +5,7 @@ import { loadCfaApplicationBoard } from "@/lib/cfa/load-cfa-crm";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
+import { publicAppUrl } from "@/lib/env";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -26,7 +27,7 @@ async function sendCandidateEmail(payload: Record<string, unknown>): Promise<boo
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@edgebs.fr>",
+        from: process.env.RESEND_FROM_EMAIL?.trim() || "Byound <noreply@byound.fr>",
         ...payload,
       }),
     });
@@ -134,11 +135,7 @@ export async function PATCH(request: NextRequest) {
   let emailSent: boolean | undefined;
 
   if (status === "administrative" && data?.email) {
-    const publicUrl = (
-      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      "https://edgebs.fr"
-    ).replace(/\/$/, "");
+    const publicUrl = publicAppUrl();
     const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
     emailSent = await sendCandidateEmail({
       to: String(data.email),
@@ -173,11 +170,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (status === "admitted" && data?.email) {
-    const publicUrl = (
-      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-      "https://edgebs.fr"
-    ).replace(/\/$/, "");
+    const publicUrl = publicAppUrl();
     const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
     emailSent = await sendCandidateEmail({
       to: String(data.email),

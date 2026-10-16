@@ -416,7 +416,7 @@ export function CommercialIaNarrativePage() {
             {EDGE_CTA_LABELS.apply}
           </Link>
           <a
-            href="mailto:contact@edgebs.fr"
+            href="mailto:contact@byound.fr"
             className="inline-flex rounded-full border border-white px-8 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
           >
             Poser une question

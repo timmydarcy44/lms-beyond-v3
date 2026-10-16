@@ -49,7 +49,7 @@ export async function sendSessionConfirmationEmails(params: {
   });
 
   await sendEmail({
-    from: "Timmy Darcy <darcy@edgebs.fr>",
+    from: "Timmy Darcy <noreply@byound.fr>",
     to: params.collaborateurEmail,
     subject: `Votre séance avec ${params.praticienPrenom} ${params.praticienNom} est confirmée`,
     html: collaborateurHtml,
@@ -74,7 +74,7 @@ export async function sendSessionConfirmationEmails(params: {
   });
 
   await sendEmail({
-    from: "Beyond <noreply@edgebs.fr>",
+    from: "Beyond <noreply@byound.fr>",
     to: params.praticienEmail,
     subject: `Nouvelle réservation — ${when}`,
     html: praticienHtml,

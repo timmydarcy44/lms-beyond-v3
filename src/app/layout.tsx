@@ -7,6 +7,7 @@ import { AuthHashRedirect } from "@/components/auth/auth-hash-redirect";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
 import { Toaster } from "sonner";
 import { headers } from "next/headers";
+import { BYOUND_PUBLIC_ORIGIN, bareHostname } from "@/lib/edge-site/byound-host";
 import { getServerClient } from "@/lib/supabase/server";
 
 const EDGE_ICON = "/icons/edge/edge-icon-E.png";
@@ -14,11 +15,11 @@ const EDGE_APPLE_ICON = "/icons/edge/apple-touch-icon-180.png";
 
 export async function generateMetadata(): Promise<Metadata> {
   const h = await headers();
-  const host = h.get("host")?.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+  const host = bareHostname(h.get("host"));
 
-  if (host === "edgebs.fr") {
+  if (host === "edgebs.fr" || host === "byound.fr") {
     return {
-      metadataBase: new URL("https://edgebs.fr"),
+      metadataBase: new URL(BYOUND_PUBLIC_ORIGIN),
       title: {
         default: "Byound",
         template: "%s · Byound",
@@ -58,8 +59,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export async function generateViewport(): Promise<Viewport> {
   const h = await headers();
-  const host = h.get("host")?.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
-  if (host === "edgebs.fr") {
+  const host = bareHostname(h.get("host"));
+  if (host === "edgebs.fr" || host === "byound.fr") {
     return { themeColor: "#0a0a0a" };
   }
   return { themeColor: "#0d1b2e" };

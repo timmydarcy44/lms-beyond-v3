@@ -18,7 +18,7 @@ describe("buildOpenBadgeLinkedInShareMessage", () => {
 
   it("builds share URL with summary param", () => {
     const url = buildOpenBadgeLinkedInShareUrl({
-      shareUrl: "https://edgebs.fr/badgeclasses/abc/criteria",
+      shareUrl: "https://www.byound.fr/badgeclasses/abc/criteria",
       badgeName: "AI Prompting - Level 1",
       level: 1,
     });
@@ -29,12 +29,12 @@ describe("buildOpenBadgeLinkedInShareMessage", () => {
 
   it("builds feed share URL with prefilled text", () => {
     const url = buildOpenBadgeLinkedInFeedShareUrl({
-      shareUrl: "https://edgebs.fr/badgeclasses/abc/criteria",
+      shareUrl: "https://www.byound.fr/badgeclasses/abc/criteria",
       badgeName: "AI Prompting - Level 1",
       level: 1,
     });
     expect(url).toContain("linkedin.com/feed/");
     expect(url).toContain("shareActive=true");
-    expect(decodeURIComponent(url)).toContain("edgebs.fr/badgeclasses/abc/criteria");
+    expect(decodeURIComponent(url)).toContain("www.byound.fr/badgeclasses/abc/criteria");
   });
 });

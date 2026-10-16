@@ -22,7 +22,7 @@ type Body = {
 
 function safeHref(value: string): string {
   const href = value.trim();
-  if (!/^https?:\/\//i.test(href)) return "https://edgebs.fr";
+  if (!/^https?:\/\//i.test(href)) return "https://www.byound.fr";
   return href.replace(/"/g, "%22").replace(/[<>]/g, "");
 }
 
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       to: batch,
       subject,
       html,
-      replyTo: "contact@edgebs.fr",
+      replyTo: "contact@byound.fr",
       attachments,
     });
     if (result.success) {

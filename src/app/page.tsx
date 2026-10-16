@@ -9,6 +9,7 @@ import { getServerClient } from "@/lib/supabase/server";
 import { LandingPage } from "@/components/tenant/landing-page";
 import { BeyondSaasLanding } from "@/components/marketing/beyond-saas-landing";
 import { generateSEOMetadata } from "@/lib/seo/jessica-contentin-seo";
+import { BYOUND_PUBLIC_ORIGIN, bareHostname } from "@/lib/edge-site/byound-host";
 
 export const dynamic = "force-dynamic";
 
@@ -21,15 +22,15 @@ export async function generateMetadata(): Promise<Metadata> {
     hostname.startsWith("127.0.0.1") ||
     hostname.includes("localhost");
 
-  const hostOnly = hostname.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
-  if (hostOnly === "edgebs.fr" && !isLocalhost) {
+  const hostOnly = bareHostname(hostname);
+  if ((hostOnly === "edgebs.fr" || hostOnly === "byound.fr") && !isLocalhost) {
     return {
-      metadataBase: new URL("https://edgebs.fr"),
+      metadataBase: new URL(BYOUND_PUBLIC_ORIGIN),
       title: "Byound — Développons les compétences qui feront la différence demain",
       description:
         "Parce que les organismes de formation doivent évoluer. Identifier, former et valoriser les compétences — avec des résultats mesurables.",
       alternates: {
-        canonical: "https://edgebs.fr/",
+        canonical: `${BYOUND_PUBLIC_ORIGIN}/`,
       },
     };
   }
@@ -74,7 +75,7 @@ export default async function Home() {
   const headersList = await headers();
   const hostname = headersList.get('host') || '';
   const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1') || hostname.includes('localhost');
-  const hostOnly = hostname.split(":")[0]?.replace(/^www\./i, "").toLowerCase() ?? "";
+  const hostOnly = bareHostname(hostname);
 
   /** Beyond Center — agence développement sur mesure */
   if (!isLocalhost && hostOnly === "beyondcenter.fr") {
@@ -83,7 +84,7 @@ export default async function Home() {
   }
 
   /** Byound Lab sur domaine dédié. */
-  if (!isLocalhost && hostOnly === "edgebs.fr") {
+  if (!isLocalhost && (hostOnly === "edgebs.fr" || hostOnly === "byound.fr")) {
     const { default: EdgeLabLandingPage } = await import("@/app/edge-lab/page");
     return <EdgeLabLandingPage />;
   }

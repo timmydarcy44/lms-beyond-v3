@@ -22,6 +22,7 @@ type NavItem = {
   isSubItem?: boolean;
   exact?: boolean;
   activePrefixes?: string[];
+  menuGroup?: string;
 };
 
 function itemIsActive(item: NavItem, pathname: string | null): boolean {
@@ -60,11 +61,11 @@ const NAV_ITEMS: NavItem[] = [
     href: "/super/crm/cfa",
     activePrefixes: ["/super/crm/cfa", "/super/experts"],
     children: [
-      { label: "CRM Apprenant", href: "/super/crm/cfa", exact: true },
-      { label: "Cursus", href: "/super/crm/cfa/cursus" },
-      { label: "CRM Entreprise", href: "/super/crm/cfa/entreprises" },
-      { label: "Étudiants admis", href: "/super/crm/cfa/admis" },
-      { label: "Formateurs", href: "/super/experts" },
+      { label: "CRM Apprenant", href: "/super/crm/cfa", exact: true, menuGroup: "Commercial" },
+      { label: "CRM Entreprise", href: "/super/crm/cfa/entreprises", menuGroup: "Commercial" },
+      { label: "Cursus", href: "/super/crm/cfa/cursus", menuGroup: "Scolarité" },
+      { label: "Étudiants admis", href: "/super/crm/cfa/admis", menuGroup: "Scolarité" },
+      { label: "Formateurs", href: "/super/experts", menuGroup: "Ressources humaines" },
     ],
   },
   {
@@ -236,7 +237,7 @@ export function SuperAdminHeaderApple() {
                       >
                       <div 
                         className={cn(
-                          item.label === "Gestion"
+                          item.label === "Gestion" || item.label === "CFA"
                             ? "w-[min(720px,calc(100vw-2rem))] rounded-2xl border p-4 shadow-xl"
                             : "min-w-[220px] rounded-lg border py-1.5 shadow-lg",
                           isContentin
@@ -281,6 +282,36 @@ export function SuperAdminHeaderApple() {
                                 </Link>
                               );
                             })}
+                          </div>
+                        ) : item.label === "CFA" ? (
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            {["Commercial", "Scolarité", "Ressources humaines"].map((group) => (
+                              <div key={group}>
+                                <p className={cn("px-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em]", isContentin ? "text-[#8B4513]" : "text-indigo-200")}>
+                                  {group}
+                                </p>
+                                <div className="space-y-1">
+                                  {item.children?.filter((child) => child.menuGroup === group).map((child) => {
+                                    const isChildActive = itemIsActive(child, pathname);
+                                    return (
+                                      <Link
+                                        key={child.href}
+                                        href={child.href}
+                                        className={cn(
+                                          "block rounded-xl px-3 py-2 text-[13px] font-semibold transition",
+                                          isContentin
+                                            ? isChildActive ? "bg-white text-[#D4AF37]" : "text-[#2F2A25] hover:bg-white/70"
+                                            : isChildActive ? "bg-white/10 text-white" : "text-gray-100 hover:bg-white/10",
+                                        )}
+                                        onClick={() => setHoveredItem(null)}
+                                      >
+                                        {child.label}
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           item.children.map((child) => {

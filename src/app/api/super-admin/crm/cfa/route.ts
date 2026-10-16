@@ -57,6 +57,24 @@ export async function PATCH(request: NextRequest) {
   }
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const id = String(body?.id ?? "").trim();
+  if (body?.action === "save_cerfa") {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    if (!id || !body.cerfa || typeof body.cerfa !== "object") {
+      return NextResponse.json({ error: "Dossier incomplet" }, { status: 400 });
+    }
+    const { data: current } = await db.from("cfa_applications").select("cerfa_data").eq("id", id).maybeSingle();
+    const previous = (current?.cerfa_data ?? {}) as Record<string, string>;
+    const incoming = body.cerfa as Record<string, unknown>;
+    const cerfa = { ...previous };
+    for (const [key, value] of Object.entries(incoming)) {
+      if (key.startsWith("_")) continue;
+      cerfa[key] = String(value ?? "").trim();
+    }
+    const { error } = await db.from("cfa_applications").update({ cerfa_data: cerfa }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
   const status = String(body?.status ?? "").trim();
   if (
     !id ||

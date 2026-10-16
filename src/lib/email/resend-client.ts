@@ -40,6 +40,8 @@ export function resolveAdminBccEmail(): string | null {
 export type EmailAttachment = {
   filename: string;
   content: string | Buffer;
+  contentId?: string;
+  contentEncoding?: "utf8" | "base64";
 };
 
 export type EmailOptions = {
@@ -97,7 +99,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       tags: tags?.length ? tags : undefined,
       attachments: options.attachments?.map((a) => ({
         filename: a.filename,
-        content: typeof a.content === "string" ? Buffer.from(a.content) : a.content,
+        content: typeof a.content === "string"
+          ? Buffer.from(a.content, a.contentEncoding === "base64" ? "base64" : "utf8")
+          : a.content,
+        contentId: a.contentId,
       })),
     });
 

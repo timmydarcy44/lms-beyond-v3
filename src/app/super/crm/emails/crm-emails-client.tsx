@@ -19,6 +19,13 @@ import { CRM_ROLE_LABELS } from "@/lib/crm/crm-shared";
 
 type Segment = "all" | "role" | "single";
 
+type MailImage = {
+  id: string;
+  filename: string;
+  contentBase64: string;
+  href: string;
+};
+
 export function CrmEmailsClient() {
   const [segment, setSegment] = useState<Segment>("all");
   const [role, setRole] = useState("learner");
@@ -26,6 +33,8 @@ export function CrmEmailsClient() {
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
   const [sending, setSending] = useState(false);
+  const [images, setImages] = useState<MailImage[]>([]);
+  const [imageHref, setImageHref] = useState("https://edgebs.fr");
 
   const handleSend = async () => {
     if (!subject.trim() || !html.trim()) {
@@ -45,6 +54,7 @@ export function CrmEmailsClient() {
         body: JSON.stringify({
           subject,
           html: `<div style="font-family: system-ui, sans-serif; line-height: 1.5;">${html.replace(/\n/g, "<br/>")}</div>`,
+          images,
           segment,
           role: segment === "role" ? role : undefined,
           email: segment === "single" ? email : undefined,
@@ -126,6 +136,36 @@ export function CrmEmailsClient() {
         <div className="space-y-2">
           <Label>Objet</Label>
           <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Image cliquable</Label>
+          <Input value={imageHref} onChange={(event) => setImageHref(event.target.value)} placeholder="https://edgebs.fr" />
+          <Input
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              if (file.size > 4 * 1024 * 1024) {
+                toast.error("Image trop lourde (4 Mo maximum).");
+                event.target.value = "";
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => {
+                const id = `img${Date.now()}`;
+                const contentBase64 = String(reader.result ?? "");
+                setImages((current) => [...current, { id, filename: file.name, contentBase64, href: imageHref }]);
+                setHtml((current) => `${current}${current ? "\n" : ""}{{image:${id}}}`);
+              };
+              reader.readAsDataURL(file);
+              event.target.value = "";
+            }}
+          />
+          <p className="text-xs text-gray-500">
+            L’image est intégrée dans l’e-mail Resend et ouvre le lien au clic. Le marqueur {"{{image:…}}"} indique sa place dans le message.
+          </p>
         </div>
 
         <div className="space-y-2">

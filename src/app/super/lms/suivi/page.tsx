@@ -20,8 +20,6 @@ type ProfileRow = {
 
 type LeafRow = { user_id: string; completed_at: string | null; leaf_title: string | null };
 type CountRow = { user_id?: string | null; profile_id?: string | null; created_at?: string | null };
-type DiscRow = { profile_id: string; final_profile: string | null };
-type IdmcRow = { profile_id: string; level: string | null; global_score: number | null };
 
 function secondsLabel(total: number): string {
   const seconds = Math.max(0, Math.floor(total));
@@ -58,15 +56,13 @@ export default async function SuperLearnerSuiviPage() {
   const sessionRows = (sessions ?? []) as SessionRow[];
   const userIds = [...new Set(sessionRows.map((row) => row.user_id).filter(Boolean))];
 
-  const [profilesRes, leavesRes, notesRes, transformsRes, discRes, idmcRes] = await Promise.all([
+  const [profilesRes, leavesRes, notesRes, transformsRes] = await Promise.all([
     userIds.length
       ? db.from("profiles").select("id, email, first_name, last_name, role").in("id", userIds.slice(0, 300))
       : Promise.resolve({ data: [], error: null }),
     db.from("learner_leaf_completions").select("user_id, completed_at, leaf_title").order("completed_at", { ascending: false }).limit(5000),
     db.from("beyond_note_documents").select("user_id, created_at").order("created_at", { ascending: false }).limit(5000),
     db.from("lesson_ai_user_transformations").select("user_id, created_at").order("created_at", { ascending: false }).limit(5000),
-    db.from("disc_resultats").select("profile_id, final_profile").limit(1000),
-    db.from("idmc_resultats").select("profile_id, level, global_score").limit(1000),
   ]);
 
   const profiles = new Map(((profilesRes.data ?? []) as ProfileRow[]).map((row) => [row.id, row]));
@@ -92,9 +88,6 @@ export default async function SuperLearnerSuiviPage() {
       aiByUser.set(id, (aiByUser.get(id) ?? 0) + 1);
     }
   }
-  const disc = new Map(((discRes.error ? [] : discRes.data ?? []) as DiscRow[]).map((row) => [row.profile_id, row.final_profile]));
-  const idmc = new Map(((idmcRes.error ? [] : idmcRes.data ?? []) as IdmcRow[]).map((row) => [row.profile_id, row]));
-
   const grouped = new Map<string, SessionRow[]>();
   for (const row of sessionRows) {
     const list = grouped.get(row.user_id) ?? [];
@@ -121,10 +114,6 @@ export default async function SuperLearnerSuiviPage() {
         return best;
       }, null);
       const leaves = leavesByUser.get(userId) ?? [];
-      const attitude = [disc.get(userId) ? `DISC ${disc.get(userId)}` : null, idmc.get(userId)?.level ? `IDMC ${idmc.get(userId)?.level}` : null]
-        .filter(Boolean)
-        .join(" · ");
-      const recent = Date.now() - new Date(last ?? 0).getTime() < 7 * 24 * 3600 * 1000;
       return {
         userId,
         name,
@@ -139,8 +128,6 @@ export default async function SuperLearnerSuiviPage() {
         lastChapter: leaves[0]?.leaf_title ?? "—",
         notes: notesByUser.get(userId) ?? 0,
         transformations: aiByUser.get(userId) ?? 0,
-        attitude: attitude || "—",
-        behavior: !last ? "Jamais connecté" : recent ? "Actif cette semaine" : "Inactif",
       };
     })
     .sort((a, b) => (b.last ?? "").localeCompare(a.last ?? ""));
@@ -150,7 +137,7 @@ export default async function SuperLearnerSuiviPage() {
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">LMS</p>
       <h1 className="mt-1 text-3xl font-bold text-white">Suivi des apprenants</h1>
       <p className="mt-2 max-w-3xl text-sm text-white/70">
-        Horodatage des connexions, temps passé, chapitres validés avec Suivant, notes, transformations et profil DISC / IDMC.
+        Horodatage des connexions, temps passé, chapitres validés avec Suivant, notes et transformations.
       </p>
       {sessionError ? <p className="mt-4 text-sm text-rose-300">{sessionError.message}</p> : null}
       {leavesRes.error ? (
@@ -163,8 +150,6 @@ export default async function SuperLearnerSuiviPage() {
           <thead className="bg-white/5 text-xs uppercase tracking-wide text-white/60">
             <tr>
               <th className="px-3 py-3">Apprenant</th>
-              <th className="px-3 py-3">Comportement</th>
-              <th className="px-3 py-3">Attitude</th>
               <th className="px-3 py-3">Dernière connexion</th>
               <th className="px-3 py-3">Première</th>
               <th className="px-3 py-3">Temps connecté</th>
@@ -178,19 +163,15 @@ export default async function SuperLearnerSuiviPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-6 text-white/60" colSpan={11}>Aucune session enregistrée.</td>
+                <td className="px-3 py-6 text-white/60" colSpan={9}>Aucune session enregistrée.</td>
               </tr>
             ) : rows.map((row) => (
               <tr key={row.userId} className="border-t border-white/10">
                 <td className="px-3 py-3">
                   <strong className="block">{row.name}</strong>
                   <span className="text-xs text-white/60">{row.email} · {row.role}</span>
+                  <span className="mt-1 block text-xs text-white/50">{row.lastChapter}</span>
                 </td>
-                <td className="px-3 py-3">
-                  {row.behavior}
-                  <span className="mt-1 block text-xs text-white/60">{row.lastChapter}</span>
-                </td>
-                <td className="px-3 py-3">{row.attitude}</td>
                 <td className="px-3 py-3">{whenLabel(row.last)}</td>
                 <td className="px-3 py-3">{whenLabel(row.first)}</td>
                 <td className="px-3 py-3">{secondsLabel(row.connected)}</td>

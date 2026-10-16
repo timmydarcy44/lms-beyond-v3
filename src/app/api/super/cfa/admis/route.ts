@@ -71,6 +71,7 @@ export async function POST(request: Request) {
   const formData = await request.formData().catch(() => null);
   const id = String(formData?.get("id") ?? "").trim();
   const label = String(formData?.get("label") ?? "").trim() || "Document";
+  const kind = String(formData?.get("kind") ?? "").trim();
   const file = formData?.get("file");
   if (!id || !(file instanceof File)) {
     return NextResponse.json({ error: "Fichier ou dossier manquant." }, { status: 400 });
@@ -87,12 +88,12 @@ export async function POST(request: Request) {
   if (!application) return NextResponse.json({ error: "Dossier introuvable." }, { status: 404 });
 
   const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const key = `scan_${Date.now()}`;
+  const key = ["identity", "social_security", "diploma"].includes(kind) ? kind : `scan_${Date.now()}`;
   const path = `${application.id}/${key}${extension ? `.${extension}` : ""}`;
   const bytes = await file.arrayBuffer();
   const { error: uploadError } = await ctx.db.storage
     .from("cfa-applications")
-    .upload(path, bytes, { contentType: file.type || "application/octet-stream", upsert: false });
+    .upload(path, bytes, { contentType: file.type || "application/octet-stream", upsert: true });
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 });
 
   const documents = {

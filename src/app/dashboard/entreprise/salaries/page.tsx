@@ -1,12 +1,7 @@
 "use client";
-
 import { Suspense } from "react";
-import { TeamDirectoryPage } from "@/components/enterprise/team-directory-page";
+import { SalariesDirectory } from "@/components/enterprise/salaries-directory";
 
 export default function SalariesPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F4F4F1]" />}>
-      <TeamDirectoryPage />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="min-h-screen bg-white" />}><SalariesDirectory /></Suspense>;
 }

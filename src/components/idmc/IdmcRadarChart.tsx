@@ -52,7 +52,7 @@ export function IdmcRadarChart({
           {title}
         </div>
       ) : null}
-      <div className="mt-2 w-full" style={{ height: chartHeight }}>
+      <div className="mt-2 w-full min-w-0 max-w-full overflow-hidden" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
             <PolarGrid stroke={isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)"} />

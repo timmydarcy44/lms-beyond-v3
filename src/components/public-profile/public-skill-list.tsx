@@ -64,7 +64,7 @@ export function PublicSkillList({ skills, onSelect, theme = "light" }: Props) {
               type="button"
               onClick={() => onSelect(skill)}
               className={cn(
-                "group flex w-full items-center gap-3 px-4 py-2.5 text-left transition md:grid md:grid-cols-[2fr_1fr_0.75fr_1.25fr] md:gap-4",
+                "group flex w-full min-w-0 items-center gap-3 px-4 py-2.5 text-left transition md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,0.75fr)_minmax(0,1.25fr)] md:gap-4",
                 dark ? "hover:bg-white/[0.05]" : "hover:bg-[#fafafa]",
               )}
             >

@@ -126,6 +126,6 @@ export default function PublicProfileLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <div className="min-h-[100dvh] w-full max-w-full overflow-x-clip bg-[#060912]">{children}</div>;
 }
 

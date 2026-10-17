@@ -253,17 +253,17 @@ export function EdgePublicProfileView({
   return (
     <div
       id="public-profile-print-root"
-      className="min-h-screen bg-[#060912] font-['Inter',system-ui,sans-serif] text-white print:bg-white print:text-[#0a0a0a]"
+      className="box-border min-h-screen w-full max-w-full overflow-x-clip bg-[#060912] font-['Inter',system-ui,sans-serif] text-white print:bg-white print:text-[#0a0a0a]"
     >
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(61,123,255,0.22),transparent)] print:hidden" />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent print:hidden" />
 
-      <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:py-12 print:max-w-none print:px-6 print:py-4">
+      <div className="relative mx-auto w-full min-w-0 max-w-6xl px-4 py-8 sm:px-6 lg:py-12 print:max-w-none print:px-6 print:py-4">
         <motion.header
           {...fadeUp}
           className="mb-8 flex flex-wrap items-center justify-between gap-4 print:hidden"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <Image src={EDGE_LOGO_PATH} alt="Byound" width={120} height={32} className="h-7 w-auto" />
             <span className="rounded-full border border-[#3D7BFF]/30 bg-[#3D7BFF]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9EC0FF]">
               Profil certifié
@@ -292,8 +292,8 @@ export function EdgePublicProfileView({
           </div>
         </motion.header>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_320px] print:block print:space-y-6">
-          <div className="space-y-6">
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_320px] print:block print:space-y-6">
+          <div className="min-w-0 space-y-6">
             <motion.section
               {...fadeUp}
               className={cn(`overflow-hidden sm:p-8 p-6 ${motionPrintSafe}`, DARK_CARD, "print:border-black/10 print:bg-white")}
@@ -334,7 +334,7 @@ export function EdgePublicProfileView({
                 {phone ? (
                   <a
                     href={`tel:${phone.replace(/\s/g, "")}`}
-                    className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/80 transition hover:border-[#3D7BFF]/30"
+                    className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/80 transition hover:border-[#3D7BFF]/30"
                   >
                     <Phone className="h-4 w-4 shrink-0 text-[#7BA7FF]" />
                     <span className="truncate">{phone}</span>
@@ -343,10 +343,10 @@ export function EdgePublicProfileView({
                 {email ? (
                   <a
                     href={`mailto:${email}`}
-                    className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/80 transition hover:border-[#3D7BFF]/30"
+                    className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-sm text-white/80 transition hover:border-[#3D7BFF]/30"
                   >
                     <Mail className="h-4 w-4 shrink-0 text-[#7BA7FF]" />
-                    <span className="truncate">{email}</span>
+                    <span className="min-w-0 break-all">{email}</span>
                   </a>
                 ) : null}
                 {birthDateLabel && birthDateLabel !== "—" ? (
@@ -459,7 +459,7 @@ export function EdgePublicProfileView({
               </motion.section>
             ) : null}
 
-            <motion.section {...fadeUp} className={motionPrintSafe}>
+            <motion.section {...fadeUp} className={cn(motionPrintSafe, "min-w-0 overflow-hidden")}>
               <div className="mb-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7BA7FF]/90">
                   Bilans
@@ -501,7 +501,7 @@ export function EdgePublicProfileView({
 
           <motion.aside
             {...fadeUp}
-            className="h-fit space-y-4 lg:sticky lg:top-8 print:hidden"
+            className="h-fit min-w-0 space-y-4 lg:sticky lg:top-8 print:hidden"
           >
             <div className={cn("p-6", DARK_CARD)}>
               {edgeReliabilityIndex > 0 ? (

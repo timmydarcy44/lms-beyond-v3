@@ -26,10 +26,10 @@ export function HardSkillLevelModal({ open, skillName, initialLevel, saving, onC
   return (
     <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/70 px-0 sm:items-center sm:px-4">
       <div className="w-full max-w-md rounded-t-[28px] border border-white/10 bg-[#121820] p-6 shadow-2xl sm:rounded-[28px]">
-        <p className="text-xs uppercase tracking-wider text-white/40">Modifier le niveau</p>
+        <p className="text-[13px] text-white/50">Modifier le niveau</p>
         <h3 className="mt-2 text-lg font-semibold text-white">{skillName}</h3>
         <p className="mt-2 text-sm text-white/55">
-          Le niveau déclaré reste distinct du statut (auto-déclarée, prouvée, validée).
+          Auto-évaluation : ce niveau est distinct du dépôt de preuves et d&apos;un Open Badge.
         </p>
 
         <div className="mt-5">

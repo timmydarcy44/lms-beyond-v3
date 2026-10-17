@@ -13,15 +13,12 @@ import {
   APPRENANT_PAGE_SHELL,
   CONNECT_BTN_PRIMARY,
 } from "@/lib/apprenant/connect-nav";
-import { resolveSkillUxStatus } from "@/lib/hard-skills/hard-skills-portfolio";
+import { getSkillDeclarationStatus, listSkillProofs } from "@/lib/hard-skills/hard-skills-portfolio";
 
 export default function SkillsPreuvesPage() {
   const { loading, error, records, meta } = useEdgeSkillsCenter();
 
-  const proved = records.filter((r) => {
-    const s = resolveSkillUxStatus(meta[r.name]);
-    return s === "proved" || s === "evaluated" || s === "validated" || Boolean(meta[r.name]?.proof);
-  });
+  const proved = records.filter((r) => getSkillDeclarationStatus(meta[r.name]).proofCount > 0);
 
   return (
     <EdgePageAmbiance ambiance="skills">
@@ -32,7 +29,7 @@ export default function SkillsPreuvesPage() {
             Preuves rattachées
           </h1>
           <p className="max-w-lg text-[14px] text-white/40">
-            Une preuve documente une compétence, comme une pièce de portfolio. Elle alimente votre profil. Elle ne délivre pas d&apos;Open Badge.
+            Vos preuves constituent votre portfolio. Certaines compétences peuvent aussi être certifiées par un Open Badge.
           </p>
           <Link href="/dashboard/apprenant/skills/prove" className={CONNECT_BTN_PRIMARY}>
             Prouver une compétence
@@ -46,7 +43,8 @@ export default function SkillsPreuvesPage() {
             <SkillsEmptyHint>Aucune preuve déposée pour le moment.</SkillsEmptyHint>
           )}
           {proved.map((rec) => {
-            const proof = meta[rec.name]?.proof;
+            const proofs = listSkillProofs(meta[rec.name]);
+            const latest = proofs[proofs.length - 1];
             return (
               <Link
                 key={rec.name}
@@ -55,13 +53,11 @@ export default function SkillsPreuvesPage() {
               >
                 <p className="text-[15px] font-semibold text-white">{rec.name}</p>
                 <p className="mt-1 text-[13px] text-white/40">
-                  {proof?.note || proof?.url || "Preuve enregistrée"}
+                  {latest?.title || latest?.note || "Preuve enregistrée"}
                 </p>
-                {proof?.type && (
-                  <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-white/25">
-                    {proof.type}
-                  </p>
-                )}
+                <p className="mt-2 text-[13px] text-white/45">
+                  {getSkillDeclarationStatus(meta[rec.name]).label}
+                </p>
               </Link>
             );
           })}

@@ -5,38 +5,12 @@ import Link from "next/link";
 import { resolveToolLogo } from "@/lib/profile/competency-referential";
 import {
   CATEGORY_CHIP_CLASS,
-  LEVEL_CHIP_CLASS,
-  PROOF_LEVEL_CHIP,
-  masteryBarFilled,
+  getSkillDeclarationStatus,
   type LearnerHardSkillRecord,
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
 import { verdictLabel } from "@/lib/hard-skills/skill-validation";
 import { cn } from "@/lib/utils";
-
-function ProofLevelChip({ level }: { level: LearnerHardSkillRecord["proofLevel"] }) {
-  const config = PROOF_LEVEL_CHIP[level];
-  const label = config.label;
-  return (
-    <span className={cn("inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium", config.className)}>
-      {label}
-    </span>
-  );
-}
-
-function MasteryBar({ level }: { level: LearnerHardSkillRecord["level"] }) {
-  const filled = masteryBarFilled(level);
-  return (
-    <div className="flex gap-0.5" aria-hidden>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <span
-          key={i}
-          className={cn("h-1.5 w-3 rounded-sm", i < filled ? "bg-[#3D7BFF]" : "bg-white/10")}
-        />
-      ))}
-    </div>
-  );
-}
 
 type Props = {
   records: LearnerHardSkillRecord[];
@@ -72,12 +46,11 @@ export function HardSkillsPortfolioTable({
     <div className="overflow-x-auto rounded-2xl border border-white/10">
       <table className="w-full min-w-[920px] text-left text-sm">
         <thead>
-          <tr className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wider text-white/45">
+          <tr className="border-b border-white/10 bg-white/[0.03] text-xs text-white/45">
             <th className="px-4 py-3 font-medium">Compétence</th>
             <th className="px-4 py-3 font-medium">Catégorie</th>
-            <th className="px-4 py-3 font-medium">Niveau</th>
-            <th className="px-4 py-3 font-medium">Maîtrise</th>
-            <th className="px-4 py-3 font-medium">Preuve</th>
+            <th className="px-4 py-3 font-medium">Auto-évaluation</th>
+            <th className="px-4 py-3 font-medium">Statut</th>
             <th className="px-4 py-3 font-medium text-right">Actions</th>
           </tr>
         </thead>
@@ -110,21 +83,11 @@ export function HardSkillsPortfolioTable({
                     {record.category}
                   </span>
                 </td>
+                <td className="px-4 py-3.5 text-white/80">Auto-évaluation : {record.level}</td>
                 <td className="px-4 py-3.5">
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold",
-                      LEVEL_CHIP_CLASS[record.level],
-                    )}
-                  >
-                    {record.level}
+                  <span className="inline-flex rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] text-white/80">
+                    {getSkillDeclarationStatus(validationMeta?.[record.name]).label}
                   </span>
-                </td>
-                <td className="px-4 py-3.5">
-                  <MasteryBar level={record.level} />
-                </td>
-                <td className="px-4 py-3.5">
-                  <ProofLevelChip level={record.proofLevel} />
                 </td>
                 <td className="px-4 py-3.5">
                   <div className="flex items-center justify-end gap-1">

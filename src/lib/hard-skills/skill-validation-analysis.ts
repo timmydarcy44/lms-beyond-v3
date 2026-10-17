@@ -175,6 +175,8 @@ export type PublicSkillCardData = {
   confidenceScore: number | null;
   hasAnalysis: boolean;
   validation?: SkillValidationSession;
+  /** Document ou note déposés pour justifier la compétence. */
+  portfolioProof?: { type?: string; url?: string; note?: string };
 };
 
 export function resolvePublicSkillStatus(meta: StoredHardSkillMeta | undefined): PublicSkillStatus {
@@ -248,6 +250,10 @@ export function toPublicSkillCard(
         (validation?.strengths?.length ?? 0) > 0,
     ),
     validation,
+    portfolioProof:
+      meta?.proof?.url || meta?.proof?.note
+        ? { type: meta.proof.type, url: meta.proof.url, note: meta.proof.note }
+        : undefined,
   };
 }
 

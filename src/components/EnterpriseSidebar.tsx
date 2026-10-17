@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Menu } from "lucide-react";
 import { useOptionalEnterpriseOverviewContext } from "@/components/enterprise/enterprise-overview-provider";
-import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -18,6 +17,7 @@ import {
   UserCircle,
   CreditCard,
   CircleHelp,
+  Award,
 } from "lucide-react";
 
 type NavLeaf = { label: string; href: string; section?: string };
@@ -33,7 +33,7 @@ type NavItem =
 
 /** Navigation principale — Mon compte / Aide / Paramètres sont en pied de sidebar. */
 const NAV_ITEMS: NavItem[] = [
-  { type: "link", label: "Dashboard", href: "/dashboard/entreprise", icon: LayoutDashboard },
+  { type: "link", label: "Tableau de bord", href: "/dashboard/entreprise", icon: LayoutDashboard },
   {
     type: "group",
     label: "Salariés",
@@ -43,45 +43,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Mes équipes", href: "/dashboard/entreprise/salaries" },
       { label: "Métiers", href: "/dashboard/entreprise/metiers" },
       { label: "Besoins en compétences", href: "/dashboard/entreprise/besoins-competences" },
-      { label: "Équipe Insight", href: "/dashboard/entreprise/equipe-insight" },
-    ],
-  },
-  {
-    type: "group",
-    label: "Formations",
-    href: "/dashboard/entreprise/formations/catalogue",
-    icon: BookOpen,
-    children: [
-      {
-        label: "Demander une formation",
-        href: "/dashboard/entreprise/formations/demander",
-        section: "Byound",
-      },
-      {
-        label: "Byound Online",
-        href: "/dashboard/entreprise/formations/catalogue",
-        section: "Byound",
-      },
-      {
-        label: "Créer une formation",
-        href: "/dashboard/entreprise/formations/creer",
-        section: "Interne",
-      },
-      {
-        label: "Gérer mes formations",
-        href: "/dashboard/entreprise/formations/gerer",
-        section: "Interne",
-      },
-      {
-        label: "Parcours",
-        href: "/dashboard/entreprise/formations/parcours",
-        section: "Interne",
-      },
-      {
-        label: "Statistiques",
-        href: "/dashboard/entreprise/statistiques",
-        section: "Pilotage",
-      },
+      { label: "Analyse d'équipe", href: "/dashboard/entreprise/equipe-insight" },
     ],
   },
   {
@@ -94,11 +56,26 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Nouveau candidat", href: "/dashboard/entreprise/recrutement/candidats/nouveau" },
     ],
   },
-  { type: "link", label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
-  { type: "link", label: "Tarifs", href: "/dashboard/entreprise/abonnement", icon: CreditCard },
+  {
+    type: "group",
+    label: "Formations",
+    href: "/dashboard/entreprise/formations/demander",
+    icon: BookOpen,
+    children: [
+      { label: "Demander une formation", href: "/dashboard/entreprise/formations/demander" },
+      { label: "Byound Online", href: "/dashboard/entreprise/formations/catalogue" },
+      { label: "Créer une formation", href: "/dashboard/entreprise/formations/creer" },
+      { label: "Gérer mes formations", href: "/dashboard/entreprise/formations/gerer" },
+      { label: "Parcours", href: "/dashboard/entreprise/formations/parcours" },
+      { label: "Statistiques", href: "/dashboard/entreprise/statistiques" },
+    ],
+  },
+  { type: "link", label: "Badges", href: "/dashboard/entreprise/badges/delivrer", icon: Award },
 ];
 
 const ACCOUNT_SUBMENU = [
+  { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
+  { label: "Tarifs", href: "/dashboard/entreprise/abonnement", icon: CreditCard },
   { label: "Aide", href: "/dashboard/entreprise/aide", icon: CircleHelp },
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
 ] as const;
@@ -318,10 +295,8 @@ function NavLinks({
               prefetch
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                active
-                  ? "bg-violet-600/20 text-violet-200"
-                  : "text-white/55 hover:bg-white/5 hover:text-white",
+                "flex h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-semibold text-[#B5BAC6] transition hover:bg-white/5 hover:text-white",
+                active && "bg-white/10 font-bold text-white",
               )}
             >
               <Icon size={18} strokeWidth={1.75} />
@@ -339,10 +314,8 @@ function NavLinks({
               type="button"
               onClick={() => toggleGroup(item.label)}
               className={cn(
-                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                groupActive
-                  ? "bg-violet-600/20 text-violet-200"
-                  : "text-white/55 hover:bg-white/5 hover:text-white",
+                "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-[14px] font-semibold text-[#B5BAC6] transition hover:bg-white/5 hover:text-white",
+                groupActive && "font-bold text-white",
               )}
               aria-expanded={open}
             >
@@ -354,39 +327,24 @@ function NavLinks({
               />
             </button>
             {open ? (
-              <div className="ml-3 space-y-0.5 border-l border-white/10 pl-3">
-                {Array.from(new Set(item.children.map((child) => child.section || ""))).map(
-                  (section) => (
-                    <div key={`${item.label}-${section || "default"}`} className="space-y-1.5 py-1">
-                      {section ? (
-                        <p className="px-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
-                          {section}
-                        </p>
-                      ) : null}
-                      {item.children
-                        .filter((child) => (child.section || "") === section)
-                        .map((child) => {
-                          const childActive = isPathActive(pathname, child.href);
-                          return (
-                            <Link
-                              key={child.href}
-                              href={child.href}
-                              prefetch
-                              onClick={onNavigate}
-                              className={cn(
-                                "block rounded-lg px-3 py-2 text-[13px] font-medium transition",
-                                childActive
-                                  ? "bg-white/10 text-white"
-                                  : "text-white/50 hover:bg-white/5 hover:text-white",
-                              )}
-                            >
-                              {child.label}
-                            </Link>
-                          );
-                        })}
-                    </div>
-                  ),
-                )}
+              <div className="ml-4 space-y-0.5 border-l border-white/10 pl-2">
+                {item.children.map((child) => {
+                  const childActive = isPathActive(pathname, child.href);
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      prefetch
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex h-10 items-center rounded-xl px-3 text-[14px] font-semibold text-[#B5BAC6] transition hover:text-white",
+                        childActive && "bg-[#6E5BFF] font-bold text-white",
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
               </div>
             ) : null}
           </div>
@@ -448,9 +406,7 @@ export function EnterpriseMobileNav() {
             <SheetHeader>
               <SheetTitle className="text-left text-white">{orgName}</SheetTitle>
             </SheetHeader>
-            <div className="mt-2 text-[10px] font-medium tracking-[0.08em] text-white/40">
-              Powered by Byound
-            </div>
+            <div className="mt-2 text-[12px] text-white/45">Powered by Byound</div>
             <nav className="mt-6 flex flex-col gap-1" aria-label="Navigation entreprise mobile">
               <NavLinks
                 pathname={pathname}
@@ -472,7 +428,7 @@ export function EnterpriseMobileNav() {
             <img src={orgLogo} alt="" className="h-8 w-8 rounded-lg object-contain" />
           ) : null}
           <div className="mt-1 truncate text-sm font-semibold text-white">{orgName}</div>
-          <div className="text-[9px] tracking-[0.08em] text-white/40">Powered by Byound</div>
+          <div className="text-[12px] text-white/45">Powered by Byound</div>
         </div>
         <div className="w-10" />
       </div>
@@ -541,33 +497,42 @@ export default function EnterpriseSidebar() {
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-50 hidden h-full w-[260px] flex-col border-r border-[rgba(124,58,237,0.15)] lg:flex"
-      style={{ background: "linear-gradient(180deg, #0f0e1a 0%, #1a1535 100%)" }}
+      className="fixed inset-y-0 left-0 z-50 hidden h-screen w-[248px] flex-col bg-[#070C1C] px-[14px] py-5 lg:flex"
     >
-      <div className="border-b border-white/10 px-6 pb-6 pt-8">
-        <OrgSidebarBrand
-          logoUrl={overviewData?.organisation?.logo_url}
-          name={overviewData?.organisation?.name || "Beyond"}
-        />
-        <div className="mt-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white">
-            {initials}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-            <p className="truncate text-xs text-white/40">{viewer.email ?? ""}</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-[12px] font-extrabold text-[#070C1C]">
+          {overviewData?.organisation?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={overviewData.organisation.logo_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            (overviewData?.organisation?.name || "Byound").slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-extrabold text-white">Byound Business</p>
+          <p className="text-[12px] text-[#9096A3]">Powered by Byound</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/5 px-3 py-2.5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] text-[12px] font-bold text-white">
+          {initials}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[14px] font-bold text-white">{displayName}</p>
+          <p className="truncate text-[12px] text-[#9096A3]">{viewer.email ?? ""}</p>
         </div>
       </div>
 
       <nav
-        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-4"
+        className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1 [scrollbar-color:#FFFFFF1A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10"
         aria-label="Navigation entreprise"
       >
         <NavLinks pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} />
+        <div className="mt-auto pt-3">
+          <AccountMenuFooter pathname={pathname} />
+        </div>
       </nav>
-
-      <AccountMenuFooter pathname={pathname} />
     </aside>
   );
 }

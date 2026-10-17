@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildHardSkillRecord,
   computeHardSkillStats,
+  getSkillDeclarationStatus,
   levelToSelfAssessment,
+  listCatalogEntries,
+  mergeDeclaredPortfolio,
   parseHardSkillPortfolio,
   resolveDisplayCategory,
+  searchCatalogEntries,
 } from "@/lib/hard-skills/hard-skills-portfolio";
 
 describe("hard-skills-portfolio", () => {
@@ -40,5 +44,48 @@ describe("hard-skills-portfolio", () => {
       proof: { type: "link", url: "https://example.com" },
     });
     expect(justified.proofLevel).toBe("justified");
+  });
+
+  it("statut déclaration sans faux prouvée ni badge imaginaire", () => {
+    expect(getSkillDeclarationStatus(undefined).label).toBe("Déclarée");
+    expect(
+      getSkillDeclarationStatus({ proof: { type: "document", note: "Fichier : note.pdf" } }).label,
+    ).toBe("Preuve déposée");
+    expect(getSkillDeclarationStatus({ proofLevel: "justified" }, { badgeEarned: true }).label).toBe("Badge obtenu");
+  });
+
+  it("fusionne les doublons en gardant le niveau le plus haut et les preuves", () => {
+    const merged = mergeDeclaredPortfolio(
+      ["Cold Calling", "Prospection téléphonique"],
+      {
+        "Cold Calling": {
+          level: "Confirmé",
+          proof: { type: "document", note: "Script" },
+        },
+        "Prospection téléphonique": {
+          level: "Intermédiaire",
+          proofs: [
+            {
+              id: "p2",
+              type: "link",
+              title: "Appels",
+              url: "https://example.com/appels",
+              createdAt: "2026-01-02T00:00:00.000Z",
+            },
+          ],
+        },
+      },
+    );
+    expect(merged.names).toEqual(["Prospection téléphonique"]);
+    expect(merged.meta["Prospection téléphonique"]?.level).toBe("Confirmé");
+    expect(merged.proofsBefore).toBe(2);
+    expect(merged.proofsAfter).toBe(2);
+    expect(merged.meta["Prospection téléphonique"]?.legacySnapshots?.["Cold Calling"]).toBeTruthy();
+  });
+
+  it("retire le scraping du catalogue public et retrouve un alias", () => {
+    expect(listCatalogEntries().some((entry) => entry.name.toLowerCase().includes("phantombuster"))).toBe(false);
+    expect(searchCatalogEntries("cold calling").some((entry) => entry.name === "Prospection téléphonique")).toBe(true);
+    expect(searchCatalogEntries("fomo").some((entry) => entry.name === "Créer une urgence légitime")).toBe(true);
   });
 });

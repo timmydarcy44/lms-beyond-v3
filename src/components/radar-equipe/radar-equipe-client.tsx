@@ -18,8 +18,9 @@ import { DiscRadarChart } from "@/components/radar-equipe/disc-radar-chart";
 import { GaugeMetric } from "@/components/radar-equipe/gauge-metric";
 import { RgpdBanner } from "@/components/radar-equipe/rgpd-banner";
 import { SignauxFaibles } from "@/components/radar-equipe/signaux-faibles";
-import { viewerIsJade } from "@/lib/demo/jade-account";
+import { viewerIsJade, isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_EQUIPE_AGGREGAT } from "@/lib/demo/jade-dashboard-mocks";
+import { useOptionalEnterpriseOverviewContext } from "@/components/enterprise/enterprise-overview-provider";
 import type { EquipeAggregat } from "@/lib/radar-equipe/types";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ function stressTone(signal: string | null): "emerald" | "amber" | "rose" {
 
 export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "light" }) {
   const light = variant === "light";
+  const overview = useOptionalEnterpriseOverviewContext();
   const [equipes, setEquipes] = useState<EquipeOption[]>([]);
   const [equipeId, setEquipeId] = useState<string>("");
   const [aggregat, setAggregat] = useState<EquipeAggregat | null>(null);
@@ -70,7 +72,9 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
       setLoading(true);
       setLoadError(null);
       try {
-        if (await viewerIsJade()) {
+        const jade =
+          isJadeDemoEmail(overview?.data?.viewer?.email) || (await viewerIsJade());
+        if (jade) {
           setEquipes([{ id: "jade-equipe", name: "Équipe commerciale" }]);
           setEquipeId("jade-equipe");
           setAggregat(JADE_EQUIPE_AGGREGAT);
@@ -85,7 +89,7 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
         setLoading(false);
       }
     })();
-  }, [loadEquipes]);
+  }, [loadEquipes, overview?.data?.viewer?.email]);
 
   useEffect(() => {
     if (!equipeId || equipeId.startsWith("jade-")) return;
@@ -128,7 +132,7 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
         <div>
           <div className={cn("flex items-center gap-2", light ? "text-violet-600" : "text-violet-300")}>
             <Brain className="h-5 w-5" />
-            <span className="text-xs font-semibold uppercase tracking-widest">Beyond RH</span>
+            <span className="text-[13px]">Analyse d&apos;équipe</span>
           </div>
           <h1
             className={cn(
@@ -136,7 +140,7 @@ export function RadarEquipeClient({ variant = "dark" }: { variant?: "dark" | "li
               light ? ENTREPRISE_H1_CLASS : "text-[28px] font-extrabold tracking-tight text-white",
             )}
           >
-            🔍 Équipe Insight
+            Analyse d&apos;équipe
           </h1>
           <p className={cn("mt-1 text-sm", light ? "text-center text-gray-400" : "text-white/60")}>
             Semaine du {weekLabel}

@@ -8,7 +8,6 @@ import { ArrowLeft, ArrowRight, Loader2, Search } from "lucide-react";
 import { SkillLevelSelector } from "@/components/hard-skills/skill-level-selector";
 import {
   SkillsEmptyHint,
-  SkillsProgressBar,
   SkillsSectionKicker,
 } from "@/components/apprenant/skills/skills-ui";
 import { useEdgeSkillsCenter } from "@/hooks/use-edge-skills-center";
@@ -17,16 +16,18 @@ import {
   encodeSkillParam,
   nextHardSkillLevel,
 } from "@/lib/apprenant/edge-skills-center";
+import { SKILLS_TRAINING_ENABLED } from "@/lib/apprenant/skills-training-flag";
 import {
   APPRENANT_PAGE_SHELL,
   CONNECT_BTN_PRIMARY,
   CONNECT_BTN_SECONDARY,
 } from "@/lib/apprenant/connect-nav";
+import { type HardSkillCatalogEntry } from "@/lib/hard-skills/hard-skills-portfolio";
 import {
-  listCatalogEntries,
-  searchCatalogEntries,
-  type HardSkillCatalogEntry,
-} from "@/lib/hard-skills/hard-skills-portfolio";
+  publicCatalogCategories,
+  searchPublicCatalog,
+  type CatalogSkillEntry,
+} from "@/lib/hard-skills/skill-catalog-policy";
 import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,9 @@ export default function DevelopInner() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [levelsTouched, setLevelsTouched] = useState(false);
+  const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
+  const [catalogExtras, setCatalogExtras] = useState<CatalogSkillEntry[]>([]);
+  const [catalogAliases, setCatalogAliases] = useState<Array<{ alias: string; canonical: string }>>([]);
 
   const existing = useMemo(() => {
     if (!selected) return null;
@@ -77,10 +81,38 @@ export default function DevelopInner() {
     setTargetLevel(storedTarget ?? nextHardSkillLevel(existing.level));
   }, [existing, meta, levelsTouched]);
 
+  useEffect(() => {
+    void fetch("/api/skills/catalog-extras")
+      .then((res) => (res.ok ? res.json() : { entries: [] }))
+      .then((data: { entries?: CatalogSkillEntry[]; aliases?: Array<{ alias: string; canonical: string }> }) => {
+        setCatalogExtras(data.entries ?? []);
+        setCatalogAliases(data.aliases ?? []);
+      })
+      .catch(() => {
+        setCatalogExtras([]);
+        setCatalogAliases([]);
+      });
+  }, []);
+
+  const catalogCategories = useMemo(() => publicCatalogCategories(), []);
   const results = useMemo(() => {
-    if (query.trim().length < 1) return listCatalogEntries().slice(0, 12);
-    return searchCatalogEntries(query).slice(0, 16);
-  }, [query]);
+    const aliasEntries: CatalogSkillEntry[] = catalogAliases.map((row) => ({
+      name: row.canonical,
+      category: "Autre",
+      aliases: [row.alias],
+    }));
+    const found = searchPublicCatalog(query, [...catalogExtras, ...aliasEntries]);
+    const unique = new Map<string, CatalogSkillEntry>();
+    for (const entry of found) {
+      const prev = unique.get(entry.name);
+      if (!prev) unique.set(entry.name, { ...entry, aliases: [...entry.aliases] });
+      else prev.aliases = [...new Set([...prev.aliases, ...entry.aliases])];
+    }
+    const list = [...unique.values()];
+    const scoped = catalogCategory ? list.filter((entry) => entry.category === catalogCategory) : list;
+    if (!query.trim() && !catalogCategory) return [];
+    return scoped;
+  }, [query, catalogCategory, catalogExtras, catalogAliases]);
 
   const pickSkill = (entry: HardSkillCatalogEntry) => {
     setSelected(entry);
@@ -99,14 +131,19 @@ export default function DevelopInner() {
     setStep(2);
   };
 
-  const confirmHardSkillFreeText = () => {
+  const confirmHardSkillFreeText = async () => {
     const name = query.trim();
     if (name.length < 2) {
-      setError("Indiquez le nom de la compétence métier.");
+      setError("Indiquez le nom de la compétence.");
       return;
     }
     setError(null);
-    pickSkill({ name, category: "Compétence métier" });
+    void fetch("/api/learner/skill-suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: name }),
+    }).catch(() => undefined);
+    pickSkill({ name, category: "Hors catalogue" });
   };
 
   const softSkillEntries = useMemo(
@@ -172,13 +209,13 @@ export default function DevelopInner() {
       </button>
 
       <header className="mt-6 space-y-2">
-        <SkillsSectionKicker>Développer</SkillsSectionKicker>
+        <SkillsSectionKicker>Déclarer</SkillsSectionKicker>
         <h1 className="text-[28px] font-bold tracking-[-0.03em] text-white sm:text-[32px]">
-          {step === 1 && "Que voulez-vous développer ?"}
+          {step === 1 && "Que voulez-vous déclarer ?"}
           {step === 2 && family === "soft" && "Choisissez un soft skill"}
-          {step === 2 && family === "hard" && "Quelle compétence métier ?"}
-          {step === 3 && "Confirmez votre objectif"}
-          {step === 4 && "Votre plan de progression"}
+          {step === 2 && family === "hard" && "Quelle compétence ?"}
+          {step === 3 && "Votre auto-évaluation"}
+          {step === 4 && "Compétence déclarée"}
         </h1>
         <p className="text-[13px] text-white/35">
           Étape {step} / {stepTotal} · {stepLabel}
@@ -199,9 +236,7 @@ export default function DevelopInner() {
             onClick={() => chooseFamily("soft")}
             className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 text-left transition hover:border-[#3D7BFF]/40 hover:bg-white/[0.06]"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7BA7FF]/90">
-              Soft skills
-            </p>
+            <p className="text-[13px] text-[#7BA7FF]/90">Soft skills</p>
             <p className="mt-2 text-[16px] font-semibold text-white">Comportement & relationnel</p>
             <p className="mt-2 text-[13px] leading-relaxed text-white/45">
               Choisissez parmi les 20 compétences de votre test (communication, organisation…).
@@ -212,9 +247,7 @@ export default function DevelopInner() {
             onClick={() => chooseFamily("hard")}
             className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 text-left transition hover:border-[#3D7BFF]/40 hover:bg-white/[0.06]"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7BA7FF]/90">
-              Hard skills
-            </p>
+            <p className="text-[13px] text-[#7BA7FF]/90">Compétences métier</p>
             <p className="mt-2 text-[16px] font-semibold text-white">Compétence métier</p>
             <p className="mt-2 text-[13px] leading-relaxed text-white/45">
               Saisissez librement une compétence liée à votre métier ou projet.
@@ -253,47 +286,62 @@ export default function DevelopInner() {
       )}
 
       {step === 2 && family === "hard" && (
-        <div className="mt-8 space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="hard-skill-name" className="text-[12px] uppercase tracking-[0.14em] text-white/35">
-              Nom de la compétence
-            </label>
+        <div className="mt-8 space-y-5">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
             <input
-              id="hard-skill-name"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ex. Community management, Excel avancé, Soudure TIG…"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-[#3D7BFF]/40"
+              placeholder="Rechercher un nom ou un ancien libellé…"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-[#3D7BFF]/40"
               autoFocus
             />
           </div>
+          <div className="flex flex-wrap gap-2">
+            {catalogCategories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCatalogCategory((current) => (current === item ? null : item))}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[12px]",
+                  catalogCategory === item
+                    ? "border-[#3D7BFF] bg-[#3D7BFF]/20 text-white"
+                    : "border-white/10 text-white/60",
+                )}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <ul className="max-h-[360px] divide-y divide-white/[0.05] overflow-y-auto rounded-2xl border border-white/[0.06]">
+            {results.map((entry) => (
+              <li key={`${entry.category}-${entry.name}`}>
+                <button
+                  type="button"
+                  onClick={() => pickSkill(entry)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04]"
+                >
+                  <span>
+                    <span className="block text-[14px] text-white">{entry.name}</span>
+                    <span className="block text-[12px] text-white/35">{entry.category}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-white/25" />
+                </button>
+              </li>
+            ))}
+            {results.length === 0 && (
+              <li className="px-4 py-5 text-[13px] text-white/40">
+                {query.trim() || catalogCategory
+                  ? "Aucune compétence dans cette sélection."
+                  : "Choisissez une catégorie ou lancez une recherche."}
+              </li>
+            )}
+          </ul>
           {error ? <p className="text-[13px] text-rose-300">{error}</p> : null}
-          <button
-            type="button"
-            onClick={confirmHardSkillFreeText}
-            className={cn(CONNECT_BTN_PRIMARY, "w-full sm:w-auto")}
-          >
-            Continuer
+          <button type="button" onClick={() => void confirmHardSkillFreeText()} className={CONNECT_BTN_SECONDARY}>
+            Ma compétence n&apos;est pas dans la liste
           </button>
-          {results.length > 0 && query.trim().length >= 2 ? (
-            <div className="space-y-2 border-t border-white/[0.06] pt-6">
-              <p className="text-[12px] text-white/40">Suggestions du référentiel</p>
-              <ul className="divide-y divide-white/[0.05] overflow-hidden rounded-2xl border border-white/[0.06]">
-                {results.slice(0, 6).map((entry) => (
-                  <li key={`${entry.category}-${entry.name}`}>
-                    <button
-                      type="button"
-                      onClick={() => pickSkill(entry)}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04]"
-                    >
-                      <span className="text-[14px] text-white/85">{entry.name}</span>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-white/25" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </div>
       )}
 
@@ -304,12 +352,12 @@ export default function DevelopInner() {
             {existing ? (
               <p className="text-[13px] text-white/40">Déjà dans votre capital · {existing.level}</p>
             ) : (
-              <p className="text-[13px] text-white/40">Nouvelle compétence à entraîner</p>
+              <p className="text-[13px] text-white/40">Nouvelle compétence à déclarer</p>
             )}
           </div>
 
           <div className="space-y-3">
-            <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">Niveau actuel</p>
+            <p className="text-[13px] text-white/55">Auto-évaluation</p>
             <SkillLevelSelector
               value={currentLevel}
               onChange={(level) => {
@@ -320,7 +368,7 @@ export default function DevelopInner() {
           </div>
 
           <div className="space-y-3">
-            <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">Niveau visé</p>
+            <p className="text-[13px] text-white/55">Objectif</p>
             <SkillLevelSelector
               value={targetLevel}
               onChange={(level) => {
@@ -338,7 +386,7 @@ export default function DevelopInner() {
             onClick={() => void startPlan()}
             className={cn(CONNECT_BTN_PRIMARY, "w-full sm:w-auto")}
           >
-            {saving ? "Création…" : "Créer mon plan"}
+            {saving ? "Enregistrement…" : "Déclarer cette compétence"}
           </button>
         </div>
       )}
@@ -347,16 +395,15 @@ export default function DevelopInner() {
         <div className="mt-8 space-y-8">
           <div className="space-y-2">
             <p className="text-[22px] font-semibold text-white">{selected.name}</p>
-            <p className="text-[14px] text-white/45">
-              {currentLevel} → {targetLevel}
+            <p className="text-[14px] text-white/70">
+              Auto-évaluation : {currentLevel}
+              {targetLevel ? ` · Objectif : ${targetLevel}` : ""}
             </p>
-            <SkillsProgressBar value={28} className="mt-3 max-w-sm" />
           </div>
 
+          {SKILLS_TRAINING_ENABLED ? (
           <div className="space-y-3">
-            <p className="text-[12px] uppercase tracking-[0.16em] text-white/35">
-              Modalités d’entraînement
-            </p>
+            <p className="text-[13px] text-white/55">Modalités d’entraînement</p>
             <div className="flex flex-wrap gap-2">
               {TRAINING_MODALITY_TYPES.map((m) => (
                 <span
@@ -372,6 +419,11 @@ export default function DevelopInner() {
               micro-learning, quiz et validations humaines.
             </SkillsEmptyHint>
           </div>
+          ) : null}
+
+          <p className="text-[14px] leading-relaxed text-white/55">
+            Vos preuves constituent votre portfolio. Certaines compétences peuvent aussi être certifiées par un Open Badge.
+          </p>
 
           <div className="rounded-2xl border border-[#3D7BFF]/20 bg-[#3D7BFF]/[0.07] p-5">
             <p className="text-[13px] font-medium text-[#B8D0FF]">
@@ -388,10 +440,14 @@ export default function DevelopInner() {
 
           <div className="flex flex-wrap gap-3">
             <Link
-              href={`/dashboard/apprenant/skills/entrainement?skill=${encodeSkillParam(selected.name)}`}
+              href={
+                SKILLS_TRAINING_ENABLED
+                  ? `/dashboard/apprenant/skills/entrainement?skill=${encodeSkillParam(selected.name)}`
+                  : `/dashboard/apprenant/skills/prove?skill=${encodeSkillParam(selected.name)}`
+              }
               className={CONNECT_BTN_PRIMARY}
             >
-              Commencer l’entraînement
+              {SKILLS_TRAINING_ENABLED ? "Commencer l’entraînement" : "Déposer une preuve"}
             </Link>
             <Link href="/dashboard/apprenant/skills" className={CONNECT_BTN_SECONDARY}>
               Retour à Skills

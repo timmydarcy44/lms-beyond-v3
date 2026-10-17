@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { buildSkillsGapPayload } from "@/lib/entreprise/skills-gap-load";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { buildJadeSkillsGapPayload } from "@/lib/demo/jade-dashboard-mocks";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,10 @@ export async function GET() {
         { error: "Organisation non configurée", needsOnboarding: true },
         { status: 400 },
       );
+    }
+
+    if (isJadeDemoEmail(access.viewer.email)) {
+      return NextResponse.json(buildJadeSkillsGapPayload());
     }
 
     const service = getServiceRoleClient();

@@ -3,11 +3,10 @@
 import { FileCheck2, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { resolveToolLogo } from "@/lib/profile/competency-referential";
 import {
-  resolveSkillUxStatus,
+  getSkillDeclarationStatus,
   type LearnerHardSkillRecord,
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
-import { SkillStatusBadge } from "@/components/hard-skills/skill-status-badge";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -21,8 +20,8 @@ type Props = {
 
 export function SkillCard({ record, meta, onEdit, onProof, onEvaluate, onDelete }: Props) {
   const logo = resolveToolLogo(record.name);
-  const status = resolveSkillUxStatus(meta ?? { proofLevel: record.proofLevel, proof: record.proof });
-  const proofCount = meta?.proof?.url || meta?.proof?.note ? 1 : 0;
+  const declaration = getSkillDeclarationStatus(meta ?? { proofLevel: record.proofLevel, proof: record.proof });
+  const proofCount = declaration.proofCount;
   const validatedAt = meta?.validation?.analyzedAt;
 
   return (
@@ -39,7 +38,9 @@ export function SkillCard({ record, meta, onEdit, onProof, onEvaluate, onDelete 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-white">{record.name}</h3>
-            <SkillStatusBadge status={status} />
+            <span className="rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] text-white/80">
+              {declaration.label}
+            </span>
           </div>
           <p className="mt-1 text-[13px] text-white/45">{record.category}</p>
         </div>
@@ -47,22 +48,14 @@ export function SkillCard({ record, meta, onEdit, onProof, onEvaluate, onDelete 
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-[13px]">
         <div className="rounded-xl bg-white/[0.04] px-3 py-2.5">
-          <dt className="text-white/40">Niveau déclaré</dt>
+          <dt className="text-white/40">Auto-évaluation</dt>
           <dd className="mt-0.5 font-semibold text-white">{record.level}</dd>
         </div>
         <div className="rounded-xl bg-white/[0.04] px-3 py-2.5">
           <dt className="text-white/40">Statut</dt>
-          <dd className="mt-0.5 font-semibold text-white">
-            {status === "validated"
-              ? "Validée Byound"
-              : status === "evaluated"
-                ? "Évaluée"
-                : status === "proved"
-                  ? "Prouvée"
-                  : "Auto-déclarée"}
-          </dd>
+          <dd className="mt-0.5 font-semibold text-white">{declaration.label}</dd>
         </div>
-        {status === "validated" || status === "proved" ? (
+        {declaration.proofCount > 0 ? (
           <>
             <div className="rounded-xl bg-white/[0.04] px-3 py-2.5">
               <dt className="text-white/40">Preuves</dt>

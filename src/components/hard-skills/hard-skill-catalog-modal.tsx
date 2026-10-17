@@ -44,7 +44,7 @@ export function HardSkillCatalogModal({ open, existingSkills, onClose, onSelectS
         <div className="border-b border-white/10 px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div>
-              <div className="text-xs uppercase tracking-[0.3em] text-white/50">Explorer</div>
+              <div className="text-[13px] text-white/50">Explorer</div>
               <div className="mt-1 text-lg font-semibold text-white">Catalogue de compétences</div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">

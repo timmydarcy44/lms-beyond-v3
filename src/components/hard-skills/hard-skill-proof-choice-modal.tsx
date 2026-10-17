@@ -14,7 +14,7 @@ export function HardSkillProofChoiceModal({ open, skillName, onClose, onChooseIn
   return (
     <div className="fixed inset-0 z-[145] flex items-center justify-center bg-black/75 px-4">
       <div className="w-full max-w-lg rounded-3xl border border-white/[0.12] bg-[#0D111A] p-6 shadow-2xl sm:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-white/40">Faire reconnaître</p>
+        <p className="text-[13px] text-white/50">Faire reconnaître</p>
         <h3 className="mt-2 text-xl font-semibold text-white">{skillName}</h3>
         <p className="mt-3 text-sm text-white/55">
           Votre compétence est auto-déclarée. Choisissez comment la faire reconnaître dans Byound.

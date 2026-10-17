@@ -8,29 +8,7 @@ import { CONNECT_BTN_PRIMARY, CONNECT_BTN_SECONDARY } from "@/lib/apprenant/conn
 import { encodeSkillParam } from "@/lib/apprenant/edge-skills-center";
 
 export function SkillsSectionKicker({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7BA7FF]/90">
-      {children}
-    </p>
-  );
-}
-
-export function SkillsProgressBar({
-  value,
-  className,
-}: {
-  value: number;
-  className?: string;
-}) {
-  const clamped = Math.max(0, Math.min(100, value));
-  return (
-    <div className={cn("h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]", className)}>
-      <div
-        className="h-full rounded-full bg-gradient-to-r from-[#3D7BFF] to-[#60A5FA] transition-[width] duration-700 ease-out"
-        style={{ width: `${clamped}%` }}
-      />
-    </div>
-  );
+  return <p className="text-[13px] text-white/50">{children}</p>;
 }
 
 export function SkillsTrainingCard({ focus }: { focus: TrainingFocus }) {
@@ -44,27 +22,23 @@ export function SkillsTrainingCard({ focus }: { focus: TrainingFocus }) {
             <h3 className="text-[17px] font-semibold tracking-[-0.02em] text-white">{focus.skill}</h3>
             <p className="mt-1 text-[12px] text-white/35">{focus.statusLabel}</p>
           </div>
-          <span className="shrink-0 text-[22px] font-bold tabular-nums tracking-tight text-[#7BA7FF]">
-            {focus.progressPercent}&nbsp;%
-          </span>
+          <span className="shrink-0 text-[13px] text-white/55">{focus.currentLevel}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-[13px]">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-white/30">Niveau actuel</p>
+            <p className="text-[13px] text-white/45">Niveau actuel</p>
             <p className="mt-0.5 font-medium text-white/85">{focus.currentLevel}</p>
           </div>
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-white/30">Objectif</p>
+            <p className="text-[13px] text-white/45">Objectif</p>
             <p className="mt-0.5 font-medium text-white/85">{focus.targetLevel}</p>
           </div>
         </div>
 
-        <SkillsProgressBar value={focus.progressPercent} />
-
         <div className="flex items-end justify-between gap-3 border-t border-white/[0.06] pt-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.14em] text-white/30">Prochain entraînement</p>
+            <p className="text-[13px] text-white/45">Prochain entraînement</p>
             <p className="mt-0.5 text-[13px] text-white/75">{focus.nextDrill}</p>
             <p className="mt-0.5 text-[12px] text-white/35">{focus.durationMin} min</p>
           </div>
@@ -80,7 +54,6 @@ export function SkillsTrainingCard({ focus }: { focus: TrainingFocus }) {
 export function SkillsCapitalStrip({
   total,
   proved,
-  inDevelopment,
   badges,
 }: {
   total: number;
@@ -90,12 +63,11 @@ export function SkillsCapitalStrip({
 }) {
   const items = [
     { label: "compétences", value: total },
-    { label: "prouvées", value: proved },
-    { label: "en développement", value: inDevelopment },
-    { label: "badges", value: badges },
+    { label: "avec preuve", value: proved },
+    { label: "badges obtenus", value: badges },
   ];
   return (
-    <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 sm:gap-8">
+    <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 sm:gap-8">
       {items.map((item) => (
         <div key={item.label} className="space-y-1">
           <p className="text-[40px] font-bold leading-none tracking-[-0.04em] text-white tabular-nums sm:text-[48px]">
@@ -115,27 +87,32 @@ export function SkillsEmptyHint({ children }: { children: React.ReactNode }) {
 const SKILLS_QUICK_ACTIONS = [
   {
     title: "Déposer une preuve",
-    description: "Réalisation, document ou lien dans votre portfolio. Une preuve ne délivre pas d'Open Badge.",
+    description: "Vos preuves constituent votre portfolio. Certaines compétences peuvent aussi être certifiées par un Open Badge.",
     href: "/dashboard/apprenant/skills/prove",
     icon: Upload,
   },
-  {
-    title: "Entraînement",
-    description: "Exercices guidés et mises en situation.",
-    href: "/dashboard/apprenant/skills/entrainement",
-    icon: Dumbbell,
-  },
+  ...(process.env.SKILLS_TRAINING_ENABLED === "true"
+    ? [
+        {
+          title: "Entraînement",
+          description: "Exercices guidés et mises en situation.",
+          href: "/dashboard/apprenant/skills/entrainement",
+          icon: Dumbbell,
+        },
+      ]
+    : []),
   {
     title: "Wallet",
-    description: "Open Badges délivrés quand vos compétences prouvées correspondent aux critères d'un expert.",
+    description: "Les Open Badges déjà obtenus.",
     href: "/dashboard/apprenant/badges",
     icon: Wallet,
   },
 ] as const;
 
 export function SkillsQuickActionCards({ className }: { className?: string }) {
+  const columns = SKILLS_QUICK_ACTIONS.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2";
   return (
-    <div className={cn("grid gap-3 sm:grid-cols-3", className)}>
+    <div className={cn("grid gap-3", columns, className)}>
       {SKILLS_QUICK_ACTIONS.map((action) => {
         const Icon = action.icon;
         return (

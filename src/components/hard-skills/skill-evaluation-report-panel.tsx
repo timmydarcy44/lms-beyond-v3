@@ -31,8 +31,8 @@ export function SkillEvaluationReportPanel({
   const isDark = variant === "dark";
 
   const sectionTitle = isDark
-    ? "text-xs font-semibold uppercase tracking-[0.18em] text-white/40"
-    : "text-[10px] font-semibold uppercase tracking-[0.2em] text-black/40";
+    ? "text-[13px] text-white/50"
+    : "text-[13px] text-black/45";
 
   const bodyText = isDark ? "text-sm leading-relaxed text-white/75" : "text-sm leading-relaxed text-black/65";
 
@@ -40,9 +40,7 @@ export function SkillEvaluationReportPanel({
     ? "rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3"
     : "rounded-xl border border-black/[0.06] bg-[#fafafa] px-4 py-3";
 
-  const metricLabel = isDark
-    ? "text-[10px] font-semibold uppercase tracking-wider text-white/40"
-    : "text-[10px] font-semibold uppercase tracking-wider text-black/40";
+  const metricLabel = isDark ? "text-[13px] text-white/50" : "text-[13px] text-black/45";
 
   const metricValue = isDark ? "mt-1 text-sm font-medium text-white" : "mt-1 text-sm font-medium text-[#0a0a0a]";
 

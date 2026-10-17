@@ -34,7 +34,7 @@ export function HardSkillManualAddModal({ open, existingSkills, saving, onClose,
   return (
     <div className="fixed inset-0 z-[135] flex items-center justify-center bg-black/70 px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#121820] p-6 shadow-2xl">
-        <p className="text-xs uppercase tracking-wider text-white/40">Ajout manuel</p>
+        <p className="text-[13px] text-white/50">Ajout manuel</p>
         <h3 className="mt-2 text-lg font-semibold text-white">Nouvelle compétence</h3>
         <p className="mt-2 text-sm text-white/55">Créez une compétence hors catalogue Byound.</p>
 

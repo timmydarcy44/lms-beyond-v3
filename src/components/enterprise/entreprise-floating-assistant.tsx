@@ -84,7 +84,7 @@ export function EntrepriseFloatingAssistant() {
       <button
         type="button"
         onClick={openPanel}
-        className="fixed bottom-6 right-6 z-[120] flex h-14 w-14 items-center justify-center rounded-full border border-violet-400/40 bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-700 text-white shadow-[0_0_24px_rgba(124,58,237,0.45),0_12px_40px_rgba(15,23,42,0.35)] transition hover:scale-105 md:bottom-8 md:right-8"
+        className="fixed bottom-6 right-6 z-[120] flex h-14 w-14 items-center justify-center rounded-full bg-[#6E5BFF] text-white shadow-[0_12px_32px_rgba(110,91,255,0.35)]"
         aria-label={`Ouvrir ${assistantName}`}
       >
         <Sparkles className="h-7 w-7" />
@@ -113,9 +113,7 @@ export function EntrepriseFloatingAssistant() {
                 >
                   ✅ Todo
                 </button>
-                <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-200">
-                  Beta
-                </span>
+                <span className="rounded-full bg-white/15 px-2 py-0.5 text-[12px] text-white">Bêta</span>
               </div>
               <button
                 type="button"
@@ -154,7 +152,7 @@ export function EntrepriseFloatingAssistant() {
                   type="button"
                   disabled={loading}
                   onClick={() => void send()}
-                  className="shrink-0 rounded-xl bg-violet-500 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   Envoyer
                 </button>

@@ -12,6 +12,9 @@ const withPWA = require("next-pwa")({
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    SKILLS_TRAINING_ENABLED: process.env.SKILLS_TRAINING_ENABLED ?? "false",
+  },
   transpilePackages: ["@svg-maps/france.departments"],
   typescript: {
     ignoreBuildErrors: true,
@@ -68,7 +71,19 @@ const nextConfig: NextConfig = {
       },
     ]);
 
+    const trainingRedirects =
+      process.env.SKILLS_TRAINING_ENABLED === "true"
+        ? []
+        : [
+            {
+              source: "/dashboard/apprenant/skills/entrainement",
+              destination: "/dashboard/apprenant/skills",
+              statusCode: 301,
+            },
+          ];
+
     return [
+      ...trainingRedirects,
       ...programmeRedirects,
       {
         source: "/app-landing/:path*",

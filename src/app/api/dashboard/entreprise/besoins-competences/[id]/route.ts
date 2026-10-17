@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { buildSkillsGapPayload, findNeedInPayload } from "@/lib/entreprise/skills-gap-load";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { buildJadeSkillsGapPayload } from "@/lib/demo/jade-dashboard-mocks";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +30,13 @@ export async function GET(
         { error: "Organisation non configurée", needsOnboarding: true },
         { status: 400 },
       );
+    }
+
+    if (isJadeDemoEmail(access.viewer.email)) {
+      const payload = buildJadeSkillsGapPayload();
+      const need = payload.needs_with_actions.find((row) => row.id === decodeURIComponent(id));
+      if (!need) return NextResponse.json({ error: "Besoin introuvable" }, { status: 404 });
+      return NextResponse.json({ scale: 15, need, stats: payload.stats, demo_enriched: true });
     }
 
     const service = getServiceRoleClient();

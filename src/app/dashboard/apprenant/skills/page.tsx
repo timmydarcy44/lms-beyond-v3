@@ -7,14 +7,13 @@ import {
   SkillsCapitalStrip,
   SkillsQuickActionCards,
   SkillsEmptyHint,
-  SkillsProgressBar,
   SkillsSectionKicker,
   SkillsTrainingCard,
 } from "@/components/apprenant/skills/skills-ui";
 import { useEdgeSkillsCenter } from "@/hooks/use-edge-skills-center";
 import { encodeSkillParam } from "@/lib/apprenant/edge-skills-center";
+import { SKILLS_TRAINING_ENABLED } from "@/lib/apprenant/skills-training-flag";
 import { APPRENANT_PAGE_SHELL, CONNECT_BTN_PRIMARY } from "@/lib/apprenant/connect-nav";
-import { cn } from "@/lib/utils";
 
 export default function ApprenantSkillsHomePage() {
   const {
@@ -37,13 +36,13 @@ export default function ApprenantSkillsHomePage() {
           <SkillsSectionKicker>Byound Skills</SkillsSectionKicker>
           <div className="space-y-3">
             <h1 className="max-w-xl text-[34px] font-bold leading-[1.08] tracking-[-0.04em] text-white sm:text-[44px]">
-              Entraînez vos compétences.
+              Déclarez vos compétences.
               <br />
               <span className="text-white/55">Prouvez ce que vous savez faire.</span>
             </h1>
             <p className="max-w-md text-[15px] leading-relaxed text-white/40">
-              Les preuves constituent votre portfolio. Un Open Badge est délivré à part, lorsque ces
-              preuves correspondent aux critères définis par un expert.
+              Vos preuves constituent votre portfolio. Certaines compétences peuvent aussi être
+              certifiées par un Open Badge.
             </p>
           </div>
           <SkillsQuickActionCards />
@@ -51,7 +50,7 @@ export default function ApprenantSkillsHomePage() {
             href="/dashboard/apprenant/skills/develop"
             className={`${CONNECT_BTN_PRIMARY} mt-2 inline-flex w-fit`}
           >
-            Développer une compétence
+            Déclarer une compétence
           </Link>
         </header>
 
@@ -72,7 +71,7 @@ export default function ApprenantSkillsHomePage() {
           )}
         </section>
 
-        {/* Training Center */}
+        {SKILLS_TRAINING_ENABLED ? (
         <section className="mt-16 space-y-6">
           <div className="space-y-2">
             <SkillsSectionKicker>Training Center</SkillsSectionKicker>
@@ -101,6 +100,7 @@ export default function ApprenantSkillsHomePage() {
             </div>
           )}
         </section>
+        ) : null}
 
         {/* Objectif métier */}
         <section className="mt-16 space-y-6">
@@ -126,36 +126,14 @@ export default function ApprenantSkillsHomePage() {
           {objectiveGaps.length > 0 ? (
             <div className="space-y-5">
               {objectiveGaps.map((gap) => (
-                <div key={gap.skill} className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[15px] font-medium text-white/90">{gap.skill}</p>
-                    <span
-                      className={cn(
-                        "text-[15px] font-semibold tabular-nums",
-                        gap.tone === "green" && "text-emerald-300",
-                        gap.tone === "orange" && "text-amber-300",
-                        gap.tone === "red" && "text-rose-300",
-                        gap.tone === "gray" && "text-white/40",
-                      )}
-                    >
-                      {gap.percent}&nbsp;%
-                    </span>
-                  </div>
-                  <SkillsProgressBar value={gap.percent} />
-                  {gap.tone === "gray" ? (
-                    <p className="text-[11px] text-white/35">
-                      Alignement estimé dès que le test soft skills (20 compétences) ou une preuve
-                      métier est disponible pour cette compétence.
-                    </p>
-                  ) : null}
-                  <div className="flex justify-end">
-                    <Link
-                      href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(gap.skill)}`}
-                      className="text-[12px] font-semibold text-[#7BA7FF] transition hover:text-white"
-                    >
-                      Travailler cette compétence
-                    </Link>
-                  </div>
+                <div key={gap.skill} className="flex items-center justify-between gap-3 py-2">
+                  <p className="text-[15px] font-medium text-white/90">{gap.skill}</p>
+                  <Link
+                    href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(gap.skill)}`}
+                    className="text-[12px] font-semibold text-[#7BA7FF] transition hover:text-white"
+                  >
+                    Déclarer
+                  </Link>
                 </div>
               ))}
             </div>

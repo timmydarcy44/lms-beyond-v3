@@ -36,23 +36,19 @@ export default function ProveInner() {
   const [methodId, setMethodId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [proofTitle, setProofTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const skillOptions = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const fromPortfolio = records.map((r) => r.name);
-    if (!q) {
-      if (fromPortfolio.length) return fromPortfolio.slice(0, 20);
-      return listCatalogEntries()
-        .map((e) => e.name)
-        .slice(0, 20);
+    if (!query.trim()) {
+      return fromPortfolio.length ? fromPortfolio : listCatalogEntries().map((entry) => entry.name);
     }
-    const catalog = searchCatalogEntries(query).map((e) => e.name);
-    return [...new Set([...fromPortfolio, ...catalog])]
-      .filter((n) => n.toLowerCase().includes(q))
-      .slice(0, 20);
+    const catalog = searchCatalogEntries(query).map((entry) => entry.name);
+    return [...new Set([...fromPortfolio, ...catalog])];
   }, [records, query]);
 
   const method = PROOF_METHODS.find((m) => m.id === methodId) ?? null;
@@ -71,6 +67,17 @@ export default function ProveInner() {
       if (!existing) {
         await upsertSkill(skill, "Intermédiaire", { source: "manual" });
       }
+      let uploadedUrl: string | undefined;
+      if (file) {
+        const body = new FormData();
+        body.append("file", file);
+        const upload = await fetch("/api/learner/skill-proof/upload", { method: "POST", body });
+        const uploaded = (await upload.json()) as { url?: string; error?: string };
+        if (!upload.ok || !uploaded.url) {
+          throw new Error(uploaded.error || "upload");
+        }
+        uploadedUrl = uploaded.url;
+      }
       const summary = [method?.label, fileName ? `Fichier : ${fileName}` : null, note.trim() || null]
         .filter(Boolean)
         .join(" · ");
@@ -79,10 +86,18 @@ export default function ProveInner() {
           ? "other"
           : methodId === "realization"
             ? "portfolio"
-            : note.trim().startsWith("http")
-              ? "link"
-              : "document";
-      await attachProofNote(skill, summary || method?.label || "Preuve déposée", proofType);
+            : uploadedUrl
+              ? "document"
+              : note.trim().startsWith("http")
+                ? "link"
+                : "document";
+      await attachProofNote(
+        skill,
+        summary || method?.label || "Preuve déposée",
+        proofType,
+        uploadedUrl,
+        proofTitle.trim() || fileName || undefined,
+      );
       setDone(true);
       setStep(3);
     } catch {
@@ -197,12 +212,23 @@ export default function ProveInner() {
                     accept=".pdf,image/*,.doc,.docx,.ppt,.pptx,video/*"
                     className="hidden"
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
+                      const f = e.target.files?.[0] ?? null;
+                      setFile(f);
                       setFileName(f?.name ?? null);
+                      if (f) setProofTitle((current) => current || f.name.replace(/\.[^.]+$/, ""));
                     }}
                   />
                 </label>
               )}
+              <label className="block space-y-2">
+                <span className="text-[13px] text-white/55">Titre de la preuve</span>
+                <input
+                  value={proofTitle}
+                  onChange={(e) => setProofTitle(e.target.value)}
+                  placeholder="Nom lisible de la preuve"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-[#3D7BFF]/40"
+                />
+              </label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}

@@ -14,6 +14,10 @@ type Props = {
   departments?: string[];
   /** Ouvre le modal d'ajout dès le montage (ex. ?invite=1). */
   autoOpenAdd?: boolean;
+  /** Incrémenter pour ouvrir le modal d'ajout depuis l'extérieur. */
+  openAddSignal?: number;
+  /** Pilules du header Mes équipes. */
+  neo?: boolean;
 };
 
 export function exportEmployeesCsv(employees: EntrepriseEmployee[], organisationName?: string) {
@@ -48,6 +52,8 @@ export function EnterpriseEmployeeCsvActions({
   onSuccess,
   departments = [],
   autoOpenAdd = false,
+  openAddSignal = 0,
+  neo = false,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importPreview, setImportPreview] = useState<{
@@ -71,6 +77,10 @@ export function EnterpriseEmployeeCsvActions({
   useEffect(() => {
     if (autoOpenAdd) setShowAddModal(true);
   }, [autoOpenAdd]);
+
+  useEffect(() => {
+    if (openAddSignal > 0) setShowAddModal(true);
+  }, [openAddSignal]);
 
   const deptOptions = [
     ...new Set([...departments, addForm.department].filter(Boolean) as string[]),
@@ -171,10 +181,14 @@ export function EnterpriseEmployeeCsvActions({
     <>
       <div className="flex flex-wrap gap-2">
         <label
-          className={`flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 ${!organisationId ? "pointer-events-none opacity-50" : ""}`}
+          className={
+            neo
+              ? `inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-[#E3E0D8] bg-white px-4 text-[14px] font-semibold text-[#07080B] ${!organisationId ? "pointer-events-none opacity-50" : ""}`
+              : `flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 ${!organisationId ? "pointer-events-none opacity-50" : ""}`
+          }
         >
           <Upload size={15} />
-          Importer CSV
+          {neo ? "Importer" : "Importer CSV"}
           <input
             id="entreprise-csv-import"
             ref={fileInputRef}
@@ -191,18 +205,26 @@ export function EnterpriseEmployeeCsvActions({
         <button
           type="button"
           onClick={() => exportEmployeesCsv(employees, organisationName)}
-          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          className={
+            neo
+              ? "inline-flex h-11 items-center gap-2 rounded-full border border-[#E3E0D8] bg-white px-4 text-[14px] font-semibold text-[#07080B]"
+              : "flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          }
         >
           <Download size={15} />
-          Exporter CSV
+          {neo ? "Exporter" : "Exporter CSV"}
         </button>
         <button
           type="button"
           onClick={() => (organisationId ? setShowAddModal(true) : requireOrg())}
-          className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
+          className={
+            neo
+              ? "inline-flex h-11 items-center gap-2 rounded-full bg-[#07080B] px-4 text-[14px] font-semibold text-white"
+              : "flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-500"
+          }
         >
           <UserPlus size={15} />
-          Ajouter
+          {neo ? "Ajouter un collaborateur" : "Ajouter"}
         </button>
       </div>
 
@@ -212,7 +234,7 @@ export function EnterpriseEmployeeCsvActions({
           <div className="mt-3 overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase text-gray-400">
+                <tr className="border-b border-gray-100 text-[13px] font-semibold text-[#6B6F7A]">
                   <th className="px-3 py-2">Prénom</th>
                   <th className="px-3 py-2">Nom</th>
                   <th className="px-3 py-2">Email</th>

@@ -24,9 +24,8 @@ export default function SkillsBadgesPage() {
             Vos réussites
           </h1>
           <p className="max-w-lg text-[14px] text-white/40">
-            Un Open Badge atteste une compétence. Il est délivré lorsque vos preuves correspondent
-            aux critères définis par un expert. Le portfolio, lui, reste un dossier : déposer une
-            preuve ne crée pas de badge.
+            Vos preuves constituent votre portfolio. Certaines compétences peuvent aussi être
+            certifiées par un Open Badge.
           </p>
         </header>
 

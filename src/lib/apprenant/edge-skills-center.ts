@@ -1,5 +1,6 @@
 import {
   HARD_SKILL_LEVELS,
+  getSkillDeclarationStatus,
   masteryBarFilled,
   parseHardSkillPortfolio,
   resolveSkillUxStatus,
@@ -70,9 +71,8 @@ export function computeSkillsCapital(
   let inDevelopment = 0;
   let validated = 0;
   for (const r of records) {
-    const status = resolveSkillUxStatus(meta[r.name]);
-    if (status === "validated") validated += 1;
-    else if (status === "proved" || status === "evaluated") proved += 1;
+    const status = getSkillDeclarationStatus(meta[r.name]);
+    if (status.proofCount > 0) proved += 1;
     else inDevelopment += 1;
   }
   return {

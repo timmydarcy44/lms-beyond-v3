@@ -5,6 +5,8 @@ import {
   isEdgebsDemoViewer,
 } from "@/lib/entreprise/edgebs-demo-data";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { buildJadeOfferDetail } from "@/lib/demo/jade-dashboard-mocks";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,11 @@ export async function GET(_request: NextRequest, context: Params) {
   }
 
   const { id } = await context.params;
+
+  if (isJadeDemoEmail(access.viewer.email)) {
+    const jade = buildJadeOfferDetail(id);
+    if (jade) return NextResponse.json(jade);
+  }
 
   const edgebsDemo =
     access.organizationId === EDGEBS_ORG_ID && isEdgebsDemoViewer(access.viewer.email);

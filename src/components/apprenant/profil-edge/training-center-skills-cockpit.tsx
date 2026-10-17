@@ -6,7 +6,6 @@ import { ChevronRight, Sparkles } from "lucide-react";
 import type { TrainingCenterSkillRow } from "@/components/apprenant/profil-edge/coaching-skills";
 import { bucketLabelFr } from "@/components/apprenant/profil-edge/coaching-skills";
 import type { CareerSkillBucket } from "@/lib/career-profiles/career-profile-matching";
-import { levelBarColor } from "@/lib/apprenant/edge-skill-gap-visuals";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -78,8 +77,6 @@ function SkillMasteryCard({
   onSelect: () => void;
 }) {
   const styles = bucketCardStyles(item.bucket);
-  const pct = item.masteryPercent;
-  const barPct = pct == null ? 8 : Math.max(8, pct);
 
   return (
     <button
@@ -104,34 +101,11 @@ function SkillMasteryCard({
         {item.row.skill}
       </h3>
 
-      <p className="mt-1 text-[12px] text-white/45">{item.row.userLevel}</p>
+      <p className="mt-1 text-[13px] text-white/55">{item.row.userLevel}</p>
 
-      <div className="mt-4 border-t border-white/[0.06] pt-4">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p
-              className={cn(
-                "text-[1.75rem] font-bold leading-none tracking-[-0.04em] tabular-nums",
-                pct == null ? "text-white/35" : "text-white",
-              )}
-            >
-              {pct == null ? "—" : `${pct}%`}
-            </p>
-            <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.12em] text-white/35">
-              Maîtrise estimée
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/25">
-          <div
-            className={cn("h-full rounded-full transition-all", pct == null ? "bg-white/20" : levelBarColor(pct))}
-            style={{ width: `${barPct}%` }}
-          />
-        </div>
-        <p className="mt-2 text-[11px] font-medium text-[#9EC0FF] opacity-0 transition group-hover:opacity-100">
-          Ouvrir l&apos;univers compétence →
-        </p>
-      </div>
+      <p className="mt-4 text-[11px] font-medium text-[#9EC0FF] opacity-0 transition group-hover:opacity-100">
+        Ouvrir la compétence
+      </p>
     </button>
   );
 }
@@ -171,14 +145,13 @@ export function TrainingCenterSkillsCockpit({ rows, onSelect }: Props) {
         <div>
           <div className="flex items-center gap-2 text-[#9EC0FF]">
             <Sparkles className="h-4 w-4" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">Référentiel métier</span>
+            <span className="text-[13px] text-[#9EC0FF]">Référentiel métier</span>
           </div>
           <h2 className="mt-1 text-[1.15rem] font-semibold tracking-[-0.02em] text-white sm:text-[1.25rem]">
             Vos compétences, carte par carte
           </h2>
           <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-white/45">
-            Touchez une carte pour accéder aux exercices, missions et preuves. Chaque % est une estimation
-            basée sur vos tests et déclarations.
+            Touchez une carte pour voir le niveau indiqué et accéder aux exercices, missions et preuves.
           </p>
         </div>
       </div>

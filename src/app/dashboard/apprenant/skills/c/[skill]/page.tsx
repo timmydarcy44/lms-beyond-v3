@@ -1,57 +1,54 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { FileText, Link2, Trash2 } from "lucide-react";
 
 import { EdgePageAmbiance } from "@/components/apprenant/edge-page-ambiance";
-import {
-  SkillsEmptyHint,
-  SkillsProgressBar,
-  SkillsSectionKicker,
-} from "@/components/apprenant/skills/skills-ui";
+import { SkillsEmptyHint } from "@/components/apprenant/skills/skills-ui";
 import { useEdgeSkillsCenter } from "@/hooks/use-edge-skills-center";
-import {
-  decodeSkillParam,
-  encodeSkillParam,
-  levelProgressPercent,
-  nextHardSkillLevel,
-} from "@/lib/apprenant/edge-skills-center";
+import { decodeSkillParam, encodeSkillParam } from "@/lib/apprenant/edge-skills-center";
 import {
   APPRENANT_PAGE_SHELL,
   CONNECT_BTN_PRIMARY,
   CONNECT_BTN_SECONDARY,
 } from "@/lib/apprenant/connect-nav";
-import {
-  masteryBarFilled,
-  resolveSkillUxStatus,
-  SKILL_UX_STATUS,
-} from "@/lib/hard-skills/hard-skills-portfolio";
+import { getSkillDeclarationStatus, listSkillProofs } from "@/lib/hard-skills/hard-skills-portfolio";
+import { foldSkillKey } from "@/lib/hard-skills/skill-catalog-policy";
+
+const HELP =
+  "Vos preuves constituent votre portfolio. Certaines compétences peuvent aussi être certifiées par un Open Badge.";
 
 export default function SkillsSkillDetailPage() {
   const params = useParams();
   const raw = typeof params.skill === "string" ? params.skill : "";
   const skillName = decodeSkillParam(raw);
-  const { loading, records, meta } = useEdgeSkillsCenter();
+  const { loading, records, meta, earnedBadgeNames, visibleBadges, removeSkillProof } = useEdgeSkillsCenter();
+  const [removing, setRemoving] = useState<string | null>(null);
 
-  const record = useMemo(
-    () => records.find((r) => r.name.toLowerCase() === skillName.toLowerCase()) ?? null,
-    [records, skillName],
-  );
-  const m = record ? meta[record.name] : undefined;
-  const status = resolveSkillUxStatus(m);
-  const statusUi = SKILL_UX_STATUS[status];
-  const target = m?.trainingTargetLevel ?? (record ? nextHardSkillLevel(record.level) : "Confirmé");
-  const progress = record ? levelProgressPercent(record.level, target) : 0;
-  const proofCount = m?.proof?.note || m?.proof?.url ? 1 : 0;
+  const record = records.find((item) => foldSkillKey(item.name) === foldSkillKey(skillName)) ?? null;
+  const stored = record ? meta[record.name] : undefined;
+  const badgeEarned = earnedBadgeNames.some((name) => foldSkillKey(name) === foldSkillKey(record?.name ?? skillName));
+  const status = getSkillDeclarationStatus(stored, { badgeEarned });
+  const proofs = listSkillProofs(stored);
+  const availableBadge = visibleBadges.find((badge) => foldSkillKey(badge.name) === foldSkillKey(record?.name ?? skillName));
+  const target = stored?.trainingTargetLevel;
+
+  const remove = async (proofId: string) => {
+    if (!record) return;
+    setRemoving(proofId);
+    try {
+      await removeSkillProof(record.name, proofId);
+    } finally {
+      setRemoving(null);
+    }
+  };
 
   return (
     <EdgePageAmbiance ambiance="skills">
       <div className={`${APPRENANT_PAGE_SHELL} max-w-2xl pb-24`}>
-        <Link
-          href="/dashboard/apprenant/skills/competences"
-          className="text-[13px] text-white/40 transition hover:text-white"
-        >
+        <Link href="/dashboard/apprenant/skills/competences" className="text-[13px] text-white/40 transition hover:text-white">
           ← Mes compétences
         </Link>
 
@@ -65,101 +62,92 @@ export default function SkillsSkillDetailPage() {
           <div className="mt-8 space-y-4">
             <h1 className="text-[28px] font-bold text-white">{skillName || "Compétence"}</h1>
             <SkillsEmptyHint>Cette compétence n’est pas encore dans votre capital.</SkillsEmptyHint>
-            <Link
-              href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(skillName)}`}
-              className={CONNECT_BTN_PRIMARY}
-            >
-              Développer cette compétence
+            <Link href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(skillName)}`} className={CONNECT_BTN_PRIMARY}>
+              Déclarer cette compétence
             </Link>
           </div>
         )}
 
         {!loading && record && (
           <>
-            <header className="mt-6 space-y-4">
-              <SkillsSectionKicker>{record.category}</SkillsSectionKicker>
-              <h1 className="text-[32px] font-bold tracking-[-0.03em] text-white sm:text-[40px]">
-                {record.name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-[15px] text-white/70">Niveau · {record.level}</span>
-                <span
-                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${statusUi.className}`}
-                >
-                  {statusUi.label}
-                </span>
-              </div>
+            <header className="mt-6 space-y-3">
+              <p className="text-[13px] text-white/55">{record.category}</p>
+              <h1 className="text-[32px] font-bold tracking-[-0.03em] text-white sm:text-[40px]">{record.name}</h1>
+              <span className="inline-flex rounded-full border border-white/20 px-2.5 py-0.5 text-[12px] text-white">
+                {status.label}
+              </span>
+              <p className="text-[15px] text-white/80">
+                Auto-évaluation : {record.level}
+                {target ? ` · Objectif : ${target}` : ""}
+              </p>
             </header>
 
-            <section className="mt-10 space-y-3">
-              <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">
-                Progression / maîtrise
-              </p>
-              <div className="flex items-end justify-between gap-4">
-                <p className="text-[40px] font-bold tabular-nums tracking-[-0.04em] text-white">
-                  {progress}&nbsp;%
-                </p>
-                <p className="pb-2 text-[13px] text-white/40">
-                  Objectif {target} · {masteryBarFilled(record.level)}/5
-                </p>
+            <section className="mt-10 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-[18px] font-semibold text-white">Mes preuves</h2>
+                <Link href={`/dashboard/apprenant/skills/prove?skill=${encodeSkillParam(record.name)}`} className={CONNECT_BTN_SECONDARY}>
+                  Ajouter une preuve
+                </Link>
               </div>
-              <SkillsProgressBar value={progress} />
+              {proofs.length === 0 ? (
+                <SkillsEmptyHint>Aucune preuve déposée pour cette compétence.</SkillsEmptyHint>
+              ) : (
+                <ul className="space-y-3">
+                  {proofs.map((proof) => {
+                    const href = proof.url?.startsWith("http") ? proof.url : undefined;
+                    const isImage = Boolean(href && /\.(png|jpe?g|webp|gif)(\?|$)/i.test(href));
+                    const isPdf = Boolean(href && /\.pdf(\?|$)/i.test(href));
+                    const isVideo = Boolean(href && /\.(mp4|webm|mov)(\?|$)/i.test(href));
+                    return (
+                      <li key={proof.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+                        {isImage && href ? <img src={href} alt="" className="max-h-56 w-full bg-black object-contain" /> : null}
+                        {isPdf && href ? <iframe title={proof.title} src={href} className="h-64 w-full bg-white" /> : null}
+                        {isVideo && href ? <video src={href} controls className="max-h-56 w-full bg-black" /> : null}
+                        <div className="flex items-start justify-between gap-3 px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-2 text-[14px] font-medium text-white">
+                              {proof.type === "link" ? <Link2 className="h-4 w-4 text-white/40" /> : <FileText className="h-4 w-4 text-white/40" />}
+                              {proof.title}
+                            </p>
+                            {proof.createdAt ? (
+                              <p className="mt-1 text-[12px] text-white/40">
+                                {new Date(proof.createdAt).toLocaleDateString("fr-FR")}
+                              </p>
+                            ) : null}
+                            {href ? (
+                              <a href={href} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-[12px] text-[#9EC0FF] hover:underline">
+                                Ouvrir
+                              </a>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={removing === proof.id}
+                            onClick={() => void remove(proof.id)}
+                            className="rounded-full border border-white/15 p-2 text-white/70 hover:text-white"
+                            aria-label="Supprimer la preuve"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </section>
 
-            <section className="mt-10 grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">Preuves</p>
-                <p className="mt-1 text-[28px] font-bold tabular-nums text-white">{proofCount}</p>
-              </div>
-              <div>
-                <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">Statut</p>
-                <p className="mt-1 text-[18px] font-semibold text-white">{statusUi.label}</p>
-              </div>
-            </section>
+            {availableBadge ? (
+              <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <h2 className="text-[16px] font-semibold text-white">Open Badge disponible</h2>
+                <p className="mt-2 text-[14px] text-white/60">{availableBadge.name}</p>
+                <Link href={availableBadge.presentationHref} className={`${CONNECT_BTN_PRIMARY} mt-4 inline-flex`}>
+                  Voir le badge
+                </Link>
+              </section>
+            ) : null}
 
-            <section className="mt-10 space-y-3">
-              <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">
-                Historique de progression
-              </p>
-              <ul className="space-y-2 text-[13px] text-white/50">
-                <li>Niveau déclaré · {record.level}</li>
-                {m?.trainingStartedAt && (
-                  <li>
-                    Entraînement démarré ·{" "}
-                    {new Date(m.trainingStartedAt).toLocaleDateString("fr-FR")}
-                  </li>
-                )}
-                {m?.proof?.note && <li>Preuve · {m.proof.note}</li>}
-                {m?.validation?.status && <li>Validation · {m.validation.status}</li>}
-                {!m?.trainingStartedAt && !m?.proof && !m?.validation && (
-                  <li>Première étape : démarrez un entraînement ou ajoutez une preuve.</li>
-                )}
-              </ul>
-            </section>
-
-            <section className="mt-10 space-y-3">
-              <p className="text-[12px] uppercase tracking-[0.14em] text-white/35">Portfolio</p>
-              <p className="text-[14px] leading-relaxed text-white/50">
-                Une preuve documente cette compétence. Elle ne la certifie pas. L&apos;Open Badge est
-                délivré à part, lorsque les compétences prouvées correspondent aux critères d&apos;un
-                expert.
-              </p>
-            </section>
-
-            <div className="mt-12 flex flex-wrap gap-3">
-              <Link
-                href={`/dashboard/apprenant/skills/develop?skill=${encodeSkillParam(record.name)}`}
-                className={CONNECT_BTN_PRIMARY}
-              >
-                Développer cette compétence
-              </Link>
-              <Link
-                href={`/dashboard/apprenant/skills/prove?skill=${encodeSkillParam(record.name)}`}
-                className={CONNECT_BTN_SECONDARY}
-              >
-                Ajouter une preuve
-              </Link>
-            </div>
+            <p className="mt-10 text-[14px] leading-relaxed text-white/55">{HELP}</p>
           </>
         )}
       </div>

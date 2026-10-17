@@ -1,8 +1,10 @@
 import {
-  GLOBAL_SKILL_REFERENTIAL,
-  referentialItemName,
-  referentialItemSubtitle,
-} from "@/lib/profile/competency-referential";
+  canonicalSkillName,
+  catalogCategoryFor,
+  listPublicCatalogEntries,
+  searchPublicCatalog,
+  type CatalogSkillEntry,
+} from "@/lib/hard-skills/skill-catalog-policy";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import type { SkillValidationSession } from "@/lib/hard-skills/skill-validation";
 
@@ -12,6 +14,16 @@ export type HardSkillProof = {
   type: "link" | "document" | "portfolio" | "cv" | "other";
   url?: string;
   note?: string;
+};
+
+export type SkillProofItem = {
+  id: string;
+  type: HardSkillProof["type"];
+  title: string;
+  url?: string;
+  note?: string;
+  fileName?: string;
+  createdAt: string;
 };
 
 /** @deprecated Utiliser proofLevel */
@@ -39,6 +51,10 @@ export type StoredHardSkillMeta = {
   referentialCategory?: string;
   proofLevel?: HardSkillProofLevel;
   proof?: HardSkillProof;
+  /** Preuves déposées. `proof` reste la dernière, pour les lecteurs anciens. */
+  proofs?: SkillProofItem[];
+  /** Copie des fiches fusionnées. Rien n'est effacé du dossier d'origine. */
+  legacySnapshots?: Record<string, StoredHardSkillMeta>;
   /** @deprecated */
   validationStatus?: HardSkillValidationStatus;
   validated?: boolean;
@@ -97,11 +113,11 @@ export const PROOF_LEVEL_CHIP: Record<
   { label: string; className: string; locked?: boolean }
 > = {
   declared: {
-    label: "Auto-déclarée",
+    label: "Déclarée",
     className: "bg-sky-500/15 text-sky-100 border-sky-400/30",
   },
   justified: {
-    label: "Prouvée",
+    label: "Preuve déposée",
     className: "bg-amber-500/20 text-amber-100 border-amber-400/35",
   },
   evaluated: {
@@ -122,7 +138,7 @@ export const SKILL_UX_STATUS: Record<
   { label: string; className: string }
 > = {
   auto_declared: {
-    label: "Auto-déclarée",
+    label: "Déclarée",
     className: "bg-sky-500/15 text-sky-100 border-sky-400/30",
   },
   evaluated: {
@@ -130,7 +146,7 @@ export const SKILL_UX_STATUS: Record<
     className: "bg-violet-500/20 text-violet-100 border-violet-400/35",
   },
   proved: {
-    label: "Prouvée",
+    label: "Preuve déposée",
     className: "bg-amber-500/20 text-amber-100 border-amber-400/35",
   },
   validated: {
@@ -142,7 +158,7 @@ export const SKILL_UX_STATUS: Record<
 /**
  * Mapping rétrocompatible :
  * - manuelle / catalog sans preuve → Auto-déclarée
- * - preuve / analyse pending → Prouvée
+ * - preuve / analyse pending → Preuve déposée
  * - analyse IA terminée (non validée) → Évaluée
  * - verdict validated / certified → Validée Byound
  * Ne rétrograde jamais une compétence déjà prouvée ou validée.
@@ -220,15 +236,7 @@ export function normalizeStoredLevel(raw: StoredHardSkillMeta["level"]): HardSki
 }
 
 export function findReferentialCategory(skillName: string): string {
-  const norm = skillName.trim().toLowerCase();
-  for (const group of GLOBAL_SKILL_REFERENTIAL) {
-    for (const item of group.items) {
-      if (referentialItemName(item).toLowerCase() === norm) {
-        return group.category;
-      }
-    }
-  }
-  return "Autre";
+  return catalogCategoryFor(skillName) ?? "Autre";
 }
 
 export function resolveDisplayCategory(skillName: string, referentialCategory: string): string {
@@ -282,44 +290,170 @@ export type HardSkillCatalogEntry = {
   name: string;
   subtitle?: string;
   category: string;
+  aliases?: string[];
 };
 
 export function listCatalogEntries(): HardSkillCatalogEntry[] {
-  return GLOBAL_SKILL_REFERENTIAL.flatMap((group) =>
-    group.items.map((item) => ({
-      name: referentialItemName(item),
-      subtitle: referentialItemSubtitle(item),
-      category: group.category,
-    })),
-  );
+  return listPublicCatalogEntries().map(toCatalogEntry);
 }
 
-export function searchCatalogEntries(query: string): HardSkillCatalogEntry[] {
-  const raw = query.trim();
-  if (!raw) return [];
-  const fold = (s: string) =>
-    s
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .toLowerCase();
-  const tokens = fold(raw)
-    .split(/[\s,/]+/)
-    .filter(Boolean);
-  if (!tokens.length) return [];
+export function searchCatalogEntries(query: string, extras: CatalogSkillEntry[] = []): HardSkillCatalogEntry[] {
+  return searchPublicCatalog(query, extras).map(toCatalogEntry);
+}
 
-  return listCatalogEntries()
-    .map((e) => {
-      const hay = fold(`${e.name} ${e.subtitle ?? ""} ${e.category}`);
-      const score = tokens.reduce((acc, t) => {
-        if (fold(e.name).startsWith(t)) return acc + 3;
-        if (hay.includes(t)) return acc + 1;
-        return acc - 10;
-      }, 0);
-      return { e, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score || a.e.name.localeCompare(b.e.name))
-    .map((x) => x.e);
+function toCatalogEntry(entry: CatalogSkillEntry): HardSkillCatalogEntry {
+  return { name: entry.name, subtitle: entry.subtitle, category: entry.category, aliases: entry.aliases };
+}
+
+export function listSkillProofs(meta: StoredHardSkillMeta | undefined): SkillProofItem[] {
+  if (!meta) return [];
+  if (meta.proofs?.length) return meta.proofs;
+  if (!meta.proof?.url && !meta.proof?.note) return [];
+  const note = meta.proof.note ?? "";
+  const fileName = note.match(/Fichier\s*:\s*([^·]+)/)?.[1]?.trim();
+  return [
+    {
+      id: "legacy",
+      type: meta.proof.type,
+      title: fileName || note.split("·")[0]?.trim() || "Preuve",
+      url: meta.proof.url,
+      note: note || undefined,
+      fileName,
+      createdAt: meta.validation?.analyzedAt ?? "",
+    },
+  ];
+}
+
+export type SkillDeclarationStatus = {
+  key: "declared" | "proof" | "badge";
+  label: string;
+  proofCount: number;
+};
+
+/** Seule source des statuts affichés : Déclarée, Preuve déposée, Badge obtenu. */
+export function getSkillDeclarationStatus(
+  meta: StoredHardSkillMeta | undefined,
+  options?: { badgeEarned?: boolean },
+): SkillDeclarationStatus {
+  const proofCount = listSkillProofs(meta).length;
+  if (options?.badgeEarned) {
+    return { key: "badge", label: "Badge obtenu", proofCount };
+  }
+  if (proofCount <= 0) return { key: "declared", label: "Déclarée", proofCount: 0 };
+  if (proofCount === 1) return { key: "proof", label: "Preuve déposée", proofCount };
+  return { key: "proof", label: `${proofCount} preuves déposées`, proofCount };
+}
+
+const LEVEL_RANK: Record<string, number> = {
+  Débutant: 1,
+  Intermédiaire: 2,
+  Confirmé: 3,
+  Expert: 4,
+};
+
+function higherLevel(a: HardSkillLevel | undefined, b: HardSkillLevel | undefined): HardSkillLevel {
+  const left = a && LEVEL_RANK[a] ? a : "Débutant";
+  const right = b && LEVEL_RANK[b] ? b : "Débutant";
+  return (LEVEL_RANK[left] ?? 1) >= (LEVEL_RANK[right] ?? 1) ? left : right;
+}
+
+function snapshotOf(meta: StoredHardSkillMeta): StoredHardSkillMeta {
+  const { legacySnapshots: _ignored, ...rest } = meta;
+  return rest;
+}
+
+/** Regroupe les alias vers le nom canonique. Les preuves et l'ancien contenu restent dans legacySnapshots. */
+export function mergeDeclaredPortfolio(
+  names: string[],
+  meta: Record<string, StoredHardSkillMeta>,
+): { names: string[]; meta: Record<string, StoredHardSkillMeta>; changed: boolean; before: number; after: number; proofsBefore: number; proofsAfter: number } {
+  const rawNames = names.map((name) => name.trim()).filter(Boolean);
+  const canonicalDeclared = new Set(rawNames.map((name) => canonicalSkillName(name)));
+  const sourceNames = [
+    ...new Set([
+      ...rawNames,
+      ...Object.keys(meta).filter((key) => canonicalDeclared.has(canonicalSkillName(key))),
+    ]),
+  ];
+  const proofsBefore = sourceNames.reduce((sum, name) => sum + listSkillProofs(meta[name]).length, 0);
+  const groups = new Map<string, string[]>();
+  for (const name of sourceNames) {
+    const canon = canonicalSkillName(name);
+    const bucket = groups.get(canon) ?? [];
+    bucket.push(name);
+    groups.set(canon, bucket);
+  }
+
+  const nextMeta: Record<string, StoredHardSkillMeta> = { ...meta };
+  const nextNames: string[] = [];
+  let changed = rawNames.length !== groups.size;
+
+  for (const [canon, originals] of groups) {
+    nextNames.push(canon);
+    const snapshots: Record<string, StoredHardSkillMeta> = {};
+    let level: HardSkillLevel = "Débutant";
+    let proofs: SkillProofItem[] = [];
+    let target: HardSkillLevel | undefined;
+    let started: string | undefined;
+    let validation: StoredHardSkillMeta["validation"];
+    let category = catalogCategoryFor(canon) ?? undefined;
+    let referential = category;
+    let source: StoredHardSkillMeta["source"] = "manual";
+
+    for (const original of originals) {
+      const row = meta[original];
+      if (!row) continue;
+      snapshots[original] = snapshotOf(row);
+      if (row.legacySnapshots) Object.assign(snapshots, row.legacySnapshots);
+      level = higherLevel(level, normalizeStoredLevel(row.level));
+      proofs = proofs.concat(listSkillProofs(row));
+      if (row.trainingTargetLevel) target = higherLevel(target, row.trainingTargetLevel);
+      if (row.trainingStartedAt && (!started || row.trainingStartedAt < started)) started = row.trainingStartedAt;
+      if (row.validation) validation = row.validation;
+      if (row.category) category = row.category;
+      if (row.referentialCategory) referential = row.referentialCategory;
+      if (row.source === "catalog") source = "catalog";
+      if (original !== canon) changed = true;
+    }
+    for (const original of originals) {
+      if (original !== canon) delete nextMeta[original];
+    }
+
+    const seen = new Set<string>();
+    const uniqueProofs = proofs.filter((proof) => {
+      const key = `${proof.id}|${proof.url ?? ""}|${proof.title}|${proof.note ?? ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const latest = uniqueProofs[uniqueProofs.length - 1];
+    nextMeta[canon] = {
+      level,
+      category: category ?? "Autre",
+      referentialCategory: referential ?? category ?? "Autre",
+      source,
+      proofLevel: uniqueProofs.length ? "justified" : "declared",
+      proofs: uniqueProofs,
+      proof: latest
+        ? { type: latest.type, url: latest.url, note: latest.note }
+        : undefined,
+      trainingTargetLevel: target,
+      trainingStartedAt: started,
+      validation,
+      legacySnapshots: Object.keys(snapshots).length ? snapshots : undefined,
+    };
+  }
+
+  const proofsAfter = nextNames.reduce((sum, name) => sum + listSkillProofs(nextMeta[name]).length, 0);
+  return {
+    names: nextNames,
+    meta: nextMeta,
+    changed,
+    before: rawNames.length,
+    after: nextNames.length,
+    proofsBefore,
+    proofsAfter,
+  };
 }
 
 export function computeHardSkillStats(records: LearnerHardSkillRecord[]) {

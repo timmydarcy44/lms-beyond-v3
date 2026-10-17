@@ -19,6 +19,8 @@ import {
 } from "@/lib/entreprise/edgebs-demo-enrich";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { buildJadeEmployeeDetailPayload } from "@/lib/demo/jade-dashboard-mocks";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,10 @@ export async function GET(
 
   // Collaborateurs mock EDGEBS (ids non-UUID) — ne jamais les passer à Postgres
   if (isEdgebsDemoEmployeeId(employeeId) || !UUID_RE.test(employeeId)) {
+    if (isJadeDemoEmail(access.viewer.email)) {
+      const jadePayload = buildJadeEmployeeDetailPayload(employeeId);
+      if (jadePayload) return NextResponse.json(jadePayload);
+    }
     if (isEdgebsDemoEmployeeId(employeeId)) {
       const demoPayload = buildEdgebsDemoEmployeeDetailPayload(employeeId);
       if (demoPayload) return NextResponse.json(demoPayload);

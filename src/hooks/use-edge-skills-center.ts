@@ -24,11 +24,15 @@ import {
   buildStoredMeta,
   findReferentialCategory,
   levelToSelfAssessment,
+  listSkillProofs,
+  mergeDeclaredPortfolio,
   parseHardSkillPortfolio,
   resolveDisplayCategory,
   type LearnerHardSkillRecord,
+  type SkillProofItem,
   type StoredHardSkillMeta,
 } from "@/lib/hard-skills/hard-skills-portfolio";
+import { canonicalSkillName } from "@/lib/hard-skills/skill-catalog-policy";
 import type { HardSkillLevel } from "@/lib/particulier/profil-edge-maturity";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_HARD_SKILLS } from "@/lib/demo/jade-dashboard-mocks";
@@ -64,7 +68,12 @@ export type EdgeSkillsCenterData = {
     name: string,
     note: string,
     proofType?: "link" | "document" | "portfolio" | "other",
+    url?: string,
+    title?: string,
   ) => Promise<void>;
+  removeSkillProof: (name: string, proofId: string) => Promise<void>;
+  earnedBadgeNames: string[];
+  visibleBadges: Array<{ id: string; name: string; presentationHref: string }>;
 };
 
 async function loadCareer(slug: string): Promise<CareerProfile | null> {
@@ -85,6 +94,10 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
   const [hardSkills, setHardSkills] = useState<string[]>([]);
   const [meta, setMeta] = useState<Record<string, StoredHardSkillMeta>>({});
   const [badgeCount, setBadgeCount] = useState(0);
+  const [earnedBadgeNames, setEarnedBadgeNames] = useState<string[]>([]);
+  const [visibleBadges, setVisibleBadges] = useState<
+    Array<{ id: string; name: string; presentationHref: string }>
+  >([]);
   const [matching, setMatching] = useState<CareerMatchingResult | null>(null);
   const [objectiveLabel, setObjectiveLabel] = useState("");
   const [careerTitle, setCareerTitle] = useState<string | null>(null);
@@ -148,8 +161,15 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
     const profile = profileRes.data ?? {};
     const hs = Array.isArray(profile.hard_skills) ? (profile.hard_skills as string[]) : [];
     const parsedMeta = (profile.skills_metadata as Record<string, StoredHardSkillMeta>) ?? {};
-    setHardSkills(hs);
-    setMeta(parsedMeta);
+    const merged = mergeDeclaredPortfolio(hs, parsedMeta);
+    setHardSkills(merged.names);
+    setMeta(merged.meta);
+    if (merged.changed) {
+      void supabase
+        .from("profiles")
+        .update({ hard_skills: merged.names, skills_metadata: merged.meta })
+        .eq("id", uid);
+    }
 
     const disc = parseStoredDiscScores((discRes.data?.scores as Record<string, unknown>) ?? null);
 
@@ -157,7 +177,30 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       badge_awarded_at?: string;
       badge_id?: string;
     } | null;
-    setBadgeCount(completion?.badge_awarded_at ? 1 : 0);
+    let earnedNames: string[] = [];
+    let visible: Array<{ id: string; name: string; presentationHref: string }> = [];
+    try {
+      const walletRes = await fetch("/api/dashboard/learner-wallet");
+      if (walletRes.ok) {
+        const wallet = (await walletRes.json()) as {
+          earnedOpenBadges?: Array<{ name?: string }>;
+          visibleOpenBadges?: Array<{ id?: string; name?: string; presentationHref?: string }>;
+        };
+        earnedNames = (wallet.earnedOpenBadges ?? []).map((badge) => String(badge.name ?? "")).filter(Boolean);
+        visible = (wallet.visibleOpenBadges ?? [])
+          .filter((badge) => badge.id && badge.name && badge.presentationHref)
+          .map((badge) => ({
+            id: String(badge.id),
+            name: String(badge.name),
+            presentationHref: String(badge.presentationHref),
+          }));
+      }
+    } catch {
+      earnedNames = [];
+    }
+    setEarnedBadgeNames(earnedNames);
+    setVisibleBadges(visible);
+    setBadgeCount(earnedNames.length || (completion?.badge_awarded_at ? 1 : 0));
 
     const project = migrateLegacyProjectToV2(
       mergeObjectiveDetailsIntoProject(
@@ -207,8 +250,8 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
             career,
             discScores: disc,
             softSkillsScores,
-            hardSkills: hs,
-            skillsMetadata: parsedMeta,
+            hardSkills: merged.names,
+            skillsMetadata: merged.meta,
             experiences,
             diplomas,
             hasIdmc,
@@ -258,7 +301,7 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       opts?: { targetLevel?: HardSkillLevel; source?: "catalog" | "manual" },
     ) => {
       if (!userId) return;
-      const clean = name.trim();
+      const clean = canonicalSkillName(name.trim());
       if (!clean) return;
       const refCat = findReferentialCategory(clean);
       const prev = meta[clean];
@@ -280,6 +323,8 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
         ...meta,
         [clean]: {
           ...stored,
+          proofs: prev?.proofs ?? listSkillProofs(prev),
+          legacySnapshots: prev?.legacySnapshots,
           trainingTargetLevel: opts?.targetLevel ?? prev?.trainingTargetLevel,
           trainingStartedAt: opts?.targetLevel
             ? new Date().toISOString()
@@ -306,27 +351,51 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
       name: string,
       note: string,
       proofType: "link" | "document" | "portfolio" | "other" = "document",
+      url?: string,
+      title?: string,
     ) => {
       if (!userId) return;
-      const clean = name.trim();
+      const clean = canonicalSkillName(name.trim());
       const prev = meta[clean];
       const level = (prev?.level as HardSkillLevel) || "Intermédiaire";
       const trimmed = note.trim();
+      const explicitUrl = url?.trim();
+      const fileName = trimmed.match(/Fichier\s*:\s*([^·]+)/)?.[1]?.trim();
+      const proofUrl = explicitUrl?.startsWith("http")
+        ? explicitUrl
+        : trimmed.startsWith("http")
+          ? trimmed
+          : undefined;
+      const kept = listSkillProofs(prev).map((item) =>
+        item.id === "legacy" ? { ...item, id: crypto.randomUUID() } : item,
+      );
+      const created: SkillProofItem = {
+        id: crypto.randomUUID(),
+        type: proofType,
+        title: title?.trim() || fileName || "Preuve",
+        url: proofUrl,
+        note: trimmed || undefined,
+        fileName,
+        createdAt: new Date().toISOString(),
+      };
+      const proofs = [...kept, created];
       const record = buildHardSkillRecord(clean, {
         ...prev,
         level,
         selfAssessment: levelToSelfAssessment(level),
         proofLevel: "justified",
-        proof: {
-          type: proofType,
-          note: trimmed || undefined,
-          url: trimmed.startsWith("http") ? trimmed : prev?.proof?.url,
-        },
+        proof: { type: proofType, note: trimmed || undefined, url: proofUrl ?? prev?.proof?.url },
         source: prev?.source ?? "manual",
       });
       const nextMeta: Record<string, StoredHardSkillMeta> = {
         ...meta,
-        [clean]: buildStoredMeta(record, prev?.validation),
+        [clean]: {
+          ...buildStoredMeta(record, prev?.validation),
+          proofs,
+          legacySnapshots: prev?.legacySnapshots,
+          trainingTargetLevel: prev?.trainingTargetLevel,
+          trainingStartedAt: prev?.trainingStartedAt,
+        },
       };
       const nextNames = hardSkills.some((s) => s.toLowerCase() === clean.toLowerCase())
         ? hardSkills
@@ -343,6 +412,45 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
     [userId, meta, hardSkills, supabase, load],
   );
 
+  const removeSkillProof = useCallback(
+    async (name: string, proofId: string) => {
+      if (!userId) return;
+      const clean = canonicalSkillName(name.trim());
+      const prev = meta[clean];
+      if (!prev) return;
+      const proofs = listSkillProofs(prev)
+        .map((item) => (item.id === "legacy" ? { ...item, id: "legacy" } : item))
+        .filter((item) => item.id !== proofId);
+      const latest = proofs[proofs.length - 1];
+      const level = (prev.level as HardSkillLevel) || "Intermédiaire";
+      const record = buildHardSkillRecord(clean, {
+        ...prev,
+        level,
+        selfAssessment: levelToSelfAssessment(level),
+        proofLevel: proofs.length ? "justified" : "declared",
+        proof: latest ? { type: latest.type, url: latest.url, note: latest.note } : undefined,
+        source: prev.source ?? "manual",
+      });
+      const nextMeta: Record<string, StoredHardSkillMeta> = {
+        ...meta,
+        [clean]: {
+          ...buildStoredMeta(record, prev.validation),
+          proofs,
+          legacySnapshots: prev.legacySnapshots,
+          trainingTargetLevel: prev.trainingTargetLevel,
+          trainingStartedAt: prev.trainingStartedAt,
+        },
+      };
+      const { error: upErr } = await supabase
+        .from("profiles")
+        .update({ skills_metadata: nextMeta })
+        .eq("id", userId);
+      if (upErr) throw upErr;
+      setMeta(nextMeta);
+    },
+    [userId, meta, supabase],
+  );
+
   return {
     loading,
     error,
@@ -357,5 +465,8 @@ export function useEdgeSkillsCenter(): EdgeSkillsCenterData {
     reload: load,
     upsertSkill,
     attachProofNote,
+    removeSkillProof,
+    earnedBadgeNames,
+    visibleBadges,
   };
 }

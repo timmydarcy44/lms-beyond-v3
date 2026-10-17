@@ -121,9 +121,7 @@ export function AddSkillDialog({
                 Retour
               </button>
             ) : (
-              <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                Compétences
-              </p>
+              <p className="text-[13px] text-white/50">Compétences</p>
             )}
           </div>
           <button
@@ -165,9 +163,7 @@ export function AddSkillDialog({
 
               {!query.trim() && !browseCategory ? (
                 <div className="space-y-3">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white/40">
-                    Explorer les catégories
-                  </p>
+                  <p className="text-[13px] text-white/50">Explorer les catégories</p>
                   <div className="flex flex-wrap gap-2">
                     {GLOBAL_SKILL_REFERENTIAL.map((g) => (
                       <button

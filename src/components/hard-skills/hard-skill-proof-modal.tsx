@@ -88,7 +88,7 @@ export function HardSkillProofModal({ open, skillName, level, onClose, onComplet
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 px-4 py-8">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[#0D111A] p-6 shadow-2xl">
-        <p className="text-xs uppercase tracking-wider text-[#3D7BFF]">Importer une preuve</p>
+        <p className="text-[13px] text-[#3D7BFF]">Importer une preuve</p>
         <h3 className="mt-2 text-xl font-semibold text-white">{skillName}</h3>
         <p className="mt-2 text-sm text-white/55">
           PDF, PowerPoint, Word, images, certificat, portfolio, GitHub, lien ou vidéo.
@@ -97,7 +97,7 @@ export function HardSkillProofModal({ open, skillName, level, onClose, onComplet
         {result ? (
           <div className="mt-6 space-y-5">
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <p className="text-xs uppercase tracking-wider text-white/40">Résultat Byound</p>
+              <p className="text-[13px] text-white/50">Résultat Byound</p>
               <p className="mt-1 text-lg font-semibold text-white">{verdictLabel(result.verdict)}</p>
               <p className="mt-1 text-sm text-white/55">
                 Score de confiance Byound : {result.confidenceScore} %

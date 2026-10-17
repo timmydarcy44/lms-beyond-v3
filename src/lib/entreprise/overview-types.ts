@@ -9,6 +9,14 @@ export type EntrepriseEmployee = {
   diagnostic_done: boolean;
   idmc_score: number | null;
   formation_active: boolean;
+  formation_title?: string | null;
+  formation_percent?: number | null;
+  badge_count?: number;
+  skills?: Array<{ name: string; status: "declared" | "proof" | "badge" }>;
+  diagnostic_at?: string | null;
+  diagnostic_label?: string | null;
+  avatar_url?: string | null;
+  last_activity_at?: string | null;
 };
 
 export type EntrepriseOverviewData = {
@@ -24,6 +32,9 @@ export type EntrepriseOverviewData = {
     diagnostics_total: number;
     diagnostics_pct: number;
     enrollments_active: number;
+    badges_awarded?: number;
+    badges_this_month?: number;
+    formation_progress_avg?: number | null;
   };
   employees: EntrepriseEmployee[];
   employees_pending?: number;

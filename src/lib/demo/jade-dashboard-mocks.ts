@@ -125,6 +125,33 @@ const JADE_TEAM = [
   ["Tom", "Moreau", "Formateur interne", "Formation", false, null, false],
 ] as const;
 
+const JADE_TEAM_EXTRAS: Array<{
+  formation_title: string | null;
+  formation_percent: number | null;
+  badge_count: number;
+  badge_this_month: boolean;
+  skills: Array<{ name: string; status: "declared" | "proof" | "badge" }>;
+  diagnostic_at: string | null;
+  diagnostic_label: string | null;
+  last_activity_at: string | null;
+}> = [
+  { formation_title: "Closing B2B", formation_percent: 62, badge_count: 2, badge_this_month: true, skills: [{ name: "Prospection", status: "proof" }, { name: "CRM", status: "declared" }, { name: "Closing", status: "badge" }], diagnostic_at: iso(-12), diagnostic_label: "Soft Skills", last_activity_at: iso(-1) },
+  { formation_title: "Prospection multicanale", formation_percent: 48, badge_count: 1, badge_this_month: false, skills: [{ name: "Pipeline", status: "declared" }, { name: "Négociation", status: "proof" }], diagnostic_at: iso(-20), diagnostic_label: "DISC", last_activity_at: iso(-3) },
+  { formation_title: "Entretien de vente", formation_percent: 15, badge_count: 0, badge_this_month: false, skills: [{ name: "Prospection", status: "declared" }], diagnostic_at: null, diagnostic_label: null, last_activity_at: iso(-2) },
+  { formation_title: null, formation_percent: null, badge_count: 1, badge_this_month: true, skills: [{ name: "Écoute", status: "proof" }, { name: "Relation client", status: "badge" }], diagnostic_at: iso(-8), diagnostic_label: "IDMC", last_activity_at: iso(-4) },
+  { formation_title: "Closing B2B", formation_percent: 70, badge_count: 3, badge_this_month: true, skills: [{ name: "Pédagogie", status: "proof" }, { name: "Prise de parole", status: "badge" }, { name: "CRM", status: "declared" }], diagnostic_at: iso(-6), diagnostic_label: "Soft Skills", last_activity_at: iso(0) },
+  { formation_title: "Prospection multicanale", formation_percent: 40, badge_count: 1, badge_this_month: false, skills: [{ name: "Recrutement", status: "declared" }, { name: "Entretien", status: "proof" }], diagnostic_at: iso(-30), diagnostic_label: "DISC", last_activity_at: iso(-9) },
+  { formation_title: "Entretien de vente", formation_percent: 22, badge_count: 0, badge_this_month: false, skills: [{ name: "Organisation", status: "declared" }], diagnostic_at: null, diagnostic_label: null, last_activity_at: iso(-5) },
+  { formation_title: "Closing B2B", formation_percent: 55, badge_count: 2, badge_this_month: false, skills: [{ name: "Management", status: "proof" }, { name: "Négociation", status: "declared" }, { name: "Closing", status: "badge" }], diagnostic_at: iso(-15), diagnostic_label: "Soft Skills", last_activity_at: iso(-1) },
+  { formation_title: null, formation_percent: null, badge_count: 1, badge_this_month: false, skills: [{ name: "Marque", status: "declared" }, { name: "Prise de parole", status: "proof" }], diagnostic_at: iso(-18), diagnostic_label: "IDMC", last_activity_at: iso(-11) },
+  { formation_title: null, formation_percent: null, badge_count: 0, badge_this_month: false, skills: [{ name: "Pédagogie", status: "declared" }], diagnostic_at: null, diagnostic_label: null, last_activity_at: iso(-14) },
+];
+
+const jadeFormationPercents = JADE_TEAM_EXTRAS.map((row) => row.formation_percent).filter((n): n is number => typeof n === "number");
+const jadeFormationAvg = jadeFormationPercents.length
+  ? Math.round(jadeFormationPercents.reduce((sum, n) => sum + n, 0) / jadeFormationPercents.length)
+  : null;
+
 export const JADE_ENTREPRISE_OVERVIEW: EntrepriseOverviewData = {
   demo_enriched: true,
   configuration_required: false,
@@ -136,18 +163,29 @@ export const JADE_ENTREPRISE_OVERVIEW: EntrepriseOverviewData = {
     diagnostics_total: JADE_TEAM.length,
     diagnostics_pct: Math.round((JADE_TEAM.filter((row) => row[4]).length / JADE_TEAM.length) * 100),
     enrollments_active: JADE_TEAM.filter((row) => row[6]).length,
+    badges_awarded: JADE_TEAM_EXTRAS.reduce((sum, row) => sum + row.badge_count, 0),
+    badges_this_month: JADE_TEAM_EXTRAS.filter((row) => row.badge_this_month).length,
+    formation_progress_avg: jadeFormationAvg,
   },
   employees: JADE_TEAM.map((row, index) => ({
     id: `jade-emp-${index + 1}`,
     first_name: row[0],
     last_name: row[1],
-    email: `${row[0].toLowerCase()}.${row[1].toLowerCase()}@byound.fr`,
+    email: `${row[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}.${row[1].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}@byound.fr`,
     job_title: row[2],
     department: row[3],
     created_at: iso(-90 + index * 6),
     diagnostic_done: row[4],
     idmc_score: row[5],
     formation_active: row[6],
+    formation_title: JADE_TEAM_EXTRAS[index]?.formation_title ?? null,
+    formation_percent: JADE_TEAM_EXTRAS[index]?.formation_percent ?? null,
+    badge_count: JADE_TEAM_EXTRAS[index]?.badge_count ?? 0,
+    skills: JADE_TEAM_EXTRAS[index]?.skills ?? [],
+    diagnostic_at: JADE_TEAM_EXTRAS[index]?.diagnostic_at ?? null,
+    diagnostic_label: JADE_TEAM_EXTRAS[index]?.diagnostic_label ?? null,
+    last_activity_at: JADE_TEAM_EXTRAS[index]?.last_activity_at ?? null,
+    avatar_url: null,
   })),
   employees_pending: JADE_TEAM.filter((row) => !row[4]).length,
 };
@@ -289,8 +327,8 @@ export const JADE_ORG_STATS = {
 };
 
 export const JADE_ENTREPRISE_OFFERS = [
-  { id: "jade-offer-1", title: "Commerciale B2B", description: "Portefeuille Normandie, 4 rendez-vous par semaine.", city: "Le Havre", salary_range: "32–38 k€", contract_type: "CDI", status: "active", applications_count: 6 },
-  { id: "jade-offer-2", title: "Business developer", description: "Ouverture de comptes formation.", city: "Paris", salary_range: "36–42 k€", contract_type: "CDI", status: "active", applications_count: 3 },
+  { id: "jade-offer-1", title: "Commerciale B2B", description: "Portefeuille Normandie. Quatre rendez-vous qualifiés par semaine, du premier appel jusqu'au closing.", requirements: "2 ans d'expérience commerciale\nAisance à l'oral\nAppétence CRM", city: "Le Havre", salary_range: "32–38 k€", contract_type: "CDI", status: "active", applications_count: 6, created_at: iso(-20) },
+  { id: "jade-offer-2", title: "Business developer", description: "Ouverture de comptes formation auprès d'entreprises normandes et franciliennes.", requirements: "Prospection autonome\nSuivi de pipeline\nPermis B apprécié", city: "Paris", salary_range: "36–42 k€", contract_type: "CDI", status: "active", applications_count: 3, created_at: iso(-11) },
 ];
 
 export const JADE_CANDIDATES = [
@@ -322,4 +360,164 @@ export function jadePlanningSlots(weekStart: Date) {
     { id: "jade-slot-2", ...at(1, 14), module: { name: "Closing", code: "CCP2" }, instructor: { full_name: "Hugo Martin" }, room: { name: "Visio" }, class: { name: "Promo Jade" } },
     { id: "jade-slot-3", ...at(3, 10), module: { name: "Entretien de vente", code: "CCP3" }, instructor: { full_name: "Léa Bernard" }, room: { name: "Salle 1" }, class: { name: "Promo Jade" } },
   ];
+}
+
+const SKILL_STATUS_LABEL = { declared: "Déclarée", proof: "Preuve déposée", badge: "Badge obtenu" } as const;
+
+export function buildJadeEmployeeDetailPayload(id: string) {
+  const employee = JADE_ENTREPRISE_OVERVIEW.employees.find((row) => row.id === id);
+  if (!employee) return null;
+  const done = Boolean(employee.diagnostic_done);
+  const index = Number(String(id).replace(/\D/g, "")) || 1;
+  const soft = done
+    ? JADE_SOFT_SKILLS_RADAR.slice(0, 6).map((row, i) => ({
+        skill: row.skill,
+        score: Math.max(3, Math.min(15, Math.round((row.score / 100) * 15) - ((index + i) % 3))),
+      }))
+    : [];
+  return {
+    employee: {
+      id: employee.id,
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      email: employee.email,
+      phone: null,
+      hire_date: employee.created_at?.slice(0, 10) ?? null,
+      job_title: employee.job_title,
+      department: employee.department,
+      metier: employee.job_title,
+      profile_id: null,
+      company_id: "jade-org",
+      created_at: employee.created_at,
+    },
+    diagnostics: done
+      ? [
+          {
+            id: `${id}-diag`,
+            employee_id: id,
+            created_at: employee.diagnostic_at ?? employee.created_at,
+            idmc_score: employee.idmc_score,
+            results: { stress: 30 + (index % 20) },
+            source: "jade_demo" as const,
+          },
+        ]
+      : [],
+    test_results: {
+      disc: done ? JADE_DISC_SCORES : null,
+      behavioral_profile: done ? "Influent" : null,
+      idmc_score: employee.idmc_score,
+      idmc_axes: done ? JADE_IDMC_AXES : null,
+      soft_skills: soft,
+    },
+    test_status: {
+      has_disc: done,
+      has_idmc: done,
+      has_soft_skills: done,
+      all_tests_done: done,
+      share_consent: true,
+    },
+    pending_share_consent: false,
+    has_diagnostics: done,
+    recommended_action: done
+      ? {
+          id: `${id}-action`,
+          title: "Renforcer la négociation",
+          dimension_key: "negociation",
+          description: "Écart prioritaire de l'équipe commerciale.",
+        }
+      : null,
+    metier_match: null,
+    profile_analysis: done
+      ? {
+          strengths: (employee.skills ?? [])
+            .filter((skill) => skill.status !== "declared")
+            .map((skill) => `${skill.name} · ${SKILL_STATUS_LABEL[skill.status]}`),
+          improvements: ["Négociation sous la cible du poste"],
+          summary: `${employee.first_name} ${employee.last_name} · ${employee.job_title ?? "Collaborateur"}.`,
+          updatedAt: employee.last_activity_at,
+          cached: true,
+        }
+      : null,
+    missions: [],
+    hr_documents: [],
+    inclusion: null,
+    demo: true,
+  };
+}
+
+export function buildJadeOfferDetail(id: string) {
+  const offer = JADE_ENTREPRISE_OFFERS.find((row) => row.id === id);
+  if (!offer) return null;
+  const applicants = JADE_CANDIDATES.filter((candidate) => candidate.role === offer.title);
+  return {
+    offer: {
+      id: offer.id,
+      title: offer.title,
+      description: offer.description,
+      requirements: offer.requirements,
+      city: offer.city,
+      salary_range: offer.salary_range,
+      contract_type: offer.contract_type,
+      status: offer.status,
+      created_at: offer.created_at,
+    },
+    applications: applicants.map((candidate) => {
+      const [first, ...rest] = candidate.name.split(" ");
+      return {
+        id: candidate.id,
+        created_at: iso(-4),
+        match_score: candidate.match,
+        profiles: [{ id: candidate.id, first_name: first, last_name: rest.join(" ") }],
+      };
+    }),
+    demo: true,
+  };
+}
+
+function jadeNeedEmployees(skill: string) {
+  if (skill === "Négociation") {
+    return [
+      { id: "jade-emp-1", name: "Léa Bernard", observed: 9, gap: -3, severity: "modere" as const },
+      { id: "jade-emp-2", name: "Hugo Martin", observed: 8, gap: -4, severity: "important" as const },
+      { id: "jade-emp-8", name: "Ethan Simon", observed: 7, gap: -5, severity: "important" as const },
+    ];
+  }
+  return [
+    { id: "jade-emp-1", name: "Léa Bernard", observed: 10, gap: -2, severity: "leger" as const },
+    { id: "jade-emp-2", name: "Hugo Martin", observed: 8, gap: -4, severity: "important" as const },
+    { id: "jade-emp-5", name: "Camille Roux", observed: 9, gap: -3, severity: "modere" as const },
+  ];
+}
+
+export function buildJadeSkillsGapPayload() {
+  const needs = JADE_SKILL_NEEDS.map((need) => ({
+    ...need,
+    explanation: `Score cible métier = ${need.target}/15. Score moyen observé = ${need.avg_observed}/15. Écart moyen = ${need.avg_gap}.`,
+    employees: jadeNeedEmployees(need.skill),
+    actions: [
+      {
+        type: "edge_online",
+        label: "Assigner une formation",
+        href: "/dashboard/entreprise/formations/catalogue",
+      },
+      {
+        type: "recruit",
+        label: "Recruter",
+        href: "/dashboard/entreprise/offres",
+      },
+    ],
+  }));
+  return {
+    needs_with_actions: needs,
+    priority_needs: needs,
+    stats: {
+      employees_total: JADE_ENTREPRISE_OVERVIEW.employees.length,
+      employees_with_scores: JADE_ENTREPRISE_OVERVIEW.employees.filter((row) => row.diagnostic_done).length,
+      needs_count: needs.length,
+    },
+    metier_mobility: {
+      "jade-role-1": [],
+    },
+    demo_enriched: true,
+  };
 }

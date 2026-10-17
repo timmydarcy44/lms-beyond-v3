@@ -97,11 +97,15 @@ const SKILLS_NAV: ApprenantNavItem[] = [
     href: "/dashboard/apprenant/skills/competences",
     icon: Sparkles,
   },
-  {
-    label: "Entraînement",
-    href: "/dashboard/apprenant/skills/entrainement",
-    icon: Dumbbell,
-  },
+  ...(process.env.SKILLS_TRAINING_ENABLED === "true"
+    ? [
+        {
+          label: "Entraînement",
+          href: "/dashboard/apprenant/skills/entrainement",
+          icon: Dumbbell,
+        },
+      ]
+    : []),
   {
     label: "Mes preuves",
     href: "/dashboard/apprenant/skills/preuves",

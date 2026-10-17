@@ -90,6 +90,10 @@ export function PublicSkillAnalysisModal({ skill, onClose }: Props) {
             )}
           </div>
 
+          {skill.portfolioProof?.url || skill.portfolioProof?.note ? (
+            <DepositedDocument proof={skill.portfolioProof} />
+          ) : null}
+
           {/* Historique */}
           {v?.history?.length ? (
             <section className="mt-8">
@@ -209,6 +213,56 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h3 className="flex items-center text-[10px] font-semibold uppercase tracking-[0.2em] text-black/40">
       {children}
     </h3>
+  );
+}
+
+function proofHref(proof: { url?: string; note?: string }) {
+  const url = proof.url?.trim();
+  if (url?.startsWith("http")) return url;
+  return proof.note?.match(/https?:\/\/\S+/)?.[0];
+}
+
+function DepositedDocument({ proof }: { proof: { url?: string; note?: string } }) {
+  const href = proofHref(proof);
+  const note = proof.note?.trim();
+  const showNote = Boolean(note && note !== href);
+  const isImage = Boolean(href && /\.(png|jpe?g|webp|gif)(\?|$)/i.test(href));
+  const isPdf = Boolean(href && /\.pdf(\?|$)/i.test(href));
+  const isVideo = Boolean(href && /\.(mp4|webm|mov)(\?|$)/i.test(href));
+
+  return (
+    <section className="mt-8">
+      <SectionTitle>
+        <FileText className="mr-1.5 inline h-3.5 w-3.5" />
+        Document déposé
+      </SectionTitle>
+      <div className="mt-3 overflow-hidden rounded-lg border border-black/[0.06] bg-[#fafafa]">
+        {isImage && href ? (
+          <img src={href} alt="Document déposé" className="max-h-80 w-full bg-white object-contain" />
+        ) : null}
+        {isPdf && href ? (
+          <iframe title="Document déposé" src={href} className="h-80 w-full bg-white" />
+        ) : null}
+        {isVideo && href ? <video src={href} controls className="max-h-80 w-full bg-black" /> : null}
+        <div className="px-3.5 py-3 text-sm">
+          {showNote ? <p className="whitespace-pre-wrap text-black/65">{note}</p> : null}
+          {href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-xs font-medium text-[#0066cc] hover:underline"
+            >
+              Voir le document
+            </a>
+          ) : note?.includes("Fichier :") ? (
+            <p className="text-xs text-black/45">
+              Le nom du fichier est enregistré. Le document lui-même n&apos;a pas été conservé : il faut le déposer à nouveau.
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </section>
   );
 }
 

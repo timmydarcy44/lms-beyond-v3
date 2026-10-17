@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
+import { EnterpriseTrainingRequests } from "@/components/enterprise/enterprise-training-requests";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -93,6 +94,8 @@ export default function EnterpriseActionsHistoryPage() {
             ← Retour au dashboard
           </button>
         </header>
+
+        <EnterpriseTrainingRequests />
 
         {error ? <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div> : null}
 

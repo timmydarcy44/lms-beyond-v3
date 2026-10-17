@@ -1,71 +1,70 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
 import { SALARIE_NAV_ITEMS } from "@/lib/salarie/connect-nav";
 
 export default function SidebarSalarie() {
   const pathname = usePathname();
-  const [branding, setBranding] = useState<{ logoUrl: string | null; name: string | null }>({
-    logoUrl: null,
-    name: null,
-  });
+  const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/organizations/nav-branding", { credentials: "include" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (cancelled) return;
-        const b = json?.branding;
-        setBranding({
-          logoUrl: typeof b?.logoUrl === "string" && b.logoUrl.trim() ? b.logoUrl.trim() : null,
-          name: typeof b?.name === "string" && b.name.trim() ? b.name.trim() : null,
-        });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const nav = (
+    <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Navigation salarié">
+      {SALARIE_NAV_ITEMS.map((item) => {
+        const hrefPath = item.href.split("#")[0];
+        const active = hrefPath === "/dashboard/salarie" ? pathname === hrefPath : pathname.startsWith(hrefPath);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            onClick={() => setOpen(false)}
+            className={cn(
+              "flex h-11 items-center gap-3 rounded-full px-3 text-sm font-semibold text-[#B5BAC6]",
+              active && "bg-[#1E2130] font-extrabold text-white",
+            )}
+          >
+            <Icon size={18} strokeWidth={1.75} />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden h-screen w-[280px] shrink-0 flex-col border-r border-white/[0.08] bg-transparent backdrop-blur-[20px] lg:flex">
-      <div className="border-b border-white/[0.06] px-5 py-6">
-        <OrgSidebarBrand logoUrl={branding.logoUrl} name={branding.name || "Byound"} />
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-6" aria-label="Navigation salarié">
-        {SALARIE_NAV_ITEMS.map((item) => {
-          const active =
-            item.href === "/dashboard/salarie"
-              ? pathname === item.href
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                "group flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold transition",
-                active
-                  ? "bg-[rgba(61,123,255,0.15)] text-white"
-                  : "text-white/45 hover:bg-white/[0.04] hover:text-white",
-              )}
-            >
-              <Icon
-                size={16}
-                strokeWidth={1.5}
-                className={cn(active ? "text-[#3D7BFF]" : "text-white/45 group-hover:text-white/70")}
-              />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+    <>
+      <button
+        type="button"
+        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-[#262A36] bg-[#12141A] text-white lg:hidden"
+        aria-label="Ouvrir le menu"
+        onClick={() => setOpen(true)}
+      >
+        <Menu className="h-4 w-4" />
+      </button>
+      {open ? (
+        <button type="button" aria-label="Fermer le menu" className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
+      ) : null}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-[240px] flex-col border-r border-[#16181F] bg-[#07080B] py-4",
+          open ? "flex" : "hidden lg:flex",
+        )}
+      >
+        <div className="mb-4 flex items-center justify-between px-4">
+          <Link href="/dashboard/salarie" className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[11px] font-extrabold text-[#07080B]">BY</span>
+            <span className="text-[15px] font-extrabold text-white">Byound</span>
+          </Link>
+          <button type="button" className="lg:hidden" aria-label="Fermer" onClick={() => setOpen(false)}>
+            <X className="h-4 w-4 text-white" />
+          </button>
+        </div>
+        {nav}
+      </aside>
+    </>
   );
 }

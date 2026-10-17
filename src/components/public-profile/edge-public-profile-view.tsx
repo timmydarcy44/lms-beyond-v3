@@ -29,7 +29,7 @@ import {
 } from "@/components/apprenant/apprenant-assessment-results";
 import type { AxisKey } from "@/components/idmc/IdmcRadarChart";
 import { EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
-import { sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
+import { softSkillMasteryPercent, sortSoftSkillsDescending } from "@/lib/soft-skills/resolve-soft-skills-result";
 import { cn } from "@/lib/utils";
 
 const DARK_CARD =
@@ -159,7 +159,7 @@ export function EdgePublicProfileView({
     const sorted = sortSoftSkillsDescending(softSkillsRadar);
     return sorted.slice(0, 3).map((row) => ({
       ...row,
-      percent: Math.min(100, Math.round((row.score / 15) * 100)),
+      percent: softSkillMasteryPercent(row.score),
     }));
   }, [softSkillsRadar]);
 

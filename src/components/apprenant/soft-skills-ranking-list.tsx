@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   SOFT_SKILL_SCORE_PER_COMPETENCE,
   softSkillMasteryPercent,
+  softSkillPercentsAreFlat,
   sortSoftSkillsDescending,
 } from "@/lib/soft-skills/resolve-soft-skills-result";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ export function SoftSkillsRankingList({
 }: Props) {
   const sorted = sortSoftSkillsDescending(items);
   if (!sorted.length) return null;
+  const hidePercents = softSkillPercentsAreFlat(sorted.map((item) => item.score));
 
   const isRevolut = variant === "revolut";
   const isCockpit = variant === "cockpit";
@@ -88,22 +90,26 @@ export function SoftSkillsRankingList({
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <p
-                  className={cn(
-                    "text-[12px] font-semibold tabular-nums",
-                    isRevolut || isCockpit ? "text-white" : "text-[#0a0a0a]",
-                  )}
-                >
-                  {pct}&nbsp;%
-                </p>
-                <p
-                  className={cn(
-                    "text-[10px] tabular-nums",
-                    isRevolut || isCockpit ? "text-white/40" : "text-black/45",
-                  )}
-                >
-                  {Math.round(item.score)}/{SOFT_SKILL_SCORE_PER_COMPETENCE}
-                </p>
+                {hidePercents ? null : (
+                  <p
+                    className={cn(
+                      "text-[12px] font-semibold tabular-nums",
+                      isRevolut || isCockpit ? "text-white" : "text-[#0a0a0a]",
+                    )}
+                  >
+                    {pct}&nbsp;%
+                  </p>
+                )}
+                {item.score <= SOFT_SKILL_SCORE_PER_COMPETENCE ? (
+                  <p
+                    className={cn(
+                      "text-[10px] tabular-nums",
+                      isRevolut || isCockpit ? "text-white/40" : "text-black/45",
+                    )}
+                  >
+                    {Math.round(item.score)}/{SOFT_SKILL_SCORE_PER_COMPETENCE}
+                  </p>
+                ) : null}
               </div>
             </li>
           );

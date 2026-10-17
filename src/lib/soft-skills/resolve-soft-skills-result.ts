@@ -60,12 +60,28 @@ export function sortSoftSkillsDescending(
   return [...entries].sort((a, b) => b.score - a.score);
 }
 
+/**
+ * Pourcentage affiché.
+ * Un score 1–15 est la somme des 3 réponses (max 15).
+ * Un score > 15 est déjà un pourcentage 0–100 (démo, archive).
+ * L'ancienne formule (score / 15, plafonné à 100) affichait 100 %
+ * pour toutes les compétences dès que le score dépassait 15.
+ */
 export function softSkillMasteryPercent(
   score: number,
   max: number = SOFT_SKILL_SCORE_PER_COMPETENCE,
 ): number {
-  if (!Number.isFinite(score) || max <= 0) return 0;
+  if (!Number.isFinite(score) || score <= 0) return 0;
+  if (score > max) return Math.max(0, Math.min(100, Math.round(score)));
+  if (max <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round((score / max) * 100)));
+}
+
+/** Vrai quand les pourcentages affichés sont tous identiques : le test ne départage pas les compétences. */
+export function softSkillPercentsAreFlat(scores: number[]): boolean {
+  if (scores.length < 2) return false;
+  const percents = scores.map((score) => softSkillMasteryPercent(score));
+  return percents.every((percent) => percent === percents[0]);
 }
 
 /** Nombre de compétences attendu après un test soft skills terminé. */

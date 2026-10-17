@@ -3,8 +3,6 @@ import {
   BookOpen,
   ClipboardList,
   Home,
-  Library,
-  Route,
   UserCircle,
   Users,
   Wallet,
@@ -17,14 +15,12 @@ export type SalarieNavItem = {
 };
 
 export const SALARIE_NAV_ITEMS: SalarieNavItem[] = [
-  { label: "Dashboard", href: "/dashboard/salarie", icon: Home },
-  { label: "Profil", href: "/dashboard/salarie/profil", icon: UserCircle },
-  { label: "Mes missions", href: "/dashboard/salarie/missions", icon: ClipboardList },
-  { label: "Parcours", href: "/dashboard/salarie/parcours", icon: Route },
-  { label: "Mes Formations", href: "/dashboard/salarie/formations", icon: BookOpen },
-  { label: "Bibliothèque", href: "/dashboard/salarie/bibliotheque", icon: Library },
-  { label: "Mes Coachings", href: "/dashboard/salarie/coachings", icon: Users },
-  { label: "Wallet", href: "/dashboard/salarie/badges", icon: Wallet },
+  { label: "Accueil", href: "/dashboard/salarie", icon: Home },
+  { label: "Mes bilans", href: "/dashboard/salarie#bilans", icon: ClipboardList },
+  { label: "Mes formations", href: "/dashboard/salarie/formations", icon: BookOpen },
+  { label: "Mes compétences", href: "/dashboard/salarie/profil", icon: UserCircle },
+  { label: "Accompagnement", href: "/dashboard/salarie#accompagnement", icon: Users },
+  { label: "Mon compte", href: "/dashboard/salarie/profil", icon: Wallet },
 ];
 
 export const SALARIE_PAGE_KICKER =

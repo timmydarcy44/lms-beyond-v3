@@ -7,6 +7,7 @@ import "@/styles/edge-connect.css";
 import "@/styles/jessica-connect.css";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import { ApprenantConnectShell } from "@/components/apprenant/apprenant-connect-shell";
+import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
@@ -35,7 +36,9 @@ function ApprenantShellWithSuspense({
 }) {
   return (
     <Suspense fallback={null}>
-      <ApprenantConnectShell variant={variant}>{children}</ApprenantConnectShell>
+      <ApprenantConnectShell variant={variant}>
+        <JadeInternalFill>{children}</JadeInternalFill>
+      </ApprenantConnectShell>
     </Suspense>
   );
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { PaywallLMS } from "@/components/paywalls/paywall-lms";
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
@@ -20,13 +21,13 @@ export default async function StudentSuiteLayout({ children }: { children: React
     isByoundBusinessManager(user.email) ||
     isByoundBusinessManager(profile?.email)
   ) {
-    return <>{children}</>;
+    return <JadeInternalFill>{children}</JadeInternalFill>;
   }
 
   if (profile?.access_lms === false) {
     return <PaywallLMS />;
   }
 
-  return <>{children}</>;
+  return <JadeInternalFill>{children}</JadeInternalFill>;
 }
 

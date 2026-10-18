@@ -8,6 +8,7 @@ import { LayoutDashboard, Users, Building2, Euro } from "lucide-react";
 import { AppTransition } from "@/components/apprenant/edge-app-transition";
 import { EcoleFloatingAssistant } from "@/components/beyond-connect/ecole-floating-assistant";
 import { EdgeAppsLauncher } from "@/components/edge/edge-apps-launcher";
+import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { EcoleSidebar } from "@/components/ecole/ecole-sidebar";
 import {
   ECOLE_APPS,
@@ -107,7 +108,7 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
           ) : null}
           <Suspense fallback={null}>
             <div className={pendingAppId ? "invisible" : undefined} aria-hidden={pendingAppId ? true : undefined}>
-              {children}
+              <JadeInternalFill>{children}</JadeInternalFill>
             </div>
           </Suspense>
         </main>

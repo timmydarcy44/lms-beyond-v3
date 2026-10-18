@@ -3,6 +3,7 @@ import { Manrope } from "next/font/google";
 import "@/styles/edge-connect.css";
 import "@/styles/expert-revolut.css";
 
+import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { FormateurConnectShell } from "@/components/formateur/formateur-connect-shell";
 
 const manrope = Manrope({
@@ -14,7 +15,9 @@ const manrope = Manrope({
 export default function FormateurDashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={manrope.variable}>
-      <FormateurConnectShell>{children}</FormateurConnectShell>
+      <FormateurConnectShell>
+        <JadeInternalFill>{children}</JadeInternalFill>
+      </FormateurConnectShell>
     </div>
   );
 }

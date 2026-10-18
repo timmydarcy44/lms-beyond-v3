@@ -14,6 +14,8 @@ import {
   listSalarieAssignedFormations,
 } from "@/lib/salarie/assigned-formations";
 import { getSession } from "@/lib/auth/session";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_COURSES } from "@/lib/demo/jade-dashboard-mocks";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,17 @@ export default async function SalarieFormationsPage() {
   }
 
   const email = session.email ?? null;
-  let formations = await listSalarieAssignedFormations(session.id);
+  let formations = isJadeDemoEmail(email)
+    ? JADE_COURSES.map((course, index) => ({
+        id: `jade-course-${index}`,
+        title: course.title,
+        slug: null,
+        href: course.href,
+        presentation: "Assignée par Byound Business",
+        meta: course.progress,
+        progress: course.percent,
+      }))
+    : await listSalarieAssignedFormations(session.id);
   if (formations.length === 0) {
     formations = edgebsDemoAssignedFormationsFallback(email);
   }

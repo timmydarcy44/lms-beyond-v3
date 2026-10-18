@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { EntrepriseFloatingAssistant } from "@/components/enterprise/entreprise-floating-assistant";
+import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { EnterpriseConnectShell } from "@/components/enterprise/enterprise-connect-shell";
 import { EnterpriseSignupProfileGate } from "@/components/enterprise/enterprise-signup-profile-overlay";
 
@@ -40,7 +41,9 @@ export default async function EntrepriseDashboardLayout({ children }: { children
         </div>
       ) : null}
       <EnterpriseConnectShell>
-        <EnterpriseSignupProfileGate>{children}</EnterpriseSignupProfileGate>
+        <EnterpriseSignupProfileGate>
+          <JadeInternalFill>{children}</JadeInternalFill>
+        </EnterpriseSignupProfileGate>
       </EnterpriseConnectShell>
       <EntrepriseFloatingAssistant />
     </>

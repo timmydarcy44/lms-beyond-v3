@@ -54,6 +54,38 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     specialites: ["Management", "Conflits", "Performance d'équipe", "Pilotage"],
     photoUrl: null,
   },
+  {
+    id: "camille-bernard",
+    name: "Camille Bernard",
+    title: "Coach commerciale",
+    bio: "Prospection, closing et objections pour les équipes qui vendent des parcours.",
+    specialites: ["Prospection", "Closing", "Négociation"],
+    photoUrl: null,
+  },
+  {
+    id: "ines-morel",
+    name: "Inès Morel",
+    title: "Praticienne prise de parole",
+    bio: "Présence, pitch et prise de parole devant un comité ou un client.",
+    specialites: ["Prise de parole", "Pitch", "Storytelling"],
+    photoUrl: null,
+  },
+  {
+    id: "lea-martin",
+    name: "Léa Martin",
+    title: "Coach productivité",
+    bio: "Organisation du temps, priorités et rituels de travail.",
+    specialites: ["Organisation", "Priorisation", "Charge mentale"],
+    photoUrl: null,
+  },
+  {
+    id: "hugo-renard",
+    name: "Hugo Renard",
+    title: "Praticien IA métier",
+    bio: "Usage concret de l'IA dans les tâches commerciales et le reporting.",
+    specialites: ["IA", "CRM", "Reporting"],
+    photoUrl: null,
+  },
 ];
 
 export function collectSpecialites(practitioners: SalariePractitioner[]): string[] {

@@ -35,6 +35,8 @@ import {
   buildValidationSessionFromAnalysis,
   type SkillAnalysisApiResult,
 } from "@/lib/hard-skills/skill-validation-analysis";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_HARD_SKILLS } from "@/lib/demo/jade-dashboard-mocks";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type AnalysisPayload = SkillAnalysisApiResult;
@@ -70,8 +72,24 @@ export function ProfilEdgeHardSkillsSection() {
       .maybeSingle();
     const hs = Array.isArray(data?.hard_skills) ? (data.hard_skills as string[]) : [];
     const meta = (data?.skills_metadata as Record<string, StoredHardSkillMeta>) ?? {};
-    setHardSkills(hs);
-    setMetadata(meta);
+    const declaredSoft = Object.fromEntries(
+      Object.entries(meta).filter(([, value]) => value?.category === "Soft skill"),
+    );
+    if (isJadeDemoEmail(userData.user?.email) && hs.length === 0) {
+      setHardSkills(JADE_HARD_SKILLS.map((skill) => skill.name));
+      setMetadata({
+        ...declaredSoft,
+        ...Object.fromEntries(
+          JADE_HARD_SKILLS.map((skill) => [
+            skill.name,
+            { level: skill.level, category: skill.category, referentialCategory: skill.category },
+          ]),
+        ),
+      });
+    } else {
+      setHardSkills(hs);
+      setMetadata(meta);
+    }
 
     const project = mergeObjectiveDetailsIntoProject(
       data?.type_profil,
@@ -93,9 +111,15 @@ export function ProfilEdgeHardSkillsSection() {
       setSaving(false);
       return;
     }
-    await supabase.from("profiles").update({ hard_skills: nextHard, skills_metadata: nextMeta }).eq("id", uid);
+    const { data: current } = await supabase.from("profiles").select("skills_metadata").eq("id", uid).maybeSingle();
+    const currentMeta = (current?.skills_metadata ?? {}) as Record<string, StoredHardSkillMeta>;
+    const declaredSoft = Object.fromEntries(
+      Object.entries(currentMeta).filter(([, value]) => value?.category === "Soft skill"),
+    );
+    const merged = { ...declaredSoft, ...nextMeta };
+    await supabase.from("profiles").update({ hard_skills: nextHard, skills_metadata: merged }).eq("id", uid);
     setHardSkills(nextHard);
-    setMetadata(nextMeta);
+    setMetadata(merged);
     setSaving(false);
   };
 

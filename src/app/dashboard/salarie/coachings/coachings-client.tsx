@@ -23,13 +23,30 @@ export default function SalarieCoachingsPageClient() {
   const [practitionersLoading, setPractitionersLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selectedSpecialite, setSelectedSpecialite] = useState("");
+  const [nextAppointment, setNextAppointment] = useState<{
+    practitionerName: string;
+    title: string;
+    dateLabel: string;
+    time: string;
+    place: string;
+  } | null>(null);
 
   const loadPractitioners = useCallback(async () => {
     setPractitionersLoading(true);
     try {
       const res = await fetch("/api/dashboard/salarie/practitioners", { credentials: "include" });
-      const json = (await res.json()) as { praticiens?: SalariePractitioner[] };
+      const json = (await res.json()) as {
+        praticiens?: SalariePractitioner[];
+        nextAppointment?: {
+          practitionerName: string;
+          title: string;
+          dateLabel: string;
+          time: string;
+          place: string;
+        } | null;
+      };
       setPractitioners(json.praticiens ?? []);
+      setNextAppointment(json.nextAppointment ?? null);
     } catch {
       setPractitioners([]);
     } finally {
@@ -52,12 +69,28 @@ export default function SalarieCoachingsPageClient() {
 
   return (
     <div className={SALARIE_PAGE_SHELL}>
+      <section className="mb-8 overflow-hidden rounded-[36px] bg-[#0C0D12] px-6 py-7 sm:px-8">
+        <p className="text-sm text-white/45">Prochain rendez-vous</p>
+        {nextAppointment ? (
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-3xl font-extrabold tracking-tight text-white">{nextAppointment.practitionerName}</p>
+              <p className="mt-1 text-white/70">{nextAppointment.title}</p>
+              <p className="mt-3 text-sm text-white/55">
+                {nextAppointment.dateLabel} · {nextAppointment.time} · {nextAppointment.place}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-2xl font-bold text-white">Aucun rendez-vous planifié</p>
+        )}
+      </section>
+
       <section className="mb-8 space-y-2">
         <p className={SALARIE_PAGE_KICKER}>Accompagnement</p>
-        <h1 className={SALARIE_PAGE_TITLE}>Mes coachings</h1>
+        <h1 className={SALARIE_PAGE_TITLE}>Praticiens</h1>
         <p className={SALARIE_PAGE_LEAD}>
-          Trouvez un praticien certifié Byound par spécialité — recommandations basées sur vos tests
-          quand disponibles.
+          Plusieurs sujets, plusieurs praticiens. Choisissez la personne qui correspond à ce que vous voulez travailler.
         </p>
       </section>
 
@@ -163,33 +196,33 @@ export default function SalarieCoachingsPageClient() {
             <p className="text-sm text-white/60">Aucun praticien ne correspond à votre recherche.</p>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             {filtered.map((praticien) => (
-              <article key={praticien.id} className={SALARIE_CARD}>
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/30 to-indigo-500/20 text-lg font-bold text-white">
-                  {praticien.name.charAt(0)}
+              <article key={praticien.id} className="flex gap-4 rounded-[26px] border border-white/[0.08] bg-[#12141A] p-5">
+                {praticien.photoUrl ? (
+                  <img src={praticien.photoUrl} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+                ) : (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#1E2130] text-lg font-bold text-white">
+                    {praticien.name.charAt(0)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-bold text-white">{praticien.name}</p>
+                      <p className="text-sm text-white/55">{praticien.title}</p>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold text-white">Sur devis</p>
+                  </div>
+                  {praticien.bio ? <p className="mt-2 line-clamp-2 text-sm text-white/45">{praticien.bio}</p> : null}
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {praticien.specialites.map((s) => (
+                      <span key={s} className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-white/60">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <p className="mt-4 text-lg font-bold text-white">{praticien.name}</p>
-                <p className="text-sm text-white/55">{praticien.title}</p>
-                {praticien.bio ? (
-                  <p className="mt-2 text-sm text-white/45">{praticien.bio}</p>
-                ) : null}
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {praticien.specialites.map((s) => (
-                    <span
-                      key={s}
-                      className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-white/60"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="mt-4 rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/5"
-                >
-                  Demander une session
-                </button>
               </article>
             ))}
           </div>

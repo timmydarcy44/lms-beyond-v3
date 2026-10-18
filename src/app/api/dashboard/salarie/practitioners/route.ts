@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import {
   mapPractitionerRow,
   SALARIE_PRACTITIONERS_FALLBACK,
@@ -30,16 +31,55 @@ export async function GET() {
     .eq("visible_salarie_coaching", true)
     .order("nom", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({
-      praticiens: SALARIE_PRACTITIONERS_FALLBACK,
-      source: "fallback",
-    });
+  const rows = error ? [] : ((data ?? []) as SalariePractitionerRow[]);
+  const praticiens =
+    isJadeDemoEmail(user.email) || rows.length === 0
+      ? SALARIE_PRACTITIONERS_FALLBACK
+      : rows.map(mapPractitionerRow);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: session } = await db
+    .from("sessions_bct")
+    .select("date_session, heure_debut, praticien_id")
+    .eq("collaborateur_id", user.id)
+    .gte("date_session", today)
+    .order("date_session", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  let nextAppointment: {
+    practitionerName: string;
+    title: string;
+    dateLabel: string;
+    time: string;
+    place: string;
+  } | null = null;
+
+  if (isJadeDemoEmail(user.email)) {
+    const when = new Date();
+    when.setDate(when.getDate() + 3);
+    nextAppointment = {
+      practitionerName: "Camille Bernard",
+      title: "Coaching commercial",
+      dateLabel: when.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
+      time: "16:00",
+      place: "Visio Byound",
+    };
+  } else if (session?.date_session) {
+    const praticien = praticiens.find((item) => item.id === session.praticien_id);
+    const date = new Date(`${session.date_session}T12:00:00`);
+    nextAppointment = {
+      practitionerName: praticien?.name ?? "Praticien Byound",
+      title: praticien?.title ?? "Rendez-vous",
+      dateLabel: date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }),
+      time: String(session.heure_debut ?? "").slice(0, 5) || "À confirmer",
+      place: "Visio Byound",
+    };
   }
 
-  const rows = (data ?? []) as SalariePractitionerRow[];
-  const praticiens =
-    rows.length > 0 ? rows.map(mapPractitionerRow) : SALARIE_PRACTITIONERS_FALLBACK;
-
-  return NextResponse.json({ praticiens, source: rows.length > 0 ? "database" : "fallback" });
+  return NextResponse.json({
+    praticiens,
+    source: rows.length > 0 ? "database" : "fallback",
+    nextAppointment,
+  });
 }

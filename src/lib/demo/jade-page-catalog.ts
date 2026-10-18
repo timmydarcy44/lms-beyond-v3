@@ -12,6 +12,9 @@ const EXACT_REAL = new Set([
   "/dashboard/salarie",
   "/dashboard/salarie/profil",
   "/dashboard/salarie/formations",
+  "/dashboard/salarie/competences",
+  "/dashboard/salarie/accompagnement",
+  "/dashboard/salarie/coachings",
   "/dashboard/salarie/partage-entreprise",
   "/dashboard/apprenant",
   "/dashboard/apprenant/profil",
@@ -44,6 +47,7 @@ const PREFIX_REAL = [
   "/dashboard/entreprise/recrutement",
   "/dashboard/entreprise/formations/creer",
   "/dashboard/entreprise/formations/gerer",
+  "/dashboard/salarie/formations",
 ];
 
 function keepsRealPage(path: string) {

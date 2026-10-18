@@ -18,8 +18,8 @@ export const SALARIE_NAV_ITEMS: SalarieNavItem[] = [
   { label: "Accueil", href: "/dashboard/salarie", icon: Home },
   { label: "Mes bilans", href: "/dashboard/salarie#bilans", icon: ClipboardList },
   { label: "Mes formations", href: "/dashboard/salarie/formations", icon: BookOpen },
-  { label: "Mes compétences", href: "/dashboard/salarie/profil", icon: UserCircle },
-  { label: "Accompagnement", href: "/dashboard/salarie#accompagnement", icon: Users },
+  { label: "Mes compétences", href: "/dashboard/salarie/competences", icon: UserCircle },
+  { label: "Accompagnement", href: "/dashboard/salarie/accompagnement", icon: Users },
   { label: "Mon compte", href: "/dashboard/salarie/profil", icon: Wallet },
 ];
 

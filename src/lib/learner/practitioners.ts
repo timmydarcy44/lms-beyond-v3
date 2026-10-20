@@ -36,7 +36,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Psychopédagogue — neuroéducation",
     bio: "Psychopédagogue certifiée, spécialisée en gestion des émotions et accompagnement TND.",
     specialites: ["Gestion des émotions", "TDA-H", "Confiance en soi", "Phobie scolaire"],
-    photoUrl: "/jessica-contentin/jessica-portrait.jpg",
+    photoUrl:
+      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=900&h=1200&q=80",
   },
   {
     id: "timmy-darcy",
@@ -44,7 +45,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Coach professionnel — performance",
     bio: "Coach certifié Byound, accompagnement des parcours professionnels et montée en compétences.",
     specialites: ["Leadership", "Communication", "Orientation carrière", "Soft skills"],
-    photoUrl: null,
+    photoUrl:
+      "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=900&h=1200&q=80",
   },
   {
     id: "jerome-picot",
@@ -52,7 +54,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Consultant management & transformation",
     bio: "Expert management et conduite du changement pour managers et collaborateurs.",
     specialites: ["Management", "Conflits", "Performance d'équipe", "Pilotage"],
-    photoUrl: null,
+    photoUrl:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=900&h=1200&q=80",
   },
   {
     id: "camille-bernard",
@@ -60,7 +63,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Coach commerciale",
     bio: "Prospection, closing et objections pour les équipes qui vendent des parcours.",
     specialites: ["Prospection", "Closing", "Négociation"],
-    photoUrl: null,
+    photoUrl:
+      "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=900&h=1200&q=80",
   },
   {
     id: "ines-morel",
@@ -68,7 +72,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Praticienne prise de parole",
     bio: "Présence, pitch et prise de parole devant un comité ou un client.",
     specialites: ["Prise de parole", "Pitch", "Storytelling"],
-    photoUrl: null,
+    photoUrl:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=900&h=1200&q=80",
   },
   {
     id: "lea-martin",
@@ -76,7 +81,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Coach productivité",
     bio: "Organisation du temps, priorités et rituels de travail.",
     specialites: ["Organisation", "Priorisation", "Charge mentale"],
-    photoUrl: null,
+    photoUrl:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=900&h=1200&q=80",
   },
   {
     id: "hugo-renard",
@@ -84,7 +90,8 @@ export const SALARIE_PRACTITIONERS_FALLBACK: SalariePractitioner[] = [
     title: "Praticien IA métier",
     bio: "Usage concret de l'IA dans les tâches commerciales et le reporting.",
     specialites: ["IA", "CRM", "Reporting"],
-    photoUrl: null,
+    photoUrl:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&h=1200&q=80",
   },
 ];
 

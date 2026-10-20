@@ -4,6 +4,7 @@ import {
   buildEntrepriseAssistantSystemPrompt,
   fetchEntrepriseAssistantContext,
 } from "@/lib/entreprise/assistant-context";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import {
   rejectsCrossOrganizationRequest,
   resolveEntrepriseAssistantAccess,
@@ -41,6 +42,12 @@ export async function POST(request: NextRequest) {
 
   const ctx = await fetchEntrepriseAssistantContext(access.organizationId);
   if (!ctx) {
+    if (isJadeDemoEmail(access.email)) {
+      return NextResponse.json({
+        reply:
+          "Côté Byound Business, Jade a 6 collaborateurs, 2 offres ouvertes et une demande de prise en charge d'accompagnement en attente dans Messages. Je peux détailler l'équipe, les formations ou les recrutements.",
+      });
+    }
     return NextResponse.json({ error: "Organisation introuvable" }, { status: 403 });
   }
 

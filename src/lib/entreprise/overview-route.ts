@@ -1,4 +1,5 @@
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 import { resolveEnterpriseViewerDisplay } from "@/lib/entreprise/resolve-viewer-display";
@@ -99,6 +100,16 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
 
   if (!profile) {
     return { ok: false, error: "Profil introuvable", status: 401 };
+  }
+
+  const jadeEmail = user.email ?? profile.email ?? null;
+  if (isJadeDemoEmail(jadeEmail)) {
+    return {
+      ok: true,
+      userId: user.id,
+      organizationId: EDGEBS_ORG_ID,
+      viewer: { email: jadeEmail, prenom: "Jade", nom: "Martin" },
+    };
   }
 
   if (!canAccessEntrepriseDashboard(profile)) {

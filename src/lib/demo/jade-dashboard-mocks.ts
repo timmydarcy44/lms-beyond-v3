@@ -338,13 +338,16 @@ export const JADE_CANDIDATES = [
 ];
 
 export const JADE_HR_THREADS = [
-  { employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", last_message: "Je bloque sur l'objection prix.", last_at: new Date().toISOString(), unread_from_employee: 1 },
+  { employee_id: "jade-accompagnement", employee_name: "Jade Martin", employee_job_title: "Prise en charge", last_message: "Je demande une prise en charge pour un accompagnement avec Camille Bernard.", last_at: new Date().toISOString(), unread_from_employee: 1 },
+  { employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", last_message: "Je bloque sur l'objection prix.", last_at: new Date(Date.now() - 3600000).toISOString(), unread_from_employee: 0 },
   { employee_id: "jade-emp-3", employee_name: "Inès Morel", employee_job_title: "Business developer", last_message: "Le quiz closing est terminé.", last_at: new Date(Date.now() - 86400000).toISOString(), unread_from_employee: 0 },
 ];
 
 export const JADE_HR_MESSAGES = [
-  { id: "msg-1", org_id: "jade-org", employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", sender_role: "employee" as const, sender_user_id: null, content: "Je bloque sur l'objection prix.", created_at: new Date().toISOString() },
-  { id: "msg-2", org_id: "jade-org", employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", sender_role: "rh" as const, sender_user_id: null, content: "Reprends le module Closing, partie objection.", created_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: "msg-acc-1", org_id: "jade-org", employee_id: "jade-accompagnement", employee_name: "Jade Martin", employee_job_title: "Prise en charge", sender_role: "employee" as const, sender_user_id: null, content: "Je demande une prise en charge pour un accompagnement individuel avec Camille Bernard (Coaching commercial).", created_at: new Date().toISOString() },
+  { id: "msg-acc-2", org_id: "jade-org", employee_id: "jade-accompagnement", employee_name: "Jade Martin", employee_job_title: "Prise en charge", sender_role: "rh" as const, sender_user_id: null, content: "Bien reçu. Je regarde le budget accompagnement et je te réponds aujourd'hui.", created_at: new Date(Date.now() - 120000).toISOString() },
+  { id: "msg-1", org_id: "jade-org", employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", sender_role: "employee" as const, sender_user_id: null, content: "Je bloque sur l'objection prix.", created_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: "msg-2", org_id: "jade-org", employee_id: "jade-emp-1", employee_name: "Léa Bernard", employee_job_title: "Commerciale", sender_role: "rh" as const, sender_user_id: null, content: "Reprends le module Closing, partie objection.", created_at: new Date(Date.now() - 3000000).toISOString() },
 ];
 
 export function jadePlanningSlots(weekStart: Date) {

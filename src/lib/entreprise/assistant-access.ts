@@ -1,4 +1,5 @@
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
@@ -7,7 +8,7 @@ import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 const MANAGER_ROLES = new Set(["entreprise", "admin_hr", "rh", "manager"]);
 
 export type EntrepriseAssistantAccess =
-  | { ok: true; userId: string; organizationId: string }
+  | { ok: true; userId: string; organizationId: string; email: string | null }
   | { ok: false; error: string; status: 401 | 403; redirect?: string };
 
 /** profiles.company_id = organizations.id (organization_id métier). */
@@ -18,8 +19,11 @@ export async function resolveEntrepriseAssistantAccess(): Promise<EntrepriseAssi
   }
 
   const managerEmail = user.email ?? profile.email ?? null;
+  if (isJadeDemoEmail(managerEmail)) {
+    return { ok: true, userId: user.id, organizationId: EDGEBS_ORG_ID, email: managerEmail };
+  }
   if (isByoundBusinessManager(managerEmail)) {
-    return { ok: true, userId: user.id, organizationId: EDGEBS_ORG_ID };
+    return { ok: true, userId: user.id, organizationId: EDGEBS_ORG_ID, email: managerEmail };
   }
 
   if (await isSuperAdmin()) {
@@ -56,7 +60,7 @@ export async function resolveEntrepriseAssistantAccess(): Promise<EntrepriseAssi
     };
   }
 
-  return { ok: true, userId: user.id, organizationId };
+  return { ok: true, userId: user.id, organizationId, email: managerEmail };
 }
 
 /** Refuse les tentatives explicites d'accès à une autre organisation. */

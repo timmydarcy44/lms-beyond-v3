@@ -7,6 +7,7 @@ export type TutorAuthContext = {
   supabase: SupabaseClient;
   userId: string;
   tutorName: string;
+  email: string;
 };
 
 const tutorRoles = new Set(["tutor", "tuteur"]);
@@ -61,6 +62,7 @@ export async function requireTutorClient(): Promise<
       supabase,
       userId: user.id,
       tutorName: displayNameFromProfile(profile as Record<string, string | null | undefined>),
+      email,
     },
   };
 }

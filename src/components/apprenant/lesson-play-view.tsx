@@ -2187,13 +2187,13 @@ export function LessonPlayView({
           )}
 
           {showBeyondFlashCta ? (
-            <div className="flex justify-center">
+            <div className="mt-8 flex justify-center">
               <Button
                 type="button"
                 onClick={() => setIsBeyondFlashOpen(true)}
-                className="rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-6 py-2 text-xs font-bold uppercase tracking-[0.25em] text-white hover:opacity-95"
+                className="rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-6 py-2.5 text-sm font-bold text-white hover:opacity-95"
               >
-                Réviser avec Beyond Flash
+                S&apos;entraîner avec le Byound Card
               </Button>
             </div>
           ) : null}

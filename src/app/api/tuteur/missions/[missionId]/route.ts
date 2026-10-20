@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { recordTutorValidatedProof } from "@/lib/tuteur/skill-proof";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
@@ -45,6 +46,9 @@ export async function PATCH(
   }
 
   const { missionId } = await params;
+  if (isJadeDemoEmail(auth.ctx.email)) {
+    return NextResponse.json({ id: missionId, updated: true, status: "done" });
+  }
   let body: { statut?: string; motif?: string };
   try {
     body = await request.json();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
 const KINDS = new Set(["point", "evaluation", "visite", "autre"]);
@@ -7,6 +8,7 @@ const KINDS = new Set(["point", "evaluation", "visite", "autre"]);
 export async function POST(request: NextRequest) {
   const auth = await requireTutorClient();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
+  if (isJadeDemoEmail(auth.ctx.email)) return NextResponse.json({ ok: true });
 
   let body: { learnerId?: string; kind?: string; title?: string; startsAt?: string; place?: string; participants?: string };
   try {

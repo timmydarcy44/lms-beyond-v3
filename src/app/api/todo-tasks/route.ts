@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { JADE_TUTOR_TODO } from "@/lib/demo/jade-tutor-demo";
 import { getServerClient } from "@/lib/supabase/server";
 
 /**
@@ -19,6 +21,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const roleFilter = searchParams.get("role_filter");
+    if (roleFilter === "tuteur" && isJadeDemoEmail(authData.user.email)) {
+      return NextResponse.json(JADE_TUTOR_TODO);
+    }
 
     let query = supabase
       .from("todo_tasks")

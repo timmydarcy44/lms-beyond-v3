@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { jadeTutorForm } from "@/lib/demo/jade-tutor-demo";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
 export async function GET(
@@ -12,6 +14,11 @@ export async function GET(
   }
 
   const { assignmentId, formId } = await params;
+  if (isJadeDemoEmail(auth.ctx.email)) {
+    const demo = jadeTutorForm(assignmentId, formId);
+    if (!demo) return NextResponse.json({ error: "Formulaire introuvable" }, { status: 404 });
+    return NextResponse.json(demo);
+  }
   const supabase = auth.ctx.supabase;
 
   const { data: assignment, error: aErr } = await supabase
@@ -74,6 +81,7 @@ export async function POST(
   }
 
   const { assignmentId, formId } = await params;
+  if (isJadeDemoEmail(auth.ctx.email)) return NextResponse.json({ ok: true });
   const supabase = auth.ctx.supabase;
   const tutorId = auth.ctx.userId;
 

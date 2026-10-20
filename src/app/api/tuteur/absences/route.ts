@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
 export async function POST(request: NextRequest) {
   const auth = await requireTutorClient();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
+  if (isJadeDemoEmail(auth.ctx.email)) return NextResponse.json({ ok: true });
 
   let body: { learnerId?: string; date?: string; motif?: string };
   try {

@@ -4,8 +4,6 @@ import {
   buildPsgApprenantDemoParcours,
   isPsgDemoViewer,
 } from "@/lib/entreprise/psg-demo-data";
-import { isJadeDemoEmail } from "@/lib/demo/jade-account";
-import { JADE_COURSES } from "@/lib/demo/jade-dashboard-mocks";
 import { getSession } from "@/lib/auth/session";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
 
@@ -13,7 +11,6 @@ export const dynamic = "force-dynamic";
 
 export default async function ApprenantHomePage() {
   const session = await getSession();
-  const jade = isJadeDemoEmail(session?.email);
   const data = await getApprenantDashboardData();
   const email = session?.email ?? null;
   const isPsgApprenant =
@@ -33,17 +30,14 @@ export default async function ApprenantHomePage() {
     }
   }
 
-  const primaryParcours = jade
-    ? { title: JADE_COURSES[0].title, href: JADE_COURSES[0].href }
-    : primary
-      ? { title: String(primary.title ?? "Parcours"), href: String(primary.href ?? "") }
-      : null;
+  const primaryParcours = primary
+    ? { title: String(primary.title ?? "Parcours"), href: String(primary.href ?? "") }
+    : null;
 
   return (
     <ApprenantDashboardClient
       initialView="home"
       primaryParcours={primaryParcours?.href ? primaryParcours : null}
-      courses={jade ? JADE_COURSES : undefined}
       visibleOpenBadges={visibleOpenBadges}
       earnedOpenBadges={earnedOpenBadges}
     />

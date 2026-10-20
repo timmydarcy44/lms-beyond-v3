@@ -48,6 +48,7 @@ const PREFIX_REAL = [
   "/dashboard/entreprise/formations/creer",
   "/dashboard/entreprise/formations/gerer",
   "/dashboard/salarie/formations",
+  "/dashboard/tuteur",
 ];
 
 function keepsRealPage(path: string) {

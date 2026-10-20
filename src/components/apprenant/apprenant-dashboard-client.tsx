@@ -6,13 +6,6 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { isJadeDemoEmail } from "@/lib/demo/jade-account";
-import {
-  JADE_DISC_SCORES,
-  JADE_IDMC_AXES,
-  JADE_SOFT_SKILLS_RADAR,
-  JADE_SOFT_SKILLS_RECORD,
-} from "@/lib/demo/jade-dashboard-mocks";
 import { AxisKey, resolveIdmcAxes } from "@/components/idmc/IdmcRadarChart";
 import {
   GLOBAL_SKILL_REFERENTIAL,
@@ -499,21 +492,12 @@ export function ApprenantDashboardClient({
           setProfile(null);
         }
 
-        const jadeDemo = isJadeDemoEmail(userData.user.email);
         let foundDisc = false;
         let foundIdmc = false;
         let foundSoft = false;
-        if (jadeDemo) {
-          setDiscScores(JADE_DISC_SCORES);
-          setIdmcAxes(JADE_IDMC_AXES);
-          setIdmcData({ scores: JADE_IDMC_AXES, updated_at: new Date().toISOString() });
-          setIdmcUpdatedAt(new Date().toISOString());
-          setSoftSkillsData({ scores: JADE_SOFT_SKILLS_RECORD });
-          setSoftSkillsRadar(JADE_SOFT_SKILLS_RADAR);
-        }
 
         try {
-          if (!useSnapshotTestsRef.current && !jadeDemo) {
+          if (!useSnapshotTestsRef.current) {
           let discResult: { scores?: Record<string, unknown> | null } | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -546,7 +530,7 @@ export function ApprenantDashboardClient({
         }
 
         try {
-          if (!useSnapshotTestsRef.current && !jadeDemo) {
+          if (!useSnapshotTestsRef.current) {
           let idmcResult: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
             const { data, error } = await supabase
@@ -586,7 +570,7 @@ export function ApprenantDashboardClient({
         }
 
         try {
-          if (!useSnapshotTestsRef.current && !jadeDemo) {
+          if (!useSnapshotTestsRef.current) {
           if (!userId) return;
           let latestSoftSkills: Record<string, unknown> | null = null;
           for (const candidateId of profileIdsToQuery) {
@@ -621,9 +605,9 @@ export function ApprenantDashboardClient({
           }
         }
 
-        if (!jadeDemo && !foundDisc && !foundIdmc && !foundSoft) {
+        if (!foundDisc && !foundIdmc && !foundSoft) {
           try {
-            const snapRes = await fetch("/api/dashboard/learner-snapshot", { credentials: "include" });
+            const snapRes = await fetch("/api/dashboard/learner-snapshot?live=1", { credentials: "include" });
             if (snapRes.ok) {
               const snap = (await snapRes.json()) as {
                 discScores?: { D: number; I: number; S: number; C: number } | null;

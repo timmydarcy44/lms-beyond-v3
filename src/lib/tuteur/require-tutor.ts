@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getServerClient } from "@/lib/supabase/server";
 
 export type TutorAuthContext = {
@@ -49,7 +50,8 @@ export async function requireTutorClient(): Promise<
   }
 
   const role = String((profile as { role?: string }).role ?? "").toLowerCase();
-  if (!tutorRoles.has(role)) {
+  const email = String((profile as { email?: string | null }).email ?? user.email ?? "");
+  if (!tutorRoles.has(role) && !isJadeDemoEmail(email)) {
     return { ok: false, status: 403, message: "Accès réservé aux tuteurs" };
   }
 

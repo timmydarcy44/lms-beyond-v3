@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { recordTutorValidatedProof } from "@/lib/tuteur/skill-proof";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
 function mapBodyStatutToDb(statut: string): "todo" | "in_progress" | "done" | "invalid" | null {
@@ -65,11 +66,20 @@ export async function PATCH(
 
   const { data: existing, error: fetchErr } = await supabase
     .from("tutor_missions")
-    .select("id, assignment_id, status")
+    .select("id, assignment_id, status, title")
     .eq("id", missionId)
     .maybeSingle();
 
   if (fetchErr || !existing) {
+    return NextResponse.json({ error: "Mission introuvable" }, { status: 404 });
+  }
+
+  const { data: assignment } = await supabase
+    .from("tutor_assignments")
+    .select("id, tutor_id, learner_id")
+    .eq("id", existing.assignment_id)
+    .maybeSingle();
+  if (!assignment || assignment.tutor_id !== userId) {
     return NextResponse.json({ error: "Mission introuvable" }, { status: 404 });
   }
 
@@ -115,6 +125,14 @@ export async function PATCH(
     entry_type: logType,
     content: logContent,
   });
+
+  if (dbStatus === "done") {
+    let label = String(existing.title ?? "").trim();
+    const labeled = await supabase.from("tutor_missions").select("competency_label").eq("id", missionId).maybeSingle();
+    if (!labeled.error && labeled.data?.competency_label) label = String(labeled.data.competency_label);
+    const note = String(body.motif ?? "").trim() || "Validée par le tuteur";
+    await recordTutorValidatedProof(String(assignment.learner_id), label, note);
+  }
 
   return NextResponse.json({
     id: updated?.id ?? missionId,

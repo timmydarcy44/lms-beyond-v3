@@ -3,186 +3,105 @@
 import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Manrope } from "next/font/google";
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
   ClipboardList,
-  ListChecks,
-  CheckSquare,
+  Calendar,
+  BookOpen,
   MessageCircle,
-  UserCircle,
   Menu,
-  LifeBuoy,
   X,
+  ListChecks,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
 type Props = {
   children: ReactNode;
   tutorName: string;
-  /** Compteurs dynamiques (ex. depuis /api/tuteur/workspace). */
   navBadges?: { missions?: number; todo?: number };
 };
 
-type NavItem = {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  badge?: number;
-};
+type NavItem = { label: string; href: string; icon: LucideIcon; badge?: number };
 
 function buildNavItems(badges?: { missions?: number; todo?: number }): NavItem[] {
-  const m = badges?.missions;
-  const t = badges?.todo;
   return [
-    { label: "Tableau de bord", href: "/dashboard/tuteur", icon: LayoutDashboard },
+    { label: "Accueil", href: "/dashboard/tuteur", icon: LayoutDashboard },
     { label: "Mes alternants", href: "/dashboard/tuteur/alternants", icon: Users },
-    {
-      label: "Missions à valider",
-      href: "/dashboard/tuteur/missions",
-      icon: ListChecks,
-      badge: typeof m === "number" && m > 0 ? m : undefined,
-    },
+    { label: "Missions", href: "/dashboard/tuteur/missions", icon: ListChecks, badge: badges?.missions },
     { label: "Évaluations", href: "/dashboard/tuteur/formulaires", icon: ClipboardList },
-    {
-      label: "To-Do",
-      href: "/dashboard/tuteur/todo",
-      icon: CheckSquare,
-      badge: typeof t === "number" && t > 0 ? t : undefined,
-    },
+    { label: "Livrets", href: "/dashboard/tuteur/livrets", icon: BookOpen },
+    { label: "Calendrier", href: "/dashboard/tuteur/calendrier", icon: Calendar },
     { label: "Messagerie", href: "/dashboard/student/community", icon: MessageCircle },
   ];
 }
 
-function NavLink({
-  item,
-  onNavigate,
-}: {
-  item: NavItem;
-  onNavigate?: () => void;
-}) {
+function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+  const active = pathname === item.href || (item.href !== "/dashboard/tuteur" && pathname?.startsWith(item.href + "/"));
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
-        isActive
-          ? "bg-gradient-to-r from-violet-500/20 to-sky-500/15 text-white shadow-[0_0_0_1px_rgba(139,92,246,0.25)]"
-          : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100",
+        "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold",
+        active ? "bg-[#1E2130] text-white" : "text-[#B5BAC6] hover:bg-[#12141A]",
       )}
     >
-      <Icon className="h-4 w-4 shrink-0 opacity-80 group-hover:opacity-100" />
-      <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
-      {typeof item.badge === "number" ? (
-        <span className="rounded-full bg-violet-500/90 px-2 py-0.5 text-[10px] font-bold tabular-nums text-white shadow-sm">
-          {item.badge}
-        </span>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      {item.badge ? (
+        <span className="rounded-full bg-[#6E5BFF] px-2 py-0.5 text-[11px] font-bold text-white">{item.badge}</span>
       ) : null}
     </Link>
   );
 }
 
 export function TuteurShell({ children, tutorName, navBadges }: Props) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const navItems = buildNavItems(navBadges);
-
+  const [open, setOpen] = useState(false);
+  const items = buildNavItems(navBadges);
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100">
+    <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
       <div className="flex min-h-screen">
-        {/* Desktop sidebar */}
-        <aside className="relative z-20 hidden w-[240px] shrink-0 flex-col border-r border-white/[0.06] bg-[#0c0c0f] lg:flex">
-          <div className="absolute inset-0 bg-gradient-to-b from-violet-500/[0.03] via-transparent to-sky-500/[0.04] pointer-events-none" />
-          <div className="relative px-5 pt-7 pb-5">
-            <div className="text-[11px] font-bold uppercase tracking-[0.35em] text-zinc-300">Beyond</div>
-            <div className="mt-1 text-xs font-medium text-zinc-500">Espace tuteur</div>
-          </div>
-          <div className="relative mx-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <nav className="relative mt-3 flex-1 space-y-0.5 px-3 py-4">
-            {navItems.map((item) => (
+        <aside className="hidden w-[240px] shrink-0 flex-col border-r border-[#262A36] bg-[#07080B] px-3 py-6 lg:flex">
+          <p className="px-4 pb-6 text-sm font-semibold text-[#DADDE4]">Byound School · Espace tuteur</p>
+          <nav className="flex flex-1 flex-col gap-1">
+            {items.map((item) => (
               <NavLink key={item.href} item={item} />
             ))}
           </nav>
-          <div className="relative mt-auto space-y-1 border-t border-white/[0.06] px-3 py-5">
-            <Link
-              href="/dashboard/mon-compte"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-white/[0.04] hover:text-zinc-100"
-            >
-              <UserCircle className="h-4 w-4" />
-              <span className="truncate font-medium">{tutorName}</span>
-            </Link>
-            <Link
-              href="/dashboard/student/community"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 transition hover:bg-white/[0.04] hover:text-zinc-300"
-            >
-              <LifeBuoy className="h-4 w-4" />
-              Centre d&apos;aide
-            </Link>
-          </div>
+          <p className="truncate px-4 pt-4 text-sm font-semibold text-[#DADDE4]">{tutorName}</p>
         </aside>
-
-        <main className="relative min-w-0 flex-1 pb-20 lg:pb-0">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(120,119,198,0.12),transparent)]" />
-          {children}
-        </main>
-      </div>
-
-      {/* Mobile bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-white/[0.08] bg-[#0c0c0f]/95 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
-        <Link
-          href="/dashboard/tuteur"
-          className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium text-zinc-400"
-        >
-          <LayoutDashboard className="h-5 w-5" />
-          Accueil
-        </Link>
-        <Link
-          href="/dashboard/tuteur/alternants"
-          className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium text-zinc-400"
-        >
-          <Users className="h-5 w-5" />
-          Alternants
-        </Link>
-        <Link
-          href="/dashboard/tuteur/missions"
-          className="relative flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium text-zinc-400"
-        >
-          <span className="absolute right-2 top-1 rounded-full bg-violet-500 px-1.5 text-[9px] font-bold text-white">5</span>
-          <ListChecks className="h-5 w-5" />
-          Missions
-        </Link>
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <button
-              type="button"
-              className="flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium text-zinc-300"
-            >
+        <div className="min-w-0 flex-1">
+          <header className="flex items-center justify-between gap-3 border-b border-[#262A36] px-4 py-3 lg:hidden">
+            <p className="text-sm font-semibold">Byound School</p>
+            <button type="button" className="rounded-full bg-[#1E2130] p-2" onClick={() => setOpen(true)} aria-label="Ouvrir le menu">
               <Menu className="h-5 w-5" />
-              Menu
             </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="border-white/10 bg-[#0c0c0f] text-zinc-100">
-            <SheetHeader className="flex flex-row items-center justify-between border-b border-white/10 pb-4 text-left">
-              <SheetTitle className="text-white">Navigation</SheetTitle>
-              <Button type="button" variant="ghost" size="icon" className="text-zinc-400" onClick={() => setMobileOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </SheetHeader>
-            <div className="mt-4 space-y-1 pb-8">
-              {navItems.map((item) => (
-                <NavLink key={item.href} item={item} onNavigate={() => setMobileOpen(false)} />
+          </header>
+          <div className="mx-auto w-full max-w-[1040px] px-4 py-6 sm:px-6">{children}</div>
+        </div>
+      </div>
+      {open ? (
+        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setOpen(false)}>
+          <aside className="h-full w-[280px] bg-[#07080B] p-4" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="mb-4 rounded-full bg-[#1E2130] p-2" onClick={() => setOpen(false)} aria-label="Fermer">
+              <X className="h-4 w-4" />
+            </button>
+            <nav className="flex flex-col gap-1">
+              {items.map((item) => (
+                <NavLink key={item.href} item={item} onNavigate={() => setOpen(false)} />
               ))}
-            </div>
-          </SheetContent>
-        </Sheet>
-      </nav>
+            </nav>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

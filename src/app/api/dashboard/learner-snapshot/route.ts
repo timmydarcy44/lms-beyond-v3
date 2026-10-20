@@ -17,7 +17,7 @@ import { JADE_DISC_SCORES, JADE_IDMC_AXES, JADE_SOFT_SKILLS_RADAR } from "@/lib/
 export const dynamic = "force-dynamic";
 
 /** Snapshot léger : profil + tests en une seule requête serveur parallélisée. */
-export async function GET() {
+export async function GET(request: Request) {
   const authClient = await createSupabaseServerClient();
   if (!authClient) {
     return NextResponse.json({ error: "Configuration manquante" }, { status: 500 });
@@ -97,7 +97,8 @@ export async function GET() {
     });
   }
 
-  if (isJadeDemoEmail(email)) {
+  const live = new URL(request.url).searchParams.get("live") === "1";
+  if (!live && isJadeDemoEmail(email)) {
     return NextResponse.json({
       userId,
       firstName: firstName || "Jade",

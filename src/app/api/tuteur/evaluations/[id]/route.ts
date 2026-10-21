@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { jadeEvaluationDetail } from "@/lib/demo/jade-tutor-pages";
 import { loadEvaluation } from "@/lib/tuteur/followup-server";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
@@ -7,6 +9,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const auth = await requireTutorClient();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
   const { id } = await params;
+  if (isJadeDemoEmail(auth.ctx.email)) {
+    const detail = jadeEvaluationDetail(id);
+    if (!detail) return NextResponse.json({ error: "Évaluation introuvable" }, { status: 404 });
+    return NextResponse.json(detail);
+  }
   const detail = await loadEvaluation(auth.ctx.supabase, auth.ctx.userId, id);
   if (!detail) return NextResponse.json({ error: "Évaluation introuvable" }, { status: 404 });
   const selfVisible = Boolean(detail.evaluation.self_sent_at);
@@ -23,6 +30,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const auth = await requireTutorClient();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
   const { id } = await params;
+  if (isJadeDemoEmail(auth.ctx.email)) return NextResponse.json({ ok: true });
   const detail = await loadEvaluation(auth.ctx.supabase, auth.ctx.userId, id);
   if (!detail) return NextResponse.json({ error: "Évaluation introuvable" }, { status: 404 });
   if (detail.evaluation.status === "sent") return NextResponse.json({ error: "Cette évaluation est déjà envoyée" }, { status: 409 });

@@ -25,12 +25,12 @@ const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800
 type Props = {
   children: ReactNode;
   tutorName: string;
-  navBadges?: { missions?: number; evaluations?: number; livrets?: number; todo?: number };
+  navBadges?: { missions?: number; evaluations?: number; livrets?: number; messages?: number; todo?: number };
 };
 
 type NavItem = { label: string; href: string; icon: LucideIcon; badge?: number };
 
-function buildNavItems(badges?: { missions?: number; evaluations?: number; livrets?: number }): NavItem[] {
+function buildNavItems(badges?: { missions?: number; evaluations?: number; livrets?: number; messages?: number }): NavItem[] {
   return [
     { label: "Accueil", href: "/dashboard/tuteur", icon: LayoutDashboard },
     { label: "Mes alternants", href: "/dashboard/tuteur/alternants", icon: Users },
@@ -38,22 +38,22 @@ function buildNavItems(badges?: { missions?: number; evaluations?: number; livre
     { label: "Évaluations", href: "/dashboard/tuteur/evaluations", icon: ClipboardList, badge: badges?.evaluations },
     { label: "Livrets", href: "/dashboard/tuteur/livrets", icon: BookOpen, badge: badges?.livrets },
     { label: "Calendrier", href: "/dashboard/tuteur/calendrier", icon: Calendar },
-    { label: "Messagerie", href: "/dashboard/student/community", icon: MessageCircle },
+    { label: "Messagerie", href: "/dashboard/tuteur/messagerie", icon: MessageCircle, badge: badges?.messages },
     { label: "Ressources", href: "/dashboard/tuteur/ressources", icon: Library },
   ];
 }
 
 function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const active = pathname === item.href || (item.href !== "/dashboard/tuteur" && pathname?.startsWith(item.href + "/"));
+  const active = pathname === item.href || (item.href !== "/dashboard/tuteur" && pathname?.startsWith(`${item.href}/`));
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold",
-        active ? "bg-[#1E2130] text-white" : "text-[#B5BAC6] hover:bg-[#12141A]",
+        "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF9A5C]",
+        active ? "bg-[#1E2130] font-extrabold text-white" : "text-[#B5BAC6] hover:bg-[#12141A]",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -69,6 +69,7 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState(navBadges);
   const [name, setName] = useState(tutorName);
+  const pathname = usePathname();
   useEffect(() => {
     void fetch("/api/tuteur/nav-counts", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
@@ -78,7 +79,7 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
         if (json.tutorName) setName(String(json.tutorName));
       })
       .catch(() => undefined);
-  }, []);
+  }, [pathname]);
   const items = buildNavItems(counts);
   return (
     <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
@@ -99,7 +100,7 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
               <Menu className="h-5 w-5" />
             </button>
           </header>
-          <div className="mx-auto w-full max-w-[1040px] px-4 py-6 sm:px-6">{children}</div>
+          <div className="mx-auto w-full min-w-0 max-w-[1040px] px-4 py-6 sm:px-6">{children}</div>
         </div>
       </div>
       {open ? (

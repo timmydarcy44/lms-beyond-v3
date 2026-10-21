@@ -23,8 +23,10 @@ export function EnterpriseConnectShell({ children }: { children: ReactNode }) {
 
   return (
     <EnterpriseOverviewProvider>
-      <EnterpriseMobileNav />
-      {children}
+      <div className="min-w-0 max-w-full overflow-x-hidden">
+        <EnterpriseMobileNav />
+        {children}
+      </div>
     </EnterpriseOverviewProvider>
   );
 }

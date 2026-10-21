@@ -27,8 +27,8 @@ export type MissionRow = {
 
 export function missionBucket(row: { status: string; late: boolean }) {
   if (row.status === "validated" || row.status === "done") return "validees";
+  if (row.status === "submitted") return "a_valider";
   if (row.late) return "en_retard";
-  if (row.status === "submitted" || row.status === "in_progress") return "a_valider";
   return "en_cours";
 }
 

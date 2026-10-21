@@ -24,8 +24,8 @@ type MissionRow = {
 
 function missionBucket(row: { status: string; late: boolean }) {
   if (row.status === "validated" || row.status === "done") return "validees";
+  if (row.status === "submitted") return "a_valider";
   if (row.late) return "en_retard";
-  if (row.status === "submitted" || row.status === "in_progress") return "a_valider";
   return "en_cours";
 }
 
@@ -161,7 +161,9 @@ export function TutorMissionsPage() {
               <p className="text-[15px] font-bold">{mission.title}</p>
               <p className="text-sm text-[var(--tutor-text-4)]">
                 {mission.learnerName}
-                {mission.submittedAt ? ` · déposée le ${formatDay(mission.submittedAt)}` : mission.late ? " · en retard" : mission.dueDate ? ` · échéance ${formatDay(mission.dueDate)}` : ""}
+                {mission.submittedAt ? ` · déposée le ${formatDay(mission.submittedAt)}` : ""}
+                {mission.late && mission.dueDate ? ` · ${Math.max(1, Math.ceil((Date.now() - new Date(mission.dueDate).getTime()) / 86400000))} jours de retard` : ""}
+                {!mission.submittedAt && !mission.late && mission.dueDate ? ` · échéance ${formatDay(mission.dueDate)}` : ""}
               </p>
             </div>
             {mission.blockCode ? <span className="rounded-full bg-[var(--tutor-surface-2)] px-3 py-1 text-xs font-bold text-[var(--tutor-accent-text)]">{mission.blockCode}</span> : null}

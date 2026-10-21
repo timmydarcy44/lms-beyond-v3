@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { jadeEvaluations } from "@/lib/demo/jade-tutor-pages";
 import { listBlocks, listEvaluations } from "@/lib/tuteur/followup-server";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
 export async function GET() {
   const auth = await requireTutorClient();
   if (!auth.ok) return NextResponse.json({ error: auth.message }, { status: auth.status });
+  if (isJadeDemoEmail(auth.ctx.email)) return NextResponse.json(jadeEvaluations());
   const evaluations = await listEvaluations(auth.ctx.supabase, auth.ctx.userId);
   return NextResponse.json({ evaluations });
 }

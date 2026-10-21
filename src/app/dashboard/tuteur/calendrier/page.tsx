@@ -1,7 +1,7 @@
 "use client";
 
-import { TutorCalendar } from "@/components/tuteur/tutor-neo";
+import { TutorCalendarPage } from "@/components/tuteur/tutor-calendar";
 
-export default function TutorCalendarPage() {
-  return <TutorCalendar />;
+export default function Page() {
+  return <TutorCalendarPage />;
 }

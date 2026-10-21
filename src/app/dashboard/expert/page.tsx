@@ -1,9 +1,9 @@
-"use client";
+import { ExpertDashboardClient } from "@/components/expert/expert-dashboard-client";
+import { loadExpertShopFormations } from "@/lib/expert/shop-formations";
 
-import { ExpertCockpitDashboard } from "@/components/expert/expert-cockpit-dashboard";
-import { useExpertAccess } from "@/components/expert/expert-access-provider";
+export const dynamic = "force-dynamic";
 
-export default function ExpertDashboardPage() {
-  const { isApproved } = useExpertAccess();
-  return <ExpertCockpitDashboard restricted={!isApproved} />;
+export default async function ExpertDashboardPage() {
+  const formations = await loadExpertShopFormations();
+  return <ExpertDashboardClient formations={formations} />;
 }

@@ -35,6 +35,7 @@ import { byoundCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-c
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
 import { computeProfileCompletion, parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
 import { JADE_EXPERT_MISSIONS } from "@/lib/demo/jade-dashboard-mocks";
+import type { ExpertShopFormation } from "@/lib/expert/shop-formations";
 import { cn } from "@/lib/utils";
 
 type MissionRow = {
@@ -59,6 +60,7 @@ const QUICK_NAV = [
   { label: "Mon agenda", href: "/dashboard/expert/agenda", keywords: "agenda calendrier disponibilités" },
   { label: "Mes revenus", href: "/dashboard/expert/revenus", keywords: "revenus ca factures paiement" },
   { label: "Documents", href: "/dashboard/expert/documents", keywords: "documents contrat supports" },
+  { label: "Formations", href: "/dashboard/expert/formations", keywords: "formations achat catalogue boutique" },
   { label: "Byound Certified", href: "/dashboard/expert/certification", keywords: "certification badge" },
   { label: "Notifications", href: "/dashboard/expert/notifications", keywords: "notifications alertes" },
   { label: "Paramètres", href: "/dashboard/expert/settings", keywords: "paramètres compte mot de passe" },
@@ -67,6 +69,7 @@ const QUICK_NAV = [
 
 type Props = {
   restricted?: boolean;
+  formations?: ExpertShopFormation[];
 };
 
 const CARD = "rounded-3xl border border-white/[0.07] bg-[#10173a]/70 backdrop-blur-xl";
@@ -159,7 +162,7 @@ function EmptyRow({ icon: Icon, children }: { icon: typeof Inbox; children: Reac
   );
 }
 
-export function ExpertCockpitDashboard({ restricted = false }: Props) {
+export function ExpertCockpitDashboard({ restricted = false, formations = [] }: Props) {
   const { expert } = useExpertAccess();
   const supabase = useSupabase();
   const router = useRouter();
@@ -351,10 +354,10 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
-                  restricted ? "bg-amber-400/15 text-amber-200" : "bg-emerald-400/15 text-emerald-200",
+                  restricted ? "bg-amber-400/15 text-amber-200" : "bg-[#FF4B4B]/15 text-[#FFB4B8]",
                 )}
               >
-                <span className={cn("h-1.5 w-1.5 rounded-full", restricted ? "bg-amber-400" : "bg-emerald-400")} />
+                <span className={cn("h-1.5 w-1.5 rounded-full", restricted ? "bg-amber-400" : "bg-[#FF4B4B]")} />
                 {expertReviewStatusLabel(expert.review_status)}
               </span>
               <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-medium text-white/70">{certLabel}</span>
@@ -378,11 +381,13 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
               <QuickAction icon={Plus} label="Compléter profil" href="/dashboard/expert/profile" />
               <QuickAction icon={CalendarDays} label="Agenda" href="/dashboard/expert/agenda" disabled={restricted} />
               <QuickAction icon={FileText} label="Documents" href="/dashboard/expert/documents" />
+              <QuickAction icon={GraduationCap} label="Formations" href="/dashboard/expert/formations" />
               <div ref={moreRef} className="relative">
                 <QuickAction icon={MoreHorizontal} label="Plus" onClick={() => setMoreOpen((v) => !v)} />
                 {moreOpen ? (
                   <div className="absolute left-1/2 top-[88px] z-40 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#121a40] py-1.5 text-left shadow-2xl">
                     {[
+                      { label: "Formations", href: "/dashboard/expert/formations", icon: GraduationCap },
                       { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
                       { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap },
                       { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
@@ -510,6 +515,42 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
                 </Link>
               </div>
             </div>
+          </section>
+
+          <section className={cn(CARD, "mt-3 p-5")}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-lg font-semibold">Formations</p>
+              <Link href="/dashboard/expert/formations" className="text-xs font-semibold text-white hover:underline">
+                Tout voir
+              </Link>
+            </div>
+            {formations.length === 0 ? (
+              <EmptyRow icon={GraduationCap}>Aucune formation en vente pour le moment.</EmptyRow>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {formations.map((course) => {
+                  const inner = (
+                    <>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">{course.title}</p>
+                        {course.subtitle ? <p className="mt-0.5 truncate text-xs text-white/45">{course.subtitle}</p> : null}
+                      </div>
+                      <p className="shrink-0 text-sm font-semibold text-[#FFB4B8]">{course.price}</p>
+                    </>
+                  );
+                  const className = "flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3 transition hover:bg-white/[0.07]";
+                  return course.href ? (
+                    <Link key={course.id} href={course.href} className={className}>
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div key={course.id} className={className}>
+                      {inner}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* Demandes + prochaines missions */}

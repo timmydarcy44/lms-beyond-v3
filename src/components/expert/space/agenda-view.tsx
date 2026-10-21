@@ -41,10 +41,10 @@ export function AgendaView({
               const occupied = slots.some((slot) => slot.missionId && isSameDay(new Date(slot.startsAt), day));
               const hasFree = slots.some((slot) => !slot.missionId && isSameDay(new Date(slot.startsAt), day));
               return (
-                <button key={day.toISOString()} type="button" aria-pressed={active} onClick={() => setSelected(day)} className={`flex min-w-[72px] flex-1 flex-col items-center rounded-[22px] px-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7EEBB5] ${active ? "bg-[#2FD08A] text-[#04140C]" : "text-[#F4F5F7]"}`}>
+                <button key={day.toISOString()} type="button" aria-pressed={active} onClick={() => setSelected(day)} className={`flex min-w-[72px] flex-1 flex-col items-center rounded-[22px] px-2 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8] ${active ? "bg-[#FF4B4B] text-[#04140C]" : "text-[#F4F5F7]"}`}>
                   <span className="text-xs font-semibold">{weekdayShort(day)}</span>
                   <span className="text-[22px] font-extrabold leading-none">{day.getDate()}</span>
-                  <span className={`mt-1 h-1.5 w-1.5 rounded-full ${occupied ? (active ? "bg-[#04140C]" : "bg-[#2FD08A]") : hasFree ? "bg-[#9096A3]" : "bg-transparent"}`} />
+                  <span className={`mt-1 h-1.5 w-1.5 rounded-full ${occupied ? (active ? "bg-[#04140C]" : "bg-[#FF4B4B]") : hasFree ? "bg-[#9096A3]" : "bg-transparent"}`} />
                 </button>
               );
             })}
@@ -64,7 +64,7 @@ export function AgendaView({
               const endLabel = new Date(slot.endsAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
               return (
                 <article key={slot.id} className={`flex items-center gap-4 rounded-[22px] px-4 py-4 ${occupied ? "bg-[#1E2130]" : "border border-dashed border-[#262A36]"}`}>
-                  {occupied ? <span className="h-12 w-1 rounded-full bg-[#2FD08A]" /> : null}
+                  {occupied ? <span className="h-12 w-1 rounded-full bg-[#FF4B4B]" /> : null}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-[#B5BAC6]">{startLabel} – {endLabel}</p>
                     <p className="text-base font-extrabold">{occupied ? slot.title : "Créneau libre"}</p>
@@ -109,7 +109,7 @@ function Setting({ label, hint, control }: { label: string; hint: string; contro
 }
 
 function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
-  return <button type="button" aria-label={label} onClick={onClick} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1E2130] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7EEBB5]">{children}</button>;
+  return <button type="button" aria-label={label} onClick={onClick} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1E2130] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]">{children}</button>;
 }
 
 function SlotModal({ date, format, onClose }: { date: Date; format: SlotFormat; onClose: () => void }) {
@@ -153,7 +153,7 @@ function SlotModal({ date, format, onClose }: { date: Date; format: SlotFormat; 
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="h-11 rounded-full px-4 text-sm font-bold">Annuler</button>
-          <button type="submit" disabled={pending} className="h-11 rounded-full bg-[#2FD08A] px-5 text-sm font-extrabold text-[#04140C]">Enregistrer</button>
+          <button type="submit" disabled={pending} className="h-11 rounded-full bg-[#FF4B4B] px-5 text-sm font-extrabold text-[#04140C]">Enregistrer</button>
         </div>
       </form>
     </div>

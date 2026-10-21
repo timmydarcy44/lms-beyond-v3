@@ -153,10 +153,18 @@ function prepareSnapshotForSaveApi(
   }
 
   if (byoundOwned) {
+    const surfaces = copy.general.visible_surfaces ?? [];
+    const learner = surfaces.includes("apprenant");
+    const company = surfaces.includes("entreprise");
     copy.general = {
       ...copy.general,
       publisher: "byound",
       instructor_ids: [],
+      ...(surfaces.length
+        ? {
+            target_audience: learner && company ? "all" : learner ? "apprenant" : company ? "pro" : undefined,
+          }
+        : {}),
     };
   }
 
@@ -1362,6 +1370,57 @@ export function FormateurFormationBuilderWhite({
                 placeholder="Ex : Négociation avancée pour managers"
                 className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
               />
+              {byoundOwned ? (
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div>
+                    <p className="text-sm font-bold text-slate-950">Où la formation apparaît</p>
+                    <p className="text-xs text-slate-600">
+                      Cochez les espaces. L’espace expert met la formation en vente sur le dashboard expert.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {(
+                      [
+                        ["apprenant", "Catalogue apprenant"],
+                        ["entreprise", "Espace entreprise"],
+                        ["expert", "Espace expert"],
+                      ] as const
+                    ).map(([id, label]) => {
+                      const selected = (snapshot.general.visible_surfaces ?? []).includes(id);
+                      return (
+                        <label key={id} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-900">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => {
+                              const current = snapshot.general.visible_surfaces ?? [];
+                              const next = selected ? current.filter((item) => item !== id) : [...current, id];
+                              const learner = next.includes("apprenant");
+                              const company = next.includes("entreprise");
+                              updateGeneral({
+                                visible_surfaces: next,
+                                target_audience: learner && company ? "all" : learner ? "apprenant" : company ? "pro" : undefined,
+                              });
+                            }}
+                          />
+                          {label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-black/40">Prix de vente (€)</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={snapshot.general.price ?? ""}
+                      onChange={(e) => updateGeneral({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
+                      placeholder="Ex : 490"
+                      className="max-w-xs rounded-xl border border-slate-200 bg-white text-slate-950"
+                    />
+                  </div>
+                </div>
+              ) : null}
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2 sm:col-span-3">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-black/40">

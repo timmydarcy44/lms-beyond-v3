@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7EEBB5]";
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]";
 
 export function ExpertPageFrame({ children }: { children: ReactNode }) {
   return <div className="mx-auto w-full max-w-[1040px] px-4 py-6 pb-24 sm:px-6 sm:py-8">{children}</div>;
@@ -46,7 +46,7 @@ export function ExpertPrimaryButton({
   type?: "button" | "submit";
 }) {
   const className = cn(
-    "inline-flex h-11 items-center justify-center rounded-full bg-[#2FD08A] px-5 text-sm font-extrabold text-[#04140C]",
+    "inline-flex h-11 items-center justify-center rounded-full bg-[#FF4B4B] px-5 text-sm font-extrabold text-[#04140C]",
     focusRing,
   );
   if (href) {
@@ -76,7 +76,7 @@ export function HeroCard({
     <section
       className={cn(
         "relative overflow-hidden rounded-[32px] p-6 sm:p-8",
-        tone === "green" && "bg-[#2FD08A] text-[#04140C]",
+        tone === "green" && "bg-[#FF4B4B] text-[#04140C]",
         tone === "blue" && "bg-[#132A4D] text-[#F4F5F7]",
         tone === "surface" && "bg-[#12141A] text-[#F4F5F7]",
         className,
@@ -84,7 +84,7 @@ export function HeroCard({
     >
       {tone === "surface" ? (
         <span
-          className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(47,208,138,0.38),transparent_70%)]"
+          className="pointer-events-none absolute -left-16 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,75,75,0.38),transparent_70%)]"
           aria-hidden
         />
       ) : null}
@@ -116,7 +116,7 @@ export function QuickActions({
         const Icon = action.icon;
         const circle = cn(
           "flex h-14 w-14 items-center justify-center rounded-full",
-          action.tone === "green" && "bg-[#2FD08A] text-[#04140C]",
+          action.tone === "green" && "bg-[#FF4B4B] text-[#04140C]",
           action.tone === "dark" && "bg-[#07080B] text-[#F4F5F7]",
           (!action.tone || action.tone === "ghost") && "bg-[#1E2130] text-[#F4F5F7]",
         );
@@ -168,7 +168,7 @@ export function SegmentBar({
                 ? "bg-[#F2CF6B]"
                 : tone === "white"
                   ? "bg-white"
-                  : "bg-[#2FD08A]"
+                  : "bg-[#FF4B4B]"
               : "bg-[#1E2130]",
           )}
         />
@@ -178,8 +178,8 @@ export function SegmentBar({
 }
 
 const PILL_TONES = {
-  green: "bg-[#0F2E20] text-[#7EEBB5]",
-  solid: "bg-[#2FD08A] text-[#04140C]",
+  green: "bg-[#3A1418] text-[#FFB4B8]",
+  solid: "bg-[#FF4B4B] text-[#04140C]",
   grey: "bg-[#1E2130] text-[#DADDE4]",
   blue: "bg-[#132A4D] text-[#8DB8FF]",
   gold: "bg-[#36301A] text-[#F2CF6B]",

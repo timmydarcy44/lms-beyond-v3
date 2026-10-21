@@ -386,7 +386,7 @@ function JadeMissionPreview({ id }: { id: string }) {
   if (!mission) return <p className="p-8 text-sm text-[#B5BAC6]">Mission introuvable.</p>;
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <a href="/dashboard/expert/interventions" className="text-sm font-bold text-[#7EEBB5]">Retour aux missions</a>
+      <a href="/dashboard/expert/interventions" className="text-sm font-bold text-[#FFB4B8]">Retour aux missions</a>
       <h1 className="mt-4 text-4xl font-extrabold tracking-[-0.04em]">{mission.title}</h1>
       <p className="mt-2 text-[#B5BAC6]">{mission.client} · {dayPhrase(mission.startsAt)} · {mission.location} · {formatEuros(mission.amountCents)}</p>
     </div>

@@ -57,6 +57,7 @@ const PREFIX_REAL = [
   "/dashboard/expert/agenda",
   "/dashboard/expert/revenus",
   "/dashboard/expert/documents",
+  "/dashboard/expert/formations",
   "/dashboard/expert/certification",
 ];
 

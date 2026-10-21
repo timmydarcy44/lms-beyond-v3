@@ -1,6 +1,7 @@
 import { CertifiedView } from "@/components/expert/space/certified-view";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getSession } from "@/lib/auth/session";
+import { loadExpertShopFormations } from "@/lib/expert/shop-formations";
 import { loadExpertSpace } from "@/lib/expert/space-server";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -19,6 +20,6 @@ export default async function ExpertCertificationPage({
       await supabase.from("experts").update({ certification_status: "training" }).eq("id", session.id);
     }
   }
-  const space = await loadExpertSpace();
-  return <CertifiedView certification={space.certification} />;
+  const [space, formations] = await Promise.all([loadExpertSpace(), loadExpertShopFormations()]);
+  return <CertifiedView certification={space.certification} formations={formations} />;
 }

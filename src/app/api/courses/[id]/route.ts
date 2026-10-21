@@ -123,18 +123,28 @@ export async function PATCH(
 
         if (superAdminCheck) {
           const assignmentType = snapshot.general.assignment_type || "no_school";
-          const assignedOrgId = snapshot.general.assigned_organization_id;
-          
-          // Si assignment_type === "no_school", forcer target_audience à "apprenant" et publication automatique
-          const targetAudience = assignmentType === "no_school" 
-            ? "apprenant" 
-            : (snapshot.general.target_audience || "all");
-          
-          // Si No School, toujours ajouter au catalogue et activer
-          // Si Organisation, ajouter au catalogue seulement si publié
-          const shouldAddToCatalog = assignmentType === "no_school" 
-            ? true 
-            : (status === "published" || targetAudience === "apprenant");
+          const surfaces = Array.isArray(snapshot.general.visible_surfaces) ? snapshot.general.visible_surfaces : null;
+          const showToLearner = surfaces?.includes("apprenant") ?? false;
+          const showToCompany = surfaces?.includes("entreprise") ?? false;
+
+          // Si des espaces sont choisis, ils décident du catalogue. Sinon, comportement historique.
+          const targetAudience = surfaces
+            ? showToLearner && showToCompany
+              ? "all"
+              : showToLearner
+                ? "apprenant"
+                : showToCompany
+                  ? "pro"
+                  : "apprenant"
+            : assignmentType === "no_school"
+              ? "apprenant"
+              : (snapshot.general.target_audience || "all");
+
+          const shouldAddToCatalog = surfaces
+            ? showToLearner || showToCompany
+            : assignmentType === "no_school"
+              ? true
+              : (status === "published" || targetAudience === "apprenant");
           
           console.log("[api/courses/[id]] Super Admin detected, assignment_type:", assignmentType, "target_audience:", targetAudience, "status:", status, "shouldAddToCatalog:", shouldAddToCatalog);
 

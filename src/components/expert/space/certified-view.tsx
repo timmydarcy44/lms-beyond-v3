@@ -5,9 +5,16 @@ import { toast } from "sonner";
 
 import { startCertification } from "@/app/dashboard/expert/space-actions";
 import { ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
+import type { ExpertShopFormation } from "@/lib/expert/shop-formations";
 import type { ExpertCertificationModel } from "@/lib/expert/space-server";
 
-export function CertifiedView({ certification }: { certification: ExpertCertificationModel }) {
+export function CertifiedView({
+  certification,
+  formations = [],
+}: {
+  certification: ExpertCertificationModel;
+  formations?: ExpertShopFormation[];
+}) {
   const [pending, setPending] = useState(false);
   const next = certification.steps.find((step) => !step.done);
   const publicUrl = `https://www.byound.fr${certification.publicPath}`;
@@ -63,7 +70,7 @@ export function CertifiedView({ certification }: { certification: ExpertCertific
             <StatusPillLike>Badge actif et public</StatusPillLike>
             <h2 className="mt-4 text-2xl font-extrabold">Montrez votre certification</h2>
             <p className="mt-2 text-sm text-[#B5BAC6]">Votre badge est vérifiable en ligne : n'importe qui peut contrôler qu'il est authentique et à jour.</p>
-            <a href={linkedin} className="mt-5 inline-flex h-11 items-center rounded-full bg-[#2FD08A] px-5 text-sm font-extrabold text-[#04140C]">Ajouter à LinkedIn</a>
+            <a href={linkedin} className="mt-5 inline-flex h-11 items-center rounded-full bg-[#FF4B4B] px-5 text-sm font-extrabold text-[#04140C]">Ajouter à LinkedIn</a>
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" onClick={() => void navigator.clipboard.writeText(publicUrl).then(() => toast.success("Lien copié"))} className="h-11 rounded-full bg-[#1E2130] px-4 text-sm font-bold">Copier le lien</button>
               <button type="button" onClick={download} className="h-11 rounded-full bg-[#1E2130] px-4 text-sm font-bold">Télécharger</button>
@@ -80,8 +87,8 @@ export function CertifiedView({ certification }: { certification: ExpertCertific
               return (
                 <li key={step.id} className="flex gap-3">
                   <span className="flex flex-col items-center">
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold ${step.done ? "bg-[#2FD08A] text-[#04140C]" : current ? "border-2 border-[#F2CF6B] text-[#F2CF6B]" : "border border-[#262A36] text-[#9096A3]"}`}>{step.done ? "✓" : index + 1}</span>
-                    {index < certification.steps.length - 1 ? <span className={`mt-1 h-8 w-0.5 ${step.done ? "bg-[#2FD08A]" : "bg-[#262A36]"}`} /> : null}
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-extrabold ${step.done ? "bg-[#FF4B4B] text-[#04140C]" : current ? "border-2 border-[#F2CF6B] text-[#F2CF6B]" : "border border-[#262A36] text-[#9096A3]"}`}>{step.done ? "✓" : index + 1}</span>
+                    {index < certification.steps.length - 1 ? <span className={`mt-1 h-8 w-0.5 ${step.done ? "bg-[#FF4B4B]" : "bg-[#262A36]"}`} /> : null}
                   </span>
                   <span className="flex min-w-0 flex-1 items-start justify-between gap-3">
                     <span>
@@ -98,15 +105,39 @@ export function CertifiedView({ certification }: { certification: ExpertCertific
         <section className="rounded-[28px] bg-[#12141A] p-5">
           <h2 className="mb-4 text-base font-extrabold">Ce que le badge vous apporte</h2>
           <ul className="space-y-4 text-sm">
-            <li><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#2FD08A]" />Badge vérifiable. Authentifié sur une page publique.</li>
+            <li><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#FF4B4B]" />Badge vérifiable. Authentifié sur une page publique.</li>
             <li><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-[#8DB8FF]" />Visible sur LinkedIn, dans la signature et sur le lien du badge.</li>
           </ul>
         </section>
       </div>
+      <section className="mt-4 rounded-[28px] bg-[#12141A] p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-base font-extrabold">Formations</h2>
+          <a href="/dashboard/expert/formations" className="text-sm font-bold text-[#FFB4B8]">Tout voir</a>
+        </div>
+        {formations.length === 0 ? (
+          <p className="text-sm text-[#B5BAC6]">Aucune formation en vente pour le moment.</p>
+        ) : (
+          <ul className="grid gap-3 md:grid-cols-2">
+            {formations.map((course) => (
+              <li key={course.id} className="rounded-[24px] bg-[#1E2130] p-4">
+                <p className="font-extrabold text-[#F4F5F7]">{course.title}</p>
+                {course.subtitle ? <p className="mt-1 text-sm text-[#B5BAC6]">{course.subtitle}</p> : null}
+                <p className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-[#FF4B4B]">{course.price}</p>
+                {course.href ? (
+                  <a href={course.href} className="mt-4 inline-flex h-11 items-center rounded-full bg-[#FF4B4B] px-5 text-sm font-extrabold text-[#04140C]">
+                    Voir la formation
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </ExpertPageFrame>
   );
 }
 
 function StatusPillLike({ children }: { children: string }) {
-  return <span className="inline-flex rounded-full bg-[#0F2E20] px-3 py-1 text-xs font-bold text-[#7EEBB5]">{children}</span>;
+  return <span className="inline-flex rounded-full bg-[#3A1418] px-3 py-1 text-xs font-bold text-[#FFB4B8]">{children}</span>;
 }

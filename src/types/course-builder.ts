@@ -140,6 +140,8 @@ export type CourseBuilderGeneralInfo = {
   publisher?: "byound";
   objectifs?: string[];
   target_audience?: "pro" | "apprenant" | "all";
+  /** Espaces où la formation Byound est proposée. */
+  visible_surfaces?: Array<"apprenant" | "entreprise" | "expert">;
   price?: number;
   assignment_type?: "no_school" | "organization";
   assigned_organization_id?: string;

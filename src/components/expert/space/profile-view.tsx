@@ -46,7 +46,7 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
             {profile.photoUrl ? (
               <span className="h-[88px] w-[88px] rounded-full bg-cover bg-center" style={{ backgroundImage: `url(${profile.photoUrl})` }} />
             ) : (
-              <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#2FD08A] text-2xl font-extrabold text-[#04140C]">
+              <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#FF4B4B] text-2xl font-extrabold text-[#04140C]">
                 {initials}
               </span>
             )}
@@ -100,7 +100,7 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
             </div>
           </section>
           {profile.sections.filter((section) => !section.filled).map((section) => (
-            <a key={section.id} href="/dashboard/expert/profile?edit=1" className="block rounded-[24px] bg-[#0F2E20] px-4 py-4 text-sm font-extrabold text-[#7EEBB5]">
+            <a key={section.id} href="/dashboard/expert/profile?edit=1" className="block rounded-[24px] bg-[#3A1418] px-4 py-4 text-sm font-extrabold text-[#FFB4B8]">
               + {section.missing}
             </a>
           ))}
@@ -120,7 +120,7 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
                         <span key={value} className="rounded-full bg-[#1E2130] px-3 py-1 text-sm font-semibold">{value}</span>
                       ))
                     ) : (
-                      <span className="text-sm font-bold text-[#7EEBB5]">+ Renseigner</span>
+                      <span className="text-sm font-bold text-[#FFB4B8]">+ Renseigner</span>
                     )}
                   </span>
                   <StatusPill tone={profile.visibility[section.id] === "private" ? "grey" : "green"}>
@@ -171,8 +171,8 @@ function Round({
   onClick?: () => void;
   tone?: "green" | "dark";
 }) {
-  const className = "flex w-[88px] flex-col items-center gap-2 text-xs font-semibold text-[#DADDE4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7EEBB5]";
-  const circle = `flex h-14 w-14 items-center justify-center rounded-full ${tone === "green" ? "bg-[#2FD08A] text-[#04140C]" : "bg-[#1E2130] text-[#F4F5F7]"}`;
+  const className = "flex w-[88px] flex-col items-center gap-2 text-xs font-semibold text-[#DADDE4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]";
+  const circle = `flex h-14 w-14 items-center justify-center rounded-full ${tone === "green" ? "bg-[#FF4B4B] text-[#04140C]" : "bg-[#1E2130] text-[#F4F5F7]"}`;
   const inner = (
     <>
       <span className={circle}><Icon className="h-5 w-5" /></span>

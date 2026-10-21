@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ClipboardList,
   Euro,
+  BookOpen,
   FileText,
   GraduationCap,
   HelpCircle,
@@ -37,7 +38,7 @@ type NavItem = {
   badge?: number;
 };
 
-const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7EEBB5]";
+const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]";
 
 function initialsOf(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -68,7 +69,7 @@ function NavLinks({
         );
         const badge =
           item.badge && item.badge > 0 ? (
-            <span className="ml-auto rounded-full bg-[#2FD08A] px-2 py-0.5 text-[11px] font-extrabold text-[#04140C]">
+            <span className="ml-auto rounded-full bg-[#FF4B4B] px-2 py-0.5 text-[11px] font-extrabold text-[#04140C]">
               {item.badge}
             </span>
           ) : null;
@@ -171,6 +172,7 @@ export function ExpertShell({
     { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
     { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
     { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, badge: counts.documents },
+    { label: "Formations", href: "/dashboard/expert/formations", icon: BookOpen },
     { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
     { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap, external: true },
     { label: "Notifications", href: "/dashboard/expert/notifications", icon: Bell },
@@ -182,7 +184,7 @@ export function ExpertShell({
       {photoUrl ? (
         <Image src={photoUrl} alt="" width={44} height={44} unoptimized className="h-11 w-11 rounded-full object-cover" />
       ) : (
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#2FD08A] text-sm font-extrabold text-[#04140C]">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#FF4B4B] text-sm font-extrabold text-[#04140C]">
           {initialsOf(name)}
         </span>
       )}

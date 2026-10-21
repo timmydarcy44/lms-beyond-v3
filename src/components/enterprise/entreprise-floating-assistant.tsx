@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -28,6 +28,21 @@ export function EntrepriseFloatingAssistant() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
+
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const prompt = (event as CustomEvent<{ prompt?: string }>).detail?.prompt?.trim();
+      setOpen(true);
+      setMessages((current) =>
+        current.length > 0
+          ? current
+          : [{ role: "bot", text: "Bonjour. Je suis votre assistant RH Beyond : radar équipe, marketplace BCT, collaborateurs et actions prioritaires. Posez votre question." }],
+      );
+      if (prompt) setInput(prompt);
+    };
+    window.addEventListener("entreprise-assistant-open", onOpen);
+    return () => window.removeEventListener("entreprise-assistant-open", onOpen);
+  }, []);
 
   const openPanel = () => {
     setOpen(true);

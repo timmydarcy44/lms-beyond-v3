@@ -527,9 +527,9 @@ export function buildJadeOfferDetail(id: string) {
         status: candidate.stage,
         stage: candidate.stage,
         read_at: candidate.read_at,
-        match_score: candidate.criteria_total
-          ? Math.round((candidate.criteria_met / candidate.criteria_total) * 100)
-          : null,
+        source: "source" in candidate ? candidate.source : null,
+        interview_at: "interview_at" in candidate ? candidate.interview_at ?? null : null,
+        retained_at: "retained_at" in candidate ? candidate.retained_at : null,
         criteria_met: candidate.criteria_met,
         criteria_total: candidate.criteria_total,
         profiles: [{ id: candidate.id, first_name: first, last_name: rest.join(" ") }],

@@ -44,6 +44,7 @@ const PREFIX_REAL = [
   "/dashboard/entreprise/salaries",
   "/dashboard/entreprise/besoins-competences",
   "/dashboard/entreprise/offres",
+  "/dashboard/entreprise/badges",
   "/dashboard/entreprise/recrutement",
   "/dashboard/entreprise/formations/creer",
   "/dashboard/entreprise/formations/gerer",

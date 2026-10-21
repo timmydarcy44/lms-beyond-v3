@@ -9,6 +9,8 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { CalendarDays, CheckCircle2, ChevronLeft, ShieldCheck, Sparkles } from "lucide-react";
 import type { ActionRequest } from "@/types/database";
+import { loadMissionPreview } from "@/app/dashboard/expert/space-actions";
+import { dayPhrase, formatEuros, type ExpertMission } from "@/lib/expert/space-model";
 
 type ActionRequestRow = ActionRequest & {
   target_count: number | null;
@@ -22,7 +24,7 @@ function formatLaunchDate(dateIso: string | null) {
   return format(d, "d MMMM yyyy 'à' HH'h'mm", { locale: fr });
 }
 
-export default function ExpertInterventionDetailPage() {
+function RealInterventionDetail() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
@@ -373,5 +375,28 @@ export default function ExpertInterventionDetailPage() {
       </main>
     </div>
   );
+}
+
+function JadeMissionPreview({ id }: { id: string }) {
+  const [mission, setMission] = useState<ExpertMission | null | undefined>(undefined);
+  useEffect(() => {
+    void loadMissionPreview(id).then(setMission);
+  }, [id]);
+  if (mission === undefined) return <p className="p-8 text-sm text-[#B5BAC6]">Chargement…</p>;
+  if (!mission) return <p className="p-8 text-sm text-[#B5BAC6]">Mission introuvable.</p>;
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8">
+      <a href="/dashboard/expert/interventions" className="text-sm font-bold text-[#7EEBB5]">Retour aux missions</a>
+      <h1 className="mt-4 text-4xl font-extrabold tracking-[-0.04em]">{mission.title}</h1>
+      <p className="mt-2 text-[#B5BAC6]">{mission.client} · {dayPhrase(mission.startsAt)} · {mission.location} · {formatEuros(mission.amountCents)}</p>
+    </div>
+  );
+}
+
+export default function ExpertInterventionDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? "";
+  if (id.startsWith("jade-")) return <JadeMissionPreview id={id} />;
+  return <RealInterventionDetail />;
 }
 

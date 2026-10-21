@@ -7,6 +7,10 @@ export type ExpertDocumentMeta = {
   size?: number | null;
   uploaded_at: string;
   version?: number | null;
+  status?: "to_sign" | "signed" | "deposited" | null;
+  expires_at?: string | null;
+  pages?: number | null;
+  folder?: "contrat" | "cv" | "attestation" | "autre" | null;
 };
 
 export type EdgeRegistrationMeta = {
@@ -24,6 +28,9 @@ export type EdgeRegistrationMeta = {
   website_url?: string | null;
   daily_rate?: number | null;
   documents?: ExpertDocumentMeta[];
+  visibility?: Partial<Record<"titre" | "specialites" | "regions" | "formats" | "tarif" | "photo" | "bio", "public" | "private">>;
+  agenda_format?: "visio" | "presentiel" | null;
+  notice_hours?: number | null;
 };
 
 const META_TYPE = "edge_registration_meta";
@@ -52,6 +59,9 @@ export function parseRegistrationMeta(references: unknown): EdgeRegistrationMeta
     bio_long: typeof raw.bio_long === "string" ? raw.bio_long : null,
     website_url: typeof raw.website_url === "string" ? raw.website_url : null,
     daily_rate: typeof raw.daily_rate === "number" ? raw.daily_rate : null,
+    visibility: raw.visibility && typeof raw.visibility === "object" ? (raw.visibility as EdgeRegistrationMeta["visibility"]) : undefined,
+    agenda_format: raw.agenda_format === "presentiel" || raw.agenda_format === "visio" ? raw.agenda_format : null,
+    notice_hours: typeof raw.notice_hours === "number" ? raw.notice_hours : null,
     documents: Array.isArray(raw.documents)
       ? (raw.documents as ExpertDocumentMeta[]).filter((d) => d && typeof d.id === "string")
       : [],

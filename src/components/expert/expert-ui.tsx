@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7EEBB5]";
 
+export function ExpertPageFrame({ children }: { children: ReactNode }) {
+  return <div className="mx-auto w-full max-w-[1040px] px-4 py-6 pb-24 sm:px-6 sm:py-8">{children}</div>;
+}
+
 export function ExpertPageHeader({
   title,
   subtitle,

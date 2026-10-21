@@ -52,6 +52,12 @@ const PREFIX_REAL = [
   "/dashboard/tuteur",
   "/dashboard/apprenant/livret",
   "/dashboard/apprenant/evaluations",
+  "/dashboard/expert/profile",
+  "/dashboard/expert/interventions",
+  "/dashboard/expert/agenda",
+  "/dashboard/expert/revenus",
+  "/dashboard/expert/documents",
+  "/dashboard/expert/certification",
 ];
 
 function keepsRealPage(path: string) {

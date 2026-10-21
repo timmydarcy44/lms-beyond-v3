@@ -138,18 +138,23 @@ export function ExpertShell({
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/expert/nav-counts", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        if (cancelled || !json) return;
-        setCounts({
-          missions: Number(json.missions) || 0,
-          documents: Number(json.documents) || 0,
-        });
-      })
-      .catch(() => undefined);
+    const load = () => {
+      void fetch("/api/expert/nav-counts", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (cancelled || !json) return;
+          setCounts({
+            missions: Number(json.missions) || 0,
+            documents: Number(json.documents) || 0,
+          });
+        })
+        .catch(() => undefined);
+    };
+    load();
+    window.addEventListener("expert-nav-refresh", load);
     return () => {
       cancelled = true;
+      window.removeEventListener("expert-nav-refresh", load);
     };
   }, [pathname]);
 

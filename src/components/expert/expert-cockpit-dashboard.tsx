@@ -27,7 +27,6 @@ import {
 import { addHours, format, parseISO, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import SidebarExpert from "@/components/SidebarExpert";
 import type { CalendarEvent } from "@/components/expert/expert-week-calendar";
 import { ExpertAgendaStrip } from "@/components/expert/expert-agenda-strip";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
@@ -284,9 +283,7 @@ export function ExpertCockpitDashboard({ restricted = false }: Props) {
         <div className="absolute bottom-0 left-0 h-[600px] w-[600px] rounded-full bg-[radial-gradient(circle_at_center,rgba(40,80,200,0.14),transparent_62%)] blur-3xl" />
       </div>
 
-      <SidebarExpert restricted={restricted} />
-
-      <main className="relative min-h-screen lg:pl-[260px]">
+      <main className="relative min-h-screen">
         <div className="mx-auto max-w-[1160px] px-4 pb-20 pt-4 lg:pr-8">
           {/* Top bar */}
           <div className="flex items-center justify-between gap-4 py-2">

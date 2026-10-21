@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import SidebarExpert from "@/components/SidebarExpert";
-import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { ArrowLeft, Construction } from "lucide-react";
 
 const SECTIONS: Record<string, { title: string; description: string }> = {
@@ -23,15 +21,13 @@ const SECTIONS: Record<string, { title: string; description: string }> = {
 
 export default function ExpertActiviteSectionPage() {
   const params = useParams();
-  const { isApproved } = useExpertAccess();
   const section = typeof params.section === "string" ? params.section : "";
   const meta = SECTIONS[section];
 
   if (!meta) {
     return (
       <div className="min-h-screen bg-[#070b1f] text-white">
-        <SidebarExpert restricted={!isApproved} />
-        <main className="min-h-screen lg:pl-[260px]">
+        <main className="min-h-screen">
           <div className="mx-auto max-w-3xl px-6 py-16">
             <p className="text-white/55">Section introuvable.</p>
             <Link href="/dashboard/expert" className="mt-4 inline-block text-[#A9AEFF] hover:underline">
@@ -45,8 +41,7 @@ export default function ExpertActiviteSectionPage() {
 
   return (
     <div className="min-h-screen bg-[#070b1f] text-white">
-      <SidebarExpert restricted={!isApproved} />
-      <main className="min-h-screen lg:pl-[260px]">
+      <main className="min-h-screen">
         <div className="mx-auto max-w-3xl px-6 py-10 pb-24">
           <Link
             href="/dashboard/expert"

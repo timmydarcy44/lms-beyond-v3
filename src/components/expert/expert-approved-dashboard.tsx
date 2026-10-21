@@ -14,7 +14,6 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import SidebarExpert from "@/components/SidebarExpert";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { edgeCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-certification";
 import { expertReviewStatusLabel } from "@/lib/expert/expert-access";
@@ -65,8 +64,7 @@ export function ExpertApprovedDashboard() {
 
   return (
     <div className="min-h-screen bg-[#070b1f] text-white">
-      <SidebarExpert />
-      <main className="min-h-screen lg:pl-[260px]">
+      <main className="min-h-screen">
         <div className="mx-auto max-w-6xl px-6 py-10 pb-24">
           <header className="mb-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A9AEFF]">Espace formateur</p>

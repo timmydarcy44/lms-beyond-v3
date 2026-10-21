@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Award, Check, Sparkles } from "lucide-react";
-import SidebarExpert from "@/components/SidebarExpert";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import {
@@ -82,8 +81,7 @@ export default function ExpertCertificationPage() {
 
   return (
     <div className="min-h-screen bg-[#070b1f] text-white">
-      <SidebarExpert restricted={!isApproved} />
-      <main className="min-h-screen lg:pl-[260px]">
+      <main className="min-h-screen">
         <div className="mx-auto max-w-4xl px-6 py-10 pb-24">
           <header className="mb-10">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A9AEFF]">Certification</p>

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import SidebarExpert from "@/components/SidebarExpert";
 import { ClubLayout } from "@/components/club/club-layout";
 import { TuteurShell } from "@/components/tuteur/tuteur-shell";
 import { PartenaireLayout } from "@/components/partenaire/partenaire-layout";
@@ -27,7 +26,9 @@ function Surface({ page }: { page: JadeDemoPage }) {
     <div className={light ? "px-4 py-6 text-[#1D1D1F] sm:px-8" : "px-4 py-6 text-[#F4F5F7] sm:px-8"}>
       <p className={light ? "text-xs font-bold text-[#86868B]" : "text-xs font-bold text-[#9096A3]"}>{page.kicker}</p>
       <h1 className="mt-1 text-3xl font-extrabold tracking-tight">{page.title}</h1>
-      <p className={light ? "mt-2 text-sm text-[#6E6E73]" : "mt-2 text-sm text-[#B5BAC6]"}>Compte démo Jade Martin</p>
+      {page.chrome === "expert" ? null : (
+        <p className={light ? "mt-2 text-sm text-[#6E6E73]" : "mt-2 text-sm text-[#B5BAC6]"}>Compte démo Jade Martin</p>
+      )}
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         {page.stats.map((stat) => (
           <article key={stat.label} className={light ? "rounded-[26px] border border-[#E5E5EA] bg-white p-4" : "rounded-[26px] border border-[#262A36] bg-[#12141A] p-4"}>
@@ -66,12 +67,7 @@ function Surface({ page }: { page: JadeDemoPage }) {
 
 function Frame({ page }: { page: JadeDemoPage }) {
   if (page.chrome === "expert") {
-    return (
-      <div className="min-h-screen bg-[#070b1f]">
-        <SidebarExpert />
-        <div className="lg:pl-[276px]"><Surface page={page} /></div>
-      </div>
-    );
+    return <Surface page={page} />;
   }
   if (page.chrome === "entreprise") {
     return (

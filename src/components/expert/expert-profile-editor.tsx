@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Award, Globe, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
-import SidebarExpert from "@/components/SidebarExpert";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { edgeCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-certification";
@@ -45,7 +44,7 @@ function toggleInList(list: string[], value: string): string[] {
 }
 
 export function ExpertProfileEditor() {
-  const { expert: ctxExpert, isApproved } = useExpertAccess();
+  const { expert: ctxExpert } = useExpertAccess();
   const supabase = useSupabase();
 
   const [loading, setLoading] = useState(true);
@@ -346,8 +345,7 @@ export function ExpertProfileEditor() {
 
   return (
     <div className="min-h-screen bg-[#070b1f] text-white">
-      <SidebarExpert restricted={!isApproved} />
-      <main className="min-h-screen lg:pl-[260px]">
+      <main className="min-h-screen">
         <div className="mx-auto max-w-5xl px-6 py-10 pb-24">
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>

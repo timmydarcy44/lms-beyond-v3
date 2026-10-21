@@ -1,0 +1,18 @@
+.expert-theme {
+  min-height: 100vh;
+  background: #07080b;
+  color: #f4f5f7;
+  color-scheme: dark;
+}
+
+.expert-theme input,
+.expert-theme select,
+.expert-theme textarea {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #f4f5f7;
+}
+
+.expert-theme input::placeholder,
+.expert-theme textarea::placeholder {
+  color: rgba(244, 245, 247, 0.35);
+}

@@ -139,6 +139,7 @@ export type CourseBuilderGeneralInfo = {
   /** Formation créée depuis /super : elle appartient à Byound, pas à un formateur. */
   publisher?: "byound";
   objectifs?: string[];
+  prerequisites?: string[];
   target_audience?: "pro" | "apprenant" | "all";
   /** Espaces où la formation Byound est proposée. */
   visible_surfaces?: Array<"apprenant" | "entreprise" | "expert">;

@@ -12,7 +12,7 @@ import {
   writeJadeOverrides,
   type JadeOverrides,
 } from "@/lib/expert/space-server";
-import { slotsOverlap, type ExpertMission, type SlotFormat } from "@/lib/expert/space-model";
+import { encodeSlotRule, slotsOverlap, type ExpertMission, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 import { getServerClient } from "@/lib/supabase/server";
 
 const decisionSchema = z.object({
@@ -25,6 +25,7 @@ const slotSchema = z.object({
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
   format: z.enum(["visio", "presentiel"]),
+  kind: z.enum(["indisponible", "rendez_vous", "formation"]),
   location: z.string().trim().max(120).optional(),
   weekly: z.boolean().optional(),
 });
@@ -144,6 +145,7 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
           startsAt: slot.startsAt,
           endsAt: slot.endsAt,
           format: parsed.format as SlotFormat,
+          kind: parsed.kind as SlotKind,
           location,
           missionId: null,
           title: null,
@@ -162,7 +164,7 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
     format: parsed.format,
     location,
     mission_id: null,
-    recurrence_rule: parsed.weekly ? "WEEKLY" : null,
+    recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly)),
   }));
   const { error } = await supabase.from("expert_slots").insert(rows);
   if (error) {

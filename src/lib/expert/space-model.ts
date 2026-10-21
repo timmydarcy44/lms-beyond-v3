@@ -1,6 +1,7 @@
 export type MissionStatus = "nouvelle" | "acceptee" | "planifiee" | "terminee" | "annulee";
 export type MissionBilling = "paid" | "to_invoice" | "upcoming" | "none";
 export type SlotFormat = "visio" | "presentiel";
+export type SlotKind = "indisponible" | "rendez_vous" | "formation";
 
 export type ExpertMission = {
   id: string;
@@ -23,11 +24,23 @@ export type ExpertSlot = {
   startsAt: string;
   endsAt: string;
   format: SlotFormat;
+  kind: SlotKind;
   location: string;
   missionId: string | null;
   title: string | null;
   client: string | null;
 };
+
+export function slotKindFromRule(rule: unknown): SlotKind {
+  const value = String(rule ?? "");
+  if (value.includes("indisponible")) return "indisponible";
+  if (value.includes("formation")) return "formation";
+  return "rendez_vous";
+}
+
+export function encodeSlotRule(kind: SlotKind, weekly: boolean) {
+  return weekly ? `${kind}|WEEKLY` : kind;
+}
 
 export type ExpertDocumentItem = {
   id: string;

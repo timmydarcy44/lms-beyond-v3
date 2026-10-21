@@ -120,7 +120,13 @@ export function CertifiedView({
         ) : (
           <ul className="grid gap-3 md:grid-cols-2">
             {formations.map((course) => (
-              <li key={course.id} className="rounded-[24px] bg-[#1E2130] p-4">
+              <li key={course.id} className="overflow-hidden rounded-[24px] bg-[#1E2130]">
+                {course.coverUrl ? (
+                  <span className="block h-40 bg-cover bg-center" style={{ backgroundImage: `url(${course.coverUrl})` }} />
+                ) : (
+                  <span className="block h-40 bg-[#12141A]" />
+                )}
+                <div className="p-4">
                 <p className="font-extrabold text-[#F4F5F7]">{course.title}</p>
                 {course.subtitle ? <p className="mt-1 text-sm text-[#B5BAC6]">{course.subtitle}</p> : null}
                 <p className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-[#FF4B4B]">{course.price}</p>
@@ -129,6 +135,7 @@ export function CertifiedView({
                     Voir la formation
                   </a>
                 ) : null}
+                </div>
               </li>
             ))}
           </ul>

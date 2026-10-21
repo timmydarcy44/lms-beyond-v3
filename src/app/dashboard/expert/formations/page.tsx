@@ -14,7 +14,13 @@ export default async function ExpertFormationsPage() {
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {courses.map((course) => (
-            <li key={course.id} className="flex flex-col rounded-[28px] bg-[#12141A] p-6">
+            <li key={course.id} className="flex flex-col overflow-hidden rounded-[28px] bg-[#12141A]">
+              {course.coverUrl ? (
+                <span className="block h-44 bg-cover bg-center" style={{ backgroundImage: `url(${course.coverUrl})` }} />
+              ) : (
+                <span className="block h-44 bg-[#1E2130]" />
+              )}
+              <div className="flex flex-1 flex-col p-6">
               <p className="text-2xl font-extrabold tracking-[-0.03em] text-[#F4F5F7]">{course.title}</p>
               {course.subtitle ? <p className="mt-2 text-sm text-[#B5BAC6]">{course.subtitle}</p> : null}
               <p className="mt-5 text-4xl font-extrabold tracking-[-0.04em] text-[#FF4B4B]">{course.price}</p>
@@ -23,6 +29,7 @@ export default async function ExpertFormationsPage() {
                   <ExpertPrimaryButton href={course.href}>Voir la formation</ExpertPrimaryButton>
                 </div>
               ) : null}
+              </div>
             </li>
           ))}
         </ul>

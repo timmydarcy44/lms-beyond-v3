@@ -8,13 +8,11 @@ import { Manrope } from "next/font/google";
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
-  Bell,
   CalendarDays,
   ClipboardList,
   Euro,
   BookOpen,
   FileText,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   Lock,
@@ -24,7 +22,6 @@ import {
   X,
 } from "lucide-react";
 
-import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
@@ -174,8 +171,6 @@ export function ExpertShell({
     { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, badge: counts.documents },
     { label: "Formations", href: "/dashboard/expert/formations", icon: BookOpen },
     { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
-    { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap, external: true },
-    { label: "Notifications", href: "/dashboard/expert/notifications", icon: Bell },
     { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
   ];
 

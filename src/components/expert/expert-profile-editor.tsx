@@ -130,6 +130,12 @@ export function ExpertProfileEditor() {
   }, [ctxExpert, hydrateFromRow]);
 
   useEffect(() => {
+    if (loading) return;
+    if (window.location.hash !== "#tarif") return;
+    document.getElementById("tarif")?.scrollIntoView({ block: "center" });
+  }, [loading]);
+
+  useEffect(() => {
     let cancelled = false;
     async function refresh() {
       try {
@@ -449,9 +455,23 @@ export function ExpertProfileEditor() {
                   <input value={email} readOnly className="sm:col-span-2 rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3 text-sm text-white/55" />
                   <input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="Headline" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
                   <input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn (URL)" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
-                  <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Site internet / portfolio" className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
-                  <input value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="Tarif journalier (€)" className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
+                  <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Site internet / portfolio" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
                 </div>
+              </section>
+
+              <section id="tarif" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
+                <h2 className="text-sm font-semibold">Tarif journalier</h2>
+                <p className="mt-1 text-xs text-white/45">Montant en euros pour une journée. Il reste privé et n&apos;apparaît pas sur le profil public.</p>
+                <label className="mt-5 block text-xs font-medium text-white/70">
+                  Tarif journalier (€)
+                  <input
+                    value={dailyRate}
+                    onChange={(e) => setDailyRate(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="Ex. 650"
+                    className="mt-2 w-full max-w-xs rounded-2xl border border-white/15 bg-[#1E2130] px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#FF4B4B]"
+                  />
+                </label>
               </section>
 
               <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">

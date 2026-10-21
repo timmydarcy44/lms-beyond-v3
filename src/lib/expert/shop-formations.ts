@@ -6,6 +6,7 @@ export type ExpertShopFormation = {
   subtitle: string;
   price: string;
   href: string | null;
+  coverUrl: string | null;
 };
 
 type CourseRow = {
@@ -20,8 +21,11 @@ type CourseRow = {
       price?: number;
       publisher?: string;
       visible_surfaces?: string[];
+      cover_image?: string;
+      heroImage?: string;
     };
   } | null;
+  cover_image?: string | null;
 };
 
 function formatPrice(value: number | null) {
@@ -34,7 +38,7 @@ export async function loadExpertShopFormations(): Promise<ExpertShopFormation[]>
   if (!db) return [];
   const { data } = await db
     .from("courses")
-    .select("id, title, slug, price, status, builder_snapshot")
+    .select("id, title, slug, price, status, cover_image, builder_snapshot")
     .eq("status", "published")
     .limit(400);
   const courses: ExpertShopFormation[] = [];
@@ -49,6 +53,7 @@ export async function loadExpertShopFormations(): Promise<ExpertShopFormation[]>
       subtitle: general.subtitle?.trim() || "",
       price: formatPrice(typeof amount === "number" ? amount : null),
       href: row.slug ? `/catalog/formations/${row.slug}` : null,
+      coverUrl: general.cover_image || general.heroImage || row.cover_image || null,
     });
   }
   return courses;

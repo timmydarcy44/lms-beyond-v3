@@ -100,7 +100,7 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
             </div>
           </section>
           {profile.sections.filter((section) => !section.filled).map((section) => (
-            <a key={section.id} href="/dashboard/expert/profile?edit=1" className="block rounded-[24px] bg-[#3A1418] px-4 py-4 text-sm font-extrabold text-[#FFB4B8]">
+            <a key={section.id} href={section.id === "tarif" ? "/dashboard/expert/profile?edit=1#tarif" : "/dashboard/expert/profile?edit=1"} className="block rounded-[24px] bg-[#3A1418] px-4 py-4 text-sm font-extrabold text-[#FFB4B8]">
               + {section.missing}
             </a>
           ))}
@@ -112,7 +112,7 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
           <ul className="divide-y divide-[#1E2130]">
             {profile.sections.filter((section) => section.id !== "bio").map((section) => (
               <li key={section.id}>
-                <a href="/dashboard/expert/profile?edit=1" className="flex min-h-[64px] items-center gap-3 py-3">
+                <a href={section.id === "tarif" ? "/dashboard/expert/profile?edit=1#tarif" : "/dashboard/expert/profile?edit=1"} className="flex min-h-[64px] items-center gap-3 py-3">
                   <span className="w-[150px] shrink-0 text-sm text-[#9096A3]">{section.label}</span>
                   <span className="flex min-w-0 flex-1 flex-wrap gap-2">
                     {section.values.length ? (

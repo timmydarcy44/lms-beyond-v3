@@ -19,6 +19,7 @@ import {
   type MissionStatus,
   type ProfileSectionId,
   type ProfileVisibility,
+  slotKindFromRule,
   type SlotFormat,
 } from "@/lib/expert/space-model";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -356,7 +357,10 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     .order("scheduled_at", { ascending: true });
   const missions = (requests.error ? [] : (requests.data ?? [])).map((row) => mapMission(row as Record<string, unknown>, firstName)).filter((mission) => mission.status !== "annulee");
 
-  const slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id").eq("expert_id", session.id);
+  let slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id,recurrence_rule").eq("expert_id", session.id);
+  if (slotQuery.error && /recurrence_rule|column/i.test(slotQuery.error.message ?? "")) {
+    slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id").eq("expert_id", session.id);
+  }
   const slots: ExpertSlot[] = tableMissing(slotQuery.error)
     ? []
     : ((slotQuery.data ?? []) as Array<Record<string, unknown>>).map((slot) => {
@@ -366,6 +370,7 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
           startsAt: String(slot.starts_at),
           endsAt: String(slot.ends_at),
           format: asFormat(slot.format),
+          kind: slotKindFromRule(slot.recurrence_rule),
           location: String(slot.location ?? ""),
           missionId: slot.mission_id ? String(slot.mission_id) : null,
           title: mission?.title ?? null,

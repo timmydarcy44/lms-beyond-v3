@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { createExpertSlot, saveAgendaSettings } from "@/app/dashboard/expert/space-actions";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton, HeroCard, SegmentBar, StatusPill } from "@/components/expert/expert-ui";
-import { addDays, isSameDay, longDayLabel, weekdayShort, type ExpertSlot, type SlotFormat } from "@/lib/expert/space-model";
+import { addDays, isSameDay, longDayLabel, weekdayShort, type ExpertSlot, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 
 export function AgendaView({
   slots,
@@ -26,7 +26,7 @@ export function AgendaView({
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
   const horizonEnd = addDays(today, 7);
   const upcoming = slots.filter((slot) => { const date = new Date(slot.startsAt); return date >= today && date < horizonEnd; });
-  const free = upcoming.filter((slot) => !slot.missionId);
+  const free = upcoming.filter((slot) => !slot.missionId && slot.kind !== "indisponible");
   const daySlots = slots.filter((slot) => isSameDay(new Date(slot.startsAt), selected)).sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
 
   return (
@@ -60,17 +60,21 @@ export function AgendaView({
               <EmptyState title="Aucun créneau ce jour-là" action={<ExpertPrimaryButton onClick={() => setOpen(true)}>Ouvrir un créneau</ExpertPrimaryButton>} />
             ) : daySlots.map((slot) => {
               const occupied = Boolean(slot.missionId);
+              const kind = slot.kind ?? "rendez_vous";
+              const blocked = kind === "indisponible";
               const startLabel = new Date(slot.startsAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
               const endLabel = new Date(slot.endsAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+              const label = occupied ? slot.title : blocked ? "Indisponible" : kind === "formation" ? "Formation" : "Rendez-vous";
+              const pill = occupied ? "Occupé" : blocked ? "Indisponible" : kind === "formation" ? "Formation" : "Rendez-vous";
               return (
-                <article key={slot.id} className={`flex items-center gap-4 rounded-[22px] px-4 py-4 ${occupied ? "bg-[#1E2130]" : "border border-dashed border-[#262A36]"}`}>
-                  {occupied ? <span className="h-12 w-1 rounded-full bg-[#FF4B4B]" /> : null}
+                <article key={slot.id} className={`flex items-center gap-4 rounded-[22px] px-4 py-4 ${occupied || blocked ? "bg-[#1E2130]" : "border border-dashed border-[#262A36]"}`}>
+                  {!blocked ? <span className="h-12 w-1 rounded-full bg-[#FF4B4B]" /> : null}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-[#B5BAC6]">{startLabel} – {endLabel}</p>
-                    <p className="text-base font-extrabold">{occupied ? slot.title : "Créneau libre"}</p>
-                    <p className="text-sm text-[#9096A3]">{occupied ? `${slot.client} · ${slot.location}` : slot.location || "Visio"}</p>
+                    <p className="text-base font-extrabold">{label}</p>
+                    <p className="text-sm text-[#9096A3]">{occupied ? `${slot.client} · ${slot.location}` : blocked ? "Aucun rendez-vous possible" : slot.location || "Visio"}</p>
                   </div>
-                  <StatusPill tone={occupied ? "grey" : "solid"}>{occupied ? "Occupé" : "Libre"}</StatusPill>
+                  <StatusPill tone={blocked ? "alert" : occupied ? "grey" : kind === "formation" ? "blue" : "solid"}>{pill}</StatusPill>
                 </article>
               );
             })}
@@ -81,7 +85,7 @@ export function AgendaView({
             <p className="text-sm font-semibold text-[#B5BAC6]">Créneaux libres · 7 prochains jours</p>
             <p className="mt-2 text-[64px] font-extrabold leading-none tracking-[-0.05em]">{free.length} <span className="text-[28px] text-[#9096A3]">/ {upcoming.length}</span></p>
             <div className="mt-4"><SegmentBar total={Math.max(upcoming.length, 1)} filled={free.length} /></div>
-            <p className="mt-4 text-sm text-[#B5BAC6]">Les entreprises et l'école ne peuvent vous proposer une mission que sur vos créneaux libres.</p>
+            <p className="mt-4 text-sm text-[#B5BAC6]">Un créneau Indisponible bloque les rendez-vous. Rendez-vous et Formation restent ouverts à la réservation.</p>
             <div className="mt-5"><ExpertPrimaryButton onClick={() => setOpen(true)}>Ajouter un créneau</ExpertPrimaryButton></div>
           </HeroCard>
           <section className="space-y-4 rounded-[28px] bg-[#12141A] p-5">
@@ -129,6 +133,7 @@ function SlotModal({ date, format, onClose }: { date: Date; format: SlotFormat; 
             start: String(form.get("start")),
             end: String(form.get("end")),
             format: String(form.get("format")) as SlotFormat,
+            kind: String(form.get("kind")) as SlotKind,
             location: String(form.get("location") ?? ""),
             weekly: form.get("weekly") === "on",
           }).then((result) => {
@@ -147,6 +152,7 @@ function SlotModal({ date, format, onClose }: { date: Date; format: SlotFormat; 
             <label className="text-sm text-[#B5BAC6]">Début<input name="start" type="time" defaultValue="09:00" required className="mt-1 w-full rounded-2xl bg-[#1E2130] px-3 py-2" /></label>
             <label className="text-sm text-[#B5BAC6]">Fin<input name="end" type="time" defaultValue="12:00" required className="mt-1 w-full rounded-2xl bg-[#1E2130] px-3 py-2" /></label>
           </div>
+          <label className="text-sm text-[#B5BAC6]">Type<select name="kind" defaultValue="rendez_vous" className="mt-1 w-full rounded-2xl bg-[#1E2130] px-3 py-2"><option value="rendez_vous">Rendez-vous</option><option value="formation">Formation</option><option value="indisponible">Indisponible</option></select></label>
           <label className="text-sm text-[#B5BAC6]">Format<select name="format" defaultValue={format} className="mt-1 w-full rounded-2xl bg-[#1E2130] px-3 py-2"><option value="visio">Visio</option><option value="presentiel">Présentiel</option></select></label>
           <label className="text-sm text-[#B5BAC6]">Lieu<input name="location" placeholder="Visio ou ville" className="mt-1 w-full rounded-2xl bg-[#1E2130] px-3 py-2" /></label>
           <label className="flex items-center gap-2 text-sm"><input name="weekly" type="checkbox" /> Récurrence hebdomadaire</label>

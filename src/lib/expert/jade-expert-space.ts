@@ -131,12 +131,12 @@ export function buildJadeSlots(now = new Date()): ExpertSlot[] {
   const atelier = byId("jade-atelier-2");
   const ines = byId("jade-ines");
   return [
-    { id: "slot-entretien", startsAt: entretien.startsAt, endsAt: entretien.endsAt, format: "visio", location: "Visio", missionId: entretien.id, title: entretien.title, client: entretien.client },
-    { id: "slot-prep", startsAt: atHour(day(now, 2), 14), endsAt: atHour(day(now, 2), 15), format: "visio", location: "Visio", missionId: entretien.id, title: "Préparation entretien", client: entretien.client },
-    { id: "slot-atelier", startsAt: atelier.startsAt, endsAt: atelier.endsAt, format: "presentiel", location: "Le Havre", missionId: atelier.id, title: atelier.title, client: atelier.client },
-    { id: "slot-ines", startsAt: ines.startsAt, endsAt: ines.endsAt, format: "visio", location: "Visio", missionId: ines.id, title: ines.title, client: ines.client },
-    { id: "slot-free-1", startsAt: atHour(day(now, 1), 9), endsAt: atHour(day(now, 1), 12), format: "visio", location: "Visio", missionId: null, title: null, client: null },
-    { id: "slot-free-2", startsAt: atHour(day(now, 5), 14), endsAt: atHour(day(now, 5), 17), format: "visio", location: "Visio", missionId: null, title: null, client: null },
+    { id: "slot-entretien", startsAt: entretien.startsAt, endsAt: entretien.endsAt, format: "visio", kind: "rendez_vous", location: "Visio", missionId: entretien.id, title: entretien.title, client: entretien.client },
+    { id: "slot-prep", startsAt: atHour(day(now, 2), 14), endsAt: atHour(day(now, 2), 15), format: "visio", kind: "rendez_vous", location: "Visio", missionId: entretien.id, title: "Préparation entretien", client: entretien.client },
+    { id: "slot-atelier", startsAt: atelier.startsAt, endsAt: atelier.endsAt, format: "presentiel", kind: "formation", location: "Le Havre", missionId: atelier.id, title: atelier.title, client: atelier.client },
+    { id: "slot-ines", startsAt: ines.startsAt, endsAt: ines.endsAt, format: "visio", kind: "rendez_vous", location: "Visio", missionId: ines.id, title: ines.title, client: ines.client },
+    { id: "slot-free-1", startsAt: atHour(day(now, 1), 9), endsAt: atHour(day(now, 1), 12), format: "visio", kind: "rendez_vous", location: "Visio", missionId: null, title: null, client: null },
+    { id: "slot-free-2", startsAt: atHour(day(now, 5), 14), endsAt: atHour(day(now, 5), 17), format: "presentiel", kind: "formation", location: "Le Havre", missionId: null, title: null, client: null },
   ];
 }
 

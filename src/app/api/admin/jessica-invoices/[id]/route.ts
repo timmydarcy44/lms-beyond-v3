@@ -4,6 +4,41 @@ import { assertJessicaAdmin } from "@/lib/jessica-contentin/assert-jessica-admin
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+export async function PATCH(req: NextRequest, context: RouteContext) {
+  const user = await assertJessicaAdmin();
+  if (!user) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+
+  const { id } = await context.params;
+  if (!id?.trim()) {
+    return NextResponse.json({ error: "Identifiant manquant" }, { status: 400 });
+  }
+
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const includeRpps = body?.include_rpps === true || body?.includeRpps === true;
+
+  const supabase = getServiceRoleClient();
+  if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const { data, error } = await supabase
+    .from("jessica_invoices")
+    .update({ include_rpps: includeRpps })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    if (error.code === "42703" || /include_rpps/i.test(error.message ?? "")) {
+      return NextResponse.json(
+        { error: "Collez d'abord le script SQL des factures Jessica (colonne include_rpps)." },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ invoice: data });
+}
+
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   const user = await assertJessicaAdmin();
   if (!user) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });

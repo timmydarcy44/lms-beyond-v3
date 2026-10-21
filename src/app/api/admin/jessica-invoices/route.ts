@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Montant invalide" }, { status: 400 });
   }
 
+  const includeRpps = body?.include_rpps === true || body?.includeRpps === true;
   const today = new Date().toISOString().slice(0, 10);
   const firstDate = lineItems[0]?.service_date ?? today;
 
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest) {
     invoice_date: today,
     consultation_date: firstDate,
     created_by: user.id,
+    include_rpps: includeRpps,
   };
 
   let { data, error } = await supabase.from("jessica_invoices").insert(payload).select("*").single();
@@ -142,9 +144,20 @@ export async function POST(req: NextRequest) {
   if (error?.code === "23505") {
     const match = invoiceNumber.match(/FAC(\d+)/i);
     invoiceNumber = `FAC${(match ? Number(match[1]) : 1803) + 1}`;
+    payload.invoice_number = invoiceNumber;
     ({ data, error } = await supabase
       .from("jessica_invoices")
-      .insert({ ...payload, invoice_number: invoiceNumber })
+      .insert(payload)
+      .select("*")
+      .single());
+  }
+
+  if (error && isMissingIncludeRppsColumn(error)) {
+    const withoutRpps = { ...payload };
+    delete withoutRpps.include_rpps;
+    ({ data, error } = await supabase
+      .from("jessica_invoices")
+      .insert(withoutRpps)
       .select("*")
       .single());
   }
@@ -153,6 +166,7 @@ export async function POST(req: NextRequest) {
     const withoutExtras = { ...payload };
     delete withoutExtras.section_title;
     delete withoutExtras.line_items;
+    delete withoutExtras.include_rpps;
     ({ data, error } = await supabase
       .from("jessica_invoices")
       .insert(withoutExtras)
@@ -164,4 +178,8 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ invoice: data });
+}
+
+function isMissingIncludeRppsColumn(error: { code?: string; message?: string }): boolean {
+  return error.code === "42703" || /include_rpps/i.test(error.message ?? "");
 }

@@ -54,11 +54,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     );
   }
 
-  const result = await sendJessicaInvoiceEmail(invoice as JessicaStoredInvoice, {
-    recipientEmail: recipient,
-    subject,
-    bodyText,
-  });
+  const includeRpps =
+    body?.include_rpps === true || body?.includeRpps === true
+      ? true
+      : body?.include_rpps === false || body?.includeRpps === false
+        ? false
+        : (invoice as JessicaStoredInvoice).include_rpps === true;
+
+  const result = await sendJessicaInvoiceEmail(
+    { ...(invoice as JessicaStoredInvoice), include_rpps: includeRpps },
+    {
+      recipientEmail: recipient,
+      subject,
+      bodyText,
+    },
+  );
   if (!result.success) {
     return NextResponse.json({ error: result.error ?? "Envoi impossible" }, { status: 502 });
   }

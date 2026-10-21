@@ -85,6 +85,7 @@ export default async function JessicaFacturesPage() {
     invoice_date: string;
     consultation_date: string | null;
     created_at: string;
+    include_rpps?: boolean | null;
   }> = [];
 
   if (service) {

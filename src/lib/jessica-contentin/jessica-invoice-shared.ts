@@ -57,6 +57,7 @@ export type JessicaStoredInvoice = {
   payment_method: string;
   invoice_date: string;
   consultation_date?: string | null;
+  include_rpps?: boolean | null;
 };
 
 export function storedInvoiceToPdfInput(invoice: JessicaStoredInvoice) {
@@ -74,5 +75,6 @@ export function storedInvoiceToPdfInput(invoice: JessicaStoredInvoice) {
     consultationDate: new Date(invoice.consultation_date ?? invoice.invoice_date),
     paymentMethod: invoice.payment_method,
     designation: invoice.designation,
+    includeRpps: invoice.include_rpps === true,
   };
 }

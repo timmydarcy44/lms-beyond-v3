@@ -62,6 +62,7 @@ type StoredInvoice = {
   invoice_date: string;
   consultation_date: string | null;
   created_at: string;
+  include_rpps?: boolean | null;
 };
 
 function priceCentsToDraft(cents: number): string {
@@ -132,7 +133,9 @@ export function JessicaFacturesClient({
   const [priceDrafts, setPriceDrafts] = useState<string[]>(() =>
     [emptyInvoiceLine()].map((l) => priceCentsToDraft(l.unit_price_cents)),
   );
+  const [includeRpps, setIncludeRpps] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [rppsSavingId, setRppsSavingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState(initialInvoices);
@@ -203,19 +206,48 @@ export function JessicaFacturesClient({
           client_user_id: selected.id.startsWith("user:") ? selected.id.slice(5) : null,
           section_title: sectionTitle,
           line_items: validLines,
+          include_rpps: includeRpps,
         }),
       });
       const json = (await res.json()) as { invoice?: StoredInvoice; error?: string };
       if (!res.ok || !json.invoice) throw new Error(json.error ?? "Création impossible");
 
-      const invoice = json.invoice;
+      const invoice = { ...json.invoice, include_rpps: json.invoice.include_rpps === true || includeRpps };
       downloadJessicaInvoicePdf(storedInvoiceToPdfInput(invoice));
       setInvoices((prev) => [invoice, ...prev]);
+      setIncludeRpps(false);
+      if (includeRpps && json.invoice.include_rpps !== true) {
+        toast.message("Le PDF inclut le RPPS. Collez le script SQL pour que la case reste cochée après rechargement.");
+      }
       toast.success(`Facture ${invoice.invoice_number} générée`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Création impossible");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const setInvoiceRpps = async (invoice: StoredInvoice, checked: boolean) => {
+    setInvoices((prev) => prev.map((row) => (row.id === invoice.id ? { ...row, include_rpps: checked } : row)));
+    setRppsSavingId(invoice.id);
+    try {
+      const res = await fetch(`/api/admin/jessica-invoices/${invoice.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ include_rpps: checked }),
+      });
+      const json = (await res.json()) as { invoice?: StoredInvoice; error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Enregistrement impossible");
+      if (json.invoice) {
+        setInvoices((prev) => prev.map((row) => (row.id === invoice.id ? { ...row, ...json.invoice } : row)));
+      }
+    } catch (e) {
+      setInvoices((prev) =>
+        prev.map((row) => (row.id === invoice.id ? { ...row, include_rpps: invoice.include_rpps === true } : row)),
+      );
+      toast.error(e instanceof Error ? e.message : "Enregistrement impossible");
+    } finally {
+      setRppsSavingId(null);
     }
   };
 
@@ -253,6 +285,7 @@ export function JessicaFacturesClient({
           email: to,
           subject: sendSubject.trim(),
           body_text: sendBody.trim(),
+          include_rpps: sendInvoiceDraft.include_rpps === true,
         }),
       });
       const json = (await res.json()) as { error?: string; sentTo?: string };
@@ -520,6 +553,21 @@ export function JessicaFacturesClient({
             ))}
           </div>
 
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-black/[0.08] bg-white px-4 py-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-black"
+              checked={includeRpps}
+              onChange={(e) => setIncludeRpps(e.target.checked)}
+            />
+            <span>
+              <span className="block text-sm font-medium text-black">Mettre le numéro RPPS</span>
+              <span className="block text-xs text-neutral-500">
+                N°RPPS : 10109804632 — décoché, la facture reste sans ce numéro.
+              </span>
+            </span>
+          </label>
+
           <div className="flex items-center justify-between rounded-xl border border-black/[0.06] bg-white px-4 py-3">
             <span className="text-sm font-medium text-neutral-600">Total TTC</span>
             <span className="text-lg font-semibold text-black">{totalEuros.toFixed(2)} €</span>
@@ -584,6 +632,16 @@ export function JessicaFacturesClient({
                     {inv.designation ? ` · ${inv.designation}` : ""}
                     {inv.client_email ? ` · ${inv.client_email}` : " · pas d'email"}
                   </p>
+                  <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-xs text-neutral-600">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 accent-black"
+                      checked={inv.include_rpps === true}
+                      disabled={rppsSavingId === inv.id}
+                      onChange={(e) => void setInvoiceRpps(inv, e.target.checked)}
+                    />
+                    Mettre le numéro RPPS
+                  </label>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   <Button

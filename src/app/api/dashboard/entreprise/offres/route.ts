@@ -92,9 +92,68 @@ export async function GET() {
     };
   });
 
+  const pathIds = internal.map((path) => path.id);
+  const enrolledByPath = new Map<string, number>();
+  let recentEnrollments: Array<{
+    id: string;
+    offer_id: string;
+    offer_title: string;
+    name: string;
+    created_at: string | null;
+    href: string;
+  }> = [];
+  if (pathIds.length > 0) {
+    const { data: enrollments } = await service
+      .from("path_enrollments")
+      .select("user_id, path_id, created_at")
+      .in("path_id", pathIds);
+    for (const row of enrollments ?? []) {
+      const pathId = String(row.path_id ?? "");
+      if (!pathId) continue;
+      enrolledByPath.set(pathId, (enrolledByPath.get(pathId) ?? 0) + 1);
+    }
+    const latest = [...(enrollments ?? [])]
+      .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
+      .slice(0, 6);
+    const userIds = [...new Set(latest.map((row) => String(row.user_id ?? "")).filter(Boolean))];
+    const names = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: people } = await service.from("profiles").select("id, first_name, last_name, full_name").in("id", userIds);
+      for (const person of people ?? []) {
+        const full = [person.first_name, person.last_name].filter(Boolean).join(" ").trim() || String(person.full_name ?? "").trim();
+        if (full) names.set(String(person.id), full);
+      }
+    }
+    const titles = new Map(internal.map((path) => [path.id, path.title]));
+    recentEnrollments = latest.map((row) => {
+      const pathId = String(row.path_id ?? "");
+      const userId = String(row.user_id ?? "");
+      return {
+        id: `${pathId}-${userId}`,
+        offer_id: pathId,
+        offer_title: titles.get(pathId) ?? "",
+        name: names.get(userId) || "Apprenant",
+        created_at: (row.created_at as string | null) ?? null,
+        href: `/dashboard/formateur/parcours/${pathId}`,
+      };
+    });
+  }
+
+  const formationCards = internal.map((path) => ({
+    id: path.id,
+    title: path.title,
+    status: path.raw_status,
+    enrolled: enrolledByPath.get(path.id) ?? 0,
+    seats: null as number | null,
+    updated_at: path.updated_at,
+    href: `/dashboard/formateur/parcours/${path.id}`,
+  }));
+
   return NextResponse.json({
     organisation: { id: orgId, name: String((org as { name?: string })?.name ?? ""), edge_tier: tier },
     internal_formations: internal,
+    formation_cards: formationCards,
+    recent_enrollments: recentEnrollments,
     edge_catalogue: catalogue,
     edge_tier: tier,
   });

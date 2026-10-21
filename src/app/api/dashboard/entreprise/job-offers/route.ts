@@ -1,4 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
+import { jadeOffresPayload } from "@/lib/demo/jade-dashboard-mocks";
+import {
+  applicationStage,
+  demoApplicationRows,
+  fetchApplications,
+  summarizeApplications,
+  type LoadedApplication,
+} from "@/lib/entreprise/application-stage";
 import {
   EDGEBS_DEMO_JOB_OFFERS,
   EDGEBS_ORG_ID,
@@ -21,22 +30,59 @@ type OfferRow = {
   created_at: string | null;
 };
 
+function offerFromApplications(offer: {
+  id: string;
+  title: string;
+  description: string;
+  city: string;
+  salary_range: string;
+  contract_type: string;
+  status: string;
+}, rows: LoadedApplication[]) {
+  const summary = summarizeApplications(rows);
+  return {
+    id: offer.id,
+    title: offer.title,
+    description: offer.description,
+    city: offer.city,
+    salary_range: offer.salary_range,
+    contract_type: offer.contract_type,
+    status: offer.status,
+    school_id: EDGEBS_ORG_ID,
+    created_at: new Date().toISOString(),
+    applications_count: summary.total,
+    unread_count: summary.unread,
+    stages: summary.stages,
+    demo: true,
+  };
+}
+
 function demoOffersPayload() {
   return {
-    offers: EDGEBS_DEMO_JOB_OFFERS.map((o) => ({
-      id: o.id,
-      title: o.title,
-      description: o.description,
-      city: o.city,
-      salary_range: o.salary_range,
-      contract_type: o.contract_type,
-      status: o.status,
-      school_id: EDGEBS_ORG_ID,
-      created_at: new Date().toISOString(),
-      applications_count: o.applications_count,
-      demo: true,
-    })),
+    offers: EDGEBS_DEMO_JOB_OFFERS.map((offer) => offerFromApplications(offer, demoApplicationRows(offer.id))),
+    recent: recentFromRows(EDGEBS_DEMO_JOB_OFFERS.flatMap((offer) => demoApplicationRows(offer.id)), new Map(
+      EDGEBS_DEMO_JOB_OFFERS.map((offer) => [offer.id, offer.title]),
+    )),
   };
+}
+
+function recentFromRows(rows: LoadedApplication[], titles: Map<string, string>, names = new Map<string, string>()) {
+  return rows
+    .map((row) => ({ row, stage: applicationStage(row) }))
+    .filter((item) => item.stage !== "rejected")
+    .sort((a, b) => String(b.row.created_at ?? "").localeCompare(String(a.row.created_at ?? "")))
+    .slice(0, 6)
+    .map(({ row, stage }) => ({
+      id: row.id,
+      offer_id: row.job_id,
+      offer_title: titles.get(row.job_id) ?? "",
+      name: row.name || names.get(row.talent_id ?? "") || "Candidat",
+      created_at: row.created_at,
+      stage,
+      href: row.talent_id
+        ? `/dashboard/entreprise/offres/${row.job_id}/candidats/${row.talent_id}`
+        : `/dashboard/entreprise/offres/${row.job_id}`,
+    }));
 }
 
 export async function GET() {
@@ -49,6 +95,9 @@ export async function GET() {
   }
   if ("configurationRequired" in access && access.configurationRequired) {
     return NextResponse.json({ error: "Organisation non configurée", needsOnboarding: true }, { status: 400 });
+  }
+  if (isJadeDemoEmail(access.viewer.email)) {
+    return NextResponse.json(jadeOffresPayload());
   }
 
   const edgebsDemo =
@@ -71,37 +120,53 @@ export async function GET() {
   }
 
   const offers = (data ?? []) as OfferRow[];
-  const offerIds = offers.map((offer) => offer.id);
-
-  let countsByOffer = new Map<string, number>();
-  if (offerIds.length > 0) {
-    const { data: applications } = await service
-      .from("applications")
-      .select("job_id")
-      .in("job_id", offerIds);
-
-    countsByOffer = new Map<string, number>();
-    for (const row of applications ?? []) {
-      const offerId = String((row as { job_id?: string | null }).job_id ?? "");
-      if (!offerId) continue;
-      countsByOffer.set(offerId, (countsByOffer.get(offerId) ?? 0) + 1);
-    }
-  }
-
-  const dbOffers = offers.map((offer) => ({
-    ...offer,
-    applications_count: countsByOffer.get(offer.id) ?? 0,
-  }));
+  const applications = await fetchApplications(service, offers.map((offer) => offer.id));
+  const titles = new Map(offers.map((offer) => [offer.id, offer.title ?? ""]));
+  const names = await profileNames(service, applications.map((row) => row.talent_id));
+  const dbOffers = offers.map((offer) => {
+    const summary = summarizeApplications(applications.filter((row) => row.job_id === offer.id));
+    return {
+      ...offer,
+      applications_count: summary.total,
+      unread_count: summary.unread,
+      stages: summary.stages,
+    };
+  });
 
   if (edgebsDemo) {
-    const demo = demoOffersPayload().offers;
-    const demoIds = new Set(demo.map((o) => o.id));
+    const demo = demoOffersPayload();
+    const demoIds = new Set(demo.offers.map((offer) => offer.id));
+    const visible = dbOffers.filter((offer) => !demoIds.has(offer.id));
+    const visibleIds = new Set(visible.map((offer) => offer.id));
     return NextResponse.json({
-      offers: [...demo, ...dbOffers.filter((o) => !demoIds.has(o.id))],
+      offers: [...demo.offers, ...visible],
+      recent: recentFromRows(
+        [
+          ...EDGEBS_DEMO_JOB_OFFERS.flatMap((offer) => demoApplicationRows(offer.id)),
+          ...applications.filter((row) => visibleIds.has(row.job_id)),
+        ],
+        new Map([...titles, ...EDGEBS_DEMO_JOB_OFFERS.map((offer) => [offer.id, offer.title] as const)]),
+        names,
+      ),
     });
   }
 
-  return NextResponse.json({ offers: dbOffers });
+  return NextResponse.json({
+    offers: dbOffers,
+    recent: recentFromRows(applications, titles, names),
+  });
+}
+
+async function profileNames(service: NonNullable<ReturnType<typeof getServiceRoleClient>>, talentIds: Array<string | null>) {
+  const ids = [...new Set(talentIds.filter((id): id is string => Boolean(id)))];
+  const names = new Map<string, string>();
+  if (ids.length === 0) return names;
+  const { data } = await service.from("profiles").select("id, first_name, last_name, full_name").in("id", ids);
+  for (const row of data ?? []) {
+    const full = [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || String(row.full_name ?? "").trim();
+    if (full) names.set(String(row.id), full);
+  }
+  return names;
 }
 
 export async function POST(request: NextRequest) {

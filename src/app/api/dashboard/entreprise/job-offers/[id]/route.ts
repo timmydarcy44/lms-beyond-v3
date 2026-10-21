@@ -7,6 +7,7 @@ import {
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { buildJadeOfferDetail } from "@/lib/demo/jade-dashboard-mocks";
+import { demoApplicationRows, fetchApplications, applicationStage } from "@/lib/entreprise/application-stage";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -52,20 +53,18 @@ export async function GET(_request: NextRequest, context: Params) {
           school_id: EDGEBS_ORG_ID,
           created_at: new Date().toISOString(),
         },
-        applications: [
-          {
-            id: `${demo.id}-app-1`,
-            created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-            match_score: 86,
-            profiles: [{ id: "edgebs-cand-1", first_name: "Léa", last_name: "Bernard" }],
-          },
-          {
-            id: `${demo.id}-app-2`,
-            created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-            match_score: 74,
-            profiles: [{ id: "edgebs-cand-2", first_name: "Hugo", last_name: "Moreau" }],
-          },
-        ],
+        applications: demoApplicationRows(demo.id).map((row) => {
+          const [first, ...rest] = String(row.name ?? "Candidat").split(" ");
+          return {
+            id: row.id,
+            created_at: row.created_at,
+            status: row.stage,
+            stage: row.stage,
+            read_at: row.read_at ?? null,
+            match_score: null,
+            profiles: [{ id: row.talent_id, first_name: first, last_name: rest.join(" ") }],
+          };
+        }),
         demo: true,
       });
     }
@@ -90,33 +89,30 @@ export async function GET(_request: NextRequest, context: Params) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { data: applications } = await service
-    .from("applications")
-    .select(
-      `
-      id,
-      created_at,
-      status,
-      profiles:talent_id(
-        id,
-        first_name,
-        last_name
-      )
-    `,
-    )
-    .eq("job_id", id)
-    .order("created_at", { ascending: false });
+  const applications = (await fetchApplications(service, [id])).filter((row) => applicationStage(row) !== "rejected");
+  const talentIds = [...new Set(applications.map((row) => row.talent_id).filter((value): value is string => Boolean(value)))];
+  const profiles = new Map<string, { id: string; first_name: string | null; last_name: string | null }>();
+  if (talentIds.length > 0) {
+    const { data: people } = await service.from("profiles").select("id, first_name, last_name").in("id", talentIds);
+    for (const person of people ?? []) {
+      profiles.set(String(person.id), {
+        id: String(person.id),
+        first_name: (person.first_name as string | null) ?? null,
+        last_name: (person.last_name as string | null) ?? null,
+      });
+    }
+  }
 
   return NextResponse.json({
     offer,
-    applications: (applications ?? []).map((row) => ({
-      ...row,
+    applications: applications.map((row) => ({
+      id: row.id,
+      created_at: row.created_at,
+      status: row.status,
+      stage: applicationStage(row),
+      read_at: "read_at" in row ? row.read_at ?? null : null,
       match_score: null,
-      profiles: Array.isArray((row as { profiles?: unknown }).profiles)
-        ? (row as { profiles: unknown[] }).profiles
-        : (row as { profiles?: unknown }).profiles
-          ? [(row as { profiles: unknown }).profiles]
-          : [],
+      profiles: row.talent_id && profiles.get(row.talent_id) ? [profiles.get(row.talent_id)] : [],
     })),
   });
 }

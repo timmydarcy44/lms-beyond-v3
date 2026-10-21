@@ -1,6 +1,7 @@
 import type { ExpertAccessRow } from "@/lib/expert/expert-access";
 import type { TutorWorkspacePayload } from "@/lib/tuteur/workspace-server";
 import type { EntrepriseOverviewData } from "@/lib/entreprise/overview-types";
+import { summarizeApplications } from "@/lib/entreprise/application-stage";
 
 const iso = (daysFromNow: number, hour = 9) => {
   const date = new Date();
@@ -331,6 +332,60 @@ export const JADE_ENTREPRISE_OFFERS = [
   { id: "jade-offer-2", title: "Business developer", description: "Ouverture de comptes formation auprès d'entreprises normandes et franciliennes.", requirements: "Prospection autonome\nSuivi de pipeline\nPermis B apprécié", city: "Paris", salary_range: "36–42 k€", contract_type: "CDI", status: "active", applications_count: 3, created_at: iso(-11) },
 ];
 
+const JADE_DRAFT_OFFER = {
+  id: "jade-offer-3",
+  title: "Assistante commerciale",
+  description: "",
+  requirements: "",
+  city: "Caen",
+  salary_range: "Bachelor",
+  contract_type: "Alternance",
+  status: "draft",
+  applications_count: 0,
+  created_at: "2026-10-08T09:00:00.000Z",
+};
+
+/** Source unique des candidatures Jade : la liste et le détail comptent les mêmes lignes. */
+export const JADE_OFFER_APPLICATIONS = [
+  { id: "cand-chloe", offer_id: "jade-offer-1", name: "Chloé Lambert", stage: "new" as const, created_at: "2026-10-17T09:00:00.000Z", read_at: null, source: "site carrière", criteria_met: 3, criteria_total: 3 },
+  { id: "cand-sarah", offer_id: "jade-offer-1", name: "Sarah Cohen", stage: "new" as const, created_at: "2026-10-17T08:00:00.000Z", read_at: null, source: "LinkedIn", criteria_met: 2, criteria_total: 3 },
+  { id: "cand-yanis", offer_id: "jade-offer-2", name: "Yanis Robert", stage: "new" as const, created_at: "2026-10-16T09:00:00.000Z", read_at: null, source: "site carrière", criteria_met: 2, criteria_total: 3 },
+  { id: "cand-mehdi", offer_id: "jade-offer-1", name: "Mehdi Haddad", stage: "new" as const, created_at: "2026-10-15T09:00:00.000Z", read_at: null, source: "ajout manuel", criteria_met: 2, criteria_total: 3 },
+  { id: "cand-julien", offer_id: "jade-offer-1", name: "Julien Faure", stage: "interview" as const, created_at: "2026-10-12T09:00:00.000Z", read_at: "2026-10-13T09:00:00.000Z", interview_at: "2026-10-23T08:00:00.000Z", criteria_met: 3, criteria_total: 3 },
+  { id: "cand-lucas", offer_id: "jade-offer-1", name: "Lucas Bonnet", stage: "retained" as const, created_at: "2026-10-06T09:00:00.000Z", read_at: "2026-10-07T09:00:00.000Z", retained_at: "2026-10-14T09:00:00.000Z", criteria_met: 3, criteria_total: 3 },
+  { id: "cand-emma", offer_id: "jade-offer-1", name: "Emma Girard", stage: "interview" as const, created_at: "2026-10-04T09:00:00.000Z", read_at: "2026-10-05T09:00:00.000Z", interview_at: null, criteria_met: 2, criteria_total: 3 },
+  { id: "cand-camille", offer_id: "jade-offer-2", name: "Camille Roux", stage: "interview" as const, created_at: "2026-10-03T09:00:00.000Z", read_at: "2026-10-03T12:00:00.000Z", criteria_met: 2, criteria_total: 3 },
+  { id: "cand-noah", offer_id: "jade-offer-2", name: "Noah Petit", stage: "interview" as const, created_at: "2026-10-02T09:00:00.000Z", read_at: "2026-10-02T12:00:00.000Z", criteria_met: 1, criteria_total: 3 },
+];
+
+export function jadeOffresPayload() {
+  const source = [...JADE_ENTREPRISE_OFFERS, JADE_DRAFT_OFFER];
+  const offers = source.map((offer) => {
+    const rows = JADE_OFFER_APPLICATIONS.filter((row) => row.offer_id === offer.id);
+    const summary = summarizeApplications(rows);
+    return {
+      ...offer,
+      applications_count: summary.total,
+      unread_count: summary.unread,
+      stages: summary.stages,
+    };
+  });
+  const recent = JADE_OFFER_APPLICATIONS
+    .filter((row) => row.stage !== "rejected")
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 6)
+    .map((row) => ({
+      id: row.id,
+      offer_id: row.offer_id,
+      offer_title: source.find((offer) => offer.id === row.offer_id)?.title ?? "",
+      name: row.name,
+      created_at: row.created_at,
+      stage: row.stage,
+      href: `/dashboard/entreprise/offres/${row.offer_id}/candidats/${row.id}`,
+    }));
+  return { offers, recent };
+}
+
 export const JADE_CANDIDATES = [
   { id: "cand-1", name: "Chloé Lambert", role: "Commerciale B2B", match: 88, city: "Le Havre" },
   { id: "cand-2", name: "Yanis Robert", role: "Business developer", match: 76, city: "Rouen" },
@@ -449,9 +504,9 @@ export function buildJadeEmployeeDetailPayload(id: string) {
 }
 
 export function buildJadeOfferDetail(id: string) {
-  const offer = JADE_ENTREPRISE_OFFERS.find((row) => row.id === id);
+  const offer = [...JADE_ENTREPRISE_OFFERS, JADE_DRAFT_OFFER].find((row) => row.id === id);
   if (!offer) return null;
-  const applicants = JADE_CANDIDATES.filter((candidate) => candidate.role === offer.title);
+  const applicants = JADE_OFFER_APPLICATIONS.filter((candidate) => candidate.offer_id === offer.id);
   return {
     offer: {
       id: offer.id,
@@ -468,8 +523,15 @@ export function buildJadeOfferDetail(id: string) {
       const [first, ...rest] = candidate.name.split(" ");
       return {
         id: candidate.id,
-        created_at: iso(-4),
-        match_score: candidate.match,
+        created_at: candidate.created_at,
+        status: candidate.stage,
+        stage: candidate.stage,
+        read_at: candidate.read_at,
+        match_score: candidate.criteria_total
+          ? Math.round((candidate.criteria_met / candidate.criteria_total) * 100)
+          : null,
+        criteria_met: candidate.criteria_met,
+        criteria_total: candidate.criteria_total,
         profiles: [{ id: candidate.id, first_name: first, last_name: rest.join(" ") }],
       };
     }),

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { recordTutorValidatedProof } from "@/lib/tuteur/skill-proof";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 
-function mapBodyStatutToDb(statut: string): "todo" | "in_progress" | "done" | "invalid" | null {
+function mapBodyStatutToDb(statut: string): "todo" | "in_progress" | "done" | "invalid" | "validated" | "correction_requested" | null {
   const v = String(statut ?? "").toUpperCase().replace(/\s/g, "_");
-  if (v === "VALIDEE" || v === "DONE" || v === "VALIDÉE") return "done";
+  if (v === "VALIDEE" || v === "DONE" || v === "VALIDÉE") return "validated";
   if (v === "EN_COURS" || v === "IN_PROGRESS") return "in_progress";
-  if (v === "INVALIDEE" || v === "INVALID") return "invalid";
+  if (v === "INVALIDEE" || v === "INVALID" || v === "CORRECTION_REQUESTED") return "correction_requested";
   if (v === "TODO" || v === "A_FAIRE" || v === "EN_ATTENTE") return "todo";
   return null;
 }
@@ -46,9 +45,6 @@ export async function PATCH(
   }
 
   const { missionId } = await params;
-  if (isJadeDemoEmail(auth.ctx.email)) {
-    return NextResponse.json({ id: missionId, updated: true, status: "done" });
-  }
   let body: { statut?: string; motif?: string };
   try {
     body = await request.json();
@@ -61,7 +57,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Statut inconnu" }, { status: 400 });
   }
 
-  if (dbStatus === "invalid" && !String(body.motif ?? "").trim()) {
+  if ((dbStatus === "invalid" || dbStatus === "correction_requested") && !String(body.motif ?? "").trim()) {
     return NextResponse.json({ error: "Motif obligatoire pour une invalidation" }, { status: 400 });
   }
 
@@ -91,10 +87,14 @@ export async function PATCH(
     status: dbStatus,
   };
 
-  if (dbStatus === "done") {
+  const validated = dbStatus === "done" || dbStatus === "validated";
+  const correction = dbStatus === "invalid" || dbStatus === "correction_requested";
+  if (validated) {
     updatePayload.completed_at = new Date().toISOString();
+    updatePayload.validated_at = new Date().toISOString();
+    updatePayload.tutor_comment = String(body.motif ?? "").trim() || null;
     updatePayload.invalidation_reason = null;
-  } else if (dbStatus === "invalid") {
+  } else if (correction) {
     updatePayload.invalidation_reason = String(body.motif ?? "").trim();
     updatePayload.completed_at = null;
   } else {
@@ -102,26 +102,40 @@ export async function PATCH(
     updatePayload.completed_at = null;
   }
 
-  const { data: updated, error: upErr } = await supabase
+  let updatedResult = await supabase
     .from("tutor_missions")
     .update(updatePayload)
     .eq("id", missionId)
     .select("id, status, completed_at, invalidation_reason")
     .single();
 
+  if (updatedResult.error && (updatedResult.error.code === "42703" || updatedResult.error.code === "23514")) {
+    const fallback = { ...updatePayload };
+    delete fallback.validated_at;
+    delete fallback.tutor_comment;
+    if (fallback.status === "correction_requested") fallback.status = "invalid";
+    if (fallback.status === "validated") fallback.status = "done";
+    updatedResult = await supabase
+      .from("tutor_missions")
+      .update(fallback)
+      .eq("id", missionId)
+      .select("id, status, completed_at, invalidation_reason")
+      .single();
+  }
+  const updated = updatedResult.data;
+  const upErr = updatedResult.error;
+
   if (upErr) {
     console.error("[tuteur/missions PATCH]", upErr);
     return NextResponse.json({ error: "Mise à jour impossible" }, { status: 500 });
   }
 
-  const logType =
-    dbStatus === "done" ? "validation" : dbStatus === "invalid" ? "blocking" : "update";
-  const logContent =
-    dbStatus === "done"
-      ? "Mission validée par le tuteur"
-      : dbStatus === "invalid"
-        ? String(body.motif ?? "").trim()
-        : `Statut : ${dbStatus}`;
+  const logType = validated ? "validation" : correction ? "blocking" : "update";
+  const logContent = validated
+    ? "Mission validée par le tuteur"
+    : correction
+      ? String(body.motif ?? "").trim()
+      : `Statut : ${dbStatus}`;
 
   await supabase.from("tutor_mission_logs").insert({
     mission_id: missionId,
@@ -130,12 +144,27 @@ export async function PATCH(
     content: logContent,
   });
 
-  if (dbStatus === "done") {
+  if (validated) {
     let label = String(existing.title ?? "").trim();
     const labeled = await supabase.from("tutor_missions").select("competency_label").eq("id", missionId).maybeSingle();
     if (!labeled.error && labeled.data?.competency_label) label = String(labeled.data.competency_label);
     const note = String(body.motif ?? "").trim() || "Validée par le tuteur";
     await recordTutorValidatedProof(String(assignment.learner_id), label, note);
+    await supabase.from("notifications").insert({
+      user_id: assignment.learner_id,
+      type: "info",
+      title: "Mission validée",
+      message: `${label} a été validée par votre tuteur.`,
+      read: false,
+    });
+  } else if (correction) {
+    await supabase.from("notifications").insert({
+      user_id: assignment.learner_id,
+      type: "info",
+      title: "Correction demandée",
+      message: String(body.motif ?? "").trim() || "Votre tuteur demande une correction.",
+      read: false,
+    });
   }
 
   return NextResponse.json({

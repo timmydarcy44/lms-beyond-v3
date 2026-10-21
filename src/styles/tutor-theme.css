@@ -1,0 +1,33 @@
+.tutor-theme {
+  --tutor-bg: #07080b;
+  --tutor-surface: #12141a;
+  --tutor-surface-2: #1e2130;
+  --tutor-hero: #0c0d12;
+  --tutor-border: #262a36;
+  --tutor-text: #f4f5f7;
+  --tutor-text-2: #dadde4;
+  --tutor-text-3: #b5bac6;
+  --tutor-text-4: #9096a3;
+  --tutor-accent: #ff7a2f;
+  --tutor-on-accent: #1a0c04;
+  --tutor-accent-soft: #3a1e0e;
+  --tutor-accent-text: #ffb085;
+  --tutor-accent-ring: #ff9a5c;
+  --tutor-accent-glow: rgba(255, 122, 47, 0.32);
+  --tutor-company: rgba(255, 122, 47, 0.18);
+  --tutor-alert-bg: #3a1418;
+  --tutor-alert: #ff7a85;
+  --tutor-alert-sub: #f2c9cd;
+  --tutor-alert-pill: #ff7a85;
+  --tutor-alert-ink: #3a1418;
+  --tutor-alert-dot: #d6334a;
+  --tutor-school: rgba(47, 124, 246, 0.18);
+  --tutor-school-text: #8db8ff;
+  --tutor-success-bg: #0e2a1d;
+  --tutor-success: #6be39b;
+  --tutor-gold: #f2cf6b;
+  --tutor-gold-bg: #36301a;
+  --tutor-self: #8db8ff;
+  background: var(--tutor-bg);
+  color: var(--tutor-text);
+}

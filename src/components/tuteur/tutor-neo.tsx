@@ -14,18 +14,18 @@ function initials(name: string) {
 
 function ringStyle(done: number, total: number) {
   const ratio = total > 0 ? Math.round((done / total) * 100) : 0;
-  return { background: `conic-gradient(#6E5BFF ${ratio * 3.6}deg, #262A36 0deg)` };
+  return { background: `conic-gradient(#FF7A2F ${ratio * 3.6}deg, #262A36 0deg)` };
 }
 
 function statusPill(statut: TutorHomeStudent["statut"]) {
-  if (statut === "a_surveiller") return { label: "À surveiller", className: "bg-[#3A2414] text-[#FFAA6B]" };
-  if (statut === "en_retard") return { label: "En retard", className: "bg-[#3A2414] text-[#FFAA6B]" };
+  if (statut === "a_surveiller") return { label: "À surveiller", className: "bg-[#3A1418] text-[#FF7A85]" };
+  if (statut === "en_retard") return { label: "En retard", className: "bg-[#3A1418] text-[#FF7A85]" };
   return { label: "À jour", className: "bg-[#0E2A1D] text-[#6BE39B]" };
 }
 
 function cardTone(statut: TutorHomeStudent["statut"], firstUpToDate: boolean) {
-  if (firstUpToDate && statut === "a_jour") return "bg-[#6E5BFF] text-white";
-  if (statut === "a_surveiller") return "bg-[#3A2414] text-[#F4F5F7] ring-1 ring-[#FFAA6B]";
+  if (firstUpToDate && statut === "a_jour") return "bg-[#FF7A2F] text-[var(--tutor-on-accent)]";
+  if (statut === "a_surveiller") return "bg-[#3A1418] text-[#F4F5F7] ring-1 ring-[#FF7A85]";
   return "bg-[#12141A] text-[#F4F5F7] border border-[#262A36]";
 }
 
@@ -82,7 +82,7 @@ export function TutorHome() {
       {data ? (
         <div className="space-y-6">
           <section className="relative overflow-hidden rounded-[36px] bg-[#0C0D12] p-6 sm:p-8">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#6E5BFF]/20" aria-hidden />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#FF7A2F]/20" aria-hidden />
             <p className="text-lg font-semibold text-[#DADDE4]">Bonjour {data.tutorFirstName} · cette semaine</p>
             <p className="mt-3 text-5xl font-extrabold tracking-tight">{total === 0 ? "Tout est à jour" : total}</p>
             <div className="mt-6 flex flex-wrap gap-4">
@@ -111,7 +111,7 @@ export function TutorHome() {
             <section>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-xl font-extrabold">Mes alternants</h2>
-                <Link href="/dashboard/tuteur/alternants" className="text-sm font-semibold text-[#C9C2FF]">
+                <Link href="/dashboard/tuteur/alternants" className="text-sm font-semibold text-[#FFB085]">
                   Voir les {data.students.length}
                 </Link>
               </div>
@@ -132,16 +132,16 @@ export function TutorHome() {
                     key={day.date}
                     className={`rounded-2xl p-2 text-center text-xs ${
                       day.lieu === "ecole"
-                        ? "bg-[#6E5BFF]/20"
+                        ? "bg-[rgba(47,124,246,0.18)]"
                         : day.lieu === "entreprise"
-                          ? "bg-[#2F7CF6]/20"
+                          ? "bg-[rgba(255,122,47,0.18)]"
                           : "bg-[#1E2130]"
                     } ${day.today ? "ring-2 ring-white" : ""}`}
                   >
                     <p className="font-semibold">{day.label}</p>
-                    {day.schoolCount ? <p className="mt-1 text-[#C9C2FF]">{day.schoolCount} école</p> : null}
+                    {day.schoolCount ? <p className="mt-1 text-[#8DB8FF]">{day.schoolCount} école</p> : null}
                     {day.companyCount ? <p className="text-[#B5BAC6]">{day.companyCount} entreprise</p> : null}
-                    {day.absence ? <p className="text-[#FFAA6B]">Absence</p> : null}
+                    {day.absence ? <p className="text-[#FF7A85]">Absence</p> : null}
                   </div>
                 ))}
               </div>
@@ -157,7 +157,7 @@ export function TutorHome() {
                     <span
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${
                         action.kind === "validation"
-                          ? "bg-[#6E5BFF] text-white"
+                          ? "bg-[#FF7A2F] text-[#1A0C04]"
                           : action.kind === "evaluation"
                             ? "bg-[#2F7CF6] text-white"
                             : action.kind === "signature"
@@ -193,7 +193,7 @@ export function TutorHome() {
                           <button type="submit" className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#07080B]">Valider</button>
                           <button
                             type="button"
-                            className="rounded-full bg-[#3A2414] px-3 py-1 text-xs font-bold text-[#FFAA6B]"
+                            className="rounded-full bg-[#3A1418] px-3 py-1 text-xs font-bold text-[#FF7A85]"
                             onClick={() => {
                               void fetch(`/api/tuteur/missions/${action.missionId}`, {
                                 method: "PATCH",
@@ -219,9 +219,9 @@ export function TutorHome() {
                     <div key={item.learnerId} className="mt-3">
                       <p className="font-bold">{item.name}</p>
                       {item.signals.map((signal) => (
-                        <p key={signal} className="text-sm text-[#FFAA6B]">{signal}</p>
+                        <p key={signal} className="text-sm text-[#FF7A85]">{signal}</p>
                       ))}
-                      <Link href="/dashboard/student/community" className="mt-2 inline-block text-sm font-semibold text-[#C9C2FF]">
+                      <Link href="/dashboard/student/community" className="mt-2 inline-block text-sm font-semibold text-[#FFB085]">
                         Prévenir le CFA
                       </Link>
                     </div>
@@ -343,7 +343,7 @@ export function TutorAlternants() {
       {data && students.length === 0 ? (
         <p className="mt-8 text-[#DADDE4]">
           Aucun alternant ne vous est encore rattaché.{" "}
-          <Link href="/dashboard/student/community" className="font-semibold text-[#C9C2FF]">Contacter le CFA</Link>
+          <Link href="/dashboard/student/community" className="font-semibold text-[#FFB085]">Contacter le CFA</Link>
         </p>
       ) : null}
       <div className="mt-6 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
@@ -408,7 +408,7 @@ export function TutorFicheView({ studentId }: { studentId: string }) {
     <TuteurShell tutorName={student.displayName}>
       <Link href="/dashboard/tuteur/alternants" className="inline-flex rounded-full bg-[#1E2130] px-4 py-2 text-sm font-semibold">← Mes alternants</Link>
       <section className="relative mt-4 overflow-hidden rounded-[36px] bg-[#0C0D12] p-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#6E5BFF]/25" aria-hidden />
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#FF7A2F]/25" aria-hidden />
         <div className="flex flex-wrap items-center gap-5">
           <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[#1E2130] text-2xl font-extrabold">{initials(student.displayName)}</span>
           <div className="min-w-0 flex-1">
@@ -429,7 +429,7 @@ export function TutorFicheView({ studentId }: { studentId: string }) {
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/dashboard/student/community" className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#07080B]">Message</Link>
           {student.phone ? <a href={`tel:${student.phone}`} className="rounded-full bg-[#1E2130] px-4 py-2 text-sm font-bold">Appeler</a> : null}
-          <button type="button" className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-bold" onClick={() => setModal("interview")}>Planifier un entretien</button>
+          <button type="button" className="rounded-full bg-[#FF7A2F] px-4 py-2 text-sm font-bold text-[#1A0C04]" onClick={() => setModal("interview")}>Planifier un entretien</button>
           <button type="button" className="rounded-full bg-[#1E2130] px-4 py-2 text-sm font-bold" onClick={() => setModal("absence")}>Signaler une absence</button>
         </div>
       </section>
@@ -463,7 +463,7 @@ export function TutorFicheView({ studentId }: { studentId: string }) {
                 <p className="font-extrabold">{name}</p>
                 <p className="text-sm text-[#B5BAC6]">{doneCount}/{missions.length}</p>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#262A36]">
-                  <div className="h-full bg-[#6E5BFF]" style={{ width: `${missions.length ? (doneCount / missions.length) * 100 : 0}%` }} />
+                  <div className="h-full bg-[#FF7A2F]" style={{ width: `${missions.length ? (doneCount / missions.length) * 100 : 0}%` }} />
                 </div>
                 {missions.map((mission) => (
                   <div key={mission.id} className="mt-3 flex items-center justify-between gap-3">
@@ -492,7 +492,7 @@ export function TutorFicheView({ studentId }: { studentId: string }) {
                         Valider
                       </button>
                     ) : (
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${mission.status === "done" ? "bg-[#0E2A1D] text-[#6BE39B]" : mission.dueDate && new Date(mission.dueDate).getTime() < Date.now() ? "bg-[#3A2414] text-[#FFAA6B]" : "bg-[#1E2130] text-[#B5BAC6]"}`}>
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${mission.status === "done" ? "bg-[#0E2A1D] text-[#6BE39B]" : mission.dueDate && new Date(mission.dueDate).getTime() < Date.now() ? "bg-[#3A1418] text-[#FF7A85]" : "bg-[#1E2130] text-[#B5BAC6]"}`}>
                         {mission.status === "done" ? "Validée" : mission.dueDate && new Date(mission.dueDate).getTime() < Date.now() ? "En retard" : "À faire"}
                       </span>
                     )}
@@ -506,7 +506,7 @@ export function TutorFicheView({ studentId }: { studentId: string }) {
 
       {tab === "entretiens" ? (
         <div className="mt-5 space-y-3">
-          <button type="button" className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-bold" onClick={() => setModal("interview")}>Planifier un entretien</button>
+          <button type="button" className="rounded-full bg-[#FF7A2F] px-4 py-2 text-sm font-bold text-[#1A0C04]" onClick={() => setModal("interview")}>Planifier un entretien</button>
           {fiche.interviews.length === 0 ? <p className="text-[#B5BAC6]">Aucun entretien planifié.</p> : null}
           {fiche.interviews.map((item) => (
             <article key={item.id} className="rounded-[22px] border border-[#262A36] bg-[#12141A] p-4">
@@ -520,7 +520,7 @@ export function TutorFicheView({ studentId }: { studentId: string }) {
       {tab === "agenda" ? (
         <div className="mt-5 grid grid-cols-7 gap-2">
           {fiche.agendaDays.map((day) => (
-            <div key={day.date} className={`min-h-[52px] rounded-xl p-2 text-xs ${day.lieu === "ecole" ? "bg-[#6E5BFF]/20" : day.lieu === "entreprise" ? "bg-[#2F7CF6]/20" : "bg-[#1E2130]"}`}>
+            <div key={day.date} className={`min-h-[52px] rounded-xl p-2 text-xs ${day.lieu === "ecole" ? "bg-[rgba(47,124,246,0.18)]" : day.lieu === "entreprise" ? "bg-[rgba(255,122,47,0.18)]" : "bg-[#1E2130]"}`}>
               {Number(day.date.slice(-2))}
             </div>
           ))}
@@ -622,7 +622,7 @@ export function TutorCalendar() {
           {data.week.days.map((day) => (
             <div key={day.date} className="rounded-2xl bg-[#12141A] p-3 text-sm">
               <p className="font-bold">{day.label}</p>
-              {day.schoolCount ? <p className="text-[#C9C2FF]">{day.schoolCount} à l&apos;école</p> : null}
+              {day.schoolCount ? <p className="text-[#8DB8FF]">{day.schoolCount} à l&apos;école</p> : null}
               {day.companyCount ? <p className="text-[#B5BAC6]">{day.companyCount} en entreprise</p> : null}
             </div>
           ))}

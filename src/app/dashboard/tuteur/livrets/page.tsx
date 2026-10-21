@@ -1,7 +1,13 @@
 "use client";
 
-import { TutorLivrets } from "@/components/tuteur/tutor-neo";
+import { Suspense } from "react";
 
-export default function TutorLivretsPage() {
-  return <TutorLivrets />;
+import { TutorLivretsPage } from "@/components/tuteur/tutor-records";
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <TutorLivretsPage />
+    </Suspense>
+  );
 }

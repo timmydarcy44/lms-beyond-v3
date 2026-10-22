@@ -279,6 +279,42 @@ export function EntrepriseFormationStudio({
                   <Field label="Titre">
                     <input className={fieldClass} value={general.title ?? ""} onChange={(e) => updateGeneral({ title: e.target.value })} />
                   </Field>
+                  {byoundOwned ? (
+                    <Field label="Où la formation apparaît">
+                      <p className="mb-2 text-sm text-[#6B6F7A]">Cochez les espaces. L&apos;espace expert met la formation en vente sur le dashboard expert.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ["apprenant", "Catalogue apprenant"],
+                            ["entreprise", "Espace entreprise"],
+                            ["expert", "Espace expert"],
+                          ] as const
+                        ).map(([id, label]) => {
+                          const selected = (general.visible_surfaces ?? []).includes(id);
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => {
+                                const current = general.visible_surfaces ?? [];
+                                const next = selected ? current.filter((item) => item !== id) : [...current, id];
+                                const learner = next.includes("apprenant");
+                                const company = next.includes("entreprise");
+                                updateGeneral({
+                                  visible_surfaces: next,
+                                  target_audience: learner && company ? "all" : learner ? "apprenant" : company ? "pro" : undefined,
+                                });
+                              }}
+                              className={`rounded-full px-3 py-2 text-sm font-semibold ${selected ? "bg-[#07080B] text-white" : "border border-[#E3E0D8] bg-white"}`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Field>
+                  ) : null}
                   <Field label="Présentation">
                     <textarea className={`${fieldClass} min-h-28`} value={general.presentation ?? ""} onChange={(e) => updateGeneral({ presentation: e.target.value })} />
                     <button type="button" onClick={onOpenAi} className="mt-2 rounded-full bg-[#EEEBFF] px-4 py-2 text-sm font-semibold text-[#4B3BD1]">
@@ -323,7 +359,7 @@ export function EntrepriseFormationStudio({
                   <Field label="Entreprise">
                     <select
                       className={fieldClass}
-                      disabled={Boolean(general.assigned_organization_id) && organizations.length <= 1}
+                      disabled={!byoundOwned && Boolean(general.assigned_organization_id) && organizations.length <= 1}
                       value={general.assigned_organization_id ?? ""}
                       onChange={(e) => updateGeneral({ assigned_organization_id: e.target.value, assignment_type: "organization" } as never)}
                     >

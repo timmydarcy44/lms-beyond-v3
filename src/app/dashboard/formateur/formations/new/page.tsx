@@ -1184,7 +1184,7 @@ export function FormateurFormationBuilderWhite({
     returnTo ||
     (orgIsLocked ? "/dashboard/entreprise/formations/gerer" : "/dashboard/formateur");
   const formationsHref = editorBase || "/dashboard/formateur/formations";
-  const enterpriseStudio = orgIsLocked && !byoundOwned;
+  const enterpriseStudio = byoundOwned || orgIsLocked;
 
   return (
     <DashboardShell

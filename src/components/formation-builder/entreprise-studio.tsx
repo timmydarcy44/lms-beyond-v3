@@ -2,13 +2,67 @@
 
 import { Manrope } from "next/font/google";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
+import { Sparkles } from "lucide-react";
+import { CourseResourcesManager } from "@/components/formateur/course-builder/course-resources-manager";
 import { CourseStructureBuilder } from "@/components/formateur/course-builder/course-structure-builder";
+import { LineList } from "@/components/formation-builder/line-list";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
 import { ficheScore } from "@/lib/courses/fiche-checklist";
-import type { CourseBuilderChapter, CourseBuilderSubchapter } from "@/types/course-builder";
+import { formatEvaluationMethodsSummary } from "@/lib/openbadges/badge-evaluation";
+
+const ACCESSIBILITY_TEXT = "Formation accessible aux personnes en situation de handicap. Notre LMS est neuroadapté.";
+
+const STUDIO_MODALITY_LABELS: Record<string, string> = {
+  qcm: "QCM",
+  case_study: "Étude de cas",
+  oral_ia: "Audio / Vidéo",
+  file_upload: "Dépôt de livrable",
+  video: "Présentation",
+  ai_qa: "Q&A",
+};
+
+type OpenBadgeLink = {
+  id: string;
+  title?: string | null;
+  name?: string | null;
+  course_id?: string | null;
+  required_course_id?: string | null;
+  criteria?: string | null;
+  modalities?: unknown;
+  evaluation_config?: unknown;
+};
+
+function badgeModalitiesLabel(badge: OpenBadgeLink | null) {
+  if (!badge) return "";
+  const config =
+    badge.evaluation_config && typeof badge.evaluation_config === "object"
+      ? (badge.evaluation_config as Record<string, unknown>)
+      : {};
+  const receivability =
+    config.receivability && typeof config.receivability === "object"
+      ? (config.receivability as Record<string, unknown>)
+      : {};
+  const expected = String(receivability.expectedModalities ?? "").trim();
+  if (expected) return expected;
+  const methods = Array.isArray(config.evaluationMethods) ? config.evaluationMethods.map(String) : [];
+  const fromMethods = formatEvaluationMethodsSummary(methods);
+  if (fromMethods) return fromMethods;
+  const modalities =
+    badge.modalities && typeof badge.modalities === "object" && !Array.isArray(badge.modalities)
+      ? (badge.modalities as Record<string, unknown>)
+      : {};
+  const labels = Object.keys(modalities)
+    .filter((key) => key !== "expected_proofs" && modalities[key])
+    .map((key) => STUDIO_MODALITY_LABELS[key] ?? "")
+    .filter(Boolean);
+  if (labels.length) return labels.join(", ");
+  return String(badge.criteria ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
 
@@ -19,34 +73,6 @@ type Org = { id: string; name: string };
 type Named = { id: string; name: string };
 type PathRow = { id: string; title: string };
 
-function minutesOf(value: string | undefined) {
-  const match = String(value ?? "").match(/(\d+)/);
-  return match ? Number(match[1]) : 0;
-}
-
-function formatMinutes(total: number) {
-  if (total <= 0) return "0 min";
-  const hours = Math.floor(total / 60);
-  const mins = total % 60;
-  if (!hours) return `${mins} min`;
-  if (!mins) return `${hours} h`;
-  return `${hours} h ${mins}`;
-}
-
-function pillFor(item: { type?: string; kind?: string }) {
-  if (item.kind === "quiz") return { label: "Quiz", bg: "#FFF1E2", fg: "#8A4B0F" };
-  if (item.kind === "resource") return { label: "Ressource", bg: "#E3F6EC", fg: "#126B3B" };
-  if (item.type === "video") return { label: "Vidéo", bg: "#E8EEF8", fg: "#2F5FB3" };
-  return { label: "Leçon", bg: "#EEEBFF", fg: "#4B3BD1" };
-}
-
-function isReady(item: { content?: string; duration?: string; type?: string; kind?: string; quiz_id?: string; resource_id?: string }) {
-  const filled = Boolean(item.kind || item.quiz_id || item.resource_id || String(item.content ?? "").trim());
-  if (!filled) return false;
-  if (item.type === "video" || item.type === "text") return minutesOf(item.duration) > 0;
-  return true;
-}
-
 export function EntrepriseFormationStudio({
   courseId,
   organizations,
@@ -54,6 +80,7 @@ export function EntrepriseFormationStudio({
   instructors,
   paths,
   validators,
+  openBadges,
   isTimmy,
   byoundOwned,
   saving,
@@ -70,6 +97,7 @@ export function EntrepriseFormationStudio({
   instructors: Named[];
   paths: PathRow[];
   validators: Named[];
+  openBadges: OpenBadgeLink[];
   isTimmy: boolean;
   byoundOwned: boolean;
   saving: boolean;
@@ -82,44 +110,35 @@ export function EntrepriseFormationStudio({
 }) {
   const snapshot = useCourseBuilder((s) => s.snapshot);
   const updateGeneral = useCourseBuilder((s) => s.updateGeneral);
-  const addSection = useCourseBuilder((s) => s.addSection);
-  const updateSection = useCourseBuilder((s) => s.updateSection);
-  const reorderSections = useCourseBuilder((s) => s.reorderSections);
-  const addChapter = useCourseBuilder((s) => s.addChapter);
-  const updateChapter = useCourseBuilder((s) => s.updateChapter);
-  const reorderChapters = useCourseBuilder((s) => s.reorderChapters);
-  const addSubchapter = useCourseBuilder((s) => s.addSubchapter);
-  const updateSubchapter = useCourseBuilder((s) => s.updateSubchapter);
-  const selectChapter = useCourseBuilder((s) => s.selectChapter);
-  const selectSubchapter = useCourseBuilder((s) => s.selectSubchapter);
 
   const [tab, setTab] = useState<"fiche" | "contenu">("fiche");
   const [step, setStep] = useState(1);
-  const [openModules, setOpenModules] = useState<Record<string, boolean>>({});
-  const [advanced, setAdvanced] = useState(false);
   const [saveLabel, setSaveLabel] = useState("Brouillon");
   const [skillDraft, setSkillDraft] = useState("");
   const [skillIdeas, setSkillIdeas] = useState<string[]>([]);
-  const [undo, setUndo] = useState<{ label: string; apply: () => void } | null>(null);
-  const [confirm, setConfirm] = useState<{ label: string; run: () => void } | null>(null);
   const saveRef = useRef(onSave);
   saveRef.current = onSave;
   const skipAutosave = useRef(true);
 
   const general = snapshot.general;
-  const sections = (snapshot.sections ?? []).filter((section) => !section.deleted_at);
+  const linkedBadge = useMemo(() => {
+    const id = courseId?.trim();
+    if (!id) return null;
+    return openBadges.find((badge) => badge.course_id === id || badge.required_course_id === id) ?? null;
+  }, [courseId, openBadges]);
+  const modalitiesText = useMemo(() => badgeModalitiesLabel(linkedBadge), [linkedBadge]);
+
+  useEffect(() => {
+    if ((general.accessibility ?? "") === ACCESSIBILITY_TEXT) return;
+    updateGeneral({ accessibility: ACCESSIBILITY_TEXT });
+  }, [general.accessibility, updateGeneral]);
+
+  useEffect(() => {
+    if (!modalitiesText || (general.evaluation_modalities ?? "") === modalitiesText) return;
+    updateGeneral({ evaluation_modalities: modalitiesText });
+  }, [general.evaluation_modalities, modalitiesText, updateGeneral]);
+
   const score = ficheScore(snapshot);
-  const totalMinutes = sections.reduce((sum, section) => {
-    return (
-      sum +
-      (section.chapters ?? [])
-        .filter((chapter) => !chapter.deleted_at)
-        .reduce((inner, chapter) => {
-          const subs = (chapter.subchapters ?? []).filter((sub) => !sub.deleted_at);
-          return inner + minutesOf(chapter.duration) + subs.reduce((n, sub) => n + minutesOf(sub.duration), 0);
-        }, 0)
-    );
-  }, 0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -127,8 +146,6 @@ export function EntrepriseFormationStudio({
     if (nextTab === "fiche" || nextTab === "contenu") setTab(nextTab);
     const nextStep = Number(params.get("step"));
     if (nextStep >= 1 && nextStep <= 4) setStep(nextStep);
-    const moduleId = params.get("module");
-    if (moduleId) setOpenModules((prev) => ({ ...prev, [moduleId]: true }));
   }, []);
 
   useEffect(() => {
@@ -151,20 +168,6 @@ export function EntrepriseFormationStudio({
     }, 800);
     return () => window.clearTimeout(timer);
   }, [snapshotKey, general.title]);
-
-  useEffect(() => {
-    if (!undo) return;
-    const timer = window.setTimeout(() => setUndo(null), 8000);
-    return () => window.clearTimeout(timer);
-  }, [undo]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setConfirm(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   useEffect(() => {
     const q = skillDraft.trim();
@@ -196,20 +199,9 @@ export function EntrepriseFormationStudio({
     setSkillIdeas([]);
   };
 
-  const scheduleUndo = (label: string, apply: () => void) => setUndo({ label, apply });
-
-  const askDelete = (label: string, run: () => void) => setConfirm({ label, run });
-
-  const move = (ids: string[], id: string, dir: -1 | 1, apply: (active: string, over: string) => void) => {
-    const index = ids.indexOf(id);
-    const next = ids[index + dir];
-    if (!next) return;
-    apply(id, next);
-  };
-
   return (
     <div className={`${manrope.className} min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
-      <header className="sticky top-0 z-30 border-b border-[#E3E0D8] bg-[#F4F4F1]/95 px-4 py-3 backdrop-blur md:px-8">
+      <header className={`sticky z-40 border-b border-[#E3E0D8] bg-[#F4F4F1]/95 px-4 py-3 backdrop-blur md:px-8 ${byoundOwned ? "top-12" : "top-0"}`}>
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-3">
           <a href={backHref} className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold">
             Retour
@@ -232,12 +224,27 @@ export function EntrepriseFormationStudio({
           <span className="text-sm text-[#6B6F7A]" aria-live="polite">
             {saving ? "Enregistrement…" : saveLabel}
           </span>
-          <button type="button" onClick={() => void onSave(false)} className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold">
+          <button
+            type="button"
+            onClick={onOpenAi}
+            className="inline-flex items-center rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-4 py-2 text-sm font-bold text-white"
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Byound AI
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => {
+              void onSave(false).then((ok) => setSaveLabel(ok === false ? "Non enregistré" : "Enregistré"));
+            }}
+            className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
+          >
             Enregistrer
           </button>
           <button
             type="button"
-            disabled={publishing || score.done < score.total}
+            disabled={publishing}
             onClick={onPublish}
             className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#1A0C04] disabled:opacity-40"
           >
@@ -474,16 +481,26 @@ export function EntrepriseFormationStudio({
 
               {step === 2 ? (
                 <div className="space-y-5">
-                  <LineEditor
-                    label="Objectifs pédagogiques"
-                    value={general.objectifs ?? []}
-                    onChange={(objectifs) => updateGeneral({ objectifs })}
-                  />
-                  <LineEditor
-                    label="Prérequis"
-                    value={general.prerequisites ?? []}
-                    onChange={(prerequisites) => updateGeneral({ prerequisites })}
-                  />
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Objectifs pédagogiques</p>
+                    <LineList
+                      value={general.objectifs ?? []}
+                      onChange={(objectifs) => updateGeneral({ objectifs })}
+                      placeholder="Objectif"
+                      kind="objectifs"
+                      title={general.title ?? ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">Prérequis</p>
+                    <LineList
+                      value={general.prerequisites ?? []}
+                      onChange={(prerequisites) => updateGeneral({ prerequisites })}
+                      placeholder="Prérequis"
+                      kind="prerequis"
+                      title={general.title ?? ""}
+                    />
+                  </div>
                   <Field label="Niveau">
                     <select className={fieldClass} value={general.level ?? ""} onChange={(e) => updateGeneral({ level: e.target.value })}>
                       <option value="">—</option>
@@ -578,10 +595,22 @@ export function EntrepriseFormationStudio({
                     Progression linéaire
                   </label>
                   <Field label="Modalités d'évaluation">
-                    <textarea className={`${fieldClass} min-h-24`} value={general.evaluation_modalities ?? ""} onChange={(e) => updateGeneral({ evaluation_modalities: e.target.value })} />
+                    <p className="text-sm text-[#6B6F7A]">Celles de l&apos;Open Badge lié à la formation.</p>
+                    {linkedBadge ? (
+                      <div className="rounded-2xl border border-[#E3E0D8] bg-[#F7F6F2] px-4 py-3 text-sm">
+                        <p className="font-semibold">{linkedBadge.name || linkedBadge.title || "Open Badge"}</p>
+                        <p className="mt-2 whitespace-pre-wrap">
+                          {modalitiesText || "Cet Open Badge n'a pas encore de modalités d'évaluation."}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="rounded-2xl border border-[#E3E0D8] bg-[#F7F6F2] px-4 py-3 text-sm">
+                        Aucun Open Badge n&apos;est lié à cette formation.
+                      </p>
+                    )}
                   </Field>
                   <Field label="Accessibilité">
-                    <textarea className={`${fieldClass} min-h-24`} value={general.accessibility ?? ""} onChange={(e) => updateGeneral({ accessibility: e.target.value })} />
+                    <p className="rounded-2xl border border-[#E3E0D8] bg-[#F7F6F2] px-4 py-3 text-sm">{ACCESSIBILITY_TEXT}</p>
                   </Field>
                 </div>
               ) : null}
@@ -631,116 +660,19 @@ export function EntrepriseFormationStudio({
               </div>
             </section>
           ) : (
-            <section className="space-y-4">
-              <div className="rounded-[32px] bg-[#070C1C] p-6 text-white shadow-[0_0_80px_#6E5BFF59]">
-                <p className="text-sm text-white/70">Durée du parcours</p>
-                <p className="mt-1 text-3xl font-extrabold">{formatMinutes(totalMinutes)}</p>
-                <p className="mt-2 text-sm text-white/70">{sections.length} module{sections.length > 1 ? "s" : ""}</p>
+            <section className="space-y-6">
+              <button
+                type="button"
+                onClick={onOpenAi}
+                className="inline-flex items-center rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 py-2 text-sm font-bold text-white"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Byound AI
+              </button>
+              <CourseStructureBuilder theme="light" courseId={courseId} />
+              <div className="overflow-hidden rounded-[28px] bg-[#070C1C] p-2 text-white">
+                <CourseResourcesManager courseId={courseId} />
               </div>
-              {sections.map((section, index) => {
-                const chapters = (section.chapters ?? []).filter((chapter) => !chapter.deleted_at);
-                const leaves = chapters.flatMap((chapter) => {
-                  const subs = (chapter.subchapters ?? []).filter((sub) => !sub.deleted_at);
-                  return subs.length ? subs : [chapter];
-                });
-                const ready = leaves.length > 0 && leaves.every(isReady);
-                const open = openModules[section.id] ?? false;
-                return (
-                  <article key={section.id} className="rounded-[28px] bg-white">
-                    <div className="flex items-center gap-3 p-4">
-                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpenModules((prev) => ({ ...prev, [section.id]: !open }))}>
-                        <span className="block font-semibold">{section.title || `Module ${index + 1}`}</span>
-                        <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${ready ? "bg-[#E3F6EC] text-[#126B3B]" : "bg-[#FFF1E2] text-[#8A4B0F]"}`}>
-                          {ready ? "Prêt" : leaves.length ? "À compléter" : "Brouillon"}
-                        </span>
-                      </button>
-                      <button type="button" className={roundBtn} aria-label="Monter le module" onClick={() => move(sections.map((row) => row.id), section.id, -1, reorderSections)}>
-                        ↑
-                      </button>
-                      <button type="button" className={roundBtn} aria-label="Descendre le module" onClick={() => move(sections.map((row) => row.id), section.id, 1, reorderSections)}>
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-full bg-[#FDECEC] px-3 py-2 text-sm font-semibold text-[#B42318]"
-                        onClick={() =>
-                          askDelete(`Supprimer le module « ${section.title || "sans titre"} » ?`, () => {
-                            const stamp = new Date().toISOString();
-                            updateSection(section.id, { deleted_at: stamp });
-                            scheduleUndo("Module supprimé", () => updateSection(section.id, { deleted_at: null }));
-                          })
-                        }
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                    {open ? (
-                      <div className="border-t border-[#F1EFE9] p-4">
-                        <input
-                          className={`${fieldClass} mb-3`}
-                          value={section.title}
-                          aria-label="Titre du module"
-                          onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                        />
-                        {chapters.map((chapter) => (
-                          <ChapterBlock
-                            key={chapter.id}
-                            chapter={chapter}
-                            sectionId={section.id}
-                            onEditChapter={() => selectChapter(section.id, chapter.id)}
-                            onEditSub={(subId) => selectSubchapter(section.id, chapter.id, subId)}
-                            onDeleteChapter={() =>
-                              askDelete(`Supprimer « ${chapter.title || "contenu"} » ?`, () => {
-                                updateChapter(section.id, chapter.id, { deleted_at: new Date().toISOString() });
-                                scheduleUndo("Contenu supprimé", () => updateChapter(section.id, chapter.id, { deleted_at: null }));
-                              })
-                            }
-                            onDeleteSub={(sub) =>
-                              askDelete(`Supprimer « ${sub.title || "contenu"} » ?`, () => {
-                                updateSubchapter(section.id, chapter.id, sub.id, { deleted_at: new Date().toISOString() });
-                                scheduleUndo("Contenu supprimé", () => updateSubchapter(section.id, chapter.id, sub.id, { deleted_at: null }));
-                              })
-                            }
-                            onMove={(dir) => move(chapters.map((row) => row.id), chapter.id, dir, (active, over) => reorderChapters(section.id, active, over))}
-                          />
-                        ))}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <button type="button" className="rounded-full border border-[#E3E0D8] px-3 py-2 text-sm font-semibold" onClick={() => addChapter(section.id)}>
-                            + Chapitre
-                          </button>
-                          {chapters[0] ? (
-                            <>
-                              <button type="button" className="rounded-full border border-[#E3E0D8] px-3 py-2 text-sm font-semibold" onClick={() => addSubchapter(section.id, chapters[0].id, { type: "text", title: "Leçon", duration: "10 min" })}>
-                                + Leçon
-                              </button>
-                              <button type="button" className="rounded-full border border-[#E3E0D8] px-3 py-2 text-sm font-semibold" onClick={() => addSubchapter(section.id, chapters[0].id, { type: "video", title: "Vidéo", duration: "5 min" })}>
-                                + Vidéo
-                              </button>
-                              <button type="button" className="rounded-full border border-[#E3E0D8] px-3 py-2 text-sm font-semibold" onClick={() => addSubchapter(section.id, chapters[0].id, { type: "text", kind: "quiz", title: "Quiz", duration: "" })}>
-                                + Quiz
-                              </button>
-                              <button type="button" className="rounded-full border border-[#E3E0D8] px-3 py-2 text-sm font-semibold" onClick={() => addSubchapter(section.id, chapters[0].id, { type: "document", kind: "resource", title: "Ressource", duration: "" })}>
-                                + Ressource
-                              </button>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-              <button type="button" onClick={() => addSection()} className="rounded-full bg-[#07080B] px-4 py-3 text-sm font-semibold text-white">
-                Ajouter un module
-              </button>
-              <button type="button" onClick={() => setAdvanced((v) => !v)} className="ml-3 rounded-full border border-[#E3E0D8] bg-white px-4 py-3 text-sm font-semibold">
-                {advanced ? "Fermer l'éditeur avancé" : "Éditeur avancé"}
-              </button>
-              {advanced ? (
-                <CourseBuilderWorkspace previewHref="/dashboard/formateur/formations/new/preview" theme="light" courseId={courseId} />
-              ) : (
-                <CourseStructureBuilder editorOnly theme="light" courseId={courseId} />
-              )}
             </section>
           )}
         </div>
@@ -774,51 +706,11 @@ export function EntrepriseFormationStudio({
         </aside>
       </div>
 
-      {confirm ? (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Confirmer la suppression">
-          <div className="w-full max-w-md rounded-[28px] bg-white p-6">
-            <p className="font-semibold">{confirm.label}</p>
-            <p className="mt-2 text-sm text-[#6B6F7A]">Vous pourrez annuler pendant 8 secondes.</p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" className="rounded-full border border-[#E3E0D8] px-4 py-2 text-sm font-semibold" onClick={() => setConfirm(null)}>
-                Annuler
-              </button>
-              <button
-                type="button"
-                className="rounded-full bg-[#FDECEC] px-4 py-2 text-sm font-semibold text-[#B42318]"
-                onClick={() => {
-                  confirm.run();
-                  setConfirm(null);
-                }}
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {undo ? (
-        <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full bg-[#070C1C] px-4 py-3 text-sm text-white" role="status">
-          <span>{undo.label}</span>
-          <button
-            type="button"
-            className="rounded-full bg-white px-3 py-1 font-semibold text-[#07080B]"
-            onClick={() => {
-              undo.apply();
-              setUndo(null);
-            }}
-          >
-            Annuler
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
 
 const fieldClass = "w-full rounded-2xl border border-[#E3E0D8] bg-white px-3 py-3 text-sm outline-none focus:border-[#6E5BFF]";
-const roundBtn = "flex h-[52px] w-[52px] items-center justify-center rounded-full border border-[#E3E0D8] bg-white text-sm font-semibold";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -826,105 +718,5 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-sm font-semibold">{label}</span>
       {children}
     </label>
-  );
-}
-
-function LineEditor({ label, value, onChange }: { label: string; value: string[]; onChange: (next: string[]) => void }) {
-  const [draft, setDraft] = useState("");
-  return (
-    <div>
-      <p className="mb-2 text-sm font-semibold">{label}</p>
-      <ul className="space-y-2">
-        {value.map((line, index) => (
-          <li key={`${index}-${line.slice(0, 12)}`} className="flex gap-2">
-            <input
-              className={fieldClass}
-              value={line}
-              onChange={(e) => onChange(value.map((item, i) => (i === index ? e.target.value : item)))}
-            />
-            <button type="button" className="rounded-full px-3 text-sm text-[#B42318]" onClick={() => onChange(value.filter((_, i) => i !== index))}>
-              Retirer
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-2 flex gap-2">
-        <input
-          className={fieldClass}
-          value={draft}
-          placeholder="Ajouter une ligne"
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const next = draft.trim();
-              if (!next) return;
-              onChange([...value, next]);
-              setDraft("");
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function ChapterBlock({
-  chapter,
-  onEditChapter,
-  onEditSub,
-  onDeleteChapter,
-  onDeleteSub,
-  onMove,
-}: {
-  chapter: CourseBuilderChapter;
-  sectionId: string;
-  onEditChapter: () => void;
-  onEditSub: (id: string) => void;
-  onDeleteChapter: () => void;
-  onDeleteSub: (sub: CourseBuilderSubchapter) => void;
-  onMove: (dir: -1 | 1) => void;
-}) {
-  const subs = (chapter.subchapters ?? []).filter((sub) => !sub.deleted_at);
-  const pill = pillFor(chapter);
-  return (
-    <div className="mb-3 rounded-[24px] border border-[#F1EFE9] p-3">
-      <div className="flex items-center gap-2">
-        <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: pill.bg, color: pill.fg }}>
-          {pill.label}
-        </span>
-        <button type="button" className="min-w-0 flex-1 truncate text-left text-sm font-semibold" onClick={onEditChapter}>
-          {chapter.title || "Sans titre"}
-        </button>
-        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isReady(chapter) ? "bg-[#E3F6EC] text-[#126B3B]" : "bg-[#FFF1E2] text-[#8A4B0F]"}`}>
-          {isReady(chapter) ? "Prêt" : "À compléter"}
-        </span>
-        <button type="button" aria-label="Monter" onClick={() => onMove(-1)} className="px-2">
-          ↑
-        </button>
-        <button type="button" aria-label="Descendre" onClick={() => onMove(1)} className="px-2">
-          ↓
-        </button>
-        <button type="button" className="text-sm font-semibold text-[#B42318]" onClick={onDeleteChapter}>
-          Supprimer
-        </button>
-      </div>
-      {subs.map((sub) => {
-        const subPill = pillFor(sub);
-        return (
-          <div key={sub.id} className="mt-2 flex items-center gap-2 pl-4">
-            <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: subPill.bg, color: subPill.fg }}>
-              {subPill.label}
-            </span>
-            <button type="button" className="min-w-0 flex-1 truncate text-left text-sm" onClick={() => onEditSub(sub.id)}>
-              {sub.title || "Sans titre"}
-            </button>
-            <button type="button" className="text-sm text-[#B42318]" onClick={() => onDeleteSub(sub)}>
-              Supprimer
-            </button>
-          </div>
-        );
-      })}
-    </div>
   );
 }

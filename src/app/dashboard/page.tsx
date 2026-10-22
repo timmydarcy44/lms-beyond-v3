@@ -59,7 +59,9 @@ export default async function DashboardPage() {
     href === "/dashboard/partenaire" ||
     href.startsWith("/dashboard/partenaire/");
 
-  const roleDestination = resolveDestinationFromProfile(profile);
+  const roleDestination = resolveDestinationFromProfile(
+    profile ? { ...profile, email: profile.email ?? session.email } : session.email ? { email: session.email } : null,
+  );
   if (!isDemoOnly && roleDestination && (clubPartenaireEnabled || !isClubPartenaireHref(roleDestination))) {
     redirect(roleDestination);
   }

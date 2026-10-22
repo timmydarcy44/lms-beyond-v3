@@ -3,6 +3,7 @@
  * Prioritaire sur les heuristiques multi-espaces pour les rôles métier connus.
  */
 
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { resolveJessicaPostLoginDestination } from "@/lib/jessica-contentin/studio-config";
 
 const normalize = (value: unknown) =>
@@ -64,6 +65,7 @@ export function resolveDestinationFromProfile(
   if (!profile) return null;
   const jessicaDest = resolveJessicaPostLoginDestination(profile.email);
   if (jessicaDest) return jessicaDest;
+  if (isSuperAdminEmailAllowlisted(profile.email)) return "/super";
 
   const roleDest = resolveDestinationFromProfileRole(profile.role);
   const roleTypeDest = resolveDestinationFromProfileRole(profile.role_type);

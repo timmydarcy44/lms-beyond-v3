@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { getSupabasePublicUrl } from "@/lib/supabase-public-url";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { ficheColumnsFromSnapshot, recordFormationVersion } from "@/lib/courses/fiche-columns";
@@ -131,10 +132,12 @@ export async function POST(req: NextRequest) {
 
     const parsed = SaveCoursePayloadSchema.safeParse(body);
     if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      const where = first?.path.join(".") || "payload";
       return NextResponse.json(
         {
           success: false,
-          error: "Erreur de validation",
+          error: first ? `Erreur de validation (${where} : ${first.message})` : "Erreur de validation",
           validation: {
             issues: parsed.error.issues.map((issue) => ({
               path: issue.path.join("."),
@@ -331,15 +334,20 @@ export async function POST(req: NextRequest) {
     const existingId = body.courseId ? String(body.courseId) : null;
     if (existingId) {
       upsertRow.id = existingId;
+      delete upsertRow.slug;
+      delete upsertRow.owner_id;
+      delete upsertRow.creator_id;
     }
+
+    const writeClient = isSuperAdminEmailAllowlisted(user.email) ? (getServiceRoleClient() ?? supabase) : supabase;
 
     const upsertWithFallback = async (row: Record<string, unknown>) => {
       const currentRow = { ...row };
-      for (let attempt = 0; attempt < 6; attempt += 1) {
+      for (let attempt = 0; attempt < 8; attempt += 1) {
         if (attempt === 0) {
           console.log("Niveau envoyé à la DB :", currentRow.level);
         }
-        const { data, error } = await supabase
+        const { data, error } = await writeClient
           .from("courses")
           .upsert(currentRow as never, { onConflict: "id" })
           .select("id")
@@ -358,6 +366,10 @@ export async function POST(req: NextRequest) {
             delete (currentRow as Record<string, unknown>)[col];
             continue;
           }
+        }
+        if (code === "23505" && /slug/i.test(msg) && "slug" in currentRow) {
+          delete (currentRow as Record<string, unknown>).slug;
+          continue;
         }
         return { data: null, error, rowUsed: currentRow };
       }

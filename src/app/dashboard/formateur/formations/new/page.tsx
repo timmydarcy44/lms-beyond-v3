@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
 import { FormationFicheExtras } from "@/components/formation-builder/fiche-extras";
 import { EntrepriseFormationStudio } from "@/components/formation-builder/entreprise-studio";
+import { LineList } from "@/components/formation-builder/line-list";
 import { BadgeCreatorOverlay } from "@/components/studio/badge-creator-overlay";
 import type { OpenBadgeSavePayload } from "@/components/super-admin/open-badge-types";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
@@ -58,9 +59,8 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, Sparkles } from "lucide-react";
-import { X, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -79,6 +79,11 @@ type OpenBadgeRow = {
   description?: string | null;
   image_url?: string | null;
   issuer?: string | null;
+  course_id?: string | null;
+  required_course_id?: string | null;
+  criteria?: string | null;
+  modalities?: unknown;
+  evaluation_config?: unknown;
 };
 
 function isCoverVideoUrl(url: string | null | undefined): boolean {
@@ -662,6 +667,13 @@ export function FormateurFormationBuilderWhite({
     return rows;
   };
 
+  useEffect(() => {
+    const id = courseId || initialCourseId;
+    if (!id || selectedOpenBadgeId !== "none") return;
+    const linked = openBadges.find((badge) => badge.course_id === id || badge.required_course_id === id);
+    if (linked) setSelectedOpenBadgeId(String(linked.id));
+  }, [openBadges, courseId, initialCourseId, selectedOpenBadgeId]);
+
   const selectedBadge = selectedOpenBadgeId !== "none" ? badgeById.get(selectedOpenBadgeId) : null;
 
   useEffect(() => {
@@ -769,17 +781,10 @@ export function FormateurFormationBuilderWhite({
         }
 
         const objectifs = Array.isArray(data?.structure?.objectifs) ? data.structure.objectifs : [];
-        if (objectifs.length) {
-          const safe = objectifs
-            .map((x: any) => String(x ?? "").trim())
-            .filter((x: string) => x.length > 0)
-            .slice(0, 12);
-          if (safe.length) {
-            updateGeneral({
-              objectifs: safe,
-            });
-          }
-        }
+        const safeObjectifs = objectifs
+          .map((x: any) => String(x ?? "").trim())
+          .filter((x: string) => x.length > 0)
+          .slice(0, 12);
 
         const sections = Array.isArray(data?.structure?.sections) ? data.structure.sections : [];
         if (!sections.length) {
@@ -788,6 +793,10 @@ export function FormateurFormationBuilderWhite({
 
         hydrateFromSnapshot({
           ...latestSnapshot,
+          general: {
+            ...latestSnapshot.general,
+            ...(safeObjectifs.length ? { objectifs: safeObjectifs } : {}),
+          },
           sections: sections.map((section: any, sectionIndex: number) => ({
             id: `section-${Date.now()}-${sectionIndex}`,
             title: String(section.title ?? `Section ${sectionIndex + 1}`),
@@ -841,16 +850,20 @@ export function FormateurFormationBuilderWhite({
 
   const handlePersistBeyondIA = async (silent = false) => {
     if (!snapshot.general.title?.trim()) {
-      toast.error("Titre requis", {
-        description: "Saisissez un titre avant d'enregistrer.",
-      });
-      return;
+      if (!silent) {
+        toast.error("Titre requis", {
+          description: "Saisissez un titre avant d'enregistrer.",
+        });
+      }
+      return false;
     }
     if (Boolean((snapshot.general as any)?.parcours_only) && !String((snapshot.general as any)?.parcours_only_path_id ?? "").trim()) {
-      toast.error("Parcours requis", {
-        description: "Choisissez le parcours de la galaxie (Paramètres généraux) pour une formation uniquement visible dans un parcours.",
-      });
-      return;
+      if (!silent) {
+        toast.error("Parcours requis", {
+          description: "Choisissez le parcours de la galaxie (Paramètres généraux) pour une formation uniquement visible dans un parcours.",
+        });
+      }
+      return false;
     }
     setIsPersisting(true);
     try {
@@ -948,8 +961,7 @@ export function FormateurFormationBuilderWhite({
         return true;
       }
       if (!silent) {
-        setSuccessOverlayStatus(data?.status === "published" ? "published" : "draft");
-        setPublishSuccessOpen(true);
+        toast.success("Formation enregistrée");
       }
       return true;
     } catch (e) {
@@ -1220,6 +1232,7 @@ export function FormateurFormationBuilderWhite({
           backHref={backHref}
           onSave={handlePersistBeyondIA}
           onPublish={() => void handlePublishBeyondIA()}
+          openBadges={openBadges}
           onOpenAi={() => setIsBeyondIAOpen(true)}
           onCreateValidator={() => {
             setCreateValidatorFirstName("");
@@ -1877,6 +1890,8 @@ export function FormateurFormationBuilderWhite({
 
         {/* Section "Open Badge & Certification" retirée (refonte UI). */}
       </div>
+      </>
+      )}
 
       {publishSuccessOpen ? (
         <div
@@ -1919,8 +1934,6 @@ export function FormateurFormationBuilderWhite({
           </motion.div>
         </div>
       ) : null}
-      </>
-      )}
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
           <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-white text-slate-950 shadow-xl">
             <DialogHeader>
@@ -2114,101 +2127,6 @@ function ObjectivesMirror({ items, empty }: { items: string[]; empty: string }) 
         <li key={`${idx}-${item.slice(0, 16)}`}>{item}</li>
       ))}
     </ul>
-  );
-}
-
-function splitLines(text: string) {
-  return text.split(/\r?\n/).map((line) => line.replace(/^[\s\-*•\d.)]+/, "").trim()).filter(Boolean);
-}
-
-function LineList({
-  value,
-  onChange,
-  placeholder,
-  kind,
-  title,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-  placeholder: string;
-  kind: "objectifs" | "prerequis";
-  title: string;
-}) {
-  const rows = value.length ? value : [""];
-  const [mode, setMode] = useState<"lines" | "paste" | "ai">("lines");
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const append = (lines: string[]) => {
-    const kept = rows.map((row) => row.trim()).filter(Boolean);
-    onChange([...kept, ...lines]);
-    setDraft("");
-    setMode("lines");
-  };
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant={mode === "paste" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "paste" ? "lines" : "paste")}>Faire un copier/coller</Button>
-        <Button type="button" variant={mode === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "ai" ? "lines" : "ai")}>Avec l&apos;IA</Button>
-      </div>
-      {mode === "paste" ? (
-        <div className="space-y-2">
-          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Une ligne par élément" className="min-h-[120px] rounded-2xl border-0 bg-slate-50 text-slate-950" />
-          <Button type="button" className="rounded-full" onClick={() => append(splitLines(draft))}>Ajouter ces lignes</Button>
-        </div>
-      ) : null}
-      {mode === "ai" ? (
-        <div className="space-y-2">
-          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Décrivez le public et le sujet" className="min-h-[96px] rounded-2xl border-0 bg-slate-50 text-slate-950" />
-          <Button
-            type="button"
-            disabled={busy}
-            className="rounded-full"
-            onClick={() => {
-              setBusy(true);
-              void fetch("/api/course-builder/lines", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ kind, title, prompt: draft }),
-              })
-                .then(async (response) => {
-                  const json = (await response.json()) as { lines?: string[]; error?: string };
-                  if (!response.ok || !json.lines?.length) {
-                    toast.error(json.error ?? "L'IA n'a pas répondu");
-                    return;
-                  }
-                  append(json.lines);
-                })
-                .finally(() => setBusy(false));
-            }}
-          >
-            {busy ? "Génération…" : "Générer"}
-          </Button>
-        </div>
-      ) : null}
-      <AnimatePresence initial={false}>
-        {rows.map((row, idx) => (
-          <motion.div key={`${kind}-${idx}`} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-            <Input
-              value={row}
-              onChange={(event) => {
-                const next = [...rows];
-                next[idx] = event.target.value;
-                onChange(next);
-              }}
-              placeholder={`${placeholder} ${idx + 1}`}
-              className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
-            />
-            <Button type="button" variant="ghost" onClick={() => { const next = rows.filter((_, index) => index !== idx); onChange(next.length ? next : [""]); }} className="h-10 w-10 rounded-full bg-slate-100 p-0 text-slate-700 hover:bg-slate-200" aria-label="Supprimer">
-              <X className="h-4 w-4" />
-            </Button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-      <Button type="button" onClick={() => onChange([...rows, ""])} className="rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 py-2 text-sm font-medium text-white hover:opacity-95">
-        <Plus className="mr-2 h-4 w-4" />
-        Ajouter une ligne
-      </Button>
-    </div>
   );
 }
 

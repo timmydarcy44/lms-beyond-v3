@@ -54,7 +54,9 @@ export async function POST(request: Request) {
   const isClubPartenaireHref = (href: string) =>
     isClubDashboardPath(href) || isPartenaireDashboardPath(href);
 
-  const roleDestination = resolveDestinationFromProfile(profile);
+  const roleDestination = resolveDestinationFromProfile(
+    profile ? { ...profile, email: profile.email ?? emailValue } : emailValue ? { email: emailValue } : null,
+  );
   if (roleDestination && (clubPartenaireEnabled || !isClubPartenaireHref(roleDestination))) {
     return NextResponse.json({ destination: roleDestination });
   }

@@ -10,6 +10,7 @@ import type { ExpertAccessRow } from "@/lib/expert/expert-access";
 import { isExpertApproved } from "@/lib/expert/expert-access";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_EXPERT } from "@/lib/demo/jade-dashboard-mocks";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { getSession } from "@/lib/auth/session";
 import { loadExpertPoleState, type ExpertMembership, type ExpertPole } from "@/lib/expert/poles";
 import { getServerClient } from "@/lib/supabase/server";
@@ -66,9 +67,10 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
     );
   }
 
+  const superAdmin = isSuperAdminEmailAllowlisted(session.email);
   const supabase = await getServerClient();
   if (!supabase) {
-    redirect("/login?next=/dashboard/expert");
+    redirect(superAdmin ? "/super" : "/login?next=/dashboard/expert");
   }
 
   const {
@@ -82,11 +84,16 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
   const expert = await loadOrCreateExpertProfile(supabase, session.id, user);
 
   if (!expert) {
-    redirect("/login?next=/dashboard/expert");
+    redirect(superAdmin ? "/super" : "/login?next=/dashboard/expert");
   }
 
   const emailConfirmed = Boolean(user?.email_confirmed_at) || user?.user_metadata?.needs_password_setup === false;
-  const poles = await loadExpertPoleState();
+  let poles: Awaited<ReturnType<typeof loadExpertPoleState>>;
+  try {
+    poles = await loadExpertPoleState();
+  } catch {
+    poles = { ready: false, pole: "formation", memberships: [], managerPoles: [] };
+  }
 
   return (
     <ExpertFrame

@@ -1874,9 +1874,53 @@ export function FormateurFormationBuilderWhite({
           theme="light"
           courseId={initialCourseId}
         />
+
+        {/* Section "Open Badge & Certification" retirée (refonte UI). */}
+      </div>
+
+      {publishSuccessOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/35 px-6 backdrop-blur-xl"
+          onClick={() => setPublishSuccessOpen(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 26 }}
+            className="w-full max-w-sm rounded-[2rem] border border-white/20 bg-white/92 p-10 text-center shadow-2xl ring-1 ring-black/5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -25 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.05 }}
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+            >
+              <Check className="h-9 w-9" strokeWidth={2.5} />
+            </motion.div>
+            <p className="mt-8 text-xl font-semibold tracking-tight text-slate-900">
+              {successOverlayStatus === "published" ? "Votre cours est en ligne" : "Cours enregistré"}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              {successOverlayStatus === "published"
+                ? "Votre formation est visible pour les apprenants."
+                : "Vos modifications ont été sauvegardées."}
+            </p>
+            <Button
+              type="button"
+              className="mt-10 h-12 w-full rounded-full bg-slate-950 text-sm font-semibold text-white hover:bg-slate-900"
+              onClick={() => {
+                setPublishSuccessOpen(false);
+                router.push(returnTo || "/dashboard/formateur/formations");
+              }}
+            >
+              {successOverlayStatus === "published" ? "Accéder au catalogue" : "Retour au catalogue"}
+            </Button>
+          </motion.div>
+        </div>
+      ) : null}
       </>
       )}
-
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
           <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-white text-slate-950 shadow-xl">
             <DialogHeader>
@@ -2033,51 +2077,6 @@ export function FormateurFormationBuilderWhite({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Section "Open Badge & Certification" retirée (refonte UI). */}
-      </div>
-
-      {publishSuccessOpen ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/35 px-6 backdrop-blur-xl"
-          onClick={() => setPublishSuccessOpen(false)}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 26 }}
-            className="w-full max-w-sm rounded-[2rem] border border-white/20 bg-white/92 p-10 text-center shadow-2xl ring-1 ring-black/5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <motion.div
-              initial={{ scale: 0, rotate: -25 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.05 }}
-              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
-            >
-              <Check className="h-9 w-9" strokeWidth={2.5} />
-            </motion.div>
-            <p className="mt-8 text-xl font-semibold tracking-tight text-slate-900">
-              {successOverlayStatus === "published" ? "Votre cours est en ligne" : "Cours enregistré"}
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              {successOverlayStatus === "published"
-                ? "Votre formation est visible pour les apprenants."
-                : "Vos modifications ont été sauvegardées."}
-            </p>
-            <Button
-              type="button"
-              className="mt-10 h-12 w-full rounded-full bg-slate-950 text-sm font-semibold text-white hover:bg-slate-900"
-              onClick={() => {
-                setPublishSuccessOpen(false);
-                router.push(returnTo || "/dashboard/formateur/formations");
-              }}
-            >
-              {successOverlayStatus === "published" ? "Accéder au catalogue" : "Retour au catalogue"}
-            </Button>
-          </motion.div>
-        </div>
-      ) : null}
     </DashboardShell>
   );
 }

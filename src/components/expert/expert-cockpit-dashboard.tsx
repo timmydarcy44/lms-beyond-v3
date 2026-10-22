@@ -70,6 +70,7 @@ const QUICK_NAV = [
 type Props = {
   restricted?: boolean;
   formations?: ExpertShopFormation[];
+  pole?: "formation" | "care" | null;
 };
 
 const CARD = "rounded-3xl border border-white/[0.07] bg-[#10173a]/70 backdrop-blur-xl";
@@ -162,7 +163,7 @@ function EmptyRow({ icon: Icon, children }: { icon: typeof Inbox; children: Reac
   );
 }
 
-export function ExpertCockpitDashboard({ restricted = false, formations = [] }: Props) {
+export function ExpertCockpitDashboard({ restricted = false, formations = [], pole = null }: Props) {
   const { expert } = useExpertAccess();
   const supabase = useSupabase();
   const router = useRouter();
@@ -180,19 +181,26 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
         if (!cancelled) setMissions(JADE_EXPERT_MISSIONS);
         return;
       }
-      const { data: rows } = await supabase
-        .from("action_requests")
-        .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
-        .eq("expert_id", expert.id)
-        .order("created_at", { ascending: false })
-        .limit(30);
+      const run = (withPole: boolean) => {
+        let query = supabase
+          .from("action_requests")
+          .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
+          .eq("expert_id", expert.id)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (withPole && pole) query = query.eq("pole", pole);
+        return query;
+      };
+      const first = await run(Boolean(pole));
+      const rows =
+        first.error && /pole|column|schema cache/i.test(first.error.message ?? "") ? (await run(false)).data : first.data;
       if (!cancelled) setMissions((rows ?? []) as MissionRow[]);
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [expert.id, supabase]);
+  }, [expert.id, pole, supabase]);
 
   useEffect(() => {
     if (!moreOpen) return;

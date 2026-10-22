@@ -22,6 +22,7 @@ import {
   slotKindFromRule,
   type SlotFormat,
 } from "@/lib/expert/space-model";
+import { loadExpertPoleState } from "@/lib/expert/poles";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const COOKIE = "jade_expert_overrides";
@@ -350,20 +351,32 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     is_certified_beyond: expert.is_certified_beyond === true,
   });
 
-  const requests = await supabase
+  const poleState = await loadExpertPoleState();
+  let requests = await supabase
     .from("action_requests")
     .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
     .eq("expert_id", session.id)
+    .eq("pole", poleState.ready ? poleState.pole : "formation")
     .order("scheduled_at", { ascending: true });
+  if (requests.error && /pole|column|schema cache/i.test(requests.error.message ?? "")) {
+    requests = await supabase
+      .from("action_requests")
+      .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
+      .eq("expert_id", session.id)
+      .order("scheduled_at", { ascending: true });
+  }
   const missions = (requests.error ? [] : (requests.data ?? [])).map((row) => mapMission(row as Record<string, unknown>, firstName)).filter((mission) => mission.status !== "annulee");
 
   let slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id,recurrence_rule").eq("expert_id", session.id);
   if (slotQuery.error && /recurrence_rule|column/i.test(slotQuery.error.message ?? "")) {
     slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id").eq("expert_id", session.id);
   }
+  const missionIds = new Set(missions.map((mission) => mission.id));
   const slots: ExpertSlot[] = tableMissing(slotQuery.error)
     ? []
-    : ((slotQuery.data ?? []) as Array<Record<string, unknown>>).map((slot) => {
+    : ((slotQuery.data ?? []) as Array<Record<string, unknown>>)
+        .filter((slot) => !slot.mission_id || missionIds.has(String(slot.mission_id)))
+        .map((slot) => {
         const mission = missions.find((item) => item.id === slot.mission_id);
         return {
           id: String(slot.id),

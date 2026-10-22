@@ -11,16 +11,23 @@ import { isExpertApproved } from "@/lib/expert/expert-access";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_EXPERT } from "@/lib/demo/jade-dashboard-mocks";
 import { getSession } from "@/lib/auth/session";
+import { loadExpertPoleState, type ExpertMembership, type ExpertPole } from "@/lib/expert/poles";
 import { getServerClient } from "@/lib/supabase/server";
 import "@/styles/expert-theme.css";
 
 function ExpertFrame({
   expert,
   emailConfirmed,
+  pole,
+  memberships,
+  managerPoles,
   children,
 }: {
   expert: ExpertAccessRow;
   emailConfirmed: boolean;
+  pole: ExpertPole;
+  memberships: ExpertMembership[];
+  managerPoles: ExpertPole[];
   children: React.ReactNode;
 }) {
   const name = [expert.first_name, expert.last_name].filter(Boolean).join(" ").trim() || "Expert";
@@ -33,6 +40,9 @@ function ExpertFrame({
             certified={isEdgeCertified(expert)}
             restricted={!isExpertApproved(expert)}
             photoUrl={expert.photo_url || expert.avatar_url}
+            pole={pole}
+            memberships={memberships}
+            managerPoles={managerPoles}
           >
             <JadeInternalFill>{children}</JadeInternalFill>
           </ExpertShell>
@@ -50,7 +60,7 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
 
   if (isJadeDemoEmail(session.email)) {
     return (
-      <ExpertFrame expert={JADE_EXPERT} emailConfirmed>
+      <ExpertFrame expert={JADE_EXPERT} emailConfirmed pole="formation" memberships={[]} managerPoles={[]}>
         {children}
       </ExpertFrame>
     );
@@ -76,9 +86,16 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
   }
 
   const emailConfirmed = Boolean(user?.email_confirmed_at) || user?.user_metadata?.needs_password_setup === false;
+  const poles = await loadExpertPoleState();
 
   return (
-    <ExpertFrame expert={expert} emailConfirmed={emailConfirmed}>
+    <ExpertFrame
+      expert={expert}
+      emailConfirmed={emailConfirmed}
+      pole={poles.pole}
+      memberships={poles.memberships}
+      managerPoles={poles.managerPoles}
+    >
       {children}
     </ExpertFrame>
   );

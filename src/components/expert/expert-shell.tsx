@@ -13,16 +13,21 @@ import {
   Euro,
   BookOpen,
   FileText,
+  FlaskConical,
   HelpCircle,
   LayoutDashboard,
   Lock,
   Menu,
+  Receipt,
   Settings,
   User2,
+  Users,
   X,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { ExpertPoleSwitcher } from "@/components/expert/expert-pole-switcher";
+import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
+import { activePoles } from "@/lib/expert/pole-model";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
@@ -119,12 +124,18 @@ export function ExpertShell({
   certified,
   restricted,
   photoUrl,
+  pole = "formation",
+  memberships = [],
+  managerPoles = [],
 }: {
   children: ReactNode;
   name: string;
   certified: boolean;
   restricted: boolean;
   photoUrl?: string | null;
+  pole?: ExpertPole;
+  memberships?: ExpertMembership[];
+  managerPoles?: ExpertPole[];
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -173,6 +184,15 @@ export function ExpertShell({
     { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
     { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
   ];
+  if (pole === "care") {
+    items.push(
+      { label: "Dossiers clients", href: "/dashboard/expert/dossiers", icon: Users },
+      { label: "Rendez-vous", href: "/dashboard/expert/rendez-vous", icon: CalendarDays },
+      { label: "Facturation particuliers", href: "/dashboard/expert/facturation", icon: Receipt },
+      { label: "Tests Care", href: "/dashboard/expert/tests", icon: FlaskConical },
+    );
+  }
+  const switcherPoles = activePoles(memberships);
 
   const identity = (
     <div className="mb-5 flex items-center gap-3 px-2">
@@ -223,6 +243,12 @@ export function ExpertShell({
         <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
           {brand}
           {identity}
+          {switcherPoles.length > 1 ? <ExpertPoleSwitcher pole={pole} /> : null}
+          {managerPoles.length > 0 ? (
+            <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)}>
+              Appartenances
+            </Link>
+          ) : null}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <NavLinks items={items} />
           </div>
@@ -267,6 +293,12 @@ export function ExpertShell({
               </button>
             </div>
             {identity}
+            {switcherPoles.length > 1 ? <ExpertPoleSwitcher pole={pole} /> : null}
+            {managerPoles.length > 0 ? (
+              <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)} onClick={() => setOpen(false)}>
+                Appartenances
+              </Link>
+            ) : null}
             <div className="min-h-0 flex-1 overflow-y-auto">
               <NavLinks items={items} onNavigate={() => setOpen(false)} />
             </div>

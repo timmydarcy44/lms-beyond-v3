@@ -194,16 +194,11 @@ export function SalarieDashboardClient() {
         const { data, error } = await supabase
           .from("action_requests")
           .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
+          .eq("requester_id", snapshot.userId)
           .order("created_at", { ascending: false })
           .limit(20);
         if (error) throw error;
-        const all = (data ?? []) as ActionRequestRow[];
-        const mine = all.filter(
-          (r) =>
-            r.metadata?.requester_type === "employee" &&
-            r.metadata?.requester_id === snapshot.userId,
-        );
-        if (!cancelled) setRequests(mine);
+        if (!cancelled) setRequests((data ?? []) as ActionRequestRow[]);
       } catch {
         if (!cancelled) setRequests([]);
       } finally {

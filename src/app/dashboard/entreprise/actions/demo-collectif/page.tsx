@@ -117,12 +117,35 @@ export default function DemoCollectifActionPage() {
     if (processing || confirmed) return;
     setProcessing(true);
     try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth.user?.id ?? null;
+      let companyId: string | null = null;
+      if (userId) {
+        const membership = await supabase
+          .from("org_memberships")
+          .select("org_id")
+          .eq("user_id", userId)
+          .eq("role", "admin")
+          .limit(1)
+          .maybeSingle();
+        companyId = membership.data?.org_id ? String(membership.data.org_id) : null;
+        if (!companyId) {
+          const profile = await supabase.from("profiles").select("company_id").eq("id", userId).maybeSingle();
+          companyId = profile.data?.company_id ? String(profile.data.company_id) : null;
+        }
+      }
+      if (!userId || !companyId) {
+        toast.error("Organisation introuvable pour cette demande.");
+        return;
+      }
       const payload = {
         expert_id: expert?.id ?? "68f42af8-61a4-472a-89e3-3fca38b29c64",
         action_type: "group_workshop",
         target_label: "Équipe Engineering",
         target_count: 7,
         status: "expert_notified",
+        company_id: companyId,
+        requester_id: userId,
         metadata: { topic: "Cohésion & Alignement" },
       };
       const { error } = await supabase.from("action_requests").insert(payload);

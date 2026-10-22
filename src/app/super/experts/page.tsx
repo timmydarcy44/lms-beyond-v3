@@ -15,5 +15,14 @@ export default async function SuperExpertsPage({ searchParams }: { searchParams?
   const status = params?.status ?? "all";
   const experts = await getAdminExperts(null);
 
-  return <AdminExpertsView experts={experts} activeFilter={status} basePath="/super/experts" />;
+  return (
+    <div>
+      <p className="px-6 pt-6 text-sm">
+        <a href="/super/experts/appartenances" className="font-semibold underline">
+          Appartenances par pôle
+        </a>
+      </p>
+      <AdminExpertsView experts={experts} activeFilter={status} basePath="/super/experts" />
+    </div>
+  );
 }

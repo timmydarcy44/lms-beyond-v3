@@ -1043,6 +1043,34 @@ body.light {
   border-color: #d1d5db !important;
 }
 
+/* Score de quiz : le thème apprenant recolore p/span, et text-card-foreground reste sombre sur les cartes. */
+[data-quiz-results],
+[data-quiz-results] [data-slot="card"],
+[data-quiz-results] [data-slot="card-header"],
+[data-quiz-results] [data-slot="card-title"],
+[data-quiz-results] [data-slot="card-content"],
+[data-quiz-results] p,
+[data-quiz-results] span,
+[data-quiz-results] li,
+[data-quiz-results] label {
+  color: #ffffff !important;
+}
+
+.formateur-theme [data-quiz-results] [class*="text-white"],
+.formateur-theme [data-quiz-results] [class*="text-white/"] {
+  color: #ffffff !important;
+}
+
+.apprenant-theme [data-quiz-results],
+.apprenant-theme [data-quiz-results] p,
+.apprenant-theme [data-quiz-results] span,
+.apprenant-theme [data-quiz-results] li,
+.apprenant-theme [data-quiz-results] label,
+.apprenant-theme [data-quiz-results] [data-slot="card"],
+.apprenant-theme [data-quiz-results] [data-slot="card-title"] {
+  color: #ffffff !important;
+}
+
 .apprenant-theme .card {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;

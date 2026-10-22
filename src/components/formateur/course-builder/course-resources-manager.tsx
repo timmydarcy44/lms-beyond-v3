@@ -532,7 +532,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
             ))
           ) : (
             <p className="rounded-2xl border border-dashed border-white/15 bg-transparent px-4 py-3 text-sm text-white/50">
-              Intégrez une ressource de votre bibliothèque et choisissez son emplacement dans le parcours.
+              Créez une ressource ici, ou choisissez-en une déjà dans votre bibliothèque.
             </p>
           )}
         </section>

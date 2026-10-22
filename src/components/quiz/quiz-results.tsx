@@ -44,8 +44,8 @@ function CircularScore({ score, max = 100 }: { score: number; max?: number }) {
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-4xl font-black tabular-nums text-white">{score}</span>
-        <span className="text-sm font-semibold text-slate-300">/ {max}</span>
+        <span className="text-4xl font-black tabular-nums !text-white">{score}</span>
+        <span className="text-sm font-semibold !text-white/80">/ {max}</span>
       </div>
     </div>
   );
@@ -119,13 +119,14 @@ export function QuizResults({
 
   const wrongItems = reviewItems.filter((r) => !r.correct);
 
-  const glassCard = "border border-white/10 bg-white/5 shadow-xl backdrop-blur-md";
+  const glassCard = "border border-white/10 !bg-[#171a22] !text-white shadow-xl backdrop-blur-md";
 
   return (
     <div
+      data-quiz-results=""
       className={cn(
         "relative min-h-screen w-full overflow-y-auto overflow-x-hidden",
-        "bg-[#0B0E14] text-white",
+        "bg-[#0B0E14] !text-white",
         fullscreen && "min-h-[70vh]",
         className,
       )}
@@ -147,18 +148,18 @@ export function QuizResults({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card className={cn(glassCard, "md:col-span-1")}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-bold text-white">Ton score</CardTitle>
+              <CardTitle className="text-lg font-bold !text-white">Ton score</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-3 pb-6">
               <CircularScore score={score} />
-              <p className="text-center text-sm text-slate-300">
+              <p className="text-center text-sm !text-white/80">
                 {score >= 85
                   ? "Excellent travail."
                   : score >= minScorePercent
                     ? "Objectif atteint ou dépassé."
                     : `Objectif suggéré : ${minScorePercent}%.`}
               </p>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-300">{completionLabel}</p>
+              <p className="text-xs font-medium uppercase tracking-wider !text-white/80">{completionLabel}</p>
             </CardContent>
           </Card>
 
@@ -168,30 +169,30 @@ export function QuizResults({
                 <Eye className="h-5 w-5 text-[#ff00ff]" aria-hidden />
                 L&apos;œil d&apos;Byound AI
               </CardTitle>
-              <p className="text-sm font-normal text-white">
+              <p className="text-sm font-normal !text-white">
                 Synthèse basée sur ton score, tes thèmes et le détail de tes réponses (erreurs et réussites).
               </p>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-slate-200">
+            <CardContent className="space-y-4 text-sm !text-white/90">
               {analysisLoading ? (
-                <div className="flex items-center gap-2 text-slate-300">
+                <div className="flex items-center gap-2 !text-white/80">
                   <Loader2 className="h-4 w-4 animate-spin text-fuchsia-400" /> Génération de l’analyse…
                 </div>
               ) : (
                 <>
-                  {analysisComment ? <p className="leading-relaxed text-slate-300">{analysisComment}</p> : null}
+                  {analysisComment ? <p className="leading-relaxed !text-white/80">{analysisComment}</p> : null}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <p className="mb-2 font-semibold text-white">Points forts</p>
-                      <ul className="list-inside list-disc space-y-1 text-slate-300">
+                      <p className="mb-2 font-semibold !text-white">Points forts</p>
+                      <ul className="list-inside list-disc space-y-1 !text-white/80">
                         {(strengths.length ? strengths : ["—"]).slice(0, 4).map((s, i) => (
                           <li key={i}>{s}</li>
                         ))}
                       </ul>
                     </div>
                     <div>
-                      <p className="mb-2 font-semibold text-white">Axes d’amélioration</p>
-                      <ul className="list-inside list-disc space-y-1 text-slate-300">
+                      <p className="mb-2 font-semibold !text-white">Axes d’amélioration</p>
+                      <ul className="list-inside list-disc space-y-1 !text-white/80">
                         {(improvements.length ? improvements : ["—"]).slice(0, 4).map((s, i) => (
                           <li key={i}>{s}</li>
                         ))}
@@ -207,7 +208,7 @@ export function QuizResults({
         {radarRows.length > 0 ? (
           <Card className={glassCard}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold text-white">Synthèse par thème</CardTitle>
+              <CardTitle className="text-base font-bold !text-white">Synthèse par thème</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="flex flex-wrap gap-3">
@@ -216,8 +217,8 @@ export function QuizResults({
                     key={row.category}
                     className="flex min-w-[140px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm"
                   >
-                    <span className="font-medium text-white">{row.category}</span>
-                    <span className="ml-auto tabular-nums text-slate-300">
+                    <span className="font-medium !text-white">{row.category}</span>
+                    <span className="ml-auto tabular-nums !text-white/80">
                       {row.correct}/{row.total}
                     </span>
                   </li>
@@ -229,8 +230,8 @@ export function QuizResults({
 
         <Card className={glassCard}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold text-white">Détail des réponses</CardTitle>
-            {summary ? <p className="text-sm font-normal text-slate-300">{summary}</p> : null}
+            <CardTitle className="text-base font-bold !text-white">Détail des réponses</CardTitle>
+            {summary ? <p className="text-sm font-normal !text-white/80">{summary}</p> : null}
           </CardHeader>
           <CardContent className="space-y-3 overflow-visible pr-1">
             {reviewItems.map((row) => (
@@ -250,33 +251,33 @@ export function QuizResults({
                     <X className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" aria-hidden />
                   )}
                   <div className="min-w-0 flex-1 space-y-2">
-                    <p className="text-sm font-bold text-white">
+                    <p className="text-sm font-bold !text-white">
                       Question {row.index} : {row.title}
                     </p>
                     {!row.correct ? (
                       <>
-                        <p className="text-sm text-slate-300">
-                          <span className="font-semibold text-white">Ta réponse :</span>{" "}
+                        <p className="text-sm !text-white/80">
+                          <span className="font-semibold !text-white">Ta réponse :</span>{" "}
                           <span className="line-through decoration-rose-400/90 decoration-2">{row.userAnswerDisplay}</span>
                         </p>
-                        <p className="text-sm text-slate-200">
-                          <span className="font-semibold text-white">Bonne réponse :</span>{" "}
-                          <span className="text-slate-300">{row.expectedDisplay}</span>
+                        <p className="text-sm !text-white/90">
+                          <span className="font-semibold !text-white">Bonne réponse :</span>{" "}
+                          <span className="!text-white/80">{row.expectedDisplay}</span>
                         </p>
                         {row.explanation ? (
                           <div className="rounded-lg border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-2 text-sm">
-                            <p className="font-semibold text-white">Pourquoi est-ce faux ?</p>
-                            <p className="mt-1 leading-relaxed text-slate-300">{row.explanation}</p>
+                            <p className="font-semibold !text-white">Pourquoi est-ce faux ?</p>
+                            <p className="mt-1 leading-relaxed !text-white/80">{row.explanation}</p>
                           </div>
                         ) : null}
                       </>
                     ) : (
-                      <p className="text-sm text-slate-300">
-                        <span className="font-semibold text-white">Ta réponse :</span> {row.userAnswerDisplay}
+                      <p className="text-sm !text-white/80">
+                        <span className="font-semibold !text-white">Ta réponse :</span> {row.userAnswerDisplay}
                       </p>
                     )}
                     {row.feedback ? (
-                      <p className="text-sm italic text-slate-400">Feedback : {row.feedback}</p>
+                      <p className="text-sm italic !text-white/70">Feedback : {row.feedback}</p>
                     ) : null}
                   </div>
                 </div>
@@ -289,7 +290,7 @@ export function QuizResults({
           <Button
             type="button"
             variant="outline"
-            className="border-fuchsia-400/40 bg-white/5 text-white hover:bg-white/10"
+            className="border-fuchsia-400/40 bg-white/5 !text-white hover:bg-white/10"
             disabled={remediationLoading || wrongItems.length === 0}
             onClick={async () => {
               setRemediationLoading(true);
@@ -322,21 +323,21 @@ export function QuizResults({
             Générer un résumé de mes points d’amélioration
           </Button>
           {remediationText ? (
-            <p className="max-w-prose whitespace-pre-wrap text-sm text-slate-300 sm:flex-1">{remediationText}</p>
+            <p className="max-w-prose whitespace-pre-wrap text-sm !text-white/80 sm:flex-1">{remediationText}</p>
           ) : null}
         </div>
 
         <div className="flex flex-wrap justify-center gap-2 pb-8">
           <Button
             onClick={onClose}
-            className="rounded-full bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-8 font-semibold text-white hover:opacity-95"
+            className="rounded-full bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-8 font-semibold !text-white hover:opacity-95"
           >
             Fermer
           </Button>
           <Button
             variant="outline"
             onClick={onReviewAgain}
-            className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+            className="rounded-full border-white/20 bg-white/5 !text-white hover:bg-white/10"
           >
             Revoir
           </Button>

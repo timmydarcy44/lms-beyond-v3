@@ -634,11 +634,11 @@
   font-size: 13px;
 }
 
-.byound-ai-recall__open {
+.byound-ai-recall .byound-ai-recall__open {
   position: relative;
   margin-left: auto;
   border-radius: 999px;
-  background: #fff;
+  background: #f4f5f7;
   color: #07080b;
   padding: 8px 14px;
   font-size: 13px;

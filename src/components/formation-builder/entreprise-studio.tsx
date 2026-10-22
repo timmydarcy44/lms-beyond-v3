@@ -3,6 +3,7 @@
 import { Manrope } from "next/font/google";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
+import { CourseStructureBuilder } from "@/components/formateur/course-builder/course-structure-builder";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
@@ -89,6 +90,7 @@ export function EntrepriseFormationStudio({
   const reorderChapters = useCourseBuilder((s) => s.reorderChapters);
   const addSubchapter = useCourseBuilder((s) => s.addSubchapter);
   const updateSubchapter = useCourseBuilder((s) => s.updateSubchapter);
+  const selectChapter = useCourseBuilder((s) => s.selectChapter);
   const selectSubchapter = useCourseBuilder((s) => s.selectSubchapter);
 
   const [tab, setTab] = useState<"fiche" | "contenu">("fiche");
@@ -100,11 +102,6 @@ export function EntrepriseFormationStudio({
   const [skillIdeas, setSkillIdeas] = useState<string[]>([]);
   const [undo, setUndo] = useState<{ label: string; apply: () => void } | null>(null);
   const [confirm, setConfirm] = useState<{ label: string; run: () => void } | null>(null);
-  const [edit, setEdit] = useState<
-    | { level: "chapter"; sectionId: string; chapterId: string }
-    | { level: "sub"; sectionId: string; chapterId: string; subId: string }
-    | null
-  >(null);
   const saveRef = useRef(onSave);
   saveRef.current = onSave;
   const skipAutosave = useRef(true);
@@ -163,10 +160,7 @@ export function EntrepriseFormationStudio({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setEdit(null);
-        setConfirm(null);
-      }
+      if (event.key === "Escape") setConfirm(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -693,17 +687,8 @@ export function EntrepriseFormationStudio({
                             key={chapter.id}
                             chapter={chapter}
                             sectionId={section.id}
-                            onEditChapter={() => setEdit({ level: "chapter", sectionId: section.id, chapterId: chapter.id })}
-                            onEditSub={(subId) => {
-                              const sub = (chapter.subchapters ?? []).find((row) => row.id === subId);
-                              selectSubchapter(section.id, chapter.id, subId);
-                              if (sub?.kind === "quiz" || sub?.kind === "resource") {
-                                setEdit(null);
-                                setAdvanced(true);
-                                return;
-                              }
-                              setEdit({ level: "sub", sectionId: section.id, chapterId: chapter.id, subId });
-                            }}
+                            onEditChapter={() => selectChapter(section.id, chapter.id)}
+                            onEditSub={(subId) => selectSubchapter(section.id, chapter.id, subId)}
                             onDeleteChapter={() =>
                               askDelete(`Supprimer « ${chapter.title || "contenu"} » ?`, () => {
                                 updateChapter(section.id, chapter.id, { deleted_at: new Date().toISOString() });
@@ -753,7 +738,9 @@ export function EntrepriseFormationStudio({
               </button>
               {advanced ? (
                 <CourseBuilderWorkspace previewHref="/dashboard/formateur/formations/new/preview" theme="light" courseId={courseId} />
-              ) : null}
+              ) : (
+                <CourseStructureBuilder editorOnly theme="light" courseId={courseId} />
+              )}
             </section>
           )}
         </div>
@@ -786,8 +773,6 @@ export function EntrepriseFormationStudio({
           </ul>
         </aside>
       </div>
-
-      {edit ? <EditDrawer edit={edit} onClose={() => setEdit(null)} /> : null}
 
       {confirm ? (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Confirmer la suppression">
@@ -940,50 +925,6 @@ function ChapterBlock({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function EditDrawer({
-  edit,
-  onClose,
-}: {
-  edit: { level: "chapter"; sectionId: string; chapterId: string } | { level: "sub"; sectionId: string; chapterId: string; subId: string };
-  onClose: () => void;
-}) {
-  const snapshot = useCourseBuilder((s) => s.snapshot);
-  const updateChapter = useCourseBuilder((s) => s.updateChapter);
-  const updateSubchapter = useCourseBuilder((s) => s.updateSubchapter);
-  const section = (snapshot.sections ?? []).find((row) => row.id === edit.sectionId);
-  const chapter = section?.chapters?.find((row) => row.id === edit.chapterId);
-  const sub = edit.level === "sub" ? chapter?.subchapters?.find((row) => row.id === edit.subId) : null;
-  const item = edit.level === "sub" ? sub : chapter;
-  if (!item) return null;
-  const patch = (payload: { title?: string; duration?: string; content?: string }) => {
-    if (edit.level === "sub") updateSubchapter(edit.sectionId, edit.chapterId, edit.subId, payload);
-    else updateChapter(edit.sectionId, edit.chapterId, payload);
-  };
-  return (
-    <div className="fixed inset-y-0 right-0 z-30 w-full max-w-md overflow-y-auto border-l border-[#E3E0D8] bg-white p-6" role="dialog" aria-label="Modifier le contenu">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="font-semibold">Modifier</p>
-        <button type="button" onClick={onClose} className="rounded-full border border-[#E3E0D8] px-3 py-1 text-sm">
-          Fermer
-        </button>
-      </div>
-      <Field label="Titre">
-        <input className={fieldClass} value={item.title} onChange={(e) => patch({ title: e.target.value })} />
-      </Field>
-      <div className="mt-4">
-        <Field label="Durée">
-          <input className={fieldClass} value={item.duration} onChange={(e) => patch({ duration: e.target.value })} />
-        </Field>
-      </div>
-      <div className="mt-4">
-        <Field label="Contenu">
-          <textarea className={`${fieldClass} min-h-40`} value={item.content ?? ""} onChange={(e) => patch({ content: e.target.value })} />
-        </Field>
-      </div>
     </div>
   );
 }

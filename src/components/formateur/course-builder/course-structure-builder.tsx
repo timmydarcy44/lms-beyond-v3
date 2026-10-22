@@ -166,10 +166,13 @@ export function CourseStructureBuilder({
   previewHref,
   courseId,
   theme = "dark",
+  editorOnly = false,
 }: {
   previewHref?: string;
   courseId?: string;
   theme?: "dark" | "light";
+  /** Ouvre seulement l'éditeur de chapitre déjà existant, sans la liste des modules. */
+  editorOnly?: boolean;
 }) {
   const sections = useCourseBuilder((state) => state.snapshot.sections).filter((section) => !section.deleted_at);
   const selection = useCourseBuilder((state) => state.selection);
@@ -267,6 +270,45 @@ export function CourseStructureBuilder({
   const isLight = theme === "light";
   const primaryGradient =
     "bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] text-white font-bold hover:opacity-95";
+
+  const editorDialog = (
+    <Dialog
+      open={Boolean(expandedSelection) && isEditorOpen}
+      onOpenChange={(open) => (open ? setIsEditorOpen(true) : handleCloseEditor())}
+    >
+      <DialogContent className={isLight ? "flex h-[min(92vh,980px)] w-[min(1480px,96vw)] !max-w-[min(1480px,96vw)] flex-col border-0 bg-white p-0 shadow-2xl" : "flex h-[min(92vh,980px)] w-[min(1480px,96vw)] !max-w-[min(1480px,96vw)] flex-col border border-white/10 bg-[#0a0a0a] p-0 shadow-2xl"}>
+        <DialogHeader className={isLight ? "flex flex-row items-start justify-between gap-4 px-6 py-4" : "flex flex-row items-start justify-between gap-4 border-b border-white/10 px-6 py-4"}>
+          <div>
+            <DialogTitle className={isLight ? "text-base font-extrabold text-slate-950" : "text-base font-semibold text-white"}>
+              {modalContext.title}
+            </DialogTitle>
+            {modalContext.subtitle ? (
+              <DialogDescription className={isLight ? "text-sm text-slate-600" : "text-sm text-white/60"}>
+                {modalContext.subtitle}
+              </DialogDescription>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleCloseEditor}
+            className={
+              isLight
+                ? "h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                : "h-9 w-9 rounded-full border border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
+            }
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+          <EditorPanel courseId={courseId} selectionOverride={expandedSelection} isLight={isLight} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (editorOnly) return editorDialog;
 
   return (
     <Card
@@ -387,41 +429,7 @@ export function CourseStructureBuilder({
           </DndContext>
         </div>
       </CardContent>
-
-      <Dialog
-        open={Boolean(expandedSelection) && isEditorOpen}
-        onOpenChange={(open) => (open ? setIsEditorOpen(true) : handleCloseEditor())}
-      >
-        <DialogContent className={isLight ? "flex h-[min(92vh,980px)] w-[min(1480px,96vw)] !max-w-[min(1480px,96vw)] flex-col border-0 bg-white p-0 shadow-2xl" : "flex h-[min(92vh,980px)] w-[min(1480px,96vw)] !max-w-[min(1480px,96vw)] flex-col border border-white/10 bg-[#0a0a0a] p-0 shadow-2xl"}>
-          <DialogHeader className={isLight ? "flex flex-row items-start justify-between gap-4 px-6 py-4" : "flex flex-row items-start justify-between gap-4 border-b border-white/10 px-6 py-4"}>
-            <div>
-              <DialogTitle className={isLight ? "text-base font-extrabold text-slate-950" : "text-base font-semibold text-white"}>
-                {modalContext.title}
-              </DialogTitle>
-              {modalContext.subtitle ? (
-                <DialogDescription className={isLight ? "text-sm text-slate-600" : "text-sm text-white/60"}>
-                  {modalContext.subtitle}
-                </DialogDescription>
-              ) : null}
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleCloseEditor}
-              className={
-                isLight
-                  ? "h-9 w-9 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  : "h-9 w-9 rounded-full border border-white/10 text-white/60 hover:bg-white/10 hover:text-white"
-              }
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
-            <EditorPanel courseId={courseId} selectionOverride={expandedSelection} isLight={isLight} />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {editorDialog}
     </Card>
   );
 }

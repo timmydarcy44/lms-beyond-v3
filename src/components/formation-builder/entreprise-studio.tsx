@@ -3,14 +3,18 @@
 import { Manrope } from "next/font/google";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
+import { AddCourseResourceModal } from "@/components/formateur/course-builder/add-course-resource-modal";
 import { CourseResourcesManager } from "@/components/formateur/course-builder/course-resources-manager";
 import { CourseStructureBuilder } from "@/components/formateur/course-builder/course-structure-builder";
+import { CreateInterviewModal } from "@/components/formateur/course-builder/create-interview-modal";
+import { requestQuizBuilder } from "@/components/formateur/course-builder/quiz-builder-bus";
 import { LineList } from "@/components/formation-builder/line-list";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
 import { ficheScore } from "@/lib/courses/fiche-checklist";
 import { formatEvaluationMethodsSummary } from "@/lib/openbadges/badge-evaluation";
+import type { CourseBuilderChapter } from "@/types/course-builder";
 
 const ACCESSIBILITY_TEXT = "Formation accessible aux personnes en situation de handicap. Notre LMS est neuroadapté.";
 
@@ -66,6 +70,52 @@ function badgeModalitiesLabel(badge: OpenBadgeLink | null) {
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
 
+function minutesOf(value: string | undefined) {
+  const match = String(value ?? "").match(/(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function formatMinutes(total: number) {
+  if (total <= 0) return "0 min";
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (!hours) return `${mins} min`;
+  if (!mins) return `${hours} h`;
+  return `${hours} h ${mins}`;
+}
+
+function plainLength(html?: string) {
+  return String(html ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim().length;
+}
+
+function hasContent(item: {
+  content?: string;
+  type?: string;
+  kind?: string;
+  quiz_id?: string;
+  resource_id?: string;
+  mediaUrl?: string;
+  interview_context?: string;
+}) {
+  if (item.kind === "quiz") return Boolean(item.quiz_id);
+  if (item.kind === "resource") return Boolean(item.resource_id);
+  if (item.kind === "experiential_interview") return String(item.interview_context ?? "").trim().length >= 80;
+  if (item.type === "interactive_game") return Boolean(item.mediaUrl);
+  return plainLength(item.content) > 0;
+}
+
+function blockLabel(item: { type?: string; kind?: string }) {
+  if (item.kind === "quiz") return "Quiz";
+  if (item.kind === "resource") return "Ressource";
+  if (item.kind === "experiential_interview") return "Entretien";
+  if (item.type === "interactive_game") return "Jeu";
+  if (item.type === "video") return "Vidéo";
+  return "Leçon";
+}
+
 const FORMATS = ["Présentiel", "Distanciel", "Mixte", "E-learning"] as const;
 const AUDIENCES = ["Managers", "Commerciaux", "Équipes RH", "Direction", "Nouveaux arrivants", "Tous les collaborateurs"];
 
@@ -110,10 +160,25 @@ export function EntrepriseFormationStudio({
 }) {
   const snapshot = useCourseBuilder((s) => s.snapshot);
   const updateGeneral = useCourseBuilder((s) => s.updateGeneral);
+  const addSection = useCourseBuilder((s) => s.addSection);
+  const updateSection = useCourseBuilder((s) => s.updateSection);
+  const reorderSections = useCourseBuilder((s) => s.reorderSections);
+  const addChapter = useCourseBuilder((s) => s.addChapter);
+  const updateChapter = useCourseBuilder((s) => s.updateChapter);
+  const reorderChapters = useCourseBuilder((s) => s.reorderChapters);
+  const appendSubchapterBlock = useCourseBuilder((s) => s.appendSubchapterBlock);
+  const updateSubchapter = useCourseBuilder((s) => s.updateSubchapter);
+  const selectChapter = useCourseBuilder((s) => s.selectChapter);
+  const selectSubchapter = useCourseBuilder((s) => s.selectSubchapter);
 
   const [tab, setTab] = useState<"fiche" | "contenu">("fiche");
   const [step, setStep] = useState(1);
+  const [openModules, setOpenModules] = useState<Record<string, boolean>>({});
   const [saveLabel, setSaveLabel] = useState("Brouillon");
+  const [resourceOpen, setResourceOpen] = useState(false);
+  const [interviewTarget, setInterviewTarget] = useState<{ sectionTitle: string; chapter: CourseBuilderChapter } | null>(null);
+  const [undo, setUndo] = useState<{ label: string; apply: () => void } | null>(null);
+  const [confirm, setConfirm] = useState<{ label: string; run: () => void } | null>(null);
   const [skillDraft, setSkillDraft] = useState("");
   const [skillIdeas, setSkillIdeas] = useState<string[]>([]);
   const saveRef = useRef(onSave);
@@ -138,7 +203,26 @@ export function EntrepriseFormationStudio({
     updateGeneral({ evaluation_modalities: modalitiesText });
   }, [general.evaluation_modalities, modalitiesText, updateGeneral]);
 
+  const sections = (snapshot.sections ?? []).filter((section) => !section.deleted_at);
   const score = ficheScore(snapshot);
+  const totalMinutes = sections.reduce((sum, section) => {
+    return (
+      sum +
+      (section.chapters ?? [])
+        .filter((chapter) => !chapter.deleted_at)
+        .reduce((inner, chapter) => {
+          const subs = (chapter.subchapters ?? []).filter((sub) => !sub.deleted_at);
+          return inner + minutesOf(chapter.duration) + subs.reduce((n, sub) => n + minutesOf(sub.duration), 0);
+        }, 0)
+    );
+  }, 0);
+  const usedResourceIds = sections.flatMap((section) =>
+    (section.chapters ?? []).flatMap((chapter) =>
+      (chapter.subchapters ?? [])
+        .filter((sub) => sub.kind === "resource" && sub.resource_id)
+        .map((sub) => String(sub.resource_id)),
+    ),
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -188,6 +272,15 @@ export function EntrepriseFormationStudio({
     }, 250);
     return () => window.clearTimeout(timer);
   }, [skillDraft]);
+
+  const move = (ids: string[], id: string, dir: -1 | 1, apply: (active: string, over: string) => void) => {
+    const index = ids.indexOf(id);
+    const next = ids[index + dir];
+    if (!next) return;
+    apply(id, next);
+  };
+  const scheduleUndo = (label: string, apply: () => void) => setUndo({ label, apply });
+  const askDelete = (label: string, run: () => void) => setConfirm({ label, run });
 
   const addSkill = (name: string) => {
     const clean = name.trim();
@@ -660,7 +753,7 @@ export function EntrepriseFormationStudio({
               </div>
             </section>
           ) : (
-            <section className="space-y-6">
+            <section className="space-y-4">
               <button
                 type="button"
                 onClick={onOpenAi}
@@ -669,10 +762,142 @@ export function EntrepriseFormationStudio({
                 <Sparkles className="mr-2 h-4 w-4" />
                 Byound AI
               </button>
-              <CourseStructureBuilder theme="light" courseId={courseId} />
-              <div className="overflow-hidden rounded-[28px] bg-[#070C1C] p-2 text-white">
+              <div className="rounded-[32px] bg-[#070C1C] p-6 text-white shadow-[0_0_80px_#6E5BFF59]">
+                <p className="text-sm text-white/70">Durée du parcours</p>
+                <p className="mt-1 text-3xl font-extrabold">{formatMinutes(totalMinutes)}</p>
+                <p className="mt-2 text-sm text-white/70">
+                  {sections.length} module{sections.length > 1 ? "s" : ""}
+                </p>
+              </div>
+              {sections.map((section, index) => {
+                const chapters = (section.chapters ?? []).filter((chapter) => !chapter.deleted_at);
+                const leaves = chapters.flatMap((chapter) => {
+                  const subs = (chapter.subchapters ?? []).filter((sub) => !sub.deleted_at);
+                  return subs.length ? subs : [chapter];
+                });
+                const ready = leaves.length > 0 && leaves.every(hasContent);
+                const open = openModules[section.id] ?? true;
+                return (
+                  <article key={section.id} className="rounded-[28px] bg-white">
+                    <div className="flex items-center gap-3 p-4">
+                      <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpenModules((prev) => ({ ...prev, [section.id]: !open }))}>
+                        <span className="block font-semibold">{section.title || `Module ${index + 1}`}</span>
+                        <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${ready ? "bg-[#E3F6EC] text-[#126B3B]" : "bg-[#FFF1E2] text-[#8A4B0F]"}`}>
+                          {ready ? "Prêt" : leaves.length ? "À compléter" : "Brouillon"}
+                        </span>
+                      </button>
+                      <button type="button" className={roundBtn} aria-label="Monter le module" onClick={() => move(sections.map((row) => row.id), section.id, -1, reorderSections)}>↑</button>
+                      <button type="button" className={roundBtn} aria-label="Descendre le module" onClick={() => move(sections.map((row) => row.id), section.id, 1, reorderSections)}>↓</button>
+                      <button
+                        type="button"
+                        className="rounded-full bg-[#FDECEC] px-3 py-2 text-sm font-semibold text-[#B42318]"
+                        onClick={() =>
+                          askDelete(`Supprimer le module « ${section.title || "sans titre"} » ?`, () => {
+                            updateSection(section.id, { deleted_at: new Date().toISOString() });
+                            scheduleUndo("Module supprimé", () => updateSection(section.id, { deleted_at: null }));
+                          })
+                        }
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                    {open ? (
+                      <div className="space-y-3 border-t border-[#F1EFE9] p-4">
+                        <input className={fieldClass} value={section.title} aria-label="Titre du module" onChange={(e) => updateSection(section.id, { title: e.target.value })} />
+                        {chapters.map((chapter) => (
+                          <div key={chapter.id} className="rounded-[24px] border border-[#F1EFE9] p-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <ContentDot filled={hasContent(chapter)} />
+                              <button type="button" className="min-w-0 flex-1 truncate text-left text-sm font-semibold" onClick={() => selectChapter(section.id, chapter.id)}>
+                                {chapter.title || "Chapitre"}
+                              </button>
+                              <span className="rounded-full bg-[#EEEBFF] px-2 py-0.5 text-xs font-semibold text-[#4B3BD1]">{blockLabel(chapter)}</span>
+                              <button type="button" className="px-2 text-sm" aria-label="Monter" onClick={() => move(chapters.map((row) => row.id), chapter.id, -1, (active, over) => reorderChapters(section.id, active, over))}>↑</button>
+                              <button type="button" className="px-2 text-sm" aria-label="Descendre" onClick={() => move(chapters.map((row) => row.id), chapter.id, 1, (active, over) => reorderChapters(section.id, active, over))}>↓</button>
+                              <button
+                                type="button"
+                                className="text-sm font-semibold text-[#B42318]"
+                                onClick={() =>
+                                  askDelete(`Supprimer « ${chapter.title || "contenu"} » ?`, () => {
+                                    updateChapter(section.id, chapter.id, { deleted_at: new Date().toISOString() });
+                                    scheduleUndo("Contenu supprimé", () => updateChapter(section.id, chapter.id, { deleted_at: null }));
+                                  })
+                                }
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button type="button" className={chip} onClick={() => requestQuizBuilder({ chapterId: chapter.id })}>Quiz</button>
+                              <button type="button" className={chip} onClick={() => setResourceOpen(true)}>Ressource</button>
+                              <button type="button" className={chip} onClick={() => setInterviewTarget({ sectionTitle: section.title || "Module", chapter })}>Entretien</button>
+                              <button
+                                type="button"
+                                className={chip}
+                                onClick={() =>
+                                  appendSubchapterBlock(section.id, chapter.id, {
+                                    title: "Jeu interactif",
+                                    duration: "",
+                                    type: "interactive_game",
+                                    summary: "",
+                                    content: "",
+                                  })
+                                }
+                              >
+                                Jeu
+                              </button>
+                            </div>
+                            {(chapter.subchapters ?? [])
+                              .filter((sub) => !sub.deleted_at)
+                              .map((sub) => (
+                                <div key={sub.id} className="mt-2 flex items-center gap-2 pl-4">
+                                  <ContentDot filled={hasContent(sub)} />
+                                  <button type="button" className="min-w-0 flex-1 truncate text-left text-sm" onClick={() => selectSubchapter(section.id, chapter.id, sub.id)}>
+                                    {sub.title || "Sans titre"}
+                                  </button>
+                                  <span className="rounded-full bg-[#F7F6F2] px-2 py-0.5 text-xs font-semibold text-[#3A3D45]">{blockLabel(sub)}</span>
+                                  <button
+                                    type="button"
+                                    className="text-sm text-[#B42318]"
+                                    onClick={() =>
+                                      askDelete(`Supprimer « ${sub.title || "contenu"} » ?`, () => {
+                                        updateSubchapter(section.id, chapter.id, sub.id, { deleted_at: new Date().toISOString() });
+                                        scheduleUndo("Contenu supprimé", () => updateSubchapter(section.id, chapter.id, sub.id, { deleted_at: null }));
+                                      })
+                                    }
+                                  >
+                                    Supprimer
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        ))}
+                        <button type="button" className={chip} onClick={() => addChapter(section.id)}>
+                          + Chapitre
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+              <button type="button" onClick={() => addSection()} className="rounded-full bg-[#07080B] px-4 py-3 text-sm font-semibold text-white">
+                Ajouter un module
+              </button>
+              <CourseStructureBuilder editorOnly theme="light" courseId={courseId} />
+              <div className="hidden">
                 <CourseResourcesManager courseId={courseId} />
               </div>
+              <AddCourseResourceModal open={resourceOpen} onOpenChange={setResourceOpen} usedResourceIds={usedResourceIds} />
+              {interviewTarget ? (
+                <CreateInterviewModal
+                  open
+                  onOpenChange={(open) => {
+                    if (!open) setInterviewTarget(null);
+                  }}
+                  chapter={interviewTarget.chapter}
+                  sectionTitle={interviewTarget.sectionTitle}
+                />
+              ) : null}
             </section>
           )}
         </div>
@@ -706,11 +931,59 @@ export function EntrepriseFormationStudio({
         </aside>
       </div>
 
+      {confirm ? (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Confirmer la suppression">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-6">
+            <p className="font-semibold">{confirm.label}</p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" className="rounded-full border border-[#E3E0D8] px-4 py-2 text-sm font-semibold" onClick={() => setConfirm(null)}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-[#B42318] px-4 py-2 text-sm font-semibold text-[#1A0C04]"
+                onClick={() => {
+                  confirm.run();
+                  setConfirm(null);
+                }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {undo ? (
+        <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full bg-[#070C1C] px-4 py-3 text-sm text-white" role="status">
+          <span>{undo.label}</span>
+          <button
+            type="button"
+            className="rounded-full bg-white px-3 py-1 font-semibold text-[#07080B]"
+            onClick={() => {
+              undo.apply();
+              setUndo(null);
+            }}
+          >
+            Annuler
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 const fieldClass = "w-full rounded-2xl border border-[#E3E0D8] bg-white px-3 py-3 text-sm outline-none focus:border-[#6E5BFF]";
+const chip = "rounded-full border border-[#E3E0D8] bg-white px-3 py-2 text-sm font-semibold";
+const roundBtn = "flex h-[52px] w-[52px] items-center justify-center rounded-full border border-[#E3E0D8] bg-white text-sm font-semibold";
+
+function ContentDot({ filled }: { filled: boolean }) {
+  return (
+    <span
+      className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${filled ? "bg-[#1F8A4C]" : "bg-[#E23B3B]"}`}
+      title={filled ? "Contenu en place" : "Contenu à rédiger"}
+    />
+  );
+}
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (

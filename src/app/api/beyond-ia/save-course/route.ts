@@ -332,14 +332,24 @@ export async function POST(req: NextRequest) {
     };
 
     const existingId = body.courseId ? String(body.courseId) : null;
+    const writeClient = isSuperAdminEmailAllowlisted(user.email) ? (getServiceRoleClient() ?? supabase) : supabase;
     if (existingId) {
       upsertRow.id = existingId;
-      delete upsertRow.slug;
-      delete upsertRow.owner_id;
-      delete upsertRow.creator_id;
+      const { data: existing } = await writeClient
+        .from("courses")
+        .select("slug, owner_id, creator_id")
+        .eq("id", existingId)
+        .maybeSingle();
+      const keptSlug = String((existing as { slug?: string } | null)?.slug ?? "").trim();
+      if (keptSlug) upsertRow.slug = keptSlug;
+      const keptOwner = String((existing as { owner_id?: string } | null)?.owner_id ?? "").trim();
+      const keptCreator = String((existing as { creator_id?: string } | null)?.creator_id ?? "").trim();
+      if (keptOwner) upsertRow.owner_id = keptOwner;
+      if (keptCreator) upsertRow.creator_id = keptCreator;
     }
-
-    const writeClient = isSuperAdminEmailAllowlisted(user.email) ? (getServiceRoleClient() ?? supabase) : supabase;
+    if (!String(upsertRow.slug ?? "").trim()) {
+      upsertRow.slug = `course-${Date.now()}`;
+    }
 
     const upsertWithFallback = async (row: Record<string, unknown>) => {
       const currentRow = { ...row };
@@ -367,8 +377,9 @@ export async function POST(req: NextRequest) {
             continue;
           }
         }
-        if (code === "23505" && /slug/i.test(msg) && "slug" in currentRow) {
-          delete (currentRow as Record<string, unknown>).slug;
+        if (code === "23505" && /slug/i.test(msg)) {
+          const base = String(currentRow.slug ?? "course").replace(/-\d+$/, "");
+          currentRow.slug = `${base}-${Date.now().toString().slice(-6)}`;
           continue;
         }
         return { data: null, error, rowUsed: currentRow };

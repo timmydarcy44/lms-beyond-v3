@@ -64,6 +64,9 @@ export function OrgFormationsManageView({
   }, [learners, query]);
 
   const editHref = (courseId: string) => {
+    if (basePath.startsWith("/dashboard/entreprise")) {
+      return `${basePath}/creer?courseId=${encodeURIComponent(courseId)}`;
+    }
     const params = new URLSearchParams({
       lockedOrgId: orgId,
       courseId,

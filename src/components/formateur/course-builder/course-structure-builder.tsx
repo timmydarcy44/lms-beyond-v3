@@ -171,7 +171,7 @@ export function CourseStructureBuilder({
   courseId?: string;
   theme?: "dark" | "light";
 }) {
-  const sections = useCourseBuilder((state) => state.snapshot.sections);
+  const sections = useCourseBuilder((state) => state.snapshot.sections).filter((section) => !section.deleted_at);
   const selection = useCourseBuilder((state) => state.selection);
   const addSection = useCourseBuilder((state) => state.addSection);
   const reorderSections = useCourseBuilder((state) => state.reorderSections);
@@ -560,12 +560,12 @@ function SectionCard({
         <div className="mt-6 space-y-3">
         <SortableContext
           id={`chapter-context-${section.id}`}
-          items={section.chapters.map((chapter) => chapter.id)}
+          items={section.chapters.filter((chapter) => !chapter.deleted_at).map((chapter) => chapter.id)}
           strategy={verticalListSortingStrategy}
         >
           <div ref={setChapterDropZoneRef} className="space-y-3">
             {section.chapters.length ? (
-              section.chapters.map((chapter) => (
+              section.chapters.filter((chapter) => !chapter.deleted_at).map((chapter) => (
                 <ChapterCard
                   key={chapter.id}
                   sectionId={section.id}
@@ -907,12 +907,12 @@ function ChapterCard({
         <div className="mt-4 space-y-2">
         <SortableContext
           id={`subchapter-context-${chapter.id}`}
-          items={chapter.subchapters.map((sub) => sub.id)}
+          items={chapter.subchapters.filter((sub) => !sub.deleted_at).map((sub) => sub.id)}
           strategy={verticalListSortingStrategy}
         >
           <div ref={setSubchapterDropZoneRef} className="space-y-2">
             {chapter.subchapters.length ? (
-              chapter.subchapters.map((subchapter) => (
+              chapter.subchapters.filter((subchapter) => !subchapter.deleted_at).map((subchapter) => (
                 <SubchapterRow
                   key={subchapter.id}
                   sectionId={sectionId}
@@ -1209,7 +1209,7 @@ function EditorPanel({
   selectionOverride?: BuilderSelection | null;
   isLight: boolean;
 }) {
-  const sections = useCourseBuilder((state) => state.snapshot.sections);
+  const sections = useCourseBuilder((state) => state.snapshot.sections).filter((section) => !section.deleted_at);
   const tests = useCourseBuilder((state) => state.snapshot.tests);
   const formationTitle = useCourseBuilder((state) => state.snapshot.general.title);
   const storeSelection = useCourseBuilder((state) => state.selection);

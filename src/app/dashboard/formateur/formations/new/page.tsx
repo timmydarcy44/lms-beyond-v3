@@ -33,12 +33,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
+import { FormationFicheExtras } from "@/components/formation-builder/fiche-extras";
+import { EntrepriseFormationStudio } from "@/components/formation-builder/entreprise-studio";
 import { BadgeCreatorOverlay } from "@/components/studio/badge-creator-overlay";
 import type { OpenBadgeSavePayload } from "@/components/super-admin/open-badge-types";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
+import { ficheScore } from "@/lib/courses/fiche-checklist";
 import {
   getEdgeLabThematicBuilderOptions,
   isExactEdgeLabLabel,
@@ -836,7 +839,7 @@ export function FormateurFormationBuilderWhite({
     });
   };
 
-  const handlePersistBeyondIA = async () => {
+  const handlePersistBeyondIA = async (silent = false) => {
     if (!snapshot.general.title?.trim()) {
       toast.error("Titre requis", {
         description: "Saisissez un titre avant d'enregistrer.",
@@ -902,7 +905,7 @@ export function FormateurFormationBuilderWhite({
         body: JSON.stringify({
           snapshot: snapshotForApi,
           openBadgeId: selectedOpenBadgeId !== "none" ? selectedOpenBadgeId : null,
-          courseId,
+          courseId: courseId || initialCourseId || null,
           creator_id: user?.id ?? null,
           flashcards: flashcardsPayload,
         }),
@@ -920,26 +923,39 @@ export function FormateurFormationBuilderWhite({
               ? data.message.trim()
               : "";
         toast.error(detail ? `${msg} — ${detail}` : msg);
-        return;
+        return false;
       }
       if (data?.courseId && !courseId) {
         const id = String(data.courseId);
         setCourseId(id);
-        router.replace(
-          editorBase ? `${editorBase.replace(/\/$/, "")}/${id}` : returnTo || `/dashboard/formateur/formations/${id}`,
-        );
+        if (!initialCourseId) {
+          if (orgIsLocked && !byoundOwned) {
+            const params = new URLSearchParams(window.location.search);
+            params.set("courseId", id);
+            router.replace(`/dashboard/entreprise/formations/creer?${params.toString()}`);
+          } else {
+            router.replace(
+              editorBase ? `${editorBase.replace(/\/$/, "")}/${id}` : returnTo || `/dashboard/formateur/formations/${id}`,
+            );
+          }
+        }
         // On navigue → overlay inutile ici.
-        toast.success("Enregistré", {
-          description: data?.message || "Le cours a été sauvegardé.",
-        });
-        return;
+        if (!silent) {
+          toast.success("Enregistré", {
+            description: data?.message || "Le cours a été sauvegardé.",
+          });
+        }
+        return true;
       }
-      // Succès : afficher l'overlay Apple-style (même pour draft) pour feedback immédiat.
-      setSuccessOverlayStatus(data?.status === "published" ? "published" : "draft");
-      setPublishSuccessOpen(true);
+      if (!silent) {
+        setSuccessOverlayStatus(data?.status === "published" ? "published" : "draft");
+        setPublishSuccessOpen(true);
+      }
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Impossible d'enregistrer.";
       toast.error(msg);
+      return false;
     } finally {
       setIsPersisting(false);
     }
@@ -1055,6 +1071,10 @@ export function FormateurFormationBuilderWhite({
   };
 
   const handlePublishBeyondIA = async () => {
+    if (orgIsLocked && !byoundOwned && ficheScore(snapshot).done < 8) {
+      toast.error("Complétez la checklist pour publier");
+      return;
+    }
     if (!snapshot.general.title?.trim()) {
       toast.error("Titre requis", {
         description: "Saisissez un titre avant de publier.",
@@ -1119,7 +1139,8 @@ export function FormateurFormationBuilderWhite({
           snapshot: snapshotForApi,
           openBadgeId: selectedOpenBadgeId !== "none" ? selectedOpenBadgeId : null,
           status: "published",
-          courseId,
+          requireChecklist: orgIsLocked && !byoundOwned,
+          courseId: courseId || initialCourseId || null,
           creator_id: user?.id ?? null,
           flashcards: flashcardsPayload,
         }),
@@ -1163,6 +1184,7 @@ export function FormateurFormationBuilderWhite({
     returnTo ||
     (orgIsLocked ? "/dashboard/entreprise/formations/gerer" : "/dashboard/formateur");
   const formationsHref = editorBase || "/dashboard/formateur/formations";
+  const enterpriseStudio = orgIsLocked && !byoundOwned;
 
   return (
     <DashboardShell
@@ -1180,6 +1202,35 @@ export function FormateurFormationBuilderWhite({
       hideSidebar
       hideHeader
     >
+      {enterpriseStudio ? (
+        <EntrepriseFormationStudio
+          courseId={courseId || initialCourseId}
+          organizations={organizations}
+          thematics={thematics}
+          instructors={instructors.map((person) => ({
+            id: person.id,
+            name: person.full_name?.trim() || person.email || "Formateur",
+          }))}
+          paths={availablePaths}
+          validators={validators}
+          isTimmy={isTimmy}
+          byoundOwned={byoundOwned}
+          saving={isPersisting}
+          publishing={isPublishing}
+          backHref={backHref}
+          onSave={handlePersistBeyondIA}
+          onPublish={() => void handlePublishBeyondIA()}
+          onOpenAi={() => setIsBeyondIAOpen(true)}
+          onCreateValidator={() => {
+            setCreateValidatorFirstName("");
+            setCreateValidatorLastName("");
+            setCreateValidatorDescription("");
+            setCreateValidatorPhotoUrl("");
+            setCreateValidatorOpen(true);
+          }}
+        />
+      ) : (
+      <>
       <div className="sticky top-0 z-20 pt-4">
         <div className="mx-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] shadow-lg backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-8">
@@ -1701,6 +1752,12 @@ export function FormateurFormationBuilderWhite({
                       placeholder="Ou collez une URL (https://...)"
                       className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
                     />
+                    <Input
+                      value={snapshot.general.cover_alt || ""}
+                      onChange={(e) => updateGeneral({ cover_alt: e.target.value })}
+                      placeholder="Texte alternatif de la couverture"
+                      className="rounded-2xl border border-slate-200 bg-white text-slate-950 placeholder:text-slate-400"
+                    />
                   </div>
                 </div>
               </div>
@@ -1810,11 +1867,15 @@ export function FormateurFormationBuilderWhite({
           </CardContent>
         </Card>
 
+        <FormationFicheExtras />
+
         <CourseBuilderWorkspace
           previewHref="/dashboard/formateur/formations/new/preview"
           theme="light"
           courseId={initialCourseId}
         />
+      </>
+      )}
 
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
           <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-white text-slate-950 shadow-xl">

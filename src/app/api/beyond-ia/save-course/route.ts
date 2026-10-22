@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { getSupabasePublicUrl } from "@/lib/supabase-public-url";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { ficheColumnsFromSnapshot, recordFormationVersion } from "@/lib/courses/fiche-columns";
+import { ficheScore } from "@/lib/courses/fiche-checklist";
 import { z } from "zod";
 
 type Payload = {
@@ -11,6 +13,7 @@ type Payload = {
   courseId?: string | null;
   creator_id?: string | null;
   slug?: string | null;
+  requireChecklist?: boolean;
   flashcards?: Array<{
     id?: string;
     chapterId?: string | null;
@@ -265,6 +268,15 @@ export async function POST(req: NextRequest) {
     }
 
     const status: "draft" | "published" = body.status === "published" ? "published" : "draft";
+    if (body.requireChecklist && status === "published") {
+      const score = ficheScore(snapshot);
+      if (score.done < score.total) {
+        return NextResponse.json(
+          { error: "Checklist incomplète", details: `${score.done} / ${score.total}` },
+          { status: 400 },
+        );
+      }
+    }
 
     const levelRaw = String(snapshot.general.level ?? "").trim();
     /**
@@ -313,6 +325,7 @@ export async function POST(req: NextRequest) {
       presentation: snapshot.general.presentation || null,
       hero_image_url: hero_image_url,
       cover_image: cover_image_for_row,
+      ...ficheColumnsFromSnapshot(snapshot),
     };
 
     const existingId = body.courseId ? String(body.courseId) : null;
@@ -538,6 +551,10 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         console.warn("[save-course] flashcards sync exception:", e);
       }
+    }
+
+    if (courseId) {
+      await recordFormationVersion(supabase, courseId, snapshot, user.id, status);
     }
 
     return NextResponse.json({

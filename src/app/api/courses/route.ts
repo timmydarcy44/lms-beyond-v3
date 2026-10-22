@@ -4,6 +4,7 @@ import { CourseBuilderSnapshot } from "@/types/course-builder";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
 import { syncBadgeToDatabase } from "@/lib/badges/sync-badge-from-snapshot";
 import { resolveOrgIdFromCourseSnapshot } from "@/lib/utils/course-org-id";
+import { ficheColumnsFromSnapshot, recordFormationVersion, writeCourseRow } from "@/lib/courses/fiche-columns";
 
 export async function POST(request: NextRequest) {
   const isUuid = (value: string) =>
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
       price: snapshot.general.price || 0, // Inclure le prix depuis le snapshot
       category: snapshot.general.category || null, // Inclure la catégorie depuis le snapshot
       org_id: orgIdFromBody ?? resolveOrgIdFromCourseSnapshot(snapshot),
+      ...ficheColumnsFromSnapshot(snapshot),
     };
 
     // Ne pas modifier creator_id lors d'une mise à jour (pour éviter les problèmes de propriété)
@@ -206,12 +208,18 @@ export async function POST(request: NextRequest) {
         status,
       }));
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("courses")
         .update(courseData)
         .eq("id", courseIdToUse)
         .select()
         .single();
+
+      if (error && (error.code === "42703" || error.code === "PGRST204" || /column|schema cache/i.test(error.message ?? ""))) {
+        const fallback = await writeCourseRow(supabase, courseIdToUse, courseData);
+        data = fallback.data as typeof data;
+        error = fallback.error as typeof error;
+      }
 
       if (error) {
         console.error("[api/courses] Erreur lors de la mise à jour:", error);
@@ -238,11 +246,17 @@ export async function POST(request: NextRequest) {
       // Création d'une nouvelle formation
       // Note: Si des triggers tentent de créer des sections automatiquement,
       // ils seront désactivés via le script SQL FIX_SECTIONS_FORMATION_ID.sql
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("courses")
         .insert(courseData)
         .select()
         .single();
+
+      if (error && (error.code === "42703" || error.code === "PGRST204" || /column|schema cache/i.test(error.message ?? ""))) {
+        const fallback = await writeCourseRow(supabase, null, courseData);
+        data = fallback.data as typeof data;
+        error = fallback.error as typeof error;
+      }
 
       if (error) {
         console.error("[api/courses] Erreur lors de la création:", error);
@@ -285,6 +299,10 @@ export async function POST(request: NextRequest) {
       } else {
         result = data;
       }
+    }
+
+    if (result?.id) {
+      await recordFormationVersion(supabase, result.id, snapshot, user.id, status);
     }
 
     // Créer automatiquement un produit Stripe si un prix > 0 est défini

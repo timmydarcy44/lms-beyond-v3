@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "schema": {
-        fullPrompt = await loadPrompt(featureId, { text });
+        fullPrompt = await loadPrompt(featureId, { text, schemaType: options?.schemaType });
         result = await generateJSON(fullPrompt);
         format = "json";
         break;

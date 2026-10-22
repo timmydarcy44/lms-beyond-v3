@@ -20,7 +20,7 @@ import {
 import ReactMarkdown from "react-markdown";
 
 import { MindmapViewer } from "@/components/apprenant/mindmap-viewer";
-import { TimelineTube } from "@/components/apprenant/timeline-tube";
+import { SchemaBoard } from "@/components/apprenant/schema-board";
 import type { AIAction } from "@/lib/ai/utils";
 import "./byound-ai-panel.css";
 
@@ -42,6 +42,13 @@ const REPHRASE = [
   { id: "theoretical", title: "Reformulation théorique" },
   { id: "examples", title: "Reformulation avec exemples" },
   { id: "structured", title: "Reformulation structurée" },
+];
+const SCHEMAS = [
+  { id: "timeline", title: "Frise" },
+  { id: "flow", title: "Processus" },
+  { id: "cycle", title: "Cycle" },
+  { id: "pyramid", title: "Pyramide" },
+  { id: "compare", title: "Comparaison" },
 ];
 const OPEN_KEY = "byound-ai-panel-open";
 const LAST_KEY = "byound-ai-last-action";
@@ -209,7 +216,7 @@ export function ByoundAiPanel(props: Props) {
     } catch {
       /* ignore */
     }
-    if (action === "rephrase" || action === "translate") return;
+    if (action === "rephrase" || action === "translate" || action === "schema") return;
     props.onLaunch(action, action === "audio" ? { voice: "alloy", ...options } : options);
   };
 
@@ -320,6 +327,13 @@ export function ByoundAiPanel(props: Props) {
               <div className="byound-ai__choices">
                 {LANGUAGES.map((language) => (
                   <button key={language} type="button" onClick={() => props.onLaunch("translate", { targetLanguage: language })}>{language}</button>
+                ))}
+              </div>
+            ) : null}
+            {selected === "schema" ? (
+              <div className="byound-ai__choices">
+                {SCHEMAS.map((schema) => (
+                  <button key={schema.id} type="button" onClick={() => props.onLaunch("schema", { schemaType: schema.id })}>{schema.title}</button>
                 ))}
               </div>
             ) : null}
@@ -473,7 +487,7 @@ function ResultCard({
             </div>
             <h3>{active.aria}</h3>
             {result.action === "schema" && result.result && typeof result.result === "object" ? (
-              <div className="byound-ai__embed"><TimelineTube data={result.result as never} /></div>
+              <div className="byound-ai__embed"><SchemaBoard data={result.result as never} /></div>
             ) : null}
             {result.action === "mindmap" && result.result && typeof result.result === "object" ? (
               <div className="byound-ai__embed"><MindmapViewer data={result.result as never} /></div>
@@ -512,7 +526,11 @@ export function historyMetric(action: AIAction, result: unknown): string {
     const children = Array.isArray(record?.children) ? record.children.length : Array.isArray(record?.branches) ? record.branches.length : 0;
     return children ? `${children} branches` : "Carte";
   }
-  if (action === "schema" && Array.isArray(record?.steps)) return `${record.steps.length} étapes`;
+  if (action === "schema") {
+    if (record?.kind === "compare") return "Comparaison";
+    if (Array.isArray(record?.steps)) return `${record.steps.length} étapes`;
+    return "Schéma";
+  }
   if (action === "insights") {
     const count = keywordList(result as ResultState["result"]).length;
     return count ? `${count} mots-clés` : "Mots-clés";

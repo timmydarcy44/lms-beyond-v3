@@ -305,37 +305,20 @@ export function EntrepriseFormationStudio({
 
   return (
     <div className={`${manrope.className} min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
-      <header className={`sticky z-30 border-b border-[#E3E0D8] bg-[#F4F4F1] px-4 py-3 md:px-8 ${byoundOwned ? "top-12" : "top-0"}`}>
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <a href={backHref} className="shrink-0 rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold">
+      <header className="relative z-10 border-b border-[#E3E0D8] bg-[#F4F4F1] px-4 py-6 md:px-8">
+        <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-4">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <a href={backHref} className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold">
               Retour
             </a>
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold">{general.title?.trim() || "Nouvelle formation"}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-full bg-[#ECE9E1] p-1" role="tablist" aria-label="Fiche ou contenu">
-              {(["fiche", "contenu"] as const).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === key}
-                  onClick={() => setTab(key)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === key ? "bg-[#07080B] text-white" : "text-[#3A3D45]"}`}
-                >
-                  {key === "fiche" ? "Fiche" : "Contenu"}
-                </button>
-              ))}
-            </div>
-            <span className="text-sm text-[#6B6F7A]" aria-live="polite">
-              {saving ? "Enregistrement…" : saveLabel}
-            </span>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="text-sm text-[#6B6F7A]" aria-live="polite">
+                {saving ? "Enregistrement…" : saveLabel}
+              </span>
               <button
                 type="button"
                 onClick={onOpenAi}
-                className="inline-flex items-center rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-4 py-2 text-sm font-bold text-white"
+                className="inline-flex items-center rounded-full bg-gradient-to-r from-[#071633] to-[#38BDF8] px-4 py-2 text-sm font-bold text-white"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Byound AI
@@ -359,6 +342,23 @@ export function EntrepriseFormationStudio({
                 {publishing ? "Publication…" : "Publier"}
               </button>
             </div>
+          </div>
+          <h1 className="max-w-3xl text-center text-3xl font-extrabold tracking-tight text-[#07080B] md:text-4xl">
+            {general.title?.trim() || "Nouvelle formation"}
+          </h1>
+          <div className="flex rounded-full bg-[#ECE9E1] p-1" role="tablist" aria-label="Fiche ou contenu">
+            {(["fiche", "contenu"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={`rounded-full px-5 py-2 text-sm font-semibold ${tab === key ? "bg-[#07080B] text-white" : "text-[#3A3D45]"}`}
+              >
+                {key === "fiche" ? "Fiche" : "Contenu"}
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -771,7 +771,7 @@ export function EntrepriseFormationStudio({
             </section>
           ) : (
             <section className="space-y-4">
-              <div className="rounded-[32px] bg-[#070C1C] p-6 text-white shadow-[0_0_80px_#6E5BFF59]">
+              <div className="rounded-[32px] bg-[#070C1C] p-6 text-white">
                 <p className="text-sm text-white/70">Durée du parcours</p>
                 <p className="mt-1 text-3xl font-extrabold">{formatMinutes(totalMinutes)}</p>
                 <p className="mt-2 text-sm text-white/70">

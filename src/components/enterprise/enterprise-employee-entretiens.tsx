@@ -35,6 +35,10 @@ export type InterviewDetails = {
   employee_feedback: string;
   hr_feedback: string;
   extra_notes: string;
+  signature_token?: string;
+  signature_requested_at?: string;
+  signed_at?: string;
+  signed_name?: string;
 };
 
 const DOC_TYPE_LABEL: Record<string, string> = {
@@ -78,6 +82,12 @@ export function parseInterviewDetails(notes: string | null | undefined): Intervi
         employee_feedback: String(parsed.employee_feedback ?? ""),
         hr_feedback: String(parsed.hr_feedback ?? ""),
         extra_notes: String(parsed.extra_notes ?? (parsed.kind ? "" : notes)),
+        signature_token: parsed.signature_token ? String(parsed.signature_token) : undefined,
+        signature_requested_at: parsed.signature_requested_at
+          ? String(parsed.signature_requested_at)
+          : undefined,
+        signed_at: parsed.signed_at ? String(parsed.signed_at) : undefined,
+        signed_name: parsed.signed_name ? String(parsed.signed_name) : undefined,
       };
     }
   } catch {
@@ -95,6 +105,10 @@ export function serializeInterviewDetails(details: InterviewDetails): string {
     employee_feedback: details.employee_feedback.trim(),
     hr_feedback: details.hr_feedback.trim(),
     extra_notes: details.extra_notes.trim(),
+    signature_token: details.signature_token || undefined,
+    signature_requested_at: details.signature_requested_at || undefined,
+    signed_at: details.signed_at || undefined,
+    signed_name: details.signed_name || undefined,
   });
 }
 
@@ -119,6 +133,8 @@ export function EnterpriseEmployeeEntretiensSection({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [savedDocId, setSavedDocId] = useState<string | null>(null);
+  const [sendingSignature, setSendingSignature] = useState(false);
 
   const entretiens = useMemo(
     () =>
@@ -129,6 +145,7 @@ export function EnterpriseEmployeeEntretiensSection({
   );
 
   const openCreate = () => {
+    setSavedDocId(null);
     setEditingId(null);
     setForm({
       ...EMPTY_FORM,
@@ -139,6 +156,7 @@ export function EnterpriseEmployeeEntretiensSection({
   };
 
   const openEdit = (doc: HrDocument) => {
+    setSavedDocId(null);
     setEditingId(doc.id);
     setForm({
       document_type: doc.document_type || "entretien_individuel",
@@ -177,7 +195,7 @@ export function EnterpriseEmployeeEntretiensSection({
           onDocumentsChange([nextDoc, ...documents]);
         }
         toast.success(editingId ? "Entretien mis à jour" : "Entretien ajouté");
-        setOpen(false);
+        setSavedDocId(nextDoc.id);
         return;
       }
 
@@ -200,6 +218,7 @@ export function EnterpriseEmployeeEntretiensSection({
         if (!res.ok || !json.document) throw new Error(json.error ?? "Erreur");
         onDocumentsChange(documents.map((d) => (d.id === editingId ? json.document! : d)));
         toast.success("Entretien mis à jour");
+        setSavedDocId(editingId);
       } else {
         const formData = new FormData();
         formData.set("document_type", form.document_type);
@@ -214,8 +233,8 @@ export function EnterpriseEmployeeEntretiensSection({
         if (!res.ok || !json.document) throw new Error(json.error ?? "Erreur");
         onDocumentsChange([json.document, ...documents]);
         toast.success("Entretien ajouté");
+        setSavedDocId(json.document.id);
       }
-      setOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -487,17 +506,65 @@ export function EnterpriseEmployeeEntretiensSection({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              className="bg-[#0f766e] text-white hover:bg-[#0d9488]"
-              disabled={saving}
-              onClick={() => void save()}
-            >
-              {saving ? "Enregistrement…" : editingId ? "Enregistrer" : "Ajouter l'entretien"}
-            </Button>
+            {savedDocId ? (
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-gray-600">
+                  Envoyer une signature de la part du collaborateur pour qu&apos;il confirme la synthèse.
+                </p>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Plus tard
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-[#111111] text-white hover:bg-[#111111]"
+                    disabled={sendingSignature}
+                    onClick={() => {
+                      if (isEdgebsDemoEmployeeId(employeeId)) {
+                        toast.success("Demande enregistrée sur cette fiche démo");
+                        setOpen(false);
+                        return;
+                      }
+                      setSendingSignature(true);
+                      void fetch(
+                        `/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/signature`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ docId: savedDocId }),
+                        },
+                      )
+                        .then(async (res) => {
+                          const json = (await res.json()) as { error?: string };
+                          if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
+                          toast.success("Demande de signature envoyée");
+                          setOpen(false);
+                        })
+                        .catch((e: unknown) => {
+                          toast.error(e instanceof Error ? e.message : "Envoi impossible");
+                        })
+                        .finally(() => setSendingSignature(false));
+                    }}
+                  >
+                    {sendingSignature ? "Envoi…" : "Envoyer la signature"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  Annuler
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[#0f766e] text-white hover:bg-[#0d9488]"
+                  disabled={saving}
+                  onClick={() => void save()}
+                >
+                  {saving ? "Enregistrement…" : editingId ? "Enregistrer" : "Ajouter l'entretien"}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

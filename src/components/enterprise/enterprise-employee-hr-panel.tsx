@@ -28,13 +28,19 @@ type Props = {
   email: string | null;
   phone: string | null;
   hireDate: string | null;
+  jobTitle?: string | null;
   documents: HrDocument[];
   editing?: boolean;
   /** Affiche uniquement les coordonnées (sans entretiens). */
   showContactOnly?: boolean;
   /** Affiche uniquement la section entretiens. */
   showEntretiensOnly?: boolean;
-  onProfileChange: (patch: { phone?: string | null; hire_date?: string | null }) => void;
+  onProfileChange: (patch: {
+    phone?: string | null;
+    hire_date?: string | null;
+    job_title?: string | null;
+    metier?: string | null;
+  }) => void;
   onDocumentsChange: (docs: HrDocument[]) => void;
 };
 
@@ -43,6 +49,7 @@ export function EnterpriseEmployeeHrPanel({
   email,
   phone,
   hireDate,
+  jobTitle = null,
   documents,
   editing = false,
   showContactOnly = false,
@@ -52,6 +59,8 @@ export function EnterpriseEmployeeHrPanel({
 }: Props) {
   const [editPhone, setEditPhone] = useState(phone ?? "");
   const [editHireDate, setEditHireDate] = useState(hireDate ?? "");
+  const [editMetier, setEditMetier] = useState(jobTitle ?? "");
+  const [metiers, setMetiers] = useState<{ id: string; title: string }[]>([]);
   const [savingProfile, setSavingProfile] = useState(false);
   const [docType, setDocType] = useState("entretien_individuel");
   const [docTitle, setDocTitle] = useState("");
@@ -63,7 +72,22 @@ export function EnterpriseEmployeeHrPanel({
   useEffect(() => {
     setEditPhone(phone ?? "");
     setEditHireDate(hireDate ?? "");
-  }, [phone, hireDate]);
+    setEditMetier(jobTitle ?? "");
+  }, [phone, hireDate, jobTitle]);
+
+  useEffect(() => {
+    if (!editing) return;
+    let cancelled = false;
+    void fetch("/api/dashboard/entreprise/metiers")
+      .then((res) => res.json())
+      .then((json: { roles?: { id: string; title: string }[] }) => {
+        if (!cancelled) setMetiers(json.roles ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [editing]);
 
   const seniority = formatSeniority(hireDate);
   const showContact = !showEntretiensOnly;
@@ -78,6 +102,7 @@ export function EnterpriseEmployeeHrPanel({
         body: JSON.stringify({
           phone: editPhone.trim() || null,
           hire_date: editHireDate || null,
+          job_title: editMetier.trim() || null,
         }),
       });
       const json = (await res.json()) as { error?: string };
@@ -85,6 +110,8 @@ export function EnterpriseEmployeeHrPanel({
       onProfileChange({
         phone: editPhone.trim() || null,
         hire_date: editHireDate || null,
+        job_title: editMetier.trim() || null,
+        metier: editMetier.trim() || null,
       });
       toast.success("Fiche mise à jour");
     } catch (e) {
@@ -218,6 +245,33 @@ export function EnterpriseEmployeeHrPanel({
               </div>
             </div>
           </div>
+          {editing ? (
+            <div className="mt-4">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Métier
+              </label>
+              <select
+                value={editMetier}
+                onChange={(e) => setEditMetier(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Choisir un métier</option>
+                {editMetier && !metiers.some((role) => role.title === editMetier) ? (
+                  <option value={editMetier}>{editMetier}</option>
+                ) : null}
+                {metiers.map((role) => (
+                  <option key={role.id} value={role.title}>
+                    {role.title}
+                  </option>
+                ))}
+              </select>
+              {metiers.length === 0 ? (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Ajoutez d&apos;abord un métier dans la section Métiers.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {editing ? (
             <button
               type="button"

@@ -23,6 +23,7 @@ import {
   type AxisKey,
 } from "@/lib/idmc/idmc-display";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Briefcase,
   Building2,
@@ -219,6 +220,7 @@ export default function SalarieDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [resendingInvite, setResendingInvite] = useState(false);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
   const [hasDiagnostics, setHasDiagnostics] = useState(false);
@@ -533,7 +535,7 @@ export default function SalarieDetailPage() {
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4 text-gray-400" />
-                    {metierMatch?.title ?? displayEmployee.metier ?? "Métier non lié"}
+                    {displayEmployee.metier ?? metierMatch?.title ?? "Métier non lié"}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-gray-400" />
@@ -587,6 +589,30 @@ export default function SalarieDetailPage() {
                   Terminer l&apos;édition
                 </button>
               )}
+              <button
+                type="button"
+                disabled={resendingInvite || !displayEmployee.email}
+                onClick={() => {
+                  if (!employeeId) return;
+                  setResendingInvite(true);
+                  void fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/resend-invite`, {
+                    method: "POST",
+                  })
+                    .then(async (res) => {
+                      const json = (await res.json()) as { error?: string };
+                      if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
+                      toast.success("Invitation renvoyée");
+                    })
+                    .catch((e: unknown) => {
+                      toast.error(e instanceof Error ? e.message : "Envoi impossible");
+                    })
+                    .finally(() => setResendingInvite(false));
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
+              >
+                <Mail className="h-4 w-4" />
+                {resendingInvite ? "Envoi…" : "Renvoyer l'invitation"}
+              </button>
               <EnterpriseEmployeeInclusionCta
                 employeeName={
                   [displayEmployee.first_name, displayEmployee.last_name].filter(Boolean).join(" ") ||
@@ -628,7 +654,7 @@ export default function SalarieDetailPage() {
             <div className="rounded-xl border border-gray-100 bg-[#f7f7f5] px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Fiche métier</p>
               <p className="mt-1 truncate text-sm font-semibold text-gray-900">
-                {metierMatch?.title ?? displayEmployee.metier ?? "—"}
+                {displayEmployee.metier ?? metierMatch?.title ?? "—"}
               </p>
             </div>
             <div className="rounded-xl border border-gray-100 bg-[#f7f7f5] px-4 py-3">
@@ -770,6 +796,7 @@ export default function SalarieDetailPage() {
                 email={displayEmployee.email ?? null}
                 phone={displayEmployee.phone ?? null}
                 hireDate={displayEmployee.hire_date ?? null}
+                jobTitle={displayEmployee.job_title ?? null}
                 documents={hrDocuments}
                 editing
                 showContactOnly

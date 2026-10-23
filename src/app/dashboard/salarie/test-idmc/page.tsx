@@ -116,6 +116,11 @@ function TestInner() {
       if (dbError) throw dbError;
 
       invalidateLearnerSnapshotCache();
+      void fetch("/api/dashboard/salarie/test-complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: "idmc" }),
+      });
 
       const next = await redirectAfterSalarieAssessmentTest("idmc", "/dashboard/salarie");
       router.push(next);

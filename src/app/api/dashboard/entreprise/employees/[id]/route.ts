@@ -263,7 +263,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Action non autorisée" }, { status: 400 });
   }
 
-  let body: { phone?: string | null; hire_date?: string | null } = {};
+  let body: { phone?: string | null; hire_date?: string | null; job_title?: string | null } = {};
   try {
     body = await request.json();
   } catch {
@@ -276,6 +276,7 @@ export async function PATCH(
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if ("phone" in body) patch.phone = body.phone?.trim() || null;
   if ("hire_date" in body) patch.hire_date = body.hire_date?.trim() || null;
+  if ("job_title" in body) patch.job_title = body.job_title?.trim() || null;
 
   let updateQuery = service
     .from("employees")
@@ -287,6 +288,7 @@ export async function PATCH(
 
   if (error?.message?.includes("hire_date") || error?.message?.includes("phone")) {
     const safePatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if ("job_title" in body) safePatch.job_title = body.job_title?.trim() || null;
     ({ data, error } = await service
       .from("employees")
       .update(safePatch)

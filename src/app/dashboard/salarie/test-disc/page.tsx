@@ -38,6 +38,11 @@ export default function SalarieDiscTestPage() {
       }
 
       invalidateLearnerSnapshotCache();
+      void fetch("/api/dashboard/salarie/test-complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: "disc" }),
+      });
 
       const redirectPath = await redirectAfterSalarieAssessmentTest("disc", "/dashboard/salarie");
       window.setTimeout(() => {

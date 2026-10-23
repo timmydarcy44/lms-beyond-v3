@@ -607,14 +607,20 @@ export function FormateurFormationBuilderWhite({
       setValidatorsLoading(true);
       try {
         const supabase = createSupabaseBrowserClient();
-        const { data, error } = await supabase.from("validators").select("*");
+        const [{ data, error }, admin] = await Promise.all([
+          supabase.from("validators").select("*"),
+          fetch("/api/super-admin/validators")
+            .then(async (response) => (response.ok ? response.json() : null))
+            .catch(() => null),
+        ]);
         if (ignore) return;
-        if (error) {
+        if (error && !admin) {
           console.warn("[validators] fetch failed", error);
           setValidators([]);
           return;
         }
-        const rows = ((data ?? []) as any[])
+        const source = Array.isArray(admin?.validators) ? admin.validators : ((data ?? []) as unknown[]);
+        const rows = (source as Array<Record<string, unknown>>)
           .filter((r) => Boolean(r?.id))
           .map((r) => {
             const first = String(r?.first_name ?? "").trim();
@@ -630,6 +636,17 @@ export function FormateurFormationBuilderWhite({
               avatarUrl,
             } satisfies ValidatorRow;
           }) as ValidatorRow[];
+        const seen = new Set(rows.map((row) => row.id));
+        const seenNames = new Set(rows.map((row) => row.name.toLocaleLowerCase("fr")));
+        for (const person of (Array.isArray(admin?.formateurs) ? admin.formateurs : []) as Array<{ id?: string; name?: string }>) {
+          const id = String(person?.id ?? "");
+          const name = String(person?.name ?? "").trim() || id;
+          const key = name.toLocaleLowerCase("fr");
+          if (!id || seen.has(id) || seenNames.has(key)) continue;
+          seen.add(id);
+          seenNames.add(key);
+          rows.push({ id, name, avatarUrl: null });
+        }
 
         rows.sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
         setValidators(rows);

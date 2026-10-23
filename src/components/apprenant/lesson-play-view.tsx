@@ -14,6 +14,7 @@ import "katex/dist/katex.min.css";
 
 import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-resource";
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
+import { ByoundCardsPrompt, type ByoundCardsReview } from "@/components/apprenant/byound-cards-prompt";
 import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
@@ -1059,20 +1060,35 @@ export function LessonPlayView({
   }, [sanitizedContent]);
 
   const showBeyondFlashCta = beyondFlashCards.length > 0;
-  const flashReview = useMemo(() => {
+  const flashReview = useMemo<ByoundCardsReview | null>(() => {
     if (typeof window === "undefined") return null;
     try {
       const raw = window.localStorage.getItem(`flash-review-${courseId}-${String(activeLesson.id)}`);
       if (!raw) return null;
-      const parsed = JSON.parse(raw) as { known?: number; unknown?: number };
+      const parsed = JSON.parse(raw) as {
+        known?: number;
+        unknown?: number;
+        results?: Array<{ cardId?: string; known?: boolean }>;
+      };
       const known = Math.max(0, Number(parsed.known ?? 0));
       const unknown = Math.max(0, Number(parsed.unknown ?? 0));
-      if (known + unknown === 0) return null;
-      return { known, unknown };
+      const results = (parsed.results ?? [])
+        .map((row) => ({ cardId: String(row.cardId ?? ""), known: Boolean(row.known) }))
+        .filter((row) => row.cardId);
+      if (known + unknown === 0 && results.length === 0) return null;
+      return { known, results };
     } catch {
       return null;
     }
   }, [activeLesson.id, beyondFlashStorageEpoch, courseId, isBeyondFlashOpen]);
+
+  const cardsPrompt = showBeyondFlashCta ? (
+    <ByoundCardsPrompt
+      cardIds={beyondFlashCards.map((card) => card.id)}
+      reviewed={flashReview}
+      onStart={() => setIsBeyondFlashOpen(true)}
+    />
+  ) : null;
 
   const isHtmlContent = useMemo(() => /<\/?[a-z][\s\S]*>/i.test(sanitizedContent ?? ""), [sanitizedContent]);
 
@@ -2096,6 +2112,7 @@ export function LessonPlayView({
               lessonId={activeLesson.id}
               courseTitle={courseTitle}
               lessonTitle={activeLesson.title}
+              afterContent={cardsPrompt}
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -2179,6 +2196,7 @@ export function LessonPlayView({
               lessonId={activeLesson.id}
               courseTitle={courseTitle}
               lessonTitle={activeLesson.title}
+              afterContent={cardsPrompt}
             >
               <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
                 <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-slate-500">
@@ -2200,31 +2218,7 @@ export function LessonPlayView({
             </div>
           )}
 
-          {showBeyondFlashCta ? (
-            <button
-              type="button"
-              onClick={() => setIsBeyondFlashOpen(true)}
-              className="mt-8 flex w-full items-center gap-4 rounded-[28px] bg-gradient-to-r from-[#5B4DFF] to-[#7A6CFF] px-5 py-4 text-left text-white shadow-[0_16px_40px_rgba(91,77,255,0.28)]"
-            >
-              <span className="relative grid h-12 w-12 shrink-0 place-items-center" aria-hidden>
-                <span className="absolute left-1 top-1 h-9 w-8 rounded-xl bg-white/35" />
-                <span className="relative grid h-10 w-9 place-items-center rounded-xl bg-white text-lg font-extrabold text-[#5B4DFF]">?</span>
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-base font-extrabold">
-                  {flashReview ? "Sous-chapitre révisé" : "Cartes de ce sous-chapitre"}
-                </span>
-                <span className="mt-0.5 block text-sm text-white/80">
-                  {flashReview
-                    ? `Byound Cards · ${flashReview.known} / ${beyondFlashCards.length} cartes sues${flashReview.unknown > 0 ? ` · ${flashReview.unknown} à revoir demain` : ""}`
-                    : `Byound Cards · ${beyondFlashCards.length} carte${beyondFlashCards.length > 1 ? "s" : ""}`}
-                </span>
-              </span>
-              <span className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-extrabold text-[#1A0C04]">
-                {flashReview ? "Recommencer" : "Commencer"}
-              </span>
-            </button>
-          ) : null}
+          {isInteractiveGame || (isMediaContent && !hasTextContent) ? cardsPrompt : null}
 
           {neo ? null : <div className="flex w-full max-w-5xl flex-wrap items-start justify-start gap-3 pl-1 sm:pl-2 lg:pl-11">
             {previousLesson ? (
@@ -2684,7 +2678,10 @@ export function LessonPlayView({
         ? createPortal(
             <FlashcardPlayer
               cards={beyondFlashCards}
-              onClose={() => setIsBeyondFlashOpen(false)}
+              onClose={() => {
+                setIsBeyondFlashOpen(false);
+                setBeyondFlashStorageEpoch((value) => value + 1);
+              }}
               trackingContext={{
                 courseId,
                 scopeId: String(activeLesson.id),

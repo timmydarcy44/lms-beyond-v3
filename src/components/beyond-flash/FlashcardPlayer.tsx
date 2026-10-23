@@ -57,6 +57,10 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose, trackin
             unknown: unknownCountRef.current,
             total,
             at: Date.now(),
+            results: cardResultsRef.current.map((row) => ({
+              cardId: row.cardId,
+              known: row.result === "known",
+            })),
           }),
         );
       }

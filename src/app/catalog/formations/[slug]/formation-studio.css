@@ -499,18 +499,34 @@
 
 .formation-studio__doc-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .formation-studio__doc-actions button {
+  display: flex;
   min-height: 56px;
+  align-items: center;
+  gap: 10px;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--surface);
   color: var(--text);
+  padding: 0 16px;
   font-size: 15px;
   font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.formation-studio__doc-actions button svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .formation-studio__doc-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .formation-studio__doc-actions button:disabled {
@@ -519,6 +535,66 @@
 
 .formation-studio__sheet-panel .formation-studio__pill {
   align-self: flex-start;
+}
+
+.formation-studio__md strong,
+.formation-studio__goal-list strong {
+  font-weight: 800;
+}
+
+.formation-studio__md h1,
+.formation-studio__md h2,
+.formation-studio__md h3 {
+  margin: 12px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.formation-studio__md ul,
+.formation-studio__md ol,
+.formation-studio__goal-list ul,
+.formation-studio__goal-list ol {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+}
+
+.formation-studio__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.formation-studio__notes li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+.formation-studio__notes small {
+  opacity: 0.7;
+}
+
+.formation-studio__coach-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formation-studio__coach-form textarea {
+  min-height: 96px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text);
+  padding: 12px;
+  font: inherit;
+  resize: vertical;
 }
 
 .formation-studio__lock[title] {
@@ -607,9 +683,12 @@
   border: 0;
   background: transparent;
   color: var(--text-muted);
+  padding: 0;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .formation-studio__round {

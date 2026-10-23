@@ -26,6 +26,7 @@ type LessonSmartAssistProps = {
   lessonId?: string;
   courseTitle?: string;
   lessonTitle?: string;
+  afterContent?: React.ReactNode;
 };
 
 type SelectionState = {
@@ -158,6 +159,7 @@ export function LessonSmartAssist({
   courseId,
   lessonId,
   lessonTitle,
+  afterContent,
 }: LessonSmartAssistProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -515,12 +517,18 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
   };
 
   if (hideAssistantPanel) {
-    return <div ref={containerRef}>{children}</div>;
+    return (
+      <div ref={containerRef}>
+        {children}
+        {afterContent}
+      </div>
+    );
   }
 
   return (
     <div ref={containerRef} className={className}>
       {children}
+      {afterContent}
       <ByoundAiPanel
         dyslexia={isDyslexiaMode}
         lessonTitle={lessonLabel}

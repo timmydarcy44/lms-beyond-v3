@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Manrope } from "next/font/google";
-import { ArrowRight, Bell, Check, ChevronRight, Lock, Menu, MoreHorizontal, NotebookPen, Play, Search, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Check, ChevronRight, ClipboardList, Lock, Menu, MoreHorizontal, NotebookPen, Play, Search, Shield, Sparkles, Target } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { readLeafDone } from "@/lib/learning/leaf-done";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
@@ -114,6 +115,18 @@ function joinMeta(parts: Array<string | false | null | undefined>): string {
   return parts.map((part) => (typeof part === "string" ? part.trim() : "")).filter(Boolean).join(" · ");
 }
 
+const NOTE_LABELS: Record<string, string> = {
+  rephrase: "Reformulation",
+  mindmap: "Carte mentale",
+  schema: "Schéma",
+  translate: "Traduction",
+  audio: "Audio",
+  insights: "Analyse",
+  synthesis: "Fiche",
+};
+
+const COURSE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function nodeProgress(node: Node): ItemProgress {
   if (!node.leaves.length) return node.progress;
   const done = node.leaves.filter((leaf) => isDone(leaf.progress)).length;
@@ -162,7 +175,16 @@ export function FormationStudio({
   const [drawer, setDrawer] = useState(false);
   const [strategyOpen, setStrategyOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState<"presentation" | "objectives" | null>(null);
+  const [detailOpen, setDetailOpen] = useState<"presentation" | "objectives" | "prerequisites" | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notes, setNotes] = useState<Array<{ id: string; action: string; createdAt: string; excerpt: string; result: string }>>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachQuestion, setCoachQuestion] = useState("");
+  const [coachFeedback, setCoachFeedback] = useState("");
+  const [coachAnswer, setCoachAnswer] = useState("");
+  const [coachBusy, setCoachBusy] = useState(false);
+  const [coachHistory, setCoachHistory] = useState<Array<{ question: string; answer: string }>>([]);
   const [orgName, setOrgName] = useState("Byound");
   const [userInitials, setUserInitials] = useState("BY");
   const [outline, setOutline] = useState<ItemProgress>(EMPTY_PROGRESS);
@@ -426,8 +448,73 @@ export function FormationStudio({
   const levelTitle = selectedNode?.title ?? selectedChapter?.title ?? title;
   const levelLabel = levelDone === 0 ? "Commencer" : levelNext ? "Reprendre" : "Chapitre suivant";
   const showIndicatorTabs = Boolean(activity?.available);
-  const presentation = plainText(snapshot?.general?.presentation || snapshot?.general?.description || description || "");
+  const presentation = snapshot?.general?.presentation || snapshot?.general?.description || description || "";
   const objectives = [...new Set([...(snapshot?.general?.objectifs ?? []), ...(snapshot?.objectives ?? [])].flatMap((item) => item.split(/\n+/)).map((item) => item.trim()).filter(Boolean))];
+  const prerequisites = [...new Set((Array.isArray(snapshot?.general?.prerequisites) ? snapshot.general.prerequisites : []).flatMap((item) => String(item).split(/\n+/)).map((item) => item.trim()).filter(Boolean))];
+  const readMaterial = useMemo(() => {
+    const parts: string[] = [];
+    for (const section of snapshot?.sections ?? []) {
+      if (section.deleted_at) continue;
+      for (const chapter of section.chapters ?? []) {
+        if (chapter.deleted_at) continue;
+        if (isDone(progressById.get(String(chapter.id)) ?? EMPTY_PROGRESS)) {
+          const text = plainText(String(chapter.content || chapter.summary || "")).slice(0, 1500);
+          if (text) parts.push(`${chapter.title}\n${text}`);
+        }
+        for (const sub of chapter.subchapters ?? []) {
+          if (sub.deleted_at || !isDone(progressById.get(String(sub.id)) ?? EMPTY_PROGRESS)) continue;
+          const text = plainText(String(sub.content || sub.summary || "")).slice(0, 1500);
+          if (text) parts.push(`${sub.title}\n${text}`);
+        }
+      }
+    }
+    return parts.join("\n\n").slice(0, 12000);
+  }, [progressById, snapshot]);
+  const loadNotes = async () => {
+    if (!COURSE_UUID.test(courseId)) {
+      setNotes([]);
+      return;
+    }
+    setNotesLoading(true);
+    try {
+      const response = await fetch(`/api/ai/lesson-assistant?courseId=${encodeURIComponent(courseId)}&limit=50`);
+      const data = await response.json().catch(() => null);
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setNotes(
+        items.map((item: { id?: string; action?: string; created_at?: string; selection_excerpt?: string; transformation?: { result_text?: string | null; result_json?: unknown } }) => ({
+          id: String(item.id ?? ""),
+          action: NOTE_LABELS[String(item.action ?? "")] ?? "Transformation",
+          createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "",
+          excerpt: String(item.selection_excerpt ?? "").trim(),
+          result: String(item.transformation?.result_text ?? (item.transformation?.result_json ? JSON.stringify(item.transformation.result_json) : "")).trim(),
+        })),
+      );
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+  const requestQuestion = async (history: Array<{ question: string; answer: string }>) => {
+    if (!readMaterial) return;
+    setCoachBusy(true);
+    try {
+      const response = await fetch("/api/ai/coach-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseTitle: title, material: readMaterial, history }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setCoachFeedback(String(data?.error ?? "Le coach est indisponible."));
+        return;
+      }
+      setCoachFeedback(String(data?.feedback ?? ""));
+      setCoachQuestion(String(data?.question ?? ""));
+    } catch {
+      setCoachFeedback("Le coach est indisponible.");
+    } finally {
+      setCoachBusy(false);
+    }
+  };
   const coverUrl = [cover, snapshot?.general?.cover_image, snapshot?.general?.heroImage].find((value) => typeof value === "string" && /^https?:\/\//i.test(value.trim()))?.trim() ?? "";
   const badge = certification ?? {
     status: formationPercent >= 100 ? "unlocked" : "locked",
@@ -680,18 +767,38 @@ export function FormationStudio({
               </span>
               {actionLabel}
             </Link>
-            <Link href={actionHref} className="formation-studio__action" aria-label="Coach IA">
+            <button
+              type="button"
+              className="formation-studio__action"
+              aria-label="Coach IA"
+              onClick={() => {
+                setCoachOpen(true);
+                setCoachAnswer("");
+                setCoachFeedback("");
+                setCoachHistory([]);
+                setCoachQuestion("");
+                if (readMaterial) void requestQuestion([]);
+              }}
+            >
               <span className="formation-studio__round formation-studio__round--quiet">
                 <Sparkles size={22} strokeWidth={2} />
               </span>
               Coach IA
-            </Link>
-            <Link href="/beyond-note-app" className="formation-studio__action" aria-label="Mes notes">
+            </button>
+            <button
+              type="button"
+              className="formation-studio__action"
+              aria-label="Mes notes"
+              onClick={() => {
+                setNotesOpen(true);
+                void loadNotes();
+              }}
+            >
               <span className="formation-studio__round formation-studio__round--quiet">
                 <NotebookPen size={22} strokeWidth={2} />
               </span>
               Mes notes
-            </Link>
+            </button>
             <div className="formation-studio__more">
               <button type="button" className="formation-studio__action" aria-expanded={moreOpen} aria-label="Plus" onClick={() => setMoreOpen((open) => !open)}>
                 <span className="formation-studio__round formation-studio__round--quiet">
@@ -716,15 +823,21 @@ export function FormationStudio({
           </div>
         </div>
 
-        {coverUrl || presentation || objectives.length ? (
+        {coverUrl || presentation.trim() || objectives.length || prerequisites.length ? (
           <section className="formation-studio__docs">
             {coverUrl ? <img className="formation-studio__cover" src={coverUrl} alt="" /> : null}
             <div className="formation-studio__doc-actions">
-              <button type="button" disabled={!presentation} onClick={() => setDetailOpen("presentation")}>
+              <button type="button" disabled={!presentation.trim()} onClick={() => setDetailOpen("presentation")}>
+                <BookOpen size={18} strokeWidth={2} aria-hidden />
                 Présentation
               </button>
               <button type="button" disabled={!objectives.length} onClick={() => setDetailOpen("objectives")}>
+                <Target size={18} strokeWidth={2} aria-hidden />
                 Objectifs pédagogiques
+              </button>
+              <button type="button" disabled={!prerequisites.length} onClick={() => setDetailOpen("prerequisites")}>
+                <ClipboardList size={18} strokeWidth={2} aria-hidden />
+                Prérequis
               </button>
             </div>
           </section>
@@ -873,18 +986,90 @@ export function FormationStudio({
       </section>
 
       {detailOpen ? (
-        <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label={detailOpen === "presentation" ? "Présentation" : "Objectifs pédagogiques"}>
+        <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label={detailOpen === "presentation" ? "Présentation" : detailOpen === "objectives" ? "Objectifs pédagogiques" : "Prérequis"}>
           <button type="button" className="formation-studio__sheet-backdrop" aria-label="Fermer" onClick={() => setDetailOpen(null)} />
           <div className="formation-studio__sheet-panel">
-            <h2>{detailOpen === "presentation" ? "Présentation" : "Objectifs pédagogiques"}</h2>
-            {detailOpen === "presentation" ? <p>{presentation}</p> : (
+            <h2>{detailOpen === "presentation" ? "Présentation" : detailOpen === "objectives" ? "Objectifs pédagogiques" : "Prérequis"}</h2>
+            {detailOpen === "presentation" ? (
+              <div className="formation-studio__md">
+                <ReactMarkdown>{presentation}</ReactMarkdown>
+              </div>
+            ) : (
               <ol className="formation-studio__goal-list">
-                {objectives.map((objective) => (
-                  <li key={objective}>{objective}</li>
+                {(detailOpen === "objectives" ? objectives : prerequisites).map((item) => (
+                  <li key={item}>
+                    <ReactMarkdown>{item}</ReactMarkdown>
+                  </li>
                 ))}
               </ol>
             )}
             <button type="button" className="formation-studio__pill" onClick={() => setDetailOpen(null)}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {notesOpen ? (
+        <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label="Mes notes">
+          <button type="button" className="formation-studio__sheet-backdrop" aria-label="Fermer" onClick={() => setNotesOpen(false)} />
+          <div className="formation-studio__sheet-panel">
+            <h2>Mes notes</h2>
+            <p>Les transformations enregistrées pendant la lecture de cette formation.</p>
+            {notesLoading ? <p>Chargement…</p> : null}
+            {!notesLoading && notes.length === 0 ? <p>Aucune transformation enregistrée pour le moment.</p> : null}
+            {notes.length ? (
+              <ul className="formation-studio__notes">
+                {notes.map((note) => (
+                  <li key={note.id || `${note.action}-${note.createdAt}`}>
+                    <strong>{note.action}</strong>
+                    {note.createdAt ? <small>{note.createdAt}</small> : null}
+                    {note.excerpt ? <p>{note.excerpt}</p> : null}
+                    {note.result ? <p>{note.result.slice(0, 500)}</p> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <button type="button" className="formation-studio__pill" onClick={() => setNotesOpen(false)}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {coachOpen ? (
+        <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label="Coach IA">
+          <button type="button" className="formation-studio__sheet-backdrop" aria-label="Fermer" onClick={() => setCoachOpen(false)} />
+          <div className="formation-studio__sheet-panel">
+            <h2>Coach IA</h2>
+            {readMaterial ? (
+              <form
+                className="formation-studio__coach-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const answer = coachAnswer.trim();
+                  if (!answer || !coachQuestion || coachBusy) return;
+                  const history = [...coachHistory, { question: coachQuestion, answer }];
+                  setCoachHistory(history);
+                  setCoachAnswer("");
+                  void requestQuestion(history);
+                }}
+              >
+                {coachFeedback ? <p>{coachFeedback}</p> : null}
+                <p>{coachBusy && !coachQuestion ? "Préparation d'une question…" : coachQuestion || "Le coach prépare une question sur ce que tu as déjà lu."}</p>
+                <textarea
+                  value={coachAnswer}
+                  onChange={(event) => setCoachAnswer(event.target.value)}
+                  placeholder="Ta réponse"
+                  aria-label="Ta réponse"
+                  disabled={coachBusy || !coachQuestion}
+                />
+                <button type="submit" className="formation-studio__pill" disabled={coachBusy || !coachQuestion || !coachAnswer.trim()}>
+                  Répondre
+                </button>
+              </form>
+            ) : (
+              <p>Lis d&apos;abord un sous-chapitre. Le coach pose des questions seulement sur le contenu déjà lu.</p>
+            )}
+            <button type="button" className="formation-studio__pill" onClick={() => setCoachOpen(false)}>
               Fermer
             </button>
           </div>

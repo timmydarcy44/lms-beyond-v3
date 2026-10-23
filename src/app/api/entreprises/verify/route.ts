@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const email = String(body?.email ?? "").trim().toLowerCase();
   const token = String(body?.token ?? "").replace(/\s/g, "");
-  if (!email.includes("@") || !/^\d{6}$/.test(token)) {
+  if (!email.includes("@") || !/^\d{6,10}$/.test(token)) {
     return NextResponse.json({ error: "Code incorrect ou expiré." }, { status: 400 });
   }
 

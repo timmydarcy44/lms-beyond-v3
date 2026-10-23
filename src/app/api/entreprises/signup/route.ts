@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: issued.error, retryAfter: issued.retryAfter }, { status: issued.status });
     }
 
-    return NextResponse.json({ step: "code" });
+    return NextResponse.json({ step: "code", digits: issued.digits });
   } catch (error) {
     console.error("[entreprises/signup] unexpected error:", error);
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });

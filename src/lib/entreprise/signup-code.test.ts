@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { formatEntrepriseOtp } from "@/lib/emails/templates/entreprise-otp";
+import { formatEntrepriseOtp, getEntrepriseOtpEmail } from "@/lib/emails/templates/entreprise-otp";
 import { secondsUntilResend, sendsInLastHour } from "@/lib/entreprise/signup-code";
 
 describe("formatEntrepriseOtp", () => {
-  it("groupe le code par trois", () => {
+  it("groupe un code a 6 chiffres", () => {
     expect(formatEntrepriseOtp("482913")).toBe("482 913");
+  });
+
+  it("groupe un code a 8 chiffres", () => {
+    expect(formatEntrepriseOtp("48291347")).toBe("4829 1347");
+  });
+
+  it("affiche le code en grand, sans lien", () => {
+    const { html } = getEntrepriseOtpEmail("48291347");
+    expect(html).toContain("4829 1347");
+    expect(html).not.toContain("filter:invert");
+    expect(html).not.toContain("href=\"http");
   });
 });
 

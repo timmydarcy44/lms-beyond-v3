@@ -79,7 +79,7 @@ export async function issueEntrepriseCode(
     mode: SignupCodeMode;
     redirectTo: string;
   },
-): Promise<{ ok: true } | { ok: false; status: number; error: string; retryAfter?: number }> {
+): Promise<{ ok: true; digits: number } | { ok: false; status: number; error: string; retryAfter?: number }> {
   await purgeOldSignupRequests(db);
   const open = await latestOpenRequest(db, input.email);
   const now = Date.now();
@@ -142,7 +142,7 @@ export async function issueEntrepriseCode(
     console.error("[entreprise-code] signup_requests:", write.error.message);
     return { ok: false, status: 503, error: "La demande de code n'a pas pu être enregistrée." };
   }
-  return { ok: true };
+  return { ok: true, digits: otp.replace(/\D/g, "").length || 8 };
 }
 
 export type LoginHint = "unknown" | "otp" | "password";

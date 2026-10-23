@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  if (!open) return NextResponse.json({ step: "code" });
+  if (!open) return NextResponse.json({ step: "code", digits: 8 });
 
   const issued = await issueEntrepriseCode(db, {
     email,
@@ -43,5 +43,5 @@ export async function POST(request: NextRequest) {
   if (!issued.ok) {
     return NextResponse.json({ error: issued.error, retryAfter: issued.retryAfter }, { status: issued.status });
   }
-  return NextResponse.json({ step: "code" });
+  return NextResponse.json({ step: "code", digits: issued.digits });
 }

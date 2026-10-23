@@ -56,13 +56,15 @@ export function EntrepriseConnexionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<"form" | "code" | "password">("form");
   const [codeEmail, setCodeEmail] = useState("");
+  const [codeLength, setCodeLength] = useState(8);
 
   const suggestion = suggestProfessionalEmail(form.email);
   const consumerWarning = !suggestion && isConsumerEmail(form.email) ? CONSUMER_EMAIL_WARNING : null;
   const companyLabel = form.company_name.trim() || "Votre entreprise";
 
-  const openCode = (email: string) => {
+  const openCode = (email: string, digits?: number) => {
     setCodeEmail(email);
+    if (digits && digits >= 6) setCodeLength(digits);
     setStep("code");
   };
 
@@ -90,6 +92,7 @@ export function EntrepriseConnexionPage() {
         error?: string;
         fields?: Partial<Record<SignupField, string>>;
         step?: string;
+        digits?: number;
       };
       if (!response.ok) {
         setFieldErrors(data.fields ?? { email: data.error || "Une erreur est survenue." });
@@ -101,7 +104,7 @@ export function EntrepriseConnexionPage() {
         setStep("password");
         return;
       }
-      openCode(parsed.data.email);
+      openCode(parsed.data.email, data.digits);
     } catch {
       setFieldErrors({ email: "Une erreur est survenue." });
     } finally {
@@ -124,7 +127,7 @@ export function EntrepriseConnexionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = (await response.json().catch(() => ({}))) as { error?: string; step?: string };
+      const data = (await response.json().catch(() => ({}))) as { error?: string; step?: string; digits?: number };
       if (!response.ok) {
         setLoginError(data.error || "Impossible de continuer.");
         return;
@@ -133,7 +136,7 @@ export function EntrepriseConnexionPage() {
         setStep("password");
         return;
       }
-      openCode(email);
+      openCode(email, data.digits);
     } catch {
       setLoginError("Impossible de continuer.");
     } finally {
@@ -166,20 +169,11 @@ export function EntrepriseConnexionPage() {
     }
   };
 
-  if (step === "code" && codeEmail) {
-    return (
-      <div className={manrope.className}>
-        <EntrepriseCodeScreen
-          email={codeEmail}
-          onBack={() => {
-            setStep("form");
-            if (mode === "login") setLoginEmail(codeEmail);
-            else setField("email", codeEmail);
-          }}
-        />
-      </div>
-    );
-  }
+  const leaveCode = () => {
+    setStep("form");
+    if (mode === "login") setLoginEmail(codeEmail);
+    else setField("email", codeEmail);
+  };
 
   return (
     <div className={`${manrope.className} min-h-dvh bg-[#F4F4F1] text-[#07080B] lg:grid lg:grid-cols-[1.05fr_1fr]`}>
@@ -251,7 +245,11 @@ export function EntrepriseConnexionPage() {
           </span>
         </div>
 
-        <div className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center">
+        <div className={`mx-auto flex w-full flex-1 flex-col justify-center ${step === "code" ? "max-w-[520px]" : "max-w-[440px]"}`}>
+          {step === "code" && codeEmail ? (
+            <EntrepriseCodeScreen email={codeEmail} length={codeLength} onBack={leaveCode} />
+          ) : (
+          <>
           <div className="flex rounded-full bg-white p-1" role="radiogroup" aria-label="Créer un compte ou se connecter">
             {(
               [
@@ -427,12 +425,12 @@ export function EntrepriseConnexionPage() {
                       body: JSON.stringify({ email }),
                     })
                       .then(async (response) => {
-                        const data = (await response.json().catch(() => ({}))) as { error?: string };
+                        const data = (await response.json().catch(() => ({}))) as { error?: string; digits?: number };
                         if (!response.ok) {
                           setLoginError(data.error || "Le code n'a pas pu être envoyé.");
                           return;
                         }
-                        openCode(email);
+                        openCode(email, data.digits);
                       })
                       .finally(() => setIsLoading(false));
                   }}
@@ -441,6 +439,8 @@ export function EntrepriseConnexionPage() {
                 </button>
               ) : null}
             </form>
+          )}
+          </>
           )}
         </div>
       </main>

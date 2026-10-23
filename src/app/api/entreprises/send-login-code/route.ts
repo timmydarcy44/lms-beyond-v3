@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!hint) {
     return NextResponse.json({ error: "La vérification par code n'est pas encore activée." }, { status: 503 });
   }
-  if (hint === "unknown") return NextResponse.json({ step: "code" });
+  if (hint === "unknown") return NextResponse.json({ step: "code", digits: 8 });
 
   const { data: profile } = await db
     .from("profiles")
@@ -44,5 +44,5 @@ export async function POST(request: NextRequest) {
   if (!issued.ok) {
     return NextResponse.json({ error: issued.error, retryAfter: issued.retryAfter }, { status: issued.status });
   }
-  return NextResponse.json({ step: "code" });
+  return NextResponse.json({ step: "code", digits: issued.digits });
 }

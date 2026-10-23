@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState, useTransition } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState, useTransition } from "react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
@@ -201,6 +201,7 @@ export function FormateurFormationBuilderWhite({
   const updateGeneral = useCourseBuilder((s) => s.updateGeneral);
   const snapshot = useCourseBuilder((s) => s.snapshot);
   const hydrateFromSnapshot = useCourseBuilder((s) => s.hydrateFromSnapshot);
+  const resetBuilder = useCourseBuilder((s) => s.reset);
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const isTimmy = String(userEmail ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
@@ -684,6 +685,12 @@ export function FormateurFormationBuilderWhite({
       badgeImage: selectedBadge.image_url ?? undefined,
     });
   }, [selectedBadge, updateGeneral]);
+
+  useLayoutEffect(() => {
+    if (initialCourseId?.trim()) return;
+    resetBuilder();
+    setCourseId(null);
+  }, [initialCourseId, resetBuilder]);
 
   useEffect(() => {
     if (!initialCourseId) return;

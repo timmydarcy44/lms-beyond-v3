@@ -28,6 +28,7 @@ import {
 import { ExpertPoleSwitcher } from "@/components/expert/expert-pole-switcher";
 import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
 import { activePoles } from "@/lib/expert/pole-model";
+import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 

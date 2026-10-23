@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
+import { resolveValidatorId } from "@/lib/lms/resolve-validator";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { getSupabasePublicUrl } from "@/lib/supabase-public-url";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
@@ -333,6 +334,19 @@ export async function POST(req: NextRequest) {
 
     const existingId = body.courseId ? String(body.courseId) : null;
     const writeClient = isSuperAdminEmailAllowlisted(user.email) ? (getServiceRoleClient() ?? supabase) : supabase;
+    let peerId = validatedByPeerId;
+    if (peerId) {
+      const resolved = await resolveValidatorId(writeClient, peerId);
+      if (!resolved) {
+        return NextResponse.json(
+          { error: "Ce formateur ne peut pas encore valider la formation." },
+          { status: 400 },
+        );
+      }
+      peerId = resolved;
+      (snapshot.general as { validated_by_peer_id?: string }).validated_by_peer_id = resolved;
+    }
+    upsertRow.validated_by_peer_id = peerId;
     if (existingId) {
       upsertRow.id = existingId;
       const { data: existing } = await writeClient

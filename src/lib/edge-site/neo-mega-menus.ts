@@ -208,9 +208,12 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
       },
     ],
     bar: {
-      note: "Un projet pour vos équipes ? On vous répond sous 48 h.",
+      note: "Un projet pour vos équipes ? Créez votre espace et invitez vos collaborateurs.",
       textLink: { label: "Byound Business", href: routes.business },
-      actions: [{ label: "Parlons de vos besoins", href: routes.contact, variant: "primary" }],
+      actions: [
+        { label: "Tarifs", href: routes.tarifs, variant: "secondary" },
+        { label: "Créer un compte", href: routes.entrepriseSignup, variant: "primary" },
+      ],
     },
   };
 

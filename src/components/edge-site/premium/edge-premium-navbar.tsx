@@ -168,6 +168,17 @@ export function EdgePremiumNavbar({
             );
           })}
           <Link
+            href={routes.tarifs}
+            className={cn(
+              "px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
+              light
+                ? "text-neutral-700 hover:text-neutral-950"
+                : "text-white/60 hover:text-white",
+            )}
+          >
+            Tarifs
+          </Link>
+          <Link
             href={routes.aPropos}
             className={cn(
               "px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
@@ -193,12 +204,12 @@ export function EdgePremiumNavbar({
             Connexion
           </Link>
           <EdgePremiumButton
-            href={routes.alternance}
+            href={routes.entrepriseSignup}
             variant={light ? "primary" : "white"}
             shape="revolut"
             className="!px-5 !py-2.5 !text-sm"
           >
-            Découvrir l&apos;alternance
+            Créer un compte
           </EdgePremiumButton>
         </div>
 
@@ -249,7 +260,7 @@ export function EdgePremiumNavbar({
         onClose={closeAll}
         config={config}
         loginHref={links.login}
-        discoverHref={routes.alternance}
+        discoverHref={routes.entrepriseSignup}
         light={light}
       />
     </header>

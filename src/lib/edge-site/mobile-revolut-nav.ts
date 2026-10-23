@@ -54,16 +54,22 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
     {
       id: "entreprises",
       label: "Entreprises",
-      discoverHref: routes.contact,
-      discoverLabel: "Parlons de vos besoins",
-      sections: megaBusiness.columns.map((col) => ({
-        title: col.title,
-        links: col.links.map((link) => ({
-          label: link.label,
-          href: link.href,
-          description: "description" in link ? link.description : undefined,
+      discoverHref: routes.entrepriseSignup,
+      discoverLabel: "Créer un compte",
+      sections: [
+        ...megaBusiness.columns.map((col) => ({
+          title: col.title,
+          links: col.links.map((link) => ({
+            label: link.label,
+            href: link.href,
+            description: "description" in link ? link.description : undefined,
+          })),
         })),
-      })),
+        {
+          title: "Abonnement",
+          links: [{ label: "Tarifs", href: routes.tarifs, description: "Les offres par collaborateur" }],
+        },
+      ],
       editorialTitle: "",
       editorialCtaLabel: "",
       editorialCtaHref: "",

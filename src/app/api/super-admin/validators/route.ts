@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { JESSICA_CONTENTIN_EMAIL } from "@/lib/jessica-contentin/studio-config";
+import { resolveValidatorId } from "@/lib/lms/resolve-validator";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 const pick = (v: unknown) => {
@@ -33,7 +34,7 @@ export async function GET() {
     .from("profiles")
     .select("id, full_name, email, role")
     .or(`role.eq.formateur,role.eq.instructor,email.ilike.${jessicaEmail},full_name.ilike.%contentin%`);
-  const formateurs = ((profiles ?? []) as Array<{ id?: string; full_name?: string | null; email?: string | null; role?: string | null }>)
+  const people = ((profiles ?? []) as Array<{ id?: string; full_name?: string | null; email?: string | null; role?: string | null }>)
     .filter((profile) => {
       const role = String(profile.role ?? "").toLowerCase();
       const email = String(profile.email ?? "").toLowerCase();
@@ -44,8 +45,15 @@ export async function GET() {
       id: String(profile.id),
       name: String(profile.full_name ?? "").trim() || String(profile.email ?? "").trim() || String(profile.id),
     }))
-    .filter((profile) => profile.id)
-    .sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
+    .filter((profile) => profile.id);
+
+  const formateurs: Array<{ id: string; name: string }> = [];
+  for (const profile of people) {
+    const validatorId = await resolveValidatorId(supabase, profile.id, profile.name);
+    if (!validatorId) continue;
+    formateurs.push({ id: validatorId, name: profile.name });
+  }
+  formateurs.sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
 
   return NextResponse.json({ validators: data ?? [], formateurs });
 }

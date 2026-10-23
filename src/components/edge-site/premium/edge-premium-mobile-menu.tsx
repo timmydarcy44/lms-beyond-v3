@@ -109,6 +109,13 @@ export function EdgePremiumMobileMenu({
             </div>
           );
         })}
+        <Link
+          href={config.routes.tarifs}
+          className="flex min-h-14 items-center border-b border-white/10 text-[17px] font-bold text-white"
+          onClick={onClose}
+        >
+          Tarifs
+        </Link>
         {tabs.map((tab) => {
           const open = openPanel === tab.id;
           return (
@@ -165,7 +172,7 @@ export function EdgePremiumMobileMenu({
             className="w-full"
             onClick={onClose}
           >
-            Découvrir l&apos;alternance
+            Créer un compte
           </EdgePremiumButton>
         </div>
       </div>

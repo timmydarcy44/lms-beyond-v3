@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Building2, Loader2, Mail } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -21,9 +21,18 @@ type SignupForm = {
   email: string;
 };
 
+const PLAN_LABELS: Record<string, string> = {
+  skills: "Byound Skills",
+  learning: "Byound Learning",
+  "learning-plus": "Byound Learning+",
+};
+
 export function EntrepriseConnexionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useSupabase();
+  const planLabel = PLAN_LABELS[searchParams.get("plan") ?? ""] ?? null;
+  const seats = searchParams.get("seats");
   const [mode, setMode] = useState<Mode>("signup");
   const [signupForm, setSignupForm] = useState<SignupForm>({
     first_name: "",
@@ -118,7 +127,8 @@ export function EntrepriseConnexionPage() {
           <p className="mt-4 text-[15px] leading-relaxed text-white/55">
             Un email de confirmation vient de vous être envoyé à{" "}
             <span className="font-medium text-white/85">{signupSuccess.email}</span>. Cliquez sur le lien pour activer
-            votre essai gratuit de 30 jours.
+            votre essai gratuit de 30 jours. Vous pourrez ensuite inviter vos collaborateurs depuis votre espace
+            entreprise.
           </p>
           <button
             type="button"
@@ -161,9 +171,15 @@ export function EntrepriseConnexionPage() {
             Pilotez la montée en compétences de vos équipes.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55 sm:text-lg">
-            Créez votre espace RH Byound : diagnostics DISC & compétences, dashboard temps réel, plan d&apos;action
-            personnalisé. Essai gratuit 30 jours, sans carte bancaire.
+            Créez votre espace RH Byound : diagnostics, formations et invitations de vos collaborateurs. Essai gratuit
+            30 jours, sans carte bancaire.
           </p>
+          {planLabel ? (
+            <p className="mt-4 text-sm font-semibold text-[#9EC0FF]">
+              Offre choisie : {planLabel}
+              {seats ? ` · ${seats} collaborateurs` : ""}
+            </p>
+          ) : null}
           <ul className="mt-8 space-y-3 text-sm text-white/60">
             <li>· 3 licences RH incluses pendant l&apos;essai</li>
             <li>· Invitations collaborateurs en quelques clics</li>

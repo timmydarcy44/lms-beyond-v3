@@ -24,7 +24,11 @@ export default async function TarifsPage() {
   return (
     <EdgePremiumShell overlayNav={false} navChrome="light">
       <div className={cn(inter.className, "font-edge-sf antialiased")}>
-        <EdgePremiumTarifs demoHref={routes.businessDemo} contactHref={routes.contact} />
+        <EdgePremiumTarifs
+          demoHref={routes.businessDemo}
+          contactHref={routes.contact}
+          signupHref={routes.entrepriseSignup}
+        />
       </div>
     </EdgePremiumShell>
   );

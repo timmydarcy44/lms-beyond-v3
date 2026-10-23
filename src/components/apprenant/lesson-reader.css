@@ -158,7 +158,7 @@
   max-width: 720px;
   flex: 999 1 560px;
   margin: 0 auto;
-  padding: 22px 20px 210px;
+  padding: 22px 20px 180px;
 }
 
 .lesson-reader__ai-dock:empty {
@@ -199,7 +199,66 @@
 .lesson-reader__prose li {
   color: var(--r-body);
   font-size: 17px;
-  line-height: 1.7;
+  line-height: 1.75;
+}
+
+.lesson-reader[data-reading-theme="light"] .lesson-reader__prose,
+.lesson-reader[data-reading-theme="light"] .lesson-reader__prose p,
+.lesson-reader[data-reading-theme="light"] .lesson-reader__prose li {
+  color: #3a3d45;
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.lesson-reader__prose h2.lesson-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 10px;
+  color: var(--r-text);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.2;
+}
+
+.lesson-section-title__num {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  border-radius: 999px;
+  background: #eeebff;
+  padding: 6px 12px;
+  color: #4b3bd1;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.lesson-reader__progress {
+  position: fixed;
+  top: 0;
+  z-index: 60;
+  height: 4px;
+  background: #ece9e1;
+  pointer-events: none;
+}
+
+.lesson-reader__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 0 999px 999px 0;
+  background: #6e5bff;
+}
+
+.lesson-reader__fade {
+  position: fixed;
+  bottom: 0;
+  z-index: 44;
+  height: 170px;
+  background: linear-gradient(180deg, transparent 0%, var(--r-bg) 62%);
+  pointer-events: none;
 }
 
 .lesson-reader__prose p {

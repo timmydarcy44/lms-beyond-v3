@@ -15,6 +15,8 @@ import "katex/dist/katex.min.css";
 import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-resource";
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
 import { ByoundCardsPrompt, type ByoundCardsReview } from "@/components/apprenant/byound-cards-prompt";
+import { ReadingContent } from "@/components/lms/ReadingContent";
+import { splitSectionTitle } from "@/lib/lms/reading-transform";
 import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
@@ -81,6 +83,13 @@ function readerMark(lesson: LearnerLesson): "quiz" | "game" | "interview" | unde
   if (isInterviewLikeLesson(lesson)) return "interview";
   if (type === "interactive_game" || /jeu\s+interactif/i.test(title)) return "game";
   return undefined;
+}
+
+function readingNodeText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map((item) => readingNodeText(item)).join("");
+  return "";
 }
 
 function prepareReadingHtml(html: string, title: string) {
@@ -2129,17 +2138,21 @@ export function LessonPlayView({
                   <div className="space-y-4">
                     {neo ? null : <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>}
                     {isHtmlContent ? (
+                      neo ? (
+                        <div data-dyslexia-content="true" className="lesson-reader__prose">
+                          <ReadingContent html={prepareReadingHtml(sanitizedContent, readingHeading)} />
+                        </div>
+                      ) : (
                       <div
                         data-dyslexia-content="true"
-                        className={neo ? "lesson-reader__prose" : "text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"}
-                        style={neo ? undefined : {
+                        className="text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"
+                        style={{
                           isolation: "isolate",
                           whiteSpace: "pre-wrap",
                         }}
-                        dangerouslySetInnerHTML={{
-                          __html: neo ? prepareReadingHtml(sanitizedContent, readingHeading) : sanitizedContent,
-                        }}
+                        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                       />
+                      )
                     ) : (
                       <div
                         data-dyslexia-content="true"
@@ -2158,8 +2171,24 @@ export function LessonPlayView({
                               if (text === readingHeading.toLowerCase()) return null;
                               return <h2>{children}</h2>;
                             },
-                            h2: (props: { children?: ReactNode }) => <h2 {...props} />,
-                            h3: (props: { children?: ReactNode }) => <h3 {...props} />,
+                            h2: ({ children }: { children?: ReactNode }) => {
+                              const split = splitSectionTitle(readingNodeText(children));
+                              return (
+                                <h2 className="lesson-section-title">
+                                  {split.number ? <span className="lesson-section-title__num">{split.number}</span> : null}
+                                  <span>{split.title}</span>
+                                </h2>
+                              );
+                            },
+                            h3: ({ children }: { children?: ReactNode }) => {
+                              const split = splitSectionTitle(readingNodeText(children));
+                              return (
+                                <h2 className="lesson-section-title">
+                                  {split.number ? <span className="lesson-section-title__num">{split.number}</span> : null}
+                                  <span>{split.title}</span>
+                                </h2>
+                              );
+                            },
                             p: (props: { children?: ReactNode }) => <p {...props} />,
                             strong: (props: { children?: ReactNode }) => <strong {...props} />,
                             li: (props: { children?: ReactNode }) => <li {...props} />,

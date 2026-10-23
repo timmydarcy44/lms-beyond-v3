@@ -360,8 +360,9 @@ export async function POST(req: NextRequest) {
         ? [
             "INSTRUCTION STRICTE (encarts colorés — uniquement parce qu’ils sont demandés) :",
             "",
-            "DÉFINITIONS : chaque définition formelle dans <div class=\"bg-red-50 border-l-4 border-red-500 p-4 my-6 rounded-r-lg text-red-900\"><strong>Définition :</strong> ...</div>.",
-            "EXEMPLES : chaque exemple illustratif dans <div class=\"bg-green-50 border-l-4 border-green-500 p-4 my-6 rounded-r-lg text-green-900\"><strong>Exemple concret :</strong> ...</div>.",
+            "DÉFINITIONS : chaque définition formelle dans <aside data-callout=\"definition\">...</aside>, sans écrire « Définition : » dans le texte.",
+            "EXEMPLES : chaque exemple illustratif dans <aside data-callout=\"example\">...</aside>, sans écrire « Exemple concret : » dans le texte.",
+            "À RETENIR : une phrase dans <aside data-callout=\"key\">...</aside>, sans écrire « À retenir : » dans le texte.",
             "N’utilise ces encarts que pour de vraies définitions et de vrais exemples — pas pour tout le corps du cours.",
             ...(mode === "theory_examples"
               ? [

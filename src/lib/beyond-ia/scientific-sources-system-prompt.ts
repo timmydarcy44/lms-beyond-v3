@@ -62,14 +62,11 @@ LONGUEUR ET FORMAT
 développement, conclusion actionnable, encadrés
 - Durée de lecture cible : 3 minutes`;
 
-const CALLOUT_DEF =
-  '<div class="bg-red-50 border-l-4 border-red-500 p-4 my-6 rounded-r-lg text-red-900"><strong>Définition :</strong> …</div>';
+const CALLOUT_DEF = '<aside data-callout="definition">…</aside>';
 const CALLOUT_KEY =
   '<div class="bg-sky-50 border-l-4 border-sky-600 p-4 my-6 rounded-r-lg text-slate-900"><strong>Chiffre clé :</strong> …<br /><span class="text-sm text-slate-700"><em>Source :</em> auteur, ouvrage ou étude, année, éditeur ou journal</span></div>';
-const CALLOUT_EX =
-  '<div class="bg-green-50 border-l-4 border-green-500 p-4 my-6 rounded-r-lg text-green-900"><strong>Exemple concret :</strong> …</div>';
-const CALLOUT_KEEP =
-  '<div class="bg-amber-50 border-l-4 border-amber-500 p-4 my-6 rounded-r-lg text-amber-950"><strong>À retenir :</strong> …</div>';
+const CALLOUT_EX = '<aside data-callout="example">…</aside>';
+const CALLOUT_KEEP = '<aside data-callout="key">…</aside>';
 
 /** Règles HTML ajoutées au prompt système (sortie éditeur LMS). */
 export function buildScientificSourcesSystemMessage(): string {
@@ -78,11 +75,11 @@ export function buildScientificSourcesSystemMessage(): string {
     "",
     "FORMAT DE SORTIE (obligatoire) :",
     "- Réponds uniquement en HTML brut (pas de Markdown, pas de ```html).",
-    "- Balises autorisées : <h2>, <h3>, <p>, <strong>, <em>, <br>, <div> avec classes Tailwind ci-dessous, <a> si besoin.",
+    "- Balises autorisées : <h2>, <h3>, <p>, <strong>, <em>, <br>, <aside data-callout>, <div> pour le chiffre clé, <a> si besoin.",
     "- Un <h2> pour le titre du micro-contenu.",
     "- Respecte strictement 350 à 450 mots dans le corps (hors balises).",
     "",
-    "ENCADRÉS HTML (utilise uniquement ceux pertinents) :",
+    "ENCADRÉS HTML (utilise uniquement ceux pertinents, sans répéter le nom de l'encadré dans le texte) :",
     `- Définition : ${CALLOUT_DEF}`,
     `- Chiffre clé (sans source vérifiable = ne pas publier le chiffre) : ${CALLOUT_KEY}`,
     `- Exemple concret : ${CALLOUT_EX}`,

@@ -39,7 +39,9 @@
   line-height: 1.2;
 }
 
-.lms-callout__text {
+.lms-callout__text,
+.lesson-reader__prose .lms-callout .lms-callout__text,
+.lesson-reader__prose .lms-callout .lms-callout__text strong {
   color: #1f2128;
   line-height: 1.65;
 }
@@ -112,19 +114,38 @@
   font-weight: 500;
 }
 
+.lesson-reader__prose .lms-callout--definition .lms-callout__text,
+.lesson-reader__prose .lms-callout--definition .lms-callout__text p {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.lesson-reader__prose .lms-callout--example .lms-callout__text,
+.lesson-reader__prose .lms-callout--example .lms-callout__text p,
+.lesson-reader__prose .lms-callout--key .lms-callout__text,
+.lesson-reader__prose .lms-callout--key .lms-callout__text p {
+  font-size: 17px;
+  font-weight: 500;
+}
+
 @media (max-width: 639px) {
   .lms-callout {
     padding: 16px 18px;
   }
 
-  .lms-callout--definition .lms-callout__text {
+  .lms-callout--definition .lms-callout__text,
+  .lesson-reader__prose .lms-callout--definition .lms-callout__text,
+  .lesson-reader__prose .lms-callout--definition .lms-callout__text p {
     font-size: 18px;
   }
 }
 
 .lesson-reader[data-reading-theme="dys"] .lms-callout__text,
 .lesson-reader[data-reading-theme="dys"] .lms-callout__text p,
-.lesson-reader[data-reading-theme="dys"] .lms-callout__text li {
+.lesson-reader[data-reading-theme="dys"] .lms-callout__text li,
+.lesson-reader[data-reading-theme="dys"] .lesson-reader__prose .lms-callout__text,
+.lesson-reader[data-reading-theme="dys"] .lesson-reader__prose .lms-callout__text p {
   font-family: inherit;
   font-size: inherit;
   letter-spacing: inherit;

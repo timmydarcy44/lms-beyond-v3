@@ -94,6 +94,10 @@ export function LessonReaderShell({
 }: Props) {
   const titleId = useId();
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const [readProgress, setReadProgress] = useState(0);
+  const [stageBox, setStageBox] = useState({ left: 0, width: 0 });
   const [choice, setChoice] = useState<ThemeChoice>("auto");
   const [systemDark, setSystemDark] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,6 +117,30 @@ export function LessonReaderShell({
   useEffect(() => {
     setOpenPartId(initialOpenPartId);
   }, [initialOpenPartId]);
+
+  useEffect(() => {
+    const update = () => {
+      const stage = stageRef.current;
+      const main = mainRef.current;
+      if (!stage || !main) return;
+      const box = stage.getBoundingClientRect();
+      setStageBox({ left: box.left, width: box.width });
+      const total = main.offsetHeight - window.innerHeight;
+      if (total <= 8) {
+        setReadProgress(1);
+        return;
+      }
+      const top = main.getBoundingClientRect().top + window.scrollY;
+      setReadProgress(Math.min(1, Math.max(0, (window.scrollY - top) / total)));
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [heading, children]);
 
   const theme: ReadingTheme = dyslexia ? "dys" : choice === "auto" ? (systemDark ? "dark" : "light") : choice;
 
@@ -260,7 +288,10 @@ export function LessonReaderShell({
           {outline}
         </aside>
       ) : null}
-      <div className="lesson-reader__stage">
+      <div className="lesson-reader__stage" ref={stageRef}>
+        <div className="lesson-reader__progress" style={{ left: stageBox.left, width: stageBox.width || "100%" }} aria-hidden>
+          <span style={{ width: `${Math.round(readProgress * 100)}%` }} />
+        </div>
         <header className="lesson-reader__header">
           <div className="lesson-reader__header-row">
             <Link href={backHref} className="lesson-reader__icon-btn" aria-label="Retour">
@@ -310,13 +341,14 @@ export function LessonReaderShell({
           ) : null}
         </header>
         <div className="lesson-reader__body">
-          <main className="lesson-reader__main">
+          <main className="lesson-reader__main" ref={mainRef}>
             <p className="lesson-reader__chip">{chip}</p>
             <h1 className="lesson-reader__h1">{heading}</h1>
             {children}
           </main>
           <div id="byound-ai-dock" className="lesson-reader__ai-dock" />
         </div>
+        <div className="lesson-reader__fade" style={{ left: stageBox.left, width: stageBox.width || "100%" }} aria-hidden />
         <div className="lesson-reader__bar">
           <button type="button" className="lesson-reader__bar-prev" aria-label="Sous-chapitre précédent" disabled={prevDisabled} aria-disabled={prevDisabled} onClick={onPrev}>
             <ChevronLeft size={18} strokeWidth={2} />

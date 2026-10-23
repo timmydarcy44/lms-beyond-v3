@@ -147,6 +147,20 @@ const statusLabel = (value: BadgeClassRecord["status"]) => {
   return "Brouillon";
 };
 
+function badgeStepForError(key: string) {
+  if (key === "criteria") return 2;
+  if (
+    key === "level" ||
+    key === "evaluationMethods" ||
+    key === "validatorExpertId" ||
+    key === "methodConfigs" ||
+    key === "requiredCourseId"
+  ) {
+    return 3;
+  }
+  return 1;
+}
+
 const ensureCriteriaIds = (items: BadgeCriteriaInput[]): BadgeCriteriaInput[] =>
   items.map((item, index) => ({
     ...item,
@@ -188,6 +202,7 @@ export function BadgeClassForm({
   const [visibleInLearnerDashboard, setVisibleInLearnerDashboard] = useState(false);
   const [receivabilityReviewMode, setReceivabilityReviewMode] = useState<"HUMAN" | "AI" | "MIXED">("HUMAN");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [step, setStep] = useState(1);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -672,13 +687,13 @@ export function BadgeClassForm({
       ];
       const firstKey = order.find((key) => nextErrors[key]);
       if (firstKey) {
-        const target = document.getElementById(`field-${firstKey}`);
-        if (target) {
+        setStep(badgeStepForError(firstKey));
+        window.setTimeout(() => {
+          const target = document.getElementById(`field-${firstKey}`);
+          if (!target) return;
           target.scrollIntoView({ behavior: "smooth", block: "center" });
-          if ("focus" in target) {
-            (target as HTMLElement).focus();
-          }
-        }
+          if ("focus" in target) (target as HTMLElement).focus();
+        }, 80);
       }
       toast.error("Merci de compléter les champs obligatoires.");
       return false;
@@ -724,16 +739,19 @@ export function BadgeClassForm({
         const errorCode = (json?.error as string | undefined) ?? undefined;
         if (errorCode === "AI_PROMPT_REQUIRED") {
           setErrors((prev) => ({ ...prev, methodConfigs: "Configurez chaque méthode d’évaluation." }));
+          setStep(3);
           toast.error("Configurez chaque méthode d’évaluation.");
           return;
         }
         if (errorCode === "REQUIRED_COURSE_ID" || errorCode === "REQUIRED_COURSE_MISSING") {
           setErrors((prev) => ({ ...prev, requiredCourseId: "Formation requise." }));
+          setStep(3);
           toast.error("Formation requise.");
           return;
         }
         if (errorCode === "COURSE_NOT_FOUND") {
           setErrors((prev) => ({ ...prev, requiredCourseId: "Formation introuvable." }));
+          setStep(3);
           toast.error("Formation introuvable.");
           return;
         }
@@ -741,6 +759,7 @@ export function BadgeClassForm({
           const field = (json?.field as string | undefined) ?? undefined;
           if (field === "name") {
             setErrors((prev) => ({ ...prev, name: "Un badge avec ce nom existe déjà." }));
+            setStep(1);
           }
         }
         if (errorCode === "FK_INVALID") {
@@ -808,8 +827,31 @@ export function BadgeClassForm({
     }
   };
 
+  const badgeSteps = [
+    { id: 1, label: "Identité" },
+    { id: 2, label: "Critères" },
+    { id: 3, label: "Évaluation" },
+    { id: 4, label: "Aperçu" },
+  ] as const;
+
   return (
-    <div className="space-y-6 text-slate-900">
+    <div className="super-lms-light space-y-6 rounded-[28px] bg-[#F4F4F1] p-4 text-[#07080B] md:p-6">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Étapes du badge">
+        {badgeSteps.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={step === item.id}
+            onClick={() => setStep(item.id)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${step === item.id ? "bg-[#07080B] text-white" : "border border-[#E3E0D8] bg-white text-[#07080B]"}`}
+          >
+            {item.id}. {item.label}
+          </button>
+        ))}
+      </div>
+      {step === 1 ? (
+      <>
       <Card className="border-violet-200 bg-gradient-to-br from-violet-50/80 to-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-slate-900 flex items-center gap-2">
@@ -1144,10 +1186,13 @@ export function BadgeClassForm({
           ) : null}
         </CardContent>
       </Card>
+      </>
+      ) : null}
 
+      {step === 2 ? (
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-slate-900">Critères détaillés (optionnel)</CardTitle>
+          <CardTitle className="text-slate-900">Critères détaillés</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -1210,7 +1255,9 @@ export function BadgeClassForm({
           </Button>
         </CardContent>
       </Card>
+      ) : null}
 
+      {step === 3 ? (
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <CardTitle className="text-slate-900">Évaluation & validation</CardTitle>
@@ -1403,6 +1450,7 @@ export function BadgeClassForm({
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
       <EvaluationMethodConfigDialog
         open={configDialogOpen}
@@ -1417,23 +1465,25 @@ export function BadgeClassForm({
         onSave={saveMethodConfig}
       />
 
-      <Card className="border border-zinc-700 bg-zinc-800 shadow-lg text-zinc-100">
-        <CardHeader className="border-b border-zinc-700/80 pb-4">
-          <CardTitle className="text-lg font-semibold text-white">
-            Aperçu (informations du badge)
+      {step === 4 ? (
+      <>
+      <Card className="border border-[#E3E0D8] bg-white text-[#07080B] shadow-sm">
+        <CardHeader className="border-b border-[#E3E0D8] pb-4">
+          <CardTitle className="text-lg font-semibold text-[#07080B]">
+            Aperçu
           </CardTitle>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[#6B6F7A]">
             Résumé du verso du badge tel qu&apos;il sera présenté.
           </p>
         </CardHeader>
         <CardContent className="space-y-5 pt-6 text-sm">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Nom du badge</p>
-            <p className="text-base font-semibold text-white">{name.trim() || "—"}</p>
+            <p className="text-base font-semibold text-[#07080B]">{name.trim() || "—"}</p>
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Niveau</p>
-            <p className="text-white">{level ? `Niveau ${level}` : "—"}</p>
+            <p className="text-[#07080B]">{level ? `Niveau ${level}` : "—"}</p>
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Description</p>
@@ -1520,10 +1570,19 @@ export function BadgeClassForm({
           organizationId={organizationId}
         />
       ) : null}
+      </>
+      ) : null}
 
-      <Separator />
-
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          disabled={step === 1}
+          onClick={() => setStep((current) => Math.max(1, current - 1))}
+          className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold text-[#07080B] disabled:opacity-40"
+        >
+          Précédent
+        </button>
+        <div className="flex flex-wrap gap-3">
         <Button onClick={() => saveBadge("DRAFT")} disabled={loading || imageUploading}>
           Enregistrer (brouillon)
         </Button>
@@ -1541,6 +1600,15 @@ export function BadgeClassForm({
         >
           Archiver
         </Button>
+        </div>
+        <button
+          type="button"
+          disabled={step === 4}
+          onClick={() => setStep((current) => Math.min(4, current + 1))}
+          className="rounded-full bg-[#07080B] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          Suivant
+        </button>
       </div>
     </div>
   );

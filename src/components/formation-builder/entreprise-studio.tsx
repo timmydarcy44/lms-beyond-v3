@@ -166,6 +166,7 @@ export function EntrepriseFormationStudio({
   const addChapter = useCourseBuilder((s) => s.addChapter);
   const updateChapter = useCourseBuilder((s) => s.updateChapter);
   const reorderChapters = useCourseBuilder((s) => s.reorderChapters);
+  const addSubchapter = useCourseBuilder((s) => s.addSubchapter);
   const appendSubchapterBlock = useCourseBuilder((s) => s.appendSubchapterBlock);
   const updateSubchapter = useCourseBuilder((s) => s.updateSubchapter);
   const selectChapter = useCourseBuilder((s) => s.selectChapter);
@@ -282,6 +283,16 @@ export function EntrepriseFormationStudio({
   const scheduleUndo = (label: string, apply: () => void) => setUndo({ label, apply });
   const askDelete = (label: string, run: () => void) => setConfirm({ label, run });
 
+  const addLesson = (sectionId: string, chapterId: string) => {
+    addSubchapter(sectionId, chapterId, {
+      title: "Leçon",
+      duration: "",
+      type: "text",
+      summary: "",
+      content: "",
+    });
+  };
+
   const addSkill = (name: string) => {
     const clean = name.trim();
     if (!clean) return;
@@ -294,55 +305,61 @@ export function EntrepriseFormationStudio({
 
   return (
     <div className={`${manrope.className} min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
-      <header className={`sticky z-40 border-b border-[#E3E0D8] bg-[#F4F4F1]/95 px-4 py-3 backdrop-blur md:px-8 ${byoundOwned ? "top-12" : "top-0"}`}>
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-3">
-          <a href={backHref} className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold">
-            Retour
-          </a>
-          <p className="min-w-0 flex-1 truncate text-sm font-semibold">{general.title?.trim() || "Nouvelle formation"}</p>
-          <div className="flex rounded-full bg-[#ECE9E1] p-1" role="tablist" aria-label="Fiche ou contenu">
-            {(["fiche", "contenu"] as const).map((key) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                onClick={() => setTab(key)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === key ? "bg-[#07080B] text-white" : "text-[#3A3D45]"}`}
-              >
-                {key === "fiche" ? "Fiche" : "Contenu"}
-              </button>
-            ))}
+      <header className={`sticky z-30 border-b border-[#E3E0D8] bg-[#F4F4F1] px-4 py-3 md:px-8 ${byoundOwned ? "top-12" : "top-0"}`}>
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <a href={backHref} className="shrink-0 rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold">
+              Retour
+            </a>
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold">{general.title?.trim() || "Nouvelle formation"}</p>
           </div>
-          <span className="text-sm text-[#6B6F7A]" aria-live="polite">
-            {saving ? "Enregistrement…" : saveLabel}
-          </span>
-          <button
-            type="button"
-            onClick={onOpenAi}
-            className="inline-flex items-center rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-4 py-2 text-sm font-bold text-white"
-          >
-            <Sparkles className="mr-2 h-4 w-4" />
-            Byound AI
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => {
-              void onSave(false).then((ok) => setSaveLabel(ok === false ? "Non enregistré" : "Enregistré"));
-            }}
-            className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
-          >
-            Enregistrer
-          </button>
-          <button
-            type="button"
-            disabled={publishing}
-            onClick={onPublish}
-            className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#1A0C04] disabled:opacity-40"
-          >
-            {publishing ? "Publication…" : "Publier"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-full bg-[#ECE9E1] p-1" role="tablist" aria-label="Fiche ou contenu">
+              {(["fiche", "contenu"] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === key}
+                  onClick={() => setTab(key)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === key ? "bg-[#07080B] text-white" : "text-[#3A3D45]"}`}
+                >
+                  {key === "fiche" ? "Fiche" : "Contenu"}
+                </button>
+              ))}
+            </div>
+            <span className="text-sm text-[#6B6F7A]" aria-live="polite">
+              {saving ? "Enregistrement…" : saveLabel}
+            </span>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenAi}
+                className="inline-flex items-center rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-4 py-2 text-sm font-bold text-white"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Byound AI
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  void onSave(false).then((ok) => setSaveLabel(ok === false ? "Non enregistré" : "Enregistré"));
+                }}
+                className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              >
+                Enregistrer
+              </button>
+              <button
+                type="button"
+                disabled={publishing}
+                onClick={onPublish}
+                className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#1A0C04] disabled:opacity-40"
+              >
+                {publishing ? "Publication…" : "Publier"}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -754,14 +771,6 @@ export function EntrepriseFormationStudio({
             </section>
           ) : (
             <section className="space-y-4">
-              <button
-                type="button"
-                onClick={onOpenAi}
-                className="inline-flex items-center rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 py-2 text-sm font-bold text-white"
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Byound AI
-              </button>
               <div className="rounded-[32px] bg-[#070C1C] p-6 text-white shadow-[0_0_80px_#6E5BFF59]">
                 <p className="text-sm text-white/70">Durée du parcours</p>
                 <p className="mt-1 text-3xl font-extrabold">{formatMinutes(totalMinutes)}</p>
@@ -846,6 +855,9 @@ export function EntrepriseFormationStudio({
                               >
                                 Jeu
                               </button>
+                              <button type="button" className={plusBtn} aria-label="Ajouter une leçon" title="Ajouter une leçon" onClick={() => addLesson(section.id, chapter.id)}>
+                                +
+                              </button>
                             </div>
                             {(chapter.subchapters ?? [])
                               .filter((sub) => !sub.deleted_at)
@@ -856,6 +868,9 @@ export function EntrepriseFormationStudio({
                                     {sub.title || "Sans titre"}
                                   </button>
                                   <span className="rounded-full bg-[#F7F6F2] px-2 py-0.5 text-xs font-semibold text-[#3A3D45]">{blockLabel(sub)}</span>
+                                  <button type="button" className={plusBtn} aria-label="Ajouter une leçon" title="Ajouter une leçon" onClick={() => addLesson(section.id, chapter.id)}>
+                                    +
+                                  </button>
                                   <button
                                     type="button"
                                     className="text-sm text-[#B42318]"
@@ -974,6 +989,7 @@ export function EntrepriseFormationStudio({
 
 const fieldClass = "w-full rounded-2xl border border-[#E3E0D8] bg-white px-3 py-3 text-sm outline-none focus:border-[#6E5BFF]";
 const chip = "rounded-full border border-[#E3E0D8] bg-white px-3 py-2 text-sm font-semibold";
+const plusBtn = "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#E3E0D8] bg-white text-base font-semibold leading-none";
 const roundBtn = "flex h-[52px] w-[52px] items-center justify-center rounded-full border border-[#E3E0D8] bg-white text-sm font-semibold";
 
 function ContentDot({ filled }: { filled: boolean }) {

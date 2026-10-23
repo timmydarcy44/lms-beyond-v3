@@ -11,6 +11,7 @@ import {
   isCollaboratorInviteMetadata,
 } from "@/lib/entreprise/collaborator-invite";
 import { env } from "@/lib/env";
+import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
 import { isJessicaMarketingHostname } from "@/lib/jessica-contentin/studio-config";
 
 export async function GET(request: NextRequest) {
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
     const cookieCarrier = NextResponse.next();
 
     const supabase = createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();

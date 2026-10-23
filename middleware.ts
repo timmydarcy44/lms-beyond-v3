@@ -20,6 +20,7 @@ import {
   shouldRestrictSchoolDashboardToHandicapOnly,
 } from "@/lib/auth/school-role-type-guards";
 import { createServerClient } from "@supabase/ssr";
+import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
 import { handleEdgeBsRouting, isEdgeBsHostname } from "./middleware-edgebs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,6 +33,7 @@ async function fetchProfileForRequest(
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
   const cookieAdapter = NextResponse.next();
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
     cookies: {
       get(name) {
         return request.cookies.get(name)?.value;
@@ -465,6 +467,7 @@ async function runMiddleware(request: NextRequest) {
     SUPABASE_ANON_KEY
   ) {
     const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
       cookies: {
         get(name) {
           return request.cookies.get(name)?.value;
@@ -549,6 +552,7 @@ async function runMiddleware(request: NextRequest) {
 
   if (isDashboardEcolePath && !isEcoleHandicapPath && SUPABASE_URL && SUPABASE_ANON_KEY) {
     const supabaseEcole = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
       cookies: {
         get(name) {
           return request.cookies.get(name)?.value;

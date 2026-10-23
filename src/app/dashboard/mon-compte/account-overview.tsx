@@ -73,7 +73,7 @@ const profileSchema = z.object({
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, { message: "Le mot de passe actuel est requis" }),
+    currentPassword: z.string().optional(),
     newPassword: z
       .string()
       .min(6, { message: "Le mot de passe doit contenir au moins 6 caractères" })
@@ -139,6 +139,7 @@ export default function AccountOverview() {
     userRoleDB && databaseToFrontendRole(userRoleDB as DatabaseRole) === "apprenant";
 
   const [loading, setLoading] = useState(true);
+  const [mustSetPassword, setMustSetPassword] = useState(false);
   const [userData, setUserData] = useState<{
     firstName: string;
     lastName: string;
@@ -205,6 +206,7 @@ export default function AccountOverview() {
           router.push("/login");
           return;
         }
+        setMustSetPassword(user.user_metadata?.needs_password_setup === true);
 
         const { data: profile } = await supabase
           .from("profiles")
@@ -437,30 +439,36 @@ export default function AccountOverview() {
         return;
       }
 
-      // Vérifier le mot de passe actuel
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      const redirectTo = `${siteUrl}/auth/callback`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: values.currentPassword,
-        options: { redirectTo } as any,
-      });
+      if (!mustSetPassword) {
+        if (!values.currentPassword) {
+          toast.error("Le mot de passe actuel est requis");
+          return;
+        }
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+        const redirectTo = `${siteUrl}/auth/callback`;
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: values.currentPassword,
+          options: { redirectTo } as any,
+        });
 
-      if (signInError) {
-        toast.error("Mot de passe actuel incorrect");
-        return;
+        if (signInError) {
+          toast.error("Mot de passe actuel incorrect");
+          return;
+        }
       }
 
-      // Mettre à jour le mot de passe
       const { error: updateError } = await supabase.auth.updateUser({
         password: values.newPassword,
+        data: { needs_password_setup: false },
       });
 
       if (updateError) {
         throw updateError;
       }
 
-      toast.success("Mot de passe mis à jour avec succès");
+      setMustSetPassword(false);
+      toast.success(mustSetPassword ? "Mot de passe défini" : "Mot de passe mis à jour");
       passwordForm.reset({
         currentPassword: "",
         newPassword: "",
@@ -515,7 +523,7 @@ export default function AccountOverview() {
                 : "data-[state=active]:text-white text-white/70"
             )}
           >
-            Mot de passe
+            {mustSetPassword ? "Définir un mot de passe" : "Modifier mon mot de passe"}
           </TabsTrigger>
           {isApprenant && (
             <TabsTrigger
@@ -647,7 +655,9 @@ export default function AccountOverview() {
         <TabsContent value="password" className="mt-6">
           <Card className={cardClass}>
             <CardHeader>
-              <CardTitle className={textPrimaryClass}>Changer le mot de passe</CardTitle>
+              <CardTitle className={textPrimaryClass}>
+                {mustSetPassword ? "Définir un mot de passe" : "Modifier mon mot de passe"}
+              </CardTitle>
               <CardDescription className={textSecondaryClass}>
                 Assurez-vous d&apos;utiliser un mot de passe fort et unique
               </CardDescription>
@@ -658,24 +668,26 @@ export default function AccountOverview() {
                   onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
                   className="space-y-6"
                 >
-                  <FormField
-                    control={passwordForm.control}
-                    name="currentPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={textPrimaryClass}>Mot de passe actuel</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Lock className={cn("absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2", iconClass)} />
-                            <Input type="password" className={inputClass} {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-red-400" />
-                      </FormItem>
-                    )}
-                  />
+                  {mustSetPassword ? null : (
+                    <FormField
+                      control={passwordForm.control}
+                      name="currentPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className={textPrimaryClass}>Mot de passe actuel</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Lock className={cn("absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2", iconClass)} />
+                              <Input type="password" className={inputClass} {...field} />
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
-                  <Separator className={borderClass} />
+                  {mustSetPassword ? null : <Separator className={borderClass} />}
 
                   <FormField
                     control={passwordForm.control}

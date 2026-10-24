@@ -81,10 +81,32 @@ function clamp01(n: number) {
 
 function scoreToVigilance(stressScore: number | null | undefined) {
   const v = typeof stressScore === "number" ? stressScore : null;
-  if (v == null) return { label: "Attention", tone: "amber" as const };
-  if (v < 30) return { label: "Critique", tone: "red" as const };
-  if (v < 60) return { label: "Attention", tone: "amber" as const };
-  return { label: "OK", tone: "emerald" as const };
+  if (v == null) {
+    return {
+      label: "Non mesurée",
+      tone: "amber" as const,
+      hint: "Le score de gestion du stress n'est pas encore disponible. La vigilance se calcule à partir de cet axe IDMC.",
+    };
+  }
+  if (v < 30) {
+    return {
+      label: "Critique",
+      tone: "red" as const,
+      hint: `Gestion du stress à ${Math.round(v)}/100. Le niveau est bas : un échange sur la charge est recommandé. Ce n'est pas un diagnostic médical.`,
+    };
+  }
+  if (v < 60) {
+    return {
+      label: "Attention",
+      tone: "amber" as const,
+      hint: `Gestion du stress à ${Math.round(v)}/100. Le niveau est fragile : la charge et le suivi méritent d'être allégés. Ce n'est pas un diagnostic médical.`,
+    };
+  }
+  return {
+    label: "OK",
+    tone: "emerald" as const,
+    hint: `Gestion du stress à ${Math.round(v)}/100. Le niveau mesuré est stable.`,
+  };
 }
 
 function initials(first?: string | null, last?: string | null) {
@@ -220,6 +242,7 @@ export default function SalarieDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [saveRequest, setSaveRequest] = useState(0);
   const [resendingInvite, setResendingInvite] = useState(false);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
@@ -404,17 +427,18 @@ export default function SalarieDetailPage() {
     if (!hasDiagnostics) return null;
     const weakIdmc = [...idmcAxesList].sort((a, b) => a.score - b.score)[0];
     const weakSoft = [...(testResults?.soft_skills ?? [])].sort((a, b) => a.score - b.score)[0];
+    const subject = employee?.first_name?.trim() || "Ce collaborateur";
     if (weakIdmc && weakIdmc.score < 55) {
-      return `Priorité IDMC : renforcer « ${weakIdmc.label} » (${weakIdmc.score}/100 — ${weakIdmc.mastery}).`;
+      return `Priorité IDMC pour ${subject} : renforcer « ${weakIdmc.label} » (${weakIdmc.score}/100 — ${weakIdmc.mastery}).`;
     }
     if (weakSoft && weakSoft.score < 60) {
-      return `Priorité soft skills : travailler « ${weakSoft.skill} » (${Math.round(weakSoft.score)}/15).`;
+      return `Priorité soft skills pour ${subject} : travailler « ${weakSoft.skill} » (${Math.round(weakSoft.score)}/15).`;
     }
     if (stressScore != null && stressScore < 50) {
-      return "Gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.";
+      return `${subject} gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.`;
     }
-    return "Progresse plus vite avec des consignes concrètes, un suivi régulier et un plan ciblé sur 1–2 axes faibles.";
-  }, [hasDiagnostics, idmcAxesList, testResults?.soft_skills, stressScore]);
+    return `${subject} progresse plus vite avec des consignes concrètes, un suivi régulier et un plan ciblé sur 1 ou 2 axes faibles.`;
+  }, [hasDiagnostics, idmcAxesList, testResults?.soft_skills, stressScore, employee?.first_name]);
 
   const actionBlock = useMemo(() => {
     if (!hasDiagnostics) return null;
@@ -508,7 +532,7 @@ export default function SalarieDetailPage() {
             <span>Mode édition — seules les sections autorisées sont modifiables.</span>
             <button
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={() => setSaveRequest((n) => n + 1)}
               className="inline-flex items-center gap-1 font-semibold text-amber-900"
             >
               <X className="h-4 w-4" /> Terminer
@@ -555,6 +579,7 @@ export default function SalarieDetailPage() {
                       >
                         Vigilance {vigilance.label}
                       </span>
+                      <p className="basis-full text-sm leading-relaxed text-gray-600">{vigilance.hint}</p>
                       {testResults?.behavioral_profile ? (
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                           Profil {testResults.behavioral_profile}
@@ -583,10 +608,10 @@ export default function SalarieDetailPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setEditing(false)}
+                  onClick={() => setSaveRequest((n) => n + 1)}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0f766e] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0d9488]"
                 >
-                  Terminer l&apos;édition
+                  Enregistrer
                 </button>
               )}
               <button
@@ -783,10 +808,7 @@ export default function SalarieDetailPage() {
                   adaptation, organisation, traitement de l&apos;information, résolution de difficultés,
                   suivi de progression et auto-évaluation. Le score global est la moyenne de ces axes.
                 </p>
-                <p className="mt-3 text-xs text-gray-500">
-                  Vigilance associée : <span className="font-semibold">{vigilance.label}</span>
-                  {stressScore != null ? ` (gestion du stress ${Math.round(stressScore)})` : ""}
-                </p>
+                <p className="mt-3 text-sm leading-relaxed text-gray-600">{vigilance.hint}</p>
               </div>
             ) : null}
 
@@ -797,6 +819,7 @@ export default function SalarieDetailPage() {
                 phone={displayEmployee.phone ?? null}
                 hireDate={displayEmployee.hire_date ?? null}
                 jobTitle={displayEmployee.job_title ?? null}
+                metier={displayEmployee.metier ?? null}
                 documents={hrDocuments}
                 editing
                 showContactOnly
@@ -804,6 +827,8 @@ export default function SalarieDetailPage() {
                   setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))
                 }
                 onDocumentsChange={setHrDocuments}
+                saveRequest={saveRequest}
+                onSaved={() => setEditing(false)}
               />
             ) : null}
           </aside>
@@ -943,6 +968,8 @@ export default function SalarieDetailPage() {
         <div className="mt-6">
           <EnterpriseEmployeeEntretiensSection
             employeeId={employeeId!}
+            employeeName={fullName}
+            employeeFirstName={displayEmployee.first_name}
             documents={hrDocuments}
             onDocumentsChange={setHrDocuments}
           />

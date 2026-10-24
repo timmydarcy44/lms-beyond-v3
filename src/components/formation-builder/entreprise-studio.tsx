@@ -935,10 +935,13 @@ export function EntrepriseFormationStudio({
                     } else setTab("contenu");
                   }}
                 >
-                  <span className={`mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${check.ok ? "bg-[#E3F6EC] text-[#126B3B]" : "bg-[#ECE9E1] text-[#3A3D45]"}`}>
-                    {check.ok ? "✓" : ""}
+                  <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs ${check.required === false ? "bg-[#F4F4F1] text-[#8A8F98]" : check.ok ? "bg-[#E3F6EC] text-[#126B3B]" : "bg-[#ECE9E1] text-[#3A3D45]"}`}>
+                    {check.required === false ? "–" : check.ok ? "✓" : ""}
                   </span>
-                  <span className={check.ok ? "text-[#126B3B]" : "text-[#3A3D45]"}>{check.label}</span>
+                  <span className={check.required === false ? "text-[#8A8F98]" : check.ok ? "text-[#126B3B]" : "text-[#3A3D45]"}>
+                    {check.label}
+                    {check.required === false ? " — non obligatoire" : ""}
+                  </span>
                 </button>
               </li>
             ))}

@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import SidebarSalarie from "@/components/SidebarSalarie";
 import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function SalarieConnectShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const bareTest = pathname.startsWith("/dashboard/salarie/test-");
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -25,6 +27,14 @@ export function SalarieConnectShell({ children }: { children: ReactNode }) {
       }
     })();
   }, [router]);
+
+  if (bareTest) {
+    return (
+      <LearnerSnapshotProvider>
+        <div className="min-h-screen bg-white text-[#111111]">{children}</div>
+      </LearnerSnapshotProvider>
+    );
+  }
 
   return (
     <LearnerSnapshotProvider>

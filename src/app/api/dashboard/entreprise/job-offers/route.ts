@@ -13,6 +13,7 @@ import {
   EDGEBS_ORG_ID,
   isEdgebsDemoViewer,
 } from "@/lib/entreprise/edgebs-demo-data";
+import { offerDraftSchema } from "@/lib/entreprise/offer-publish";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
   }
 
   let body: {
+    mode?: unknown;
     title?: unknown;
     city?: unknown;
     contract_type?: unknown;
@@ -197,6 +199,30 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
+  }
+
+  if (body.mode === "draft") {
+    const parsed = offerDraftSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Brouillon invalide" }, { status: 400 });
+    }
+    const service = getServiceRoleClient();
+    if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const { data, error } = await service
+      .from("job_offers")
+      .insert({
+        school_id: access.organizationId,
+        title: parsed.data.title || "Sans titre",
+        description: "",
+        status: "draft",
+        updated_at: new Date().toISOString(),
+      })
+      .select("id, title, status, created_at")
+      .maybeSingle();
+    if (error || !data) {
+      return NextResponse.json({ error: error?.message || "Brouillon impossible" }, { status: 400 });
+    }
+    return NextResponse.json({ offer: data });
   }
 
   const title = String(body.title ?? "").trim();

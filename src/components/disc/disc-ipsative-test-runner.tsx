@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useState } from "react";
+import { AssessmentChoice, AssessmentTestFrame } from "@/components/salarie/assessment-test-frame";
 import {
   DISC_QUESTIONS,
   DISC_QUESTION_COUNT,
@@ -16,10 +15,6 @@ import {
   type DiscRawScores,
 } from "@/lib/disc/disc-scoring";
 import { shuffleDiscOptions } from "@/lib/disc/disc-shuffle";
-import {
-  EdgeAssessmentOption,
-  EdgeAssessmentQuestionShell,
-} from "@/components/edge/edge-assessment-question-shell";
 
 type PickPhase = "most" | "least";
 
@@ -122,93 +117,46 @@ export function DiscIpsativeTestRunner({ onComplete }: DiscIpsativeTestRunnerPro
     shuffledOptions,
   ]);
 
-  const optionState = useMemo(() => {
-    return (label: DiscLabel) => {
-      if (mostLabel === label) return "most" as const;
-      if (leastLabel === label) return "least" as const;
-      return "available" as const;
-    };
-  }, [leastLabel, mostLabel]);
-
   if (!current) return null;
 
+  const progress = Math.round(((index + (phase === "least" ? 0.5 : 0)) / DISC_QUESTION_COUNT) * 100);
+
   return (
-    <EdgeAssessmentQuestionShell
-      categoryTag="Profil comportemental"
-      categoryMention="test DISC"
-      questionText={current.situation}
-      questionIndex={index}
-      totalQuestions={DISC_QUESTION_COUNT}
-      analyzing={analyzing}
-      analyzingLabel="Analyse de votre profil en cours…"
-      animateKey={`${index}-${phase}`}
+    <AssessmentTestFrame
+      stepLabel={`Question ${index + 1} sur ${DISC_QUESTION_COUNT}`}
+      progress={analyzing ? 100 : progress}
+      kicker={analyzing ? "Analyse de votre profil" : instruction}
+      title={analyzing ? "Un instant." : current.situation}
       footer={
-        <div className="space-y-4">
-          <p className="text-center text-sm font-medium text-[#3D7BFF]">{instruction}</p>
+        canAdvance ? (
           <button
             type="button"
-            disabled={!canAdvance}
             onClick={() => void handleNext()}
-            className={cn(
-              "w-full rounded-xl py-3.5 text-sm font-bold transition",
-              canAdvance
-                ? "bg-[#3D7BFF] text-white shadow-[0_8px_24px_-8px_rgba(61,123,255,0.55)] hover:bg-[#2f6ae8]"
-                : "cursor-not-allowed bg-black/[0.06] text-black/30",
-            )}
+            className="h-12 w-full rounded-full bg-[#111111] text-[15px] font-semibold text-white"
           >
-            {index < DISC_QUESTION_COUNT - 1 ? "Suivant" : "Terminer le test"}
+            {index < DISC_QUESTION_COUNT - 1 ? "Continuer" : "Terminer"}
           </button>
-        </div>
+        ) : (
+          <span />
+        )
       }
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`${index}-${phase}`}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-3"
-        >
-          {shuffledOptions.map((option) => {
-            const isMostLocked = phase === "least" && mostLabel === option.label;
-            const isSelectedMost = mostLabel === option.label;
-            const isSelectedLeast = leastLabel === option.label;
-            optionState(option.label);
-
-            return (
-              <EdgeAssessmentOption
-                key={`${option.label}-${option.text}`}
-                selected={isSelectedMost || isSelectedLeast}
-                disabled={submitting || analyzing || isMostLocked}
-                onClick={() => handlePick(option.label)}
-                className={cn(
-                  isMostLocked &&
-                    "border-black/[0.06] bg-black/[0.04] text-black/35 line-through decoration-black/20",
-                  isSelectedMost &&
-                    "border-[rgba(61,123,255,0.45)] bg-[rgba(61,123,255,0.12)] ring-1 ring-[rgba(61,123,255,0.2)]",
-                  isSelectedLeast &&
-                    "border-[rgba(255,59,48,0.35)] bg-[rgba(255,59,48,0.06)] ring-1 ring-[rgba(255,59,48,0.15)]",
-                )}
-              >
-                <span className="flex items-start justify-between gap-3">
-                  <span>{option.text}</span>
-                  {isSelectedMost ? (
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#3D7BFF]">
-                      Plus
-                    </span>
-                  ) : null}
-                  {isSelectedLeast ? (
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#FF3B30]">
-                      Moins
-                    </span>
-                  ) : null}
-                </span>
-              </EdgeAssessmentOption>
-            );
-          })}
-        </motion.div>
-      </AnimatePresence>
-    </EdgeAssessmentQuestionShell>
+      <div className="space-y-3">
+        {shuffledOptions.map((option) => {
+          const locked = phase === "least" && mostLabel === option.label;
+          const selected = mostLabel === option.label || leastLabel === option.label;
+          const mark = mostLabel === option.label ? "Le plus" : leastLabel === option.label ? "Le moins" : "";
+          return (
+            <AssessmentChoice
+              key={`${option.label}-${option.text}`}
+              label={mark ? `${option.text} · ${mark}` : option.text}
+              selected={selected && !locked}
+              disabled={submitting || analyzing || locked}
+              onClick={() => handlePick(option.label)}
+            />
+          );
+        })}
+      </div>
+    </AssessmentTestFrame>
   );
 }

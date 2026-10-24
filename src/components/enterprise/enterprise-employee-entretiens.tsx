@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FileText, MapPin, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -120,12 +120,16 @@ function defaultTitle(type: string, date: string) {
 
 type Props = {
   employeeId: string;
+  employeeName: string;
+  employeeFirstName?: string | null;
   documents: HrDocument[];
   onDocumentsChange: (docs: HrDocument[]) => void;
 };
 
 export function EnterpriseEmployeeEntretiensSection({
   employeeId,
+  employeeName,
+  employeeFirstName,
   documents,
   onDocumentsChange,
 }: Props) {
@@ -135,6 +139,43 @@ export function EnterpriseEmployeeEntretiensSection({
   const [saving, setSaving] = useState(false);
   const [savedDocId, setSavedDocId] = useState<string | null>(null);
   const [sendingSignature, setSendingSignature] = useState(false);
+  const [hrName, setHrName] = useState("");
+  const [requestSignature, setRequestSignature] = useState(true);
+  const [participantsEdited, setParticipantsEdited] = useState(false);
+
+  const signatureLabel = employeeFirstName?.trim()
+    ? `Envoyer à ${employeeFirstName.trim()} pour signature`
+    : "Envoyer au collaborateur pour signature";
+
+  const defaultParticipants = (name: string) => {
+    const hr = name.trim() ? `${name.trim()} (RH)` : "Responsable RH";
+    const employee = employeeName.trim() || "Collaborateur";
+    return `${hr}, ${employee}`;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/dashboard/entreprise/viewer")
+      .then((res) => res.json())
+      .then((json: { displayName?: string }) => {
+        const name = String(json.displayName ?? "").trim();
+        if (!cancelled && name && name !== "—") setHrName(name);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open || editingId || participantsEdited) return;
+    const participants = defaultParticipants(hrName);
+    setForm((prev) =>
+      prev.details.participants === participants
+        ? prev
+        : { ...prev, details: { ...prev.details, participants } },
+    );
+  }, [open, editingId, participantsEdited, hrName, employeeName]);
 
   const entretiens = useMemo(
     () =>
@@ -147,16 +188,21 @@ export function EnterpriseEmployeeEntretiensSection({
   const openCreate = () => {
     setSavedDocId(null);
     setEditingId(null);
+    setRequestSignature(true);
+    setParticipantsEdited(false);
     setForm({
       ...EMPTY_FORM,
       document_date: new Date().toISOString().slice(0, 10),
       title: "",
+      details: { ...EMPTY_DETAILS, participants: defaultParticipants(hrName) },
     });
     setOpen(true);
   };
 
   const openEdit = (doc: HrDocument) => {
     setSavedDocId(null);
+    setRequestSignature(false);
+    setParticipantsEdited(true);
     setEditingId(doc.id);
     setForm({
       document_type: doc.document_type || "entretien_individuel",
@@ -165,6 +211,34 @@ export function EnterpriseEmployeeEntretiensSection({
       details: parseInterviewDetails(doc.notes),
     });
     setOpen(true);
+  };
+
+  const sendSignatureRequest = async (docId: string) => {
+    if (isEdgebsDemoEmployeeId(employeeId)) {
+      toast.success("Entretien enregistré. Signature notée sur cette fiche démo.");
+      setOpen(false);
+      return;
+    }
+    setSendingSignature(true);
+    try {
+      const res = await fetch(
+        `/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/signature`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ docId }),
+        },
+      );
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
+      toast.success("Entretien enregistré. Demande de signature envoyée.");
+      setOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Envoi impossible");
+      setSavedDocId(docId);
+    } finally {
+      setSendingSignature(false);
+    }
   };
 
   const save = async () => {
@@ -194,8 +268,12 @@ export function EnterpriseEmployeeEntretiensSection({
         } else {
           onDocumentsChange([nextDoc, ...documents]);
         }
+        if (requestSignature) {
+          await sendSignatureRequest(nextDoc.id);
+          return;
+        }
         toast.success(editingId ? "Entretien mis à jour" : "Entretien ajouté");
-        setSavedDocId(nextDoc.id);
+        setOpen(false);
         return;
       }
 
@@ -217,8 +295,12 @@ export function EnterpriseEmployeeEntretiensSection({
         const json = (await res.json()) as { document?: HrDocument; error?: string };
         if (!res.ok || !json.document) throw new Error(json.error ?? "Erreur");
         onDocumentsChange(documents.map((d) => (d.id === editingId ? json.document! : d)));
+        if (requestSignature) {
+          await sendSignatureRequest(editingId);
+          return;
+        }
         toast.success("Entretien mis à jour");
-        setSavedDocId(editingId);
+        setOpen(false);
       } else {
         const formData = new FormData();
         formData.set("document_type", form.document_type);
@@ -232,8 +314,12 @@ export function EnterpriseEmployeeEntretiensSection({
         const json = (await res.json()) as { document?: HrDocument; error?: string };
         if (!res.ok || !json.document) throw new Error(json.error ?? "Erreur");
         onDocumentsChange([json.document, ...documents]);
+        if (requestSignature) {
+          await sendSignatureRequest(json.document.id);
+          return;
+        }
         toast.success("Entretien ajouté");
-        setSavedDocId(json.document.id);
+        setOpen(false);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
@@ -429,13 +515,14 @@ export function EnterpriseEmployeeEntretiensSection({
               </span>
               <Input
                 value={form.details.participants}
-                onChange={(e) =>
+                placeholder="Responsable RH, collaborateur"
+                onChange={(e) => {
+                  setParticipantsEdited(true);
                   setForm((prev) => ({
                     ...prev,
                     details: { ...prev.details, participants: e.target.value },
-                  }))
-                }
-                placeholder="Ex. Sarah Petit, Clara Martin (RH), Manager Sales"
+                  }));
+                }}
               />
             </label>
 
@@ -504,6 +591,18 @@ export function EnterpriseEmployeeEntretiensSection({
               />
             </label>
           </div>
+
+          {!savedDocId ? (
+            <label className="flex items-start gap-3 rounded-2xl border border-[#E3E0D8] bg-[#F7F7F5] px-4 py-3">
+              <input
+                type="checkbox"
+                checked={requestSignature}
+                onChange={(e) => setRequestSignature(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[#111111]"
+              />
+              <span className="text-sm font-medium text-[#111111]">{signatureLabel}</span>
+            </label>
+          ) : null}
 
           <DialogFooter>
             {savedDocId ? (

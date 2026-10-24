@@ -5,6 +5,8 @@ export type FicheCheck = {
   label: string;
   ok: boolean;
   step?: number;
+  /** Absent ou true : compte dans le score de publication. */
+  required?: boolean;
 };
 
 function minutesOf(value: string | undefined) {
@@ -29,16 +31,6 @@ export function ficheChecks(snapshot: CourseBuilderSnapshot): FicheCheck[] {
     if (item.type === "video" || item.type === "text") return minutesOf(item.duration) > 0;
     return true;
   };
-  const quizInEveryModule =
-    sections.length > 0 &&
-    sections.every((section) =>
-      (section.chapters ?? []).some(
-        (chapter) =>
-          !chapter.deleted_at &&
-          ((chapter.subchapters ?? []).some((sub) => !sub.deleted_at && (sub.kind === "quiz" || sub.quiz_id)) ||
-            chapter.type === "interactive_game"),
-      ),
-    );
   const total = contents.reduce((sum, item) => sum + minutesOf(item.duration), 0);
 
   return [
@@ -62,8 +54,9 @@ export function ficheChecks(snapshot: CourseBuilderSnapshot): FicheCheck[] {
     },
     {
       id: "quiz",
-      label: "Au moins un quiz par module",
-      ok: quizInEveryModule,
+      label: "Au moins un quiz par chapitre",
+      ok: false,
+      required: false,
     },
     {
       id: "duration",
@@ -93,5 +86,6 @@ export function ficheChecks(snapshot: CourseBuilderSnapshot): FicheCheck[] {
 
 export function ficheScore(snapshot: CourseBuilderSnapshot) {
   const checks = ficheChecks(snapshot);
-  return { checks, done: checks.filter((item) => item.ok).length, total: checks.length };
+  const required = checks.filter((item) => item.required !== false);
+  return { checks, done: required.filter((item) => item.ok).length, total: required.length };
 }

@@ -31,6 +31,8 @@ export type ProfileAnalysisInput = {
   softSkillsTop: Array<{ skill: string; score: number }>;
   /** Compétences métiers issues du matching carrière. */
   careerMatching?: ProfileAnalysisCareerMatching | null;
+  /** learner : vouvoiement. hr : le texte s'adresse au RH, au sujet du collaborateur. */
+  audience?: "learner" | "hr";
 };
 
 export type StoredProfileAnalysis = {
@@ -223,6 +225,8 @@ export async function generateProfileAnalysisText(input: ProfileAnalysisInput): 
     throw new Error("OpenAI non configuré.");
   }
 
+  const hr = input.audience === "hr";
+  const name = input.firstName.trim() || "Ce collaborateur";
   const jobContext = input.jobTitle?.trim()
     ? ` Poste actuel : ${input.jobTitle.trim()}.`
     : "";
@@ -240,6 +244,17 @@ export async function generateProfileAnalysisText(input: ProfileAnalysisInput): 
       })}`
     : " Matching compétences métiers : non disponible.";
 
+  const toneLines = PROFILE_ANALYSIS_TONE_PROMPT_LINES.filter(
+    (line) => !hr || !line.includes("Vouvoiement"),
+  );
+  const voice = hr
+    ? `- Tu t'adresses à un responsable RH qui lit la fiche de ${name}. Le collaborateur n'est pas le lecteur.
+- Interdit, pour parler de ${name} : « vous », « votre », « vos », « tu », « ton », « ta », « tes ».
+- Sujet : le prénom « ${name} ». Pour alléger, alterne avec « il » ou « elle », un seul genre, choisi d'après le prénom et tenu jusqu'au bout.
+- Si le prénom est mixte, n'utilise que « ${name} ».
+- La synthèse commence par « ${name} », jamais par « Vous êtes ».`
+    : "- Toujours vouvoyer";
+
   const prompt = `Tu es un analyste comportemental senior Byound. Tu rédiges une lecture croisée exigeante.${jobContext}${objectiveContext}
 Les scores ci-dessous sont des matières premières : tu dois les INTERPRÉTER en combinaison (DISC × IDMC × soft skills × compétences métiers), pas les reformuler.
 
@@ -253,23 +268,26 @@ Structure la réponse en français avec exactement ces 4 parties, chacune introd
 **Orientation objectif**
 (2 à 4 phrases. ${
     objective
-      ? `Commence par « Votre objectif est de devenir ${objective}. » Puis enchaîne sur une recommandation métier précise du type « À la lecture des compétences métiers, nous vous suggérons de… ». Explique POURQUOI ces priorités comptent pour cet objectif (pas une simple liste).`
-      : `Commence par « Pour avancer sur votre projet professionnel, » puis propose 1 à 3 priorités compétences métiers avec le raisonnement.`
+      ? hr
+        ? `Commence par « L'objectif de ${name} est de devenir ${objective}. » Puis une recommandation métier précise, au sujet de ${name}. Explique POURQUOI ces priorités comptent pour cet objectif.`
+        : `Commence par « Votre objectif est de devenir ${objective}. » Puis enchaîne sur une recommandation métier précise du type « À la lecture des compétences métiers, nous vous suggérons de… ». Explique POURQUOI ces priorités comptent pour cet objectif (pas une simple liste).`
+      : hr
+        ? `Commence par « Pour le projet professionnel de ${name}, » puis propose 1 à 3 priorités avec le raisonnement.`
+        : `Commence par « Pour avancer sur votre projet professionnel, » puis propose 1 à 3 priorités compétences métiers avec le raisonnement.`
   })
 
 **Forces majeures**
-(3 à 5 puces. Chaque puce = un levier d'action face à l'objectif. Format : ce que la personne fait naturellement + l'avantage concret dans le métier cible. Interdit : « Soft skill dominante : X », « Style comportemental Y ».)
+(3 à 5 puces. Chaque puce = un levier d'action. Format : ce que ${hr ? name : "la personne"} fait naturellement + l'avantage concret. Interdit : « Soft skill dominante : X », « Style comportemental Y ».)
 
 **Axes d'amélioration**
-(3 à 5 puces. Chaque puce = un risque ou un frein pour l'objectif + ce qu'il faut entraîner. Interdit : « Développer « X » pour élargir votre palette ».)
+(3 à 5 puces. Chaque puce = un risque ou un frein + ce qu'il faut entraîner.)
 
 **Synthèse**
-(1 paragraphe de 4 à 6 phrases, commence obligatoirement par « Vous êtes ». C'est LA phrase de présentation du profil : portrait psychométrique croisé, dynamique de travail, tension principale, et implication pour l'objectif.
-Interdit formel : lister les soft skills du top 3, répéter « Influent/Dominant/… » sans en tirer une lecture situationnelle, phrases creuses du type « trajectoire cohérente », « complètent votre profil », « matching carrière ».)
+(1 paragraphe de 4 à 6 phrases, commence obligatoirement par « ${hr ? name : "Vous êtes"} ». Portrait croisé, dynamique de travail, tension principale, implication pour l'objectif.)
 
 Contraintes strictes :
-${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
-- Toujours vouvoyer
+${toneLines.join("\n")}
+${voice}
 - Zéro paraphrase des scores / classements visibles
 - Chaque phrase doit apporter une lecture que le lecteur ne peut pas déduire d'un simple regard sur les barres
 - 240 à 380 mots au total`;
@@ -280,8 +298,9 @@ ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
       messages: [
         {
           role: "system",
-          content:
-            "Tu es un analyste Byound senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
+          content: hr
+            ? `Tu es un analyste Byound senior. Tu écris pour un responsable RH, au sujet de ${name}. Jamais de vouvoiement adressé au collaborateur. Français sobre, précis.`
+            : "Tu es un analyste Byound senior. Tu croises DISC, IDMC, soft skills et compétences métiers pour produire une lecture décisionnelle. Tu n'énumères jamais des labels déjà visibles. Français vouvoyé, sobre, précis.",
         },
         { role: "user", content: prompt },
       ],
@@ -293,7 +312,8 @@ ${PROFILE_ANALYSIS_TONE_PROMPT_LINES.join("\n")}
     if (!raw) {
       throw new Error("OpenAI a renvoyé une réponse vide.");
     }
-    return sanitizeProfileAnalysisTone(raw);
+    const cleaned = sanitizeProfileAnalysisTone(raw);
+    return hr ? rewriteAnalysisForHr(cleaned, name) : cleaned;
   } catch (error: unknown) {
     const apiError = error as { status?: number; message?: string; code?: string };
     if (apiError?.status === 401) {
@@ -341,17 +361,101 @@ export async function saveProfileAnalysisToDb(
   return updatedAt;
 }
 
+export function rewriteAnalysisForHr(text: string, firstName: string): string {
+  const name = firstName.trim() || "Ce collaborateur";
+  const rules: Array<[RegExp, string]> = [
+    [/\bVotre objectif est de devenir\b/g, `L'objectif de ${name} est de devenir`],
+    [/\bPour avancer sur votre projet professionnel\b/gi, `Pour le projet professionnel de ${name}`],
+    [/\bnous vous suggérons de\b/gi, `l'orientation pour ${name} est de`],
+    [/\bVous êtes\b/g, `${name} est`],
+    [/\bvous êtes\b/g, `${name} est`],
+    [/\bVous avez\b/g, `${name} a`],
+    [/\bvous avez\b/g, `${name} a`],
+    [/\bVotre\b/g, "Son"],
+    [/\bvotre\b/g, "son"],
+    [/\bVos\b/g, "Ses"],
+    [/\bvos\b/g, "ses"],
+    [/\bVous\b/g, name],
+    [/\bvous\b/g, name],
+  ];
+  return rules.reduce((current, [pattern, value]) => current.replace(pattern, value), text);
+}
+
+function readAnalysisRecord(raw: unknown): Record<string, unknown> {
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+    } catch {
+      return { text: raw };
+    }
+    return { text: raw };
+  }
+  return {};
+}
+
 export async function resolveProfileAnalysisForProfile(
   service: SupabaseClient,
   profileId: string,
   input: ProfileAnalysisInput,
-  options?: { forceRegenerate?: boolean },
+  options?: { forceRegenerate?: boolean; audience?: "learner" | "hr" },
 ): Promise<{ analysis: string; updatedAt: string; cached: boolean; sections: ParsedProfileAnalysisSections }> {
   const signature = buildProfileAnalysisTestsSignature({
     discScores: input.discScores,
     idmcScores: input.idmcScores,
     softSkills: input.softSkillsTop,
   });
+
+  if (options?.audience === "hr") {
+    const { data } = await service.from("profiles").select("ai_analysis").eq("id", profileId).maybeSingle();
+    const record = readAnalysisRecord(data?.ai_analysis);
+    const cachedHr = typeof record.hr_text === "string" ? record.hr_text : "";
+    const cachedSig = typeof record.hr_tests_signature === "string" ? record.hr_tests_signature : "";
+    const cachedStillAddressesThePerson = /\b(vous|votre|vos)\b/i.test(cachedHr);
+    const voice = typeof record.hr_voice === "string" ? record.hr_voice : "";
+    if (
+      !options.forceRegenerate &&
+      cachedHr.trim() &&
+      cachedSig === signature &&
+      voice === "rh-prenom-v1" &&
+      !cachedStillAddressesThePerson
+    ) {
+      return {
+        analysis: cachedHr,
+        updatedAt: typeof record.hr_updated_at === "string" ? record.hr_updated_at : new Date().toISOString(),
+        cached: true,
+        sections: parseProfileAnalysisSections(cachedHr),
+      };
+    }
+
+    let analysis = "";
+    try {
+      analysis = await generateProfileAnalysisText({ ...input, audience: "hr" });
+    } catch (error) {
+      const learnerText = typeof record.text === "string" ? record.text : "";
+      if (!learnerText.trim()) throw error;
+      analysis = rewriteAnalysisForHr(learnerText, input.firstName);
+    }
+    if (!analysis.trim()) throw new Error("Analyse vide.");
+
+    const updatedAt = new Date().toISOString();
+    record.hr_text = analysis;
+    record.hr_tests_signature = signature;
+    record.hr_updated_at = updatedAt;
+    record.hr_voice = "rh-prenom-v1";
+    const { error } = await service
+      .from("profiles")
+      .update({ ai_analysis: JSON.stringify(record) })
+      .eq("id", profileId);
+    if (error) throw new Error(error.message);
+
+    return {
+      analysis,
+      updatedAt,
+      cached: false,
+      sections: parseProfileAnalysisSections(analysis),
+    };
+  }
 
   const cached = await loadProfileAnalysisFromDb(service, profileId);
 

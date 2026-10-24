@@ -27,6 +27,26 @@ export const dynamic = "force-dynamic";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const EMPLOYEE_SELECTS = [
+  "id, first_name, last_name, email, job_title, department, phone, hire_date, metier, profile_id, company_id, created_at",
+  "id, first_name, last_name, email, job_title, department, phone, hire_date, profile_id, company_id, created_at",
+  "id, first_name, last_name, email, job_title, department, profile_id, company_id, created_at",
+];
+
+async function loadEmployeeRow(
+  service: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  employeeId: string,
+) {
+  let lastError: { message: string } | null = null;
+  for (const columns of EMPLOYEE_SELECTS) {
+    const result = await service.from("employees").select(columns).eq("id", employeeId).maybeSingle();
+    if (!result.error) return result;
+    lastError = result.error;
+    if (!/phone|hire_date|metier|schema cache|column/i.test(result.error.message)) return result;
+  }
+  return { data: null, error: lastError };
+}
+
 function mapCollaborateurDiagnostic(row: Record<string, unknown>) {
   const stress = row.stress_score != null ? Number(row.stress_score) : null;
   return {
@@ -71,13 +91,7 @@ export async function GET(
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const { data: employeeRow, error: empLookupErr } = await service
-    .from("employees")
-    .select(
-      "id, first_name, last_name, email, job_title, department, profile_id, company_id, created_at",
-    )
-    .eq("id", employeeId)
-    .maybeSingle();
+  const { data: employeeRow, error: empLookupErr } = await loadEmployeeRow(service, employeeId);
 
   if (empLookupErr) {
     return NextResponse.json({ error: empLookupErr.message }, { status: 400 });
@@ -193,8 +207,9 @@ export async function GET(
       : (hrDocumentsRows ?? []);
 
   let metierMatch = null;
-  const jobTitle = String(employee.job_title ?? "").trim();
-  if (jobTitle && orgId) {
+    const jobTitle = String(employee.job_title ?? "").trim();
+    const metierName = String((employee as { metier?: string | null }).metier ?? "").trim() || jobTitle;
+    if (metierName && orgId) {
     const { data: roleRows } = await service
       .from("enterprise_job_roles")
       .select("id, title, hard_skills, soft_skills")
@@ -203,10 +218,10 @@ export async function GET(
       .limit(40);
 
     const matched =
-      (roleRows ?? []).find((role) => String(role.title).toLowerCase() === jobTitle.toLowerCase()) ??
+      (roleRows ?? []).find((role) => String(role.title).toLowerCase() === metierName.toLowerCase()) ??
       (roleRows ?? []).find((role) =>
-        String(role.title).toLowerCase().includes(jobTitle.toLowerCase()) ||
-        jobTitle.toLowerCase().includes(String(role.title).toLowerCase()),
+        String(role.title).toLowerCase().includes(metierName.toLowerCase()) ||
+        metierName.toLowerCase().includes(String(role.title).toLowerCase()),
       ) ??
       null;
 
@@ -263,7 +278,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Action non autorisée" }, { status: 400 });
   }
 
-  let body: { phone?: string | null; hire_date?: string | null; job_title?: string | null } = {};
+  let body: { phone?: string | null; hire_date?: string | null; job_title?: string | null; metier?: string | null } = {};
   try {
     body = await request.json();
   } catch {
@@ -273,34 +288,89 @@ export async function PATCH(
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const patch: Record<string, unknown> = {};
   if ("phone" in body) patch.phone = body.phone?.trim() || null;
   if ("hire_date" in body) patch.hire_date = body.hire_date?.trim() || null;
   if ("job_title" in body) patch.job_title = body.job_title?.trim() || null;
+  if ("metier" in body) patch.metier = body.metier?.trim() || null;
 
-  let updateQuery = service
+  const { data: existing, error: existingError } = await service
     .from("employees")
-    .update(patch)
+    .select("id, company_id")
     .eq("id", employeeId)
-    .eq("company_id", access.organizationId);
+    .maybeSingle();
+  if (existingError) return NextResponse.json({ error: existingError.message }, { status: 400 });
+  if (!existing) return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+  const companyId = String((existing as { company_id?: string | null }).company_id ?? "");
+  if (companyId && companyId !== access.organizationId) {
+    return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
+  }
 
-  let { data, error } = await updateQuery.select("id").maybeSingle();
+  const write = (fields: Record<string, unknown>) =>
+    service.from("employees").update(fields).eq("id", employeeId).select("id").maybeSingle();
 
-  if (error?.message?.includes("hire_date") || error?.message?.includes("phone")) {
-    const safePatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if ("job_title" in body) safePatch.job_title = body.job_title?.trim() || null;
-    ({ data, error } = await service
-      .from("employees")
-      .update(safePatch)
-      .eq("id", employeeId)
-      .eq("company_id", access.organizationId)
-      .select("id")
-      .maybeSingle());
+  let fields = { ...patch };
+  let { data, error } = await write(fields);
+
+  const optional = ["metier", "phone", "hire_date"] as const;
+  for (const key of optional) {
+    if (!error) break;
+    if (!new RegExp(key, "i").test(error.message) || !(key in fields)) continue;
+    const next = { ...fields };
+    delete next[key];
+    fields = next;
+    if (Object.keys(fields).length === 0) break;
+    ({ data, error } = await write(fields));
+  }
+
+  if (error && "job_title" in body) {
+    ({ data, error } = await write({ job_title: body.job_title?.trim() || null }));
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Collaborateur introuvable" }, { status: 404 });
-  return NextResponse.json({ employee: data });
+
+  let readBack = await service
+    .from("employees")
+    .select("id, phone, job_title, hire_date, metier")
+    .eq("id", employeeId)
+    .maybeSingle();
+  if (readBack.error && /metier|schema cache|column/i.test(readBack.error.message)) {
+    readBack = await service
+      .from("employees")
+      .select("id, phone, job_title, hire_date")
+      .eq("id", employeeId)
+      .maybeSingle();
+  }
+  const stored = readBack.data as {
+    phone?: string | null;
+    job_title?: string | null;
+    hire_date?: string | null;
+    metier?: string | null;
+  } | null;
+  const dropped: string[] = [];
+  if (readBack.error && /phone|job_title|column|schema cache/i.test(readBack.error.message)) {
+    if ("phone" in body) dropped.push("téléphone");
+  } else if (stored) {
+    if ("phone" in body && (stored.phone ?? null) !== (body.phone?.trim() || null)) dropped.push("téléphone");
+    if ("job_title" in body && (stored.job_title ?? null) !== (body.job_title?.trim() || null)) dropped.push("poste");
+  }
+  if (dropped.length) {
+    return NextResponse.json(
+      { error: `Impossible d'enregistrer : ${dropped.join(", ")}.` },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({
+    employee: {
+      id: data.id,
+      phone: stored?.phone ?? (body.phone?.trim() || null),
+      hire_date: stored?.hire_date ?? (body.hire_date?.trim() || null),
+      job_title: stored?.job_title ?? (body.job_title?.trim() || null),
+      metier: stored && "metier" in stored ? stored.metier ?? null : body.metier?.trim() || null,
+    },
+  });
 }
 
 export async function DELETE(

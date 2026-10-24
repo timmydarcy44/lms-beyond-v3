@@ -1107,7 +1107,8 @@ export function FormateurFormationBuilderWhite({
   };
 
   const handlePublishBeyondIA = async () => {
-    if (orgIsLocked && !byoundOwned && ficheScore(snapshot).done < 8) {
+    const checklist = ficheScore(snapshot);
+    if (orgIsLocked && !byoundOwned && checklist.done < checklist.total) {
       toast.error("Complétez la checklist pour publier");
       return;
     }

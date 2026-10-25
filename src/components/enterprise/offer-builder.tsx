@@ -104,24 +104,35 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
     if (!offerId) return;
     let cancelled = false;
     void (async () => {
-      const res = await fetch(`/api/dashboard/entreprise/job-offers/${offerId}`, { credentials: "include" });
-      const json = (await res.json()) as { offer?: OfferPoste & { updated_at?: string } };
-      if (!res.ok || !json.offer || cancelled) return;
-      const poste = preparePosteDraft(json.offer);
-      const conditions = prepareConditions(poste.draft);
-      const prepared = prepareCandidature(conditions.draft);
-      setOffer(prepared.draft);
-      baseline.current = poste.folded || conditions.folded || prepared.folded ? "" : serializePoste(prepared.draft);
-      const updated = Date.parse(String(json.offer.updated_at ?? ""));
-      setSavedAt(Number.isNaN(updated) ? Date.now() : updated);
-      const skillsRes = await fetch(`/api/dashboard/entreprise/job-offers/${offerId}/skills`, { credentials: "include" });
-      const skillsJson = (await skillsRes.json()) as { skills?: OfferSkillDraft[] };
-      if (cancelled) return;
-      const next = skillsRes.ok ? skillsJson.skills ?? [] : [];
-      setSkills(next);
-      skillsBaseline.current = JSON.stringify(next.map((skill) => ({ label: skill.label, kind: skill.kind, importance: skill.importance })));
-      setReady(true);
-      void scanDiscrimination(prepared.draft);
+      let loaded: OfferPoste | null = null;
+      try {
+        const res = await fetch(`/api/dashboard/entreprise/job-offers/${offerId}`, { credentials: "include" });
+        const json = (await res.json().catch(() => null)) as { offer?: OfferPoste & { updated_at?: string } } | null;
+        if (res.ok && json?.offer && !cancelled) {
+          const poste = preparePosteDraft(json.offer);
+          const conditions = prepareConditions(poste.draft);
+          const prepared = prepareCandidature(conditions.draft);
+          loaded = prepared.draft;
+          setOffer(prepared.draft);
+          baseline.current = poste.folded || conditions.folded || prepared.folded ? "" : serializePoste(prepared.draft);
+          const updated = Date.parse(String(json.offer.updated_at ?? ""));
+          setSavedAt(Number.isNaN(updated) ? Date.now() : updated);
+        }
+        const skillsRes = await fetch(`/api/dashboard/entreprise/job-offers/${offerId}/skills`, { credentials: "include" });
+        const skillsJson = (await skillsRes.json().catch(() => null)) as { skills?: OfferSkillDraft[] } | null;
+        if (!cancelled) {
+          const next = skillsRes.ok ? skillsJson?.skills ?? [] : [];
+          setSkills(next);
+          skillsBaseline.current = JSON.stringify(next.map((skill) => ({ label: skill.label, kind: skill.kind, importance: skill.importance })));
+        }
+      } catch {
+        loaded = null;
+      } finally {
+        if (!cancelled) {
+          setReady(true);
+          if (loaded) void scanDiscrimination(loaded);
+        }
+      }
     })();
     return () => {
       cancelled = true;
@@ -339,8 +350,8 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
               onChange={setSkills}
             />
           ) : null}
-          {step === 3 && ready ? <OfferStepConditions draft={offer} onChange={(patch) => setOffer((prev) => ({ ...prev, ...patch }))} /> : null}
-          {step === 4 && ready && offerId ? <OfferStepCandidature offerId={offerId} draft={offer} onChange={(patch) => setOffer((prev) => ({ ...prev, ...patch }))} /> : null}
+          {step === 3 ? <OfferStepConditions key={ready ? "loaded" : "draft"} draft={offer} onChange={(patch) => setOffer((prev) => ({ ...prev, ...patch }))} /> : null}
+          {step === 4 && offerId ? <OfferStepCandidature key={ready ? "loaded" : "draft"} offerId={offerId} draft={offer} onChange={(patch) => setOffer((prev) => ({ ...prev, ...patch }))} /> : null}
           <div className="mt-8 flex items-center justify-between gap-3">
             <button
               type="button"

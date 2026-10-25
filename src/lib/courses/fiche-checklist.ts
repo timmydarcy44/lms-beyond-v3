@@ -31,7 +31,7 @@ export function ficheChecks(snapshot: CourseBuilderSnapshot): FicheCheck[] {
     if (item.type === "video" || item.type === "text") return minutesOf(item.duration) > 0;
     return true;
   };
-  const total = contents.reduce((sum, item) => sum + minutesOf(item.duration), 0);
+  const cover = String(general.cover_image || general.heroImage || "").trim();
 
   return [
     {
@@ -59,26 +59,14 @@ export function ficheChecks(snapshot: CourseBuilderSnapshot): FicheCheck[] {
       required: false,
     },
     {
-      id: "duration",
-      label: "Durée totale supérieure à 0",
-      ok: total > 0,
-      step: 3,
-    },
-    {
       id: "ready",
       label: "Tous les contenus au statut Prêt",
       ok: contents.length > 0 && contents.every(ready),
     },
     {
-      id: "evaluation",
-      label: "Modalités d'évaluation",
-      ok: Boolean(general.evaluation_modalities?.trim()),
-      step: 3,
-    },
-    {
       id: "cover",
-      label: "Image de couverture et texte alternatif",
-      ok: Boolean(general.cover_image?.trim() && general.cover_alt?.trim()),
+      label: "Image de couverture",
+      ok: Boolean(cover),
       step: 4,
     },
   ];

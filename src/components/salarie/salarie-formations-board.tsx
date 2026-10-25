@@ -22,45 +22,55 @@ export function SalarieFormationsBoard({ formations }: { formations: SalarieAssi
   }, [formations, query]);
 
   return (
-    <div className={`${SALARIE_PAGE_SHELL} min-h-screen bg-[#F4F5F7] text-[#14151A]`}>
-      <section className="mb-8 space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8B909A]">Entreprise</p>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[#14151A]">Mes formations</h1>
-        <p className="mt-2 max-w-3xl text-sm text-[#5C6370]">
-          Uniquement les formations auxquelles vous êtes inscrit.
-        </p>
+    <div className={`${SALARIE_PAGE_SHELL} min-h-screen text-white`}>
+      <section className="mb-8">
+        <h1 className="text-[clamp(1.8rem,3vw,2.4rem)] font-extrabold tracking-[-0.03em]">Mes formations</h1>
+        <p className="mt-2 max-w-xl text-[13px] text-white/45">Uniquement les formations auxquelles vous êtes inscrit.</p>
       </section>
 
       <div className="relative mb-6 max-w-xl">
-        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B909A]" />
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Rechercher une formation"
-          className="w-full rounded-full border border-black/10 bg-white py-3 pl-11 pr-4 text-sm text-[#14151A] outline-none placeholder:text-[#8B909A]"
+          className="h-12 w-full rounded-full border border-white/10 bg-white/[0.04] pl-11 pr-4 text-sm text-white outline-none placeholder:text-white/35"
         />
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-sm text-[#5C6370]">Aucune formation ne vous est encore assignée.</p>
+        <p className="text-sm text-white/45">Aucune formation ne vous est encore assignée.</p>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((formation) => (
             <Link
               key={formation.id}
               href={formation.href}
-              className="overflow-hidden rounded-[28px] bg-white text-left shadow-[0_12px_40px_rgba(15,23,42,0.06)]"
+              className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] text-left"
             >
-              <div className="space-y-2 p-5">
-                <p className="text-base font-semibold text-[#14151A]">{formation.title}</p>
-                {formation.presentation ? (
-                  <p className="line-clamp-3 text-sm text-[#5C6370]">{formation.presentation}</p>
+              <div className="aspect-[16/10] bg-[#12141a]">
+                {formation.coverImage ? (
+                  <img src={formation.coverImage} alt="" className="h-full w-full object-cover" />
                 ) : null}
-                <p className="text-xs text-[#8B909A]">
-                  {formation.progress > 0 ? `${formation.progress} %` : "À commencer"}
-                  {formation.meta ? ` · ${formation.meta}` : ""}
-                </p>
+              </div>
+              <div className="space-y-3 px-5 py-4">
+                <p className="text-[15px] font-extrabold tracking-[-0.02em] text-white">{formation.title}</p>
+                {formation.presentation ? (
+                  <p className="line-clamp-2 text-[13px] text-white/45">{formation.presentation}</p>
+                ) : null}
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-white/55">
+                    <span>Complétion</span>
+                    <span>{Math.round(formation.progress)} %</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden>
+                    <div
+                      className="h-full rounded-full bg-[#3D7BFF]"
+                      style={{ width: `${Math.max(0, Math.min(100, formation.progress))}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             </Link>
           ))}

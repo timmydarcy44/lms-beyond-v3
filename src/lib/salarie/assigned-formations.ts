@@ -1,4 +1,3 @@
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 import { collectLearnerProfileCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
@@ -10,6 +9,7 @@ export type SalarieAssignedFormation = {
   presentation: string | null;
   meta: string | null;
   progress: number;
+  coverImage: string | null;
 };
 
 const UUID_RE =
@@ -17,7 +17,26 @@ const UUID_RE =
 
 function formationHref(slug: string | null, id: string) {
   const key = (slug || id).trim();
-  return `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/${encodeURIComponent(key)}`;
+  return `/dashboard/salarie/formations/${encodeURIComponent(key)}`;
+}
+
+function courseCover(row: { cover_image?: string | null; builder_snapshot?: unknown }) {
+  const direct = String(row.cover_image ?? "").trim();
+  if (direct) return direct;
+  let snapshot = row.builder_snapshot;
+  if (typeof snapshot === "string") {
+    try {
+      snapshot = JSON.parse(snapshot) as unknown;
+    } catch {
+      snapshot = null;
+    }
+  }
+  const general =
+    snapshot && typeof snapshot === "object"
+      ? (snapshot as { general?: { cover_image?: unknown; heroImage?: unknown } }).general
+      : null;
+  const fromSnapshot = String(general?.cover_image || general?.heroImage || "").trim();
+  return fromSnapshot || null;
 }
 
 /** Formations assignées au salarié (enrollments + course_enrollments), sans filtre org_id cours. */
@@ -56,7 +75,7 @@ export async function listSalarieAssignedFormations(
   const ids = Array.from(courseIds);
   const { data: courses, error } = await client
     .from("courses")
-    .select("id, title, description, presentation, slug, status")
+    .select("id, title, description, presentation, slug, status, cover_image, builder_snapshot")
     .in("id", ids)
     .limit(200);
 
@@ -87,6 +106,8 @@ export async function listSalarieAssignedFormations(
       presentation?: string | null;
       slug?: string | null;
       status?: string | null;
+      cover_image?: string | null;
+      builder_snapshot?: unknown;
     };
     const status = String(row.status ?? "").toLowerCase();
     if (status === "draft" || status === "archived" || status === "deleted") continue;
@@ -98,6 +119,7 @@ export async function listSalarieAssignedFormations(
       presentation: row.presentation ?? null,
       meta: row.description ?? null,
       progress: progressByCourse.get(row.id) ?? 0,
+      coverImage: courseCover(row),
     });
   }
 

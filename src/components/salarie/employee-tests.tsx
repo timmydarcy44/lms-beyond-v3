@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { EmptyState, TxRow } from "@/components/salarie/employee-fiche-blocks";
+import { SoftSkillRanking } from "@/components/salarie/employee-skills";
 import { AXES_LABELS, IDMC_AXIS_KEYS, resolveIdmcAxisMasteryLevel } from "@/lib/idmc/idmc-display";
 import { EXPECTED_SOFT_SKILLS_COMPETENCE_COUNT } from "@/lib/soft-skills/resolve-soft-skills-result";
 
@@ -60,6 +61,7 @@ export function EmployeeTests({
   softSkillsAt: string | null;
 }) {
   const [sending, setSending] = useState(false);
+  const [softOpen, setSoftOpen] = useState(false);
   const name = firstName.trim() || "Ce collaborateur";
 
   if (!shareConsent) {
@@ -80,6 +82,7 @@ export function EmployeeTests({
   }).sort((a, b) => b.score - a.score);
   const axesShared = Boolean(idmcAxes && Object.values(idmcAxes).some((value) => Number(value) > 0));
   const idmcShared = idmcScore != null || axesShared;
+  const idmcLevel = idmcScore != null ? resolveIdmcAxisMasteryLevel(Math.round(idmcScore)) : null;
   const softShared = softSkills.length > 0;
   const behavior = disc ? [...BEHAVIOR].sort((a, b) => Number(disc[b.key]) - Number(disc[a.key])) : [];
   const dominant = behavior[0] ?? null;
@@ -167,7 +170,12 @@ export function EmployeeTests({
             <section id="employee-idmc" className="rounded-[26px] bg-white px-6 py-5">
               <h2 className="text-lg font-extrabold text-[#07080B]">IDMC</h2>
               {idmcScore != null ? (
-                <p className="mt-3 text-[38px] font-extrabold leading-none text-[#07080B]">{Math.round(idmcScore)} / 100</p>
+                <>
+                  <p className="mt-3 text-[38px] font-extrabold leading-none text-[#07080B]">{Math.round(idmcScore)} / 100</p>
+                  <p className="mt-3 max-w-md text-sm leading-relaxed text-[#3A3D45]">
+                    Moyenne des huit axes : {idmcLevel ? `${idmcLevel.charAt(0).toLowerCase()}${idmcLevel.slice(1)}` : ""}. Le détail est dans les barres.
+                  </p>
+                </>
               ) : (
                 <p className="mt-3 text-sm text-[#6B6F7A]">Score global non disponible.</p>
               )}
@@ -241,13 +249,15 @@ export function EmployeeTests({
         </div>
       ) : null}
 
-      <div id="employee-soft-skills" className="rounded-[26px] bg-white px-6 py-5">
-        <h2 className="text-lg font-extrabold text-[#07080B]">Soft skills</h2>
-        <p className="mt-2 text-sm text-[#6B6F7A]">
-          {softShared
-            ? "Le détail des compétences mesurées est dans l'onglet Compétences."
-            : "Aucun soft skill partagé pour le moment."}
-        </p>
+      <div id="employee-soft-skills">
+        {softShared ? (
+          <SoftSkillRanking skills={softSkills} expanded={softOpen} onToggle={() => setSoftOpen((value) => !value)} />
+        ) : (
+          <div className="rounded-[26px] bg-white px-6 py-5">
+            <h2 className="text-lg font-extrabold text-[#07080B]">Soft skills</h2>
+            <p className="mt-2 text-sm text-[#6B6F7A]">Aucun soft skill partagé pour le moment.</p>
+          </div>
+        )}
       </div>
     </div>
   );

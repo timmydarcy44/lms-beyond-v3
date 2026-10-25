@@ -303,7 +303,7 @@ function RowMenu({ onAssign }: { onAssign: () => void }) {
   );
 }
 
-function SoftSkillRanking({
+export function SoftSkillRanking({
   skills,
   expanded,
   onToggle,

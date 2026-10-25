@@ -31,6 +31,7 @@ export default async function SalarieFormationsPage() {
       presentation: item.objectives[0] ?? null,
       meta: `${item.trainer} · ${item.date}`,
       progress: item.positioningDone ? 100 : 0,
+      coverImage: null,
     }));
   } else {
     formations = await listSalarieAssignedFormations(session.id, session.email);

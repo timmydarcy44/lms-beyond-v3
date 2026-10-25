@@ -331,6 +331,8 @@ type LessonPlayViewProps = {
   activeModule?: LearnerModule;
   videoSrc?: string | null;
   cardHref: string;
+  /** Base des liens de leçon. Par défaut, `cardHref`. */
+  lessonBaseHref?: string;
   flashcards: LearnerFlashcard[];
   previousLesson?: { id: string; title: string };
   nextLesson?: { id: string; title: string };
@@ -347,6 +349,7 @@ export function LessonPlayView({
   activeModule,
   videoSrc,
   cardHref,
+  lessonBaseHref,
   flashcards,
   previousLesson,
   nextLesson,
@@ -780,7 +783,10 @@ export function LessonPlayView({
     setFocusMode(isPomodoroFocus);
   }, [pomodoroState.phase, pomodoroState.isActive]);
 
-  const lessonHref = useMemo(() => (lessonId: string) => `${cardHref}/play/${lessonId}`, [cardHref]);
+  const lessonHref = useMemo(
+    () => (lessonId: string) => `${lessonBaseHref ?? cardHref}/play/${lessonId}`,
+    [cardHref, lessonBaseHref],
+  );
 
   useEffect(() => {
     if (!courseId) return;

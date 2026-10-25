@@ -124,6 +124,8 @@ type Props = {
   employeeFirstName?: string | null;
   documents: HrDocument[];
   onDocumentsChange: (docs: HrDocument[]) => void;
+  openSignal?: number;
+  hideSection?: boolean;
 };
 
 export function EnterpriseEmployeeEntretiensSection({
@@ -132,6 +134,8 @@ export function EnterpriseEmployeeEntretiensSection({
   employeeFirstName,
   documents,
   onDocumentsChange,
+  openSignal = 0,
+  hideSection = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -152,6 +156,13 @@ export function EnterpriseEmployeeEntretiensSection({
     const employee = employeeName.trim() || "Collaborateur";
     return `${hr}, ${employee}`;
   };
+
+  useEffect(() => {
+    if (!openSignal) return;
+    openCreate();
+    // Le signal vient du bouton Planifier de l'onglet Suivi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openSignal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -350,7 +361,7 @@ export function EnterpriseEmployeeEntretiensSection({
   };
 
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <section className={cn("rounded-2xl border border-gray-200 bg-white p-6 shadow-sm", hideSection && "hidden")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-black tracking-tight text-gray-950">Entretiens &amp; bilans RH</h2>

@@ -124,8 +124,9 @@ export function EnterpriseEmployeeHrPanel({
           metier: current.metier.trim() || null,
         }),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as { error?: string; warning?: string };
       if (!res.ok) throw new Error(json.error ?? "Erreur");
+      if (json.warning) toast.warning(json.warning);
       onProfileChange({
         phone: current.phone.trim() || null,
         hire_date: current.hireDate || null,

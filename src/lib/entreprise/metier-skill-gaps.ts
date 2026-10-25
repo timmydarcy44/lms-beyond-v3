@@ -12,6 +12,7 @@ import {
   SKILLS_GAP_SCORE_MAX,
   type GapSeverity,
 } from "@/lib/entreprise/skills-gap-config";
+import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 
 export type MetierSoftSkillTarget = {
   label: string;
@@ -50,6 +51,8 @@ export function parseMetierSoftSkillTargets(values: string[] | null | undefined)
     .filter((item): item is MetierSoftSkillTarget => Boolean(item));
 }
 
+const LABEL_STOPWORDS = new Set(["de", "des", "du", "et", "la", "le", "les", "en", "au", "aux", "un", "une"]);
+
 function normalizeLabel(value: string) {
   return value
     .toLowerCase()
@@ -59,20 +62,43 @@ function normalizeLabel(value: string) {
     .trim();
 }
 
+function skillTokens(value: string) {
+  return normalizeLabel(value)
+    .split(" ")
+    .filter((token) => token.length > 2 && !LABEL_STOPWORDS.has(token));
+}
+
+const SOFT_SKILL_CATALOG = SOFT_SKILLS.map((skill) => ({
+  id: skill.id,
+  key: normalizeLabel(skill.titre),
+  tokens: skillTokens(skill.titre),
+}));
+
+/** Identifiant du référentiel testé, via le titre ou un alias (« de » / « des », libellé court unique). */
+export function resolveSoftSkillCatalogId(label: string): number | null {
+  const key = normalizeLabel(label);
+  const exact = SOFT_SKILL_CATALOG.find((skill) => skill.key === key);
+  if (exact) return exact.id;
+  const tokens = skillTokens(label);
+  if (tokens.length === 0) return null;
+  const tokenKey = tokens.join(" ");
+  const sameTokens = SOFT_SKILL_CATALOG.filter((skill) => skill.tokens.join(" ") === tokenKey);
+  if (sameTokens.length === 1) return sameTokens[0]!.id;
+  const subset = SOFT_SKILL_CATALOG.filter((skill) => tokens.every((token) => skill.tokens.includes(token)));
+  if (subset.length === 1) return subset[0]!.id;
+  return null;
+}
+
 export function findSoftSkillScore(
   softSkills: Array<{ skill: string; score: number }> | null | undefined,
   label: string,
 ): number | null {
   if (!Array.isArray(softSkills) || softSkills.length === 0) return null;
-  const needle = normalizeLabel(label);
-  const exact = softSkills.find((item) => normalizeLabel(item.skill) === needle);
-  if (exact) return normalizeObservedToScale15(Number(exact.score) || 0);
-  const partial = softSkills.find(
-    (item) =>
-      normalizeLabel(item.skill).includes(needle) || needle.includes(normalizeLabel(item.skill)),
-  );
-  if (partial) return normalizeObservedToScale15(Number(partial.score) || 0);
-  return null;
+  const catalogId = resolveSoftSkillCatalogId(label);
+  if (catalogId == null) return null;
+  const match = softSkills.find((item) => resolveSoftSkillCatalogId(item.skill) === catalogId);
+  if (!match || !Number.isFinite(Number(match.score))) return null;
+  return normalizeObservedToScale15(Number(match.score));
 }
 
 function severityToLegacyStatus(severity: GapSeverity): SoftSkillGap["status"] {
@@ -112,6 +138,27 @@ export function computeSoftSkillGaps(
       targetSource: "metier_soft_skills",
     };
   });
+}
+
+export type FicheGapBand = "work" | "close" | "reached" | "missing";
+
+/** Même découpage que la liste des écarts : ≤ −2 à travailler, −1 proche, ≥ 0 atteint. */
+export function ficheGapBand(gap: Pick<SoftSkillGap, "actual" | "gap">): FicheGapBand {
+  if (gap.actual == null || gap.gap == null) return "missing";
+  if (gap.gap <= -2) return "work";
+  if (gap.gap < 0) return "close";
+  return "reached";
+}
+
+export function summarizeFicheGaps(gaps: SoftSkillGap[]) {
+  const measured = gaps.filter((gap) => gap.actual != null);
+  return {
+    measured,
+    work: measured.filter((gap) => ficheGapBand(gap) === "work").sort((a, b) => (a.gap ?? 0) - (b.gap ?? 0)),
+    close: measured.filter((gap) => ficheGapBand(gap) === "close").sort((a, b) => (a.gap ?? 0) - (b.gap ?? 0)),
+    reached: measured.filter((gap) => ficheGapBand(gap) === "reached"),
+    missing: gaps.filter((gap) => ficheGapBand(gap) === "missing"),
+  };
 }
 
 export function gapStatusLabel(status: SoftSkillGap["status"]) {

@@ -5,7 +5,6 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { getSupabasePublicUrl } from "@/lib/supabase-public-url";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { ficheColumnsFromSnapshot, recordFormationVersion } from "@/lib/courses/fiche-columns";
-import { ficheScore } from "@/lib/courses/fiche-checklist";
 import { z } from "zod";
 
 type Payload = {
@@ -15,7 +14,6 @@ type Payload = {
   courseId?: string | null;
   creator_id?: string | null;
   slug?: string | null;
-  requireChecklist?: boolean;
   flashcards?: Array<{
     id?: string;
     chapterId?: string | null;
@@ -272,15 +270,6 @@ export async function POST(req: NextRequest) {
     }
 
     const status: "draft" | "published" = body.status === "published" ? "published" : "draft";
-    if (body.requireChecklist && status === "published") {
-      const score = ficheScore(snapshot);
-      if (score.done < score.total) {
-        return NextResponse.json(
-          { error: "Checklist incomplète", details: `${score.done} / ${score.total}` },
-          { status: 400 },
-        );
-      }
-    }
 
     const levelRaw = String(snapshot.general.level ?? "").trim();
     /**

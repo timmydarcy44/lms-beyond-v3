@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Accessibility, FileCheck, Shield, X } from "lucide-react";
 import {
   accommodationCategoryLabel,
@@ -13,10 +13,15 @@ type Props = {
   employeeName: string;
   profile: EmployeeInclusionProfile | null | undefined;
   className?: string;
+  hideButton?: boolean;
+  openSignal?: number;
 };
 
-export function EnterpriseEmployeeInclusionCta({ employeeName, profile, className }: Props) {
+export function EnterpriseEmployeeInclusionCta({ employeeName, profile, className, hideButton, openSignal = 0 }: Props) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (openSignal) setOpen(true);
+  }, [openSignal]);
   const data = profile ?? {
     status: "none" as const,
     summary: null,
@@ -28,22 +33,24 @@ export function EnterpriseEmployeeInclusionCta({ employeeName, profile, classNam
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-5 py-3 text-sm font-bold text-teal-900 transition hover:bg-teal-100",
-          className,
-        )}
-      >
-        <Accessibility className="h-4 w-4" />
-        Inclusion / accessibilité
-        {hasFactors ? (
-          <span className="rounded-full bg-teal-700 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-            {data.accommodations.length}
-          </span>
-        ) : null}
-      </button>
+      {hideButton ? null : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            "inline-flex items-center justify-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-5 py-3 text-sm font-bold text-teal-900 transition hover:bg-teal-100",
+            className,
+          )}
+        >
+          <Accessibility className="h-4 w-4" />
+          Inclusion / accessibilité
+          {hasFactors ? (
+            <span className="rounded-full bg-teal-700 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+              {data.accommodations.length}
+            </span>
+          ) : null}
+        </button>
+      )}
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">

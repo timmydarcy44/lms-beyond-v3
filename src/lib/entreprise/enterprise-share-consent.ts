@@ -49,6 +49,9 @@ export function maskTestResultsForEnterprise<T extends {
   idmc_score: number | null;
   idmc_axes: Record<string, number> | null;
   soft_skills: Array<{ skill: string; score: number }>;
+  disc_at?: string | null;
+  idmc_at?: string | null;
+  soft_skills_at?: string | null;
 }>(
   results: T,
   consent: EnterpriseShareConsentRow | null,
@@ -60,14 +63,20 @@ export function maskTestResultsForEnterprise<T extends {
       idmc_score: null,
       idmc_axes: null,
       soft_skills: [],
+      disc_at: null,
+      idmc_at: null,
+      soft_skills_at: null,
     };
   }
   return {
     ...results,
     disc: consent.disc_shared ? results.disc : null,
+    disc_at: consent.disc_shared ? results.disc_at ?? null : null,
     idmc_score: consent.idmc_shared ? results.idmc_score : null,
     idmc_axes: consent.idmc_shared ? results.idmc_axes : null,
+    idmc_at: consent.idmc_shared ? results.idmc_at ?? null : null,
     soft_skills: consent.soft_skills_shared ? results.soft_skills : [],
+    soft_skills_at: consent.soft_skills_shared ? results.soft_skills_at ?? null : null,
   };
 }
 

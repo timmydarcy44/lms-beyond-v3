@@ -42,7 +42,6 @@ import { useCourseBuilder } from "@/hooks/use-course-builder";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
-import { ficheScore } from "@/lib/courses/fiche-checklist";
 import {
   getEdgeLabThematicBuilderOptions,
   isExactEdgeLabLabel,
@@ -1107,11 +1106,6 @@ export function FormateurFormationBuilderWhite({
   };
 
   const handlePublishBeyondIA = async () => {
-    const checklist = ficheScore(snapshot);
-    if (orgIsLocked && !byoundOwned && checklist.done < checklist.total) {
-      toast.error("Complétez la checklist pour publier");
-      return;
-    }
     if (!snapshot.general.title?.trim()) {
       toast.error("Titre requis", {
         description: "Saisissez un titre avant de publier.",
@@ -1176,7 +1170,6 @@ export function FormateurFormationBuilderWhite({
           snapshot: snapshotForApi,
           openBadgeId: selectedOpenBadgeId !== "none" ? selectedOpenBadgeId : null,
           status: "published",
-          requireChecklist: orgIsLocked && !byoundOwned,
           courseId: courseId || initialCourseId || null,
           creator_id: user?.id ?? null,
           flashcards: flashcardsPayload,

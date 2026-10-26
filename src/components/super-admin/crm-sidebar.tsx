@@ -269,7 +269,7 @@ export function CrmSidebar() {
                   onClick={() => toggleSection(section.key)}
                   aria-expanded={!isCollapsed}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                  <span className="text-[11px] font-semibold text-gray-400">
                     {section.label}
                   </span>
                   <ChevronDown

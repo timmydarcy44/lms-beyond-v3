@@ -9,6 +9,10 @@ import {
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
 import { publicAppUrl } from "@/lib/env";
+import { sendAccessCode } from "@/lib/cfa/access-code";
+import { grantCfaAssessmentShares } from "@/lib/cfa/assessment-shares";
+import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
+import { getSession } from "@/lib/auth/session";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CFA_ADMIN_EMAIL = "timmydarcy44@gmail.com";
@@ -69,7 +73,9 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Candidature introuvable." }, { status: 404 });
 
-  return NextResponse.json({ application: data });
+  return NextResponse.json({
+    application: { ...data, cerfa_data: presentCerfa((data.cerfa_data ?? {}) as Record<string, string>, "owner") },
+  });
 }
 
 export async function POST(request: Request) {
@@ -103,7 +109,18 @@ export async function POST(request: Request) {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
 
-  const { data, error } = await db
+  const session = await getSession();
+  const withCv = await db.from("profiles").select("id, cv_url").ilike("email", email).maybeSingle();
+  const existingProfile = withCv.error
+    ? await db.from("profiles").select("id").ilike("email", email).maybeSingle()
+    : withCv;
+  const matched = existingProfile.data as { id?: string; cv_url?: string | null } | null;
+  const emailMatchesSession = Boolean(session?.id && session.email?.toLowerCase() === email);
+  const profileId = String(matched?.id ?? "").trim() || (emailMatchesSession ? session!.id : "");
+  const canShare = Boolean(session?.id && session.id === profileId);
+  const origin = profileId ? "existing_account" : "direct";
+  const cvPath = canShare ? String(matched?.cv_url ?? "").trim() || null : null;
+  const inserted = await db
     .from("cfa_applications")
     .insert({
       status: "challenge",
@@ -114,9 +131,31 @@ export async function POST(request: Request) {
       age,
       education_level: educationLevel,
       specialization,
+      profile_id: profileId || null,
+      origin,
+      cv_path: cvPath,
     })
     .select("*")
     .single();
+  const retry =
+    inserted.error && /profile_id|origin|schema cache/i.test(inserted.error.message)
+      ? await db
+          .from("cfa_applications")
+          .insert({
+            status: "challenge",
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone: phone || null,
+            age,
+            education_level: educationLevel,
+            specialization,
+          })
+          .select("*")
+          .single()
+      : inserted;
+  const data = retry.data;
+  const error = retry.error;
 
   if (error) {
     if (error.code === "23505") {
@@ -130,17 +169,36 @@ export async function POST(request: Request) {
 
   const publicUrl = publicAppUrl();
   const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
+  if (canShare && profileId && body.shareTests && typeof body.shareTests === "object") {
+    const requested = body.shareTests as Record<string, unknown>;
+    await grantCfaAssessmentShares(db, profileId, {
+      disc: requested.disc === true,
+      idmc: requested.idmc === true,
+      soft: requested.soft === true,
+    });
+  }
+  if (profileId) {
+    await sendAccessCode(db, {
+      email,
+      role: "apprenant",
+      context: "application_linked",
+      firstName,
+      lastName,
+    });
+  }
   await Promise.all([
-    sendCfaEmail({
-      to: email,
-      subject: "Votre profil Byound est créé",
-      html: cfaEmailTemplate({
-        eyebrow: "Votre candidature",
-        title: "Votre profil est créé.",
-        body: "<p>Vous pouvez reprendre votre challenge et suivre votre candidature à tout moment grâce à votre lien personnel.</p>",
-        cta: { label: "Continuer ma candidature", href: resumeUrl },
-      }),
-    }),
+    profileId
+      ? Promise.resolve(true)
+      : sendCfaEmail({
+          to: email,
+          subject: "Votre profil Byound est créé",
+          html: cfaEmailTemplate({
+            eyebrow: "Votre candidature",
+            title: "Votre profil est créé.",
+            body: "<p>Vous pouvez reprendre votre challenge et suivre votre candidature à tout moment grâce à votre lien personnel.</p>",
+            cta: { label: "Continuer ma candidature", href: resumeUrl },
+          }),
+        }),
     sendCfaEmail({
       to: CFA_ADMIN_EMAIL,
       reply_to: email,
@@ -154,7 +212,9 @@ export async function POST(request: Request) {
     }),
   ]);
 
-  return NextResponse.json({ application: data }, { status: 201 });
+  return NextResponse.json({
+    application: { ...data, cerfa_data: presentCerfa((data.cerfa_data ?? {}) as Record<string, string>, "owner") },
+  }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
@@ -256,7 +316,11 @@ export async function PATCH(request: Request) {
         { status: 400 },
       );
     }
-    patch.cerfa_data = cerfaData;
+    const mergedCerfa = mergeSealedCerfa((current.cerfa_data ?? {}) as Record<string, string>, cerfaData);
+    if (mergedCerfa.refused.length) {
+      return NextResponse.json({ error: SENSITIVE_KEY_ERROR }, { status: 400 });
+    }
+    patch.cerfa_data = mergedCerfa.cerfa;
     patch.administrative_documents_submitted_at = new Date().toISOString();
   } else if (action === "financing" && current.status === "admitted") {
     const financingPath = clean(body.financingPath, 40);
@@ -316,5 +380,7 @@ export async function PATCH(request: Request) {
     ]);
   }
 
-  return NextResponse.json({ application: data });
+  return NextResponse.json({
+    application: { ...data, cerfa_data: presentCerfa((data.cerfa_data ?? {}) as Record<string, string>, "owner") },
+  });
 }

@@ -23,7 +23,7 @@ export async function GET() {
   if ("error" in ctx) return ctx.error;
   const { db } = ctx;
   const [board, companies, curricula] = await Promise.all([
-    loadCfaApplicationBoard(db),
+    loadCfaApplicationBoard(db, "admin"),
     loadCfaCompanies(db),
     db.from("school_curricula").select("id, name, code").order("name"),
   ]);
@@ -76,8 +76,11 @@ export async function POST(request: Request) {
   if (!id || !(file instanceof File)) {
     return NextResponse.json({ error: "Fichier ou dossier manquant." }, { status: 400 });
   }
-  if (file.size > 25 * 1024 * 1024) {
-    return NextResponse.json({ error: "Fichier supérieur à 25 Mo." }, { status: 400 });
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "Fichier supérieur à 10 Mo." }, { status: 400 });
+  }
+  if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+    return NextResponse.json({ error: "Formats acceptés : PDF, JPG, PNG." }, { status: 400 });
   }
 
   const { data: application } = await ctx.db

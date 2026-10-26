@@ -23,6 +23,8 @@ export type CfaPrivateFile = {
   size_bytes?: number;
   uploaded_at?: string;
   signed_url?: string | null;
+  review_status?: "received" | "validated" | "refused" | null;
+  review_note?: string | null;
 };
 
 export const CFA_APPLICATION_STATUSES = [
@@ -34,6 +36,7 @@ export const CFA_APPLICATION_STATUSES = [
   "review",
   "administrative",
   "admitted",
+  "contract",
   "rejected",
 ] as const;
 
@@ -47,7 +50,8 @@ export const CFA_STATUS_LABELS: Record<CfaApplicationStatus, string> = {
   interview: "Entretien",
   review: "Review",
   administrative: "Éléments administratifs",
-  admitted: "Admitted",
+  admitted: "Admis",
+  contract: "En contrat",
   rejected: "Non retenu",
 };
 
@@ -114,6 +118,8 @@ export type CfaApplication = {
   career_center_activated_at: string | null;
   created_at: string;
   updated_at: string;
+  profile_id?: string | null;
+  origin?: "direct" | "existing_account" | null;
 };
 
 export function getCfaSpecializationLabel(value: string): string {

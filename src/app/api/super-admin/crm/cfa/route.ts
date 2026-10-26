@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { CFA_APPLICATION_STATUSES } from "@/lib/cfa-applications";
 import { loadCfaApplicationBoard } from "@/lib/cfa/load-cfa-crm";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { getServiceRoleClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { admitCfaApplication, recordCfaAudit } from "@/lib/cfa/admit-application";
+import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, revealCerfaField } from "@/lib/cfa/sensitive";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
 import { publicAppUrl } from "@/lib/env";
 
@@ -47,7 +49,7 @@ export async function GET() {
   }
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-  const board = await loadCfaApplicationBoard(db);
+  const board = await loadCfaApplicationBoard(db, "admin");
   if ("error" in board && board.error) return NextResponse.json({ error: board.error }, { status: 400 });
   return NextResponse.json(board);
 }
@@ -66,14 +68,73 @@ export async function PATCH(request: NextRequest) {
     }
     const { data: current } = await db.from("cfa_applications").select("cerfa_data").eq("id", id).maybeSingle();
     const previous = (current?.cerfa_data ?? {}) as Record<string, string>;
-    const incoming = body.cerfa as Record<string, unknown>;
-    const cerfa = { ...previous };
-    for (const [key, value] of Object.entries(incoming)) {
-      if (key.startsWith("_")) continue;
-      cerfa[key] = String(value ?? "").trim();
-    }
-    const { error } = await db.from("cfa_applications").update({ cerfa_data: cerfa }).eq("id", id);
+    const merged = mergeSealedCerfa(previous, body.cerfa as Record<string, unknown>);
+    const { error } = await db.from("cfa_applications").update({ cerfa_data: merged.cerfa }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (merged.refused.length) return NextResponse.json({ error: SENSITIVE_KEY_ERROR }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+  if (body?.action === "mark_fee") {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    if (!id) return NextResponse.json({ error: "Dossier incomplet" }, { status: 400 });
+    const method = String(body.method ?? "");
+    const methods = new Set(["cheque", "transfer", "card", "cash", "covered"]);
+    if (!methods.has(method)) {
+      return NextResponse.json({ error: "Choisissez un moyen de paiement." }, { status: 400 });
+    }
+    const current = await db.from("cfa_applications").select("cerfa_data").eq("id", id).maybeSingle();
+    const cerfa = { ...((current.data?.cerfa_data ?? {}) as Record<string, string>), _fee_method: method };
+    const { error } = await db
+      .from("cfa_applications")
+      .update({ registration_fee_paid_at: new Date().toISOString(), cerfa_data: cerfa })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+  if (body?.action === "audit_reveal") {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const field = String(body.field ?? "");
+    if (!id || (field !== "socialSecurityNumber" && field !== "rqth")) {
+      return NextResponse.json({ error: "Champ inconnu" }, { status: 400 });
+    }
+    const actor = await getServerClient();
+    const actorUser = actor ? await actor.auth.getUser() : null;
+    await recordCfaAudit(db, {
+      actorId: actorUser?.data.user?.id ?? null,
+      applicationId: id,
+      action: field === "rqth" ? "reveal_rqth" : "reveal_nss",
+    });
+    const stored = await db.from("cfa_applications").select("cerfa_data").eq("id", id).maybeSingle();
+    const value = revealCerfaField((stored.data?.cerfa_data ?? {}) as Record<string, string>, field);
+    return NextResponse.json({ ok: true, value });
+  }
+  if (body?.action === "review_document") {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const kind = String(body.kind ?? "").trim();
+    const review = String(body.review ?? "");
+    if (!id || !kind || !["received", "validated", "refused"].includes(review)) {
+      return NextResponse.json({ error: "Revue invalide" }, { status: 400 });
+    }
+    const current = await db.from("cfa_applications").select("private_files").eq("id", id).maybeSingle();
+    const files = { ...((current.data?.private_files ?? {}) as Record<string, Record<string, unknown>>) };
+    files[kind] = {
+      ...(files[kind] ?? {}),
+      review_status: review,
+      review_note: review === "refused" ? String(body.note ?? "").trim().slice(0, 400) : null,
+    };
+    const { error } = await db.from("cfa_applications").update({ private_files: files }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    const actor = await getServerClient();
+    const actorUser = actor ? await actor.auth.getUser() : null;
+    await recordCfaAudit(db, {
+      actorId: actorUser?.data.user?.id ?? null,
+      applicationId: id,
+      action: "review_document",
+      newValue: `${kind}:${review}`,
+    });
     return NextResponse.json({ ok: true });
   }
   const status = String(body?.status ?? "").trim();
@@ -88,6 +149,25 @@ export async function PATCH(request: NextRequest) {
 
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const previous = await db.from("cfa_applications").select("status").eq("id", id).maybeSingle();
+  const previousStatus = String((previous.data as { status?: string } | null)?.status ?? "");
+
+  if (status === "contract") {
+    const placement = await db
+      .from("apprentice_placements")
+      .select("id, tutor_id")
+      .eq("apprentice_id", id)
+      .eq("status", "active")
+      .maybeSingle();
+    if (placement.error && /apprentice_placements|schema cache/i.test(placement.error.message)) {
+      return NextResponse.json({ error: "Appliquez d'abord la migration des placements." }, { status: 409 });
+    }
+    const placed = placement.data as { tutor_id?: string | null } | null;
+    if (!placed?.tutor_id) {
+      return NextResponse.json({ error: "Rattachez d'abord une entreprise et un tuteur." }, { status: 409 });
+    }
+  }
 
   if (status === "admitted") {
     const { data: eligibility } = await db
@@ -132,7 +212,34 @@ export async function PATCH(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  const actor = await getServerClient();
+  const actorUser = actor ? await actor.auth.getUser() : null;
+  if (previousStatus && previousStatus !== status) {
+    await recordCfaAudit(db, {
+      actorId: actorUser?.data.user?.id ?? null,
+      applicationId: id,
+      action: "status",
+      oldValue: previousStatus,
+      newValue: status,
+    });
+  }
+
   let emailSent: boolean | undefined;
+
+  if (status === "admitted" && data) {
+    const admitted = await admitCfaApplication(db, data);
+    emailSent = admitted.ok;
+    if (!admitted.ok) {
+      return NextResponse.json({ application: data, emailSent: false, error: admitted.error }, { status: 502 });
+    }
+    await recordCfaAudit(db, {
+      actorId: actorUser?.data.user?.id ?? null,
+      applicationId: id,
+      action: "account_link",
+      oldValue: null,
+      newValue: "admitted",
+    });
+  }
 
   if (status === "administrative" && data?.email) {
     const publicUrl = publicAppUrl();
@@ -165,21 +272,6 @@ export async function PATCH(request: NextRequest) {
         eyebrow: "Entretien d’admission",
         title: "Votre entretien est planifié.",
         body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<div style="margin-top:24px;padding:18px;border-radius:16px;background:#f7f7f8;line-height:1.7"><strong>Adresse</strong><br/>Byound School<br/>134 Rue Elise Déroche<br/>14760 - Bretteville sur Odon</div><p style="margin-top:28px">À très bientôt,<br>L’équipe Byound</p>`,
-      }),
-    });
-  }
-
-  if (status === "admitted" && data?.email) {
-    const publicUrl = publicAppUrl();
-    const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
-    emailSent = await sendCandidateEmail({
-      to: String(data.email),
-      subject: "Bienvenue chez Byound. Vous êtes admis.",
-      html: cfaEmailTemplate({
-        eyebrow: "Décision d’admission",
-        title: "Bienvenue chez Byound.<br>Vous êtes admis.",
-        body: `<p>Félicitations ${escapeHtml(data.first_name)}. Votre admission est confirmée.</p><p>Votre espace candidat contient désormais toutes vos prochaines étapes.</p>`,
-        cta: { label: "Voir mes prochaines étapes", href: resumeUrl },
       }),
     });
   }

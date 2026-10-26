@@ -51,12 +51,35 @@ export function CfaApplicationFlow() {
     motivationMediaUrl: "",
     alternanceStatus: "",
   });
+  const [connected, setConnected] = useState(false);
+  const [availableTests, setAvailableTests] = useState<Array<"disc" | "idmc" | "soft">>([]);
+  const [shareTests, setShareTests] = useState({ disc: false, idmc: false, soft: false });
 
   useEffect(() => {
     void (async () => {
       await Promise.resolve();
       const saved = resume || localStorage.getItem(TOKEN_KEY);
-      if (!saved) return setLoading(false);
+      if (!saved) {
+        try {
+          const context = await fetch("/api/cfa/applications/context");
+          const data = await context.json();
+          if (data.connected) {
+            setConnected(true);
+            setProfile((current) => ({
+              ...current,
+              firstName: data.firstName || current.firstName,
+              lastName: data.lastName || current.lastName,
+              email: data.email || current.email,
+              phone: data.phone || current.phone,
+            }));
+            if (data.cvName) setCvName(data.cvName);
+            setAvailableTests(Array.isArray(data.tests) ? data.tests : []);
+          }
+        } catch {
+          /* la candidature reste possible sans compte */
+        }
+        return setLoading(false);
+      }
       if (resume) localStorage.setItem(TOKEN_KEY, resume);
       setToken(saved);
       try {
@@ -166,10 +189,10 @@ export function CfaApplicationFlow() {
                 setError("Choisissez une spécialisation.");
                 return;
               }
-              void send("POST", profile);
+              void send("POST", { ...profile, shareTests });
             }}>
               <Title overline="Étape 1 · 2 minutes">Créez votre profil Byound.</Title>
-              <p className="mt-3 text-sm text-white/45">Aucune entreprise n’est demandée à cette étape.</p>
+              <p className="mt-3 text-sm text-white/45">{connected ? "Votre compte Byound a rempli le nom, l’e-mail et le téléphone. Vous pouvez les corriger." : "Aucune entreprise n’est demandée à cette étape."}</p>
               <div className="mt-8 grid gap-5 sm:grid-cols-2">
                 <Input label="Prénom" value={profile.firstName} onChange={(value) => setProfile({ ...profile, firstName: value })} />
                 <Input label="Nom" value={profile.lastName} onChange={(value) => setProfile({ ...profile, lastName: value })} />
@@ -191,6 +214,21 @@ export function CfaApplicationFlow() {
                   </section>
                 ))}
               </div>
+              {connected && cvName ? <p className="mt-4 text-sm text-white/60">CV du compte : {cvName}</p> : null}
+              {availableTests.length ? (
+                <fieldset className="mt-6 rounded-2xl border border-white/10 p-4">
+                  <legend className="px-1 text-sm font-semibold">Partager mes tests avec le CFA</legend>
+                  <p className="mt-2 text-sm text-white/45">Facultatif. Chaque test reste privé tant que vous ne l’activez pas.</p>
+                  <div className="mt-4 space-y-3">
+                    {availableTests.map((test) => (
+                      <label key={test} className="flex items-center justify-between gap-3 text-sm">
+                        <span>{test === "disc" ? "DISC" : test === "idmc" ? "IDMC" : "Soft skills"}</span>
+                        <input type="checkbox" checked={shareTests[test]} onChange={(event) => setShareTests((current) => ({ ...current, [test]: event.target.checked }))} className="h-4 w-4" />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
               <Submit busy={busy} error={error}>Commencer le challenge</Submit>
             </form>
           ) : null}

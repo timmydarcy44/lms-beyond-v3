@@ -1,8 +1,9 @@
+import { hasSensitiveKey, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Db = NonNullable<ReturnType<typeof getServiceRoleClient>>;
 
-export async function loadCfaApplicationBoard(db: Db) {
+export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" = "staff") {
   const { data, error } = await db
     .from("cfa_applications")
     .select("*")
@@ -22,7 +23,9 @@ export async function loadCfaApplicationBoard(db: Db) {
       >;
       const [cvSigned, motivationSigned, documentEntries, privateFileEntries] = await Promise.all([
         application.cv_path
-          ? db.storage.from("cfa-applications").createSignedUrl(String(application.cv_path), 3600)
+          ? String(application.cv_path).startsWith("http")
+            ? Promise.resolve({ data: { signedUrl: String(application.cv_path) } })
+            : db.storage.from("cfa-applications").createSignedUrl(String(application.cv_path), 3600)
           : Promise.resolve({ data: null }),
         application.motivation_media_url && !String(application.motivation_media_url).startsWith("http")
           ? db.storage.from("cfa-applications").createSignedUrl(String(application.motivation_media_url), 3600)
@@ -42,8 +45,17 @@ export async function loadCfaApplicationBoard(db: Db) {
           }),
         ),
       ]);
+      const storedCerfa = (application.cerfa_data ?? {}) as Record<string, string>;
+      const merged = mergeSealedCerfa(storedCerfa, {});
+      if (
+        hasSensitiveKey() &&
+        (merged.cerfa.socialSecurityNumber !== storedCerfa.socialSecurityNumber || merged.cerfa.rqth !== storedCerfa.rqth)
+      ) {
+        await db.from("cfa_applications").update({ cerfa_data: merged.cerfa }).eq("id", application.id);
+      }
       return {
         ...application,
+        cerfa_data: presentCerfa(merged.cerfa, access),
         cv_url: cvSigned.data?.signedUrl ?? null,
         motivation_media_signed_url: motivationSigned.data?.signedUrl ?? application.motivation_media_url ?? null,
         administrative_document_urls: Object.fromEntries(documentEntries),

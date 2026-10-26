@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function CfaApplyPage() {
   return (
-    <EdgePremiumShell overlayNav showTopBar={false}>
+    <EdgePremiumShell overlayNav={false} showTopBar={false}>
       <Suspense fallback={<div className="min-h-screen bg-[#070b1f]" />}>
         <CfaApplicationFlow />
       </Suspense>

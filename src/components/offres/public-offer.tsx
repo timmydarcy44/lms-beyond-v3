@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Building2, Dumbbell, GraduationCap, Store } from "lucide-react";
+import type { OfferCompatibility } from "@/lib/offres/compatibility";
 import type { PublicOffer } from "@/lib/offres/public-offers";
 import { listPublicOffers, publishedLabel } from "@/lib/offres/public-offers";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -76,7 +77,42 @@ export function AlternantsRecruiting({ offers, cursus }: { offers: PublicOffer[]
   );
 }
 
-export function OfferDetail({ offer }: { offer: PublicOffer }) {
+function CompatibilityCard({ offer, compatibility }: { offer: PublicOffer; compatibility: OfferCompatibility }) {
+  const href = `/offres/${offer.slug}/postuler`;
+  return (
+    <section className="relative overflow-hidden rounded-[28px] bg-[#070C1C] p-5 text-white shadow-[0_0_80px_rgba(110,91,255,0.28)]">
+      <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-[#6E5BFF]/40 blur-3xl" aria-hidden />
+      <h2 className="text-lg font-extrabold tracking-[-0.03em]">Votre compatibilité avec ce poste</h2>
+      {compatibility.revealed && compatibility.matched != null ? (
+        <p className="mt-4 text-3xl font-extrabold tracking-[-0.04em]">{compatibility.matched} / {compatibility.total} compétences clés</p>
+      ) : (
+        <p className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-white/80 blur-[7px]" aria-hidden>2 / 4</p>
+      )}
+      {compatibility.skills.length ? (
+        <ul className="mt-4 space-y-2">
+          {compatibility.skills.map((skill) => (
+            <li key={skill.label} className="flex items-center gap-2 text-sm">
+              <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${compatibility.revealed ? (skill.matched ? "bg-[#14A37F] text-[#04140C]" : "bg-white/10 text-white/50") : "bg-white/10 text-white/70"}`}>
+                {compatibility.revealed ? (skill.matched ? "✓" : "○") : "?"}
+              </span>
+              {skill.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="mt-4 text-sm leading-relaxed text-white/70">
+        {compatibility.revealed
+          ? "Ce résultat compare vos 5 meilleures soft skills aux compétences clés du poste."
+          : "Créez votre compte et passez le test de soft skills (10 min) pour savoir si votre profil correspond, avant même de postuler."}
+      </p>
+      <Link href={href} className="mt-5 inline-flex h-11 items-center rounded-full bg-[#6E5BFF] px-4 text-sm font-semibold text-white">
+        Découvrir ma compatibilité
+      </Link>
+    </section>
+  );
+}
+
+export function OfferDetail({ offer, compatibility = { skills: [], matched: null, total: 0, revealed: false } }: { offer: PublicOffer; compatibility?: OfferCompatibility }) {
   const pills = [offer.contractType && offer.duration ? `${offer.contractType} · ${offer.duration}` : offer.contractType, offer.startLabel && `Début ${offer.startLabel}`, offer.city && offer.workMode ? `${offer.city} · ${offer.workMode.toLowerCase()}` : offer.city || offer.workMode, offer.hours].filter(Boolean);
   return (
     <article>
@@ -103,8 +139,11 @@ export function OfferDetail({ offer }: { offer: PublicOffer }) {
               {offer.payLabel ? <p className="mt-3 text-sm text-white/70">{offer.payLabel}</p> : null}
             </div>
             <div className="text-right">
-              <Link href={`/ecole/candidater?offre=${offer.slug}`} className="inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#12141A]">
+              <Link href={`/offres/${offer.slug}/postuler`} className="inline-flex h-12 items-center rounded-full bg-white px-5 text-sm font-semibold text-[#12141A]">
                 Postuler à l&apos;offre et au cursus
+              </Link>
+              <Link href={`/offres/${offer.slug}/postuler`} className="mt-3 block text-sm font-semibold text-white/80">
+                ◎ Découvrir ma compatibilité avec ce poste
               </Link>
               <p className="mt-2 text-xs text-white/45">Une seule candidature · réponse sous 10 jours</p>
             </div>
@@ -153,6 +192,7 @@ export function OfferDetail({ offer }: { offer: PublicOffer }) {
             ) : null}
           </div>
           <aside className="space-y-4">
+            <CompatibilityCard offer={offer} compatibility={compatibility} />
             <dl className="rounded-[28px] bg-white p-5 text-sm">
               {[
                 ["Contrat", [offer.contractType, offer.duration].filter(Boolean).join(" · ")],

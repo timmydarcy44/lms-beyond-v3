@@ -10,7 +10,7 @@ import { PostesSection, type CompanyNeed, type CompanyOffer, type ProfileSend } 
 import { SuiviColumn, type NextAction, type TimelineItem } from "./suivi-column";
 import { TutorsSection, type CompanyApprentice, type CompanyTutor } from "./tutors-section";
 
-const FRIEZE = ["to_contact", "email_sent", "appointment", "pending_decision", "recruiting", "recruited"] as const;
+const FRIEZE = ["creating_offer", "to_contact", "email_sent", "appointment", "pending_decision", "recruiting", "recruited"] as const;
 
 const STRUCTURE: Record<string, string> = {
   independent: "Indépendant",

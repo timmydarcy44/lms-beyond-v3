@@ -34,6 +34,7 @@ type CfaCompany = {
 };
 
 const columns: { id: CfaCompanyStatus; label: string; accent: string }[] = [
+  { id: "creating_offer", label: "Création offre d'emploi", accent: "bg-cyan-400" },
   { id: "to_contact", label: "À contacter", accent: "bg-slate-400" },
   { id: "email_sent", label: "Mail envoyé", accent: "bg-sky-500" },
   { id: "appointment", label: "Rendez-vous programmé", accent: "bg-indigo-500" },
@@ -141,6 +142,7 @@ export function CfaCompanyPipelineClient({
   const counts = useMemo(
     () => ({
       total: companies.length,
+      creatingOffer: companies.filter((item) => item.status === "creating_offer").length,
       toContact: companies.filter((item) => item.status === "to_contact").length,
       recruiting: companies.filter((item) => item.status === "recruiting").length,
       recruited: companies.filter((item) => item.status === "recruited").length,
@@ -540,9 +542,10 @@ export function CfaCompanyPipelineClient({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         {[
           ["Entreprises", counts.total],
+          ["Création offre d'emploi", counts.creatingOffer],
           ["À contacter", counts.toContact],
           ["Recrutement en cours", counts.recruiting],
           ["Recrutements réussis", counts.recruited],

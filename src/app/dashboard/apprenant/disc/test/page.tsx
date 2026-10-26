@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
+import { applicationReturn, redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 import { DiscIpsativeTestRunner } from "@/components/disc/disc-ipsative-test-runner";
 import { saveDiscResultats } from "@/lib/disc/disc-save";
 import type { DiscIpsativeResponse } from "@/lib/disc/disc-questions";
@@ -38,7 +38,7 @@ export default function DiscTestPage() {
 
       const redirectPath = await redirectAfterAssessmentTest(
         "disc",
-        "/dashboard/apprenant/profil?disc=done",
+        applicationReturn("/dashboard/apprenant/profil?disc=done"),
       );
       window.setTimeout(() => {
         window.location.href = redirectPath;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { publicSlug } from "@/lib/offres/anonymity";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -52,9 +53,25 @@ export async function POST(request: Request) {
   if (db instanceof NextResponse) return db;
   const parsed = decisionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Décision invalide" }, { status: 400 });
+  const current = await db
+    .from("job_offers")
+    .select("title, city, public_slug")
+    .eq("id", parsed.data.id)
+    .eq("public_status", "pending_review")
+    .maybeSingle();
+  const row = current.data as { title?: string | null; city?: string | null; public_slug?: string | null } | null;
+  const existingSlug = String(row?.public_slug ?? "").trim();
+  const weakSlug = !existingSlug || /^offre-[a-z0-9]{4}$/i.test(existingSlug);
+  const update: Record<string, unknown> = {
+    public_status: parsed.data.decision,
+    updated_at: new Date().toISOString(),
+  };
+  if (parsed.data.decision === "published" && weakSlug) {
+    update.public_slug = publicSlug(String(row?.title ?? ""), String(row?.city ?? ""), parsed.data.id);
+  }
   const updated = await db
     .from("job_offers")
-    .update({ public_status: parsed.data.decision, updated_at: new Date().toISOString() })
+    .update(update)
     .eq("id", parsed.data.id)
     .eq("public_status", "pending_review");
   if (updated.error) return NextResponse.json({ error: "Mise à jour impossible" }, { status: 400 });

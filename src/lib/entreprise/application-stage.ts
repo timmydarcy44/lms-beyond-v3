@@ -71,6 +71,11 @@ function missingColumn(message: string) {
   return /column|schema cache|42703|does not exist/i.test(message);
 }
 
+function visibleToCompany(status: string | null) {
+  const value = String(status ?? "").toLowerCase();
+  return value !== "draft" && value !== "archived";
+}
+
 export async function fetchApplications(service: SupabaseClient, offerIds: string[]): Promise<LoadedApplication[]> {
   if (offerIds.length === 0) return [];
   const rich = await service
@@ -80,7 +85,7 @@ export async function fetchApplications(service: SupabaseClient, offerIds: strin
     .order("created_at", { ascending: false });
 
   if (!rich.error) {
-    return (rich.data ?? []).map((row) => ({
+    return (rich.data ?? []).filter((row) => visibleToCompany((row.status as string | null) ?? null)).map((row) => ({
       id: String(row.id),
       job_id: String(row.job_id ?? ""),
       talent_id: (row.talent_id as string | null) ?? null,
@@ -101,7 +106,7 @@ export async function fetchApplications(service: SupabaseClient, offerIds: strin
     .in("job_id", offerIds)
     .order("created_at", { ascending: false });
 
-  return (basic.data ?? []).map((row) => ({
+  return (basic.data ?? []).filter((row) => visibleToCompany((row.status as string | null) ?? null)).map((row) => ({
     id: String(row.id),
     job_id: String(row.job_id ?? ""),
     talent_id: (row.talent_id as string | null) ?? null,

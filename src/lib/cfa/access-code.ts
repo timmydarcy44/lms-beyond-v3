@@ -15,9 +15,10 @@ export type AccessContext =
   | "tuteur_login"
   | "apprenant_admitted_new"
   | "apprenant_admitted_existing"
-  | "application_linked";
+  | "application_linked"
+  | "candidat";
 
-const CODE_CONTEXTS = new Set<AccessContext>(["tuteur_new", "tuteur_login", "apprenant_admitted_new"]);
+const CODE_CONTEXTS = new Set<AccessContext>(["tuteur_new", "tuteur_login", "apprenant_admitted_new", "candidat"]);
 
 function escapeHtml(value: string) {
   return value
@@ -88,6 +89,12 @@ function message(input: {
       html: shell("Vous êtes admis chez Byound School", `<p>Bonjour ${escapeHtml(input.firstName)}, votre espace est prêt.</p>`, input.code),
     };
   }
+  if (input.context === "candidat") {
+    return {
+      subject: "Votre code pour créer votre espace Byound",
+      html: shell("Votre code", `<p>Bonjour ${escapeHtml(input.firstName)}, utilisez ce code pour ouvrir votre espace et poursuivre votre candidature.</p>`, input.code),
+    };
+  }
   if (input.context === "apprenant_admitted_existing") {
     return {
       subject: "Votre parcours Byound School est disponible",
@@ -143,6 +150,7 @@ export async function sendAccessCode(
     learnerName?: string;
     companyName?: string;
     cfaName?: string;
+    offerSlug?: string;
   },
 ): Promise<{ ok: true; digits?: number } | { ok: false; error: string; retryAfter?: number }> {
   const email = input.email.trim().toLowerCase();
@@ -176,7 +184,11 @@ export async function sendAccessCode(
       email,
       first_name: input.firstName,
       last_name: input.lastName,
-      company: input.context.startsWith("tuteur") ? "context:tuteur" : "context:apprenant",
+      company: input.context.startsWith("tuteur")
+        ? "context:tuteur"
+        : input.context === "candidat"
+          ? `context:candidat:${String(input.offerSlug ?? "").replace(/[^a-z0-9-]/gi, "").slice(0, 80)}`
+          : "context:apprenant",
       expires_at: new Date(Date.now() + CODE_TTL_MS).toISOString(),
       last_sent_at: now,
       otp_type: link.data.properties?.verification_type === "signup" ? "signup" : "magiclink",

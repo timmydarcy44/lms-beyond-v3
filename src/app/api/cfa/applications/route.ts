@@ -156,6 +156,10 @@ export async function POST(request: Request) {
       : inserted;
   const data = retry.data;
   const error = retry.error;
+  const birthDate = clean(body.birthDate, 12);
+  if (!error && data?.id && /^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+    await db.from("cfa_applications").update({ birth_date: birthDate }).eq("id", data.id);
+  }
 
   if (error) {
     if (error.code === "23505") {

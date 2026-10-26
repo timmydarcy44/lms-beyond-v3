@@ -13,14 +13,14 @@ import {
   type IdmcVariant,
 } from "@/lib/idmc/idmc-questions";
 import { saveIdmcResultats } from "@/lib/idmc/idmc-save";
-
-const IDMC_VARIANT: IdmcVariant = "learner";
-const QUESTIONS = IDMC_QUESTIONS[IDMC_VARIANT];
-import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
+import { applicationReturn, redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 import {
   EdgeAssessmentOption,
   EdgeAssessmentQuestionShell,
 } from "@/components/edge/edge-assessment-question-shell";
+
+const IDMC_VARIANT: IdmcVariant = "learner";
+const QUESTIONS = IDMC_QUESTIONS[IDMC_VARIANT];
 
 export default function IdmcTestPage() {
   const supabase = createSupabaseBrowserClient();
@@ -97,7 +97,7 @@ export default function IdmcTestPage() {
         }
         const next = await redirectAfterAssessmentTest(
           "idmc",
-          "/dashboard/apprenant/profil?idmc=done",
+          applicationReturn("/dashboard/apprenant/profil?idmc=done"),
         );
         window.setTimeout(() => {
           window.location.href = next;

@@ -264,7 +264,7 @@ export async function PATCH(request: NextRequest, context: Params) {
   if (schoolId && (body.intent === "publish" || parsedPoste.success || candidature.success)) {
     const rich = await service
       .from("job_offers")
-      .select("title, description, requirements, diploma_prepared, city, screening_questions, benefits, diffusion, public_slug")
+      .select("title, description, requirements, diploma_prepared, city, screening_questions, benefits, diffusion, public_slug, public_status")
       .eq("id", id)
       .maybeSingle();
     const current = (rich.error ? {} : rich.data ?? {}) as Record<string, unknown>;

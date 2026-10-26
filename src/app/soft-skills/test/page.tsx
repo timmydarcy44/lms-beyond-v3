@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { SOFT_SKILLS_QUESTIONS, SOFT_SKILLS_FREQUENCY_OPTIONS } from "@/lib/soft-skills";
-import { redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
+import { applicationReturn, redirectAfterAssessmentTest } from "@/lib/apprenant/post-test-redirect";
 import {
   EdgeAssessmentOption,
   EdgeAssessmentQuestionShell,
@@ -55,7 +55,7 @@ export default function SoftSkillsTestPage() {
         return;
       }
 
-      const next = await redirectAfterAssessmentTest("soft_skills", "/soft-skills/resultats");
+      const next = await redirectAfterAssessmentTest("soft_skills", applicationReturn("/soft-skills/resultats"));
       window.setTimeout(() => {
         window.location.href = next;
       }, 600);

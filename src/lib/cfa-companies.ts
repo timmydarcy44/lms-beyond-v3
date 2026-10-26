@@ -1,4 +1,5 @@
 export const CFA_COMPANY_STATUSES = [
+  "creating_offer",
   "to_contact",
   "email_sent",
   "appointment",
@@ -11,6 +12,7 @@ export const CFA_COMPANY_STATUSES = [
 export type CfaCompanyStatus = (typeof CFA_COMPANY_STATUSES)[number];
 
 export const CFA_COMPANY_STATUS_LABELS: Record<CfaCompanyStatus, string> = {
+  creating_offer: "Création offre d'emploi",
   to_contact: "À contacter",
   email_sent: "Mail envoyé",
   appointment: "Rendez-vous programmé",

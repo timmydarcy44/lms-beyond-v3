@@ -90,6 +90,24 @@ export async function publicPublicationPatch(
     };
   }
 
+  const currentStatus = text(input.current.public_status);
+  const existingSlug = text(input.current.public_slug);
+  const weakSlug = !existingSlug || /^offre-[a-z0-9]{4}$/i.test(existingSlug);
+  patch.public_slug = weakSlug
+    ? publicSlug(text(pick("title")), text(pick("city")), input.offerId)
+    : existingSlug;
+
+  if (currentStatus === "published" || currentStatus === "pending_review") {
+    patch.public_status = currentStatus;
+    return {
+      patch,
+      block: null,
+      pending: currentStatus === "pending_review",
+      flags: [],
+      rewrite: scanned.rewrite,
+    };
+  }
+
   const previous = await db
     .from("job_offers")
     .select("id", { count: "exact", head: true })
@@ -98,7 +116,6 @@ export async function publicPublicationPatch(
     .neq("id", input.offerId);
   const first = previous.error ? true : (previous.count ?? 0) === 0;
   patch.public_status = first ? "pending_review" : "published";
-  patch.public_slug = text(input.current.public_slug) || publicSlug(text(pick("title")), text(pick("city")), input.offerId);
   return {
     patch,
     block: null,

@@ -6,6 +6,8 @@ import { getEntrepriseOtpEmail } from "@/lib/emails/templates/entreprise-otp";
 import { generateOrgSlug } from "@/lib/onboarding/slug";
 import { ENTREPRISE_NEXT_PATH } from "@/lib/entreprise/signup-redirect";
 import { grantUserRole } from "@/lib/auth/user-roles";
+import { ensureCfaSignupCompany } from "@/lib/cfa/signup-company";
+import { ensureOfferDraft } from "@/lib/offres/draft";
 import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -242,6 +244,19 @@ export async function verifyEntrepriseCode(
   }
 
   const userId = verified.data.user.id;
+  if (String(open.company ?? "").startsWith("context:candidat:")) {
+    await grantUserRole(db, userId, "apprenant");
+    const slug = String(open.company).slice("context:candidat:".length);
+    await ensureOfferDraft(db, {
+      userId,
+      slug,
+      firstName: open.first_name,
+      lastName: open.last_name,
+      email,
+    });
+    await db.from("signup_requests").update({ verified_at: new Date().toISOString() }).eq("id", open.id);
+    return { ok: true, destination: "/dashboard/apprenant" };
+  }
   const activated = await afterSuccessfulAuth(db, { userId, email: verified.data.user.email || email });
   if (open.company === "context:tuteur" || (activated.activatedTutor && open.mode !== "signup")) {
     await grantUserRole(db, userId, "tuteur");
@@ -255,7 +270,8 @@ export async function verifyEntrepriseCode(
   }
   if (open.mode === "signup") {
     const { data: profile } = await db.from("profiles").select("company_id").eq("id", userId).maybeSingle();
-    if (!profile?.company_id) {
+    let organizationId = String((profile as { company_id?: string | null } | null)?.company_id ?? "");
+    if (!organizationId) {
       const slug = generateOrgSlug(open.company || "entreprise");
       const { error } = await db.rpc("complete_entreprise_signup", {
         p_request_id: open.id,
@@ -272,15 +288,22 @@ export async function verifyEntrepriseCode(
       }
       const created = await db.auth.admin.getUserById(userId);
       const siret = String(created.data.user?.user_metadata?.siret ?? "").replace(/\s/g, "");
-      if (/^\d{14}$/.test(siret)) {
-        const linked = await db.from("profiles").select("company_id").eq("id", userId).maybeSingle();
-        const organizationId = String((linked.data as { company_id?: string | null } | null)?.company_id ?? "");
-        if (organizationId) {
-          await db.from("organizations").update({ siret }).eq("id", organizationId);
-        }
+      const linked = await db.from("profiles").select("company_id").eq("id", userId).maybeSingle();
+      organizationId = String((linked.data as { company_id?: string | null } | null)?.company_id ?? "");
+      if (/^\d{14}$/.test(siret) && organizationId) {
+        await db.from("organizations").update({ siret }).eq("id", organizationId);
       }
     } else {
       await db.from("signup_requests").update({ verified_at: new Date().toISOString() }).eq("id", open.id);
+    }
+    if (organizationId) {
+      await ensureCfaSignupCompany(db, {
+        organizationId,
+        companyName: open.company || "",
+        email,
+        firstName: open.first_name,
+        lastName: open.last_name,
+      });
     }
     return { ok: true, destination: ENTREPRISE_NEXT_PATH };
   }

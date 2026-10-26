@@ -31,6 +31,14 @@
     {
       "path": "/api/cron/expert-documents",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/cfa-business-dev",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/business-signaux",
+      "schedule": "10 6 * * *"
     }
   ]
 }

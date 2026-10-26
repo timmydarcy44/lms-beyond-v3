@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getOpcoFromIdcc } from "@/lib/ecole/siret-company-helpers";
 import { cleanSiret, isValidSiret } from "@/lib/cfa/siret";
 import { lookupOpcoForSiret, type OpcoSource } from "@/lib/cfa/lookup-opco";
 
@@ -29,6 +30,22 @@ function lookupBody(opco: string | null, source: OpcoSource | null) {
   if (source === "idcc") return `OPCO ${opco}, d'après la convention collective.`;
   if (source === "naf") return `OPCO ${opco}, estimé d'après le code NAF.`;
   return `OPCO ${opco}, saisie manuelle.`;
+}
+
+/** IDCC saisi à la main : le référentiel IDCC, puis CFADock si un SIRET est connu. */
+export async function resolveOpcoForEnteredIdcc(input: { siret?: string | null; idcc: string }) {
+  const fromIdcc = getOpcoFromIdcc(input.idcc);
+  if (fromIdcc) return { searched: true, opco: fromIdcc, source: "idcc" as const };
+  const siret = cleanSiret(input.siret);
+  if (!isValidSiret(siret)) return { searched: true, opco: null, source: null };
+  try {
+    const found = await lookupOpcoForSiret(siret);
+    if (found.source === "cfadock" && found.opco) return { searched: true, opco: found.opco, source: "cfadock" as const };
+    if (found.source === "naf" && found.opco) return { searched: true, opco: found.opco, source: "naf" as const };
+    return { searched: true, opco: null, source: null };
+  } catch {
+    return { searched: false, opco: null, source: null };
+  }
 }
 
 export async function refreshCompanyOpco(

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendAccessCode } from "@/lib/cfa/access-code";
 import { recordCfaAudit } from "@/lib/cfa/admit-application";
+import { logCompanyEvent } from "@/lib/cfa/company-events";
 import { parseInput, placementSchema } from "@/lib/cfa/fiche-input";
 import { syncTutorAssignment } from "@/lib/cfa/sync-tutor-assignment";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -21,6 +22,45 @@ export async function GET(request: NextRequest) {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   const applicationId = clean(request.nextUrl.searchParams.get("applicationId"));
+  const q = clean(request.nextUrl.searchParams.get("q"), 80).replace(/[%_,]/g, "");
+  if (q) {
+    if (q.length < 2) return NextResponse.json({ candidates: [] });
+    const companyId = clean(request.nextUrl.searchParams.get("companyId"));
+    const parts = q.split(/\s+/).filter(Boolean);
+    let query = db.from("cfa_applications").select("id, first_name, last_name, specialization, status").neq("status", "rejected").limit(8);
+    query = parts.length >= 2
+      ? query.ilike("first_name", `%${parts[0]}%`).ilike("last_name", `%${parts.slice(1).join(" ")}%`)
+      : query.or(`first_name.ilike.%${parts[0]}%,last_name.ilike.%${parts[0]}%`);
+    const found = await query;
+    if (found.error) return NextResponse.json({ error: found.error.message }, { status: 400 });
+    const rows = (found.data ?? []) as { id: string; first_name: string; last_name: string; specialization: string | null; status: string }[];
+    const ids = rows.map((row) => row.id);
+    const open = ids.length
+      ? await db.from("apprentice_placements").select("apprentice_id, company_id").in("apprentice_id", ids).in("status", ["pending", "active"])
+      : { data: [] };
+    const openRows = (open.data ?? []) as { apprentice_id: string; company_id: string }[];
+    const companyIds = [...new Set(openRows.map((row) => row.company_id))];
+    const companies = companyIds.length
+      ? await db.from("cfa_companies").select("id, company_name").in("id", companyIds)
+      : { data: [] };
+    const names = new Map(((companies.data ?? []) as { id: string; company_name: string }[]).map((row) => [row.id, row.company_name]));
+    const current = new Map(openRows.map((row) => [row.apprentice_id, row.company_id]));
+    return NextResponse.json({
+      candidates: rows.map((row) => {
+        const currentCompanyId = current.get(row.id) ?? null;
+        return {
+          id: row.id,
+          firstName: row.first_name,
+          lastName: row.last_name,
+          specialization: row.specialization ?? "",
+          status: row.status,
+          currentCompanyId,
+          currentCompanyName: currentCompanyId ? names.get(currentCompanyId) ?? "" : "",
+          alreadyHere: Boolean(companyId && currentCompanyId === companyId),
+        };
+      }),
+    });
+  }
   if (!applicationId) return NextResponse.json({ error: "Dossier requis" }, { status: 400 });
 
   const [companies, tutors, placements, active] = await Promise.all([
@@ -117,16 +157,25 @@ export async function POST(request: NextRequest) {
   if (action === "set_company") {
     if (body.action !== "set_company") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
     const companyId = body.companyId;
+    const actor = await actorId();
     await closeOpen();
     const placed = await db.from("apprentice_placements").insert({
       apprentice_id: applicationId,
       company_id: companyId,
       status: "pending",
-      created_by: await actorId(),
+      created_by: actor,
     });
     if (placed.error) return NextResponse.json({ error: placed.error.message }, { status: 400 });
     await syncTutorAssignment(db, applicationId);
-    await recordCfaAudit(db, { actorId: await actorId(), applicationId, action: "placement_company", newValue: companyId });
+    await recordCfaAudit(db, { actorId: actor, applicationId, action: "placement_company", newValue: companyId });
+    await logCompanyEvent(db, {
+      companyId,
+      actorId: actor,
+      action: "placement",
+      activityType: "placement",
+      body: `${learnerName} rejoint l'entreprise.`,
+      newValue: applicationId,
+    });
     return NextResponse.json({ ok: true });
   }
 

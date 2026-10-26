@@ -100,6 +100,21 @@ function mapHit(hit: Hit, siretHint: string): RegistryCompany | null {
   };
 }
 
+export async function searchRegistryByDepartment(input: { query: string; department: string; page: number }) {
+  const url = new URL("https://recherche-entreprises.api.gouv.fr/search");
+  url.searchParams.set("q", input.query);
+  url.searchParams.set("departement", input.department);
+  url.searchParams.set("etat_administratif", "A");
+  url.searchParams.set("per_page", "20");
+  url.searchParams.set("page", String(Math.max(1, input.page)));
+  const response = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+  if (!response.ok) throw new Error("L'annuaire des entreprises est indisponible.");
+  const payload = (await response.json()) as { results?: Hit[] };
+  return (payload.results ?? [])
+    .map((item) => mapHit(item, cleanSiret(item.siege?.siret)))
+    .filter((item): item is RegistryCompany => Boolean(item));
+}
+
 export async function searchRegistry(query: string) {
   const trimmed = query.trim();
   const siret = cleanSiret(trimmed);

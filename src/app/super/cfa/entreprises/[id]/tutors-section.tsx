@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { GraduationCap } from "lucide-react";
 import { CFA_STATUS_LABELS, getCfaSpecializationLabel, type CfaApplicationStatus } from "@/lib/cfa-applications";
 
@@ -43,6 +43,17 @@ function statusLabel(status: string) {
   return CFA_STATUS_LABELS[status as CfaApplicationStatus] ?? status;
 }
 
+type Candidate = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  specialization: string;
+  status: string;
+  currentCompanyId: string | null;
+  currentCompanyName: string;
+  alreadyHere: boolean;
+};
+
 export function TutorsSection({
   companyId,
   tutors,
@@ -57,9 +68,32 @@ export function TutorsSection({
   onMessage: (message: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState({ firstName: "", lastName: "", email: "", jobTitle: "" });
   const unassigned = apprentices.filter((item) => !item.tutorId);
+
+  useEffect(() => {
+    if (!attachOpen) return;
+    const term = query.trim();
+    if (term.length < 2) {
+      setCandidates([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/super-admin/crm/cfa/placements?q=${encodeURIComponent(term)}&companyId=${encodeURIComponent(companyId)}`, { cache: "no-store" })
+        .then(async (response) => {
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Recherche impossible");
+          setCandidates(result.candidates ?? []);
+        })
+        .catch((error: unknown) => onMessage(error instanceof Error ? error.message : "Recherche impossible"));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [attachOpen, query, companyId, onMessage]);
 
   async function createTutor(event: FormEvent) {
     event.preventDefault();
@@ -83,6 +117,29 @@ export function TutorsSection({
     }
   }
 
+  async function attach(applicationId: string) {
+    setBusy(true);
+    onMessage("");
+    try {
+      const response = await fetch("/api/super-admin/crm/cfa/placements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_company", applicationId, companyId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Rattachement impossible");
+      setQuery("");
+      setCandidates([]);
+      setConfirmId(null);
+      setAttachOpen(false);
+      await onChanged();
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Rattachement impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section id="tuteurs" className="scroll-mt-28 rounded-[26px] border border-[#1A2340] bg-[#111831] p-5" style={{ borderTop: "4px solid #E7A92C" }}>
       <header id="champ-tuteur" className="-mx-5 -mt-5 mb-5 flex scroll-mt-28 flex-wrap items-start justify-between gap-3 border-b border-[#1A2340] px-5 py-4" style={{ background: "linear-gradient(90deg, #E7A92C2E, transparent 75%)" }}>
@@ -94,8 +151,36 @@ export function TutorsSection({
             <p className="text-xs text-[#AEB6CC]">Maîtres d'apprentissage et alternants en cours.</p>
           </div>
         </div>
-        <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => setOpen((value) => !value)}>+ Tuteur</button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => { setAttachOpen((value) => !value); setOpen(false); }}>+ Alternant</button>
+          <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => { setOpen((value) => !value); setAttachOpen(false); }}>+ Tuteur</button>
+        </div>
       </header>
+
+      {attachOpen ? (
+        <div className="mb-4 space-y-2">
+          <input aria-label="Rechercher un apprenant" value={query} onChange={(event) => { setQuery(event.target.value); setConfirmId(null); }} placeholder="Prénom ou nom de l'apprenant" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
+          <ul className="space-y-2">
+            {candidates.map((candidate) => (
+              <li key={candidate.id} className="rounded-2xl border border-[#26304F] px-3 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-extrabold">{candidate.firstName} {candidate.lastName}</p>
+                    <p className="text-xs text-[#AEB6CC]">{[getCfaSpecializationLabel(candidate.specialization), statusLabel(candidate.status)].filter(Boolean).join(" · ")}</p>
+                    {candidate.currentCompanyName && !candidate.alreadyHere ? <p className="mt-1 text-xs text-[#F6D68B]">Déjà chez {candidate.currentCompanyName}. Le rattachement en cours sera clos.</p> : null}
+                  </div>
+                  {candidate.alreadyHere ? <span className="text-xs font-extrabold text-[#6BE3C0]">Déjà ici</span> : confirmId === candidate.id ? (
+                    <button type="button" disabled={busy} className="h-9 rounded-full bg-[#E7A92C] px-3 text-xs font-extrabold text-[#2A1F06]" onClick={() => void attach(candidate.id)}>Confirmer</button>
+                  ) : (
+                    <button type="button" disabled={busy} className="h-9 rounded-full bg-[#E7A92C] px-3 text-xs font-extrabold text-[#2A1F06]" onClick={() => (candidate.currentCompanyId ? setConfirmId(candidate.id) : void attach(candidate.id))}>Rattacher</button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {query.trim().length >= 2 && !candidates.length ? <p className="text-xs text-[#AEB6CC]">Aucun apprenant trouvé.</p> : null}
+        </div>
+      ) : null}
 
       {open ? (
         <form className="mb-4 space-y-2" onSubmit={(event) => void createTutor(event)}>

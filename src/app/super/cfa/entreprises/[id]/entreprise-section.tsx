@@ -156,7 +156,7 @@ export function EntrepriseSection({
     setSource(next.opco_source ?? null);
     setSyncedAt(next.registry_synced_at ?? null);
     onCompany({ ...company, ...next });
-    onMessage("");
+    onMessage(result.opcoLookup === "none" ? "Aucun OPCO trouvé pour cet IDCC." : "");
   }
 
   async function search(query: string) {

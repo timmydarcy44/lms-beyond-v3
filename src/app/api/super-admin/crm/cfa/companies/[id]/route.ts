@@ -7,7 +7,7 @@ import { isCursusId, newProfileToken } from "@/lib/cfa/profile-share";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendEmail } from "@/lib/email/resend-client";
 import { publicAppUrl } from "@/lib/env";
-import { isOpcoContractReady, refreshCompanyOpco, shouldAutoLookupOpco } from "@/lib/cfa/company-opco";
+import { isOpcoContractReady, refreshCompanyOpco, resolveOpcoForEnteredIdcc, shouldAutoLookupOpco } from "@/lib/cfa/company-opco";
 import { zodMessage } from "@/lib/cfa/fiche-input";
 import { linkCompanyByExactSiret } from "@/lib/cfa/link-company-organization";
 import { cleanSiret, isValidSiret } from "@/lib/cfa/siret";
@@ -301,7 +301,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: zodMessage(parsed.error, "Requête invalide.") }, { status: 400 });
 
-  const current = await db.from("cfa_companies").select("status, organization_id, opco, opco_source, company_name").eq("id", id).maybeSingle();
+  const current = await db.from("cfa_companies").select("status, organization_id, opco, opco_source, idcc, company_name").eq("id", id).maybeSingle();
   if (!current.data) return NextResponse.json({ error: "Entreprise introuvable" }, { status: 404 });
   const previous = String((current.data as { status?: string }).status ?? "");
   const actor = await actorId();
@@ -322,8 +322,17 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     if (input.postal_code && !/^\d{5}$/.test(input.postal_code)) {
       return NextResponse.json({ error: "Le code postal doit contenir 5 chiffres." }, { status: 400 });
     }
-    const previousOpco = String((current.data as { opco?: string | null }).opco ?? "").trim();
+    const previousRow = current.data as { opco?: string | null; opco_source?: string | null; idcc?: string | null };
+    const previousOpco = String(previousRow.opco ?? "").trim();
     const nextOpco = input.opco.trim();
+    const previousIdcc = String(previousRow.idcc ?? "").replace(/\D/g, "");
+    const nextIdcc = input.idcc.replace(/\D/g, "");
+    const manualWrite = Boolean(input.opcoTouched && nextOpco !== previousOpco);
+    const sourceNow = String(previousRow.opco_source ?? "");
+    let opcoLookup: "found" | "none" | null = null;
+    let lookupNote = "";
+    const enteredIdcc = !input.fromRegistry && Boolean(nextIdcc) && nextIdcc !== previousIdcc && !manualWrite && sourceNow !== "manual" && sourceNow !== "cfadock";
+    const resolved = enteredIdcc ? await resolveOpcoForEnteredIdcc({ siret, idcc: nextIdcc }) : null;
     const update: Record<string, unknown> = {
       siret: siret || null,
       company_name: input.company_name,
@@ -346,6 +355,19 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       update.opco = nextOpco || null;
       update.opco_source = nextOpco ? "manual" : null;
       update.opco_checked_at = new Date().toISOString();
+    } else if (resolved?.searched && resolved.opco && resolved.source) {
+      update.opco = resolved.opco;
+      update.opco_source = resolved.source;
+      update.opco_checked_at = new Date().toISOString();
+      opcoLookup = "found";
+      lookupNote = resolved.source === "idcc"
+        ? `OPCO ${resolved.opco}, d'après la convention collective ${nextIdcc}.`
+        : resolved.source === "cfadock"
+          ? `OPCO ${resolved.opco}, source CFADock.`
+          : `OPCO ${resolved.opco}, estimé d'après le code NAF.`;
+    } else if (resolved?.searched && !resolved.opco) {
+      opcoLookup = "none";
+      lookupNote = `Recherche OPCO pour l'IDCC ${nextIdcc} : aucun résultat.`;
     }
     const saved = await db.from("cfa_companies").update(update).eq("id", id).select("*").single();
     if (saved.error) {
@@ -359,7 +381,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       siret,
       organization_id: String((saved.data as { organization_id?: string | null }).organization_id ?? "") || null,
     }, actor);
-    return NextResponse.json({ company: saved.data });
+    if (lookupNote) {
+      await db.from("cfa_company_activities").insert({
+        company_id: id,
+        type: "opco_lookup",
+        body: lookupNote,
+        actor_id: actor,
+      });
+    }
+    return NextResponse.json({ company: saved.data, opcoLookup });
   }
 
   if (parsed.data.action === "save_contact") {

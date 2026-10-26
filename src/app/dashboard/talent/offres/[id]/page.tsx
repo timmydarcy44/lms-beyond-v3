@@ -39,7 +39,12 @@ export default function TalentOfferDetailPage() {
         if (res.ok) {
           const json = (await res.json()) as { offer?: JobOffer };
           if (json.offer) {
-            setOffer(json.offer);
+            const contract = String(json.offer.contract_type ?? "");
+            setOffer({
+              ...json.offer,
+              company_name: null,
+              salary_range: /alternance|apprentissage/i.test(contract) ? "Selon l'âge et l'année du contrat" : json.offer.salary_range,
+            });
             setLoading(false);
             return;
           }
@@ -55,7 +60,16 @@ export default function TalentOfferDetailPage() {
         .select("id, title, city, contract_type, salary_range, description, requirements")
         .eq("id", params.id)
         .maybeSingle();
-      setOffer(data || null);
+      const revealed = await fetch(`/api/candidat/entreprise?jobId=${params.id}`, { credentials: "include" })
+        .then((res) => res.json() as Promise<{ companies?: Array<{ companyName: string }> }>)
+        .catch(() => ({ companies: [] as Array<{ companyName: string }> }));
+      const companyName = revealed.companies?.[0]?.companyName ?? null;
+      const contract = String(data?.contract_type ?? "");
+      setOffer(data ? {
+        ...data,
+        company_name: companyName,
+        salary_range: /alternance|apprentissage/i.test(contract) ? "Selon l'âge et l'année du contrat" : data.salary_range,
+      } : null);
       const { data: userData } = await supabase.auth.getUser();
       if (userData?.user?.id) {
         const { data: existing } = await supabase
@@ -128,9 +142,9 @@ export default function TalentOfferDetailPage() {
                 </span>
               </div>
               <p className="mt-2 text-sm text-gray-500">{offer.city || "Ville non precisee"}</p>
-              {!offer.company_hidden_from_learner && offer.company_name?.trim() ? (
-                <p className="mt-1 text-sm font-medium text-gray-700">{offer.company_name.trim()}</p>
-              ) : null}
+              <p className="mt-1 text-sm font-medium text-gray-700">
+                {offer.company_name?.trim() || "Entreprise partenaire"}
+              </p>
 
               <div className="mt-8 space-y-6 text-sm text-black/70">
                 <section>

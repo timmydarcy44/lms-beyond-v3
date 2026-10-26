@@ -168,6 +168,21 @@ export function EdgePremiumNavbar({
             );
           })}
           <Link
+            href="/offres"
+            className={cn(
+              "rounded-full px-3 py-2 text-sm transition-colors",
+              pathname.startsWith("/offres")
+                ? light
+                  ? "bg-black/5 font-bold text-neutral-950"
+                  : "bg-white/10 font-bold text-white"
+                : light
+                  ? "font-medium text-neutral-700 hover:text-neutral-950"
+                  : "font-medium text-white/60 hover:text-white",
+            )}
+          >
+            Offres d&apos;emploi
+          </Link>
+          <Link
             href={routes.tarifs}
             className={cn(
               "px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",

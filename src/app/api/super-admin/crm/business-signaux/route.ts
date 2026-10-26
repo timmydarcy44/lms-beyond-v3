@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { acceptBusinessSignal, runBusinessSignaux } from "@/lib/crm/business-signaux";
+import { isCallForTender } from "@/lib/open-data/tender";
 import { zodMessage } from "@/lib/cfa/fiche-input";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -22,7 +23,16 @@ export async function GET() {
   const missing = [leads.error, runs.error].find((error) => error && /biz_signal_|schema cache|does not exist/i.test(error.message));
   if (missing) return NextResponse.json({ error: "Collez le script 20261026190000_business_signaux.sql.", leads: [], run: null });
   if (leads.error) return NextResponse.json({ error: leads.error.message }, { status: 400 });
-  return NextResponse.json({ leads: leads.data ?? [], run: runs.data?.[0] ?? null });
+  const visible = [];
+  for (const lead of (leads.data ?? []) as { id: string; reason?: string | null; source_url?: string | null }[]) {
+    const tender = isCallForTender(String(lead.reason ?? "")) || String(lead.source_url ?? "").includes("boamp.fr");
+    if (tender) {
+      await db.from("biz_signal_leads").update({ status: "dismissed" }).eq("id", lead.id).eq("status", "pending");
+      continue;
+    }
+    visible.push(lead);
+  }
+  return NextResponse.json({ leads: visible, run: runs.data?.[0] ?? null });
 }
 
 export async function POST(request: NextRequest) {

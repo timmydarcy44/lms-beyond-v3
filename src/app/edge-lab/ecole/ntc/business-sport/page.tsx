@@ -14,6 +14,7 @@ import {
 import { NtcEvaluationSection } from "@/components/edge-site/cfa/ntc-evaluation-section";
 import { ProgramContributorsSection } from "@/components/edge-site/cfa/program-contributors-section";
 import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card";
+import { AlternantsRecruitingSection } from "@/components/offres/public-offer";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { getContributorByLastName, getProgramContributors, type ProgramContributor } from "@/lib/expert/program-contributors";
@@ -397,6 +398,7 @@ export default async function NtcBusinessSportPage() {
           </div>
         </div>
       </section>
+      <AlternantsRecruitingSection cursus="Business Sport" />
     </EdgePremiumShell>
   );
 }

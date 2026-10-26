@@ -3,7 +3,8 @@ import { z } from "zod";
 import { isCfaCompanyStatus, CFA_COMPANY_STATUS_LABELS, type CfaCompanyStatus } from "@/lib/cfa-companies";
 import { sendAccessCode } from "@/lib/cfa/access-code";
 import { logCompanyEvent } from "@/lib/cfa/company-events";
-import { isCursusId, newProfileToken } from "@/lib/cfa/profile-share";
+import { isCursusId } from "@/lib/cfa/profile-share";
+import { sendApprenticeProfile } from "@/lib/cfa/send-apprentice-profile";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendEmail } from "@/lib/email/resend-client";
 import { publicAppUrl } from "@/lib/env";
@@ -88,6 +89,12 @@ const aliasSchema = z.object({
 const consentSchema = z.object({
   action: z.literal("request_consent"),
   applicationId: z.string().uuid(),
+  needId: z.string().uuid().optional(),
+  jobOfferId: z.string().uuid().optional(),
+});
+
+const createOfferSchema = z.object({
+  action: z.literal("create_offer"),
 });
 
 const noteSchema = z.object({
@@ -128,7 +135,7 @@ const tutorSchema = z.object({
   jobTitle: z.string().trim().max(120).default(""),
 });
 
-const patchSchema = z.discriminatedUnion("action", [statusSchema, lostSchema, linkSchema, identitySchema, refreshOpcoSchema, contactSchema, designateSchema, tutorSchema, needSchema, aliasSchema, consentSchema, sendProfileSchema, noteSchema, nextActionSchema, completeActionSchema, postponeActionSchema]);
+const patchSchema = z.discriminatedUnion("action", [statusSchema, lostSchema, linkSchema, identitySchema, refreshOpcoSchema, contactSchema, designateSchema, tutorSchema, needSchema, aliasSchema, consentSchema, createOfferSchema, sendProfileSchema, noteSchema, nextActionSchema, completeActionSchema, postponeActionSchema]);
 
 async function actorId() {
   const client = await getServerClient();
@@ -301,7 +308,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: zodMessage(parsed.error, "Requête invalide.") }, { status: 400 });
 
-  const current = await db.from("cfa_companies").select("status, organization_id, opco, opco_source, idcc, company_name").eq("id", id).maybeSingle();
+  const current = await db.from("cfa_companies").select("status, organization_id, opco, opco_source, idcc, company_name, city").eq("id", id).maybeSingle();
   if (!current.data) return NextResponse.json({ error: "Entreprise introuvable" }, { status: 404 });
   const previous = String((current.data as { status?: string }).status ?? "");
   const actor = await actorId();
@@ -529,17 +536,46 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ ok: true });
   }
 
+  if (parsed.data.action === "create_offer") {
+    const organizationId = String((current.data as { organization_id?: string | null }).organization_id ?? "");
+    if (!organizationId) return NextResponse.json({ error: "Reliez cette entreprise à un compte Byound Business pour créer l'offre." }, { status: 400 });
+    const city = String((current.data as { city?: string | null }).city ?? "");
+    const created = await db.from("job_offers").insert({
+      school_id: organizationId,
+      title: "Sans titre",
+      description: "",
+      status: "draft",
+      contract_type: "Alternance",
+      city,
+      updated_at: new Date().toISOString(),
+    }).select("id").single();
+    if (created.error || !created.data) return NextResponse.json({ error: created.error?.message || "Création impossible" }, { status: 400 });
+    return NextResponse.json({ ok: true, offerId: (created.data as { id: string }).id });
+  }
+
   if (parsed.data.action === "request_consent") {
+    const targetId = parsed.data.jobOfferId || parsed.data.needId;
+    const kind = parsed.data.jobOfferId ? "offer" : "need";
+    if (!targetId) return NextResponse.json({ error: "Choisissez un poste ou une offre." }, { status: 400 });
     const application = await db.from("cfa_applications").select("id, first_name, email, resume_token").eq("id", parsed.data.applicationId).maybeSingle();
     const person = application.data as { first_name?: string; email?: string; resume_token?: string } | null;
     if (!person?.email || !person.resume_token) return NextResponse.json({ error: "Candidat introuvable." }, { status: 404 });
-    const href = `${publicAppUrl()}/ecole/accord/${encodeURIComponent(person.resume_token)}`;
+    let offerTitle = "cette offre";
+    if (kind === "need") {
+      const need = await db.from("cfa_company_needs").select("title").eq("id", targetId).eq("company_id", id).maybeSingle();
+      offerTitle = String((need.data as { title?: string } | null)?.title || offerTitle);
+    } else {
+      const offer = await db.from("job_offers").select("title").eq("id", targetId).maybeSingle();
+      offerTitle = String((offer.data as { title?: string | null } | null)?.title || offerTitle);
+    }
+    const companyName = String((current.data as { company_name?: string }).company_name ?? "l'entreprise");
+    const href = `${publicAppUrl()}/ecole/offres/${targetId}?accord=${encodeURIComponent(person.resume_token)}&company=${id}&kind=${kind}`;
     const sent = await sendEmail({
       to: person.email,
       from: EDGE_COCKPIT_FROM,
       skipBcc: true,
-      subject: "Byound School souhaite transmettre votre profil",
-      html: `<p>Bonjour ${person.first_name || ""},</p><p>Byound School souhaite pouvoir transmettre votre profil à des entreprises partenaires. Aucune donnée administrative n'est incluse.</p><p><a href="${href}">Donner mon accord</a></p>`,
+      subject: `${companyName} souhaite recevoir votre présentation`,
+      html: `<p>Bonjour ${person.first_name || ""},</p><p>${companyName} propose « ${offerTitle} ». Byound School souhaite lui transmettre votre présentation : prénom, nom, cursus, disponibilité et motivation. Aucune donnée administrative n'est incluse.</p><p>Ouvrez l'offre, puis confirmez avec le bouton « Je donne mon accord ».</p><p><a href="${href}">Voir l'offre</a></p>`,
     });
     if (!sent.success) return NextResponse.json({ error: "L'e-mail n'a pas pu être envoyé." }, { status: 502 });
     await logCompanyEvent(db, {
@@ -555,46 +591,25 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
   if (parsed.data.action === "send_profile") {
     const input = parsed.data;
-    if (!input.needId && !input.jobOfferId) return NextResponse.json({ error: "Choisissez un poste ou une offre." }, { status: 400 });
-    const application = await db.from("cfa_applications").select("id, first_name, last_name, share_with_companies").eq("id", input.applicationId).maybeSingle();
-    const person = application.data as { first_name?: string; last_name?: string; share_with_companies?: boolean } | null;
-    if (!person) return NextResponse.json({ error: "Candidat introuvable." }, { status: 404 });
-    if (!person.share_with_companies) return NextResponse.json({ error: "Le candidat n'a pas donné son accord." }, { status: 400 });
-    const contactsQuery = await db.from("cfa_company_contacts").select("id, first_name, email, roles").eq("company_id", id);
-    const people = (contactsQuery.data ?? []) as { id: string; first_name?: string; email?: string | null; roles?: string[] | null }[];
-    const chosen = people.find((item) => item.id === input.contactId) ?? people.find((item) => (item.roles ?? []).includes("main")) ?? people.find((item) => item.email);
-    if (!chosen?.email) return NextResponse.json({ error: "Aucun contact n'a d'e-mail." }, { status: 400 });
-    const token = newProfileToken();
-    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const inserted = await db.from("cfa_profile_sends").insert({
-      company_id: id,
-      application_id: input.applicationId,
-      need_id: input.needId ?? null,
-      job_offer_id: input.jobOfferId ?? null,
-      sent_by: actor,
-      sent_to_email: chosen.email,
-      token,
-      expires_at: expires,
-    }).select("id, sent_at").single();
-    if (inserted.error) return NextResponse.json({ error: inserted.error.message }, { status: 400 });
-    const href = `${publicAppUrl()}/ecole/profil/${token}`;
-    const sent = await sendEmail({
-      to: chosen.email,
-      from: EDGE_COCKPIT_FROM,
-      skipBcc: true,
-      subject: `Profil de ${person.first_name || ""} ${person.last_name || ""}`.trim(),
-      html: `<p>Bonjour ${chosen.first_name || ""},</p><p>Byound School vous propose un profil d'alternant. La fiche est valable 30 jours.</p><p><a href="${href}">Voir le profil</a></p>`,
-    });
-    if (!sent.success) return NextResponse.json({ error: "Le profil est enregistré, mais l'e-mail n'a pas pu être envoyé." }, { status: 502 });
-    await logCompanyEvent(db, {
+    const sent = await sendApprenticeProfile(db, {
       companyId: id,
+      applicationId: input.applicationId,
+      needId: input.needId,
+      jobOfferId: input.jobOfferId,
       actorId: actor,
-      action: "profile_sent",
-      body: `Profil de ${person.first_name || ""} ${person.last_name || ""} envoyé à ${chosen.email}.`,
-      newValue: String((inserted.data as { id?: string } | null)?.id ?? ""),
-      activityType: "profile_sent",
+      contactId: input.contactId,
     });
-    return NextResponse.json({ ok: true, sentAt: (inserted.data as { sent_at?: string } | null)?.sent_at, email: chosen.email });
+    if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: sent.error.includes("introuvable") ? 404 : 400 });
+    if (!sent.already) {
+      await logCompanyEvent(db, {
+        companyId: id,
+        actorId: actor,
+        action: "profile_sent",
+        body: `Présentation de ${sent.name || "l'alternant"} envoyée à ${sent.email}.`,
+        activityType: "profile_sent",
+      });
+    }
+    return NextResponse.json({ ok: true, sentAt: sent.already ? null : sent.sentAt, email: sent.already ? null : sent.email });
   }
 
   if (parsed.data.action === "add_note") {

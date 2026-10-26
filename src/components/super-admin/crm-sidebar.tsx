@@ -93,6 +93,13 @@ const CFA_LINKS: CrmNavLink[] = [
     featured: true,
     section: "commercial",
   },
+  {
+    href: "/super/offres-publiques",
+    label: "Offres à relire",
+    icon: ClipboardList,
+    featured: true,
+    section: "commercial",
+  },
   { href: "/super/experts", label: "Formateurs", icon: Users, section: "formation" },
   { href: "/super/lms/suivi", label: "Suivi apprenants", icon: ClipboardList, section: "formation" },
 ];

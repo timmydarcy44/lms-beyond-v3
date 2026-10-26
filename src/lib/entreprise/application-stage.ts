@@ -43,6 +43,11 @@ export function applicationStage(row: CountedApplication): ApplicationStage {
   return "new";
 }
 
+export function applicationRevealsCompany(row: CountedApplication) {
+  const stage = applicationStage(row);
+  return stage === "interview" || stage === "retained";
+}
+
 export function isUnreadApplication(row: CountedApplication, stage = applicationStage(row)) {
   if (stage === "rejected") return false;
   if ("read_at" in row) return !row.read_at;

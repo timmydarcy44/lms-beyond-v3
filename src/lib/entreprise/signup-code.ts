@@ -244,6 +244,7 @@ export async function verifyEntrepriseCode(
   const userId = verified.data.user.id;
   const activated = await afterSuccessfulAuth(db, { userId, email: verified.data.user.email || email });
   if (open.company === "context:tuteur" || (activated.activatedTutor && open.mode !== "signup")) {
+    await grantUserRole(db, userId, "tuteur");
     await db.from("signup_requests").update({ verified_at: new Date().toISOString() }).eq("id", open.id);
     return { ok: true, destination: "/dashboard/tuteur" };
   }

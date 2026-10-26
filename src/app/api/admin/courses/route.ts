@@ -18,11 +18,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "SUPABASE_UNAVAILABLE" }, { status: 503 });
   }
 
-  const { data: courses, error } = await supabase
+  const rich = await supabase
     .from("courses")
-    .select("id, title")
+    .select("id, title, description, presentation, objectives")
     .eq("org_id", auth.user.orgId)
     .order("title", { ascending: true });
+  const coursesQuery = rich.error
+    ? await supabase.from("courses").select("id, title").eq("org_id", auth.user.orgId).order("title", { ascending: true })
+    : rich;
+  const { data: courses, error } = coursesQuery;
 
   if (error) {
     return NextResponse.json({ error: "COURSES_FETCH_FAILED" }, { status: 500 });

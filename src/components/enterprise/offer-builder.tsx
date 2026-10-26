@@ -16,6 +16,7 @@ import { scanOfferDiscrimination, type DiscriminationFinding } from "@/lib/entre
 import { formatOfferPay } from "@/lib/entreprise/offer-conditions";
 import { prepareCandidature } from "@/lib/entreprise/offer-candidature";
 import { prepareConditions, preparePosteDraft, type OfferPoste } from "@/lib/entreprise/offer-poste";
+import { ANONYMITY_MESSAGE, type AnonymityFlag, type AnonymityRewrite } from "@/lib/offres/anonymity";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
 
@@ -54,6 +55,18 @@ function serializePoste(draft: OfferPoste) {
 
 type OfferStatus = "draft" | "active" | "paused" | "closed";
 
+type AnonymityNotice = { flags: AnonymityFlag[]; rewrite: AnonymityRewrite };
+
+function readAnonymity(json: {
+  anonymity?: AnonymityNotice | null;
+  flags?: AnonymityFlag[];
+  rewrite?: AnonymityRewrite;
+}): AnonymityNotice | null {
+  const flags = json.anonymity?.flags ?? json.flags ?? [];
+  if (!flags.length) return null;
+  return { flags, rewrite: json.anonymity?.rewrite ?? json.rewrite ?? {} };
+}
+
 function asStatus(value: string | null | undefined): OfferStatus {
   if (value === "active" || value === "paused" || value === "closed" || value === "draft") return value;
   return "draft";
@@ -72,6 +85,7 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
   const baseline = useRef("");
   const [tick, setTick] = useState(0);
   const [publishing, setPublishing] = useState(false);
+  const [anonymity, setAnonymity] = useState<AnonymityNotice | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [company, setCompany] = useState<{ name: string; logoUrl: string | null }>({ name: "", logoUrl: null });
   const [discrimination, setDiscrimination] = useState<{ status: "idle" | "checking" | "clean" | "review"; findings: DiscriminationFinding[] }>({ status: "idle", findings: [] });
@@ -172,7 +186,9 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
           headers: { "Content-Type": "application/json" },
           body: payload,
         });
-        const json = (await res.json()) as { error?: string };
+        const json = (await res.json()) as { error?: string; anonymity?: AnonymityNotice | null; flags?: AnonymityFlag[]; rewrite?: AnonymityRewrite };
+        const notice = readAnonymity(json);
+        setAnonymity(notice);
         if (!res.ok) {
           toast.error(json.error ?? "Enregistrement impossible");
           return;
@@ -264,6 +280,26 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
     });
   };
 
+  const applyAnonymityRewrite = () => {
+    const rewrite = anonymity?.rewrite;
+    if (!rewrite) return;
+    setOffer((prev) => ({
+      ...prev,
+      ...(rewrite.title ? { title: rewrite.title } : {}),
+      ...(rewrite.description ? { description: rewrite.description } : {}),
+      ...(rewrite.requirements ? { requirements: rewrite.requirements } : {}),
+      ...(rewrite.diploma_prepared ? { diploma_prepared: rewrite.diploma_prepared } : {}),
+      ...(rewrite.city ? { city: rewrite.city } : {}),
+      screening_questions: rewrite.screening_questions?.length
+        ? (prev.screening_questions ?? []).map((question) => {
+            const next = rewrite.screening_questions?.find((item) => item.id === question.id);
+            return next ? { ...question, prompt: next.prompt } : question;
+          })
+        : prev.screening_questions,
+    }));
+    setAnonymity(null);
+  };
+
   const go = (next: number) => {
     const safe = Math.min(4, Math.max(1, next));
     setStep(safe);
@@ -280,9 +316,13 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ intent: "publish" }),
       });
-      const json = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(json.error ?? "Publication impossible");
-      toast.success("Offre publiée");
+      const json = (await res.json()) as { error?: string; publicStatus?: string | null; anonymity?: AnonymityNotice | null; flags?: AnonymityFlag[]; rewrite?: AnonymityRewrite };
+      const notice = readAnonymity(json);
+      setAnonymity(notice);
+      if (!res.ok) throw new Error(json.error ?? ANONYMITY_MESSAGE);
+      toast.success(json.publicStatus === "pending_review"
+        ? "Offre enregistrée. La première offre publique est relue avant d'apparaître sur byound.fr."
+        : "Offre publiée");
       setOffer((prev) => ({ ...prev, status: "active" }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Publication impossible");
@@ -307,7 +347,7 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
         preview={
           offerId ? (
             <a
-              href={`/dashboard/talent/offres/${offerId}?apercu=1`}
+              href={`/offres/apercu/${offerId}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-11 items-center rounded-full bg-white px-4 text-sm font-semibold text-[#07080B]"
@@ -334,6 +374,19 @@ export function OfferBuilder({ offerId }: { offerId?: string }) {
       </div>
       <div className="mt-6 grid items-start gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_360px]">
         <section className="rounded-[28px] bg-white p-6 sm:p-8">
+          {anonymity ? (
+            <div className="mb-6 rounded-2xl border border-[#E7A92C] bg-[#FFF8E8] p-4">
+              <p className="text-sm font-semibold text-[#2A1F06]">{ANONYMITY_MESSAGE}</p>
+              <ul className="mt-3 space-y-1 text-sm text-[#2A1F06]">
+                {anonymity.flags.map((flag) => (
+                  <li key={`${flag.field}-${flag.excerpt}`}><mark className="rounded bg-[#E7A92C]/50 px-1">{flag.excerpt}</mark></li>
+                ))}
+              </ul>
+              <button type="button" onClick={applyAnonymityRewrite} className="mt-3 h-10 rounded-full bg-[#12141A] px-4 text-sm font-semibold text-white">
+                Reformuler avec Byound
+              </button>
+            </div>
+          ) : null}
           <h2 className="text-[22px] font-extrabold tracking-[-0.03em]">{current.title}</h2>
           <p className="mt-1 text-sm text-[#6B6F7A]">{current.caption}</p>
           {step === 1 ? (

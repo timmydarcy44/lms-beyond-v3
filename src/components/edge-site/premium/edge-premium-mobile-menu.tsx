@@ -110,6 +110,13 @@ export function EdgePremiumMobileMenu({
           );
         })}
         <Link
+          href="/offres"
+          className="flex min-h-14 items-center border-b border-white/10 text-[17px] font-bold text-white"
+          onClick={onClose}
+        >
+          Offres d&apos;emploi
+        </Link>
+        <Link
           href={config.routes.tarifs}
           className="flex min-h-14 items-center border-b border-white/10 text-[17px] font-bold text-white"
           onClick={onClose}

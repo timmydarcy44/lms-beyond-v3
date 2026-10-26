@@ -58,7 +58,7 @@ export function SignauxClient() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-950">Signaux formation</h1>
-          <p className="mt-1 text-sm text-gray-600">Chaque matin, jusqu'à 10 organismes en France qui ont publié un avis officiel de formation, de LMS ou de SIRH. La source est le BOAMP, sans clé et sans NDA. Aucun e-mail, aucun appel, aucun message.</p>
+          <p className="mt-1 text-sm text-gray-600">Chaque matin, jusqu'à 10 entreprises en France qui ont publié un besoin de formation, un sujet LMS ou un signal RH. Les appels d'offres sont écartés. Aucun e-mail, aucun appel, aucun message.</p>
         </div>
         <button type="button" disabled={busy} className="h-10 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void send({ action: "run" })}>Lancer la recherche</button>
       </div>

@@ -246,8 +246,8 @@ export function OfferStepCandidature({
           <Channel
             mark="BY"
             markClass="bg-[#07080B] text-white"
-            name="Page carrière Byound"
-            detail="Votre page entreprise et le moteur de recherche Byound"
+            name="Publier sur byound.fr (offre anonyme)"
+            detail="Votre nom n'apparaît pas. Les candidats postulent via Byound."
             checked={diffusion.byound}
             onChange={(byound) => onChange({ diffusion: { ...diffusion, byound } })}
           />

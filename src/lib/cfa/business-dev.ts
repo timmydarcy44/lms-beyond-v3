@@ -264,10 +264,7 @@ export async function runBusinessDev(db: SupabaseClient, input: { force?: boolea
       if (!inserted.error) createdCount += 1;
     }
     await db.from("cfa_bd_runs").update({ finished_at: new Date().toISOString(), found_count: createdCount }).eq("id", run.data.id);
-    const notice = process.env.LBA_API_KEY?.trim()
-      ? ""
-      : "Sans clé La bonne alternance, la recherche automatique ne lit pas les offres. Collez une page publique qui cite une alternance pour septembre 2027.";
-    return { ok: true as const, skipped: false as const, created: createdCount, notice };
+    return { ok: true as const, skipped: false as const, created: createdCount, notice: "" };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Recherche impossible";
     await db.from("cfa_bd_runs").update({ finished_at: new Date().toISOString(), error: message }).eq("id", run.data.id);

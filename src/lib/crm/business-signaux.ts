@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchRegistry } from "@/lib/cfa/registry-company";
 import { findBoampSignals } from "@/lib/open-data/boamp";
+import { isCallForTender } from "@/lib/open-data/tender";
 
 export const BUSINESS_SIGNAL_DAILY_LIMIT = 10;
 
@@ -180,6 +181,7 @@ export async function runBusinessSignaux(db: SupabaseClient, input: { force?: bo
     const day = dayIndex();
     const offers: Offer[] = [];
     for (const notice of await findBoampSignals(day)) {
+      if (isCallForTender(`${notice.title} ${notice.buyer}`)) continue;
       const published = new Date(`${notice.publishedOn}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
       offers.push({
         companyName: notice.buyer,

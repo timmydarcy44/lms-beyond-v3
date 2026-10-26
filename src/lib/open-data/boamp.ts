@@ -1,3 +1,5 @@
+import { isCallForTender } from "@/lib/open-data/tender";
+
 export type BoampSignal = {
   buyer: string;
   title: string;
@@ -42,7 +44,7 @@ function kindOf(title: string, fallback: BoampSignal["kind"]): BoampSignal["kind
 
 async function searchQuery(query: (typeof QUERIES)[number], since: string) {
   const url = new URL("https://www.boamp.fr/api/explore/v2.1/catalog/datasets/boamp/records");
-  url.searchParams.set("select", "objet,nomacheteur,dateparution,url_avis,code_departement,code_departement_prestation");
+  url.searchParams.set("select", "objet,nomacheteur,dateparution,url_avis,nature,code_departement,code_departement_prestation");
   url.searchParams.set("where", `search(objet,"${query.q}") AND dateparution>=date'${since}'`);
   url.searchParams.set("order_by", "dateparution desc");
   url.searchParams.set("limit", "15");
@@ -54,6 +56,7 @@ async function searchQuery(query: (typeof QUERIES)[number], since: string) {
       nomacheteur?: string;
       dateparution?: string;
       url_avis?: string;
+      nature?: string;
       code_departement?: unknown;
       code_departement_prestation?: unknown;
     }[];
@@ -66,6 +69,7 @@ async function searchQuery(query: (typeof QUERIES)[number], since: string) {
     if (!title || !buyer || buyer.length < 4 || WEAK_BUYER.test(buyer)) return [];
     if (!publishedOn || publishedOn < since) return [];
     if (!KEEP.test(title) || DROP.test(title)) return [];
+    if (String(row.nature ?? "") === "APPEL_OFFRE" || isCallForTender(`${title} ${buyer}`)) return [];
     if (!/^https:\/\//.test(source)) return [];
     return [{ buyer, title, publishedOn, url: source, department: departmentOf(row), kind: kindOf(title, query.kind) }];
   });

@@ -11,6 +11,8 @@ import { demoApplicationRows, fetchApplications, applicationStage } from "@/lib/
 import { formatOfferPay } from "@/lib/entreprise/offer-conditions";
 import { offerCandidatureSchema, offerConditionsSchema, offerPosteSchema, offerReadyToPublish } from "@/lib/entreprise/offer-publish";
 import { criteriaForApplications, listOfferSkills } from "@/lib/entreprise/offer-skills";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { publicPublicationPatch } from "@/lib/offres/publish";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +95,7 @@ export async function GET(_request: NextRequest, context: Params) {
     return NextResponse.json({ error: "Offre introuvable" }, { status: 404 });
   }
 
-  if (String((offer as { school_id?: string | null }).school_id ?? "") !== access.organizationId) {
+  if (String((offer as { school_id?: string | null }).school_id ?? "") !== access.organizationId && !(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
@@ -171,7 +173,7 @@ export async function PATCH(request: NextRequest, context: Params) {
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
   const { data: offer } = await service.from("job_offers").select("id, school_id").eq("id", id).maybeSingle();
-  if (!offer || String((offer as { school_id?: string | null }).school_id ?? "") !== access.organizationId) {
+  if (!offer || (String((offer as { school_id?: string | null }).school_id ?? "") !== access.organizationId && !(await isSuperAdmin()))) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
@@ -257,8 +259,32 @@ export async function PATCH(request: NextRequest, context: Params) {
     if (data.diffusion) patch.diffusion = data.diffusion;
   }
 
+  let publication: Awaited<ReturnType<typeof publicPublicationPatch>> | null = null;
+  const schoolId = String((offer as { school_id?: string | null }).school_id ?? "");
+  if (schoolId && (body.intent === "publish" || parsedPoste.success || candidature.success)) {
+    const rich = await service
+      .from("job_offers")
+      .select("title, description, requirements, diploma_prepared, city, screening_questions, benefits, diffusion, public_slug")
+      .eq("id", id)
+      .maybeSingle();
+    const current = (rich.error ? {} : rich.data ?? {}) as Record<string, unknown>;
+    try {
+      publication = await publicPublicationPatch(service, {
+        offerId: id,
+        schoolId,
+        publishing: body.intent === "publish",
+        current,
+        next: patch,
+      });
+      Object.assign(patch, publication.patch);
+      if (publication.block) delete patch.status;
+    } catch {
+      publication = null;
+    }
+  }
+
   let { error } = await service.from("job_offers").update(patch).eq("id", id);
-  const optional = ["work_mode", "contract_duration", "diploma_prepared", "alternance_school", "work_rhythm", "experience_level", "education_level", "requirements", "salary_min", "salary_max", "salary_period", "hours_per_week", "start_label", "headcount", "benefits", "recruitment_steps", "requested_documents", "screening_questions", "application_deadline", "diffusion"] as const;
+  const optional = ["work_mode", "contract_duration", "diploma_prepared", "alternance_school", "work_rhythm", "experience_level", "education_level", "requirements", "salary_min", "salary_max", "salary_period", "hours_per_week", "start_label", "headcount", "benefits", "recruitment_steps", "requested_documents", "screening_questions", "application_deadline", "diffusion", "public_listing", "public_slug", "public_status", "anonymity_flags"] as const;
   const dropped: string[] = [];
   for (const key of optional) {
     if (!error || !(key in patch)) continue;
@@ -268,7 +294,15 @@ export async function PATCH(request: NextRequest, context: Params) {
     ({ error } = await service.from("job_offers").update(patch).eq("id", id));
   }
   if (error) return NextResponse.json({ error: "Mise à jour impossible" }, { status: 400 });
-  if (dropped.some((key) => key !== "requirements")) {
+  const publicKeys = new Set(["public_listing", "public_slug", "public_status", "anonymity_flags"]);
+  if (body.intent === "publish" && dropped.some((key) => publicKeys.has(key))) {
+    return NextResponse.json(
+      { error: "Le poste est enregistré. Collez la migration 20261026200000 pour publier l'offre anonyme sur byound.fr." },
+      { status: 400 },
+    );
+  }
+  if (publication?.block && body.intent === "publish") return NextResponse.json(publication.block, { status: 400 });
+  if (dropped.some((key) => key !== "requirements" && !publicKeys.has(key))) {
     return NextResponse.json(
       { error: dropped.some((key) => candidatureKeys.includes(key as (typeof candidatureKeys)[number]))
         ? "Le poste est enregistré. Collez la migration 20261024200000 pour garder les étapes, les pièces et la diffusion."
@@ -278,5 +312,9 @@ export async function PATCH(request: NextRequest, context: Params) {
       { status: 400 },
     );
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    publicStatus: publication?.pending ? "pending_review" : publication?.patch.public_status ?? null,
+    anonymity: publication ? { flags: publication.flags, rewrite: publication.rewrite } : null,
+  });
 }

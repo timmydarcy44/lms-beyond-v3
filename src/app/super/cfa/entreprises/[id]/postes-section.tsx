@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Briefcase, Check } from "lucide-react";
+import { ActionNotice } from "@/components/cfa/action-notice";
 import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
 import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 import type { CompanyApprentice } from "./tutors-section";
@@ -85,9 +87,9 @@ export function PostesSection({
   onChanged: () => Promise<void> | void;
   onMessage: (message: string) => void;
 }) {
+  const router = useRouter();
   const [openSkills, setOpenSkills] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ title: "", cursusId: "", quantity: 1, startDate: "", location: "" });
+  const [notice, setNotice] = useState<{ state: "working" | "done" | "error"; title: string; detail: string } | null>(null);
   const [query, setQuery] = useState("");
   const [orgs, setOrgs] = useState<Array<{ id: string; name: string; siret?: string | null }>>([]);
   const [pendingOrg, setPendingOrg] = useState<{ id: string; name: string } | null>(null);
@@ -103,8 +105,22 @@ export function PostesSection({
       onMessage(result.error || "Enregistrement impossible");
       return;
     }
-    setCreating(false);
     await onChanged();
+  }
+
+  async function createOffer() {
+    setNotice({ state: "working", title: "Nouvelle offre", detail: "Ouverture du formulaire." });
+    const response = await fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create_offer" }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.offerId) {
+      setNotice({ state: "error", title: "Offre non créée", detail: result.error || "Création impossible" });
+      return;
+    }
+    router.push(`/dashboard/entreprise/offres/${result.offerId}/edition?step=1`);
   }
 
   return (
@@ -118,25 +134,9 @@ export function PostesSection({
             <p className="text-xs text-[#AEB6CC]">Besoins du CFA et offres publiées sur Byound.</p>
           </div>
         </div>
-        <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => setCreating((value) => !value)}>+ Poste</button>
+        <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => void createOffer()}>+ Poste</button>
       </header>
-
-      {creating ? (
-        <form className="mb-4 grid gap-2 sm:grid-cols-2" onSubmit={(event) => {
-          event.preventDefault();
-          void saveNeed({ action: "save_need", ...draft, softSkillIds: [] });
-        }}>
-          <input required aria-label="Intitulé" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="Intitulé" className="h-11 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm sm:col-span-2" />
-          <select aria-label="Cursus" value={draft.cursusId} onChange={(event) => setDraft({ ...draft, cursusId: event.target.value })} className="h-11 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm">
-            <option value="">Cursus</option>
-            {CFA_SPECIALIZATIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-          <input aria-label="Nombre" type="number" min={1} max={30} value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: Number(event.target.value) })} className="h-11 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-          <input aria-label="Début" value={draft.startDate} onChange={(event) => setDraft({ ...draft, startDate: event.target.value })} placeholder="Début, mois et année" className="h-11 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-          <input aria-label="Lieu" value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} placeholder="Lieu" className="h-11 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-          <button type="submit" className="h-10 rounded-full bg-[#14A37F] px-4 text-sm font-extrabold text-[#04140C] sm:col-span-2">Enregistrer le poste</button>
-        </form>
-      ) : null}
+      <ActionNotice open={Boolean(notice)} state={notice?.state ?? "working"} title={notice?.title ?? ""} detail={notice?.detail} onClose={() => setNotice(null)} />
 
       <ul className="space-y-3">
         {needs.map((need) => {
@@ -285,6 +285,7 @@ function ProfilesPanel({
   const [alias, setAlias] = useState("");
   const [contactId, setContactId] = useState(contacts.find((item) => (item.roles ?? []).includes("main"))?.id ?? "");
   const [pending, setPending] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [notice, setNotice] = useState<{ state: "working" | "done" | "error"; title: string; detail: string } | null>(null);
   const changedRef = useRef(onChanged);
   const messageRef = useRef(onMessage);
   changedRef.current = onChanged;
@@ -323,8 +324,11 @@ function ProfilesPanel({
         }),
       }).then(async (response) => {
         const result = await response.json();
-        if (!response.ok) messageRef.current(result.error || "Envoi impossible");
-        else await changedRef.current();
+        if (!response.ok) setNotice({ state: "error", title: "Présentation non envoyée", detail: result.error || "Envoi impossible" });
+        else {
+          setNotice({ state: "done", title: "Présentation envoyée", detail: `${snapshot.name} est transmis au contact.` });
+          await changedRef.current();
+        }
       });
     }, 8000);
     return () => window.clearTimeout(timer);
@@ -402,16 +406,25 @@ function ProfilesPanel({
                 {sent?.response === "interested" ? <span className="rounded-full bg-[#14A37F] px-3 py-1 text-xs font-extrabold text-[#04140C]">Intéressé</span> : null}
                 {sent?.response === "declined" ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-xs font-extrabold text-[#AEB6CC]">Décliné</span> : null}
                 {sent && !sent.response ? <span className="text-xs font-extrabold text-[#6BE3C0]">{sentLabel}</span> : null}
-                {!sent && candidate.shareWithCompanies ? <button type="button" className="h-9 rounded-full bg-[#6E5BFF] px-3 text-xs font-extrabold text-white" onClick={() => setPending({ id: candidate.id, name: `${candidate.firstName} ${candidate.lastName}`, email: contacts.find((item) => item.id === contactId)?.email || contacts.find((item) => item.email)?.email || "" })}>Envoyer le profil</button> : null}
-                {!sent && !candidate.shareWithCompanies ? <button type="button" className="h-9 rounded-full border border-[#E7A92C] px-3 text-xs font-extrabold text-[#F6D68B]" onClick={() => void fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "request_consent", applicationId: candidate.id }) }).then(async (response) => { const result = await response.json(); onMessage(response.ok ? "Demande d'accord envoyée." : result.error || "Envoi impossible"); })}>Demander l'accord</button> : null}
+                {!sent && candidate.shareWithCompanies ? <button type="button" className="h-9 rounded-full bg-[#6E5BFF] px-3 text-xs font-extrabold text-white" onClick={() => { setNotice({ state: "working", title: "Envoi", detail: "Vous pouvez encore annuler." }); setPending({ id: candidate.id, name: `${candidate.firstName} ${candidate.lastName}`, email: contacts.find((item) => item.id === contactId)?.email || contacts.find((item) => item.email)?.email || "" }); }}>Envoyer le profil</button> : null}
+                {!sent && !candidate.shareWithCompanies ? <button type="button" className="h-9 rounded-full border border-[#E7A92C] px-3 text-xs font-extrabold text-[#F6D68B]" onClick={() => {
+                  setNotice({ state: "working", title: "Demande d'accord", detail: `E-mail en cours pour ${candidate.firstName}.` });
+                  void fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "request_consent", applicationId: candidate.id, needId: current.kind === "need" ? current.id : undefined, jobOfferId: current.kind === "offer" ? current.id : undefined }) }).then(async (response) => {
+                    const result = await response.json();
+                    setNotice(response.ok
+                      ? { state: "done", title: "Demande envoyée", detail: `${candidate.firstName} reçoit le lien vers l'offre.` }
+                      : { state: "error", title: "E-mail non envoyé", detail: result.error || "Envoi impossible" });
+                  });
+                }}>Demander l'accord</button> : null}
               </div>
             </li>
           );
         })}
       </ul>
       {pending ? (
-        <p className="mt-4 rounded-full bg-[#241C4A] px-4 py-2 text-sm">Profil de {pending.name} envoyé à {pending.email || "le contact"} · <button type="button" className="font-extrabold" onClick={() => setPending(null)}>Annuler</button></p>
+        <p className="mt-4 rounded-full bg-[#241C4A] px-4 py-2 text-sm">Profil de {pending.name} envoyé à {pending.email || "le contact"} · <button type="button" className="font-extrabold" onClick={() => { setPending(null); setNotice(null); }}>Annuler</button></p>
       ) : null}
+      <ActionNotice open={Boolean(notice)} state={notice?.state ?? "working"} title={notice?.title ?? ""} detail={notice?.detail} onClose={() => setNotice(null)} />
     </div>
   );
 }

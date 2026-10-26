@@ -48,7 +48,13 @@ type IssuerProfile = {
   organizationName?: string | null;
   type?: string | null;
 };
-type CourseOption = { id: string; title: string };
+type CourseOption = {
+  id: string;
+  title: string;
+  description?: string | null;
+  presentation?: string | null;
+  objectives?: string | null;
+};
 type ValidatorOption = {
   id: string;
   first_name?: string | null;
@@ -197,6 +203,7 @@ export function BadgeClassForm({
   const [status, setStatus] = useState<BadgeClassRecord["status"]>("DRAFT");
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [requiresEnrollment, setRequiresEnrollment] = useState(false);
+  const [formationChoice, setFormationChoice] = useState<"unset" | "existing" | "new">(badgeClassId ? "new" : "unset");
   const [requiredCourseId, setRequiredCourseId] = useState<string | null>(null);
   const [failureRemediationCourseId, setFailureRemediationCourseId] = useState<string | null>(null);
   const [visibleInLearnerDashboard, setVisibleInLearnerDashboard] = useState(false);
@@ -334,6 +341,25 @@ export function BadgeClassForm({
       setEvaluationMethods((prev) => [...prev, config.methodId]);
     }
     clearFieldError("methodConfigs");
+  };
+
+  const fillFromCourse = (courseId: string) => {
+    setRequiredCourseId(courseId || null);
+    const course = courses.find((item) => item.id === courseId);
+    if (!course) return;
+    setRequiresEnrollment(true);
+    if (course.title) setName(course.title);
+    const text = [course.description, course.presentation, course.objectives]
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (Array.isArray(item)) return item.map((entry) => (typeof entry === "string" ? entry : "")).filter(Boolean).join("\n");
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+    if (!text) return;
+    setDescription(text.slice(0, 800));
+    setCriteria([{ id: crypto.randomUUID(), label: "Valider la formation", description: text.slice(0, 500), sortOrder: 0 }]);
   };
 
   const qcmConfig = methodConfigs.find((c) => c.methodId === "qcm");
@@ -887,6 +913,35 @@ export function BadgeClassForm({
           <CardTitle className="text-slate-900">Informations principales</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!badgeClassId ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Rattacher ce badge à une formation déjà existante ?</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" variant={formationChoice === "existing" ? "default" : "outline"} onClick={() => setFormationChoice("existing")}>
+                  Oui, une formation existante
+                </Button>
+                <Button type="button" variant={formationChoice === "new" ? "default" : "outline"} onClick={() => { setFormationChoice("new"); setRequiredCourseId(null); }}>
+                  Non, sans formation
+                </Button>
+              </div>
+              {formationChoice === "existing" ? (
+                <div className="mt-4 space-y-2">
+                  <Label className="text-slate-900">Formation</Label>
+                  <Select value={requiredCourseId ?? ""} onValueChange={fillFromCourse} disabled={!organizationId}>
+                    <SelectTrigger className="border-slate-300 bg-white text-slate-900">
+                      <SelectValue placeholder={organizationId ? "Choisir la formation" : "Choisissez d'abord le club"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">Le nom, la description et le critère du badge reprennent ce qui existe déjà sur la formation.</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-slate-900">Club / Organisation</Label>

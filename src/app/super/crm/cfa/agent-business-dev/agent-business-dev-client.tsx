@@ -70,7 +70,7 @@ export function AgentBusinessDevClient() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-950">Agent Business Dev</h1>
-          <p className="mt-1 text-sm text-gray-600">La recherche automatique lit les offres dès que la clé La bonne alternance est en place. En attendant, collez une page publique : elle entre dans la file seulement si elle cite une alternance pour septembre 2027. La Normandie et la région parisienne passent devant. Aucun e-mail, aucun appel, aucun message.</p>
+          <p className="mt-1 text-sm text-gray-600">Jusqu'à 10 entreprises en France dont une page publique cite une alternance pour septembre 2027. La Normandie et la région parisienne passent devant. Collez une page, ou lancez la recherche. Aucun e-mail, aucun appel, aucun message.</p>
         </div>
         <button type="button" disabled={busy} className="h-10 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void send({ action: "run" })}>Lancer la recherche</button>
       </div>
@@ -101,7 +101,7 @@ export function AgentBusinessDevClient() {
           </li>
         ))}
       </ul>
-      {!leads.length ? <p className="text-sm text-gray-500">Aucune entreprise en attente. Collez une page publique, ou lancez la recherche quand la clé est en place.</p> : null}
+      {!leads.length ? <p className="text-sm text-gray-500">Aucune entreprise en attente. Collez une page publique qui cite septembre 2027, ou lancez la recherche.</p> : null}
     </div>
   );
 }

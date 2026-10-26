@@ -11,6 +11,7 @@ const NAV = [
   { label: "Byound Online", href: EDGE_HREFS.edgeOnline },
   { label: "Entreprises", href: EDGE_HREFS.entreprises },
   { label: "École", href: EDGE_HREFS.ecole },
+  { label: "Offres d'emploi", href: "/offres" },
   { label: "À propos", href: EDGE_HREFS.aPropos },
 ] as const;
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
 import { offerSkillSchema, replaceOfferSkills, listOfferSkills } from "@/lib/entreprise/offer-skills";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ async function ownedOffer(id: string) {
   const service = getServiceRoleClient();
   if (!service) return { error: NextResponse.json({ error: "Service indisponible" }, { status: 503 }) };
   const { data } = await service.from("job_offers").select("id, school_id").eq("id", id).maybeSingle();
-  if (!data || String(data.school_id ?? "") !== access.organizationId) {
+  if (!data || (String(data.school_id ?? "") !== access.organizationId && !(await isSuperAdmin()))) {
     return { error: NextResponse.json({ error: "Accès refusé" }, { status: 403 }) };
   }
   return { service, organizationId: access.organizationId };

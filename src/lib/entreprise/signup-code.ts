@@ -6,7 +6,7 @@ import { getEntrepriseOtpEmail } from "@/lib/emails/templates/entreprise-otp";
 import { generateOrgSlug } from "@/lib/onboarding/slug";
 import { ENTREPRISE_NEXT_PATH } from "@/lib/entreprise/signup-redirect";
 import { grantUserRole } from "@/lib/auth/user-roles";
-import { activateTutorByEmail } from "@/lib/cfa/sync-tutor-assignment";
+import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
 
 const HOUR_MS = 60 * 60 * 1000;
 const RESEND_GAP_MS = 60 * 1000;
@@ -241,8 +241,8 @@ export async function verifyEntrepriseCode(
   }
 
   const userId = verified.data.user.id;
-  if (open.company === "context:tuteur") {
-    await activateTutorByEmail(db, email, userId);
+  const activated = await afterSuccessfulAuth(db, { userId, email: verified.data.user.email || email });
+  if (open.company === "context:tuteur" || (activated.activatedTutor && open.mode !== "signup")) {
     await db.from("signup_requests").update({ verified_at: new Date().toISOString() }).eq("id", open.id);
     return { ok: true, destination: "/dashboard/tuteur" };
   }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendAccessCode } from "@/lib/cfa/access-code";
 import { recordCfaAudit } from "@/lib/cfa/admit-application";
+import { accountMutationSchema, accountSearchSchema, parseInput } from "@/lib/cfa/fiche-input";
+import { syncTutorAssignment } from "@/lib/cfa/sync-tutor-assignment";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 function clean(value: unknown, max = 80) {
@@ -28,9 +30,14 @@ export async function GET(request: NextRequest) {
   if (!(await isSuperAdmin())) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-  const applicationId = clean(request.nextUrl.searchParams.get("applicationId"));
-  const query = clean(request.nextUrl.searchParams.get("q")).replace(/[%(),]/g, "");
-  if (!applicationId || query.length < 2) return NextResponse.json({ accounts: [] });
+  const parsed = parseInput(accountSearchSchema, {
+    applicationId: request.nextUrl.searchParams.get("applicationId") ?? "",
+    q: request.nextUrl.searchParams.get("q") ?? "",
+  }, "Recherche de compte invalide.");
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const applicationId = parsed.data.applicationId;
+  const query = parsed.data.q.replace(/[%(),]/g, "");
+  if (query.length < 2) return NextResponse.json({ error: "Saisissez au moins 2 caractères." }, { status: 400 });
 
   const application = await db.from("cfa_applications").select("id, last_name, phone").eq("id", applicationId).maybeSingle();
   if (!application.data) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
@@ -70,10 +77,11 @@ export async function POST(request: NextRequest) {
   if (!(await isSuperAdmin())) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const applicationId = clean(body?.applicationId, 80);
-  const action = clean(body?.action, 40);
-  if (!applicationId || !action) return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  const parsed = parseInput(accountMutationSchema, await request.json().catch(() => null), "Liaison de compte invalide.");
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const body = parsed.data;
+  const applicationId = body.applicationId;
+  const action = body.action;
 
   const application = await db.from("cfa_applications").select("id, status, profile_id, first_name, last_name, email, phone").eq("id", applicationId).maybeSingle();
   const app = application.data as { status: string; profile_id: string | null; first_name: string; last_name: string; email: string; phone: string | null } | null;
@@ -85,13 +93,14 @@ export async function POST(request: NextRequest) {
     }
     const { error } = await db.from("cfa_applications").update({ profile_id: null, origin: "direct" }).eq("id", applicationId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await syncTutorAssignment(db, applicationId, { previousLearnerId: app.profile_id });
     await recordCfaAudit(db, { actorId: await actorId(), applicationId, action: "account_unlink", oldValue: app.profile_id, newValue: null });
     return NextResponse.json({ ok: true });
   }
 
   if (action !== "link") return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
-  const profileId = clean(body?.profileId, 80);
-  if (!profileId) return NextResponse.json({ error: "Compte requis" }, { status: 400 });
+  if (body.action !== "link") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
+  const profileId = body.profileId;
 
   const profile = await db.from("profiles").select("id, first_name, last_name, email, phone").eq("id", profileId).maybeSingle();
   const person = profile.data as { first_name?: string | null; last_name?: string | null; email?: string | null; phone?: string | null } | null;
@@ -104,12 +113,13 @@ export async function POST(request: NextRequest) {
 
   const sameName = sameText(app.last_name, String(person.last_name ?? ""));
   const samePhone = Boolean(digits(app.phone ?? "") && digits(app.phone ?? "") === digits(String(person.phone ?? "")));
-  if (!sameName && !samePhone && body?.confirmNoMatch !== true) {
+  if (!sameName && !samePhone && body.confirmNoMatch !== true) {
     return NextResponse.json({ error: "Aucun point commun. Confirmez le lien.", needsConfirm: true }, { status: 409 });
   }
 
   const { error } = await db.from("cfa_applications").update({ profile_id: profileId, origin: "existing_account" }).eq("id", applicationId);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await syncTutorAssignment(db, applicationId);
   await recordCfaAudit(db, { actorId: await actorId(), applicationId, action: "account_link", oldValue: app.profile_id, newValue: profileId });
   const sent = await sendAccessCode(db, {
     email: person.email,

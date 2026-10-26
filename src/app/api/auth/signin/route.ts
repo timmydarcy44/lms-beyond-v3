@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,6 +91,12 @@ export async function POST(request: NextRequest) {
 
     console.log("[api/auth/signin] ✅ Sign in successful for:", data.user.email);
     console.log("[api/auth/signin] Session token length:", data.session.access_token?.length);
+    const service = getServiceRoleClient();
+    if (service && data.user?.id) {
+      await afterSuccessfulAuth(service, { userId: data.user.id, email: data.user.email }).catch((activationError) => {
+        console.error("[api/auth/signin] tutor activation", activationError);
+      });
+    }
 
     // Retourner la session pour que le client puisse la stocker
     return NextResponse.json({

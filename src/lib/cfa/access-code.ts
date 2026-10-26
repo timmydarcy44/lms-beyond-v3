@@ -167,7 +167,7 @@ export async function sendAccessCode(
       ? await db.from("signup_requests").update(payload).eq("id", row.id)
       : await db.from("signup_requests").insert(payload);
     if (write.error) return { ok: false, error: "Le code n'a pas pu être enregistré." };
-  } else {
+  } else if (input.context !== "application_linked") {
     const profile = await db.from("profiles").select("id").ilike("email", email).maybeSingle();
     const existingId = String((profile.data as { id?: string } | null)?.id ?? "");
     if (existingId) await grantUserRole(db, existingId, input.role);

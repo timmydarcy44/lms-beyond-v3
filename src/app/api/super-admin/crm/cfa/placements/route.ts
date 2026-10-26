@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendAccessCode } from "@/lib/cfa/access-code";
 import { recordCfaAudit } from "@/lib/cfa/admit-application";
+import { parseInput, placementSchema } from "@/lib/cfa/fiche-input";
 import { syncTutorAssignment } from "@/lib/cfa/sync-tutor-assignment";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function clean(value: unknown, max = 200) {
   return String(value ?? "").trim().slice(0, max);
@@ -59,10 +58,11 @@ export async function POST(request: NextRequest) {
   if (!(await isSuperAdmin())) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-  const applicationId = clean(body?.applicationId);
-  const action = clean(body?.action, 40);
-  if (!applicationId || !action) return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  const parsed = parseInput(placementSchema, await request.json().catch(() => null), "Action de rattachement inconnue.");
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const body = parsed.data;
+  const applicationId = body.applicationId;
+  const action = body.action;
 
   const application = await db.from("cfa_applications").select("id, first_name, last_name, email").eq("id", applicationId).maybeSingle();
   if (!application.data) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
@@ -77,11 +77,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "create_company") {
-    const companyName = clean(body?.companyName, 160);
-    const siret = clean(body?.siret, 20).replace(/\s/g, "");
-    const city = clean(body?.city, 120);
-    if (!companyName) return NextResponse.json({ error: "Le nom de l'entreprise est requis." }, { status: 400 });
-    if (siret && !/^\d{14}$/.test(siret)) return NextResponse.json({ error: "Le SIRET doit contenir 14 chiffres." }, { status: 400 });
+    if (body.action !== "create_company") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
+    const companyName = body.companyName;
+    const siret = String(body.siret ?? "").replace(/\s/g, "");
+    const city = body.city ?? "";
     const created = await db.from("cfa_companies").insert({ company_name: companyName, siret: siret || null, city: city || null, status: "to_contact" }).select("id").single();
     if (created.error || !created.data) return NextResponse.json({ error: created.error?.message ?? "Création impossible" }, { status: 400 });
     await closeOpen();
@@ -97,8 +96,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "set_company") {
-    const companyId = clean(body?.companyId);
-    if (!companyId) return NextResponse.json({ error: "Entreprise requise" }, { status: 400 });
+    if (body.action !== "set_company") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
+    const companyId = body.companyId;
     await closeOpen();
     const placed = await db.from("apprentice_placements").insert({
       apprentice_id: applicationId,
@@ -117,15 +116,13 @@ export async function POST(request: NextRequest) {
     const companyId = String((current.data as { company_id?: string } | null)?.company_id ?? "");
     if (!companyId) return NextResponse.json({ error: "Choisissez d'abord l'entreprise." }, { status: 400 });
 
-    let tutorId = clean(body?.tutorId);
+    let tutorId = body.action === "set_tutor" ? body.tutorId : "";
     if (action === "create_tutor") {
-      const firstName = clean(body?.firstName, 80);
-      const lastName = clean(body?.lastName, 80);
-      const email = clean(body?.email, 240).toLowerCase();
-      const jobTitle = clean(body?.jobTitle, 120);
-      if (!firstName || !lastName || !EMAIL_RE.test(email)) {
-        return NextResponse.json({ error: "Prénom, nom et e-mail professionnel sont requis." }, { status: 400 });
-      }
+      if (body.action !== "create_tutor") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
+      const firstName = body.firstName;
+      const lastName = body.lastName;
+      const email = body.email;
+      const jobTitle = body.jobTitle ?? "";
       const created = await db.from("company_tutors").insert({
         company_id: companyId,
         first_name: firstName,
@@ -180,7 +177,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "resend_code") {
-    const tutorId = clean(body?.tutorId);
+    if (body.action !== "resend_code") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
+    const tutorId = body.tutorId;
     const tutor = await db.from("company_tutors").select("id, company_id, user_id, first_name, last_name, email, activated_at").eq("id", tutorId).maybeSingle();
     const row = tutor.data as { company_id: string; user_id: string | null; first_name: string; last_name: string; email: string; activated_at: string | null } | null;
     if (!row) return NextResponse.json({ error: "Tuteur introuvable" }, { status: 404 });

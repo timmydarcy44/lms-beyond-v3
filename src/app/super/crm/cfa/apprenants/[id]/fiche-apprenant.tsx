@@ -169,6 +169,7 @@ export function FicheApprenant({ id }: { id: string }) {
   const [pickingTutor, setPickingTutor] = useState(false);
   const [pendingTutorId, setPendingTutorId] = useState("");
   const [showNss, setShowNss] = useState(false);
+  const [showRqth, setShowRqth] = useState(false);
   const [refuseKind, setRefuseKind] = useState("");
   const [refuseNote, setRefuseNote] = useState("");
   const [addressHits, setAddressHits] = useState<string[]>([]);
@@ -204,6 +205,8 @@ export function FicheApprenant({ id }: { id: string }) {
       const next: Record<string, string> = {};
       for (const [key] of CERFA_FIELDS) next[key] = stored[key] ?? "";
       next.socialSecurityNumberMask = stored.socialSecurityNumberMask ?? "";
+      next.rqth = "";
+      next.rqthPresent = stored.rqthPresent ? "1" : "";
       if (found) {
         next.lastName = next.lastName || found.last_name;
         next.firstNames = next.firstNames || found.first_name;
@@ -211,6 +214,8 @@ export function FicheApprenant({ id }: { id: string }) {
         next.phone = next.phone || found.phone || "";
       }
       loadedCerfa.current = JSON.stringify(next);
+      setShowNss(false);
+      setShowRqth(false);
       setCerfa(next);
       setInterviewNotes(found?.interview_notes ?? "");
       setInterviewAt(
@@ -280,7 +285,7 @@ export function FicheApprenant({ id }: { id: string }) {
     return [item.company_name, item.siret, item.city].filter(Boolean).join(" ").toLowerCase().includes(query);
   });
 
-  const filledCerfa = CERFA_FIELDS.filter(([key]) => key === "socialSecurityNumber" ? Boolean((cerfa[key] ?? "").trim() || cerfa.socialSecurityNumberMask) : Boolean((cerfa[key] ?? "").trim())).length;
+  const filledCerfa = CERFA_FIELDS.filter(([key]) => key === "socialSecurityNumber" ? Boolean((cerfa[key] ?? "").trim() || cerfa.socialSecurityNumberMask) : key === "rqth" ? Boolean((cerfa[key] ?? "").trim() || cerfa.rqthPresent) : Boolean((cerfa[key] ?? "").trim())).length;
   const challengeCount = application ? CFA_CHALLENGE_QUESTIONS.filter((question) => (application.challenge_answers?.[question.id] ?? "").trim()).length : 0;
   const docsReceived = application ? DOCS.filter(([kind]) => application.administrative_document_urls?.[kind]).length : 0;
 
@@ -397,7 +402,11 @@ export function FicheApprenant({ id }: { id: string }) {
             {STEPS.map((step, index) => {
               const active = step.id === application.status;
               const past = stepIndex >= 0 && index < stepIndex;
-              const locked = step.id === "contract" && !placed;
+              const contractReady = application.status === "admitted" && placed;
+              const locked = step.id === "contract" && application.status !== "contract" && !contractReady;
+              const lockTitle = application.status !== "admitted" && application.status !== "contract"
+                ? "Passez d'abord au statut Admis."
+                : "Rattachez d'abord une entreprise et un tuteur.";
               const barOn = stepIndex >= index;
               return (
                 <div key={step.id} className="flex min-w-[92px] flex-1 items-center">
@@ -407,7 +416,7 @@ export function FicheApprenant({ id }: { id: string }) {
                     role="radio"
                     aria-checked={active}
                     disabled={busy || locked}
-                    title={locked ? "Rattachez d'abord une entreprise et un tuteur" : step.label}
+                    title={locked ? lockTitle : step.label}
                     onClick={() => void changeStatus(step.id)}
                     className={`h-9 shrink-0 rounded-full px-3 text-[11px] font-extrabold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E5BFF] ${active ? "bg-[#6E5BFF] text-white" : past ? "bg-[#241C4A] text-[#B9AFFF]" : "bg-[#0B1122] text-[#5D6785]"} ${locked ? "cursor-not-allowed opacity-45" : ""}`}
                   >
@@ -593,7 +602,7 @@ export function FicheApprenant({ id }: { id: string }) {
                       <div className="mt-3 rounded-2xl bg-[#6E5BFF]/15 p-4 text-sm">
                         <p>{(companyTutors.find((item) => item.id === pendingTutorId)?.activated_at)
                           ? `${companyTutors.find((item) => item.id === pendingTutorId)?.first_name} a déjà un compte tuteur : il recevra un e-mail l'informant que ${application.first_name} ${application.last_name} lui est confié.`
-                          : `${companyTutors.find((item) => item.id === pendingTutorId)?.first_name} ${companyTutors.find((item) => item.id === pendingTutorId)?.last_name} recevra un e-mail avec un code à 6 chiffres pour se connecter à son espace tuteur.`}</p>
+                          : `${companyTutors.find((item) => item.id === pendingTutorId)?.first_name} ${companyTutors.find((item) => item.id === pendingTutorId)?.last_name} recevra un e-mail avec un code à 8 chiffres pour se connecter à son espace tuteur.`}</p>
                         {tutor ? <p className="mt-2 text-xs text-[#AEB6CC]">Le rattachement actuel sera clos.</p> : null}
                         <button type="button" disabled={busy} className="mt-3 h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white" onClick={() => void send("/api/super-admin/crm/cfa/placements", "POST", { action: "set_tutor", applicationId: id, tutorId: pendingTutorId }).then(() => setPickingTutor(false))}>Assigner et envoyer le code</button>
                       </div>
@@ -606,7 +615,7 @@ export function FicheApprenant({ id }: { id: string }) {
                           <input required aria-label="Nom" value={tutorDraft.lastName} onChange={(event) => setTutorDraft({ ...tutorDraft, lastName: event.target.value })} placeholder="Nom" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
                           <input required aria-label="E-mail professionnel" type="email" value={tutorDraft.email} onChange={(event) => setTutorDraft({ ...tutorDraft, email: event.target.value })} placeholder="E-mail professionnel" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
                           <input aria-label="Poste" value={tutorDraft.jobTitle} onChange={(event) => setTutorDraft({ ...tutorDraft, jobTitle: event.target.value })} placeholder="Poste" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-                          <p className="text-xs text-[#AEB6CC]">{tutorDraft.firstName || "Le tuteur"} recevra un e-mail avec un code à 6 chiffres.</p>
+                          <p className="text-xs text-[#AEB6CC]">{tutorDraft.firstName || "Le tuteur"} recevra un e-mail avec un code à 8 chiffres.</p>
                           <button type="submit" disabled={busy} className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white">Assigner et envoyer le code</button>
                         </>
                       ) : null}
@@ -721,8 +730,13 @@ export function FicheApprenant({ id }: { id: string }) {
                             </ul>
                           ) : null}
                         </span>
+                      ) : kind === "rqth" && cerfa.rqthPresent && !showRqth ? (
+                        <span className="mt-1 flex h-11 items-center justify-between rounded-2xl border border-[#1E2848] bg-[#0B1122] px-3 text-sm">
+                          <span>Renseigné</span>
+                          <button type="button" className="font-semibold text-[#6BE3C0]" onClick={() => { void fetch("/api/super-admin/crm/cfa", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "audit_reveal", id, field: "rqth" }) }).then(async (response) => { const result = await response.json(); if (response.ok) { setCerfa((current) => ({ ...current, rqth: String(result.value ?? "") })); setShowRqth(true); } }); }}>Afficher</button>
+                        </span>
                       ) : (
-                        <select aria-label={label} value={cerfa[key] ?? ""} onFocus={() => { if (kind === "rqth") void fetch("/api/super-admin/crm/cfa", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "audit_reveal", id, field: "rqth" }) }); }} onChange={(event) => setCerfa((current) => ({ ...current, [key]: event.target.value }))} className={FIELD}>
+                        <select aria-label={label} value={cerfa[key] ?? ""} onChange={(event) => setCerfa((current) => ({ ...current, [key]: event.target.value }))} className={FIELD}>
                           <option value="">Choisir</option>
                           {withCurrent(kind === "sex" ? SEX_OPTIONS : kind === "nationality" ? NATIONALITY_OPTIONS : kind === "situation" ? SITUATION_OPTIONS : kind === "class" ? CLASS_OPTIONS : kind === "diploma" ? DIPLOMA_OPTIONS : YES_NO, cerfa[key] ?? "").map((option) => (
                             <option key={option} value={option}>{option}</option>

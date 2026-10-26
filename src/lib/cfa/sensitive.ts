@@ -100,14 +100,13 @@ export function presentCerfa(cerfa: Record<string, string> | null | undefined, a
   if (access === "owner") {
     return { ...source, socialSecurityNumber: nss, rqth };
   }
-  const masked = {
+  return {
     ...source,
     socialSecurityNumber: "",
     socialSecurityNumberMask: nss ? maskNss(nss) : "",
     rqth: "",
+    rqthPresent: rqth ? "1" : "",
   };
-  if (access === "staff") return masked;
-  return { ...masked, rqth };
 }
 
 export function revealCerfaField(cerfa: Record<string, string> | null | undefined, field: "socialSecurityNumber" | "rqth") {

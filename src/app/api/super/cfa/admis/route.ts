@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { documentUploadSchema, parseInput } from "@/lib/cfa/fiche-input";
 import { loadCfaApplicationBoard, loadCfaCompanies } from "@/lib/cfa/load-cfa-crm";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -69,19 +70,21 @@ export async function POST(request: Request) {
   const ctx = await authorize();
   if ("error" in ctx) return ctx.error;
   const formData = await request.formData().catch(() => null);
-  const id = String(formData?.get("id") ?? "").trim();
-  const label = String(formData?.get("label") ?? "").trim() || "Document";
-  const kind = String(formData?.get("kind") ?? "").trim();
   const file = formData?.get("file");
-  if (!id || !(file instanceof File)) {
-    return NextResponse.json({ error: "Fichier ou dossier manquant." }, { status: 400 });
+  const parsed = parseInput(documentUploadSchema, {
+    id: String(formData?.get("id") ?? ""),
+    label: String(formData?.get("label") ?? "").trim() || "Document",
+    kind: String(formData?.get("kind") ?? ""),
+    fileName: file instanceof File ? file.name : "",
+    fileSize: file instanceof File ? file.size : 0,
+    fileType: file instanceof File ? file.type : "",
+  }, "Fichier ou dossier manquant.");
+  if (!parsed.ok || !(file instanceof File)) {
+    return NextResponse.json({ error: parsed.ok ? "Fichier ou dossier manquant." : parsed.error }, { status: 400 });
   }
-  if (file.size > 10 * 1024 * 1024) {
-    return NextResponse.json({ error: "Fichier supérieur à 10 Mo." }, { status: 400 });
-  }
-  if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
-    return NextResponse.json({ error: "Formats acceptés : PDF, JPG, PNG." }, { status: 400 });
-  }
+  const id = parsed.data.id;
+  const label = parsed.data.label;
+  const kind = parsed.data.kind ?? "";
 
   const { data: application } = await ctx.db
     .from("cfa_applications")

@@ -161,6 +161,7 @@ export function FicheApprenant({ id }: { id: string }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
+  const [profileSends, setProfileSends] = useState<Array<{ id: string; companyName: string; sent_at: string; response: string | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -211,6 +212,7 @@ export function FicheApprenant({ id }: { id: string }) {
       setCompanies(place.companies ?? []);
       setTutors(place.tutors ?? []);
       setPlacements(place.placements ?? []);
+      setProfileSends(place.profileSends ?? []);
       const stored = found?.cerfa_data ?? {};
       const next: Record<string, string> = {};
       for (const [key] of CERFA_FIELDS) next[key] = stored[key] ?? "";
@@ -660,6 +662,13 @@ export function FicheApprenant({ id }: { id: string }) {
               ))}
             </div>
             <p className="mt-3 text-sm">{application.cv_url ? <a className="text-[#8DB8FF]" href={application.cv_url} target="_blank" rel="noreferrer">CV déposé</a> : <span className="text-[#5D6785]">CV non déposé</span>}</p>
+            {profileSends.length ? (
+              <ul className="mt-3 space-y-1 text-sm">
+                {profileSends.map((send) => (
+                  <li key={send.id}>Profil envoyé à : {send.companyName} · {new Date(send.sent_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} · {send.response === "interested" ? "Intéressé" : send.response === "declined" ? "Décliné" : "Sans réponse"}</li>
+                ))}
+              </ul>
+            ) : null}
             <div className="mt-4 space-y-2">
               {CFA_CHALLENGE_QUESTIONS.map((question) => {
                 const answer = application.challenge_answers?.[question.id]?.trim() ?? "";

@@ -29,6 +29,7 @@ type Mode = "signup" | "login";
 
 type SignupForm = {
   company_name: string;
+  siret: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -36,6 +37,7 @@ type SignupForm = {
 
 const EMPTY_FORM: SignupForm = {
   company_name: "",
+  siret: "",
   first_name: "",
   last_name: "",
   email: "",
@@ -290,12 +292,20 @@ export function EntrepriseConnexionPage() {
 
               <div className="mt-8 space-y-4">
                 <Field
-                  label="Entreprise"
+                  label="Votre entreprise"
                   name="company_name"
                   value={form.company_name}
                   error={fieldErrors.company_name}
                   onChange={setField}
                   autoComplete="organization"
+                />
+                <Field
+                  label="SIRET (facultatif)"
+                  name="siret"
+                  value={form.siret}
+                  error={fieldErrors.siret}
+                  onChange={setField}
+                  inputMode="numeric"
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Field
@@ -465,7 +475,7 @@ function Field({
   onChange: (name: SignupField, value: string) => void;
   type?: string;
   autoComplete?: string;
-  inputMode?: "email" | "text";
+  inputMode?: "email" | "text" | "numeric";
 }) {
   const describedBy = error ? `${name}-error` : undefined;
   return (

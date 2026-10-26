@@ -161,7 +161,7 @@ export async function readLoginHint(db: SupabaseClient, email: string): Promise<
 
 export async function ensureEntrepriseUser(
   db: SupabaseClient,
-  input: { email: string; firstName: string; lastName: string; company: string },
+  input: { email: string; firstName: string; lastName: string; company: string; siret?: string },
 ): Promise<{ ok: true; hint: LoginHint } | { ok: false; status: number; error: string }> {
   const hint = await readLoginHint(db, input.email);
   if (!hint) {
@@ -179,6 +179,7 @@ export async function ensureEntrepriseUser(
       last_name: input.lastName,
       full_name: `${input.firstName} ${input.lastName}`.trim(),
       company_name: input.company,
+      ...(input.siret ? { siret: input.siret } : {}),
       role_type: "entreprise",
       account_type: "entreprise",
       signup_source: "edge_entreprises",
@@ -267,6 +268,15 @@ export async function verifyEntrepriseCode(
       if (error) {
         console.error("[entreprise-code] complete_entreprise_signup:", error.message);
         return { ok: false, status: 500, error: "Le code est bon, mais l'espace n'a pas pu être créé." };
+      }
+      const created = await db.auth.admin.getUserById(userId);
+      const siret = String(created.data.user?.user_metadata?.siret ?? "").replace(/\s/g, "");
+      if (/^\d{14}$/.test(siret)) {
+        const linked = await db.from("profiles").select("company_id").eq("id", userId).maybeSingle();
+        const organizationId = String((linked.data as { company_id?: string | null } | null)?.company_id ?? "");
+        if (organizationId) {
+          await db.from("organizations").update({ siret }).eq("id", organizationId);
+        }
       }
     } else {
       await db.from("signup_requests").update({ verified_at: new Date().toISOString() }).eq("id", open.id);

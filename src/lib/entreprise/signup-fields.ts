@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidSiret } from "@/lib/cfa/siret";
 
 const DOMAIN_TYPOS: Record<string, string> = {
   gmial: "gmail",
@@ -96,6 +97,13 @@ export function isConsumerEmail(raw: string): boolean {
 
 export const entrepriseSignupSchema = z.object({
   company_name: z.string().trim().min(1, "Indiquez le nom de l'entreprise."),
+  siret: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .transform((value) => value.replace(/\s/g, ""))
+    .refine((value) => !value || isValidSiret(value), "Le SIRET doit contenir 14 chiffres valides."),
   first_name: z
     .string()
     .trim()
@@ -119,13 +127,13 @@ export const entrepriseSignupSchema = z.object({
 
 export type EntrepriseSignupInput = z.infer<typeof entrepriseSignupSchema>;
 
-export type SignupField = "company_name" | "first_name" | "last_name" | "email";
+export type SignupField = "company_name" | "siret" | "first_name" | "last_name" | "email";
 
 export function signupFieldErrors(error: z.ZodError): Partial<Record<SignupField, string>> {
   const fields: Partial<Record<SignupField, string>> = {};
   for (const issue of error.issues) {
     const key = issue.path[0];
-    if (key === "company_name" || key === "first_name" || key === "last_name" || key === "email") {
+    if (key === "company_name" || key === "siret" || key === "first_name" || key === "last_name" || key === "email") {
       if (!fields[key]) fields[key] = issue.message;
     }
   }

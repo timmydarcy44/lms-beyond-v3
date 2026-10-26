@@ -58,11 +58,15 @@ function message(input: {
   }
   if (input.context === "tuteur_notice") {
     const href = escapeHtml(input.accessUrl || "https://www.byound.fr/tuteur/connexion");
+    const namedLearner = input.learnerName.trim();
+    const designation = namedLearner
+      ? `${cfa} vous a désigné tuteur de ${escapeHtml(namedLearner)} chez ${company}.`
+      : `${cfa} vous a désigné tuteur chez ${company}.`;
     return {
       subject: `${input.cfaName} vous a désigné tuteur`,
       html: shell(
         "Vous êtes tuteur",
-        `<p>${cfa} vous a désigné tuteur de ${learner} chez ${company}.</p><p style="margin-top:24px;"><a href="${href}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;border-radius:999px;padding:14px 22px;font-weight:800;">Indiquer mon e-mail</a></p><p style="color:#5C6370;">La page demande votre adresse e-mail, puis « Envoyer un code ». Le code ouvre l'espace tuteur.</p>`,
+        `<p>${designation}</p><p style="margin-top:24px;"><a href="${href}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;border-radius:999px;padding:14px 22px;font-weight:800;">Indiquer mon e-mail</a></p><p style="color:#5C6370;">La page demande votre adresse e-mail, puis « Envoyer un code ». Le code ouvre l'espace tuteur.</p>`,
       ),
     };
   }
@@ -195,7 +199,9 @@ export async function sendAccessCode(
   const copy = message({
     context: input.context,
     firstName: input.firstName,
-    learnerName: input.learnerName || `${input.firstName} ${input.lastName}`.trim(),
+    learnerName: input.context === "tuteur_notice"
+      ? (input.learnerName?.trim() ?? "")
+      : (input.learnerName || `${input.firstName} ${input.lastName}`.trim()),
     companyName: input.companyName || "",
     cfaName: input.cfaName || "Byound School",
     code,

@@ -51,7 +51,26 @@ export async function GET(request: NextRequest) {
       apprenticeCount: tutorCount.get(String((row as { id: string }).id)) ?? 0,
     })),
     placements: placements.data ?? [],
+    profileSends: await loadProfileSends(db, applicationId),
   });
+}
+
+async function loadProfileSends(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, applicationId: string) {
+  const sends = await db
+    .from("cfa_profile_sends")
+    .select("id, company_id, sent_at, response, opened_at")
+    .eq("application_id", applicationId)
+    .order("sent_at", { ascending: false });
+  if (sends.error) return [];
+  const companyIds = [...new Set(((sends.data ?? []) as { company_id: string }[]).map((row) => row.company_id))];
+  const companies = companyIds.length
+    ? await db.from("cfa_companies").select("id, company_name").in("id", companyIds)
+    : { data: [] };
+  const names = new Map(((companies.data ?? []) as { id: string; company_name: string }[]).map((row) => [row.id, row.company_name]));
+  return ((sends.data ?? []) as { id: string; company_id: string; sent_at: string; response: string | null; opened_at: string | null }[]).map((row) => ({
+    ...row,
+    companyName: names.get(row.company_id) ?? "Entreprise",
+  }));
 }
 
 export async function POST(request: NextRequest) {

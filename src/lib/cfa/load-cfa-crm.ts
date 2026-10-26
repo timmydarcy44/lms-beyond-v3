@@ -87,5 +87,24 @@ export async function loadCfaCompanies(db: Db) {
     if (error.code === "42P01" || error.code === "42703") return { companies: [], migrationRequired: true };
     return { error: error.message };
   }
-  return { companies: data ?? [] };
+  const companies = (data ?? []) as Array<Record<string, unknown>>;
+  const actions = await db
+    .from("cfa_company_activities")
+    .select("company_id, next_action, next_action_at")
+    .is("done_at", null)
+    .not("next_action_at", "is", null);
+  if (actions.error) return { companies };
+  const byCompany = new Map(
+    ((actions.data ?? []) as { company_id: string; next_action: string | null; next_action_at: string | null }[]).map((row) => [row.company_id, row]),
+  );
+  return {
+    companies: companies.map((company) => {
+      const action = byCompany.get(String(company.id ?? ""));
+      return {
+        ...company,
+        next_action: action?.next_action ?? null,
+        next_action_at: action?.next_action_at ?? null,
+      };
+    }),
+  };
 }

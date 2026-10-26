@@ -54,6 +54,7 @@ export function CfaApplicationFlow() {
   const [connected, setConnected] = useState(false);
   const [availableTests, setAvailableTests] = useState<Array<"disc" | "idmc" | "soft">>([]);
   const [shareTests, setShareTests] = useState({ disc: false, idmc: false, soft: false });
+  const [shareCompanies, setShareCompanies] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -95,6 +96,7 @@ export function CfaApplicationFlow() {
           motivationMediaUrl: data.application.motivation_media_url ?? "",
           alternanceStatus: data.application.alternance_status ?? "",
         });
+        setShareCompanies(Boolean(data.application.share_with_companies));
       } catch {
         localStorage.removeItem(TOKEN_KEY);
       } finally {
@@ -243,7 +245,7 @@ export function CfaApplicationFlow() {
           ) : null}
 
           {app?.status === "dossier" ? (
-            <form onSubmit={(event) => { event.preventDefault(); void send("PATCH", { token, action: "dossier", ...dossier }); }}>
+            <form onSubmit={(event) => { event.preventDefault(); void send("PATCH", { token, action: "dossier", ...dossier, shareWithCompanies: shareCompanies }); }}>
               <Title overline="Étape 3 · Dossier candidat">Votre parcours, sans lettre formatée.</Title>
               <div className="mt-8 space-y-6">
                 <Area label="Parcours scolaire" value={dossier.schoolBackground} onChange={(value) => setDossier({ ...dossier, schoolBackground: value })} />
@@ -253,11 +255,21 @@ export function CfaApplicationFlow() {
                 <Recorder busy={busy} onFile={async (file) => { const path = await upload(file, "motivation"); if (!path) return false; setDossier((current) => ({ ...current, motivationMediaUrl: path })); return true; }} />
                 <p className="text-sm text-white/80">Situation vis-à-vis de l’alternance</p>
                 <div className="grid gap-3 sm:grid-cols-2">{[["company_found","J’ai déjà une entreprise"],["searching","Je recherche une entreprise"]].map(([value,label]) => <button key={value} type="button" onClick={() => setDossier({ ...dossier, alternanceStatus: value })} className={cn("min-h-14 rounded-2xl border text-sm font-semibold", dossier.alternanceStatus === value ? "border-[#7770ff] bg-[#7770ff]/20" : "border-white/10 text-white/50")}>{label}</button>)}</div>
+                <label className="flex items-start gap-3 text-sm text-white/80">
+                  <input type="checkbox" checked={shareCompanies} onChange={(event) => setShareCompanies(event.target.checked)} className="mt-1 h-4 w-4" />
+                  <span>J'accepte que mon profil soit transmis aux entreprises partenaires de Byound School. <span className="block text-white/45">Facultatif. La case est décochée par défaut, et vous pourrez la modifier ensuite.</span></span>
+                </label>
               </div>
               <Submit busy={busy} error={error}>Envoyer mon dossier</Submit>
             </form>
           ) : null}
 
+          {app && !["profile", "challenge", "brochure", "dossier"].includes(app.status) ? (
+            <label className="mb-8 flex items-start gap-3 rounded-2xl border border-white/10 p-4 text-sm text-white/80">
+              <input type="checkbox" checked={shareCompanies} onChange={(event) => { const next = event.target.checked; setShareCompanies(next); void send("PATCH", { token, action: "share_companies", shareWithCompanies: next }); }} className="mt-1 h-4 w-4" />
+              <span>J'accepte que mon profil soit transmis aux entreprises partenaires de Byound School.</span>
+            </label>
+          ) : null}
           {app && ["interview","review"].includes(app.status) ? <Waiting review={app.status === "review"} /> : null}
           {app?.status === "administrative" ? (
             <AdministrativeEnrollment

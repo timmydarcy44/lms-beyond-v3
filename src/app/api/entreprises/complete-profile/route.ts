@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isValidSiret, cleanSiret } from "@/lib/cfa/siret";
 import { isValidCompanySizeBand } from "@/lib/entreprise/company-size-bands";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
@@ -26,6 +27,10 @@ export async function POST(request: NextRequest) {
     .toLowerCase();
   const jobTitle = String(body?.job_title ?? body?.poste ?? "").trim();
   const companySizeBand = String(body?.company_size_band ?? "").trim();
+  const siret = cleanSiret(body?.siret);
+  if (siret && !isValidSiret(siret)) {
+    return NextResponse.json({ error: "Le SIRET doit contenir 14 chiffres valides." }, { status: 400 });
+  }
   const logoUrl = String(body?.logo_url ?? "").trim() || null;
 
   if (!companyName || !firstName || !lastName || !email || !jobTitle || !companySizeBand) {
@@ -72,20 +77,19 @@ export async function POST(request: NextRequest) {
     onboarding_step: "account_activated",
   };
   if (logoUrl) orgUpdate.logo_url = logoUrl;
+  orgUpdate.siret = siret || null;
 
   const { error: orgError } = await db.from("organizations").update(orgUpdate).eq("id", orgId);
   if (orgError) {
-    if (orgError.message?.includes("edge_profile_completed") || orgError.message?.includes("company_size_band")) {
-      const { error: fallbackOrgError } = await db
-        .from("organizations")
-        .update({ name: companyName, ...(logoUrl ? { logo_url: logoUrl } : {}) })
-        .eq("id", orgId);
-      if (fallbackOrgError) {
-        return NextResponse.json({ error: fallbackOrgError.message }, { status: 500 });
-      }
-    } else {
-      return NextResponse.json({ error: orgError.message }, { status: 500 });
+    const reduced = { ...orgUpdate };
+    if (orgError.message?.includes("siret")) delete reduced.siret;
+    if (orgError.message?.includes("company_size_band") || orgError.message?.includes("edge_profile_completed")) {
+      delete reduced.company_size_band;
+      delete reduced.edge_profile_completed;
+      delete reduced.onboarding_step;
     }
+    const retry = await db.from("organizations").update(reduced).eq("id", orgId);
+    if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
   }
 
   const { error: profileError } = await db

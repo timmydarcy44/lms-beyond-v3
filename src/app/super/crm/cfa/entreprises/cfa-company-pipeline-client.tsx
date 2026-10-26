@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Building2, Loader2, Plus, RefreshCw, X } from "lucide-react";
 
 import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
@@ -28,6 +29,8 @@ type CfaCompany = {
   apprentice_track_1: string | null;
   status: CfaCompanyStatus;
   created_at: string;
+  next_action?: string | null;
+  next_action_at?: string | null;
 };
 
 const columns: { id: CfaCompanyStatus; label: string; accent: string }[] = [
@@ -104,14 +107,15 @@ export function CfaCompanyPipelineClient({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [contactRole, setContactRole] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [track1, setTrack1] = useState("");
-  const [softSkills, setSoftSkills] = useState<string[]>([]);
   const [selected, setSelected] = useState<CfaCompany | null>(null);
   const [draft, setDraft] = useState<CompanyDraft | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editMessage, setEditMessage] = useState("");
+  const [lostCompany, setLostCompany] = useState<CfaCompany | null>(null);
+  const [lostReason, setLostReason] = useState("");
+  const router = useRouter();
 
   async function load() {
     setLoading(true);
@@ -144,14 +148,19 @@ export function CfaCompanyPipelineClient({
     [companies],
   );
 
-  async function changeStatus(company: CfaCompany, status: CfaCompanyStatus) {
+  async function changeStatus(company: CfaCompany, status: CfaCompanyStatus, reason = "") {
+    if (status === "not_recruited" && !reason) {
+      setLostCompany(company);
+      setLostReason("");
+      return;
+    }
     setUpdating(company.id);
     setError("");
     try {
       const response = await fetch(apiPath, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: company.id, status }),
+        body: JSON.stringify({ id: company.id, status, reason }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Mise à jour impossible");
@@ -174,17 +183,15 @@ export function CfaCompanyPipelineClient({
     setLastName("");
     setEmail("");
     setPhone("");
-    setContactRole("");
     setQuantity(1);
     setTrack1("");
-    setSoftSkills([]);
-  }
-
-  function toggleSkill(skill: string) {
-    setSoftSkills((current) => (current.includes(skill) ? current.filter((item) => item !== skill) : [...current, skill]));
   }
 
   function openCompany(company: CfaCompany) {
+    if (!readOnly) {
+      router.push(`/super/cfa/entreprises/${company.id}`);
+      return;
+    }
     setSelected(company);
     setDraft(draftFromCompany(company));
     setEditMessage("");
@@ -270,16 +277,14 @@ export function CfaCompanyPipelineClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyName,
-          companyAddress,
           siret,
+          contactName: `${firstName} ${lastName}`.trim(),
           firstName,
           lastName,
-          contactRole,
           email,
           phone,
           apprenticesWanted: quantity,
           apprenticeTrack1: track1,
-          softSkills: softSkills.join(" · "),
         }),
       });
       const result = await response.json();
@@ -287,6 +292,7 @@ export function CfaCompanyPipelineClient({
       setCompanies((current) => [result.company, ...current]);
       resetForm();
       setOpen(false);
+      if (result.company?.id) router.push(`/super/cfa/entreprises/${result.company.id}`);
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "Création impossible");
     } finally {
@@ -331,7 +337,7 @@ export function CfaCompanyPipelineClient({
 
       {open ? (
         <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
-          <form onSubmit={(event) => void createCompany(event)} className="super-nav-dropdown my-8 w-full max-w-2xl rounded-2xl p-5 sm:p-6">
+          <form onSubmit={(event) => void createCompany(event)} className="super-nav-dropdown my-8 w-full max-w-lg rounded-2xl p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">CRM Entreprise</p>
@@ -343,15 +349,13 @@ export function CfaCompanyPipelineClient({
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                Numéro SIRET
+                SIRET ou nom
                 <input
                   value={siret}
                   onChange={(event) => void lookupSiret(event.target.value)}
-                  required
                   inputMode="numeric"
-                  minLength={14}
                   maxLength={14}
-                  placeholder="14 chiffres"
+                  placeholder="SIRET, 14 chiffres"
                   className={cn(fieldClass, "mt-1")}
                 />
                 {lookup ? <span className="mt-1 block text-[11px] font-medium text-indigo-200">{lookup}</span> : null}
@@ -377,10 +381,6 @@ export function CfaCompanyPipelineClient({
                 <input value={phone} onChange={(event) => setPhone(event.target.value)} className={cn(fieldClass, "mt-1")} />
               </label>
               <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Qualité
-                <input value={contactRole} onChange={(event) => setContactRole(event.target.value)} placeholder="Dirigeant, RH, tuteur…" className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
                 Quantité
                 <input
                   value={quantity}
@@ -403,41 +403,43 @@ export function CfaCompanyPipelineClient({
                   ))}
                 </select>
               </label>
-              <fieldset className="sm:col-span-2">
-                <legend className="text-xs font-semibold text-[#d5e0f2]">Soft skills pour le ou les postes</legend>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {SOFT_SKILLS.map((skill) => {
-                    const active = softSkills.includes(skill.titre);
-                    return (
-                      <button
-                        key={skill.id}
-                        type="button"
-                        onClick={() => toggleSkill(skill.titre)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-medium",
-                          active ? "border-[#635BFF] bg-[#635BFF] text-white" : "border-white/15 text-[#d5e0f2] hover:bg-white/10",
-                        )}
-                      >
-                        {skill.titre}
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg px-4 text-sm font-semibold text-[#d5e0f2] hover:bg-white/10">
                 Annuler
               </button>
               <button type="submit" disabled={saving} className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white disabled:opacity-60">
-                {saving ? "Création…" : "Créer l’entreprise"}
+                {saving ? "Création…" : "Créer et ouvrir la fiche"}
               </button>
             </div>
           </form>
         </div>
       ) : null}
 
-      {selected && draft ? (
+      {lostCompany ? (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-[#050d1d]/75 p-4">
+          <form
+            className="super-nav-dropdown w-full max-w-md rounded-2xl p-5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const company = lostCompany;
+              setLostCompany(null);
+              void changeStatus(company, "not_recruited", lostReason);
+            }}
+          >
+            <h2 className="text-lg font-bold text-[#f8fbff]">Marquer perdu</h2>
+            <label className="mt-3 block text-xs font-semibold text-[#d5e0f2]">Motif
+              <textarea required value={lostReason} onChange={(event) => setLostReason(event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-white/15 bg-[#10243f] px-3 py-2 text-sm text-white" />
+            </label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" className="h-10 px-4 text-sm text-[#d5e0f2]" onClick={() => setLostCompany(null)}>Annuler</button>
+              <button type="submit" className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white">Confirmer</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      {readOnly && selected && draft ? (
         <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
           <form onSubmit={(event) => void saveCompany(event)} className="super-nav-dropdown my-8 w-full max-w-2xl rounded-2xl p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
@@ -596,6 +598,11 @@ export function CfaCompanyPipelineClient({
                           <div className="min-w-0">
                             <h3 className="truncate text-sm font-semibold text-gray-950">{company.company_name}</h3>
                             <p className="mt-1 truncate text-xs text-gray-500">{company.siret || "SIRET à préciser"}</p>
+                            {company.next_action ? (
+                              <p className={`mt-1 text-xs font-semibold ${company.next_action_at && new Date(company.next_action_at).getTime() < Date.now() ? "text-rose-600" : "text-gray-700"}`}>
+                                {company.next_action} · {company.next_action_at ? new Date(company.next_action_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}
+                              </p>
+                            ) : null}
                           </div>
                           <Building2 className="h-4 w-4 shrink-0 text-indigo-500" />
                         </div>

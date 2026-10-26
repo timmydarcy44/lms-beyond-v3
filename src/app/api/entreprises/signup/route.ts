@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       firstName,
       lastName,
       company: companyName,
+      siret: parsed.data.siret,
     });
     if (!prepared.ok) {
       return NextResponse.json({ error: prepared.error }, { status: prepared.status });

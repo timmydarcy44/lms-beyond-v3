@@ -279,7 +279,13 @@ export async function PATCH(request: Request) {
     patch.motivation_text = motivationText || null;
     patch.motivation_media_url = motivationMediaUrl || null;
     patch.alternance_status = alternanceStatus;
+    patch.share_with_companies = Boolean(body.shareWithCompanies);
+    if (body.shareWithCompanies) patch.share_with_companies_at = new Date().toISOString();
     nextStatus = "interview";
+  } else if (action === "share_companies") {
+    patch.share_with_companies = Boolean(body.shareWithCompanies);
+    patch.share_with_companies_at = body.shareWithCompanies ? new Date().toISOString() : null;
+    nextStatus = current.status;
   } else if (action === "administrative" && current.status === "administrative") {
     const rawCerfa =
       body.cerfaData && typeof body.cerfaData === "object"
@@ -338,14 +344,21 @@ export async function PATCH(request: Request) {
   }
 
   patch.status = nextStatus;
-  const { data, error } = await db
+  let { data, error } = await db
     .from("cfa_applications")
     .update(patch)
     .eq("id", current.id)
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error && /share_with_companies/i.test(error.message)) {
+    delete patch.share_with_companies;
+    delete patch.share_with_companies_at;
+    const retry = await db.from("cfa_applications").update(patch).eq("id", current.id).select("*").single();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error || !data) return NextResponse.json({ error: error?.message || "Enregistrement impossible" }, { status: 400 });
 
   if (action === "dossier") {
     const challengeSummary = CFA_CHALLENGE_QUESTIONS.map((question) => {

@@ -60,7 +60,7 @@ export async function loadHomeApplication(db: SupabaseClient, userId: string): P
   const phone = text(current.phone) || text(person.phone) || text(person.telephone);
   const place = text(current.city) || text(person.city);
   const cvPath = text(current.cv_path) || text(person.cv_url);
-  const profileDone = phone.replace(/\D/g, "").length >= 8 && place.length >= 2 && Boolean(cvPath);
+  const profileDone = phone.replace(/\D/g, "").length >= 8 && place.length >= 2;
 
   const [soft, disc, idmc] = await Promise.all([
     fetchLatestSoftSkillsResult(db, userId, "scores"),

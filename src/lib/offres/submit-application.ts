@@ -3,6 +3,7 @@ import type { CfaTestKind } from "@/lib/cfa/assessment-shares";
 import { resolveOfferCursus } from "@/lib/cfa/profile-share";
 import { sendEmail } from "@/lib/email/resend-client";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
+import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
 import { testsComplete } from "@/lib/offres/application-home";
 
 export async function submitOfferApplication(
@@ -24,7 +25,7 @@ export async function submitOfferApplication(
   const phone = String(row.phone || person.phone || "");
   const city = String(row.city || person.city || "");
   const cv = String(row.cv_path || person.cv_url || "");
-  if (phone.replace(/\D/g, "").length < 8 || city.trim().length < 2 || !cv) {
+  if (phone.replace(/\D/g, "").length < 8 || city.trim().length < 2) {
     return { ok: false as const, status: 400, error: "Complétez votre profil avant d'envoyer la candidature." };
   }
   const tests = await testsComplete(db, input.userId);
@@ -67,7 +68,10 @@ export async function submitOfferApplication(
       to: email,
       from: EDGE_COCKPIT_FROM,
       subject: "Candidature envoyée",
-      html: `<p>Bonjour ${escapeHtml(person.first_name || "")},</p><p>Votre candidature pour ${escapeHtml(job.title || "l'offre")} est envoyée. Vous aurez une réponse sous 10 jours, par e-mail et dans votre espace.</p>`,
+      html: buildEdgeEmailShell({
+        title: "Candidature envoyée",
+        bodyHtml: `<p style="margin:0 0 16px;">Bonjour ${escapeHtml(person.first_name || "")},</p><p style="margin:0;">Votre candidature pour ${escapeHtml(job.title || "l'offre")} est envoyée. Vous aurez une réponse sous 10 jours, par e-mail et dans votre espace.</p>`,
+      }),
       skipBcc: true,
     });
   }

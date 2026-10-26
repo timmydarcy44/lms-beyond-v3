@@ -27,7 +27,7 @@ export default async function PostulerPage({ params, searchParams }: Params) {
   const session = await getSession();
   if (session?.id) {
     await ensureOfferDraft(db, { userId: session.id, slug, email: session.email });
-    redirect("/dashboard/apprenant");
+    redirect("/offres/candidature");
   }
   return (
     <div className={`${manrope.className} min-h-screen bg-[#070C1C] text-white`}>

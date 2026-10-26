@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
+import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
 import { sendEmail } from "@/lib/email/resend-client";
 import { formatEntrepriseOtp } from "@/lib/emails/templates/entreprise-otp";
 import { grantUserRole, type AccountRole } from "@/lib/auth/user-roles";
@@ -28,11 +29,11 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;");
 }
 
-function shell(title: string, body: string, code?: string) {
+function shell(title: string, body: string, code?: string, cta?: { label: string; href: string }) {
   const block = code
-    ? `<p style="margin:28px 0 0;font-size:36px;font-weight:800;letter-spacing:4px;">${escapeHtml(formatEntrepriseOtp(code))}</p><p style="color:#5C6370;">Valable 10 minutes.</p>`
+    ? `<p style="margin:28px 0 0;font-size:36px;font-weight:800;letter-spacing:4px;color:#111111;">${escapeHtml(formatEntrepriseOtp(code))}</p><p style="margin:8px 0 0;color:#5C6370;">Valable 10 minutes.</p>`
     : "";
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#111;padding:32px;"><p style="font-weight:800;">Byound</p><h1 style="font-size:28px;">${title}</h1>${body}${block}</div>`;
+  return buildEdgeEmailShell({ title, bodyHtml: `${body}${block}`, cta });
 }
 
 function message(input: {
@@ -58,7 +59,6 @@ function message(input: {
     };
   }
   if (input.context === "tuteur_notice") {
-    const href = escapeHtml(input.accessUrl || "https://www.byound.fr/tuteur/connexion");
     const namedLearner = input.learnerName.trim();
     const designation = namedLearner
       ? `${cfa} vous a désigné tuteur de ${escapeHtml(namedLearner)} chez ${company}.`
@@ -67,7 +67,9 @@ function message(input: {
       subject: `${input.cfaName} vous a désigné tuteur`,
       html: shell(
         "Vous êtes tuteur",
-        `<p>${designation}</p><p style="margin-top:24px;"><a href="${href}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;border-radius:999px;padding:14px 22px;font-weight:800;">Indiquer mon e-mail</a></p><p style="color:#5C6370;">La page demande votre adresse e-mail, puis « Envoyer un code ». Le code ouvre l'espace tuteur.</p>`,
+        `<p>${designation}</p><p style="margin:8px 0 0;color:#5C6370;">La page demande votre adresse e-mail, puis « Envoyer un code ». Le code ouvre l'espace tuteur.</p>`,
+        undefined,
+        { label: "Indiquer mon e-mail", href: input.accessUrl || "https://www.byound.fr/tuteur/connexion" },
       ),
     };
   }

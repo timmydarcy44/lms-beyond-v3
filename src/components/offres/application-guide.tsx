@@ -8,7 +8,7 @@ import { IDMC_QUESTION_COUNT } from "@/lib/idmc/idmc-questions";
 import type { HomeApplication } from "@/lib/offres/application-home";
 import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 
-const RETURN = "/dashboard/apprenant";
+const RETURN = "/offres/candidature";
 
 export function ApplicationGuide({ application }: { application: HomeApplication }) {
   const router = useRouter();
@@ -103,7 +103,7 @@ export function ApplicationGuide({ application }: { application: HomeApplication
   return (
     <section className="mb-8 text-white">
       <div className="rounded-[32px] bg-[#15171E] p-6 shadow-[0_0_80px_rgba(110,91,255,0.2)]">
-        <p className="text-sm text-white/55">Accueil · bienvenue {application.firstName || ""} · votre candidature à</p>
+        <p className="text-sm text-white/55">Bienvenue {application.firstName || ""} · votre candidature à</p>
         <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">{application.title}{application.city ? ` · ${application.city}` : ""}</h2>
         <p className="mt-4 text-4xl font-extrabold">{done} <span className="text-lg text-white/50">/ 3 étapes</span></p>
         <div className="mt-3 flex gap-2" aria-hidden>
@@ -131,12 +131,12 @@ export function ApplicationGuide({ application }: { application: HomeApplication
           ) : (
             <form onSubmit={(event) => void saveProfile(event)}>
               <p className="font-extrabold">1 · Compléter mon profil <span className="ml-2 rounded-full bg-[#6E5BFF]/20 px-2 py-0.5 text-xs">2 min</span></p>
-              <p className="mt-1 text-sm text-white/60">Votre CV et votre téléphone.</p>
+              <p className="mt-1 text-sm text-white/60">Votre téléphone et votre ville. Le CV est facultatif.</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="text-sm">Téléphone<input name="phone" required value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-1 h-11 w-full rounded-xl bg-[#0E1016] px-3" /></label>
                 <label className="text-sm">Ville<input name="city" required value={place} onChange={(event) => setPlace(event.target.value)} className="mt-1 h-11 w-full rounded-xl bg-[#0E1016] px-3" /></label>
               </div>
-              <label className="mt-3 block text-sm">CV PDF ou DOCX, 5 Mo maximum<input name="cv" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="mt-2 block text-sm" /></label>
+              <label className="mt-3 block text-sm">CV, facultatif · PDF ou DOCX, 5 Mo maximum<input name="cv" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="mt-2 block text-sm" /></label>
               <label className="mt-3 block text-sm">Un mot pour l&apos;entreprise (facultatif)<input name="pitch" value={pitch} onChange={(event) => setPitch(event.target.value)} placeholder="Pourquoi ce poste vous intéresse, en une phrase" className="mt-1 h-11 w-full rounded-xl bg-[#0E1016] px-3" /></label>
               {error ? <p className="mt-3 text-sm text-[#FDA4AF]">{error}</p> : null}
               <button type="submit" disabled={busy} className="mt-4 h-11 rounded-full bg-[#6E5BFF] px-4 text-sm font-semibold disabled:opacity-60">{busy ? "Enregistrement…" : "Enregistrer et passer aux tests"}</button>
@@ -153,7 +153,7 @@ export function ApplicationGuide({ application }: { application: HomeApplication
                 <TestRow name="Profil comportemental" detail={`${DISC_QUESTION_COUNT} questions · 8 min`} done={application.tests.disc} href={`/dashboard/apprenant/disc/test?retour=${RETURN}`} next={application.tests.soft && !application.tests.disc} />
                 <TestRow name="Maîtrise cognitive" detail={`${IDMC_QUESTION_COUNT} questions · 7 min`} done={application.tests.idmc} href={`/dashboard/apprenant/idmc/test?retour=${RETURN}`} next={application.tests.soft && application.tests.disc && !application.tests.idmc} />
               </ul>
-              <p className="mt-3 text-xs text-white/50">Chaque test s&apos;ouvre ici, dans votre espace. Vous pouvez vous arrêter et reprendre plus tard.</p>
+              <p className="mt-3 text-xs text-white/50">Chaque test s&apos;ouvre à part. Vous revenez ici ensuite, et vous pouvez vous arrêter pour reprendre plus tard.</p>
             </>
           ) : (
             <p className="mt-2 text-sm text-white/55">Disponibles dès que votre profil est complété.</p>
@@ -170,7 +170,7 @@ export function ApplicationGuide({ application }: { application: HomeApplication
                 <Switch label="Profil comportemental" checked={share.disc} onChange={(value) => setShare({ ...share, disc: value })} />
                 <Switch label="Maîtrise cognitive" checked={share.idmc} onChange={(value) => setShare({ ...share, idmc: value })} />
               </div>
-              <p className="mt-3 text-xs text-white/55">Votre CV et votre profil partent toujours. Les résultats de tests, seulement ceux que vous activez.</p>
+              <p className="mt-3 text-xs text-white/55">Votre profil part toujours. Le CV aussi, seulement s&apos;il est déposé. Les résultats de tests, seulement ceux que vous activez.</p>
               {error && application.profileDone ? <p className="mt-3 text-sm text-[#FDA4AF]">{error}</p> : null}
               <button type="button" disabled={busy} onClick={() => void sendApplication()} className="mt-4 h-11 rounded-full bg-[#6E5BFF] px-4 text-sm font-semibold disabled:opacity-60">
                 {busy ? "Envoi…" : "Envoyer ma candidature"}

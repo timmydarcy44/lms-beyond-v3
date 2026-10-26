@@ -3,7 +3,7 @@ import { buildPostTestRedirectUrl } from "@/lib/entreprise/enterprise-share-cons
 
 export function applicationReturn(fallback: string) {
   if (typeof window === "undefined") return fallback;
-  return new URLSearchParams(window.location.search).get("retour") === "/dashboard/apprenant" ? "/dashboard/apprenant" : fallback;
+  return new URLSearchParams(window.location.search).get("retour") === "/offres/candidature" ? "/offres/candidature" : fallback;
 }
 
 /** Après un test : redirige vers l'overlay RGPD si le collaborateur est rattaché à une entreprise. */

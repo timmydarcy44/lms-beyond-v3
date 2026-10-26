@@ -50,14 +50,8 @@ export async function POST(request: Request) {
     cvPath = uploaded;
     await db.from("profiles").update({ cv_url: uploaded, cv_file_name: file.name.slice(0, 180) }).eq("id", session.id);
   }
-  if (!cvPath) {
-    const profile = await db.from("profiles").select("cv_url").eq("id", session.id).maybeSingle();
-    cvPath = String((profile.data as { cv_url?: string | null } | null)?.cv_url ?? "");
-  }
-  if (!cvPath) return NextResponse.json({ error: "Déposez votre CV." }, { status: 400 });
-
   await db.from("profiles").update({ phone, city }).eq("id", session.id);
-  const saved = await db.from("applications").update({ phone, city, pitch, cv_path: cvPath }).eq("id", id);
+  const saved = await db.from("applications").update({ phone, city, pitch, ...(cvPath ? { cv_path: cvPath } : {}) }).eq("id", id);
   if (saved.error && !/column|schema cache/i.test(saved.error.message)) {
     return NextResponse.json({ error: "Enregistrement impossible." }, { status: 400 });
   }

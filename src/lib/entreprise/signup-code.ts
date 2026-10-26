@@ -255,7 +255,7 @@ export async function verifyEntrepriseCode(
       email,
     });
     await db.from("signup_requests").update({ verified_at: new Date().toISOString() }).eq("id", open.id);
-    return { ok: true, destination: "/dashboard/apprenant" };
+    return { ok: true, destination: "/offres/candidature" };
   }
   const activated = await afterSuccessfulAuth(db, { userId, email: verified.data.user.email || email });
   if (open.company === "context:tuteur" || (activated.activatedTutor && open.mode !== "signup")) {

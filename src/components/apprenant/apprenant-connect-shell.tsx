@@ -78,7 +78,6 @@ export function ApprenantConnectShell({
   const [editOpen, setEditOpen] = useState(false);
   const [objectiveModalOpen, setObjectiveModalOpen] = useState(false);
   const [isParticulier, setIsParticulier] = useState(false);
-  const [applicationStepsLeft, setApplicationStepsLeft] = useState(0);
   const [snippetVersion, setSnippetVersion] = useState(0);
   const [shareCopied, setShareCopied] = useState(false);
   const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
@@ -165,13 +164,6 @@ export function ApprenantConnectShell({
   useEffect(() => {
     void loadProfile();
   }, [loadProfile, snippetVersion]);
-
-  useEffect(() => {
-    void fetch("/api/offres/candidature", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((result: { remaining?: number }) => setApplicationStepsLeft(Number(result.remaining) || 0))
-      .catch(() => setApplicationStepsLeft(0));
-  }, [pathname]);
 
   useEffect(() => {
     if (openedPostDiscProfileRef.current) return;
@@ -539,9 +531,6 @@ export function ApprenantConnectShell({
                         }`}
                       />
                       <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
-                      {item.href === "/dashboard/apprenant" && applicationStepsLeft > 0 ? (
-                        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E5BFF] px-1 text-[10px] font-bold text-white">{applicationStepsLeft}</span>
-                      ) : null}
                     </Link>
                   );
                 })}
@@ -771,9 +760,6 @@ export function ApprenantConnectShell({
                                 }`}
                               />
                               <span className="truncate">{item.label}</span>
-                              {item.href === "/dashboard/apprenant" && applicationStepsLeft > 0 ? (
-                                <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E5BFF] px-1 text-[10px] font-bold text-white">{applicationStepsLeft}</span>
-                              ) : null}
                             </Link>
                           );
                         })}

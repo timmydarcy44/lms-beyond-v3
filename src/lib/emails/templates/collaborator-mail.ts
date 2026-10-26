@@ -1,4 +1,4 @@
-import { EDGE_EMAIL_LOGO_URL, escapeEdgeEmailHtml } from "@/lib/emails/edge-email-shell";
+import { edgeEmailBrand, edgeEmailButton, escapeEdgeEmailHtml } from "@/lib/emails/edge-email-shell";
 
 function layout(params: {
   preheader: string;
@@ -8,16 +8,7 @@ function layout(params: {
   cta?: { label: string; href: string };
   footnote?: string;
 }): string {
-  const cta = params.cta
-    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0 0;">
-        <tr><td style="background:#111111;border-radius:999px;">
-          <a href="${params.cta.href}" target="_blank" rel="noopener noreferrer"
-             style="display:inline-block;padding:16px 28px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;letter-spacing:-0.02em;">
-            ${escapeEdgeEmailHtml(params.cta.label)}
-          </a>
-        </td></tr>
-      </table>`
-    : "";
+  const cta = params.cta ? edgeEmailButton(params.cta.label, params.cta.href) : "";
   const extra = params.extra
     ? `<p style="margin:18px 0 0;max-width:440px;font-size:16px;line-height:1.55;color:#5C6370;">${params.extra}</p>`
     : "";
@@ -38,11 +29,7 @@ function layout(params: {
     <tr><td align="left" style="padding:56px 28px 72px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
         <tr><td>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-            <tr><td style="background:#111111;border-radius:14px;padding:12px 16px;">
-              <img src="${EDGE_EMAIL_LOGO_URL}" alt="Byound" width="88" style="display:block;width:88px;height:auto;border:0;" />
-            </td></tr>
-          </table>
+          ${edgeEmailBrand("light")}
           <h1 style="margin:36px 0 0;font-size:40px;line-height:1.05;font-weight:800;letter-spacing:-1.4px;color:#111111;">${escapeEdgeEmailHtml(params.title)}</h1>
           <p style="margin:14px 0 0;max-width:440px;font-size:16px;line-height:1.55;color:#5C6370;">${params.intro}</p>
           ${extra}

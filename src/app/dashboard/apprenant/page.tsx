@@ -1,7 +1,4 @@
 import { ApprenantDashboardClient } from "@/components/apprenant/apprenant-dashboard-client";
-import { ApplicationGuide } from "@/components/offres/application-guide";
-import { loadHomeApplication } from "@/lib/offres/application-home";
-import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   buildPsgApprenantDemoBadges,
   buildPsgApprenantDemoParcours,
@@ -37,18 +34,12 @@ export default async function ApprenantHomePage() {
     ? { title: String(primary.title ?? "Parcours"), href: String(primary.href ?? "") }
     : null;
 
-  const db = getServiceRoleClient();
-  const application = session?.id && db ? await loadHomeApplication(db, session.id) : null;
-
   return (
-    <>
-    {application ? <ApplicationGuide application={application} /> : null}
     <ApprenantDashboardClient
       initialView="home"
       primaryParcours={primaryParcours?.href ? primaryParcours : null}
       visibleOpenBadges={visibleOpenBadges}
       earnedOpenBadges={earnedOpenBadges}
     />
-    </>
   );
 }

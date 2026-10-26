@@ -68,7 +68,7 @@ export function PostulerOffer({ offer, login }: { offer: PublicOffer; login: boo
       setError(result.error || "Code incorrect ou expiré.");
       return;
     }
-    router.push(result.destination || "/dashboard/apprenant");
+    router.push(result.destination || "/offres/candidature");
     router.refresh();
   }
 

@@ -1,4 +1,5 @@
 import { sendEmail, type EmailAttachment } from "@/lib/email/resend-client";
+import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
 import { qualiopiAppBaseUrl } from "@/lib/crm/qualiopi-shared";
 
 function escapeHtml(value: string) {
@@ -80,19 +81,12 @@ export async function sendQualiopiStartPack(params: {
   const results: { email: string; success: boolean; error?: string }[] = [];
   for (const attendee of params.attendees) {
     const link = `${qualiopiAppBaseUrl()}/qualiopi/emarger/${attendee.token}`;
-    const html = `
-      <div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111">
-        <p>Bonjour ${escapeHtml(attendee.full_name)},</p>
-        <p>
-          La formation <strong>${escapeHtml(params.courseName)}</strong>
-          pour <strong>${escapeHtml(params.companyName)}</strong> est en cours.
-        </p>
-        <p>Merci d'émarger en cliquant sur le lien ci-dessous. L'heure et le jour de signature sont enregistrés pour le dossier Qualiopi.</p>
-        <p><a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Émarger maintenant</a></p>
-        <p>Le livret d'accueil est joint à ce message.</p>
-        <p>Cordialement,<br/>${escapeHtml(params.fromName || "Byound")}</p>
-      </div>
-    `;
+    const html = buildEdgeEmailShell({
+      title: "Émargement",
+      bodyHtml: `<p style="margin:0 0 16px;">Bonjour ${escapeHtml(attendee.full_name)},</p><p style="margin:0 0 16px;">La formation <strong>${escapeHtml(params.courseName)}</strong> pour <strong>${escapeHtml(params.companyName)}</strong> est en cours.</p><p style="margin:0;">Merci d'émarger. L'heure et le jour de signature sont enregistrés pour le dossier Qualiopi. Le livret d'accueil est joint à ce message.</p>`,
+      cta: { label: "Émarger maintenant", href: link },
+      footerNote: `Cordialement, ${params.fromName || "Byound"}`,
+    });
     const sent = await sendEmail({
       to: attendee.email,
       from: params.fromEmail,
@@ -115,18 +109,12 @@ export async function sendQualiopiSatisfactionPack(params: {
   const results: { email: string; success: boolean; error?: string }[] = [];
   for (const attendee of params.attendees) {
     const link = `${qualiopiAppBaseUrl()}/qualiopi/satisfaction/${attendee.satisfaction_token}`;
-    const html = `
-      <div style="font-family:system-ui,sans-serif;line-height:1.6;color:#111">
-        <p>Bonjour ${escapeHtml(attendee.full_name)},</p>
-        <p>
-          La formation <strong>${escapeHtml(params.courseName)}</strong>
-          pour <strong>${escapeHtml(params.companyName)}</strong> est terminée.
-        </p>
-        <p>Pour clôturer le dossier Qualiopi, merci de répondre au questionnaire de satisfaction :</p>
-        <p><a href="${link}" style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:999px;text-decoration:none">Questionnaire de satisfaction</a></p>
-        <p>Cordialement,<br/>${escapeHtml(params.fromName || "Byound")}</p>
-      </div>
-    `;
+    const html = buildEdgeEmailShell({
+      title: "Questionnaire de satisfaction",
+      bodyHtml: `<p style="margin:0 0 16px;">Bonjour ${escapeHtml(attendee.full_name)},</p><p style="margin:0;">La formation <strong>${escapeHtml(params.courseName)}</strong> pour <strong>${escapeHtml(params.companyName)}</strong> est terminée. Pour clôturer le dossier Qualiopi, merci de répondre au questionnaire.</p>`,
+      cta: { label: "Répondre", href: link },
+      footerNote: `Cordialement, ${params.fromName || "Byound"}`,
+    });
     const sent = await sendEmail({
       to: attendee.email,
       from: params.fromEmail,

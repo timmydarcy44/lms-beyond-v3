@@ -2,8 +2,9 @@ import { createHmac } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendEmail } from "@/lib/email/resend-client";
-import { testsComplete } from "@/lib/offres/application-home";
 import { publicAppUrl } from "@/lib/env";
+import { testsComplete } from "@/lib/offres/application-home";
+import { buildEdgeEmailShell } from "@/lib/emails/edge-email-shell";
 
 function secret() {
   return process.env.CRON_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "byound-offer-reminders";
@@ -59,7 +60,15 @@ export async function sendOfferReminders(db: SupabaseClient) {
       to: person.email,
       from: EDGE_COCKPIT_FROM,
       subject,
-      html: `<p>Bonjour ${person.first_name || ""},</p><p>${body}</p><p><a href="${publicAppUrl()}/dashboard/apprenant">Reprendre ma candidature</a></p><p><a href="${stop}">Ne plus recevoir ces rappels</a></p>`,
+      html: buildEdgeEmailShell({
+        title: slot === "reminder_7_at" ? "Dernier rappel" : "Votre candidature",
+        bodyHtml: `<p style="margin:0 0 16px;">Bonjour ${person.first_name || ""},</p><p style="margin:0;">${body}</p>`,
+        cta: { label: "Reprendre ma candidature", href: `${publicAppUrl()}/offres/candidature` },
+        footerNote: "Vous pouvez arrêter ces rappels.",
+      }).replace(
+        "Byound ·",
+        `<a href="${stop}" style="color:#8A8F98;text-decoration:underline;">Ne plus recevoir ces rappels</a><br/>Byound ·`,
+      ),
       skipBcc: true,
     });
     if (mailed.success) {

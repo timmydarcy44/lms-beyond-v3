@@ -118,6 +118,8 @@ export type PipelineDeal = PipelineDealCommercial & {
   catalog_email_sent_at?: string | null;
   catalog_email_resend_id?: string | null;
   catalog_email_opened_at?: string | null;
+  offers_business?: boolean | null;
+  offers_school?: boolean | null;
   created_at: string;
   updated_at: string;
 };

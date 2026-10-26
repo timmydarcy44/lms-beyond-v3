@@ -90,6 +90,8 @@ function SectionHead({
   soft,
   icon,
   action,
+  expanded,
+  onToggle,
 }: {
   step: string;
   title: string;
@@ -99,6 +101,8 @@ function SectionHead({
   soft: string;
   icon: ReactNode;
   action?: ReactNode;
+  expanded?: boolean;
+  onToggle?: () => void;
 }) {
   const ink = color === "#E7A92C" || color === "#14A37F" ? "#04140C" : "#FFFFFF";
   return (
@@ -113,6 +117,11 @@ function SectionHead({
       </div>
       <div className="flex items-center gap-2">
         {action}
+        {onToggle ? (
+          <button type="button" aria-expanded={expanded !== false} onClick={onToggle} className="rounded-full border border-[#26304F] px-3 py-1 text-xs font-semibold">
+            {expanded === false ? "Déplier" : "Replier"}
+          </button>
+        ) : null}
         <span className="rounded-full px-3 py-1 text-xs font-extrabold" style={{ background: `${color}24`, color: soft }}>{pill}</span>
       </div>
     </header>
@@ -181,6 +190,7 @@ export function FicheApprenant({ id }: { id: string }) {
   const [linkQuery, setLinkQuery] = useState("");
   const [linkHits, setLinkHits] = useState<Array<{ id: string; firstName: string; lastName: string; email: string; phone: string; sameName: boolean; samePhone: boolean; linkedElsewhere: boolean }>>([]);
   const [linkPending, setLinkPending] = useState<{ id: string; label: string } | null>(null);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ entreprise: true, candidature: true, inscription: true, documents: true, entretien: true });
   const [saveHint, setSaveHint] = useState("");
   const loadedCerfa = useRef("");
 
@@ -390,7 +400,7 @@ export function FicheApprenant({ id }: { id: string }) {
           <div className="flex flex-wrap gap-2">
             <button type="button" className="h-11 rounded-full border border-[#FF8A98] px-4 text-sm font-semibold text-[#FF8A98]" onClick={() => setRejectOpen(true)}>Marquer non retenu</button>
             <a href={`mailto:${application.email}`} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#26304F] px-4 text-sm font-semibold"><Mail className="h-4 w-4" />Envoyer un email</a>
-            <a href="#entretien" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"><Calendar className="h-4 w-4" />Planifier l'entretien</a>
+            <a href="#entretien" onClick={() => setOpenSections((current) => ({ ...current, entretien: true }))} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"><Calendar className="h-4 w-4" />Planifier l'entretien</a>
           </div>
         </div>
         <div className="mt-6">
@@ -437,7 +447,7 @@ export function FicheApprenant({ id }: { id: string }) {
           { id: "documents", label: "Documents", state: `${docsReceived} / 3 reçus`, color: "#E7A92C", done: docsReceived === DOCS.length },
           { id: "entretien", label: "Entretien", state: application.interview_at ? "Planifié" : "À planifier", color: "#D9459E", done: Boolean(application.interview_at) },
         ].map((tile) => (
-          <a key={tile.id} href={`#${tile.id}`} className={`min-w-[180px] rounded-[20px] border bg-[#111831] px-3 py-3 text-sm min-[900px]:min-w-0 ${visibleSection === tile.id ? "border-[#6E5BFF]" : "border-[#1A2340]"}`}>
+          <a key={tile.id} href={`#${tile.id}`} onClick={() => setOpenSections((current) => ({ ...current, [tile.id]: true }))} className={`min-w-[180px] rounded-[20px] border bg-[#111831] px-3 py-3 text-sm min-[900px]:min-w-0 ${visibleSection === tile.id ? "border-[#6E5BFF]" : "border-[#1A2340]"}`}>
             <span className="flex items-center gap-2 font-extrabold">
               <span className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold" style={{ background: tile.color, color: tile.color === "#E7A92C" || tile.color === "#14A37F" ? "#04140C" : "#fff" }}>{tile.done ? "✓" : ""}</span>
               {tile.label}
@@ -449,7 +459,7 @@ export function FicheApprenant({ id }: { id: string }) {
 
       <div className="mt-4 grid items-start gap-4 min-[1200px]:grid-cols-[minmax(0,1.4fr)_320px]">
         <div className="space-y-4">
-          <section id="entreprise" className="scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#6E5BFF] bg-[#111831]">
+          <section id="entreprise" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#6E5BFF] bg-[#111831] ${openSections.entreprise ? "" : "[&>*:not(header)]:hidden"}`}>
             <header className="flex items-start justify-between gap-3 border-b border-[#1A2340] px-5 py-4" style={{ background: "linear-gradient(90deg, rgba(110,91,255,.18), transparent 75%)" }}>
               <div className="flex gap-3">
                 <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#6E5BFF]"><Building2 className="h-5 w-5" /></span>
@@ -459,7 +469,10 @@ export function FicheApprenant({ id }: { id: string }) {
                   <p className="text-xs text-[#AEB6CC]">Rattachez l'alternant à son entreprise d'accueil et à son maître d'apprentissage.</p>
                 </div>
               </div>
-              <span className="rounded-full bg-[#241C4A] px-3 py-1 text-xs font-extrabold text-[#B9AFFF]">{placementLabel}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" aria-expanded={openSections.entreprise} onClick={() => setOpenSections((current) => ({ ...current, entreprise: !current.entreprise }))} className="rounded-full border border-[#26304F] px-3 py-1 text-xs font-semibold">{openSections.entreprise ? "Replier" : "Déplier"}</button>
+                <span className="rounded-full bg-[#241C4A] px-3 py-1 text-xs font-extrabold text-[#B9AFFF]">{placementLabel}</span>
+              </div>
             </header>
             <div className="grid gap-4 p-5 md:grid-cols-2">
               <div className="rounded-2xl bg-[#0B1122] p-4 md:col-span-2">
@@ -574,15 +587,13 @@ export function FicheApprenant({ id }: { id: string }) {
                       <button type="button" className="rounded-full border border-[#26304F] px-3 py-1.5 text-sm font-semibold" onClick={() => { setPickingTutor(true); setPendingTutorId(""); }}>Changer</button>
                     </div>
                     <p className={`mt-3 text-xs font-semibold ${tutor.activated_at ? "text-[#6BE3C0]" : tutor.invited_at ? "text-[#B9AFFF]" : "text-[#5D6785]"}`}>
-                      {tutor.activated_at ? "Compte actif" : tutor.invited_at ? "Code de connexion envoyé · en attente de première connexion" : "Pas encore assigné"}
+                      {tutor.activated_at ? "Compte actif" : tutor.invited_at ? "E-mail envoyé · en attente de première connexion" : "Pas encore assigné"}
                     </p>
-                    {tutor.activated_at ? null : (
-                      <button type="button" disabled={busy || (tutor.last_code_sent_at ? now - new Date(tutor.last_code_sent_at).getTime() < 60_000 : false)} className="mt-2 text-sm font-semibold text-[#B9AFFF] disabled:opacity-50" onClick={() => void send("/api/super-admin/crm/cfa/placements", "POST", { action: "resend_code", applicationId: id, tutorId: tutor.id })}>
-                        {tutor.last_code_sent_at && now - new Date(tutor.last_code_sent_at).getTime() < 60_000
-                          ? `Renvoyer dans ${60 - Math.floor((now - new Date(tutor.last_code_sent_at).getTime()) / 1000)} s`
-                          : "Renvoyer le code"}
-                      </button>
-                    )}
+                    <button type="button" disabled={busy || (tutor.last_code_sent_at ? now - new Date(tutor.last_code_sent_at).getTime() < 60_000 : false)} className="mt-2 text-sm font-semibold text-[#B9AFFF] disabled:opacity-50" onClick={() => void send("/api/super-admin/crm/cfa/placements", "POST", { action: "resend_code", applicationId: id, tutorId: tutor.id })}>
+                      {tutor.last_code_sent_at && now - new Date(tutor.last_code_sent_at).getTime() < 60_000
+                        ? `Renvoyer dans ${60 - Math.floor((now - new Date(tutor.last_code_sent_at).getTime()) / 1000)} s`
+                        : "Renvoyer l'e-mail"}
+                    </button>
                   </div>
                 ) : (
                   <ul className="mt-3 max-h-48 overflow-auto rounded-2xl border border-[#1A2340]">
@@ -602,9 +613,9 @@ export function FicheApprenant({ id }: { id: string }) {
                       <div className="mt-3 rounded-2xl bg-[#6E5BFF]/15 p-4 text-sm">
                         <p>{(companyTutors.find((item) => item.id === pendingTutorId)?.activated_at)
                           ? `${companyTutors.find((item) => item.id === pendingTutorId)?.first_name} a déjà un compte tuteur : il recevra un e-mail l'informant que ${application.first_name} ${application.last_name} lui est confié.`
-                          : `${companyTutors.find((item) => item.id === pendingTutorId)?.first_name} ${companyTutors.find((item) => item.id === pendingTutorId)?.last_name} recevra un e-mail avec un code à 8 chiffres pour se connecter à son espace tuteur.`}</p>
+                          : `${companyTutors.find((item) => item.id === pendingTutorId)?.first_name} ${companyTutors.find((item) => item.id === pendingTutorId)?.last_name} recevra un e-mail pour ouvrir son espace tuteur.`}</p>
                         {tutor ? <p className="mt-2 text-xs text-[#AEB6CC]">Le rattachement actuel sera clos.</p> : null}
-                        <button type="button" disabled={busy} className="mt-3 h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white" onClick={() => void send("/api/super-admin/crm/cfa/placements", "POST", { action: "set_tutor", applicationId: id, tutorId: pendingTutorId }).then(() => setPickingTutor(false))}>Assigner et envoyer le code</button>
+                        <button type="button" disabled={busy} className="mt-3 h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white" onClick={() => void send("/api/super-admin/crm/cfa/placements", "POST", { action: "set_tutor", applicationId: id, tutorId: pendingTutorId }).then(() => setPickingTutor(false))}>Assigner et prévenir</button>
                       </div>
                     ) : null}
                     <form className="mt-3 space-y-2" onSubmit={(event) => { event.preventDefault(); void send("/api/super-admin/crm/cfa/placements", "POST", { action: "create_tutor", applicationId: id, ...tutorDraft }); }}>
@@ -615,8 +626,8 @@ export function FicheApprenant({ id }: { id: string }) {
                           <input required aria-label="Nom" value={tutorDraft.lastName} onChange={(event) => setTutorDraft({ ...tutorDraft, lastName: event.target.value })} placeholder="Nom" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
                           <input required aria-label="E-mail professionnel" type="email" value={tutorDraft.email} onChange={(event) => setTutorDraft({ ...tutorDraft, email: event.target.value })} placeholder="E-mail professionnel" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
                           <input aria-label="Poste" value={tutorDraft.jobTitle} onChange={(event) => setTutorDraft({ ...tutorDraft, jobTitle: event.target.value })} placeholder="Poste" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-                          <p className="text-xs text-[#AEB6CC]">{tutorDraft.firstName || "Le tuteur"} recevra un e-mail avec un code à 8 chiffres.</p>
-                          <button type="submit" disabled={busy} className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white">Assigner et envoyer le code</button>
+                          <p className="text-xs text-[#AEB6CC]">{tutorDraft.firstName || "Le tuteur"} recevra un e-mail pour indiquer son adresse et recevoir un code.</p>
+                          <button type="submit" disabled={busy} className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white">Assigner et prévenir</button>
                         </>
                       ) : null}
                     </form>
@@ -638,8 +649,8 @@ export function FicheApprenant({ id }: { id: string }) {
             ) : null}
           </section>
 
-          <section id="candidature" className="scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#2F7CF6] bg-[#111831] p-5">
-            <SectionHead step="2 · Candidature" title="Dossier et challenge" explain="Ce que le candidat a écrit pour se présenter." pill={`${challengeCount} / 4 réponses`} color="#2F7CF6" soft="#8DB8FF" icon={<ClipboardList className="h-5 w-5" />} />
+          <section id="candidature" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#2F7CF6] bg-[#111831] p-5 ${openSections.candidature ? "" : "[&>*:not(header)]:hidden"}`}>
+            <SectionHead step="2 · Candidature" title="Dossier et challenge" explain="Ce que le candidat a écrit pour se présenter." pill={`${challengeCount} / 4 réponses`} color="#2F7CF6" soft="#8DB8FF" icon={<ClipboardList className="h-5 w-5" />} expanded={openSections.candidature} onToggle={() => setOpenSections((current) => ({ ...current, candidature: !current.candidature }))} />
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {[["Parcours", application.school_background], ["Expériences", application.experiences], ["Motivation", application.motivation_text]].map(([label, value]) => (
                 <div key={label} className="rounded-2xl bg-[#0B1122] p-4">
@@ -669,8 +680,8 @@ export function FicheApprenant({ id }: { id: string }) {
             </div>
           </section>
 
-          <section id="inscription" className="scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#14A37F] bg-[#111831] p-5">
-            <SectionHead step="3 · Inscription" title="Informations administratives" explain="Nécessaires au contrat d'apprentissage. Enregistrement automatique." pill={saveHint || `${filledCerfa} / 17 champs`} color="#14A37F" soft="#6BE3C0" icon={<ListChecks className="h-5 w-5" />} />
+          <section id="inscription" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#14A37F] bg-[#111831] p-5 ${openSections.inscription ? "" : "[&>*:not(header)]:hidden"}`}>
+            <SectionHead step="3 · Inscription" title="Informations administratives" explain="Nécessaires au contrat d'apprentissage. Enregistrement automatique." pill={saveHint || `${filledCerfa} / 17 champs`} color="#14A37F" soft="#6BE3C0" icon={<ListChecks className="h-5 w-5" />} expanded={openSections.inscription} onToggle={() => setOpenSections((current) => ({ ...current, inscription: !current.inscription }))} />
             <Segments filled={filledCerfa} total={17} color="#14A37F" />
             {([
               ["Identité", [
@@ -750,7 +761,7 @@ export function FicheApprenant({ id }: { id: string }) {
             ))}
           </section>
 
-          <section id="documents" className="scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#E7A92C] bg-[#111831] p-5">
+          <section id="documents" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#E7A92C] bg-[#111831] p-5 ${openSections.documents ? "" : "[&>*:not(header)]:hidden"}`}>
             <SectionHead
               step="4 · Pièces justificatives"
               title="Documents"
@@ -759,6 +770,8 @@ export function FicheApprenant({ id }: { id: string }) {
               color="#E7A92C"
               soft="#F6D68B"
               icon={<FolderOpen className="h-5 w-5" />}
+              expanded={openSections.documents}
+              onToggle={() => setOpenSections((current) => ({ ...current, documents: !current.documents }))}
               action={<label className="cursor-pointer rounded-full border border-[#26304F] px-3 py-2 text-sm font-semibold">
                 + Autre
                 <input type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={(event) => {
@@ -843,8 +856,8 @@ export function FicheApprenant({ id }: { id: string }) {
               ))}
             </ul>
           </section>
-          <section id="entretien" className="scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#D9459E] bg-[#111831] p-5">
-            <SectionHead step="5 · Entretien" title="Planifier l'entretien" explain="La date et le message partent au candidat." pill={application.interview_at ? "Planifié" : "À planifier"} color="#D9459E" soft="#F29BCB" icon={<Calendar className="h-5 w-5" />} />
+          <section id="entretien" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#D9459E] bg-[#111831] p-5 ${openSections.entretien ? "" : "[&>*:not(header)]:hidden"}`}>
+            <SectionHead step="5 · Entretien" title="Planifier l'entretien" explain="La date et le message partent au candidat." pill={application.interview_at ? "Planifié" : "À planifier"} color="#D9459E" soft="#F29BCB" icon={<Calendar className="h-5 w-5" />} expanded={openSections.entretien} onToggle={() => setOpenSections((current) => ({ ...current, entretien: !current.entretien }))} />
             {application.interview_at && !editingInterview ? (
               <div className="mt-3">
                 <p className="text-sm">{createdLabel(application.interview_at)}</p>

@@ -11,11 +11,13 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 export type AccessContext =
   | "tuteur_new"
   | "tuteur_existing"
+  | "tuteur_notice"
+  | "tuteur_login"
   | "apprenant_admitted_new"
   | "apprenant_admitted_existing"
   | "application_linked";
 
-const CODE_CONTEXTS = new Set<AccessContext>(["tuteur_new", "apprenant_admitted_new"]);
+const CODE_CONTEXTS = new Set<AccessContext>(["tuteur_new", "tuteur_login", "apprenant_admitted_new"]);
 
 function escapeHtml(value: string) {
   return value
@@ -39,6 +41,7 @@ function message(input: {
   companyName: string;
   cfaName: string;
   code?: string;
+  accessUrl?: string;
 }) {
   const learner = escapeHtml(input.learnerName || "cet alternant");
   const company = escapeHtml(input.companyName || "son entreprise");
@@ -51,6 +54,22 @@ function message(input: {
         `<p>${cfa} vous a désigné tuteur de ${learner} chez ${company}.</p>`,
         input.code,
       ),
+    };
+  }
+  if (input.context === "tuteur_notice") {
+    const href = escapeHtml(input.accessUrl || "https://www.byound.fr/tuteur/connexion");
+    return {
+      subject: `${input.cfaName} vous a désigné tuteur`,
+      html: shell(
+        "Vous êtes tuteur",
+        `<p>${cfa} vous a désigné tuteur de ${learner} chez ${company}.</p><p style="margin-top:24px;"><a href="${href}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;border-radius:999px;padding:14px 22px;font-weight:800;">Indiquer mon e-mail</a></p><p style="color:#5C6370;">La page demande votre adresse e-mail, puis « Envoyer un code ». Le code ouvre l'espace tuteur.</p>`,
+      ),
+    };
+  }
+  if (input.context === "tuteur_login") {
+    return {
+      subject: "Votre code pour l'espace tuteur",
+      html: shell("Votre code", "<p>Utilisez ce code pour ouvrir votre espace tuteur.</p>", input.code),
     };
   }
   if (input.context === "tuteur_existing") {
@@ -121,7 +140,7 @@ export async function sendAccessCode(
     companyName?: string;
     cfaName?: string;
   },
-): Promise<{ ok: true } | { ok: false; error: string; retryAfter?: number }> {
+): Promise<{ ok: true; digits?: number } | { ok: false; error: string; retryAfter?: number }> {
   const email = input.email.trim().toLowerCase();
   const needsCode = CODE_CONTEXTS.has(input.context);
   let code: string | undefined;
@@ -167,7 +186,7 @@ export async function sendAccessCode(
       ? await db.from("signup_requests").update(payload).eq("id", row.id)
       : await db.from("signup_requests").insert(payload);
     if (write.error) return { ok: false, error: "Le code n'a pas pu être enregistré." };
-  } else if (input.context !== "application_linked") {
+  } else if (input.context !== "application_linked" && input.context !== "tuteur_notice") {
     const profile = await db.from("profiles").select("id").ilike("email", email).maybeSingle();
     const existingId = String((profile.data as { id?: string } | null)?.id ?? "");
     if (existingId) await grantUserRole(db, existingId, input.role);
@@ -180,8 +199,9 @@ export async function sendAccessCode(
     companyName: input.companyName || "",
     cfaName: input.cfaName || "Byound School",
     code,
+    accessUrl: `${publicAppUrl()}/tuteur/connexion?email=${encodeURIComponent(email)}`,
   });
   const sent = await sendEmail({ to: email, subject: copy.subject, html: copy.html, from: EDGE_COCKPIT_FROM, skipBcc: true });
   if (!sent.success) return { ok: false, error: "L'email n'a pas pu être envoyé." };
-  return { ok: true };
+  return { ok: true, digits: code ? code.replace(/\D/g, "").length || 8 : undefined };
 }

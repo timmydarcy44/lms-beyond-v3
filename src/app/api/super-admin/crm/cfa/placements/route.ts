@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     const sent = await sendAccessCode(db, {
       email: row.email,
       role: "tuteur",
-      context: alreadyActive ? "tuteur_existing" : "tuteur_new",
+      context: "tuteur_notice",
       firstName: row.first_name,
       lastName: row.last_name,
       learnerName,
@@ -168,9 +168,10 @@ export async function POST(request: NextRequest) {
       created_by: await actorId(),
     });
     if (placed.error) return NextResponse.json({ error: placed.error.message }, { status: 400 });
-    if (!alreadyActive) {
-      await db.from("company_tutors").update({ invited_at: new Date().toISOString(), last_code_sent_at: new Date().toISOString() }).eq("id", tutorId);
-    }
+    await db.from("company_tutors").update({
+      last_code_sent_at: new Date().toISOString(),
+      ...(alreadyActive ? {} : { invited_at: new Date().toISOString() }),
+    }).eq("id", tutorId);
     await syncTutorAssignment(db, applicationId);
     await recordCfaAudit(db, { actorId: await actorId(), applicationId, action: "placement_tutor", newValue: tutorId });
     return NextResponse.json({ ok: true });
@@ -179,24 +180,25 @@ export async function POST(request: NextRequest) {
   if (action === "resend_code") {
     if (body.action !== "resend_code") return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
     const tutorId = body.tutorId;
-    const tutor = await db.from("company_tutors").select("id, company_id, user_id, first_name, last_name, email, activated_at").eq("id", tutorId).maybeSingle();
-    const row = tutor.data as { company_id: string; user_id: string | null; first_name: string; last_name: string; email: string; activated_at: string | null } | null;
+    const tutor = await db.from("company_tutors").select("id, company_id, user_id, first_name, last_name, email, activated_at, last_code_sent_at").eq("id", tutorId).maybeSingle();
+    const row = tutor.data as { company_id: string; user_id: string | null; first_name: string; last_name: string; email: string; activated_at: string | null; last_code_sent_at: string | null } | null;
     if (!row) return NextResponse.json({ error: "Tuteur introuvable" }, { status: 404 });
+    if (row.last_code_sent_at) {
+      const wait = 60_000 - (Date.now() - new Date(row.last_code_sent_at).getTime());
+      if (wait > 0) return NextResponse.json({ error: "Patientez avant de renvoyer l'e-mail." }, { status: 429 });
+    }
     const company = await db.from("cfa_companies").select("company_name").eq("id", row.company_id).maybeSingle();
-    const alreadyActive = Boolean(row.user_id && row.activated_at);
     const sent = await sendAccessCode(db, {
       email: row.email,
       role: "tuteur",
-      context: alreadyActive ? "tuteur_existing" : "tuteur_new",
+      context: "tuteur_notice",
       firstName: row.first_name,
       lastName: row.last_name,
       learnerName,
       companyName: String((company.data as { company_name?: string } | null)?.company_name ?? ""),
     });
     if (!sent.ok) return NextResponse.json({ error: sent.error, retryAfter: sent.retryAfter }, { status: sent.retryAfter ? 429 : 502 });
-    if (!alreadyActive) {
-      await db.from("company_tutors").update({ last_code_sent_at: new Date().toISOString() }).eq("id", tutorId);
-    }
+    await db.from("company_tutors").update({ last_code_sent_at: new Date().toISOString() }).eq("id", tutorId);
     return NextResponse.json({ ok: true });
   }
 

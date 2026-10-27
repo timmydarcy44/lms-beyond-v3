@@ -1,7 +1,7 @@
 import { AgendaView, type AgendaPatient } from "@/components/expert/space/agenda-view";
 import { getSession } from "@/lib/auth/session";
 import { loadExpertSpace } from "@/lib/expert/space-server";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +13,14 @@ export default async function ExpertAgendaPage({
   const { client } = await searchParams;
   const space = await loadExpertSpace();
   const session = await getSession();
-  const db = await getServerClient();
+  const db = getServiceRoleClient();
   let patients: AgendaPatient[] = [];
   if (session?.id && db) {
-    const listed = await db.from("expert_care_clients").select("id,first_name,last_name,email").eq("expert_id", session.id).order("last_name");
+    const listed = await db
+      .from("expert_care_clients")
+      .select("id,first_name,last_name,email")
+      .eq("expert_id", session.id)
+      .order("created_at", { ascending: false });
     if (!listed.error) patients = (listed.data ?? []) as AgendaPatient[];
   }
 

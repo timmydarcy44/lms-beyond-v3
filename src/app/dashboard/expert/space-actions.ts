@@ -12,7 +12,7 @@ import {
   writeJadeOverrides,
   type JadeOverrides,
 } from "@/lib/expert/space-server";
-import { encodeSlotRule, slotsOverlap, type ExpertMission, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
+import { encodeSlotRule, NOTICE_HOUR_OPTIONS, slotsOverlap, type ExpertMission, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 import { sendEmail } from "@/lib/email/resend-client";
 import { buildCareEmail } from "@/lib/expert/care-email";
 import { getServerClient } from "@/lib/supabase/server";
@@ -36,7 +36,10 @@ const slotSchema = z.object({
 
 const settingsSchema = z.object({
   format: z.enum(["visio", "presentiel"]).optional(),
-  noticeHours: z.union([z.literal(24), z.literal(48), z.literal(72)]).optional(),
+  noticeHours: z
+    .number()
+    .refine((value): value is NoticeHours => NOTICE_HOUR_OPTIONS.some((option) => option.value === value))
+    .optional(),
 });
 
 const documentSchema = z.object({

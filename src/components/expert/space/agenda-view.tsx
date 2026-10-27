@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { createExpertSlot, saveAgendaSettings } from "@/app/dashboard/expert/space-actions";
 import { ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton, HeroCard, SegmentBar } from "@/components/expert/expert-ui";
-import { addDays, isSameDay, longDayLabel, weekdayShort, type ExpertSlot, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
+import { addDays, isSameDay, longDayLabel, NOTICE_HOUR_OPTIONS, weekdayShort, type ExpertSlot, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 
 export type AgendaPatient = { id: string; first_name: string; last_name: string; email: string };
 
@@ -59,7 +59,7 @@ export function AgendaView({
 }: {
   slots: ExpertSlot[];
   format: SlotFormat;
-  noticeHours: 24 | 48 | 72;
+  noticeHours: NoticeHours;
   patients: AgendaPatient[];
   presetClientId?: string | null;
 }) {
@@ -217,15 +217,17 @@ export function AgendaView({
                   aria-label="Délai de prévenance"
                   value={notice}
                   onChange={(event) => {
-                    const value = Number(event.target.value) as 24 | 48 | 72;
+                    const value = Number(event.target.value) as NoticeHours;
                     setNotice(value);
                     void saveAgendaSettings({ noticeHours: value });
                   }}
-                  className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[#07080B]"
+                  className="min-w-[7.5rem] rounded-full bg-white px-3 py-1 text-sm font-bold text-[#07080B]"
                 >
-                  <option value={24}>24 h</option>
-                  <option value={48}>48 h</option>
-                  <option value={72}>72 h</option>
+                  {NOTICE_HOUR_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               }
             />
@@ -426,6 +428,27 @@ function SlotModal({
   const [list, setList] = useState(patients);
   const iso = toIsoDate(date);
   const defaultLocation = format === "visio" ? "Visio" : "";
+
+  useEffect(() => {
+    let ignore = false;
+    void fetch("/api/expert/care/clients", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (ignore || !Array.isArray(json?.clients)) return;
+        setList(
+          json.clients.map((row: AgendaPatient) => ({
+            id: String(row.id),
+            first_name: String(row.first_name ?? ""),
+            last_name: String(row.last_name ?? ""),
+            email: String(row.email ?? ""),
+          })),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const save = async (form: HTMLFormElement, notify: boolean) => {
     const data = new FormData(form);

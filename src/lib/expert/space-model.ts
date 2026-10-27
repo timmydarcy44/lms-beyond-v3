@@ -2,6 +2,22 @@ export type MissionStatus = "nouvelle" | "acceptee" | "planifiee" | "terminee" |
 export type MissionBilling = "paid" | "to_invoice" | "upcoming" | "none";
 export type SlotFormat = "visio" | "presentiel";
 export type SlotKind = "indisponible" | "rendez_vous" | "formation" | "disponible";
+export type NoticeHours = 24 | 48 | 72 | 168 | 336 | 504 | 720;
+
+export const NOTICE_HOUR_OPTIONS: Array<{ value: NoticeHours; label: string }> = [
+  { value: 24, label: "24 h" },
+  { value: 48, label: "48 h" },
+  { value: 72, label: "72 h" },
+  { value: 168, label: "7 jours" },
+  { value: 336, label: "14 jours" },
+  { value: 504, label: "21 jours" },
+  { value: 720, label: "30 jours" },
+];
+
+export function asNoticeHours(value: unknown, fallback: NoticeHours = 168): NoticeHours {
+  const hours = Number(value);
+  return NOTICE_HOUR_OPTIONS.some((option) => option.value === hours) ? (hours as NoticeHours) : fallback;
+}
 
 export type ExpertMission = {
   id: string;

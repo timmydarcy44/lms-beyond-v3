@@ -20,8 +20,10 @@ import {
   type MissionStatus,
   type ProfileSectionId,
   type ProfileVisibility,
+  asNoticeHours,
   slotClientIdFromRule,
   slotKindFromRule,
+  type NoticeHours,
   type SlotFormat,
 } from "@/lib/expert/space-model";
 import { loadExpertPoleState } from "@/lib/expert/poles";
@@ -36,7 +38,7 @@ export type JadeOverrides = {
   extraSlots?: ExpertSlot[];
   extraDocuments?: ExpertDocumentItem[];
   format?: SlotFormat;
-  noticeHours?: 24 | 48 | 72;
+  noticeHours?: NoticeHours;
 };
 
 export type ExpertProfileModel = {
@@ -78,7 +80,7 @@ export type ExpertSpaceData = {
   documents: ExpertDocumentItem[];
   certification: ExpertCertificationModel;
   format: SlotFormat;
-  noticeHours: 24 | 48 | 72;
+  noticeHours: NoticeHours;
 };
 
 export async function readJadeOverrides(): Promise<JadeOverrides> {
@@ -145,7 +147,7 @@ function jadeSpace(now: Date): ExpertSpaceData {
   return {
     demo: true,
     format: "visio",
-    noticeHours: 48,
+    noticeHours: 168,
     missions,
     slots: buildJadeSlots(now),
     documents: buildJadeDocuments(now),
@@ -287,7 +289,7 @@ function emptySpace(id: string, name: string): ExpertSpaceData {
   return {
     demo: false,
     format: "visio",
-    noticeHours: 48,
+    noticeHours: 168,
     missions: [],
     slots: [],
     documents: [],
@@ -428,12 +430,12 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     { id: "badge", label: "Badge publié", detail: "Profil expert et badge vérifiable", at: certified && created ? created.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null, done: certified },
     { id: "renouvellement", label: "Renouvellement", detail: "Missions réalisées et avis clients sur la période", at: certified ? String(now.getFullYear() + 1) : null, done: false },
   ];
-  const notice = Number(meta?.notice_hours) || 48;
+  const notice = asNoticeHours(meta?.notice_hours, 168);
   const format = asFormat(meta?.agenda_format);
   return {
     demo: false,
     format,
-    noticeHours: notice === 24 || notice === 72 ? notice : 48,
+    noticeHours: notice,
     missions,
     slots,
     documents,

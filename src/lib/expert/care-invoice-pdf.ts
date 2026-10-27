@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { CARE_LOGO_URL } from "@/lib/expert/care-email";
+import { CARE_BERRY_RGB, CARE_LOGO_URL } from "@/lib/expert/care-email";
 
 export type CareInvoiceLine = {
   label: string;
@@ -31,10 +31,11 @@ export function careVatNotice(vatLiable: boolean | null | undefined) {
   return "TVA non applicable, article 293 B du CGI.";
 }
 
-const RED: [number, number, number] = [255, 75, 75];
+const RED: [number, number, number] = CARE_BERRY_RGB;
 const INK: [number, number, number] = [4, 20, 12];
 const MUTED: [number, number, number] = [90, 96, 92];
 const CREAM: [number, number, number] = [246, 244, 242];
+const ON_BERRY: [number, number, number] = [255, 255, 255];
 
 function euros(cents: number) {
   return `${(cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -79,7 +80,7 @@ export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
       /* logo optionnel */
     }
   }
-  doc.setTextColor(...INK);
+  doc.setTextColor(...ON_BERRY);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
   doc.text("BYOUND CARE", input.logoPng?.length ? margin + 24 : margin, 17);
@@ -158,7 +159,7 @@ export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
   const tableTop = 96;
   doc.setFillColor(...RED);
   doc.roundedRect(margin, tableTop - 8, pageW - margin * 2, 10, 2, 2, "F");
-  doc.setTextColor(...INK);
+  doc.setTextColor(...ON_BERRY);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.text("Prestation", margin + 3, tableTop - 1.5);
@@ -179,7 +180,7 @@ export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
   doc.roundedRect(margin, y - 7, pageW - margin * 2, 14, 3, 3, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.setTextColor(...INK);
+  doc.setTextColor(...ON_BERRY);
   doc.text("Total", margin + 3, y + 2);
   doc.text(euros(total), right - 3, y + 2, { align: "right" });
 

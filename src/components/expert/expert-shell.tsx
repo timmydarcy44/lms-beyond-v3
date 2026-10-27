@@ -218,7 +218,8 @@ export function ExpertShell({
     { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
     { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
   ];
-  if (pole === "care") {
+  const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
+  if (hasCare) {
     items.push(
       { label: "CRM", href: "/dashboard/expert/dossiers", icon: Users },
       { label: "Rendez-vous", href: "/dashboard/expert/rendez-vous", icon: CalendarDays },

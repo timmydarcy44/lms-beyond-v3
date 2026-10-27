@@ -43,7 +43,21 @@ export async function POST(
       patch.certification_status = "certified";
       patch.is_certified_beyond = true;
     } else if (action === "toggle_care") {
-      patch.is_care_expert = !Boolean(expert.is_care_expert);
+      const next = !Boolean(expert.is_care_expert);
+      patch.is_care_expert = next;
+      const membership = await supabase.from("expert_memberships").upsert(
+        {
+          expert_id: id,
+          pole: "care",
+          status: next ? "active" : "suspended",
+          joined_at: next ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "expert_id,pole" },
+      );
+      if (membership.error && !/does not exist|schema cache|42P01|PGRST205/i.test(membership.error.message)) {
+        console.error("[toggle_care] memberships", membership.error.message);
+      }
     } else if (action === "set_assignments") {
       const known = new Map(CFA_SPECIALIZATIONS.map((item) => [item.value, item.label]));
       const knownLabels = new Set(known.values());

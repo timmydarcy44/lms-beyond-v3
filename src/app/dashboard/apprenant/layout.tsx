@@ -59,7 +59,11 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
   }
 
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-  if (meta.needs_password_setup === true) {
+  const pathname = headerStore.get("x-url-pathname") ?? "";
+  const applicationTest =
+    pathname.startsWith("/dashboard/apprenant/disc/test") ||
+    pathname.startsWith("/dashboard/apprenant/idmc/test");
+  if (meta.needs_password_setup === true && !applicationTest) {
     const role = String(profile?.role ?? "").toLowerCase();
     const roleType = String(profile?.role_type ?? "").toLowerCase();
     const isCollaborator =
@@ -75,7 +79,8 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
       roleType === "admin_hr" ||
       String(meta.account_type ?? "") === "entreprise" ||
       String(meta.signup_source ?? "") === "edge_entreprises";
-    const next = encodeURIComponent(isEntreprise ? "/dashboard/entreprise" : "/dashboard/apprenant");
+    const fallback = isEntreprise ? "/dashboard/entreprise" : "/dashboard/apprenant";
+    const next = encodeURIComponent(pathname.startsWith("/dashboard/") ? pathname : fallback);
     const flow = isEntreprise ? "entreprise" : "particulier";
     redirect(`/auth/set-password?next=${next}&flow=${flow}`);
   }

@@ -138,6 +138,10 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
 
   const load = useCallback(async () => {
     setError(null);
+    if (!supabase) {
+      setError("Session introuvable.");
+      return;
+    }
     const t0 = typeof performance !== "undefined" ? performance.now() : 0;
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;

@@ -179,9 +179,13 @@ export function ApprenantConnectShell({
   useEffect(() => {
     if (!useEdgeApps) return;
     if (pendingAppId) return; // ne pas écraser pendant la transition de marque
-    const fromPath = resolveEdgeAppFromPathname(pathname);
-    setActiveAppId(fromPath);
-    setStoredEdgeAppId(fromPath);
+    try {
+      const fromPath = resolveEdgeAppFromPathname(pathname);
+      setActiveAppId(fromPath);
+      setStoredEdgeAppId(fromPath);
+    } catch {
+      setActiveAppId("profil");
+    }
   }, [pathname, useEdgeApps, pendingAppId]);
 
   const navItems = useMemo(() => {
@@ -203,9 +207,14 @@ export function ApprenantConnectShell({
     [router],
   );
 
-  const destinationReady = Boolean(
-    pendingAppId && resolveEdgeAppFromPathname(pathname) === pendingAppId,
-  );
+  let destinationReady = false;
+  try {
+    destinationReady = Boolean(
+      pendingAppId && resolveEdgeAppFromPathname(pathname) === pendingAppId,
+    );
+  } catch {
+    destinationReady = false;
+  }
 
   const completeAppTransition = useCallback(() => {
     if (!pendingAppId) return;

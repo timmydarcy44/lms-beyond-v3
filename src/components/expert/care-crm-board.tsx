@@ -71,7 +71,6 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [testSlug, setTestSlug] = useState(BYOUND_CARE_TESTS[0].slug);
   const [sessionPrice, setSessionPrice] = useState("");
   const [extras, setExtras] = useState<string[]>([]);
-  const [synthesis, setSynthesis] = useState("");
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
 
@@ -211,26 +210,6 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const makeSynthesis = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/expert/care/synthese", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Synthèse impossible");
-      setSynthesis(json.synthesis ?? "");
-      setSuccess({ title: "Synthèse générée", subtitle: "Le compte rendu OpenAI est disponible." });
-      await load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Synthèse impossible");
     } finally {
       setBusy(false);
     }
@@ -396,11 +375,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <ExpertPrimaryButton onClick={() => void sendTest()}>{busy ? "Envoi…" : "Envoyer le test"}</ExpertPrimaryButton>
-            <button type="button" onClick={() => void makeSynthesis()} className="h-11 rounded-full bg-[#1E2130] px-5 text-sm font-extrabold">
-              Synthèse OpenAI
-            </button>
           </div>
-          {synthesis ? <p className="whitespace-pre-wrap rounded-[24px] bg-[#12141A] p-5 text-sm leading-6">{synthesis}</p> : null}
           <div className="grid gap-3 md:grid-cols-3">
             {BYOUND_CARE_TESTS.map((test) => (
               <article key={test.slug} className="rounded-[24px] bg-[#12141A] p-5">
@@ -410,29 +385,6 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
               </article>
             ))}
           </div>
-          {responses.length ? (
-            <div className="space-y-2">
-              <p className="text-sm font-extrabold">Résultats reçus</p>
-              {responses.map((row) => {
-                const member = clients.find((item) => item.id === row.client_id);
-                const test = BYOUND_CARE_TESTS.find((item) => item.slug === row.test_slug);
-                return (
-                  <Link
-                    key={row.id}
-                    href={`/dashboard/expert/dossiers/${row.client_id}`}
-                    className="block rounded-[24px] bg-[#12141A] p-4 text-sm"
-                  >
-                    <span className="font-extrabold">{test?.title ?? row.test_slug}</span>
-                    <span className="text-[#B5BAC6]">
-                      {" "}
-                      · {member ? labelOf(member) : "Client"} · {row.score_label || "Complété"}
-                    </span>
-                    <span className="mt-1 block text-xs font-extrabold text-[#FF4B4B]">Ouvrir la fiche</span>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : null}
           <ul className="space-y-2">
             {invites.map((invite) => {
               const member = clients.find((item) => item.id === invite.client_id);
@@ -446,17 +398,13 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
                     <span className="text-[#B5BAC6]">
                       {" "}
                       · {member ? labelOf(member) : "Membre"} · {done ? "Complété" : "Envoyé"}
-                      {result?.score_label ? ` · ${result.score_label}` : ""}
                     </span>
-                    {done ? <span className="mt-1 block text-xs font-extrabold text-[#FF4B4B]">Voir le résultat sur la fiche</span> : null}
+                    {done ? <span className="mt-1 block text-xs font-extrabold text-[#FF4B4B]">Résultat sur la fiche client</span> : null}
                   </Link>
                 </li>
               );
             })}
           </ul>
-          {responses.filter((row) => row.client_id === clientId && row.synthesis).slice(0, 1).map((row) => (
-            <p key={row.id} className="whitespace-pre-wrap rounded-[24px] bg-[#12141A] p-5 text-sm leading-6">{row.synthesis}</p>
-          ))}
         </div>
       ) : null}
 

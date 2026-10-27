@@ -3,7 +3,8 @@ import { sendEmail } from "@/lib/email/resend-client";
 import { getSession } from "@/lib/auth/session";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
 import { CARE_INVOICE_EXTRAS } from "@/lib/expert/care-tests";
-import { careInvoicePdfBuffer, type CareInvoiceLine } from "@/lib/expert/care-invoice-pdf";
+import { buildCareEmail } from "@/lib/expert/care-email";
+import { careInvoicePdfBuffer, fetchCareLogoPng, type CareInvoiceLine } from "@/lib/expert/care-invoice-pdf";
 import { mergeRegistrationMeta, parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
 import { loadExpertSpace } from "@/lib/expert/space-server";
 import { eurosToCents } from "@/lib/entreprise/offer-conditions";
@@ -129,20 +130,29 @@ export async function POST(req: NextRequest) {
     clientCity: city,
     followUpLabel: followUpLabel(client),
     lines,
+    logoPng: await fetchCareLogoPng(),
   });
   const fullName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim() || "client";
   const invoiceFile = `Facture ${fullName}.pdf`;
+  const totalLabel = `${(amountCents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
   const linesHtml = lines
-    .map((line) => `<tr><td style="padding:6px 0">${line.label}</td><td style="padding:6px 0;text-align:right">${(line.cents / 100).toLocaleString("fr-FR")} €</td></tr>`)
+    .map(
+      (line) =>
+        `<tr><td style="padding:8px 0;border-bottom:1px solid #F0EEEC;">${line.label}</td><td style="padding:8px 0;border-bottom:1px solid #F0EEEC;text-align:right;font-weight:700;">${(line.cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €</td></tr>`,
+    )
     .join("");
+  const first = String(client.first_name ?? "").trim();
   const mailed = await sendEmail({
     to: client.email,
-    subject: `Facture — ${designation}`,
-    html: `<p>Bonjour ${client.first_name || ""},</p>
-<p>Veuillez trouver ci-joint votre facture nominative.</p>
-<p><strong>${fullName}</strong><br/>${client.email}<br/>${addressLine}<br/>${postalCode} ${city}${followUpLabel(client) ? `<br/>${followUpLabel(client)}` : ""}</p>
-<table style="width:100%;max-width:420px">${linesHtml}<tr><td style="padding-top:8px"><strong>Total</strong></td><td style="padding-top:8px;text-align:right"><strong>${(amountCents / 100).toLocaleString("fr-FR")} €</strong></td></tr></table>
-<p>Le document PDF reprend ces mêmes informations.</p>`,
+    subject: `Votre facture Byound Care — ${designation}`,
+    html: buildCareEmail({
+      greeting: first ? `Bonjour ${first},` : "Bonjour,",
+      title: "Votre facture est prête",
+      bodyHtml: `<p style="margin:0 0 12px;">Votre expert Byound Care vous adresse la facture <strong>${invoiceNumber}</strong>.</p>
+<p style="margin:0 0 12px;">${fullName}<br/>${addressLine}<br/>${postalCode} ${city}</p>
+<table style="width:100%;border-collapse:collapse;font-size:15px;">${linesHtml}<tr><td style="padding-top:12px;font-weight:800;">Total</td><td style="padding-top:12px;text-align:right;font-weight:800;">${totalLabel}</td></tr></table>
+<p style="margin:16px 0 0;">Le PDF est joint à ce message.</p>`,
+    }),
     attachments: [{ filename: invoiceFile, content: pdf }],
   });
 

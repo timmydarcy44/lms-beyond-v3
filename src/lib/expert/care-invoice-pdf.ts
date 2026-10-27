@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { CARE_LOGO_URL } from "@/lib/expert/care-email";
 
 export type CareInvoiceLine = {
   label: string;
@@ -19,7 +20,13 @@ export type CareInvoicePdfInput = {
   clientCity?: string | null;
   followUpLabel?: string | null;
   lines: CareInvoiceLine[];
+  logoPng?: Uint8Array | null;
 };
+
+const RED: [number, number, number] = [255, 75, 75];
+const INK: [number, number, number] = [4, 20, 12];
+const MUTED: [number, number, number] = [90, 96, 92];
+const CREAM: [number, number, number] = [246, 244, 242];
 
 function euros(cents: number) {
   return `${(cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -27,6 +34,16 @@ function euros(cents: number) {
 
 function longDate(date: Date) {
   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export async function fetchCareLogoPng(): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(CARE_LOGO_URL);
+    if (!res.ok) return null;
+    return new Uint8Array(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
@@ -41,92 +58,122 @@ export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
     .map((part) => part?.trim())
     .filter(Boolean);
 
-  doc.setFillColor(7, 8, 11);
-  doc.rect(0, 0, pageW, 28, "F");
-  doc.setTextColor(244, 245, 247);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("BYOUND CARE", margin, 18);
-  doc.setFontSize(11);
-  doc.text("FACTURE", right, 18, { align: "right" });
+  doc.setFillColor(...CREAM);
+  doc.rect(0, 0, pageW, 297, "F");
 
-  doc.setTextColor(7, 8, 11);
+  doc.setFillColor(...RED);
+  doc.rect(0, 0, pageW, 36, "F");
+  if (input.logoPng?.length) {
+    try {
+      const b64 = Buffer.from(input.logoPng).toString("base64");
+      doc.addImage(`data:image/png;base64,${b64}`, "PNG", margin, 8, 20, 20);
+    } catch {
+      /* logo optionnel */
+    }
+  }
+  doc.setTextColor(...INK);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("Émetteur", margin, 42);
+  doc.setFontSize(18);
+  doc.text("BYOUND CARE", input.logoPng?.length ? margin + 24 : margin, 17);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("Accompagnement expert", input.logoPng?.length ? margin + 24 : margin, 24);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("FACTURE", right, 20, { align: "right" });
+
+  doc.setTextColor(...INK);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Émetteur", margin, 50);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(input.expertName || "Expert Byound", margin, 48);
-  let expertY = 53;
+  doc.text(input.expertName || "Expert Byound Care", margin, 56);
+  let expertY = 61;
   if (input.expertHeadline?.trim()) {
-    doc.text(input.expertHeadline.trim(), margin, expertY);
+    doc.setTextColor(...MUTED);
+    doc.text(input.expertHeadline.trim(), margin, expertY, { maxWidth: 88 });
     expertY += 5;
+    doc.setTextColor(...INK);
   }
   if (input.expertEmail?.trim()) {
     doc.text(input.expertEmail.trim(), margin, expertY);
   }
 
   const clientX = 118;
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(clientX - 4, 44, pageW - clientX - margin + 4, 32, 3, 3, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...RED);
+  doc.text("Facturé à", clientX, 50);
+  doc.setTextColor(...INK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text("Client", clientX, 42);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  let clientY = 48;
+  let clientY = 56;
   doc.text(fullName, clientX, clientY);
   clientY += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
   doc.text(input.clientEmail, clientX, clientY);
   clientY += 5;
   for (const line of postal.length ? postal : ["Adresse postale non renseignée"]) {
     doc.text(line, clientX, clientY, { maxWidth: pageW - clientX - margin });
-    clientY += 5;
+    clientY += 4.5;
   }
   if (input.followUpLabel?.trim()) {
+    doc.setTextColor(...MUTED);
     doc.text(input.followUpLabel.trim(), clientX, clientY, { maxWidth: pageW - clientX - margin });
+    doc.setTextColor(...INK);
   }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(80, 80, 80);
-  doc.text(`N° ${input.invoiceNumber}`, margin, 78);
-  doc.text(`Date : ${longDate(issuedAt)}`, right, 78, { align: "right" });
-  doc.setTextColor(7, 8, 11);
+  doc.setTextColor(...MUTED);
+  doc.text(`N° ${input.invoiceNumber}`, margin, 86);
+  doc.text(longDate(issuedAt), right, 86, { align: "right" });
 
-  const tableTop = 88;
-  doc.setFillColor(244, 245, 247);
-  doc.rect(margin, tableTop - 7, pageW - margin * 2, 10, "F");
+  const tableTop = 96;
+  doc.setFillColor(...RED);
+  doc.roundedRect(margin, tableTop - 8, pageW - margin * 2, 10, 2, 2, "F");
+  doc.setTextColor(...INK);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("Désignation", margin + 2, tableTop);
-  doc.text("Montant", right - 2, tableTop, { align: "right" });
+  doc.text("Prestation", margin + 3, tableTop - 1.5);
+  doc.text("Montant", right - 3, tableTop - 1.5, { align: "right" });
 
-  let y = tableTop + 12;
+  let y = tableTop + 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
+  doc.setTextColor(...INK);
   for (const line of input.lines) {
-    doc.text(line.label, margin + 2, y, { maxWidth: 140 });
-    doc.text(euros(line.cents), right - 2, y, { align: "right" });
+    doc.text(line.label, margin + 3, y, { maxWidth: 140 });
+    doc.text(euros(line.cents), right - 3, y, { align: "right" });
     y += 8;
   }
 
-  doc.setDrawColor(30, 33, 48);
-  doc.line(margin, y, right, y);
-  y += 10;
+  y += 4;
+  doc.setFillColor(...RED);
+  doc.roundedRect(margin, y - 7, pageW - margin * 2, 14, 3, 3, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("Total TTC", margin + 2, y);
-  doc.text(euros(total), right - 2, y, { align: "right" });
+  doc.setTextColor(...INK);
+  doc.text("Total", margin + 3, y + 2);
+  doc.text(euros(total), right - 3, y + 2, { align: "right" });
 
-  y += 18;
+  y += 22;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(90, 96, 163);
+  doc.setTextColor(...MUTED);
   doc.text(
     "Prestation Byound Care. TVA non applicable, art. 293 B du CGI, sauf mention contraire de l'expert.",
     margin,
     y,
     { maxWidth: pageW - margin * 2 },
   );
+
+  doc.setFillColor(...RED);
+  doc.rect(0, 292, pageW, 5, "F");
 
   return doc;
 }

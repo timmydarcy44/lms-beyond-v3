@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "@/lib/ai/openai-client";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
-import { getCareTest } from "@/lib/expert/care-tests";
+import { stripAiMarkup } from "@/lib/ai/strip-markup";
+import { summarizeCareTest, careSummaryDigest } from "@/lib/expert/care-test-summary";
 
 export async function GET(req: NextRequest) {
   const gate = await requireCareExpert();
@@ -38,14 +39,16 @@ export async function POST(req: NextRequest) {
 
   const digest = rows
     .map((row) => {
-      const test = getCareTest(String(row.test_slug));
-      return `${test?.title ?? row.test_slug} (score ${row.score ?? "n/a"} ${row.score_label ?? ""})\n${JSON.stringify(row.answers).slice(0, 4000)}`;
+      const summary = summarizeCareTest(String(row.test_slug), (row.answers as Record<string, unknown>) ?? {});
+      return careSummaryDigest(summary);
     })
     .join("\n\n");
 
-  const synthesis = await generateText(
-    `Tu es un expert Byound Care. Rédige une synthèse clinique courte, vouvoiement, en français, à partir des réponses de tests suivantes. Structure : points saillants, hypothèses prudentes, pistes d'accompagnement. Pas de diagnostic médical.\n\n${digest}`,
-    { maxTokens: 900 },
+  const synthesis = stripAiMarkup(
+    (await generateText(
+      `Vous êtes un expert Byound Care. Rédigez une synthèse clinique courte en français, vouvoiement, à partir des résultats globaux et des catégories ci-dessous. Structure : points saillants, hypothèses prudentes, pistes d'accompagnement. Pas de diagnostic médical. Pas de markdown.\n\n${digest}`,
+      { maxTokens: 900 },
+    )) ?? "",
   );
   if (!synthesis) return NextResponse.json({ error: "Synthèse OpenAI indisponible" }, { status: 502 });
 

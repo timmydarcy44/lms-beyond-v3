@@ -47,13 +47,30 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
   const headerStore = await headers();
   const hostname = headerStore.get("host");
 
-  const session = await getSession();
+  let session: Awaited<ReturnType<typeof getSession>> = null;
+  try {
+    session = await getSession();
+  } catch (error) {
+    const digest = typeof error === "object" && error && "digest" in error ? String((error as { digest?: unknown }).digest) : "";
+    if (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_NOT_FOUND")) throw error;
+    console.error("[dashboard/apprenant/layout] session", error);
+  }
   if (session?.role === "demo") {
     const variant = resolveApprenantVariant(hostname, null);
     return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
   }
 
-  const { user, profile } = await getCurrentProfileWithAccess();
+  let user: Awaited<ReturnType<typeof getCurrentProfileWithAccess>>["user"] = null;
+  let profile: Awaited<ReturnType<typeof getCurrentProfileWithAccess>>["profile"] = null;
+  try {
+    const current = await getCurrentProfileWithAccess();
+    user = current.user;
+    profile = current.profile;
+  } catch (error) {
+    const digest = typeof error === "object" && error && "digest" in error ? String((error as { digest?: unknown }).digest) : "";
+    if (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_NOT_FOUND")) throw error;
+    console.error("[dashboard/apprenant/layout] profile", error);
+  }
   if (!user?.id) {
     redirect("/login?from=connect");
   }

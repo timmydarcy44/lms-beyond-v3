@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { followUpLabel } from "@/lib/expert/care-client-fields";
-import { careTestTitle, describeCareAnswers } from "@/lib/expert/care-result-view";
+import { stripAiMarkup } from "@/lib/ai/strip-markup";
+import { careTestTitle } from "@/lib/expert/care-result-view";
+import { summarizeCareTest } from "@/lib/expert/care-test-summary";
 import { AppleSuccessOverlay } from "@/components/expert/apple-success-overlay";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
 
@@ -160,45 +162,61 @@ export function CareClientFiche({ clientId }: { clientId: string }) {
         {responses.length === 0 ? (
           <EmptyState
             title="Pas encore de résultat"
-            text={invites.length ? "Le test a été envoyé. Dès qu’il sera complété, le score et les réponses apparaîtront ici." : "Envoyez un test depuis Byound tests."}
+            text={invites.length ? "Le test a été envoyé. Dès qu’il sera complété, le résultat global apparaîtra ici." : "Envoyez un test depuis Byound tests."}
           />
         ) : (
           <div className="space-y-3">
             {responses.map((row) => {
-              const items = describeCareAnswers(row.test_slug, row.answers);
+              const summary = summarizeCareTest(row.test_slug, row.answers);
               const open = openId === row.id;
               const when = new Date(row.submitted_at).toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
               });
+              const aiText = stripAiMarkup(row.synthesis);
               return (
                 <article key={row.id} className="rounded-[24px] bg-[#12141A] p-5">
                   <button type="button" className="flex w-full items-start justify-between gap-4 text-left" onClick={() => setOpenId(open ? null : row.id)}>
                     <span>
                       <span className="block text-lg font-extrabold">{careTestTitle(row.test_slug)}</span>
                       <span className="mt-1 block text-sm text-[#B5BAC6]">{when}</span>
+                      <span className="mt-2 block text-sm font-semibold text-[#F4F5F7]">{summary.overallLabel}</span>
                     </span>
                     <span className="rounded-full bg-[#FF4B4B] px-3 py-1 text-xs font-extrabold text-[#04140C]">
-                      {row.score_label || (row.score != null ? String(row.score) : "Complété")}
+                      {row.score_label || (summary.overallPercent != null ? `${summary.overallPercent} %` : "Complété")}
                     </span>
                   </button>
-                  {row.synthesis ? <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-[#DADDE4]">{row.synthesis}</p> : null}
                   {open ? (
-                    <ul className="mt-4 space-y-3 border-t border-[#1E2130] pt-4">
-                      {items.length === 0 ? (
-                        <li className="text-sm text-[#9096A3]">Les réponses ont été enregistrées, sans détail affichable.</li>
-                      ) : (
-                        items.map((item) => (
-                          <li key={item.question} className="text-sm">
-                            <p className="text-[#9096A3]">{item.question}</p>
-                            <p className="mt-1 font-extrabold">{item.answer}</p>
-                          </li>
-                        ))
-                      )}
-                    </ul>
+                    <div className="mt-5 space-y-5 border-t border-[#1E2130] pt-5">
+                      {summary.categories.length ? (
+                        <ul className="space-y-3">
+                          {summary.categories.map((item) => (
+                            <li key={item.id}>
+                              <div className="flex items-baseline justify-between gap-3 text-sm">
+                                <span className="font-extrabold">{item.label}</span>
+                                <span className="text-[#B5BAC6]">{item.percent} % · {item.comment}</span>
+                              </div>
+                              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#1E2130]">
+                                <div className="h-full rounded-full bg-[#FF4B4B]" style={{ width: `${item.percent}%` }} />
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      <div>
+                        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#9096A3]">Analyse</p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#DADDE4]">{summary.analysis}</p>
+                      </div>
+                      {aiText ? (
+                        <div>
+                          <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#9096A3]">Synthèse</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#DADDE4]">{aiText}</p>
+                        </div>
+                      ) : null}
+                    </div>
                   ) : (
-                    <p className="mt-3 text-xs font-semibold text-[#9096A3]">Voir les réponses</p>
+                    <p className="mt-3 text-xs font-semibold text-[#9096A3]">Voir les catégories et l’analyse</p>
                   )}
                 </article>
               );

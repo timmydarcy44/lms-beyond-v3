@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import type { ApprenantNavItem } from "@/lib/apprenant/connect-nav";
+import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
 export type EdgeAppId =
   | "profil"
@@ -239,6 +240,7 @@ export function setStoredEdgeAppId(id: EdgeAppId) {
 
 export function resolveEdgeAppFromPathname(pathname: string | null | undefined): EdgeAppId {
   const p = String(pathname ?? "");
+  const onlinePath = EDGE_ONLINE_APP_SURFACE_PATH || "/edgeonline";
 
   if (p.startsWith("/dashboard/apprenant/care") || p.startsWith("/dashboard/apprenant/beyond-care")) {
     return "care";
@@ -262,7 +264,7 @@ export function resolveEdgeAppFromPathname(pathname: string | null | undefined):
     p.startsWith("/dashboard/apprenant/parcours") ||
     p.startsWith("/dashboard/apprenant/online") ||
     p.startsWith("/dashboard/apprenant/statistiques") ||
-    p.startsWith(EDGE_ONLINE_APP_SURFACE_PATH) ||
+    p.startsWith(onlinePath) ||
     p.startsWith("/g/edgelab") ||
     p.startsWith("/g/edge-lab")
   ) {

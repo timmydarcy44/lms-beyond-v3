@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/resend-client";
 import { publicAppUrl } from "@/lib/env";
 import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
+import { buildCareEmail } from "@/lib/expert/care-email";
 import { getCareTest } from "@/lib/expert/care-tests";
 
 export async function POST(req: NextRequest) {
@@ -48,8 +49,16 @@ export async function POST(req: NextRequest) {
   const greeting = first ? `Bonjour ${first},` : "Bonjour,";
   const mailed = await sendEmail({
     to: client.email,
-    subject: `Byound tests — ${test.title}`,
-    html: `<p>${greeting}</p><p>Votre expert Byound Care vous invite à répondre au <strong>${test.title}</strong>.</p><p><a href="${link}">Ouvrir le test</a></p>`,
+    subject: `Byound Care — ${test.title}`,
+    html: buildCareEmail({
+      preheader: `Votre expert vous invite à répondre au ${test.title}.`,
+      greeting,
+      title: test.title,
+      bodyHtml: `<p style="margin:0 0 12px;">Votre expert Byound Care vous invite à répondre à ce questionnaire. Comptez environ ${test.minutes} minutes, dans un endroit calme.</p>
+<p style="margin:0;">Vos réponses sont transmises uniquement à votre expert. Ce n'est pas un diagnostic.</p>`,
+      ctaLabel: "Commencer le test",
+      ctaUrl: link,
+    }),
   });
   return NextResponse.json({
     ok: true,

@@ -504,7 +504,7 @@ function JobCard({ offer, featured }: { offer: JobOffer; featured: boolean }) {
   const stages = stagesOf(offer);
   return (
     <Link
-      href={`/dashboard/entreprise/offres/${offer.id}`}
+      href={draft ? `/dashboard/entreprise/offres/${offer.id}/edition` : `/dashboard/entreprise/offres/${offer.id}`}
       className={cn(
         "relative flex min-h-[280px] flex-col overflow-hidden rounded-[26px] p-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E5BFF]",
         dark ? "bg-[#070C1C] text-white" : draft ? "border border-dashed border-[#D6D2C8] bg-[#FAF9F6]" : "bg-white",

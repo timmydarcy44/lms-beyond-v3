@@ -20,9 +20,8 @@ export async function GET(
 
     const client = getServiceRoleClient() ?? supabase;
     const selectCandidates = [
-      "id, title, type, resource_type, kind, html_content, file_url, video_url, audio_url, published, status, created_by, owner_id",
-      "id, title, type, kind, html_content, file_url, published, status, created_by, owner_id",
-      "id, title, type, html_content, content, file_url, published, status, created_by, owner_id",
+      "id, title, type, html_content, content, url, published, status, created_by, owner_id",
+      "id, title, type, resource_type, kind, html_content, content, file_url, video_url, audio_url, url, published, status, created_by, owner_id",
       "id, title, type, html_content, content, published, created_by, owner_id",
     ];
 
@@ -54,10 +53,19 @@ export async function GET(
     }
 
     const html_content = extractResourceHtml(resource);
+    const storedUrl = String(resource.url ?? resource.file_url ?? "").trim();
+    const mediaType = String(resource.type ?? resource.resource_type ?? resource.kind ?? "").toLowerCase();
+    const file_url = String(resource.file_url ?? "").trim() || (mediaType === "video" || mediaType === "audio" ? "" : storedUrl);
+    const video_url = String(resource.video_url ?? "").trim() || (mediaType === "video" ? storedUrl : "");
+    const audio_url = String(resource.audio_url ?? "").trim() || (mediaType === "audio" ? storedUrl : "");
     return NextResponse.json({
       resource: {
         ...resource,
         html_content,
+        url: storedUrl || null,
+        file_url: file_url || null,
+        video_url: video_url || null,
+        audio_url: audio_url || null,
       },
     });
   } catch (error) {

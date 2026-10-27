@@ -11,6 +11,18 @@ import { syncCatalogItem } from "@/lib/utils/sync-catalog-item";
 import { createStripeProduct, updateStripeProduct } from "@/lib/stripe/products";
 import { sendPurchaseConfirmationEmail } from "@/lib/emails/send";
 
+const RESOURCE_BUCKETS = ["Public", "public"] as const;
+const RESOURCE_MAX_BYTES = 80 * 1024 * 1024;
+
+function safeResourceExtension(fileName: string, type: string) {
+  const fromName = fileName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
+  const allowed = new Set(["pdf", "mp4", "webm", "mov", "m4v", "mp3", "wav", "m4a", "ogg", "aac"]);
+  if (allowed.has(fromName)) return fromName;
+  if (type === "video") return "mp4";
+  if (type === "audio") return "mp3";
+  return "pdf";
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log("[api/resources] Requête reçue");
@@ -258,60 +270,69 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Uploader le PDF si type === "pdf" et qu'un fichier est fourni
         let pdfUrl: string | null = null;
-        if (type === "pdf" && pdfFile) {
+        if (pdfFile && type !== "html") {
+          if (pdfFile.size > RESOURCE_MAX_BYTES) {
+            await writeClient.from("resources").delete().eq("id", String(data.id));
+            return NextResponse.json({ error: "Le fichier dépasse 80 Mo." }, { status: 400 });
+          }
+          const serviceClient = getServiceRoleClient();
+          if (!serviceClient) {
+            await writeClient.from("resources").delete().eq("id", String(data.id));
+            return NextResponse.json({ error: "Enregistrement du fichier indisponible." }, { status: 503 });
+          }
           try {
-            console.log("[api/resources] Upload du PDF:", pdfFile.name);
-            const serviceClient = getServiceRoleClient();
-            if (!serviceClient) {
-              console.error("[api/resources] Service role client non disponible pour l'upload PDF");
-            } else {
-              // Générer un nom de fichier unique
-              const originalFileName = pdfFile.name.split(".")[0];
-              const sanitizedFileName = originalFileName
-                .toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, "")
-                .replace(/\s+/g, "-")
-                .replace(/--+/g, "-")
-                .trim();
-              const timestamp = Date.now();
-              const fileName = `${sanitizedFileName}-${timestamp}.pdf`;
-
-              // Convertir le File en ArrayBuffer
-              const arrayBuffer = await pdfFile.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-
-              // Upload vers Supabase Storage (bucket "pdfs")
-              const { data: uploadData, error: uploadError } = await serviceClient.storage
-                .from("pdfs")
-                .upload(fileName, buffer, {
-                  contentType: "application/pdf",
-                  cacheControl: "3600",
-                  upsert: false,
-                });
-
-              if (uploadError) {
-                console.error("[api/resources] Erreur lors de l'upload du PDF:", uploadError);
-              } else {
-                // Récupérer l'URL publique
-                const { data: { publicUrl } } = serviceClient.storage
-                  .from("pdfs")
-                  .getPublicUrl(fileName);
-                pdfUrl = publicUrl;
-                console.log("[api/resources] PDF uploadé avec succès:", pdfUrl);
-
-                await updateRowWithColumnFallback(writeClient, "resources", String(data.id), {
-                  file_url: pdfUrl,
-                  url: pdfUrl,
-                  type: "pdf",
-                });
-                console.log("[api/resources] Ressource mise à jour avec file_url");
+            const originalFileName = pdfFile.name.split(".").slice(0, -1).join(".") || pdfFile.name;
+            const sanitizedFileName = originalFileName
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-z0-9\s-]/g, "")
+              .replace(/\s+/g, "-")
+              .replace(/--+/g, "-")
+              .trim() || "ressource";
+            const extension = safeResourceExtension(pdfFile.name, String(type ?? "pdf"));
+            const fileName = `course-resources/${user.id}/${sanitizedFileName}-${Date.now()}.${extension}`;
+            const buffer = Buffer.from(await pdfFile.arrayBuffer());
+            const contentType = type === "pdf"
+              ? "application/pdf"
+              : pdfFile.type || (type === "video" ? "video/mp4" : type === "audio" ? "audio/mpeg" : "application/octet-stream");
+            let bucketName: string | null = null;
+            for (const bucket of RESOURCE_BUCKETS) {
+              const uploaded = await serviceClient.storage.from(bucket).upload(fileName, buffer, {
+                contentType,
+                cacheControl: "3600",
+                upsert: false,
+              });
+              if (!uploaded.error) {
+                bucketName = bucket;
+                break;
               }
+              console.error("[api/resources] Upload refusé:", bucket, uploaded.error.message);
             }
+            if (!bucketName) {
+              await writeClient.from("resources").delete().eq("id", String(data.id));
+              return NextResponse.json({ error: "Le fichier n'a pas pu être enregistré." }, { status: 400 });
+            }
+            pdfUrl = serviceClient.storage.from(bucketName).getPublicUrl(fileName).data.publicUrl;
+            const mediaPatch: Record<string, unknown> = {
+              url: pdfUrl,
+              file_url: pdfUrl,
+              type: type || "pdf",
+            };
+            if (type === "video") mediaPatch.video_url = pdfUrl;
+            if (type === "audio") mediaPatch.audio_url = pdfUrl;
+            const saved = await updateRowWithColumnFallback(writeClient, "resources", String(data.id), mediaPatch);
+            const stored = String(saved.data?.url ?? saved.data?.file_url ?? "").trim();
+            if (saved.error || !stored) {
+              await writeClient.from("resources").delete().eq("id", String(data.id));
+              return NextResponse.json({ error: "Le fichier n'a pas pu être rattaché à la ressource." }, { status: 400 });
+            }
+            data = { ...data, ...saved.data, url: stored };
           } catch (pdfError) {
-            console.error("[api/resources] Erreur lors de l'upload du PDF:", pdfError);
-            // Ne pas bloquer la création si l'upload PDF échoue
+            console.error("[api/resources] Erreur lors de l'upload du fichier:", pdfError);
+            await writeClient.from("resources").delete().eq("id", String(data.id));
+            return NextResponse.json({ error: "Le fichier n'a pas pu être enregistré." }, { status: 400 });
           }
         }
 

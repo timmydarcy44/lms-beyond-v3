@@ -150,10 +150,10 @@ export function ApplicationGuide({ application }: { application: HomeApplication
             <>
               <ul className="mt-4 space-y-3 text-sm">
                 <TestRow name="Soft skills" detail={`${SOFT_SKILLS.length * 3} questions · 10 min`} done={application.tests.soft} href={`/soft-skills/test?retour=${RETURN}`} next={!application.tests.soft} />
-                <TestRow name="Profil comportemental" detail={`${DISC_QUESTION_COUNT} questions · 8 min`} done={application.tests.disc} href={`/dashboard/apprenant/disc/test?retour=${RETURN}`} next={application.tests.soft && !application.tests.disc} />
-                <TestRow name="Maîtrise cognitive" detail={`${IDMC_QUESTION_COUNT} questions · 7 min`} done={application.tests.idmc} href={`/dashboard/apprenant/idmc/test?retour=${RETURN}`} next={application.tests.soft && application.tests.disc && !application.tests.idmc} />
+                <TestRow name="Profil comportemental" detail={`${DISC_QUESTION_COUNT} questions · 8 min`} done={application.tests.disc} href={`/dashboard/apprenant/disc/test?retour=${RETURN}`} next={!application.tests.disc} />
+                <TestRow name="Maîtrise cognitive" detail={`${IDMC_QUESTION_COUNT} questions · 7 min`} done={application.tests.idmc} href={`/dashboard/apprenant/idmc/test?retour=${RETURN}`} next={!application.tests.idmc} />
               </ul>
-              <p className="mt-3 text-xs text-white/50">Chaque test s&apos;ouvre à part. Vous revenez ici ensuite, et vous pouvez vous arrêter pour reprendre plus tard.</p>
+              <p className="mt-3 text-xs text-white/50">Les trois tests sont ouverts en même temps. Chacun s&apos;ouvre à part, vous revenez ici ensuite, et vous pouvez vous arrêter pour reprendre plus tard.</p>
             </>
           ) : (
             <p className="mt-2 text-sm text-white/55">Disponibles dès que votre profil est complété.</p>

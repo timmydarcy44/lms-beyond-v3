@@ -80,7 +80,7 @@ export async function GET(_request: NextRequest, context: Params) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const baseSelect = "id, title, description, requirements, city, salary_range, contract_type, status, school_id, created_at, updated_at";
+  const baseSelect = "id, title, description, city, salary_range, contract_type, status, school_id, created_at, updated_at";
   const posteSelect = `${baseSelect}, work_mode, contract_duration, diploma_prepared, alternance_school, work_rhythm, experience_level, education_level, salary_min, salary_max, salary_period, hours_per_week, start_label, headcount, benefits`;
   const fullSelect = `${posteSelect}, recruitment_steps, requested_documents, screening_questions, application_deadline, diffusion`;
   let { data: offer, error } = await service.from("job_offers").select(fullSelect).eq("id", id).maybeSingle();
@@ -264,7 +264,7 @@ export async function PATCH(request: NextRequest, context: Params) {
   if (schoolId && (body.intent === "publish" || parsedPoste.success || candidature.success)) {
     const rich = await service
       .from("job_offers")
-      .select("title, description, requirements, diploma_prepared, city, screening_questions, benefits, diffusion, public_slug, public_status")
+      .select("title, description, diploma_prepared, city, screening_questions, benefits, diffusion, public_slug, public_status")
       .eq("id", id)
       .maybeSingle();
     const current = (rich.error ? {} : rich.data ?? {}) as Record<string, unknown>;

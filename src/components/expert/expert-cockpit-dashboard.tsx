@@ -47,7 +47,7 @@ type MissionRow = {
 
 const QUICK_NAV = [
   { label: "Mon profil", href: "/dashboard/expert/profile", keywords: "profil bio photo" },
-  { label: "Mes missions", href: "/dashboard/expert/interventions", keywords: "missions interventions demandes" },
+  { label: "Agenda", href: "/dashboard/expert/agenda", keywords: "agenda calendrier rendez-vous" },
   { label: "Mon agenda", href: "/dashboard/expert/agenda", keywords: "agenda calendrier disponibilités" },
   { label: "Mes revenus", href: "/dashboard/expert/revenus", keywords: "revenus ca factures paiement" },
   { label: "Documents", href: "/dashboard/expert/documents", keywords: "documents contrat supports" },
@@ -62,6 +62,12 @@ type Props = {
   restricted?: boolean;
   formations?: ExpertShopFormation[];
   pole?: "formation" | "care" | null;
+  revenue?: {
+    totalCents: number;
+    paidCents: number;
+    upcomingCents: number;
+    bars: Array<{ month: string; value: number }>;
+  };
 };
 
 const CARD = "rounded-3xl border border-white/[0.07] bg-[#10173a]/70 backdrop-blur-xl";
@@ -154,7 +160,7 @@ function EmptyRow({ icon: Icon, children }: { icon: typeof Inbox; children: Reac
   );
 }
 
-export function ExpertCockpitDashboard({ restricted = false, formations = [], pole = null }: Props) {
+export function ExpertCockpitDashboard({ restricted = false, formations = [], pole = null, revenue }: Props) {
   const { expert } = useExpertAccess();
   const supabase = useSupabase();
   const router = useRouter();
@@ -227,17 +233,15 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
   const pendingRequests = missions.filter((m) => m.status === "expert_notified");
   const completed = missions.filter((m) => m.status === "completed");
 
-  const revenueTotal = completed.length * 1400;
+  const revenueTotal = revenue ? revenue.totalCents / 100 : 0;
   const revenueBars = useMemo(() => {
+    if (revenue?.bars?.length) return revenue.bars;
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date();
       d.setMonth(d.getMonth() - (5 - i));
-      return {
-        month: format(d, "MMM", { locale: fr }).replace(".", ""),
-        value: completed.length > 0 ? Math.round((completed.length * 1400 * (i + 1)) / 6) : 0,
-      };
+      return { month: format(d, "MMM", { locale: fr }).replace(".", ""), value: 0 };
     });
-  }, [completed.length]);
+  }, [revenue]);
   const maxBar = Math.max(...revenueBars.map((b) => b.value), 1);
 
   const avgRating = completed.length > 0 ? "4,8" : "—";
@@ -361,7 +365,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
               </span>
               <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-medium text-white/70">{certLabel}</span>
             </div>
-            <p className="mt-6 text-sm font-medium text-white/60">CA généré · EUR</p>
+            <p className="mt-6 text-sm font-medium text-white/60">Mes revenus · ce mois</p>
             <p className="mt-1 font-semibold tabular-nums tracking-[-0.04em]">
               <span className="text-[clamp(3.5rem,7vw,5.5rem)] leading-none">{amount.int}</span>
               <span className="text-[clamp(1.75rem,3.5vw,2.75rem)] text-white/90">,{amount.dec} €</span>
@@ -452,11 +456,18 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
               <div className={cn(CARD, "flex flex-1 flex-col p-5")}>
                 <div className="flex items-start justify-between">
                   <p className="text-lg font-semibold">Mes revenus</p>
-                  <span className="text-xs text-white/45">6 derniers mois</span>
+                  <Link href="/dashboard/expert/revenus" className="text-xs text-white/45 hover:text-white">
+                    Voir le détail
+                  </Link>
                 </div>
                 <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight">
-                  {revenueTotal.toLocaleString("fr-FR")} €
+                  {revenueTotal.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
                 </p>
+                {revenue ? (
+                  <p className="mt-1 text-xs text-white/45">
+                    {(revenue.paidCents / 100).toLocaleString("fr-FR")} € versés · {(revenue.upcomingCents / 100).toLocaleString("fr-FR")} € à venir
+                  </p>
+                ) : null}
                 <div className="mt-auto flex h-28 items-end gap-2 pt-6">
                   {revenueBars.map((bar, i) => {
                     const isLast = i === revenueBars.length - 1;

@@ -10,24 +10,19 @@ import {
   Award,
   CalendarDays,
   ChevronDown,
-  ClipboardList,
   Euro,
   BookOpen,
-  FileText,
-  FlaskConical,
+  FolderCog,
   HelpCircle,
   LayoutDashboard,
   Lock,
   Menu,
   Settings,
   User2,
-  Users,
   X,
 } from "lucide-react";
 
-import { ExpertPoleSwitcher } from "@/components/expert/expert-pole-switcher";
 import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
-import { activePoles } from "@/lib/expert/pole-model";
 import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
@@ -197,36 +192,26 @@ export function ExpertShell({
 
   const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
   const careOnly = hasCare && !memberships.some((item) => item.pole === "formation" && item.status === "active");
+  const adminChildren: NavChild[] = [{ label: "Mes documents", href: "/dashboard/expert/documents" }];
+  if (hasCare) {
+    adminChildren.push(
+      { label: "CRM", href: "/dashboard/expert/dossiers" },
+      { label: "Byound tests", href: "/dashboard/expert/tests" },
+    );
+  }
   const items: NavItem[] = [
     { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard },
     { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2 },
     { label: "Agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
-  ];
-  if (!careOnly) {
-    items.push({
-      label: "Mes missions",
-      href: "/dashboard/expert/interventions",
-      icon: ClipboardList,
-      locked: restricted,
-      badge: counts.missions,
-    });
-  }
-  if (hasCare) {
-    items.push(
-      { label: "CRM", href: "/dashboard/expert/dossiers", icon: Users },
-      { label: "Byound tests", href: "/dashboard/expert/tests", icon: FlaskConical },
-    );
-  }
-  items.push(
     { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
     {
-      label: "Documents",
+      label: "Gestion admin",
       href: "/dashboard/expert/documents",
-      icon: FileText,
+      icon: FolderCog,
       badge: counts.documents,
-      children: [{ label: "Exemple de facture", href: "/dashboard/expert/documents?folder=modele" }],
+      children: adminChildren,
     },
-  );
+  ];
   if (!careOnly) {
     items.push(
       {
@@ -239,7 +224,6 @@ export function ExpertShell({
     );
   }
   items.push({ label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings });
-  const switcherPoles = activePoles(memberships);
 
   const identity = (
     <div className="mb-5 flex items-center gap-3 px-2">
@@ -290,7 +274,6 @@ export function ExpertShell({
         <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
           {brand}
           {identity}
-          {switcherPoles.length > 1 ? <ExpertPoleSwitcher pole={pole} /> : null}
           {managerPoles.length > 0 ? (
             <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)}>
               Appartenances
@@ -340,7 +323,6 @@ export function ExpertShell({
               </button>
             </div>
             {identity}
-            {switcherPoles.length > 1 ? <ExpertPoleSwitcher pole={pole} /> : null}
             {managerPoles.length > 0 ? (
               <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)} onClick={() => setOpen(false)}>
                 Appartenances

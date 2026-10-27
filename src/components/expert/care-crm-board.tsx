@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { BYOUND_CARE_TESTS } from "@/lib/expert/care-tests";
+import { BYOUND_CARE_TESTS, CARE_INVOICE_EXTRAS } from "@/lib/expert/care-tests";
+import { CARE_FOLLOW_UPS, followUpLabel, parseFollowUp, type CareFollowUp, validateCareClient } from "@/lib/expert/care-client-fields";
+import { centsToInput } from "@/lib/entreprise/offer-conditions";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
 
 type Client = {
@@ -12,6 +15,14 @@ type Client = {
   email: string;
   phone: string | null;
   notes: string | null;
+  address_line?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  follow_up?: string | null;
+  child_one_first_name?: string | null;
+  child_one_last_name?: string | null;
+  child_two_first_name?: string | null;
+  child_two_last_name?: string | null;
 };
 
 type Invite = { id: string; client_id: string; test_slug: string; sent_at: string | null; completed_at: string | null };
@@ -36,10 +47,21 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [last, setLast] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [followUp, setFollowUp] = useState<CareFollowUp>("self");
+  const [childOneFirst, setChildOneFirst] = useState("");
+  const [childOneLast, setChildOneLast] = useState("");
+  const [childTwoFirst, setChildTwoFirst] = useState("");
+  const [childTwoLast, setChildTwoLast] = useState("");
+  const [invoiceAddress, setInvoiceAddress] = useState("");
+  const [invoicePostal, setInvoicePostal] = useState("");
+  const [invoiceCity, setInvoiceCity] = useState("");
   const [clientId, setClientId] = useState("");
   const [testSlug, setTestSlug] = useState(BYOUND_CARE_TESTS[0].slug);
-  const [amount, setAmount] = useState("");
-  const [designation, setDesignation] = useState("Prestation Byound Care");
+  const [sessionPrice, setSessionPrice] = useState("");
+  const [extras, setExtras] = useState<string[]>([]);
   const [synthesis, setSynthesis] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -55,7 +77,15 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
     setInvoices(i.invoices ?? []);
     setResponses(r.responses ?? []);
     setHint(c.error || t.error || i.error || r.error || null);
-    if (!clientId && c.clients?.[0]?.id) setClientId(c.clients[0].id);
+    if (typeof i.sessionPriceCents === "number") setSessionPrice(centsToInput(i.sessionPriceCents));
+    const nextClientId = clientId || c.clients?.[0]?.id || "";
+    if (!clientId && nextClientId) setClientId(nextClientId);
+    const member = (c.clients ?? []).find((item: Client) => item.id === nextClientId);
+    if (member) {
+      setInvoiceAddress(member.address_line ?? "");
+      setInvoicePostal(member.postal_code ?? "");
+      setInvoiceCity(member.city ?? "");
+    }
   };
 
   useEffect(() => {
@@ -64,12 +94,43 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   }, []);
 
   const addClient = async () => {
+    const invalid = validateCareClient({
+      first_name: first,
+      last_name: last,
+      email,
+      phone,
+      address_line: addressLine,
+      postal_code: postalCode,
+      city,
+      follow_up: followUp,
+      child_one_first_name: childOneFirst,
+      child_one_last_name: childOneLast,
+      child_two_first_name: childTwoFirst,
+      child_two_last_name: childTwoLast,
+    });
+    if (invalid) {
+      toast.error(invalid);
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/expert/care/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ first_name: first, last_name: last, email, phone }),
+        body: JSON.stringify({
+          first_name: first,
+          last_name: last,
+          email,
+          phone,
+          address_line: addressLine,
+          postal_code: postalCode,
+          city,
+          follow_up: followUp,
+          child_one_first_name: childOneFirst,
+          child_one_last_name: childOneLast,
+          child_two_first_name: childTwoFirst,
+          child_two_last_name: childTwoLast,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Création impossible");
@@ -78,6 +139,14 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       setLast("");
       setEmail("");
       setPhone("");
+      setAddressLine("");
+      setPostalCode("");
+      setCity("");
+      setFollowUp("self");
+      setChildOneFirst("");
+      setChildOneLast("");
+      setChildTwoFirst("");
+      setChildTwoLast("");
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Création impossible");
@@ -111,12 +180,18 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       const res = await fetch("/api/expert/care/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, amount, designation }),
+        body: JSON.stringify({
+          clientId,
+          sessionPrice,
+          extras,
+          address_line: invoiceAddress,
+          postal_code: invoicePostal,
+          city: invoiceCity,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
-      if (json.sampleMissing) toast.message("Facture enregistrée. Déposez un PDF dans Documents > Factures (ou public/documents/facture-exemple.pdf).");
-      else toast.success(json.emailed ? "Facture envoyée" : json.emailError ?? "Facture enregistrée");
+      toast.success(json.emailed ? "Facture envoyée" : json.emailError ?? "Facture enregistrée");
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible");
@@ -145,10 +220,22 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
     }
   };
 
+  const extraTotal = extras.reduce((sum, slug) => {
+    const item = CARE_INVOICE_EXTRAS.find((extra) => extra.slug === slug);
+    return sum + (item?.cents ?? 0);
+  }, 0);
+  const sessionCents = Math.round((Number(sessionPrice.replace(",", ".")) || 0) * 100);
+  const invoiceTotal = (sessionCents + extraTotal) / 100;
+  const selectedClient = clients.find((item) => item.id === clientId) ?? null;
+  const previewLines = [
+    { label: "Séance individuelle", cents: sessionCents },
+    ...CARE_INVOICE_EXTRAS.filter((item) => extras.includes(item.slug)).map((item) => ({ label: item.label, cents: item.cents })),
+  ].filter((line) => line.cents > 0);
+
   const titles: Record<typeof mode, { title: string; subtitle: string }> = {
-    crm: { title: "CRM", subtitle: "Vos membres Byound Care, isolés de ceux des autres experts." },
+    crm: { title: "CRM", subtitle: "Identité du client, adresse, téléphone, et enfants suivis le cas échéant." },
     tests: { title: "Byound tests", subtitle: "MAI, soft skills et stress académique — envoi depuis le CRM, réponses conservées, synthèse OpenAI." },
-    factures: { title: "Facturation", subtitle: "Les factures nominatives reprennent le PDF déposé dans Documents → Exemple de facture." },
+    factures: { title: "Facturation", subtitle: "La facture reprend votre séance, les suppléments, et l'identité complète du client." },
   };
 
   return (
@@ -159,23 +246,103 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       {mode === "crm" ? (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2">
-            <input className={field} placeholder="Prénom" value={first} onChange={(event) => setFirst(event.target.value)} />
-            <input className={field} placeholder="Nom" value={last} onChange={(event) => setLast(event.target.value)} />
-            <input className={field} placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} />
-            <input className={field} placeholder="Téléphone" value={phone} onChange={(event) => setPhone(event.target.value)} />
+            <label className="text-xs font-extrabold text-[#9096A3]">
+              Prénom
+              <input className={`${field} mt-1`} value={first} onChange={(event) => setFirst(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3]">
+              Nom
+              <input className={`${field} mt-1`} value={last} onChange={(event) => setLast(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3]">
+              Adresse e-mail
+              <input className={`${field} mt-1`} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3]">
+              Numéro de téléphone
+              <input className={`${field} mt-1`} type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3] sm:col-span-2">
+              Adresse postale
+              <input className={`${field} mt-1`} value={addressLine} onChange={(event) => setAddressLine(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3]">
+              Code postal
+              <input className={`${field} mt-1`} value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3]">
+              Ville
+              <input className={`${field} mt-1`} value={city} onChange={(event) => setCity(event.target.value)} required />
+            </label>
+            <label className="text-xs font-extrabold text-[#9096A3] sm:col-span-2">
+              Le suivi concerne
+              <select
+                className={`${selectField} mt-1`}
+                value={followUp}
+                onChange={(event) => setFollowUp(parseFollowUp(event.target.value))}
+              >
+                {CARE_FOLLOW_UPS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            {followUp !== "self" ? (
+              <>
+                <label className="text-xs font-extrabold text-[#9096A3]">
+                  Prénom de l&apos;enfant
+                  <input className={`${field} mt-1`} value={childOneFirst} onChange={(event) => setChildOneFirst(event.target.value)} required />
+                </label>
+                <label className="text-xs font-extrabold text-[#9096A3]">
+                  Nom de l&apos;enfant
+                  <input className={`${field} mt-1`} value={childOneLast} onChange={(event) => setChildOneLast(event.target.value)} required />
+                </label>
+              </>
+            ) : null}
+            {followUp === "two_children" ? (
+              <>
+                <label className="text-xs font-extrabold text-[#9096A3]">
+                  Prénom du second enfant
+                  <input className={`${field} mt-1`} value={childTwoFirst} onChange={(event) => setChildTwoFirst(event.target.value)} required />
+                </label>
+                <label className="text-xs font-extrabold text-[#9096A3]">
+                  Nom du second enfant
+                  <input className={`${field} mt-1`} value={childTwoLast} onChange={(event) => setChildTwoLast(event.target.value)} required />
+                </label>
+              </>
+            ) : null}
           </div>
+          <p className="text-sm text-[#9096A3]">
+            L&apos;expert renseigne ces informations ici. Sur le futur site Byound Care, le client pourra les compléter à la prise de rendez-vous.
+          </p>
           <ExpertPrimaryButton onClick={() => void addClient()}>{busy ? "Enregistrement…" : "Ajouter au CRM"}</ExpertPrimaryButton>
           {clients.length === 0 ? (
             <EmptyState title="Aucun membre" text="Ajoutez un premier contact pour envoyer tests et factures." />
           ) : (
-            <ul className="space-y-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {clients.map((client) => (
-                <li key={client.id} className="rounded-[24px] bg-[#12141A] p-4">
-                  <p className="font-extrabold">{labelOf(client)}</p>
-                  <p className="text-sm text-[#B5BAC6]">{client.email}{client.phone ? ` · ${client.phone}` : ""}</p>
-                </li>
+                <article key={client.id} className="rounded-[24px] bg-[#12141A] p-5">
+                  <p className="text-lg font-extrabold">{labelOf(client)}</p>
+                  <p className="mt-1 text-sm text-[#B5BAC6]">{client.email}</p>
+                  {client.phone ? <p className="text-sm text-[#9096A3]">{client.phone}</p> : null}
+                  {client.address_line || client.city ? (
+                    <p className="mt-1 text-sm text-[#9096A3]">
+                      {[client.address_line, [client.postal_code, client.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-[#FFB4B8]">Adresse postale à renseigner pour facturer</p>
+                  )}
+                  {followUpLabel(client) ? <p className="mt-2 text-sm font-semibold text-[#F4F5F7]">{followUpLabel(client)}</p> : null}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link href="/dashboard/expert/tests" className="rounded-full bg-[#1E2130] px-3 py-1.5 text-xs font-extrabold">
+                      Envoyer un test
+                    </Link>
+                    <Link href="/dashboard/expert/facturation" className="rounded-full bg-[#F4F5F7] px-3 py-1.5 text-xs font-extrabold text-[#07080B]">
+                      Créer une facture
+                    </Link>
+                  </div>
+                </article>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       ) : null}
@@ -231,17 +398,92 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
 
       {mode === "factures" ? (
         <div className="space-y-6">
-          <select className={selectField} value={clientId} onChange={(event) => setClientId(event.target.value)} aria-label="Membre CRM">
+          <select
+            className={selectField}
+            value={clientId}
+            onChange={(event) => {
+              const nextId = event.target.value;
+              setClientId(nextId);
+              const member = clients.find((item) => item.id === nextId);
+              setInvoiceAddress(member?.address_line ?? "");
+              setInvoicePostal(member?.postal_code ?? "");
+              setInvoiceCity(member?.city ?? "");
+            }}
+            aria-label="Membre CRM"
+          >
             <option value="">Choisir un membre</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>{labelOf(client)}</option>
             ))}
           </select>
-          <input className={field} placeholder="Désignation" value={designation} onChange={(event) => setDesignation(event.target.value)} />
-          <input className={field} placeholder="Montant (€)" value={amount} onChange={(event) => setAmount(event.target.value)} />
+          {selectedClient ? (
+            <div className="rounded-[24px] bg-[#12141A] p-5 text-sm">
+              <p className="font-extrabold">Destinataire (repris sur la facture)</p>
+              <p className="mt-2">{labelOf(selectedClient)}</p>
+              <p className="text-[#B5BAC6]">{selectedClient.email}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <input className={`${field} sm:col-span-2`} placeholder="Adresse postale" value={invoiceAddress} onChange={(event) => setInvoiceAddress(event.target.value)} />
+                <input className={field} placeholder="Code postal" value={invoicePostal} onChange={(event) => setInvoicePostal(event.target.value)} />
+                <input className={field} placeholder="Ville" value={invoiceCity} onChange={(event) => setInvoiceCity(event.target.value)} />
+              </div>
+            </div>
+          ) : null}
+          <div className="rounded-[24px] bg-[#12141A] p-5">
+            <p className="text-sm font-extrabold">Séance individuelle</p>
+            <p className="mt-1 text-xs text-[#9096A3]">Votre tarif est mémorisé. Il ne change que si vous le modifiez.</p>
+            <input
+              className={`${field} mt-3`}
+              placeholder="Prix de la séance (€)"
+              value={sessionPrice}
+              onChange={(event) => setSessionPrice(event.target.value)}
+              inputMode="decimal"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-extrabold">Suppléments</p>
+            {CARE_INVOICE_EXTRAS.map((extra) => {
+              const checked = extras.includes(extra.slug);
+              return (
+                <label key={extra.slug} className="flex cursor-pointer items-center justify-between rounded-[24px] bg-[#12141A] px-4 py-3 text-sm">
+                  <span>
+                    <span className="font-extrabold">{extra.label}</span>
+                    <span className="text-[#B5BAC6]"> + {(extra.cents / 100).toLocaleString("fr-FR")} €</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() =>
+                      setExtras((current) =>
+                        checked ? current.filter((slug) => slug !== extra.slug) : [...current, extra.slug],
+                      )
+                    }
+                  />
+                </label>
+              );
+            })}
+          </div>
+          <div className="rounded-[24px] border border-[#1E2130] bg-[#0B0C10] p-5 text-sm">
+            <p className="font-extrabold">Aperçu de la facture</p>
+            {previewLines.length === 0 ? (
+              <p className="mt-2 text-[#9096A3]">Indiquez le prix de la séance ou un supplément.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {previewLines.map((line) => (
+                  <li key={line.label} className="flex justify-between gap-3">
+                    <span>{line.label}</span>
+                    <span className="tabular-nums">{(line.cents / 100).toLocaleString("fr-FR")} €</span>
+                  </li>
+                ))}
+                <li className="flex justify-between gap-3 border-t border-[#1E2130] pt-2 font-extrabold">
+                  <span>Total</span>
+                  <span className="tabular-nums">{invoiceTotal.toLocaleString("fr-FR")} €</span>
+                </li>
+              </ul>
+            )}
+          </div>
           <ExpertPrimaryButton onClick={() => void sendInvoice()}>{busy ? "Envoi…" : "Envoyer la facture"}</ExpertPrimaryButton>
           {invoices.length === 0 ? (
-            <EmptyState title="Aucune facture" text="Déposez d'abord un PDF d'exemple dans Documents, dossier Factures." />
+            <EmptyState title="Aucune facture" text="Choisissez un client, le tarif de séance et les tests à facturer." />
           ) : (
             <ul className="space-y-2">
               {invoices.map((invoice) => {

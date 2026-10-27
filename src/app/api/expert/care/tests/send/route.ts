@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: missingRelation(error) ? CARE_SQL_HINT : error.message }, { status: 500 });
   }
 
-  const origin = publicAppUrl() || BYOUND_PUBLIC_ORIGIN;
-  const link = `${origin}/care-test/${encodeURIComponent(invite.token)}`;
+  const origin = BYOUND_PUBLIC_ORIGIN || publicAppUrl();
+  const link = `${origin}/care-test/${invite.token}`;
   const first = String(client.first_name ?? "").trim();
   const greeting = first ? `Bonjour ${first},` : "Bonjour,";
   const mailed = await sendEmail({

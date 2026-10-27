@@ -8,10 +8,17 @@ import type { ExpertShopFormation } from "@/lib/expert/shop-formations";
 export function ExpertDashboardClient({
   formations,
   pole,
+  revenue,
 }: {
   formations: ExpertShopFormation[];
   pole: ExpertPole | null;
+  revenue?: {
+    totalCents: number;
+    paidCents: number;
+    upcomingCents: number;
+    bars: Array<{ month: string; value: number }>;
+  };
 }) {
   const { isApproved } = useExpertAccess();
-  return <ExpertCockpitDashboard restricted={!isApproved} formations={formations} pole={pole} />;
+  return <ExpertCockpitDashboard restricted={!isApproved} formations={formations} pole={pole} revenue={revenue} />;
 }

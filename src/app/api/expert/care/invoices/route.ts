@@ -1,37 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/resend-client";
+import { getSession } from "@/lib/auth/session";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
+import { CARE_INVOICE_EXTRAS } from "@/lib/expert/care-tests";
+import { careInvoicePdfBuffer, type CareInvoiceLine } from "@/lib/expert/care-invoice-pdf";
+import { mergeRegistrationMeta, parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
 import { loadExpertSpace } from "@/lib/expert/space-server";
 import { eurosToCents } from "@/lib/entreprise/offer-conditions";
-import { readFile } from "fs/promises";
-import path from "path";
+import { followUpLabel } from "@/lib/expert/care-client-fields";
 
-async function loadTemplateBuffer(url: string) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return Buffer.from(await response.arrayBuffer());
-  } catch {
-    return null;
-  }
-}
-
-async function sampleInvoice() {
-  const space = await loadExpertSpace();
-  const fromDocs =
-    space.documents.find((doc) => doc.folder === "modele") ??
-    space.documents.find((doc) => doc.folder === "facture" || /facture|exemple/i.test(doc.name));
-  if (fromDocs?.url) {
-    const buffer = await loadTemplateBuffer(fromDocs.url);
-    return { url: fromDocs.url, name: fromDocs.name, buffer };
-  }
-  try {
-    const filePath = path.join(process.cwd(), "public", "documents", "facture-exemple.pdf");
-    const buffer = await readFile(filePath);
-    return { url: "/documents/facture-exemple.pdf", name: "facture-exemple.pdf", buffer };
-  } catch {
-    return null;
-  }
+function columnMissing(error: { message?: string } | null) {
+  return /address_line|postal_code|city|follow_up|child_one|child_two|schema cache|column/i.test(error?.message ?? "");
 }
 
 export async function GET() {
@@ -45,7 +24,9 @@ export async function GET() {
   if (error) {
     return NextResponse.json({ error: missingRelation(error) ? CARE_SQL_HINT : error.message, invoices: [] }, { status: missingRelation(error) ? 200 : 500 });
   }
-  return NextResponse.json({ invoices: data ?? [] });
+  const expert = await gate.db.from("experts").select("references").eq("id", gate.expertId).maybeSingle();
+  const sessionPriceCents = parseRegistrationMeta(expert.data?.references)?.care_session_price_cents ?? null;
+  return NextResponse.json({ invoices: data ?? [], sessionPriceCents, extras: CARE_INVOICE_EXTRAS });
 }
 
 export async function POST(req: NextRequest) {
@@ -54,32 +35,115 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
     clientId?: string;
     amount?: string;
+    sessionPrice?: string;
+    extras?: string[];
     designation?: string;
+    address_line?: string;
+    postal_code?: string;
+    city?: string;
   } | null;
   const clientId = body?.clientId?.trim() ?? "";
   if (!clientId) return NextResponse.json({ error: "Membre CRM requis" }, { status: 400 });
-  const { data: client, error: clientError } = await gate.db
+
+  let clientQuery = await gate.db
     .from("expert_care_clients")
-    .select("id,first_name,last_name,email")
+    .select("id,first_name,last_name,email,phone,address_line,postal_code,city,follow_up,child_one_first_name,child_one_last_name,child_two_first_name,child_two_last_name")
     .eq("id", clientId)
     .eq("expert_id", gate.expertId)
     .maybeSingle();
-  if (clientError) return NextResponse.json({ error: missingRelation(clientError) ? CARE_SQL_HINT : clientError.message }, { status: 500 });
+  if (clientQuery.error && columnMissing(clientQuery.error)) {
+    clientQuery = await gate.db
+      .from("expert_care_clients")
+      .select("id,first_name,last_name,email,phone")
+      .eq("id", clientId)
+      .eq("expert_id", gate.expertId)
+      .maybeSingle();
+  }
+  if (clientQuery.error) {
+    return NextResponse.json({ error: missingRelation(clientQuery.error) ? CARE_SQL_HINT : clientQuery.error.message }, { status: 500 });
+  }
+  const client = clientQuery.data as {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string | null;
+    address_line?: string | null;
+    postal_code?: string | null;
+    city?: string | null;
+    follow_up?: string | null;
+    child_one_first_name?: string | null;
+    child_one_last_name?: string | null;
+    child_two_first_name?: string | null;
+    child_two_last_name?: string | null;
+  } | null;
   if (!client) return NextResponse.json({ error: "Membre introuvable" }, { status: 404 });
 
-  const amountCents = eurosToCents(body?.amount ?? "") ?? 0;
-  const designation = body?.designation?.trim() || "Prestation Byound Care";
-  const sample = await sampleInvoice();
-  const invoiceFile = `Facture ${[client.first_name, client.last_name].filter(Boolean).join(" ").trim() || "client"}.pdf`;
-  const attachments = sample?.buffer
-    ? [{ filename: invoiceFile, content: sample.buffer }]
-    : undefined;
+  const addressLine = body?.address_line?.trim() || client.address_line?.trim() || "";
+  const postalCode = body?.postal_code?.trim() || client.postal_code?.trim() || "";
+  const city = body?.city?.trim() || client.city?.trim() || "";
+  if (!addressLine || !postalCode || !city) {
+    return NextResponse.json({ error: "Adresse postale du client requise (rue, code postal, ville)." }, { status: 400 });
+  }
 
+  const addressPatch = { address_line: addressLine, postal_code: postalCode, city };
+  const patched = await gate.db.from("expert_care_clients").update(addressPatch).eq("id", client.id).eq("expert_id", gate.expertId);
+  if (patched.error && !columnMissing(patched.error) && !missingRelation(patched.error)) {
+    return NextResponse.json({ error: patched.error.message }, { status: 500 });
+  }
+
+  const expertRow = await gate.db.from("experts").select("references").eq("id", gate.expertId).maybeSingle();
+  const savedSession = parseRegistrationMeta(expertRow.data?.references)?.care_session_price_cents ?? 0;
+  const incomingSession = eurosToCents(body?.sessionPrice ?? body?.amount ?? "");
+  const sessionPriceCents = incomingSession ?? savedSession;
+  if (incomingSession != null) {
+    const references = mergeRegistrationMeta(expertRow.data?.references, { care_session_price_cents: incomingSession });
+    await gate.db.from("experts").update({ references }).eq("id", gate.expertId);
+  }
+  const extraSlugs = Array.isArray(body?.extras) ? body.extras : [];
+  const extras = CARE_INVOICE_EXTRAS.filter((item) => extraSlugs.includes(item.slug));
+  const lines: CareInvoiceLine[] = [
+    { label: "Séance individuelle", cents: sessionPriceCents },
+    ...extras.map((item) => ({ label: item.label, cents: item.cents })),
+  ].filter((line) => line.cents > 0);
+  if (!lines.length) {
+    return NextResponse.json({ error: "Indiquez le prix de la séance ou un supplément." }, { status: 400 });
+  }
+  const amountCents = lines.reduce((sum, line) => sum + line.cents, 0);
+  const designation = body?.designation?.trim() || lines.map((line) => line.label).join(" + ");
+  const issuedAt = new Date();
+  const invoiceNumber = `BYC-${issuedAt.toISOString().slice(0, 10).replaceAll("-", "")}-${client.id.slice(0, 6).toUpperCase()}`;
+  const space = await loadExpertSpace();
+  const session = await getSession();
+  const pdf = careInvoicePdfBuffer({
+    invoiceNumber,
+    issuedAt,
+    expertName: space.profile.name,
+    expertHeadline: space.profile.headline,
+    expertEmail: session?.email ?? null,
+    clientFirstName: client.first_name,
+    clientLastName: client.last_name,
+    clientEmail: client.email,
+    clientAddressLine: addressLine,
+    clientPostalCode: postalCode,
+    clientCity: city,
+    followUpLabel: followUpLabel(client),
+    lines,
+  });
+  const fullName = [client.first_name, client.last_name].filter(Boolean).join(" ").trim() || "client";
+  const invoiceFile = `Facture ${fullName}.pdf`;
+  const linesHtml = lines
+    .map((line) => `<tr><td style="padding:6px 0">${line.label}</td><td style="padding:6px 0;text-align:right">${(line.cents / 100).toLocaleString("fr-FR")} €</td></tr>`)
+    .join("");
   const mailed = await sendEmail({
     to: client.email,
     subject: `Facture — ${designation}`,
-    html: `<p>Bonjour ${client.first_name || ""},</p><p>Veuillez trouver votre facture nominative : <strong>${designation}</strong>${amountCents > 0 ? ` (${(amountCents / 100).toLocaleString("fr-FR")} €)` : ""}.</p>${sample?.url && !sample.buffer ? `<p><a href="${sample.url}">Télécharger la facture</a></p>` : "<p>Le document est joint à cet e-mail.</p>"}`,
-    attachments,
+    html: `<p>Bonjour ${client.first_name || ""},</p>
+<p>Veuillez trouver ci-joint votre facture nominative.</p>
+<p><strong>${fullName}</strong><br/>${client.email}<br/>${addressLine}<br/>${postalCode} ${city}${followUpLabel(client) ? `<br/>${followUpLabel(client)}` : ""}</p>
+<table style="width:100%;max-width:420px">${linesHtml}<tr><td style="padding-top:8px"><strong>Total</strong></td><td style="padding-top:8px;text-align:right"><strong>${(amountCents / 100).toLocaleString("fr-FR")} €</strong></td></tr></table>
+<p>Le document PDF reprend ces mêmes informations.</p>`,
+    attachments: [{ filename: invoiceFile, content: pdf }],
   });
 
   const { data, error } = await gate.db
@@ -89,8 +153,7 @@ export async function POST(req: NextRequest) {
       client_id: client.id,
       amount_cents: amountCents,
       designation,
-      document_url: sample?.url ?? null,
-      document_name: sample?.name ?? null,
+      document_name: invoiceFile,
       status: mailed.success ? "sent" : "draft",
       sent_at: mailed.success ? new Date().toISOString() : null,
     })
@@ -104,6 +167,5 @@ export async function POST(req: NextRequest) {
     id: data.id,
     emailed: mailed.success,
     emailError: mailed.success ? null : mailed.error,
-    sampleMissing: !sample,
   });
 }

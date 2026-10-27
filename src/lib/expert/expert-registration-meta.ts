@@ -31,6 +31,7 @@ export type EdgeRegistrationMeta = {
   visibility?: Partial<Record<"titre" | "specialites" | "regions" | "formats" | "tarif" | "photo" | "bio", "public" | "private">>;
   agenda_format?: "visio" | "presentiel" | null;
   notice_hours?: number | null;
+  care_session_price_cents?: number | null;
 };
 
 const META_TYPE = "edge_registration_meta";
@@ -62,6 +63,10 @@ export function parseRegistrationMeta(references: unknown): EdgeRegistrationMeta
     visibility: raw.visibility && typeof raw.visibility === "object" ? (raw.visibility as EdgeRegistrationMeta["visibility"]) : undefined,
     agenda_format: raw.agenda_format === "presentiel" || raw.agenda_format === "visio" ? raw.agenda_format : null,
     notice_hours: typeof raw.notice_hours === "number" ? raw.notice_hours : null,
+    care_session_price_cents:
+      typeof raw.care_session_price_cents === "number" && Number.isFinite(raw.care_session_price_cents)
+        ? Math.max(0, Math.round(raw.care_session_price_cents))
+        : null,
     documents: Array.isArray(raw.documents)
       ? (raw.documents as ExpertDocumentMeta[]).filter((d) => d && typeof d.id === "string")
       : [],

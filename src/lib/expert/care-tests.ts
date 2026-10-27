@@ -27,3 +27,9 @@ export type ByoundCareTestSlug = (typeof BYOUND_CARE_TESTS)[number]["slug"];
 export function getCareTest(slug: string) {
   return BYOUND_CARE_TESTS.find((item) => item.slug === slug) ?? null;
 }
+
+export const CARE_INVOICE_EXTRAS = [
+  { slug: "mai", label: "Test MAI", cents: 5000 },
+  { slug: "soft-skills", label: "Test Soft skills", cents: 19000 },
+  { slug: "stress-academique", label: "Test de stress académique", cents: 5000 },
+] as const;

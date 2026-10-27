@@ -161,6 +161,10 @@
   padding: 22px 20px 180px;
 }
 
+.lesson-reader__main:has(.lesson-resource) {
+  max-width: min(1180px, 100%);
+}
+
 .lesson-reader__ai-dock:empty {
   display: none;
 }

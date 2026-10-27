@@ -1,3 +1,4 @@
+import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import {
   collectProgressLeafIds,
@@ -32,18 +33,24 @@ export async function readCourseLearnerProgress(userId: string, courseId: string
   const sectionsRaw = snapshot && typeof snapshot === "object" ? (snapshot as { sections?: unknown }).sections : null;
   if (!Array.isArray(sectionsRaw)) return empty;
 
-  const sections: OutlineSection[] = sectionsRaw.map((section: { id?: string; title?: string; chapters?: unknown[] }, index: number) => ({
+  const sections: OutlineSection[] = sectionsRaw
+    .filter((section: { deleted_at?: string | null }) => isCourseNodeVisible(section))
+    .map((section: { id?: string; title?: string; deleted_at?: string | null; chapters?: unknown[] }, index: number) => ({
     id: String(section?.id || `section-${index}`),
     title: String(section?.title ?? "Module"),
-    chapters: (Array.isArray(section?.chapters) ? section.chapters : []).map((chapter: { id?: string; title?: string; subchapters?: unknown[] }, chapterIndex: number) => ({
+    chapters: (Array.isArray(section?.chapters) ? section.chapters : [])
+      .filter((chapter: { deleted_at?: string | null }) => isCourseNodeVisible(chapter))
+      .map((chapter: { id?: string; title?: string; subchapters?: unknown[] }, chapterIndex: number) => ({
       id: String(chapter?.id || `chapter-${chapterIndex}`),
       title: String(chapter?.title ?? "Chapitre"),
-      subchapters: (Array.isArray(chapter?.subchapters) ? chapter.subchapters : []).map((sub: { id?: string; title?: string }, subIndex: number) => ({
+      subchapters: (Array.isArray(chapter?.subchapters) ? chapter.subchapters : [])
+        .filter((sub: { deleted_at?: string | null }) => isCourseNodeVisible(sub))
+        .map((sub: { id?: string; title?: string }, subIndex: number) => ({
         id: String(sub?.id || `sub-${subIndex}`),
         title: String(sub?.title ?? "Bloc"),
       })),
     })),
-  }));
+  })).filter((section) => section.chapters.length > 0);
 
   const leafIds = collectProgressLeafIds(sections);
   const enrollmentByUser = await client

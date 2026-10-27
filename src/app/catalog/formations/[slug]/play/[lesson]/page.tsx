@@ -4,6 +4,8 @@ import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { LearningSessionTracker, LessonLeafSessionTracker } from "@/components/learning-session-tracker";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Page de lecture d'une leçon spécifique dans une formation
  * Réutilise la même logique que /catalog/[category]/[slug]/play/[lesson]

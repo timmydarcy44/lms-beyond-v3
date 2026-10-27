@@ -11,6 +11,7 @@ import { readLeafDone } from "@/lib/learning/leaf-done";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import "./formation-studio.css";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
@@ -200,12 +201,16 @@ export function FormationStudio({
     const built: Chapter[] = [];
     let previousDone = true;
     let previousTitle = "";
-    (snapshot?.sections ?? []).forEach((section, sectionIndex) => {
+    let visibleSection = 0;
+    (snapshot?.sections ?? []).forEach((section) => {
+      if (!isCourseNodeVisible(section)) return;
       const nodes: Node[] = [];
-      (section.chapters ?? []).forEach((chapter, chapterIndex) => {
-        const locked = (linear || Boolean(chapter.unlock_condition)) && !(sectionIndex === 0 && chapterIndex === 0) && !previousDone;
+      let visibleChapter = 0;
+      (section.chapters ?? []).forEach((chapter) => {
+        if (!isCourseNodeVisible(chapter)) return;
+        const locked = (linear || Boolean(chapter.unlock_condition)) && !(visibleSection === 0 && visibleChapter === 0) && !previousDone;
         const lockReason = locked ? lockExplanation(previousTitle, chapter.unlock_condition) : undefined;
-        const leaves: Leaf[] = (chapter.subchapters ?? []).map((sub) => ({
+        const leaves: Leaf[] = (chapter.subchapters ?? []).filter((sub) => isCourseNodeVisible(sub)).map((sub) => ({
           id: String(sub.id),
           title: sub.title?.trim() || "Sans titre",
           duration: sub.duration?.trim() || "",
@@ -243,13 +248,16 @@ export function FormationStudio({
           readingHref,
           leaves,
         });
+        visibleChapter += 1;
       });
+      if (nodes.length === 0) return;
       built.push({
-        id: String(section.id || `section-${sectionIndex}`),
-        number: sectionIndex + 1,
+        id: String(section.id || `section-${visibleSection}`),
+        number: visibleSection + 1,
         title: section.title?.trim() || "Chapitre",
         nodes,
       });
+      visibleSection += 1;
     });
     return built;
   }, [playBase, progressById, snapshot]);

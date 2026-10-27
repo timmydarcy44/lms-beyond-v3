@@ -1,4 +1,5 @@
 import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
+import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import type { CourseBuilderChapter } from "@/types/course-builder";
 import { EDGE_LAB_COURSE_CATEGORY_LABELS } from "@/lib/edge-lab-course-categories";
 import {
@@ -1179,12 +1180,12 @@ export async function getLearnerContentDetail(
       // Transformer les sections en modules avec lessons
       const modules: LearnerModule[] = [];
       if (snapshot?.sections && Array.isArray(snapshot.sections)) {
-        snapshot.sections.forEach((section: any) => {
+        snapshot.sections.filter((section: { deleted_at?: string | null }) => isCourseNodeVisible(section)).forEach((section: any) => {
           const lessons: LearnerLesson[] = [];
           
           // Parcourir les chapitres et sous-chapitres pour créer les lessons
           if (section.chapters && Array.isArray(section.chapters)) {
-            section.chapters.forEach((chapter: any) => {
+            section.chapters.filter((chapter: { deleted_at?: string | null }) => isCourseNodeVisible(chapter)).forEach((chapter: any) => {
               // Le chapitre lui-même peut être une lesson s'il a du contenu ou un titre
               if (chapter.content || chapter.title || chapter.videoUrl || chapter.mediaUrl) {
                 const chapterId = chapter.id || `chapter-${chapter.title || Date.now()}`;
@@ -1202,7 +1203,7 @@ export async function getLearnerContentDetail(
               
               // Les sous-chapitres sont aussi des lessons
               if (chapter.subchapters && Array.isArray(chapter.subchapters)) {
-                chapter.subchapters.forEach((subchapter: any) => {
+                chapter.subchapters.filter((subchapter: { deleted_at?: string | null }) => isCourseNodeVisible(subchapter)).forEach((subchapter: any) => {
                   const isInterview = subchapter.kind === "experiential_interview";
                   const isResource =
                     subchapter.kind === "resource" || Boolean(subchapter.resource_id);
@@ -1272,8 +1273,8 @@ export async function getLearnerContentDetail(
             });
           }
 
-          // Ne créer un module que s'il y a des lessons
-          if (lessons.length > 0 || section.title) {
+          // Ne créer un module que s'il reste des leçons visibles
+          if (lessons.length > 0) {
             modules.push({
               id: section.id || `section-${section.title || Date.now()}`,
               title: section.title || "Section",
@@ -1493,15 +1494,15 @@ export async function getLearnerContentDetail(
       
       if (course.builder_snapshot) {
         const snapshot = course.builder_snapshot as any;
-        for (const section of snapshot.sections || []) {
-          for (const chapter of section.chapters || []) {
+        for (const section of (snapshot.sections || []).filter((section: { deleted_at?: string | null }) => isCourseNodeVisible(section))) {
+          for (const chapter of (section.chapters || []).filter((chapter: { deleted_at?: string | null }) => isCourseNodeVisible(chapter))) {
             if (chapter.dbId && chapter.id) {
               chapterIdMap.set(chapter.dbId, chapter.id);
               localIdMap.set(chapter.id, chapter.dbId);
             }
             // Vérifier aussi les sous-chapitres
             if (chapter.subchapters) {
-              for (const subchapter of chapter.subchapters) {
+              for (const subchapter of chapter.subchapters.filter((subchapter: { deleted_at?: string | null }) => isCourseNodeVisible(subchapter))) {
                 if (subchapter.dbId && subchapter.id) {
                   chapterIdMap.set(subchapter.dbId, subchapter.id);
                   localIdMap.set(subchapter.id, subchapter.dbId);

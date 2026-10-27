@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import { getCertificationStatus } from "@/lib/courses/course-completion";
 import {
   collectProgressLeafIds,
@@ -16,7 +17,8 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type SessionAgg = { hasSession: boolean; maxActiveSeconds: number };
 
@@ -217,24 +219,31 @@ export async function GET(_req: Request, { params }: RouteParams) {
         learnerProgress: { state: "none", percent: null },
         courseCover: null,
       });
-      res.headers.set("Cache-Control", "private, max-age=60");
+      res.headers.set("Cache-Control", "private, no-store");
       return res;
     }
 
-    const sections: OutlineSection[] = (snapshot as any).sections.map((section: any) => ({
+    const sections: OutlineSection[] = ((snapshot as any).sections as any[])
+      .filter((section) => isCourseNodeVisible(section))
+      .map((section: any) => ({
       id: section.id || `section-${section.title}`,
       title: section.title,
       chapters:
-        section.chapters?.map((chapter: any) => ({
+        (section.chapters ?? [])
+          .filter((chapter: { deleted_at?: string | null }) => isCourseNodeVisible(chapter))
+          .map((chapter: any) => ({
           id: chapter.id || `chapter-${chapter.title}`,
           title: chapter.title,
           subchapters:
-            chapter.subchapters?.map((subchapter: any) => ({
+            (chapter.subchapters ?? [])
+              .filter((subchapter: { deleted_at?: string | null }) => isCourseNodeVisible(subchapter))
+              .map((subchapter: any) => ({
               id: subchapter.id || `subchapter-${subchapter.title}`,
               title: subchapter.title,
             })) || [],
         })) || [],
-    }));
+    }))
+      .filter((section) => section.chapters.length > 0);
 
     const leafIds = collectProgressLeafIds(sections);
     const enrollmentProgress = await fetchEnrollmentProgress(client, user.id, id);
@@ -284,7 +293,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
     const activity = await fetchCourseActivity(client, user.id, [id, ...leafIds]);
     const certification = await getCertificationStatus(user.id, id);
     const res = NextResponse.json({ sections: sectionsOut, learnerProgress, courseCover, activity, certification });
-    res.headers.set("Cache-Control", "private, max-age=60");
+    res.headers.set("Cache-Control", "private, no-store");
     return res;
   } catch (error) {
     console.error("[api/courses/structure] Erreur:", error);

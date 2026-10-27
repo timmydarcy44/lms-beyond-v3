@@ -146,7 +146,7 @@ export function EmbeddedLessonResource({ resourceId, title }: EmbeddedLessonReso
   const videoUrl = resource.video_url || (mediaType === "video" ? fileUrl : null);
   const audioUrl = resource.audio_url || (mediaType === "audio" ? fileUrl : null);
   const sameTitle = displayTitle.trim().toLowerCase() === String(title ?? "").trim().toLowerCase();
-  const pdfSrc = fileUrl && !fileUrl.includes("#") ? `${fileUrl}#view=FitH&toolbar=1` : fileUrl;
+  const pdfSrc = fileUrl && !fileUrl.includes("#") ? `${fileUrl}#zoom=page-width&toolbar=1&navpanes=0` : fileUrl;
 
   if (mediaType === "html" && htmlContent) {
     return (
@@ -164,7 +164,7 @@ export function EmbeddedLessonResource({ resourceId, title }: EmbeddedLessonReso
         <iframe
           src={pdfSrc}
           title={displayTitle}
-          className="lesson-resource__frame h-[calc(100dvh-240px)] min-h-[68vh] w-full border-0 bg-white"
+          className="lesson-resource__frame h-[calc(100dvh-168px)] min-h-[82vh] w-full border-0 bg-white"
         />
       ) : null}
 

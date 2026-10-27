@@ -162,7 +162,16 @@
 }
 
 .lesson-reader__main:has(.lesson-resource) {
-  max-width: min(1180px, 100%);
+  max-width: none;
+  flex: 1 1 100%;
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.lesson-resource {
+  width: 100%;
+  max-width: none;
 }
 
 .lesson-reader__ai-dock:empty {

@@ -130,7 +130,7 @@ export default function BesoinCompetencesDetailPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f7] text-gray-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
+      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <Link
           href={
             need

@@ -56,7 +56,7 @@ export default function EntrepriseAidePage() {
   return (
     <div className="flex min-h-screen bg-[#f7f5fb] text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-8 max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">Aide</p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Centre d’aide</h1>

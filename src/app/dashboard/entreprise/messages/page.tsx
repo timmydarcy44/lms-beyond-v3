@@ -204,7 +204,7 @@ export default function EntrepriseMessagesPage() {
   return (
     <div className="flex min-h-screen bg-[#f2f2f7] text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex min-h-screen flex-1 flex-col lg:pl-[104px]">
+      <main className="flex min-h-screen flex-1 flex-col lg:pl-[280px]">
         <div className="mx-auto flex h-[100dvh] w-full max-w-6xl flex-col px-3 py-4 sm:px-6 lg:h-screen lg:py-6">
           <header className="mb-4 shrink-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-500">

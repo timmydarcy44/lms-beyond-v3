@@ -132,6 +132,9 @@ export function CareClientFiche({ clientId }: { clientId: string }) {
           ) : null}
         </dl>
         <div className="mt-5 flex flex-wrap gap-2">
+          <Link href={`/dashboard/expert/agenda?client=${client.id}`} className="rounded-full bg-[#FF4B4B] px-4 py-2 text-xs font-extrabold text-[#04140C]">
+            Ajouter un rendez-vous
+          </Link>
           <Link href="/dashboard/expert/tests" className="rounded-full bg-[#1E2130] px-4 py-2 text-xs font-extrabold">
             Envoyer un test
           </Link>

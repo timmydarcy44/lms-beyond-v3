@@ -39,7 +39,7 @@ export default function EntrepriseBadgesPage() {
   return (
     <div className={cn("min-h-screen bg-[#F4F4F1] text-[#07080B]", manrope.className)}>
       <EnterpriseSidebar />
-      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]">
+      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[264px]">
         <h1 className="text-[40px] font-extrabold leading-none tracking-[-1.2px]">Badges</h1>
         <p className="mt-2 max-w-xl text-[15px] text-[#3A3D45]">
           Open Badges de votre organisation : délivrés, obtenus ce mois-ci, et preuves encore en attente.

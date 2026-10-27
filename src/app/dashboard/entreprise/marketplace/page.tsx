@@ -36,7 +36,7 @@ export default function EntrepriseMarketplacePage() {
   ).sort();
 
   return (
-    <div className="min-h-screen bg-slate-50 pl-[104px]">
+    <div className="min-h-screen bg-slate-50 pl-[260px]">
       <EnterpriseSidebar />
       <main className="mx-auto max-w-6xl px-8 py-10">
         <header className="mb-8">

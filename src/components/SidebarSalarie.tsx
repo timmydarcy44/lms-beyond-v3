@@ -11,11 +11,8 @@ export default function SidebarSalarie() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const renderItems = (rail: boolean) => (
-    <nav
-      className={cn("flex flex-1 flex-col gap-0.5", rail ? "px-1.5 py-3" : "px-3 py-4")}
-      aria-label="Navigation salarié"
-    >
+  const nav = (
+    <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Navigation salarié">
       {SALARIE_NAV_ITEMS.map((item) => {
         const hrefPath = item.href.split("#")[0];
         const active = hrefPath === "/dashboard/salarie" ? pathname === hrefPath : pathname.startsWith(hrefPath);
@@ -25,17 +22,13 @@ export default function SidebarSalarie() {
             key={item.label}
             href={item.href}
             onClick={() => setOpen(false)}
-            className={
-              rail
-                ? `revolut-rail-item ${active ? "is-active" : "is-idle"}`
-                : cn(
-                    "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold text-[#B5BAC6]",
-                    active && "bg-[#6E5BFF] font-extrabold text-white",
-                  )
-            }
+            className={cn(
+              "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold text-[#B5BAC6]",
+              active && "bg-[#6E5BFF] font-extrabold text-white",
+            )}
           >
-            <Icon size={rail ? 20 : 18} strokeWidth={1.75} />
-            <span className={rail ? "revolut-rail-label" : undefined}>{item.label}</span>
+            <Icon size={18} strokeWidth={1.75} />
+            {item.label}
           </Link>
         );
       })}
@@ -57,21 +50,8 @@ export default function SidebarSalarie() {
       ) : null}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-[#16181F] bg-[#07080B] py-4",
-          "w-[88px] hidden lg:flex",
-        )}
-      >
-        <div className="mb-3 flex justify-center px-2">
-          <Link href="/dashboard/salarie" className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[11px] font-extrabold text-[#07080B]">
-            BY
-          </Link>
-        </div>
-        {renderItems(true)}
-      </aside>
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-[240px] flex-col border-r border-[#16181F] bg-[#07080B] py-4 lg:hidden",
-          open ? "flex" : "hidden",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-[240px] flex-col border-r border-[#16181F] bg-[#07080B] py-4",
+          open ? "flex" : "hidden lg:flex",
         )}
       >
         <div className="mb-4 flex items-center justify-between px-4">
@@ -83,7 +63,7 @@ export default function SidebarSalarie() {
             <X className="h-4 w-4 text-white" />
           </button>
         </div>
-        {renderItems(false)}
+        {nav}
       </aside>
     </>
   );

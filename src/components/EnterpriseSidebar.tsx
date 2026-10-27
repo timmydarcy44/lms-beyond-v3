@@ -316,14 +316,12 @@ function NavLinks({
   openGroups,
   toggleGroup,
   extraItems = [],
-  rail = false,
 }: {
   pathname: string;
   onNavigate?: () => void;
   openGroups: Record<string, boolean>;
   toggleGroup: (label: string) => void;
   extraItems?: NavItem[];
-  rail?: boolean;
 }) {
   return (
     <>
@@ -331,21 +329,6 @@ function NavLinks({
         const Icon = item.icon;
         if (item.type === "link") {
           const active = isPathActive(pathname, item.href);
-          if (rail) {
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                prefetch
-                onClick={onNavigate}
-                title={item.label}
-                className={`revolut-rail-item ${active ? "is-active" : "is-idle"}`}
-              >
-                <Icon size={20} strokeWidth={1.75} />
-                <span className="revolut-rail-label">{item.label}</span>
-              </Link>
-            );
-          }
           return (
             <Link
               key={item.label}
@@ -365,22 +348,6 @@ function NavLinks({
 
         const groupActive = isGroupActive(pathname, item);
         const open = openGroups[item.label] ?? groupActive;
-
-        if (rail) {
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              prefetch
-              onClick={onNavigate}
-              title={item.label}
-              className={`revolut-rail-item ${groupActive ? "is-active" : "is-idle"}`}
-            >
-              <Icon size={20} strokeWidth={1.75} />
-              <span className="revolut-rail-label">{item.label}</span>
-            </Link>
-          );
-        }
 
         return (
           <div key={item.label} className="space-y-1">
@@ -584,9 +551,9 @@ export default function EnterpriseSidebar() {
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-50 hidden h-screen w-[88px] flex-col bg-[#070C1C] px-1.5 py-5 lg:flex"
+      className="fixed inset-y-0 left-0 z-50 hidden h-screen w-[248px] flex-col bg-[#070C1C] px-[14px] py-5 lg:flex"
     >
-      <div className="flex justify-center">
+      <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-[12px] font-extrabold text-[#070C1C]">
           {overviewData?.organisation?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -595,28 +562,29 @@ export default function EnterpriseSidebar() {
             (overviewData?.organisation?.name || "Byound").slice(0, 2).toUpperCase()
           )}
         </div>
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-extrabold text-white">Byound Business</p>
+          <p className="text-[12px] text-[#9096A3]">Powered by Byound</p>
+        </div>
       </div>
 
-      <div className="mt-4 flex justify-center" title={displayName}>
+      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/5 px-3 py-2.5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] text-[12px] font-bold text-white">
           {initials}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[14px] font-bold text-white">{displayName}</p>
+          <p className="truncate text-[12px] text-[#9096A3]">{viewer.email ?? ""}</p>
         </div>
       </div>
 
       <nav
-        className="mt-3 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto [scrollbar-width:none]"
+        className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1 [scrollbar-color:#FFFFFF1A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10"
         aria-label="Navigation entreprise"
       >
-        <NavLinks rail pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} extraItems={tutorItem ? [tutorItem] : []} />
-        <div className="mt-auto pt-2">
-          <Link
-            href="/dashboard/entreprise/compte"
-            prefetch
-            className={`revolut-rail-item ${isPathActive(pathname, "/dashboard/entreprise/compte") ? "is-active" : "is-idle"}`}
-          >
-            <UserCircle size={20} strokeWidth={1.75} />
-            <span className="revolut-rail-label">Compte</span>
-          </Link>
+        <NavLinks pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} extraItems={tutorItem ? [tutorItem] : []} />
+        <div className="mt-auto pt-3">
+          <AccountMenuFooter pathname={pathname} />
         </div>
       </nav>
     </aside>

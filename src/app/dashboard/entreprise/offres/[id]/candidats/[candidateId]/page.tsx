@@ -366,7 +366,7 @@ export default function CandidatProfilPage() {
     return (
       <div className="min-h-screen bg-[#050505] text-white">
         <EnterpriseSidebar />
-        <main className="min-h-screen px-8 py-10 pl-[104px]">
+        <main className="min-h-screen px-8 py-10 pl-[260px]">
           <div className="rounded-[20px] border border-white/10 bg-white/5 p-6">
             Candidat introuvable.
           </div>
@@ -379,7 +379,7 @@ export default function CandidatProfilPage() {
   return (
     <div className="min-h-screen bg-[#050505] text-white">
       <EnterpriseSidebar />
-      <main className="min-h-screen px-8 py-10 pl-[104px]">
+      <main className="min-h-screen px-8 py-10 pl-[260px]">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
           <div className="mb-4 text-[12px] text-white/60">
             <a href={`/dashboard/entreprise/offres/${params.id}/candidats`} className="hover:text-white">

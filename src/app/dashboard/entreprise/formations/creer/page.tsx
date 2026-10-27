@@ -23,7 +23,7 @@ export default async function EntrepriseFormationsCreerPage({
   return (
     <div className="flex min-h-screen bg-[#F4F4F1] text-[#07080B]">
       <EnterpriseSidebar />
-      <main className="min-h-screen min-w-0 flex-1 lg:pl-[104px]">
+      <main className="min-h-screen min-w-0 flex-1 lg:pl-[280px]">
         <FormateurFormationBuilderWhite
           initialCourseId={courseId || undefined}
           lockedOrgId={orgId}

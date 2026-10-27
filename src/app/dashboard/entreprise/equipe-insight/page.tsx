@@ -7,7 +7,7 @@ export default function EquipeInsightPage() {
   return (
     <div className="min-h-screen bg-[#0b0a12] text-white">
       <EnterpriseSidebar />
-      <main className="relative min-h-screen px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
+      <main className="relative min-h-screen px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <RadarEquipeClient variant="dark" />
       </main>
     </div>

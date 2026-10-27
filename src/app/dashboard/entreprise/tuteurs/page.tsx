@@ -36,7 +36,7 @@ export default function EntrepriseTutorsPage() {
   return (
     <div className="min-h-screen bg-[#F4F4F1] text-[#07080B]">
       <EnterpriseSidebar />
-      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]">
+      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[264px]">
         <h1 className="text-[40px] font-extrabold leading-none tracking-[-1.2px]">Espaces tuteurs</h1>
         <p className="mt-2 max-w-xl text-[15px] text-[#3A3D45]">Les maîtres d'apprentissage et les alternants qu'ils suivent.</p>
         {state.loading ? <div className="mt-6 h-36 animate-pulse rounded-[26px] bg-white" /> : null}

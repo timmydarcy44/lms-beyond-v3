@@ -22,7 +22,7 @@ function isFormationWorkspace(pathname: string | null) {
 export function FormateurConnectShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeAppId, setActiveAppId] = useState<FormateurAppId | "">("");
   const workspace = isFormationWorkspace(pathname);

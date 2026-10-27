@@ -8,10 +8,8 @@ import { Manrope } from "next/font/google";
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
-  BarChart3,
   CalendarDays,
   ChevronDown,
-  ClipboardList,
   Euro,
   BookOpen,
   FolderCog,
@@ -21,7 +19,6 @@ import {
   Menu,
   Settings,
   User2,
-  Users,
   X,
 } from "lucide-react";
 
@@ -31,7 +28,7 @@ import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
-type NavChild = { label: string; href: string; icon?: LucideIcon };
+type NavChild = { label: string; href: string };
 
 type NavItem = {
   label: string;
@@ -50,63 +47,12 @@ function initialsOf(name: string) {
   return ((parts[0]?.[0] ?? "E") + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
-function isPathActive(pathname: string, href: string) {
-  if (href === "/dashboard/expert") return pathname === "/dashboard/expert";
-  if (href === "/dashboard/expert/resultats" && pathname.startsWith("/dashboard/expert/jeux")) return true;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function RailLink({
-  href,
-  icon: Icon,
-  label,
-  active,
-  locked,
-  badge,
-  onNavigate,
-}: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-  active: boolean;
-  locked?: boolean;
-  badge?: number;
-  onNavigate?: () => void;
-}) {
-  const className = cn("revolut-rail-item", focusRing, active ? "is-active" : "is-idle");
-  const inner = (
-    <>
-      <span className="relative">
-        <Icon className="h-5 w-5" aria-hidden />
-        {badge && badge > 0 ? (
-          <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-[#FF4B4B]" />
-        ) : null}
-      </span>
-      <span className="revolut-rail-label">{label}</span>
-    </>
-  );
-  if (locked) {
-    return (
-      <div className={cn(className, "cursor-not-allowed opacity-40")} title="Disponible après validation de votre profil">
-        {inner}
-      </div>
-    );
-  }
-  return (
-    <Link href={href} className={className} aria-current={active ? "page" : undefined} onClick={onNavigate}>
-      {inner}
-    </Link>
-  );
-}
-
 function NavLinks({
   items,
   onNavigate,
-  rail,
 }: {
   items: NavItem[];
   onNavigate?: () => void;
-  rail?: boolean;
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -114,49 +60,18 @@ function NavLinks({
     setCollapsed({});
   }, [pathname]);
 
-  if (rail) {
-    const flat: { label: string; href: string; icon: LucideIcon; locked?: boolean; badge?: number }[] = [];
-    for (const item of items) {
-      if (item.children?.length) {
-        for (const child of item.children) {
-          flat.push({
-            label: child.label,
-            href: child.href,
-            icon: child.icon ?? item.icon,
-            locked: item.locked,
-            badge: child.href === "/dashboard/expert/documents" ? item.badge : undefined,
-          });
-        }
-      } else {
-        flat.push(item);
-      }
-    }
-    return (
-      <nav aria-label="Navigation expert" className="flex flex-col gap-0.5">
-        {flat.map((item) => (
-          <RailLink
-            key={item.href + item.label}
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-            active={isPathActive(pathname, item.href)}
-            locked={item.locked}
-            badge={item.badge}
-            onNavigate={onNavigate}
-          />
-        ))}
-      </nav>
-    );
-  }
-
   return (
     <nav aria-label="Navigation expert" className="flex flex-col gap-1">
       {items.map((item) => {
         const Icon = item.icon;
-        const childActive = item.children?.some((child) => isPathActive(pathname, child.href));
+        const childActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`));
         const menuOpen =
           Boolean(item.children?.length) && (collapsed[item.label] === undefined ? Boolean(childActive) : !collapsed[item.label]);
-        const active = !item.external && (isPathActive(pathname, item.href) || Boolean(childActive));
+        const active =
+          !item.external &&
+          (item.href === "/dashboard/expert"
+            ? pathname === "/dashboard/expert"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`) || Boolean(childActive));
         const className = cn(
           "flex h-11 w-full items-center gap-3 rounded-full px-4 text-sm font-semibold",
           focusRing,
@@ -217,7 +132,7 @@ function NavLinks({
               {menuOpen ? (
                 <div className="ml-6 mt-1 flex flex-col gap-0.5">
                   {item.children.map((child) => {
-                    const open = isPathActive(pathname, child.href);
+                    const open = pathname === child.href || pathname.startsWith(`${child.href}/`);
                     return (
                       <Link
                         key={child.href}
@@ -309,13 +224,11 @@ export function ExpertShell({
 
   const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
   const careOnly = hasCare && !memberships.some((item) => item.pole === "formation" && item.status === "active");
-  const adminChildren: NavChild[] = [
-    { label: "Documents", href: "/dashboard/expert/documents", icon: FolderCog },
-  ];
+  const adminChildren: NavChild[] = [{ label: "Mes documents", href: "/dashboard/expert/documents" }];
   if (hasCare) {
     adminChildren.push(
-      { label: "CRM", href: "/dashboard/expert/dossiers", icon: Users },
-      { label: "Tests", href: "/dashboard/expert/tests", icon: ClipboardList },
+      { label: "CRM", href: "/dashboard/expert/dossiers" },
+      { label: "Byound tests", href: "/dashboard/expert/tests" },
     );
   }
   const items: NavItem[] = [
@@ -338,8 +251,8 @@ export function ExpertShell({
         href: "/dashboard/expert/formations",
         icon: BookOpen,
         children: [
-          { label: "Mes formations", href: "/dashboard/expert/formations", icon: BookOpen },
-          { label: "Mes résultats", href: "/dashboard/expert/resultats", icon: BarChart3 },
+          { label: "Mes formations", href: "/dashboard/expert/formations" },
+          { label: "Mes résultats", href: "/dashboard/expert/resultats" },
         ],
       },
       { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
@@ -363,18 +276,6 @@ export function ExpertShell({
     </div>
   );
 
-  const identityRail = (
-    <div className="mb-3 flex justify-center">
-      {photoUrl ? (
-        <Image src={photoUrl} alt="" width={36} height={36} unoptimized className="h-9 w-9 rounded-full object-cover" />
-      ) : (
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FF4B4B] text-xs font-extrabold text-[#04140C]">
-          {initialsOf(name)}
-        </span>
-      )}
-    </div>
-  );
-
   const help = (
     <Link
       href="/dashboard/expert/support"
@@ -390,29 +291,33 @@ export function ExpertShell({
     </Link>
   );
 
+  const brand = (
+    <div className="mb-6 flex items-center gap-3 px-2">
+      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F4F5F7] text-xs font-extrabold text-[#07080B]">
+        BY
+      </span>
+      <span>
+        <span className="block text-sm font-extrabold leading-tight text-[#F4F5F7]">Byound</span>
+        <span className="block text-xs text-[#9096A3]">Espace expert</span>
+      </span>
+    </div>
+  );
+
   return (
     <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
       <div className="flex min-h-screen">
-        <aside className="hidden w-[88px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-1.5 py-5 md:flex">
-          <div className="mb-4 flex justify-center">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F4F5F7] text-xs font-extrabold text-[#07080B]">
-              BY
-            </span>
-          </div>
-          {identityRail}
+        <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
+          {brand}
+          {identity}
           {managerPoles.length > 0 ? (
-            <Link href="/dashboard/expert/appartenances" className={cn("revolut-rail-item is-idle mb-1", focusRing)}>
-              <Users className="h-5 w-5" aria-hidden />
-              <span className="revolut-rail-label">Pôles</span>
+            <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)}>
+              Appartenances
             </Link>
           ) : null}
-          <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
-            <NavLinks items={items} rail />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <NavLinks items={items} />
           </div>
-          <Link href="/dashboard/expert/support" className={cn("revolut-rail-item is-idle mt-2", focusRing)}>
-            <HelpCircle className="h-5 w-5" aria-hidden />
-            <span className="revolut-rail-label">Aide</span>
-          </Link>
+          {help}
         </aside>
         <div className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#1E2130] bg-[#07080B] px-4 py-3 md:hidden">

@@ -55,7 +55,7 @@ export function SalarieConnectShell({ children }: { children: ReactNode }) {
     <LearnerSnapshotProvider>
       <div className="min-h-screen bg-[#07080B] text-[#F4F5F7]">
         <SidebarSalarie />
-        <main className="min-h-screen lg:pl-[88px]">{children}</main>
+        <main className="min-h-screen lg:pl-[240px]">{children}</main>
       </div>
     </LearnerSnapshotProvider>
   );

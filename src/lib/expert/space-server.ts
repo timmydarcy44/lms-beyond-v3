@@ -20,6 +20,7 @@ import {
   type MissionStatus,
   type ProfileSectionId,
   type ProfileVisibility,
+  slotClientIdFromRule,
   slotKindFromRule,
   type SlotFormat,
 } from "@/lib/expert/space-model";
@@ -379,12 +380,20 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id").eq("expert_id", session.id);
   }
   const missionIds = new Set(missions.map((mission) => mission.id));
+  const careClients = await supabase.from("expert_care_clients").select("id,first_name,last_name,email").eq("expert_id", session.id);
+  const careById = new Map(
+    ((careClients.error ? [] : careClients.data) ?? []).map((row) => [
+      String(row.id),
+      [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || String(row.email ?? "Patient"),
+    ]),
+  );
   const slots: ExpertSlot[] = tableMissing(slotQuery.error)
     ? []
     : ((slotQuery.data ?? []) as Array<Record<string, unknown>>)
         .filter((slot) => !slot.mission_id || missionIds.has(String(slot.mission_id)))
         .map((slot) => {
         const mission = missions.find((item) => item.id === slot.mission_id);
+        const clientId = slotClientIdFromRule(slot.recurrence_rule);
         return {
           id: String(slot.id),
           startsAt: String(slot.starts_at),
@@ -394,7 +403,8 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
           location: String(slot.location ?? ""),
           missionId: slot.mission_id ? String(slot.mission_id) : null,
           title: mission?.title ?? null,
-          client: mission?.client ?? null,
+          client: mission?.client ?? (clientId ? careById.get(clientId) ?? null : null),
+          clientId,
         };
       });
 

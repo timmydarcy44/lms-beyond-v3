@@ -349,7 +349,7 @@ export default function EntrepriseMetiersPage() {
   return (
     <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-8">
           <h1 className={ENTREPRISE_H1_CLASS}>Metiers</h1>
           <p className="mt-2 text-center text-sm text-gray-500">

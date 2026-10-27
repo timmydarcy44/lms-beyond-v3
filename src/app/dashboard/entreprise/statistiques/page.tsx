@@ -21,7 +21,7 @@ export default async function EntrepriseStatistiquesPage() {
   return (
     <div className="flex min-h-screen bg-[#0b0a12] text-white">
       <EnterpriseSidebar />
-      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
+      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <OrgStatsDashboardView stats={stats} variant="dark" />
       </main>
     </div>

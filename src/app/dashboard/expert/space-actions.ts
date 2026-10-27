@@ -13,6 +13,8 @@ import {
   type JadeOverrides,
 } from "@/lib/expert/space-server";
 import { encodeSlotRule, slotsOverlap, type ExpertMission, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
+import { sendEmail } from "@/lib/email/resend-client";
+import { buildCareEmail } from "@/lib/expert/care-email";
 import { getServerClient } from "@/lib/supabase/server";
 
 const decisionSchema = z.object({
@@ -25,9 +27,11 @@ const slotSchema = z.object({
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
   format: z.enum(["visio", "presentiel"]),
-  kind: z.enum(["indisponible", "rendez_vous", "formation"]),
+  kind: z.enum(["indisponible", "rendez_vous", "formation", "disponible"]),
   location: z.string().trim().max(120).optional(),
   weekly: z.boolean().optional(),
+  clientId: z.string().uuid().optional().nullable(),
+  notify: z.boolean().optional(),
 });
 
 const settingsSchema = z.object({
@@ -132,9 +136,33 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
     const slotEnd = new Date(occurrence.getTime() + (end.getTime() - start.getTime()));
     return { startsAt: occurrence.toISOString(), endsAt: slotEnd.toISOString() };
   });
-  const clash = built.some((slot) => space.slots.some((existing) => slotsOverlap(slot.startsAt, slot.endsAt, existing.startsAt, existing.endsAt)));
+  const clash = built.some((slot) =>
+    space.slots.some((existing) => {
+      if (!slotsOverlap(slot.startsAt, slot.endsAt, existing.startsAt, existing.endsAt)) return false;
+      if (parsed.kind === "rendez_vous" && existing.kind === "disponible") return false;
+      return true;
+    }),
+  );
   if (clash) return { ok: false, error: "Ce créneau chevauche un créneau existant." };
   const location = parsed.location?.trim() || (parsed.format === "visio" ? "Visio" : "");
+  const clientId = parsed.clientId || null;
+  let clientLabel: string | null = null;
+  let clientEmail: string | null = null;
+  let clientFirst = "";
+  const supabase = await getServerClient();
+  if (clientId && supabase) {
+    const { data: patient } = await supabase
+      .from("expert_care_clients")
+      .select("first_name,last_name,email")
+      .eq("id", clientId)
+      .eq("expert_id", session.id)
+      .maybeSingle();
+    if (patient) {
+      clientFirst = String(patient.first_name ?? "").trim();
+      clientLabel = [patient.first_name, patient.last_name].filter(Boolean).join(" ").trim() || patient.email;
+      clientEmail = patient.email;
+    }
+  }
   if (isJadeDemoEmail(session.email)) {
     await mutateJade((current) => ({
       ...current,
@@ -148,33 +176,56 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
           kind: parsed.kind as SlotKind,
           location,
           missionId: null,
-          title: null,
-          client: null,
+          title: parsed.kind === "rendez_vous" ? "Rendez-vous" : null,
+          client: clientLabel,
+          clientId,
         })),
       ],
     }));
-    return { ok: true };
-  }
-  const supabase = await getServerClient();
-  if (!supabase) return { ok: false, error: "Service indisponible" };
-  const rows = built.map((slot) => ({
-    expert_id: session.id,
-    starts_at: slot.startsAt,
-    ends_at: slot.endsAt,
-    format: parsed.format,
-    location,
-    mission_id: null,
-    recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly)),
-  }));
-  const { error } = await supabase.from("expert_slots").insert(rows);
-  if (error) {
-    if (error.code === "42P01" || error.code === "PGRST205") {
-      return { ok: false, error: "Collez le script SQL de l'espace expert (table expert_slots)." };
+  } else {
+    if (!supabase) return { ok: false, error: "Service indisponible" };
+    if (parsed.kind === "rendez_vous") {
+      for (const slot of built) {
+        const overlapping = space.slots.filter((existing) => existing.kind === "disponible" && slotsOverlap(slot.startsAt, slot.endsAt, existing.startsAt, existing.endsAt));
+        if (overlapping.length) {
+          await supabase.from("expert_slots").delete().in("id", overlapping.map((item) => item.id)).eq("expert_id", session.id);
+        }
+      }
     }
-    return { ok: false, error: error.message };
+    const rows = built.map((slot) => ({
+      expert_id: session.id,
+      starts_at: slot.startsAt,
+      ends_at: slot.endsAt,
+      format: parsed.format,
+      location,
+      mission_id: null,
+      recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly), clientId),
+    }));
+    const { error } = await supabase.from("expert_slots").insert(rows);
+    if (error) {
+      if (error.code === "42P01" || error.code === "PGRST205") {
+        return { ok: false, error: "Collez le script SQL de l'espace expert (table expert_slots)." };
+      }
+      return { ok: false, error: error.message };
+    }
+  }
+  let emailed = false;
+  if (parsed.notify && clientEmail) {
+    const when = start.toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    const mailed = await sendEmail({
+      to: clientEmail,
+      subject: "Byound Care — votre rendez-vous",
+      html: buildCareEmail({
+        preheader: `Rendez-vous le ${when}.`,
+        greeting: clientFirst ? `Bonjour ${clientFirst},` : "Bonjour,",
+        title: "Votre rendez-vous est confirmé",
+        bodyHtml: `<p style="margin:0 0 12px;">Votre expert Byound Care vous attend le <strong>${when}</strong>.</p><p style="margin:0;">Lieu : ${location || (parsed.format === "visio" ? "Visio" : "à confirmer")}.</p>`,
+      }),
+    });
+    emailed = mailed.success;
   }
   refresh();
-  return { ok: true };
+  return { ok: true, emailed };
 }
 
 export async function saveAgendaSettings(input: z.infer<typeof settingsSchema>) {

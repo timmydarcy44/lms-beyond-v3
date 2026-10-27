@@ -9,7 +9,7 @@ export default async function EditionOffrePage({ params }: { params: Promise<{ i
   return (
     <div className="flex min-h-screen bg-[#F4F4F1] text-[#07080B]">
       <EnterpriseSidebar />
-      <main className="min-h-screen min-w-0 flex-1 lg:pl-[104px]">
+      <main className="min-h-screen min-w-0 flex-1 lg:pl-[280px]">
         <Suspense>
           <OfferBuilder offerId={id} />
         </Suspense>

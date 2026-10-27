@@ -31,7 +31,7 @@ export default function ReserverPage() {
 
   if (!praticien || !creneau || !creneauId) {
     return (
-      <div className="min-h-screen bg-slate-50 pl-[104px]">
+      <div className="min-h-screen bg-slate-50 pl-[260px]">
         <EnterpriseSidebar />
         <main className="p-10">
           <p className="text-slate-500">Créneau invalide.</p>
@@ -51,7 +51,7 @@ export default function ReserverPage() {
   })} à ${String(creneau.heure_debut).slice(0, 5)}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 pl-[104px]">
+    <div className="min-h-screen bg-slate-50 pl-[260px]">
       <EnterpriseSidebar />
       <main className="px-8 py-10">
         <Link href={`/dashboard/entreprise/marketplace/${praticienId}`} className="text-sm text-violet-700">

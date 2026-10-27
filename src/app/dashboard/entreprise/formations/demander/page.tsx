@@ -385,7 +385,7 @@ export default function EntrepriseFormationRequestPage() {
   return (
     <div className="flex min-h-screen bg-[#f6f3fb] text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mx-auto mb-8 max-w-6xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-500">
             Formations Byound

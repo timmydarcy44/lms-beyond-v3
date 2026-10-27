@@ -36,7 +36,6 @@ import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-p
 import { ProfilEdgeHubProvider } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { OrgSidebarBrand } from "@/components/enterprise/org-sidebar-brand";
-import { setDashboardSpace } from "@/lib/dashboard/space";
 
 type ProfileSnippet = {
   first_name?: string | null;
@@ -70,7 +69,7 @@ export function ApprenantConnectShell({
   const searchParams = useSearchParams();
   const openedPostDiscProfileRef = useRef(false);
   const { isDyslexiaMode, toggleDyslexiaMode } = useDyslexiaMode();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(variant !== "jessica");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileSnippet | null>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
@@ -88,10 +87,6 @@ export function ApprenantConnectShell({
   const [activeAppId, setActiveAppId] = useState<EdgeAppId>("profil");
   const [pendingAppId, setPendingAppId] = useState<EdgeAppId | null>(null);
   const useEdgeApps = variant === "edge";
-
-  useEffect(() => {
-    setDashboardSpace("apprenant");
-  }, []);
 
   useEffect(() => {
     if (variant === "jessica") return;
@@ -389,7 +384,7 @@ export function ApprenantConnectShell({
           <aside
             data-connect-sidebar
             className={`${theme.sidebarClass} ${
-              isSidebarCollapsed ? "w-[88px]" : "w-[240px]"
+              isSidebarCollapsed ? "w-[76px]" : "w-[240px]"
             }`}
           >
             <div
@@ -507,25 +502,27 @@ export function ApprenantConnectShell({
                             pathname?.startsWith("/dashboard/accompagnement"),
                         )) ||
                       (isParcoursGuide && Boolean(pathname?.includes("/parcours-guide"))));
-                  const itemClass = isSidebarCollapsed
-                    ? `revolut-rail-item ${active ? "is-active" : "is-idle"}`
-                    : `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition ${
-                        active
-                          ? "bg-[rgba(37,99,235,0.15)] text-white"
-                          : "text-white/45 hover:bg-white/[0.04] hover:text-white"
-                      }`;
+                  const itemClass = `group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
+                    isSidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
+                  } ${
+                    active
+                      ? isSidebarCollapsed
+                        ? "bg-[rgba(37,99,235,0.15)] text-white ring-1 ring-[rgba(37,99,235,0.25)]"
+                        : "bg-[rgba(37,99,235,0.15)] text-white"
+                      : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                  }`;
 
                   if (isShareProfile) {
                     return (
                       <button
                         key={item.label}
                         type="button"
-                        title={item.label}
+                        title={isSidebarCollapsed ? item.label : undefined}
                         onClick={() => void handleShareProfile()}
                         className={itemClass}
                       >
                         <item.icon className={`h-[18px] w-[18px] shrink-0 ${theme.navIconInactive}`} />
-                        <span className={isSidebarCollapsed ? "revolut-rail-label" : "truncate"}>{item.label}</span>
+                        <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
                       </button>
                     );
                   }
@@ -534,7 +531,7 @@ export function ApprenantConnectShell({
                     <Link
                       key={item.label + item.href}
                       href={item.href}
-                      title={item.label}
+                      title={isSidebarCollapsed ? item.label : undefined}
                       className={itemClass}
                     >
                       <item.icon
@@ -542,7 +539,7 @@ export function ApprenantConnectShell({
                           active ? theme.navIconActive : theme.navIconInactive
                         }`}
                       />
-                      <span className={isSidebarCollapsed ? "revolut-rail-label" : "truncate"}>{item.label}</span>
+                      <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
                     </Link>
                   );
                 })}

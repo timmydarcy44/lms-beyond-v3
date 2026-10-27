@@ -129,7 +129,7 @@ function downloadCsv(filename: string, rows: string[][]) {
 
 export function OffresSkeleton() {
   return (
-    <main className={cn("px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]", manrope.className)}>
+    <main className={cn("px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[264px]", manrope.className)}>
       <div className="h-10 w-56 animate-pulse rounded-full bg-[#ECE9E1]" />
       <div className="mt-6 h-56 animate-pulse rounded-[32px] bg-[#ECE9E1]" />
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,1fr)]">
@@ -253,7 +253,7 @@ export function OffresBoard() {
   };
 
   return (
-    <main className={cn("px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]", manrope.className)}>
+    <main className={cn("px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[264px]", manrope.className)}>
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-[40px] font-extrabold leading-none tracking-[-1.2px]">Mes offres</h1>

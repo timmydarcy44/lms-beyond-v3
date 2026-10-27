@@ -9,7 +9,7 @@ export default function MarketplaceConfirmationPage() {
   const sessionId = searchParams.get("session");
 
   return (
-    <div className="min-h-screen bg-slate-50 pl-[104px]">
+    <div className="min-h-screen bg-slate-50 pl-[260px]">
       <EnterpriseSidebar />
       <main className="mx-auto max-w-lg px-8 py-16 text-center">
         <p className="text-4xl">✅</p>

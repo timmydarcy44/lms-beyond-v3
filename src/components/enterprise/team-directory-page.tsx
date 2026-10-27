@@ -419,7 +419,7 @@ export function TeamDirectoryPage() {
   return (
     <div className={cn("min-h-screen bg-[#F4F4F1] text-[#07080B]", manrope.className)}>
       <EnterpriseSidebar />
-      <main className="min-h-screen px-4 py-8 pb-[120px] sm:px-6 lg:px-8 lg:pl-[104px]">
+      <main className="min-h-screen px-4 py-8 pb-[120px] sm:px-6 lg:px-8 lg:pl-[264px]">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-[40px] font-extrabold leading-none tracking-[-1.2px]">Mes équipes</h1>

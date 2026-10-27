@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { scoreJessicaAnswers, getJessicaQuestionnaire } from "@/lib/jessica-contentin/questionnaires";
-import { getCareTest } from "@/lib/expert/care-tests";
+import { scoreJessicaAnswers } from "@/lib/jessica-contentin/questionnaires";
+import { getCareQuestionnaire, getCareTest } from "@/lib/expert/care-tests";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills/questions";
 
@@ -9,6 +9,8 @@ export async function POST(req: NextRequest) {
     questionnaireSlug?: string;
     answers?: Record<string, unknown>;
     inviteToken?: string | null;
+    respondentFirstName?: string | null;
+    respondentLastName?: string | null;
   } | null;
   const token = body?.inviteToken?.trim() ?? "";
   const answers = body?.answers ?? {};
@@ -25,7 +27,8 @@ export async function POST(req: NextRequest) {
   let score: number | null = null;
   let scoreLabel: string | null = null;
   if (test?.jessicaSlug) {
-    const scored = scoreJessicaAnswers(test.jessicaSlug, answers, getJessicaQuestionnaire(test.jessicaSlug)?.questions);
+    const questionnaire = getCareQuestionnaire(test.slug);
+    const scored = scoreJessicaAnswers(test.jessicaSlug, answers, questionnaire?.questions);
     score = scored.score;
     scoreLabel = scored.scoreLabel;
   } else if (test?.slug === "soft-skills") {
@@ -43,7 +46,13 @@ export async function POST(req: NextRequest) {
       client_id: invite.client_id,
       invite_id: invite.id,
       test_slug: invite.test_slug,
-      answers,
+      answers: {
+        ...answers,
+        _respondent: {
+          firstName: body?.respondentFirstName ?? null,
+          lastName: body?.respondentLastName ?? null,
+        },
+      },
       score,
       score_label: scoreLabel,
       submitted_at: new Date().toISOString(),

@@ -7,6 +7,7 @@ import { BYOUND_CARE_TESTS, CARE_INVOICE_EXTRAS } from "@/lib/expert/care-tests"
 import { CARE_FOLLOW_UPS, followUpLabel, parseFollowUp, type CareFollowUp, validateCareClient } from "@/lib/expert/care-client-fields";
 import { centsToInput } from "@/lib/entreprise/offer-conditions";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
+import { AppleSuccessOverlay } from "@/components/expert/apple-success-overlay";
 
 type Client = {
   id: string;
@@ -27,7 +28,15 @@ type Client = {
 
 type Invite = { id: string; client_id: string; test_slug: string; sent_at: string | null; completed_at: string | null };
 type Invoice = { id: string; client_id: string; designation: string; amount_cents: number; status: string; sent_at: string | null };
-type ResponseRow = { id: string; client_id: string; test_slug: string; score_label: string | null; synthesis: string | null; submitted_at: string };
+type ResponseRow = {
+  id: string;
+  client_id: string;
+  test_slug: string;
+  score?: number | null;
+  score_label: string | null;
+  synthesis: string | null;
+  submitted_at: string;
+};
 
 const field = "h-12 w-full rounded-2xl border border-[#1E2130] bg-[#12141A] px-4 text-sm text-[#F4F5F7] outline-none";
 const selectField =
@@ -64,6 +73,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [extras, setExtras] = useState<string[]>([]);
   const [synthesis, setSynthesis] = useState("");
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
 
   const load = async () => {
     const [c, t, i, r] = await Promise.all([
@@ -134,7 +144,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Création impossible");
-      toast.success("Membre ajouté au CRM");
+      setSuccess({ title: "Client enregistré", subtitle: "Le membre est dans votre CRM." });
       setFirst("");
       setLast("");
       setEmail("");
@@ -165,7 +175,10 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
-      toast.success(json.emailed ? "Test envoyé" : `Lien créé${json.emailError ? ` — ${json.emailError}` : ""}`);
+      setSuccess({
+        title: json.emailed ? "Test envoyé" : "Lien créé",
+        subtitle: json.emailed ? "Le client a reçu le test par e-mail." : json.emailError ?? "Le lien est prêt.",
+      });
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible");
@@ -191,7 +204,10 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
-      toast.success(json.emailed ? "Facture envoyée" : json.emailError ?? "Facture enregistrée");
+      setSuccess({
+        title: json.emailed ? "Facture envoyée" : "Facture enregistrée",
+        subtitle: json.emailed ? "Le PDF nominatif a été envoyé au client." : json.emailError,
+      });
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible");
@@ -211,7 +227,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Synthèse impossible");
       setSynthesis(json.synthesis ?? "");
-      toast.success("Synthèse générée");
+      setSuccess({ title: "Synthèse générée", subtitle: "Le compte rendu OpenAI est disponible." });
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Synthèse impossible");
@@ -240,6 +256,12 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
 
   return (
     <ExpertPageFrame>
+      <AppleSuccessOverlay
+        open={Boolean(success)}
+        title={success?.title ?? ""}
+        subtitle={success?.subtitle}
+        onClose={() => setSuccess(null)}
+      />
       <ExpertPageHeader title={titles[mode].title} subtitle={titles[mode].subtitle} />
       {hint ? <p className="mb-6 rounded-[24px] bg-[#12141A] p-4 text-sm text-[#FFB4B8]">{hint}</p> : null}
 
@@ -319,19 +341,28 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
             <EmptyState title="Aucun membre" text="Ajoutez un premier contact pour envoyer tests et factures." />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              {clients.map((client) => (
+              {clients.map((client) => {
+                const clientResults = responses.filter((row) => row.client_id === client.id);
+                return (
                 <article key={client.id} className="rounded-[24px] bg-[#12141A] p-5">
-                  <p className="text-lg font-extrabold">{labelOf(client)}</p>
-                  <p className="mt-1 text-sm text-[#B5BAC6]">{client.email}</p>
-                  {client.phone ? <p className="text-sm text-[#9096A3]">{client.phone}</p> : null}
-                  {client.address_line || client.city ? (
-                    <p className="mt-1 text-sm text-[#9096A3]">
-                      {[client.address_line, [client.postal_code, client.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}
+                  <Link href={`/dashboard/expert/dossiers/${client.id}`} className="block">
+                    <p className="text-lg font-extrabold">{labelOf(client)}</p>
+                    <p className="mt-1 text-sm text-[#B5BAC6]">{client.email}</p>
+                    {client.phone ? <p className="text-sm text-[#9096A3]">{client.phone}</p> : null}
+                    {client.address_line || client.city ? (
+                      <p className="mt-1 text-sm text-[#9096A3]">
+                        {[client.address_line, [client.postal_code, client.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs text-[#FFB4B8]">Adresse postale à renseigner pour facturer</p>
+                    )}
+                    {followUpLabel(client) ? <p className="mt-2 text-sm font-semibold text-[#F4F5F7]">{followUpLabel(client)}</p> : null}
+                    <p className="mt-3 text-xs font-extrabold text-[#FF4B4B]">
+                      {clientResults.length
+                        ? `${clientResults.length} résultat${clientResults.length > 1 ? "s" : ""} de test — ouvrir la fiche`
+                        : "Ouvrir la fiche"}
                     </p>
-                  ) : (
-                    <p className="mt-1 text-xs text-[#FFB4B8]">Adresse postale à renseigner pour facturer</p>
-                  )}
-                  {followUpLabel(client) ? <p className="mt-2 text-sm font-semibold text-[#F4F5F7]">{followUpLabel(client)}</p> : null}
+                  </Link>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link href="/dashboard/expert/tests" className="rounded-full bg-[#1E2130] px-3 py-1.5 text-xs font-extrabold">
                       Envoyer un test
@@ -341,7 +372,8 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
                     </Link>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -378,14 +410,46 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
               </article>
             ))}
           </div>
+          {responses.length ? (
+            <div className="space-y-2">
+              <p className="text-sm font-extrabold">Résultats reçus</p>
+              {responses.map((row) => {
+                const member = clients.find((item) => item.id === row.client_id);
+                const test = BYOUND_CARE_TESTS.find((item) => item.slug === row.test_slug);
+                return (
+                  <Link
+                    key={row.id}
+                    href={`/dashboard/expert/dossiers/${row.client_id}`}
+                    className="block rounded-[24px] bg-[#12141A] p-4 text-sm"
+                  >
+                    <span className="font-extrabold">{test?.title ?? row.test_slug}</span>
+                    <span className="text-[#B5BAC6]">
+                      {" "}
+                      · {member ? labelOf(member) : "Client"} · {row.score_label || "Complété"}
+                    </span>
+                    <span className="mt-1 block text-xs font-extrabold text-[#FF4B4B]">Ouvrir la fiche</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
           <ul className="space-y-2">
             {invites.map((invite) => {
               const member = clients.find((item) => item.id === invite.client_id);
               const test = BYOUND_CARE_TESTS.find((item) => item.slug === invite.test_slug);
+              const result = responses.find((row) => row.client_id === invite.client_id && row.test_slug === invite.test_slug);
+              const done = Boolean(invite.completed_at || result);
               return (
                 <li key={invite.id} className="rounded-[24px] bg-[#12141A] p-4 text-sm">
-                  <span className="font-extrabold">{test?.title ?? invite.test_slug}</span>
-                  <span className="text-[#B5BAC6]"> · {member ? labelOf(member) : "Membre"} · {invite.completed_at ? "Complété" : "Envoyé"}</span>
+                  <Link href={invite.client_id ? `/dashboard/expert/dossiers/${invite.client_id}` : "/dashboard/expert/dossiers"} className="block">
+                    <span className="font-extrabold">{test?.title ?? invite.test_slug}</span>
+                    <span className="text-[#B5BAC6]">
+                      {" "}
+                      · {member ? labelOf(member) : "Membre"} · {done ? "Complété" : "Envoyé"}
+                      {result?.score_label ? ` · ${result.score_label}` : ""}
+                    </span>
+                    {done ? <span className="mt-1 block text-xs font-extrabold text-[#FF4B4B]">Voir le résultat sur la fiche</span> : null}
+                  </Link>
                 </li>
               );
             })}

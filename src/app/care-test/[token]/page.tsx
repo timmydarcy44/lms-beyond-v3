@@ -1,5 +1,4 @@
-import { getCareTest } from "@/lib/expert/care-tests";
-import { getJessicaQuestionnaire } from "@/lib/jessica-contentin/questionnaires";
+import { getCareQuestionnaire, getCareTest } from "@/lib/expert/care-tests";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { CareSoftSkillsPlayer } from "@/components/expert/care-soft-skills-player";
 import { JessicaTypeformPlayer } from "@/components/jessica-contentin/jessica-typeform-player";
@@ -15,7 +14,11 @@ export default async function CareTestInvitePage({ params }: { params: Promise<{
       <Message title="Lien indisponible" text="Le service de tests n'est pas joignable pour le moment. Réessayez dans quelques minutes." />
     );
   }
-  const { data: invite } = await db.from("expert_care_invites").select("*").eq("token", token).maybeSingle();
+  const { data: invite } = await db
+    .from("expert_care_invites")
+    .select("*, client:expert_care_clients(first_name, last_name, email)")
+    .eq("token", token)
+    .maybeSingle();
   if (!invite) {
     return <Message title="Lien invalide" text="Ce test n'existe pas ou a expiré. Demandez un nouvel envoi à votre expert." />;
   }
@@ -26,14 +29,30 @@ export default async function CareTestInvitePage({ params }: { params: Promise<{
     await db.from("expert_care_invites").update({ opened_at: new Date().toISOString() }).eq("id", invite.id);
   }
   const test = getCareTest(String(invite.test_slug));
-  const jessica = test?.jessicaSlug ? getJessicaQuestionnaire(test.jessicaSlug) : null;
+  const jessica = test ? getCareQuestionnaire(test.slug) : null;
+  const client = Array.isArray(invite.client) ? invite.client[0] : invite.client;
+  const firstName = typeof client?.first_name === "string" ? client.first_name : "";
+  const lastName = typeof client?.last_name === "string" ? client.last_name : "";
+  const email = typeof client?.email === "string" ? client.email : "";
 
   return (
-    <div className="min-h-screen bg-[#07080B] text-[#F4F5F7]">
+    <div className="min-h-screen bg-white text-[#07080B]">
       {test?.slug === "soft-skills" || !jessica ? (
-        <CareSoftSkillsPlayer token={token} />
+        <CareSoftSkillsPlayer
+          token={token}
+          firstName={firstName}
+          lastName={lastName}
+        />
       ) : (
-        <JessicaTypeformPlayer questionnaire={jessica} inviteToken={token} submitUrl="/api/public/care-tests/submit" />
+        <JessicaTypeformPlayer
+          questionnaire={jessica}
+          inviteToken={token}
+          recipientFirstName={firstName}
+          recipientLastName={lastName}
+          recipientEmail={email}
+          submitUrl="/api/public/care-tests/submit"
+          appearance="care"
+        />
       )}
     </div>
   );
@@ -41,10 +60,10 @@ export default async function CareTestInvitePage({ params }: { params: Promise<{
 
 function Message({ title, text }: { title: string; text: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#07080B] px-6 text-center text-[#F4F5F7]">
+    <div className="flex min-h-screen items-center justify-center bg-white px-6 text-center text-[#07080B]">
       <div>
         <h1 className="text-3xl font-extrabold">{title}</h1>
-        <p className="mt-3 text-[#B5BAC6]">{text}</p>
+        <p className="mt-3 text-[#636366]">{text}</p>
       </div>
     </div>
   );

@@ -3,15 +3,34 @@ import { requireRole } from "@/lib/auth/require-role";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { UserRole } from "@prisma/client";
 
+type CourseRow = {
+  id: string;
+  title: string | null;
+  description?: string | null;
+  presentation?: unknown;
+  objectives?: unknown;
+  builder_snapshot?: { general?: { publisher?: string; title?: string } } | null;
+};
+
+function asCourse(row: CourseRow, source: "org" | "lms") {
+  const lmsTitle = row.builder_snapshot?.general?.title?.trim();
+  return {
+    id: row.id,
+    title: source === "lms" ? `LMS · ${lmsTitle || row.title || "Sans titre"}` : row.title || "Sans titre",
+    description: row.description ?? null,
+    presentation: row.presentation ?? null,
+    objectives: row.objectives ?? null,
+    source,
+  };
+}
+
 export async function GET(request: Request) {
   const auth = requireRole(request, [UserRole.SUPER_ADMIN]);
   if (!auth.ok) return auth.response;
 
   const url = new URL(request.url);
   const queryOrgId = url.searchParams.get("organizationId");
-  if (queryOrgId && queryOrgId !== auth.user.orgId) {
-    return NextResponse.json({ error: "ORG_MISMATCH" }, { status: 400 });
-  }
+  const orgId = queryOrgId || auth.user.orgId;
 
   const supabase = await getServiceRoleClientOrFallback();
   if (!supabase) {
@@ -20,17 +39,36 @@ export async function GET(request: Request) {
 
   const rich = await supabase
     .from("courses")
-    .select("id, title, description, presentation, objectives")
-    .eq("org_id", auth.user.orgId)
+    .select("id, title, description, presentation, objectives, builder_snapshot")
+    .eq("org_id", orgId)
     .order("title", { ascending: true });
-  const coursesQuery = rich.error
-    ? await supabase.from("courses").select("id, title").eq("org_id", auth.user.orgId).order("title", { ascending: true })
+  const orgQuery = rich.error
+    ? await supabase.from("courses").select("id, title, builder_snapshot").eq("org_id", orgId).order("title", { ascending: true })
     : rich;
-  const { data: courses, error } = coursesQuery;
-
-  if (error) {
+  if (orgQuery.error) {
     return NextResponse.json({ error: "COURSES_FETCH_FAILED" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, courses: courses ?? [] });
+  const catalog = await supabase
+    .from("courses")
+    .select("id, title, description, presentation, objectives, builder_snapshot")
+    .order("updated_at", { ascending: false })
+    .limit(400);
+  const lmsRows = ((catalog.data ?? []) as CourseRow[]).filter(
+    (course) => course.builder_snapshot?.general?.publisher === "byound",
+  );
+
+  const seen = new Set<string>();
+  const courses = [];
+  for (const row of lmsRows) {
+    seen.add(row.id);
+    courses.push(asCourse(row, "lms"));
+  }
+  for (const row of (orgQuery.data ?? []) as CourseRow[]) {
+    if (seen.has(row.id)) continue;
+    courses.push(asCourse(row, "org"));
+  }
+  courses.sort((a, b) => a.title.localeCompare(b.title, "fr"));
+
+  return NextResponse.json({ ok: true, courses });
 }

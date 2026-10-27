@@ -54,18 +54,25 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    setCollapsed({});
+  }, [pathname]);
+
   return (
     <nav aria-label="Navigation expert" className="flex flex-col gap-1">
       {items.map((item) => {
         const Icon = item.icon;
         const childActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`));
+        const menuOpen =
+          Boolean(item.children?.length) && (collapsed[item.label] === undefined ? Boolean(childActive) : !collapsed[item.label]);
         const active =
           !item.external &&
           (item.href === "/dashboard/expert"
             ? pathname === "/dashboard/expert"
             : pathname === item.href || pathname.startsWith(`${item.href}/`) || Boolean(childActive));
         const className = cn(
-          "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold",
+          "flex h-11 w-full items-center gap-3 rounded-full px-4 text-sm font-semibold",
           focusRing,
           active ? "bg-[#F4F5F7] font-extrabold text-[#07080B]" : "text-[#DADDE4] hover:bg-[#12141A]",
         );
@@ -91,8 +98,10 @@ function NavLinks({
         const content = (
           <>
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-            {item.children?.length ? <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden /> : null}
+            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+            {item.children?.length ? (
+              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 opacity-70 transition-transform", menuOpen && "rotate-180")} aria-hidden />
+            ) : null}
             {badge}
           </>
         );
@@ -103,38 +112,56 @@ function NavLinks({
             </a>
           );
         }
+        if (item.children?.length) {
+          return (
+            <div key={item.label}>
+              <button
+                type="button"
+                className={className}
+                aria-expanded={menuOpen}
+                onClick={() =>
+                  setCollapsed((current) => ({
+                    ...current,
+                    [item.label]: menuOpen,
+                  }))
+                }
+              >
+                {content}
+              </button>
+              {menuOpen ? (
+                <div className="ml-6 mt-1 flex flex-col gap-0.5">
+                  {item.children.map((child) => {
+                    const open = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex h-9 items-center rounded-full px-3 text-sm font-semibold",
+                          focusRing,
+                          open ? "bg-[#1E2130] text-[#F4F5F7]" : "text-[#9096A3] hover:text-[#DADDE4]",
+                        )}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          );
+        }
         return (
-          <div key={item.label}>
-            <Link
-              href={item.href}
-              className={className}
-              aria-current={active && !childActive ? "page" : undefined}
-              onClick={onNavigate}
-            >
-              {content}
-            </Link>
-            {item.children?.length ? (
-              <div className="ml-6 mt-1 flex flex-col gap-0.5">
-                {item.children.map((child) => {
-                  const open = pathname === child.href || pathname.startsWith(`${child.href}/`);
-                  return (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex h-9 items-center rounded-full px-3 text-sm font-semibold",
-                        focusRing,
-                        open ? "bg-[#1E2130] text-[#F4F5F7]" : "text-[#9096A3] hover:text-[#DADDE4]",
-                      )}
-                    >
-                      {child.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
+          <Link
+            key={item.label}
+            href={item.href}
+            className={className}
+            aria-current={active ? "page" : undefined}
+            onClick={onNavigate}
+          >
+            {content}
+          </Link>
         );
       })}
     </nav>

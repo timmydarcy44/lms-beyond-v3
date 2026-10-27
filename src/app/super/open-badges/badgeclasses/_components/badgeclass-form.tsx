@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -54,6 +54,7 @@ type CourseOption = {
   description?: string | null;
   presentation?: string | null;
   objectives?: string | null;
+  source?: "org" | "lms";
 };
 type ValidatorOption = {
   id: string;
@@ -165,6 +166,31 @@ function badgeStepForError(key: string) {
     return 3;
   }
   return 1;
+}
+
+function CourseSelectItems({ courses }: { courses: CourseOption[] }) {
+  const lms = courses.filter((course) => course.source === "lms");
+  const org = courses.filter((course) => course.source !== "lms");
+  return (
+    <>
+      {lms.length ? (
+        <SelectGroup>
+          <SelectLabel>LMS Byound</SelectLabel>
+          {lms.map((course) => (
+            <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+          ))}
+        </SelectGroup>
+      ) : null}
+      {org.length ? (
+        <SelectGroup>
+          <SelectLabel>Formations du club</SelectLabel>
+          {org.map((course) => (
+            <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+          ))}
+        </SelectGroup>
+      ) : null}
+    </>
+  );
 }
 
 const ensureCriteriaIds = (items: BadgeCriteriaInput[]): BadgeCriteriaInput[] =>
@@ -348,7 +374,7 @@ export function BadgeClassForm({
     const course = courses.find((item) => item.id === courseId);
     if (!course) return;
     setRequiresEnrollment(true);
-    if (course.title) setName(course.title);
+    if (course.title) setName(course.title.replace(/^LMS · /, ""));
     const text = [course.description, course.presentation, course.objectives]
       .map((item) => {
         if (typeof item === "string") return item.trim();
@@ -932,9 +958,7 @@ export function BadgeClassForm({
                       <SelectValue placeholder={organizationId ? "Choisir la formation" : "Choisissez d'abord le club"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
-                      ))}
+                      <CourseSelectItems courses={courses} />
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-muted-foreground">Le nom, la description et le critère du badge reprennent ce qui existe déjà sur la formation.</p>
@@ -1079,11 +1103,7 @@ export function BadgeClassForm({
                     <SelectValue placeholder="Sélectionner une formation" />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
+                    <CourseSelectItems courses={courses} />
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
@@ -1128,11 +1148,7 @@ export function BadgeClassForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Aucune</SelectItem>
-                  {courses.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>
-                      {course.title}
-                    </SelectItem>
-                  ))}
+                  <CourseSelectItems courses={courses} />
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">

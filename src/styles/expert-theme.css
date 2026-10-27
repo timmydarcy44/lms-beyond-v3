@@ -6,10 +6,20 @@
 }
 
 .expert-theme input,
-.expert-theme select,
 .expert-theme textarea {
   background-color: rgba(255, 255, 255, 0.05);
   color: #f4f5f7;
+}
+
+.expert-theme select {
+  color-scheme: light;
+  background-color: #ffffff;
+  color: #07080b;
+}
+
+.expert-theme select option {
+  background-color: #ffffff;
+  color: #07080b;
 }
 
 .expert-theme input::placeholder,

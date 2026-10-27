@@ -10,7 +10,7 @@ export type ExpertDocumentMeta = {
   status?: "to_sign" | "signed" | "deposited" | null;
   expires_at?: string | null;
   pages?: number | null;
-  folder?: "contrat" | "cv" | "attestation" | "facture" | "autre" | null;
+  folder?: "contrat" | "cv" | "attestation" | "facture" | "modele" | "autre" | null;
 };
 
 export type EdgeRegistrationMeta = {

@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/resend-client";
 import { publicAppUrl } from "@/lib/env";
+import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
 import { getCareTest } from "@/lib/expert/care-tests";
 
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: missingRelation(error) ? CARE_SQL_HINT : error.message }, { status: 500 });
   }
 
-  const link = `${publicAppUrl()}/byound-tests/${invite.token}`;
+  const origin = publicAppUrl() || BYOUND_PUBLIC_ORIGIN;
+  const link = `${origin}/care-test/${encodeURIComponent(invite.token)}`;
   const first = String(client.first_name ?? "").trim();
   const greeting = first ? `Bonjour ${first},` : "Bonjour,";
   const mailed = await sendEmail({

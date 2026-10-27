@@ -14,6 +14,7 @@ import {
   type ExpertDocumentItem,
   type ExpertMission,
   type ExpertReview,
+  type RevenueLine,
   type ExpertSlot,
   type MissionBilling,
   type MissionStatus,
@@ -352,11 +353,11 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
   });
 
   const poleState = await loadExpertPoleState();
+  void poleState;
   let requests = await supabase
     .from("action_requests")
     .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
     .eq("expert_id", session.id)
-    .eq("pole", poleState.ready ? poleState.pole : "formation")
     .order("scheduled_at", { ascending: true });
   if (requests.error && /pole|column|schema cache/i.test(requests.error.message ?? "")) {
     requests = await supabase
@@ -448,6 +449,54 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     },
   };
 });
+
+export async function loadExpertRevenueExtras(): Promise<RevenueLine[]> {
+  const session = await getSession();
+  const space = await loadExpertSpace();
+  const db = getServiceRoleClient();
+  const extras: RevenueLine[] = [];
+  const missionIds = new Set(space.missions.map((mission) => mission.id));
+  const rateCents = typeof space.profile.dailyRate === "number" ? Math.round(space.profile.dailyRate * 100) : 0;
+  const now = Date.now();
+  for (const slot of space.slots) {
+    if (slot.kind === "indisponible") continue;
+    if (slot.missionId && missionIds.has(slot.missionId)) continue;
+    if (!slot.client && !slot.missionId) continue;
+    const done = new Date(slot.endsAt).getTime() <= now;
+    extras.push({
+      id: `slot-${slot.id}`,
+      title: slot.title || "Rendez-vous",
+      client: slot.client || "Client",
+      at: slot.startsAt,
+      amountCents: rateCents,
+      bucket: "upcoming",
+      pill: done ? "to_invoice" : "upcoming",
+      detail: `${slot.client || "Client"} · ${new Date(slot.startsAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`,
+    });
+  }
+  if (session?.id && db) {
+    const { data, error } = await db
+      .from("expert_care_invoices")
+      .select("id,amount_cents,designation,status,sent_at,created_at,client_id")
+      .eq("expert_id", session.id);
+    if (!error) {
+      for (const row of data ?? []) {
+        const sent = Boolean(row.sent_at) || row.status === "sent";
+        extras.push({
+          id: `invoice-${row.id}`,
+          title: String(row.designation ?? "Facture"),
+          client: "Client Care",
+          at: String(row.sent_at ?? row.created_at ?? new Date().toISOString()),
+          amountCents: Number(row.amount_cents) || 0,
+          bucket: sent ? "paid" : "upcoming",
+          pill: sent ? "paid" : "to_invoice",
+          detail: sent ? "Facture envoyée" : "Facture à envoyer",
+        });
+      }
+    }
+  }
+  return extras;
+}
 
 export async function loadExpertNavCounts() {
   try {

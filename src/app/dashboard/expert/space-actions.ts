@@ -38,7 +38,7 @@ const settingsSchema = z.object({
 const documentSchema = z.object({
   name: z.string().min(1),
   url: z.string().min(1),
-  folder: z.enum(["contrat", "cv", "attestation", "facture", "autre"]),
+  folder: z.enum(["contrat", "cv", "attestation", "facture", "modele", "autre"]),
   mime: z.string().optional(),
   size: z.number().optional(),
 });

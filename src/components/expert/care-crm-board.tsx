@@ -19,6 +19,8 @@ type Invoice = { id: string; client_id: string; designation: string; amount_cent
 type ResponseRow = { id: string; client_id: string; test_slug: string; score_label: string | null; synthesis: string | null; submitted_at: string };
 
 const field = "h-12 w-full rounded-2xl border border-[#1E2130] bg-[#12141A] px-4 text-sm text-[#F4F5F7] outline-none";
+const selectField =
+  "h-12 w-full rounded-2xl border border-[#E3E0D8] bg-white px-4 text-sm font-semibold text-[#07080B] outline-none";
 
 function labelOf(client: Client) {
   return [client.first_name, client.last_name].filter(Boolean).join(" ").trim() || client.email;
@@ -146,7 +148,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const titles: Record<typeof mode, { title: string; subtitle: string }> = {
     crm: { title: "CRM", subtitle: "Vos membres Byound Care, isolés de ceux des autres experts." },
     tests: { title: "Byound tests", subtitle: "MAI, soft skills et stress académique — envoi depuis le CRM, réponses conservées, synthèse OpenAI." },
-    factures: { title: "Facturation", subtitle: "Envoi d'une facture à un membre. Le modèle se lit dans Documents > Factures, ou public/documents/facture-exemple.pdf." },
+    factures: { title: "Facturation", subtitle: "Les factures nominatives reprennent le PDF déposé dans Documents → Exemple de facture." },
   };
 
   return (
@@ -181,13 +183,13 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       {mode === "tests" ? (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2">
-            <select className={field} value={clientId} onChange={(event) => setClientId(event.target.value)} aria-label="Membre CRM">
+            <select className={selectField} value={clientId} onChange={(event) => setClientId(event.target.value)} aria-label="Membre CRM">
               <option value="">Choisir un membre</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>{labelOf(client)}</option>
               ))}
             </select>
-            <select className={field} value={testSlug} onChange={(event) => setTestSlug(event.target.value)} aria-label="Test">
+            <select className={selectField} value={testSlug} onChange={(event) => setTestSlug(event.target.value)} aria-label="Test">
               {BYOUND_CARE_TESTS.map((test) => (
                 <option key={test.slug} value={test.slug}>{test.title}</option>
               ))}
@@ -229,7 +231,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
 
       {mode === "factures" ? (
         <div className="space-y-6">
-          <select className={field} value={clientId} onChange={(event) => setClientId(event.target.value)} aria-label="Membre CRM">
+          <select className={selectField} value={clientId} onChange={(event) => setClientId(event.target.value)} aria-label="Membre CRM">
             <option value="">Choisir un membre</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>{labelOf(client)}</option>

@@ -19,7 +19,6 @@ import {
   LayoutDashboard,
   Lock,
   Menu,
-  Receipt,
   Settings,
   User2,
   Users,
@@ -196,37 +195,50 @@ export function ExpertShell({
     };
   }, [pathname]);
 
+  const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
+  const careOnly = hasCare && !memberships.some((item) => item.pole === "formation" && item.status === "active");
   const items: NavItem[] = [
     { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard },
     { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2 },
-    {
+    { label: "Agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
+  ];
+  if (!careOnly) {
+    items.push({
       label: "Mes missions",
       href: "/dashboard/expert/interventions",
       icon: ClipboardList,
       locked: restricted,
       badge: counts.missions,
-    },
-    { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
-    { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
-    { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, badge: counts.documents },
-    {
-      label: "Formations",
-      href: "/dashboard/expert/formations",
-      icon: BookOpen,
-      children: [{ label: "Mes résultats", href: "/dashboard/expert/resultats" }],
-    },
-    { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
-    { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
-  ];
-  const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
+    });
+  }
   if (hasCare) {
     items.push(
       { label: "CRM", href: "/dashboard/expert/dossiers", icon: Users },
-      { label: "Rendez-vous", href: "/dashboard/expert/rendez-vous", icon: CalendarDays },
-      { label: "Facturation", href: "/dashboard/expert/facturation", icon: Receipt },
       { label: "Byound tests", href: "/dashboard/expert/tests", icon: FlaskConical },
     );
   }
+  items.push(
+    { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
+    {
+      label: "Documents",
+      href: "/dashboard/expert/documents",
+      icon: FileText,
+      badge: counts.documents,
+      children: [{ label: "Exemple de facture", href: "/dashboard/expert/documents?folder=modele" }],
+    },
+  );
+  if (!careOnly) {
+    items.push(
+      {
+        label: "Formations",
+        href: "/dashboard/expert/formations",
+        icon: BookOpen,
+        children: [{ label: "Mes résultats", href: "/dashboard/expert/resultats" }],
+      },
+      { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
+    );
+  }
+  items.push({ label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings });
   const switcherPoles = activePoles(memberships);
 
   const identity = (

@@ -14,7 +14,8 @@ const FOLDERS = [
   { id: "contrat", label: "Contrats", dot: "bg-[#FF4B4B]" },
   { id: "cv", label: "CV", dot: "bg-[#8DB8FF]" },
   { id: "attestation", label: "Attestations", dot: "bg-[#F2CF6B]" },
-  { id: "facture", label: "Factures", dot: "bg-[#FFB4B8]" },
+  { id: "modele", label: "Exemple de facture", dot: "bg-[#FFB4B8]" },
+  { id: "facture", label: "Factures envoyées", dot: "bg-[#6EE7B7]" },
 ] as const;
 
 export function DocumentsView({ documents, folder }: { documents: ExpertDocumentItem[]; folder: string }) {
@@ -36,7 +37,7 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
       const json = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !json.url) throw new Error(json.error ?? "Dépôt impossible");
       const folderId = active === "tous" ? "autre" : active;
-      const saved = await saveExpertDocument({ name: file.name, url: json.url, folder: folderId as "contrat" | "cv" | "attestation" | "facture" | "autre", mime: file.type, size: file.size });
+      const saved = await saveExpertDocument({ name: file.name, url: json.url, folder: folderId as "contrat" | "cv" | "attestation" | "facture" | "modele" | "autre", mime: file.type, size: file.size });
       if (!saved.ok) throw new Error(saved.error);
       toast.success("Document déposé");
       window.dispatchEvent(new Event("expert-nav-refresh"));
@@ -50,7 +51,7 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
 
   return (
     <ExpertPageFrame>
-      <ExpertPageHeader title="Documents" subtitle="Vos contrats, attestations et justificatifs au même endroit" action={<ExpertPrimaryButton onClick={() => inputRef.current?.click()}>{pending ? "Dépôt…" : "Déposer un document"}</ExpertPrimaryButton>} />
+      <ExpertPageHeader title="Documents" subtitle="Déposez l'exemple de facture ici : il servira de modèle pour les factures nominatives." action={<ExpertPrimaryButton onClick={() => inputRef.current?.click()}>{pending ? "Dépôt…" : "Déposer un document"}</ExpertPrimaryButton>} />
       <input ref={inputRef} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />
       {oldest ? (
         <article className="rounded-[28px] bg-[#FF4B4B] p-5 text-[#04140C]">
@@ -92,7 +93,7 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
                   key={document.id}
                   leading={<span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1E2130]"><FileText className="h-4 w-4" /></span>}
                   title={document.name}
-                  subtitle={`${document.folder === "contrat" ? "Contrat" : document.folder === "cv" ? "CV" : document.folder === "attestation" ? "Attestation" : document.folder === "facture" ? "Facture" : "Document"} · ${document.status === "signed" ? `signé le ${when}` : document.status === "to_sign" ? `reçu le ${when}` : `déposé le ${when}`}`}
+                  subtitle={`${document.folder === "contrat" ? "Contrat" : document.folder === "cv" ? "CV" : document.folder === "attestation" ? "Attestation" : document.folder === "modele" ? "Exemple de facture" : document.folder === "facture" ? "Facture" : "Document"} · ${document.status === "signed" ? `signé le ${when}` : document.status === "to_sign" ? `reçu le ${when}` : `déposé le ${when}`}`}
                   trailing={
                     <span className="flex items-center gap-2">
                       {expiry ? <StatusPill tone="alert">{expiry.label}</StatusPill> : <StatusPill tone={document.status === "to_sign" ? "solid" : document.status === "signed" ? "green" : "grey"}>{document.status === "to_sign" ? "À signer" : document.status === "signed" ? "Signé" : "Déposé"}</StatusPill>}

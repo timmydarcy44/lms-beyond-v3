@@ -6,10 +6,25 @@ import { eurosToCents } from "@/lib/entreprise/offer-conditions";
 import { readFile } from "fs/promises";
 import path from "path";
 
+async function loadTemplateBuffer(url: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return Buffer.from(await response.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 async function sampleInvoice() {
   const space = await loadExpertSpace();
-  const fromDocs = space.documents.find((doc) => doc.folder === "facture" || /facture/i.test(doc.name));
-  if (fromDocs?.url) return { url: fromDocs.url, name: fromDocs.name, buffer: null as Buffer | null };
+  const fromDocs =
+    space.documents.find((doc) => doc.folder === "modele") ??
+    space.documents.find((doc) => doc.folder === "facture" || /facture|exemple/i.test(doc.name));
+  if (fromDocs?.url) {
+    const buffer = await loadTemplateBuffer(fromDocs.url);
+    return { url: fromDocs.url, name: fromDocs.name, buffer };
+  }
   try {
     const filePath = path.join(process.cwd(), "public", "documents", "facture-exemple.pdf");
     const buffer = await readFile(filePath);
@@ -55,14 +70,15 @@ export async function POST(req: NextRequest) {
   const amountCents = eurosToCents(body?.amount ?? "") ?? 0;
   const designation = body?.designation?.trim() || "Prestation Byound Care";
   const sample = await sampleInvoice();
+  const invoiceFile = `Facture ${[client.first_name, client.last_name].filter(Boolean).join(" ").trim() || "client"}.pdf`;
   const attachments = sample?.buffer
-    ? [{ filename: sample.name, content: sample.buffer }]
+    ? [{ filename: invoiceFile, content: sample.buffer }]
     : undefined;
 
   const mailed = await sendEmail({
     to: client.email,
     subject: `Facture — ${designation}`,
-    html: `<p>Bonjour ${client.first_name || ""},</p><p>Veuillez trouver votre facture : <strong>${designation}</strong>${amountCents > 0 ? ` (${(amountCents / 100).toLocaleString("fr-FR")} €)` : ""}.</p>${sample?.url && !sample.buffer ? `<p><a href="${sample.url}">Télécharger la facture</a></p>` : "<p>Le document est joint à cet e-mail.</p>"}`,
+    html: `<p>Bonjour ${client.first_name || ""},</p><p>Veuillez trouver votre facture nominative : <strong>${designation}</strong>${amountCents > 0 ? ` (${(amountCents / 100).toLocaleString("fr-FR")} €)` : ""}.</p>${sample?.url && !sample.buffer ? `<p><a href="${sample.url}">Télécharger la facture</a></p>` : "<p>Le document est joint à cet e-mail.</p>"}`,
     attachments,
   });
 

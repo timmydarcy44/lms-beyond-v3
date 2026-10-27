@@ -1,3 +1,5 @@
-import { carePage } from "@/lib/expert/care-page";
+import { redirect } from "next/navigation";
 
-export default carePage("Rendez-vous");
+export default function ExpertRendezVousRedirect() {
+  redirect("/dashboard/expert/agenda");
+}

@@ -73,6 +73,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [extras, setExtras] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
 
   const load = async () => {
     const [c, t, i, r] = await Promise.all([
@@ -156,6 +157,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
       setChildOneLast("");
       setChildTwoFirst("");
       setChildTwoLast("");
+      setAddOpen(false);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Création impossible");
@@ -241,81 +243,106 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
         subtitle={success?.subtitle}
         onClose={() => setSuccess(null)}
       />
-      <ExpertPageHeader title={titles[mode].title} subtitle={titles[mode].subtitle} />
+      <ExpertPageHeader
+        title={titles[mode].title}
+        subtitle={titles[mode].subtitle}
+        action={
+          mode === "crm" ? (
+            <ExpertPrimaryButton onClick={() => setAddOpen(true)}>Ajouter un client</ExpertPrimaryButton>
+          ) : undefined
+        }
+      />
       {hint ? <p className="mb-6 rounded-[24px] bg-[#12141A] p-4 text-sm text-[#FFB4B8]">{hint}</p> : null}
 
       {mode === "crm" ? (
         <div className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-extrabold text-[#9096A3]">
-              Prénom
-              <input className={`${field} mt-1`} value={first} onChange={(event) => setFirst(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3]">
-              Nom
-              <input className={`${field} mt-1`} value={last} onChange={(event) => setLast(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3]">
-              Adresse e-mail
-              <input className={`${field} mt-1`} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3]">
-              Numéro de téléphone
-              <input className={`${field} mt-1`} type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3] sm:col-span-2">
-              Adresse postale
-              <input className={`${field} mt-1`} value={addressLine} onChange={(event) => setAddressLine(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3]">
-              Code postal
-              <input className={`${field} mt-1`} value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3]">
-              Ville
-              <input className={`${field} mt-1`} value={city} onChange={(event) => setCity(event.target.value)} required />
-            </label>
-            <label className="text-xs font-extrabold text-[#9096A3] sm:col-span-2">
-              Le suivi concerne
-              <select
-                className={`${selectField} mt-1`}
-                value={followUp}
-                onChange={(event) => setFollowUp(parseFollowUp(event.target.value))}
-              >
-                {CARE_FOLLOW_UPS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            {followUp !== "self" ? (
-              <>
-                <label className="text-xs font-extrabold text-[#9096A3]">
-                  Prénom de l&apos;enfant
-                  <input className={`${field} mt-1`} value={childOneFirst} onChange={(event) => setChildOneFirst(event.target.value)} required />
-                </label>
-                <label className="text-xs font-extrabold text-[#9096A3]">
-                  Nom de l&apos;enfant
-                  <input className={`${field} mt-1`} value={childOneLast} onChange={(event) => setChildOneLast(event.target.value)} required />
-                </label>
-              </>
-            ) : null}
-            {followUp === "two_children" ? (
-              <>
-                <label className="text-xs font-extrabold text-[#9096A3]">
-                  Prénom du second enfant
-                  <input className={`${field} mt-1`} value={childTwoFirst} onChange={(event) => setChildTwoFirst(event.target.value)} required />
-                </label>
-                <label className="text-xs font-extrabold text-[#9096A3]">
-                  Nom du second enfant
-                  <input className={`${field} mt-1`} value={childTwoLast} onChange={(event) => setChildTwoLast(event.target.value)} required />
-                </label>
-              </>
-            ) : null}
-          </div>
-          <p className="text-sm text-[#9096A3]">
-            L&apos;expert renseigne ces informations ici. Sur le futur site Byound Care, le client pourra les compléter à la prise de rendez-vous.
-          </p>
-          <ExpertPrimaryButton onClick={() => void addClient()}>{busy ? "Enregistrement…" : "Ajouter au CRM"}</ExpertPrimaryButton>
+          {addOpen ? (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="add-client-title">
+              <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[28px] bg-[#12141A] p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p id="add-client-title" className="text-xl font-extrabold">Ajouter un client</p>
+                    <p className="mt-1 text-sm text-[#9096A3]">Identité, adresse, téléphone, et enfants suivis le cas échéant.</p>
+                  </div>
+                  <button type="button" onClick={() => setAddOpen(false)} className="rounded-full bg-[#1E2130] px-3 py-1 text-sm font-extrabold">
+                    Fermer
+                  </button>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <label className="text-xs font-extrabold text-[#9096A3]">
+                    Prénom
+                    <input className={`${field} mt-1`} value={first} onChange={(event) => setFirst(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3]">
+                    Nom
+                    <input className={`${field} mt-1`} value={last} onChange={(event) => setLast(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3]">
+                    Adresse e-mail
+                    <input className={`${field} mt-1`} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3]">
+                    Numéro de téléphone
+                    <input className={`${field} mt-1`} type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3] sm:col-span-2">
+                    Adresse postale
+                    <input className={`${field} mt-1`} value={addressLine} onChange={(event) => setAddressLine(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3]">
+                    Code postal
+                    <input className={`${field} mt-1`} value={postalCode} onChange={(event) => setPostalCode(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3]">
+                    Ville
+                    <input className={`${field} mt-1`} value={city} onChange={(event) => setCity(event.target.value)} required />
+                  </label>
+                  <label className="text-xs font-extrabold text-[#9096A3] sm:col-span-2">
+                    Le suivi concerne
+                    <select
+                      className={`${selectField} mt-1`}
+                      value={followUp}
+                      onChange={(event) => setFollowUp(parseFollowUp(event.target.value))}
+                    >
+                      {CARE_FOLLOW_UPS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {followUp !== "self" ? (
+                    <>
+                      <label className="text-xs font-extrabold text-[#9096A3]">
+                        Prénom de l&apos;enfant
+                        <input className={`${field} mt-1`} value={childOneFirst} onChange={(event) => setChildOneFirst(event.target.value)} required />
+                      </label>
+                      <label className="text-xs font-extrabold text-[#9096A3]">
+                        Nom de l&apos;enfant
+                        <input className={`${field} mt-1`} value={childOneLast} onChange={(event) => setChildOneLast(event.target.value)} required />
+                      </label>
+                    </>
+                  ) : null}
+                  {followUp === "two_children" ? (
+                    <>
+                      <label className="text-xs font-extrabold text-[#9096A3]">
+                        Prénom du second enfant
+                        <input className={`${field} mt-1`} value={childTwoFirst} onChange={(event) => setChildTwoFirst(event.target.value)} required />
+                      </label>
+                      <label className="text-xs font-extrabold text-[#9096A3]">
+                        Nom du second enfant
+                        <input className={`${field} mt-1`} value={childTwoLast} onChange={(event) => setChildTwoLast(event.target.value)} required />
+                      </label>
+                    </>
+                  ) : null}
+                </div>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <ExpertPrimaryButton onClick={() => void addClient()}>{busy ? "Enregistrement…" : "Enregistrer"}</ExpertPrimaryButton>
+                  <button type="button" onClick={() => setAddOpen(false)} className="h-11 rounded-full bg-[#1E2130] px-5 text-sm font-extrabold">
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {clients.length === 0 ? (
             <EmptyState title="Aucun membre" text="Ajoutez un premier contact pour envoyer tests et factures." />
           ) : (

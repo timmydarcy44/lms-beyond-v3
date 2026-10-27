@@ -317,7 +317,15 @@ export function BadgeClassForm({
     const loadOrganizations = async () => {
       const res = await fetch("/api/super-admin/organisations?internal_badges_only=1");
       const json = await res.json();
-      setOrganizations(json.organizations ?? []);
+      const orgs = (json.organizations ?? []) as Organization[];
+      setOrganizations(orgs);
+      if (!badgeClassId) {
+        setOrganizationId((current) => {
+          if (current) return current;
+          const byound = orgs.find((org) => formatOrganizationDisplayName(org.name) === "Byound");
+          return byound?.id ?? orgs[0]?.id ?? "";
+        });
+      }
     };
     const loadValidators = async () => {
       const res = await fetch("/api/super-admin/validators");
@@ -373,6 +381,10 @@ export function BadgeClassForm({
     setRequiredCourseId(courseId || null);
     const course = courses.find((item) => item.id === courseId);
     if (!course) return;
+    if (!organizationId) {
+      const byound = organizations.find((org) => formatOrganizationDisplayName(org.name) === "Byound");
+      if (byound) setOrganizationId(byound.id);
+    }
     setRequiresEnrollment(true);
     if (course.title) setName(course.title.replace(/^LMS · /, ""));
     const text = [course.description, course.presentation, course.objectives]
@@ -396,15 +408,15 @@ export function BadgeClassForm({
 
 
   useEffect(() => {
-    if (!organizationId) return;
     const loadCourses = async () => {
-      const res = await fetch(`/api/admin/courses?organizationId=${organizationId}`, {
-        headers: createHeaders(auth, organizationId),
+      const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
+      const res = await fetch(`/api/admin/courses${query}`, {
+        headers: createHeaders(auth, organizationId || auth.userId),
       });
       const json = await res.json();
       setCourses(json.courses ?? []);
     };
-    loadCourses();
+    void loadCourses();
   }, [organizationId, auth]);
 
   useEffect(() => {
@@ -953,9 +965,9 @@ export function BadgeClassForm({
               {formationChoice === "existing" ? (
                 <div className="mt-4 space-y-2">
                   <Label className="text-slate-900">Formation</Label>
-                  <Select value={requiredCourseId ?? ""} onValueChange={fillFromCourse} disabled={!organizationId}>
+                  <Select value={requiredCourseId ?? ""} onValueChange={fillFromCourse}>
                     <SelectTrigger className="border-slate-300 bg-white text-slate-900">
-                      <SelectValue placeholder={organizationId ? "Choisir la formation" : "Choisissez d'abord le club"} />
+                      <SelectValue placeholder={courses.length ? "Choisir la formation" : "Chargement des formations…"} />
                     </SelectTrigger>
                     <SelectContent>
                       <CourseSelectItems courses={courses} />

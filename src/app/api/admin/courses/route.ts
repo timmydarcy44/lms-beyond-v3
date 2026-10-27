@@ -9,8 +9,14 @@ type CourseRow = {
   description?: string | null;
   presentation?: unknown;
   objectives?: unknown;
-  builder_snapshot?: { general?: { publisher?: string; title?: string } } | null;
+  builder_snapshot?: { publisher?: string; general?: { publisher?: string; title?: string } } | null;
 };
+
+function isByoundLmsCourse(row: CourseRow) {
+  const snap = row.builder_snapshot;
+  const publisher = String(snap?.general?.publisher ?? snap?.publisher ?? "").toLowerCase();
+  return publisher === "byound";
+}
 
 function asCourse(row: CourseRow, source: "org" | "lms") {
   const lmsTitle = row.builder_snapshot?.general?.title?.trim();
@@ -30,23 +36,27 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const queryOrgId = url.searchParams.get("organizationId");
-  const orgId = queryOrgId || auth.user.orgId;
+  const orgId = queryOrgId || auth.user.orgId || "";
 
   const supabase = await getServiceRoleClientOrFallback();
   if (!supabase) {
     return NextResponse.json({ error: "SUPABASE_UNAVAILABLE" }, { status: 503 });
   }
 
-  const rich = await supabase
-    .from("courses")
-    .select("id, title, description, presentation, objectives, builder_snapshot")
-    .eq("org_id", orgId)
-    .order("title", { ascending: true });
-  const orgQuery = rich.error
-    ? await supabase.from("courses").select("id, title, builder_snapshot").eq("org_id", orgId).order("title", { ascending: true })
-    : rich;
-  if (orgQuery.error) {
-    return NextResponse.json({ error: "COURSES_FETCH_FAILED" }, { status: 500 });
+  let orgRows: CourseRow[] = [];
+  if (orgId) {
+    const rich = await supabase
+      .from("courses")
+      .select("id, title, description, presentation, objectives, builder_snapshot")
+      .eq("org_id", orgId)
+      .order("title", { ascending: true });
+    const orgQuery = rich.error
+      ? await supabase.from("courses").select("id, title, builder_snapshot").eq("org_id", orgId).order("title", { ascending: true })
+      : rich;
+    if (orgQuery.error) {
+      return NextResponse.json({ error: "COURSES_FETCH_FAILED" }, { status: 500 });
+    }
+    orgRows = (orgQuery.data ?? []) as CourseRow[];
   }
 
   const catalog = await supabase
@@ -54,9 +64,10 @@ export async function GET(request: Request) {
     .select("id, title, description, presentation, objectives, builder_snapshot")
     .order("updated_at", { ascending: false })
     .limit(400);
-  const lmsRows = ((catalog.data ?? []) as CourseRow[]).filter(
-    (course) => course.builder_snapshot?.general?.publisher === "byound",
-  );
+  const catalogRows = catalog.error
+    ? await supabase.from("courses").select("id, title, builder_snapshot").order("updated_at", { ascending: false }).limit(400)
+    : catalog;
+  const lmsRows = ((catalogRows.data ?? []) as CourseRow[]).filter(isByoundLmsCourse);
 
   const seen = new Set<string>();
   const courses = [];
@@ -64,7 +75,7 @@ export async function GET(request: Request) {
     seen.add(row.id);
     courses.push(asCourse(row, "lms"));
   }
-  for (const row of (orgQuery.data ?? []) as CourseRow[]) {
+  for (const row of orgRows) {
     if (seen.has(row.id)) continue;
     courses.push(asCourse(row, "org"));
   }

@@ -21,7 +21,15 @@ export type CareInvoicePdfInput = {
   followUpLabel?: string | null;
   lines: CareInvoiceLine[];
   logoPng?: Uint8Array | null;
+  legalName?: string | null;
+  siret?: string | null;
+  vatLiable?: boolean | null;
 };
+
+export function careVatNotice(vatLiable: boolean | null | undefined) {
+  if (vatLiable === true) return "TVA applicable.";
+  return "TVA non applicable, article 293 B du CGI.";
+}
 
 const RED: [number, number, number] = [255, 75, 75];
 const INK: [number, number, number] = [4, 20, 12];
@@ -88,8 +96,22 @@ export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
   doc.text("Émetteur", margin, 50);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(input.expertName || "Expert Byound Care", margin, 56);
+  doc.text(input.legalName?.trim() || input.expertName || "Expert Byound Care", margin, 56);
   let expertY = 61;
+  if (input.legalName?.trim() && input.expertName) {
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text(input.expertName, margin, expertY);
+    expertY += 5;
+    doc.setTextColor(...INK);
+    doc.setFontSize(10);
+  }
+  if (input.siret?.trim()) {
+    doc.setFontSize(9);
+    doc.text(`SIRET ${input.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, "$1 $2 $3 $4")}`, margin, expertY);
+    expertY += 5;
+    doc.setFontSize(10);
+  }
   if (input.expertHeadline?.trim()) {
     doc.setTextColor(...MUTED);
     doc.text(input.expertHeadline.trim(), margin, expertY, { maxWidth: 88 });
@@ -166,7 +188,7 @@ export function buildCareInvoicePdf(input: CareInvoicePdfInput): jsPDF {
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
   doc.text(
-    "Prestation Byound Care. TVA non applicable, art. 293 B du CGI, sauf mention contraire de l'expert.",
+    `Prestation Byound Care. ${careVatNotice(input.vatLiable)}`,
     margin,
     y,
     { maxWidth: pageW - margin * 2 },

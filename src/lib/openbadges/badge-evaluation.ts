@@ -29,9 +29,19 @@ export function formatEvaluationMethodsSummary(methodIds: string[]): string {
     .join(", ");
 }
 
-/** Affichage org (ex. renommage Byound Lab → Byound). */
+/** Affichage org (ex. renommage Byound Lab / EDGE LAB → Byound). */
 export function formatOrganizationDisplayName(name: string): string {
   const trimmed = name.trim();
-  if (trimmed === "Byound Lab") return "Byound";
+  const key = trimmed.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+  if (
+    key === "byound" ||
+    key === "byound lab" ||
+    key === "edge lab" ||
+    key === "edgelab" ||
+    key === "edgebs" ||
+    key === "edge"
+  ) {
+    return "Byound";
+  }
   return trimmed;
 }

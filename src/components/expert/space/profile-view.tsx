@@ -106,6 +106,35 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
           ))}
         </div>
       </div>
+      <section className="mt-4 rounded-[28px] bg-[#12141A] p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold">Société / auto-entreprise</h2>
+            <p className="mt-1 text-sm text-[#9096A3]">Mentions reprises sur les factures Byound Care</p>
+          </div>
+          <a href="/dashboard/expert/profile?edit=1#facturation" className="text-sm font-extrabold text-[#FF4B4B]">
+            {profile.legalName || profile.siret ? "Modifier" : "Renseigner"}
+          </a>
+        </div>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-[#9096A3]">Raison sociale</dt>
+            <dd className="font-extrabold">{profile.legalName || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-[#9096A3]">SIRET</dt>
+            <dd className="font-extrabold">{profile.siret || "—"}</dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-[#9096A3]">TVA</dt>
+            <dd className="font-extrabold">
+              {profile.vatLiable
+                ? "Assujetti — TVA applicable"
+                : "Non assujetti — TVA non applicable, article 293 B du CGI"}
+            </dd>
+          </div>
+        </dl>
+      </section>
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <section className="rounded-[28px] bg-[#12141A] p-5">
           <h2 className="mb-2 text-base font-extrabold">Informations du profil</h2>

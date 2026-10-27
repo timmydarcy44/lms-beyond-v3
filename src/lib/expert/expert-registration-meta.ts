@@ -32,6 +32,9 @@ export type EdgeRegistrationMeta = {
   agenda_format?: "visio" | "presentiel" | null;
   notice_hours?: number | null;
   care_session_price_cents?: number | null;
+  legal_name?: string | null;
+  siret?: string | null;
+  vat_liable?: boolean | null;
 };
 
 const META_TYPE = "edge_registration_meta";
@@ -67,6 +70,9 @@ export function parseRegistrationMeta(references: unknown): EdgeRegistrationMeta
       typeof raw.care_session_price_cents === "number" && Number.isFinite(raw.care_session_price_cents)
         ? Math.max(0, Math.round(raw.care_session_price_cents))
         : null,
+    legal_name: typeof raw.legal_name === "string" && raw.legal_name.trim() ? raw.legal_name.trim() : null,
+    siret: typeof raw.siret === "string" && raw.siret.trim() ? raw.siret.replace(/\s+/g, "") : null,
+    vat_liable: typeof raw.vat_liable === "boolean" ? raw.vat_liable : null,
     documents: Array.isArray(raw.documents)
       ? (raw.documents as ExpertDocumentMeta[]).filter((d) => d && typeof d.id === "string")
       : [],

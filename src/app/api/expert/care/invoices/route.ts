@@ -116,12 +116,16 @@ export async function POST(req: NextRequest) {
   const invoiceNumber = `BYC-${issuedAt.toISOString().slice(0, 10).replaceAll("-", "")}-${client.id.slice(0, 6).toUpperCase()}`;
   const space = await loadExpertSpace();
   const session = await getSession();
+  const billing = parseRegistrationMeta(expertRow.data?.references);
   const pdf = careInvoicePdfBuffer({
     invoiceNumber,
     issuedAt,
     expertName: space.profile.name,
     expertHeadline: space.profile.headline,
     expertEmail: session?.email ?? null,
+    legalName: billing?.legal_name ?? null,
+    siret: billing?.siret ?? null,
+    vatLiable: billing?.vat_liable ?? false,
     clientFirstName: client.first_name,
     clientLastName: client.last_name,
     clientEmail: client.email,

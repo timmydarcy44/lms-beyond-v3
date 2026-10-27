@@ -59,6 +59,9 @@ export function ExpertProfileEditor() {
   const [bio, setBio] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [dailyRate, setDailyRate] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [siret, setSiret] = useState("");
+  const [vatLiable, setVatLiable] = useState(false);
 
   const [domains, setDomains] = useState<string[]>([]);
   const [primaryDomain, setPrimaryDomain] = useState("");
@@ -103,6 +106,9 @@ export function ExpertProfileEditor() {
           ? String(meta.daily_rate)
           : "",
     );
+    setLegalName(meta?.legal_name ?? "");
+    setSiret(meta?.siret ?? "");
+    setVatLiable(meta?.vat_liable === true);
     setDomains(meta?.domains?.length ? meta.domains : ((data.specialties as string[]) ?? ctxExpert.specialties ?? []));
     setPrimaryDomain(meta?.primary_domain ?? meta?.domains?.[0] ?? "");
     setSpecialties((data.specialties as string[]) ?? ctxExpert.specialties ?? []);
@@ -205,6 +211,9 @@ export function ExpertProfileEditor() {
         bio_long: bioLong.trim() || null,
         website_url: websiteUrl.trim() || null,
         daily_rate: dailyRate.trim() ? Number(dailyRate) : null,
+        legal_name: legalName.trim() || null,
+        siret: siret.replace(/\s+/g, "") || null,
+        vat_liable: vatLiable,
       };
 
       const refsWithMeta = mergeRegistrationMeta(
@@ -270,6 +279,9 @@ export function ExpertProfileEditor() {
     websiteUrl,
     yearsExperience,
     availabilities,
+    legalName,
+    siret,
+    vatLiable,
   ]);
 
   const scheduleAutosave = useCallback(() => {
@@ -315,6 +327,9 @@ export function ExpertProfileEditor() {
     availabilities,
     yearsExperience,
     references,
+    legalName,
+    siret,
+    vatLiable,
     scheduleAutosave,
   ]);
 
@@ -457,6 +472,44 @@ export function ExpertProfileEditor() {
                   <input value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="LinkedIn (URL)" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
                   <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="Site internet / portfolio" className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70" />
                 </div>
+              </section>
+
+              <section id="facturation" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
+                <h2 className="text-sm font-semibold">Société / auto-entreprise</h2>
+                <p className="mt-1 text-xs text-white/45">
+                  Ces mentions apparaissent sur vos factures Byound Care. Si vous n&apos;êtes pas assujetti à la TVA, la mention de l&apos;article 293 B du CGI est ajoutée automatiquement.
+                </p>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <input
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    placeholder="Raison sociale ou nom de l'auto-entreprise"
+                    className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                  />
+                  <input
+                    value={siret}
+                    onChange={(e) => setSiret(e.target.value)}
+                    placeholder="Numéro SIRET"
+                    inputMode="numeric"
+                    className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                  />
+                  <label className="flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={vatLiable}
+                      onChange={(e) => setVatLiable(e.target.checked)}
+                      className="h-4 w-4 accent-[#FF4B4B]"
+                    />
+                    Assujetti à la TVA
+                  </label>
+                </div>
+                {!vatLiable ? (
+                  <p className="mt-3 text-xs text-white/45">
+                    Mention facture : TVA non applicable, article 293 B du CGI.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs text-white/45">Mention facture : TVA applicable.</p>
+                )}
               </section>
 
               <section id="tarif" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">

@@ -54,6 +54,9 @@ export type ExpertProfileModel = {
   reviews: ExpertReview[];
   missionsDone: number;
   sections: Array<{ id: ProfileSectionId; label: string; filled: boolean; missing: string; values: string[] }>;
+  legalName?: string | null;
+  siret?: string | null;
+  vatLiable?: boolean | null;
 };
 
 export type ExpertCertificationModel = {
@@ -303,6 +306,9 @@ function emptySpace(id: string, name: string): ExpertSpaceData {
       reviews: [],
       missionsDone: 0,
       sections: profileSections({ headline: "", specialties: [], regions: [], formats: [], dailyRate: null, photoUrl: null, bio: "" }),
+      legalName: null,
+      siret: null,
+      vatLiable: null,
     },
     certification: {
       certified: false,
@@ -437,6 +443,9 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
       reviews,
       missionsDone: missions.filter((mission) => mission.status === "terminee").length,
       sections: profileSections({ headline, specialties, regions, formats, dailyRate, photoUrl, bio }),
+      legalName: meta?.legal_name ?? null,
+      siret: meta?.siret ?? null,
+      vatLiable: meta?.vat_liable ?? null,
     },
     certification: {
       certified,

@@ -20,7 +20,14 @@ export function RevenusView({ missions, extraLines = [], month, invoiceId }: { m
     <ExpertPageFrame>
       <ExpertPageHeader title="Mes revenus" subtitle="Ce que vous avez gagné, ce qui arrive et ce qu'il reste à facturer" action={<ExpertPrimaryButton href="/dashboard/expert/facturation">Créer une facture</ExpertPrimaryButton>} />
       <section className="relative overflow-hidden rounded-[32px] bg-[#12141A] px-5 py-8 text-center">
-        <span className="pointer-events-none absolute left-1/2 top-0 h-48 w-[70%] -translate-x-1/2 bg-[radial-gradient(circle,rgba(255,75,75,0.35),transparent_70%)]" aria-hidden />
+        <span
+          className="pointer-events-none absolute left-1/2 top-[46%] h-[340px] w-[min(92%,640px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FF4B4B]/[0.28] blur-3xl"
+          aria-hidden
+        />
+        <span
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_80%_at_50%_48%,rgba(255,75,75,0.28),rgba(255,75,75,0.08)_38%,transparent_72%)]"
+          aria-hidden
+        />
         <div className="relative">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {keys.map((key) => {
@@ -52,7 +59,7 @@ export function RevenusView({ missions, extraLines = [], month, invoiceId }: { m
           <div className="mt-6 flex justify-center">
             <QuickActions
               actions={[
-                { label: "Créer une facture", icon: Plus, href: `/dashboard/expert/revenus?facture=${latest?.id ?? ""}`, tone: "green" },
+                { label: "Créer une facture", icon: Plus, href: "/dashboard/expert/facturation", tone: "green" },
                 { label: "Mes factures", icon: FileText, href: "/dashboard/expert/documents?folder=facture" },
                 { label: "Coordonnées bancaires", icon: Landmark, href: "/dashboard/expert/settings" },
                 { label: "Exporter", icon: Download, href: `/api/expert/revenus/export?m=${selected}` },
@@ -76,7 +83,7 @@ export function RevenusView({ missions, extraLines = [], month, invoiceId }: { m
             <p className="font-extrabold text-[#FFB4B8]">{report.toInvoice.length} mission{report.toInvoice.length > 1 ? "s" : ""} à facturer · {formatEuros(report.toInvoice.reduce((sum, line) => sum + line.amountCents, 0))}</p>
             {latest ? <p className="text-sm text-[#FFB4B8]">{latest.title} · {latest.client} · aujourd'hui</p> : null}
           </div>
-          <ExpertPrimaryButton href={`/dashboard/expert/revenus?facture=${latest?.id ?? ""}`}>Créer la facture</ExpertPrimaryButton>
+          <ExpertPrimaryButton href="/dashboard/expert/facturation">Créer la facture</ExpertPrimaryButton>
         </article>
       ) : null}
       <div className="mt-4 space-y-4">

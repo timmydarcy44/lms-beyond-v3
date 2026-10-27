@@ -10,11 +10,11 @@ export default function EntrepriseParametresPage() {
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8 max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">
-            Paramètres
+            ParamÃ¨tres
           </p>
-          <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Paramètres</h1>
+          <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>ParamÃ¨tres</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Confidentialité, conformité et accès à votre compte.
+            ConfidentialitÃ©, conformitÃ© et accÃ¨s Ã  votre compte.
           </p>
         </header>
 
@@ -29,8 +29,8 @@ export default function EntrepriseParametresPage() {
             {
               href: "/dashboard/entreprise/rgpd/confidentialite",
               icon: FileText,
-              title: "Politique de confidentialité",
-              text: "Finalités, bases légales et droits des personnes",
+              title: "Politique de confidentialitÃ©",
+              text: "FinalitÃ©s, bases lÃ©gales et droits des personnes",
             },
             {
               href: "/dashboard/entreprise/rgpd/registre",

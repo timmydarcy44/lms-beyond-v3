@@ -107,7 +107,7 @@ export default function DemoCollectifActionPage() {
   const expertBio = useMemo(
     () =>
       expert?.bio?.trim() ??
-      "Experte en rÈgulation des dynamiques de groupe et leadership partagÈ.",
+      "Experte en r√©gulation des dynamiques de groupe et leadership partag√©.",
     [expert],
   );
   const expertIsCertified = expert?.certification_status === "certified";
@@ -141,18 +141,18 @@ export default function DemoCollectifActionPage() {
       const payload = {
         expert_id: expert?.id ?? "68f42af8-61a4-472a-89e3-3fca38b29c64",
         action_type: "group_workshop",
-        target_label: "…quipe Engineering",
+        target_label: "√âquipe Engineering",
         target_count: 7,
         status: "expert_notified",
         company_id: companyId,
         requester_id: userId,
-        metadata: { topic: "CohÈsion & Alignement" },
+        metadata: { topic: "Coh√©sion & Alignement" },
       };
       const { error } = await supabase.from("action_requests").insert(payload);
       if (error) throw error;
       setOpen(true);
     } catch {
-      toast.error("Erreur lors de l'activation. Veuillez rÈessayer.");
+      toast.error("Erreur lors de l'activation. Veuillez r√©essayer.");
     } finally {
       setProcessing(false);
     }
@@ -174,14 +174,14 @@ export default function DemoCollectifActionPage() {
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div className="min-w-0">
               <h1 className="text-2xl font-extrabold tracking-tight text-white">
-                Diagnostic : Baisse d'efficience opÈrationnelle (…quipe Engineering)
+                Diagnostic : Baisse d'efficience op√©rationnelle (√âquipe Engineering)
               </h1>
               <p className="mt-3 max-w-3xl text-sm text-white/70">
-                Pattern identifiÈ de saturation cognitive et perte d'alignement
+                Pattern identifi√© de saturation cognitive et perte d'alignement
               </p>
             </div>
             <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white/80">
-              ?? 7 collaborateurs dÈtectÈs
+              üë• 7 collaborateurs d√©tect√©s
             </div>
           </div>
         </section>
@@ -193,26 +193,26 @@ export default function DemoCollectifActionPage() {
               Atelier de transformation collective
             </div>
             <h2 className="text-2xl font-extrabold tracking-tight text-white">
-              Atelier : CohÈsion & AccÈlÈration de la Roadmap
+              Atelier : Coh√©sion & Acc√©l√©ration de la Roadmap
             </h2>
             <div className="mt-6 space-y-4 text-sm text-white/75">
               <p>
                 <span className="font-extrabold text-white">Objectif :</span> Transformer les zones de friction en leviers
-                d'agilitÈ pour le Q3.
+                d'agilit√© pour le Q3.
               </p>
               <p>
-                <span className="font-extrabold text-white">Format :</span> Session intensive de 2h (PrÈsentiel recommandÈ).
+                <span className="font-extrabold text-white">Format :</span> Session intensive de 2h (Pr√©sentiel recommand√©).
               </p>
               <p>
-                <span className="font-extrabold text-white">ROI :</span> Alignement stratÈgique immÈdiat et sÈcurisation des
+                <span className="font-extrabold text-white">ROI :</span> Alignement strat√©gique imm√©diat et s√©curisation des
                 livrables.
               </p>
             </div>
 
             <div className="mt-7 rounded-3xl border border-white/10 bg-white/5 p-6">
-              <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">SynthËse</div>
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Synth√®se</div>
               <p className="mt-3 text-sm text-white/70">
-                Une session ciblÈe pour rÈaligner prioritÈs, clarifier les arbitrages et sÈcuriser la vÈlocitÈ d'exÈcution.
+                Une session cibl√©e pour r√©aligner priorit√©s, clarifier les arbitrages et s√©curiser la v√©locit√© d'ex√©cution.
               </p>
             </div>
           </div>
@@ -222,8 +222,8 @@ export default function DemoCollectifActionPage() {
             <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Expert</div>
             {expandedSearch ? (
               <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 text-xs font-semibold text-amber-100/90">
-                Recherche Èlargie : aucun expert exact ìcollectif + engineeringî nía ÈtÈ trouvÈ. SÈlection basÈe sur
-                ìcollectifî.
+                Recherche √©largie : aucun expert exact ‚Äúcollectif + engineering‚Äù n‚Äôa √©t√© trouv√©. S√©lection bas√©e sur
+                ‚Äúcollectif‚Äù.
               </div>
             ) : null}
             <div className="mt-5 flex items-start gap-4">
@@ -248,41 +248,41 @@ export default function DemoCollectifActionPage() {
                   {expertIsCertified ? (
                     <span
                       className="inline-flex items-center rounded-full border border-violet-400/30 bg-violet-500/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-violet-100 shadow-[0_0_24px_rgba(168,85,247,0.35)]"
-                      title="Cet expert a validÈ le cursus Beyond sur la performance cognitive."
+                      title="Cet expert a valid√© le cursus Beyond sur la performance cognitive."
                     >
-                      CertifiÈ Beyond
+                      Certifi√© Beyond
                     </span>
                   ) : null}
                 </div>
                 {expertIsCertified ? (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/55">
-                      CompÈtences validÈes
+                      Comp√©tences valid√©es
                     </span>
                     <span
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80"
-                      title="Badge obtenu via le parcours de formation Analyse Cognitive. Preuve de compÈtence vÈrifiÈe par Beyond."
+                      title="Badge obtenu via le parcours de formation Analyse Cognitive. Preuve de comp√©tence v√©rifi√©e par Beyond."
                     >
-                      <span aria-hidden>??</span> Analyse Cognitive
+                      <span aria-hidden>üß†</span> Analyse Cognitive
                     </span>
                     <span
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80"
-                      title="Badge obtenu via le parcours de formation Facilitation Collective. Preuve de compÈtence vÈrifiÈe par Beyond."
+                      title="Badge obtenu via le parcours de formation Facilitation Collective. Preuve de comp√©tence v√©rifi√©e par Beyond."
                     >
-                      <span aria-hidden>??</span> Facilitation Collective
+                      <span aria-hidden>üë•</span> Facilitation Collective
                     </span>
                     <span
                       className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-white/80"
-                      title="Badge obtenu via le parcours de formation MÈthodologie Beyond. Preuve de compÈtence vÈrifiÈe par Beyond."
+                      title="Badge obtenu via le parcours de formation M√©thodologie Beyond. Preuve de comp√©tence v√©rifi√©e par Beyond."
                     >
-                      <span aria-hidden>??</span> MÈthodologie Beyond
+                      <span aria-hidden>üìà</span> M√©thodologie Beyond
                     </span>
                   </div>
                 ) : null}
                 {expertIsCertified ? (
                   <div
                     className="mt-2 inline-flex flex-wrap items-center gap-2 text-xs font-bold text-violet-100/90"
-                    title="Certification obtenue aprËs validation du parcours pÈdagogique Beyond (Diagnostic, Posture & MÈthodologie)."
+                    title="Certification obtenue apr√®s validation du parcours p√©dagogique Beyond (Diagnostic, Posture & M√©thodologie)."
                   >
                     <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1">
                       <Check className="h-3.5 w-3.5 text-violet-200" aria-hidden />
@@ -306,8 +306,8 @@ export default function DemoCollectifActionPage() {
             </div>
             {expertIsCertified ? (
               <div className="mt-5 rounded-3xl border border-violet-400/20 bg-violet-500/10 p-5 text-sm text-white/75">
-                <span className="font-extrabold text-white">Recommandation Prioritaire :</span> Cet expert maÓtrise la
-                mÈthodologie Beyond dÈdiÈe aux Èquipes Engineering.
+                <span className="font-extrabold text-white">Recommandation Prioritaire :</span> Cet expert ma√Ætrise la
+                m√©thodologie Beyond d√©di√©e aux √©quipes Engineering.
               </div>
             ) : null}
             <p className="mt-5 text-sm text-white/70">
@@ -330,12 +330,12 @@ export default function DemoCollectifActionPage() {
             <div className="min-w-0">
               <div className="text-xs font-black uppercase tracking-[0.22em] text-white/55">Validation</div>
               <div className="mt-2 text-lg font-extrabold tracking-tight text-white">
-                {confirmed ? "Atelier validÈ" : "PrÍt ‡ dÈclencher l'atelier"}
+                {confirmed ? "Atelier valid√©" : "Pr√™t √† d√©clencher l'atelier"}
               </div>
               <p className="mt-2 text-sm text-white/70">
                 {confirmed
-                  ? "Confirmation envoyÈe. Sophie Vallet prend contact avec vous sous 24h pour l'organisation logistique."
-                  : "Validation instantanÈe pour lancer la prise de contact et planifier."}
+                  ? "Confirmation envoy√©e. Sophie Vallet prend contact avec vous sous 24h pour l'organisation logistique."
+                  : "Validation instantan√©e pour lancer la prise de contact et planifier."}
               </p>
             </div>
             <button
@@ -384,7 +384,7 @@ export default function DemoCollectifActionPage() {
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-300" aria-hidden />
                     <p className="text-sm text-emerald-100/90">
-                      Atelier lancÈ. Sophie Vallet a ÈtÈ notifiÈe pour l'Èquipe Engineering.
+                      Atelier lanc√©. Sophie Vallet a √©t√© notifi√©e pour l'√©quipe Engineering.
                     </p>
                   </div>
                 </div>

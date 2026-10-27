@@ -23,7 +23,7 @@ const MOCK_EXPERTS: ExpertCard[] = [
     firstName: "Sophie",
     lastName: "Vallet",
     title: "Neurosciences & Performance",
-    angle: "Pourquoi Sophie ? Recommandée pour son expertise en régulation émotionnelle sous pression.",
+    angle: "Pourquoi Sophie ? RecommandÃ©e pour son expertise en rÃ©gulation Ã©motionnelle sous pression.",
     photoUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&h=200&fit=crop",
     cardStyle: "primary",
   },
@@ -32,7 +32,7 @@ const MOCK_EXPERTS: ExpertCard[] = [
     firstName: "Thomas",
     lastName: "Riva",
     title: "Transformation Agile",
-    angle: "Alternative : structurer les rituels et accélérer la coordination.",
+    angle: "Alternative : structurer les rituels et accÃ©lÃ©rer la coordination.",
     cardStyle: "alt",
   },
 ];
@@ -122,8 +122,8 @@ export default function DemoStressActionPage() {
       title: e.specialty ?? (idx === 0 ? "Neurosciences & Performance" : "Transformation Agile"),
       angle:
         idx === 0
-          ? "Pourquoi Sophie ? Recommandée pour son expertise en régulation émotionnelle sous pression."
-          : "Alternative : structurer les rituels et accélérer la coordination.",
+          ? "Pourquoi Sophie ? RecommandÃ©e pour son expertise en rÃ©gulation Ã©motionnelle sous pression."
+          : "Alternative : structurer les rituels et accÃ©lÃ©rer la coordination.",
       photoUrl: idx === 0 ? MOCK_EXPERTS[0]!.photoUrl : undefined,
       cardStyle: idx === 0 ? "primary" : "alt",
     }));
@@ -173,13 +173,13 @@ export default function DemoStressActionPage() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-emerald-400/20 bg-emerald-400/10">
               <CheckCircle2 className="h-9 w-9 text-emerald-300" aria-hidden />
             </div>
-            <div className="mt-6 text-4xl font-extrabold tracking-tight text-white">?</div>
-            <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white">Intervention confirmée</h1>
+            <div className="mt-6 text-4xl font-extrabold tracking-tight text-white">âœ…</div>
+            <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-white">Intervention confirmÃ©e</h1>
             <p className="mt-4 text-sm text-white/70">
               La session pour <span className="font-bold text-white">Charlie Morel</span> avec{" "}
-              <span className="font-bold text-white">Sophie Vallet</span> est activée.
+              <span className="font-bold text-white">Sophie Vallet</span> est activÃ©e.
               <br />
-              Un e-mail de mise en relation confidentiel sera envoyé sous 15 minutes.
+              Un e-mail de mise en relation confidentiel sera envoyÃ© sous 15 minutes.
             </p>
             <button
               type="button"
@@ -210,7 +210,7 @@ export default function DemoStressActionPage() {
           <div className="flex flex-col gap-5">
             <div className="min-w-0">
               <h1 className="text-2xl font-extrabold tracking-tight text-white">
-                Diagnostic : Baisse de stabilité opérationnelle (Charlie Morel)
+                Diagnostic : Baisse de stabilitÃ© opÃ©rationnelle (Charlie Morel)
               </h1>
             </div>
 
@@ -268,7 +268,7 @@ export default function DemoStressActionPage() {
                   <TrendingUp className="h-4 w-4 text-white/85" aria-hidden />
                 </div>
                 <div className="text-sm text-white/75">
-                  <span className="font-extrabold text-white">Investissement :</span> 1 Crédit Expert (ou 75 € HT).
+                  <span className="font-extrabold text-white">Investissement :</span> 1 CrÃ©dit Expert (ou 75 â‚¬ HT).
                 </div>
               </li>
             </ul>
@@ -282,13 +282,13 @@ export default function DemoStressActionPage() {
               <div>
                 <h3 className="text-xl font-extrabold tracking-tight text-white">Le choix expert</h3>
                 <p className="mt-2 text-sm text-white/60">
-                  {expertsLiveLoading ? "Connexion experts..." : "Sélection prête (fallback garanti)."}
+                  {expertsLiveLoading ? "Connexion experts..." : "SÃ©lection prÃªte (fallback garanti)."}
                 </p>
               </div>
               {confirmed ? (
                 <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-100/90">
                   <CheckCircle2 className="h-4 w-4" aria-hidden />
-                  Accompagnement lancé
+                  Accompagnement lancÃ©
                 </div>
               ) : null}
             </div>
@@ -323,13 +323,13 @@ export default function DemoStressActionPage() {
                             </div>
                             <span className="inline-flex items-center gap-1 rounded-full border border-violet-400/30 bg-violet-500/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-violet-100">
                               <Award className="h-4 w-4" aria-hidden />
-                              Certifiée Beyond
+                              CertifiÃ©e Beyond
                             </span>
                           </div>
                           <div className="mt-1 text-sm font-semibold text-white/70">{e.title}</div>
                           <p className="mt-4 text-sm text-white/70">{e.angle}</p>
                           <div className="mt-5 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
-                            {active ? "Sélectionnée" : "Choisir Sophie"}
+                            {active ? "SÃ©lectionnÃ©e" : "Choisir Sophie"}
                           </div>
                         </div>
                       </div>
@@ -363,7 +363,7 @@ export default function DemoStressActionPage() {
                           <div className="mt-1 text-sm font-semibold text-white/70">{e.title}</div>
                           <p className="mt-3 text-sm text-white/65">{e.angle}</p>
                           <div className="mt-4 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
-                            {active ? "Sélectionné" : "Choisir"}
+                            {active ? "SÃ©lectionnÃ©" : "Choisir"}
                           </div>
                         </div>
                       </div>
@@ -434,7 +434,7 @@ export default function DemoStressActionPage() {
                     Vous allez activer une session pour <span className="font-bold text-white">Charlie Morel</span> avec{" "}
                     <span className="font-bold text-white">Sophie Vallet</span>.
                   </p>
-                  <p>Un e-mail de mise en relation confidentiel sera envoyé sous 15 minutes.</p>
+                  <p>Un e-mail de mise en relation confidentiel sera envoyÃ© sous 15 minutes.</p>
                 </div>
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-end">

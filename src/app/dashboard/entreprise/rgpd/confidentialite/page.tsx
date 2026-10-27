@@ -13,10 +13,10 @@ export default function EntreprisePrivacyPage() {
             RGPD
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>
-            Politique de confidentialité
+            Politique de confidentialitÃ©
           </h1>
           <p className="mt-3 text-sm text-gray-500">
-            Dernière mise à jour : 25 août 2026 — Espace entreprise Byound
+            DerniÃ¨re mise Ã  jour : 25 aoÃ»t 2026 â€” Espace entreprise Byound
           </p>
 
           <div className="prose prose-sm mt-8 max-w-none space-y-6 text-gray-700">
@@ -31,65 +31,65 @@ export default function EntreprisePrivacyPage() {
                 </a>
               </p>
               <p className="mt-2 text-sm leading-6">
-                Pour les données des collaborateurs de votre organisation, le responsable de
+                Pour les donnÃ©es des collaborateurs de votre organisation, le responsable de
                 traitement est en principe votre employeur (client Byound) ; Byound agit comme
-                sous-traitant (art. 28 RGPD) pour l’hébergement et le fonctionnement de la
+                sous-traitant (art. 28 RGPD) pour lâ€™hÃ©bergement et le fonctionnement de la
                 plateforme.
               </p>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-950">2. Données collectées</h2>
+              <h2 className="text-lg font-bold text-gray-950">2. DonnÃ©es collectÃ©es</h2>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6">
-                <li>Identité et coordonnées professionnelles (compte RH)</li>
-                <li>Annuaire collaborateurs et fiches métiers</li>
-                <li>Résultats de diagnostics (selon consentement de partage)</li>
+                <li>IdentitÃ© et coordonnÃ©es professionnelles (compte RH)</li>
+                <li>Annuaire collaborateurs et fiches mÃ©tiers</li>
+                <li>RÃ©sultats de diagnostics (selon consentement de partage)</li>
                 <li>Messages internes RH, offres, candidatures, demandes de formation</li>
-                <li>Logs techniques nécessaires à la sécurité</li>
+                <li>Logs techniques nÃ©cessaires Ã  la sÃ©curitÃ©</li>
               </ul>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-950">3. Bases légales</h2>
+              <h2 className="text-lg font-bold text-gray-950">3. Bases lÃ©gales</h2>
               <p className="mt-2 text-sm leading-6">
-                Chaque traitement dispose d’une base légale identifiée (contrat, intérêt
-                légitime, consentement ou obligation légale). Le détail figure dans le{" "}
+                Chaque traitement dispose dâ€™une base lÃ©gale identifiÃ©e (contrat, intÃ©rÃªt
+                lÃ©gitime, consentement ou obligation lÃ©gale). Le dÃ©tail figure dans le{" "}
                 <Link
                   href="/dashboard/entreprise/rgpd/registre"
                   className="font-semibold text-violet-600"
                 >
                   registre des traitements
                 </Link>{" "}
-                ({EDGE_PROCESSING_REGISTER.length} traitements documentés).
+                ({EDGE_PROCESSING_REGISTER.length} traitements documentÃ©s).
               </p>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-bold text-gray-950">4. Vos droits</h2>
               <p className="mt-2 text-sm leading-6">
-                Vous disposez des droits d’accès, de rectification, d’effacement, d’opposition et
+                Vous disposez des droits dâ€™accÃ¨s, de rectification, dâ€™effacement, dâ€™opposition et
                 de limitation. Depuis{" "}
                 <Link href="/dashboard/entreprise/compte" className="font-semibold text-violet-600">
                   Mon compte
                 </Link>
-                , vous pouvez exporter vos données et demander la suppression. Vous pouvez aussi
-                écrire à {EDGE_DPO_CONTACT.email}. Réponse sous 30 jours.
+                , vous pouvez exporter vos donnÃ©es et demander la suppression. Vous pouvez aussi
+                Ã©crire Ã  {EDGE_DPO_CONTACT.email}. RÃ©ponse sous 30 jours.
               </p>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-950">5. Conservation & sécurité</h2>
+              <h2 className="text-lg font-bold text-gray-950">5. Conservation & sÃ©curitÃ©</h2>
               <p className="mt-2 text-sm leading-6">
-                Les durées de conservation sont définies par traitement dans le registre. Les
-                accès sont authentifiés, chiffrés en transit (HTTPS) et restreints aux rôles
-                autorisés de votre organisation.
+                Les durÃ©es de conservation sont dÃ©finies par traitement dans le registre. Les
+                accÃ¨s sont authentifiÃ©s, chiffrÃ©s en transit (HTTPS) et restreints aux rÃ´les
+                autorisÃ©s de votre organisation.
               </p>
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-950">6. Réclamation</h2>
+              <h2 className="text-lg font-bold text-gray-950">6. RÃ©clamation</h2>
               <p className="mt-2 text-sm leading-6">
-                Vous pouvez introduire une réclamation auprès de la CNIL (
+                Vous pouvez introduire une rÃ©clamation auprÃ¨s de la CNIL (
                 <a
                   href="https://www.cnil.fr"
                   target="_blank"

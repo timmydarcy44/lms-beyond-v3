@@ -10,7 +10,7 @@ import {
 } from "@/lib/enterprise/business-training-catalog";
 import { cn } from "@/lib/utils";
 
-const FORMAT_OPTIONS = ["Présentiel", "Distanciel", "Blended", "À définir"] as const;
+const FORMAT_OPTIONS = ["PrÃ©sentiel", "Distanciel", "Blended", "Ã€ dÃ©finir"] as const;
 
 type RequestFormState = {
   contact_name: string;
@@ -27,7 +27,7 @@ const EMPTY_FORM: RequestFormState = {
   contact_email: "",
   contact_phone: "",
   participants: "",
-  preferred_format: "À définir",
+  preferred_format: "Ã€ dÃ©finir",
   preferred_period: "",
   notes: "",
 };
@@ -50,13 +50,13 @@ function TrainingCard({
           <p className="mt-1 text-sm text-gray-500">{item.subtitle}</p>
         </div>
         <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
-          À partir de {item.startingPrice}
+          Ã€ partir de {item.startingPrice}
         </span>
       </div>
 
       <div className="mt-5 grid gap-3 text-sm text-gray-600 md:grid-cols-2 xl:grid-cols-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">Durée</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">DurÃ©e</p>
           <p className="mt-1 font-medium text-gray-800">{item.duration}</p>
         </div>
         <div>
@@ -75,7 +75,7 @@ function TrainingCard({
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-5">
         <div className="flex flex-wrap gap-5 text-sm text-gray-500">
-          <span>{item.companiesCount} entreprises formées</span>
+          <span>{item.companiesCount} entreprises formÃ©es</span>
           <span>{item.participants}</span>
         </div>
         <button
@@ -121,11 +121,11 @@ function RequestModal({
         {success ? (
           <div className="text-center">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-500">
-              Demande envoyée
+              Demande envoyÃ©e
             </p>
-            <h2 className="mt-3 text-2xl font-bold text-gray-950">Merci, c’est bien reçu</h2>
+            <h2 className="mt-3 text-2xl font-bold text-gray-950">Merci, câ€™est bien reÃ§u</h2>
             <p className="mt-3 text-sm leading-6 text-gray-600">
-              Votre demande pour <strong>{item.title}</strong> a été transmise à l’équipe Byound. Nous
+              Votre demande pour <strong>{item.title}</strong> a Ã©tÃ© transmise Ã  lâ€™Ã©quipe Byound. Nous
               vous recontactons rapidement.
             </p>
             <button
@@ -145,7 +145,7 @@ function RequestModal({
                 </p>
                 <h2 className="mt-2 text-2xl font-bold text-gray-950">Demander {item.title}</h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  {item.duration} · {item.level} · à partir de {item.startingPrice}
+                  {item.duration} Â· {item.level} Â· Ã  partir de {item.startingPrice}
                 </p>
               </div>
               <button
@@ -183,7 +183,7 @@ function RequestModal({
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-semibold text-gray-700">
-                    Téléphone <span className="font-normal text-gray-400">(optionnel)</span>
+                    TÃ©lÃ©phone <span className="font-normal text-gray-400">(optionnel)</span>
                   </span>
                   <input
                     value={form.contact_phone}
@@ -205,7 +205,7 @@ function RequestModal({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Format souhaité</span>
+                  <span className="font-semibold text-gray-700">Format souhaitÃ©</span>
                   <select
                     value={form.preferred_format}
                     onChange={(e) => onChange({ preferred_format: e.target.value })}
@@ -220,7 +220,7 @@ function RequestModal({
                 </label>
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-semibold text-gray-700">
-                    Période souhaitée <span className="font-normal text-gray-400">(optionnel)</span>
+                    PÃ©riode souhaitÃ©e <span className="font-normal text-gray-400">(optionnel)</span>
                   </span>
                   <input
                     value={form.preferred_period}
@@ -233,13 +233,13 @@ function RequestModal({
 
               <label className="grid gap-1.5 text-sm">
                 <span className="font-semibold text-gray-700">
-                  Précisions pour Byound <span className="font-normal text-gray-400">(optionnel)</span>
+                  PrÃ©cisions pour Byound <span className="font-normal text-gray-400">(optionnel)</span>
                 </span>
                 <textarea
                   rows={4}
                   value={form.notes}
                   onChange={(e) => onChange({ notes: e.target.value })}
-                  placeholder="Objectifs, public concerné, contraintes…"
+                  placeholder="Objectifs, public concernÃ©, contraintesâ€¦"
                   className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
                 />
               </label>
@@ -251,7 +251,7 @@ function RequestModal({
                 disabled={submitting}
                 className="mt-2 inline-flex items-center justify-center rounded-full bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
               >
-                {submitting ? "Envoi…" : "Envoyer la demande"}
+                {submitting ? "Envoiâ€¦" : "Envoyer la demande"}
               </button>
             </form>
           </>
@@ -297,7 +297,7 @@ export default function EntrepriseFormationRequestPage() {
       notes:
         prev.notes ||
         (skillParam
-          ? `Besoin Skills Gap : renforcer « ${skillParam} »${metierParam ? ` pour le métier « ${metierParam} »` : ""}.`
+          ? `Besoin Skills Gap : renforcer Â« ${skillParam} Â»${metierParam ? ` pour le mÃ©tier Â« ${metierParam} Â»` : ""}.`
           : prev.notes),
     }));
   }, [skillParam, metierParam, formatParam]);
@@ -376,7 +376,7 @@ export default function EntrepriseFormationRequestPage() {
       }
       setSuccess(true);
     } catch {
-      setError("Erreur réseau. Réessayez.");
+      setError("Erreur rÃ©seau. RÃ©essayez.");
     } finally {
       setSubmitting(false);
     }
@@ -394,8 +394,8 @@ export default function EntrepriseFormationRequestPage() {
             Demander une formation
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600">
-            Catalogue business Byound ({BUSINESS_TRAINING_ITEMS.length} formations) — filtrer par
-            thématique puis envoyer une demande : l’équipe Byound reçoit votre besoin par email.
+            Catalogue business Byound ({BUSINESS_TRAINING_ITEMS.length} formations) â€” filtrer par
+            thÃ©matique puis envoyer une demande : lâ€™Ã©quipe Byound reÃ§oit votre besoin par email.
           </p>
         </header>
 
@@ -428,12 +428,12 @@ export default function EntrepriseFormationRequestPage() {
 
           <p className="mb-4 text-sm text-gray-500">
             {filtered.length} formation{filtered.length > 1 ? "s" : ""}
-            {category !== "Tous" ? ` · ${category}` : ""}
+            {category !== "Tous" ? ` Â· ${category}` : ""}
           </p>
 
           {filtered.length === 0 ? (
             <div className="rounded-[28px] border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-              Aucune formation dans cette catégorie pour le moment.
+              Aucune formation dans cette catÃ©gorie pour le moment.
             </div>
           ) : (
             <div className="grid gap-5">

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
-const CRITERION = { declared: "Déclarée", proof: "Preuve déposée", badge: "Badge obtenu" } as const;
+const CRITERION = { declared: "DÃ©clarÃ©e", proof: "Preuve dÃ©posÃ©e", badge: "Badge obtenu" } as const;
 
 function initials(first: string | null, last: string | null) {
   return `${first?.[0] ?? ""}${last?.[0] ?? ""}`.toUpperCase() || "?";
@@ -42,7 +42,7 @@ export default function EntrepriseBadgesPage() {
       <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]">
         <h1 className="text-[40px] font-extrabold leading-none tracking-[-1.2px]">Badges</h1>
         <p className="mt-2 max-w-xl text-[15px] text-[#3A3D45]">
-          Open Badges de votre organisation : délivrés, obtenus ce mois-ci, et preuves encore en attente.
+          Open Badges de votre organisation : dÃ©livrÃ©s, obtenus ce mois-ci, et preuves encore en attente.
         </p>
 
         {loading ? (
@@ -54,14 +54,14 @@ export default function EntrepriseBadgesPage() {
         ) : fetchError ? (
           <div className="mt-6 rounded-[26px] bg-white p-6">
             <p className="text-[15px]">{fetchError}</p>
-            <button type="button" onClick={() => void reload()} className="mt-4 h-11 rounded-full bg-[#07080B] px-5 text-sm font-semibold text-white">Réessayer</button>
+            <button type="button" onClick={() => void reload()} className="mt-4 h-11 rounded-full bg-[#07080B] px-5 text-sm font-semibold text-white">RÃ©essayer</button>
           </div>
         ) : (
           <>
             <section className="mt-6 grid gap-4 sm:grid-cols-3">
-              <Stat label="Délivrés" value={String(awarded)} hint="au total" />
-              <Stat label="Ce mois" value={thisMonth == null ? "—" : String(thisMonth)} hint="nouveaux badges" violet />
-              <Stat label="En attente" value={String(pending)} hint="preuves à valider" />
+              <Stat label="DÃ©livrÃ©s" value={String(awarded)} hint="au total" />
+              <Stat label="Ce mois" value={thisMonth == null ? "â€”" : String(thisMonth)} hint="nouveaux badges" violet />
+              <Stat label="En attente" value={String(pending)} hint="preuves Ã  valider" />
             </section>
             <section className="mt-4 rounded-[26px] bg-white p-3 sm:p-4">
               <div className="flex items-center justify-between px-2 py-2">
@@ -69,7 +69,7 @@ export default function EntrepriseBadgesPage() {
                 <span className="text-[13px] text-[#6B6F7A]">{rows.length}</span>
               </div>
               {rows.length === 0 ? (
-                <p className="px-2 py-10 text-center text-[14px] text-[#6B6F7A]">Aucun badge délivré pour l&apos;instant.</p>
+                <p className="px-2 py-10 text-center text-[14px] text-[#6B6F7A]">Aucun badge dÃ©livrÃ© pour l&apos;instant.</p>
               ) : (
                 <ul>
                   {rows.map((row) => (
@@ -78,10 +78,10 @@ export default function EntrepriseBadgesPage() {
                         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] text-[13px] font-bold text-white">{row.initials}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[15px] font-extrabold">{row.badge}</span>
-                          <span className="block truncate text-[13px] text-[#6B6F7A]">{row.name} · {row.criterion}</span>
+                          <span className="block truncate text-[13px] text-[#6B6F7A]">{row.name} Â· {row.criterion}</span>
                         </span>
                         <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold", row.delivered ? "bg-[#E3F6EC] text-[#126B3B]" : "bg-[#ECE9E1] text-[#3A3D45]")}>
-                          {row.delivered ? "Délivré" : "En attente"}
+                          {row.delivered ? "DÃ©livrÃ©" : "En attente"}
                         </span>
                       </Link>
                     </li>

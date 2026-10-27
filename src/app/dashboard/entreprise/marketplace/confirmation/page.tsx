@@ -12,17 +12,17 @@ export default function MarketplaceConfirmationPage() {
     <div className="min-h-screen bg-slate-50 pl-[104px]">
       <EnterpriseSidebar />
       <main className="mx-auto max-w-lg px-8 py-16 text-center">
-        <p className="text-4xl">?</p>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900">Réservation en cours de confirmation</h1>
+        <p className="text-4xl">âœ…</p>
+        <h1 className="mt-4 text-2xl font-bold text-slate-900">RÃ©servation en cours de confirmation</h1>
         <p className="mt-3 text-slate-600">
-          Si le paiement a réussi, vous recevrez un email de confirmation sous peu.
-          {sessionId ? ` (réf. ${sessionId.slice(0, 8)}…)` : ""}
+          Si le paiement a rÃ©ussi, vous recevrez un email de confirmation sous peu.
+          {sessionId ? ` (rÃ©f. ${sessionId.slice(0, 8)}â€¦)` : ""}
         </p>
         <Link
           href="/dashboard/entreprise/marketplace"
           className="mt-8 inline-block text-violet-700 font-medium"
         >
-          Retour à la marketplace ?
+          Retour Ã  la marketplace â†’
         </Link>
       </main>
     </div>

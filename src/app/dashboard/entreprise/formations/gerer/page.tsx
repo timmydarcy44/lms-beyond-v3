@@ -25,7 +25,7 @@ export default async function EntrepriseFormationsGererPage() {
       <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <OrgFormationsShell
           basePath="/dashboard/entreprise/formations"
-          title="Gérer mes formations"
+          title="GÃ©rer mes formations"
           lead="Formations internes. Assignez-les aux collaborateurs de votre organisation."
           variant="dark"
           hideTabs

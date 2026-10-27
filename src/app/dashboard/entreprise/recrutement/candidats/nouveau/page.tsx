@@ -103,7 +103,7 @@ export default function EntrepriseNewCandidatePage() {
               <article key={candidate.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Nouveau</p>
                 <h2 className="mt-2 text-lg font-semibold">{candidate.name}</h2>
-                <p className="text-sm text-gray-500">{candidate.role} · {candidate.city}</p>
+                <p className="text-sm text-gray-500">{candidate.role} Â· {candidate.city}</p>
                 <p className="mt-3 text-sm font-semibold text-gray-900">Matching {candidate.match} %</p>
               </article>
             ))}

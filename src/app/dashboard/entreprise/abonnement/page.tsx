@@ -28,7 +28,7 @@ export default function EntrepriseAbonnementPage() {
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Tarifs & abonnement</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-500">
-            Offres Byound pour piloter compétences, diagnostics et formations — facturation par
+            Offres Byound pour piloter compÃ©tences, diagnostics et formations â€” facturation par
             collaborateur.
           </p>
         </header>
@@ -38,7 +38,7 @@ export default function EntrepriseAbonnementPage() {
             {(
               [
                 { id: "monthly" as const, label: "Mensuel" },
-                { id: "annual" as const, label: `Annuel (-${Math.round(EDGE_ANNUAL_DISCOUNT * 100)} %)` },
+                { id: "annual" as const, label: `Annuel (âˆ’${Math.round(EDGE_ANNUAL_DISCOUNT * 100)} %)` },
               ] as const
             ).map((opt) => (
               <button
@@ -80,13 +80,13 @@ export default function EntrepriseAbonnementPage() {
                 <p className="mt-2 text-sm text-gray-500">{plan.tagline}</p>
                 <p className="mt-6">
                   <span className="text-4xl font-black tracking-tight text-gray-950">
-                    {unit.toFixed(0)} €
+                    {unit.toFixed(0)} â‚¬
                   </span>
                   <span className="text-sm text-gray-400"> HT / collab. / mois</span>
                 </p>
                 <p className="mt-1 text-xs text-gray-400">
-                  ˜ {Math.round(monthlyTotal)} € HT / mois pour {seats} sièges
-                  {billing === "annual" ? " (équivalent annuel)" : ""}
+                  â‰ˆ {Math.round(monthlyTotal)} â‚¬ HT / mois pour {seats} siÃ¨ges
+                  {billing === "annual" ? " (Ã©quivalent annuel)" : ""}
                 </p>
                 <p className="mt-4 text-sm font-medium text-gray-700">{plan.promise}</p>
                 <ul className="mt-5 flex-1 space-y-2">
@@ -106,7 +106,7 @@ export default function EntrepriseAbonnementPage() {
                       : "border border-gray-200 bg-white text-gray-800 hover:bg-gray-50",
                   )}
                 >
-                  Parler à un expert
+                  Parler Ã  un expert
                 </a>
               </article>
             );
@@ -114,11 +114,11 @@ export default function EntrepriseAbonnementPage() {
         </div>
 
         <p className="mt-8 text-sm text-gray-500">
-          Besoin d’un devis sur mesure ?{" "}
+          Besoin dâ€™un devis sur mesure ?{" "}
           <Link href="/dashboard/entreprise/aide" className="font-semibold text-violet-600">
-            Consulter l’aide
+            Consulter lâ€™aide
           </Link>{" "}
-          ou écrire à{" "}
+          ou Ã©crire Ã {" "}
           <a href="mailto:contact@byound.fr" className="font-semibold text-violet-600">
             contact@byound.fr
           </a>

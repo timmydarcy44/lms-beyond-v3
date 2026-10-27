@@ -9,12 +9,12 @@ export default function EntrepriseRgpdRegisterPage() {
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8 max-w-4xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">
-            RGPD · Art. 30
+            RGPD Â· Art. 30
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Registre des traitements</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-500">
-            Inventaire des traitements opérés dans l’espace entreprise Byound — finalité, base
-            légale, catégories, destinataires et durée de conservation.
+            Inventaire des traitements opÃ©rÃ©s dans lâ€™espace entreprise Byound â€” finalitÃ©, base
+            lÃ©gale, catÃ©gories, destinataires et durÃ©e de conservation.
           </p>
           <p className="mt-2 text-xs text-gray-400">
             Contact DPO / privacy : {EDGE_DPO_CONTACT.email}
@@ -43,7 +43,7 @@ export default function EntrepriseRgpdRegisterPage() {
               <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                    Catégories de données
+                    CatÃ©gories de donnÃ©es
                   </p>
                   <ul className="mt-1 list-disc pl-4 text-gray-700">
                     {item.categories.map((c) => (
@@ -69,7 +69,7 @@ export default function EntrepriseRgpdRegisterPage() {
                 </div>
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                    Mesures de sécurité
+                    Mesures de sÃ©curitÃ©
                   </p>
                   <ul className="mt-1 list-disc pl-4 text-gray-700">
                     {item.securityMeasures.map((c) => (

@@ -20,7 +20,7 @@ export default async function EntrepriseFormationsCataloguePage() {
         <OrgFormationsShell
           basePath="/dashboard/entreprise/formations"
           title="Formations Byound"
-          lead="Parcourez et assignez les formations Byound Online à vos collaborateurs."
+          lead="Parcourez et assignez les formations Byound Online Ã  vos collaborateurs."
           variant="dark"
           hideTabs
         >

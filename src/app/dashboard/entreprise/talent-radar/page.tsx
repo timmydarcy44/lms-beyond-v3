@@ -8,15 +8,15 @@ import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 const profiles = [
   {
     id: "A-27",
-    prenom: "Anaïs",
+    prenom: "AnaÃ¯s",
     nom_initial: "D.",
     photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80",
     score: 92,
-    tags: ["Stabilité émotionnelle élevée", "Adaptabilité forte", "Risque d'attrition faible"],
+    tags: ["StabilitÃ© Ã©motionnelle Ã©levÃ©e", "AdaptabilitÃ© forte", "Risque d'attrition faible"],
     disc: { D: 5, I: 7, S: 9, C: 6 },
     softSkills: [
       { label: "Communication", value: 84 },
-      { label: "Résilience", value: 88 },
+      { label: "RÃ©silience", value: 88 },
       { label: "Leadership", value: 76 },
     ],
   },
@@ -26,11 +26,11 @@ const profiles = [
     nom_initial: "B.",
     photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
     score: 88,
-    tags: ["Leadership émergent", "Énergie commerciale", "Progression rapide"],
+    tags: ["Leadership Ã©mergent", "Ã‰nergie commerciale", "Progression rapide"],
     disc: { D: 8, I: 9, S: 4, C: 5 },
     softSkills: [
       { label: "Leadership", value: 89 },
-      { label: "Adaptabilité", value: 82 },
+      { label: "AdaptabilitÃ©", value: 82 },
       { label: "Collaboration", value: 74 },
     ],
   },
@@ -40,7 +40,7 @@ const profiles = [
     nom_initial: "P.",
     photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=800&q=80",
     score: 85,
-    tags: ["Esprit analytique", "Rigueur process", "Communication précise"],
+    tags: ["Esprit analytique", "Rigueur process", "Communication prÃ©cise"],
     disc: { D: 4, I: 5, S: 7, C: 9 },
     softSkills: [
       { label: "Rigueur", value: 90 },
@@ -70,7 +70,7 @@ export default function TalentRadarPage() {
         <div className="space-y-8">
           <header className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-[28px] font-extrabold tracking-[-0.5px]">Équipe Insight</h1>
+              <h1 className="text-[28px] font-extrabold tracking-[-0.5px]">Ã‰quipe Insight</h1>
               <p className="mt-1 text-[13px] text-white/60">
                 Profils compatibles avec vos offres
               </p>
@@ -79,7 +79,7 @@ export default function TalentRadarPage() {
               href="/dashboard/entreprise/offres"
               className="rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black"
             >
-              + Déposer une offre
+              + DÃ©poser une offre
             </Link>
           </header>
 
@@ -87,7 +87,7 @@ export default function TalentRadarPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-white">
-                  Accédez aux profils qualifiés Beyond
+                  AccÃ©dez aux profils qualifiÃ©s Beyond
                 </p>
                 <p className="mt-2 text-xs text-white/70">
                   Contactez-nous pour activer le matching complet
@@ -182,7 +182,7 @@ export default function TalentRadarPage() {
                   <p className="text-2xl font-semibold">
                     {selectedProfile.prenom} {selectedProfile.nom_initial}
                   </p>
-                  <p className="mt-2 text-sm text-white/70">Profil premium anonymisé</p>
+                  <p className="mt-2 text-sm text-white/70">Profil premium anonymisÃ©</p>
                 </div>
                 <button
                   type="button"
@@ -211,7 +211,7 @@ export default function TalentRadarPage() {
               </div>
 
               <div className="space-y-3">
-                <p className="text-sm font-semibold text-white/80">Soft skills clés</p>
+                <p className="text-sm font-semibold text-white/80">Soft skills clÃ©s</p>
                 {selectedProfile.softSkills.map((skill) => (
                   <div key={skill.label}>
                     <div className="flex items-center justify-between text-xs text-white/70">

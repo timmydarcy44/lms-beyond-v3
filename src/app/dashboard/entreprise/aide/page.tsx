@@ -10,43 +10,43 @@ import Link from "next/link";
 const FAQ = [
   {
     q: "Comment inviter un collaborateur ?",
-    a: "Allez dans Salariés ? Ajouter (ou Actions rapides ? Inviter un collaborateur). Renseignez prénom, nom et email : une invitation est envoyée pour créer le mot de passe.",
+    a: "Allez dans SalariÃ©s â†’ Ajouter (ou Actions rapides â†’ Inviter un collaborateur). Renseignez prÃ©nom, nom et email : une invitation est envoyÃ©e pour crÃ©er le mot de passe.",
   },
   {
-    q: "À quoi servent les diagnostics ?",
-    a: "Les diagnostics (profil comportemental, IDMC, soft skills) cartographient les compétences et alimentent les écarts vs fiches métiers, les alertes et les recommandations RH.",
+    q: "Ã€ quoi servent les diagnostics ?",
+    a: "Les diagnostics (profil comportemental, IDMC, soft skills) cartographient les compÃ©tences et alimentent les Ã©carts vs fiches mÃ©tiers, les alertes et les recommandations RH.",
   },
   {
-    q: "Où voir les écarts de compétences ?",
-    a: "Sur la fiche collaborateur (écarts vs métier) et sur le dashboard (alertes). Les fiches métiers définissent les cibles soft / hard skills.",
+    q: "OÃ¹ voir les Ã©carts de compÃ©tences ?",
+    a: "Sur la fiche collaborateur (Ã©carts vs mÃ©tier) et sur le dashboard (alertes). Les fiches mÃ©tiers dÃ©finissent les cibles soft / hard skills.",
   },
   {
     q: "Comment demander une formation Byound ?",
-    a: "Formations ? Demander une formation. Filtrez par thématique, ouvrez le formulaire : l’équipe Byound reçoit votre demande par email.",
+    a: "Formations â†’ Demander une formation. Filtrez par thÃ©matique, ouvrez le formulaire : lâ€™Ã©quipe Byound reÃ§oit votre demande par email.",
   },
   {
-    q: "À quoi sert Inclusion / accessibilité ?",
-    a: "Sur chaque fiche collaborateur, le CTA propose des aménagements possibles selon les éléments déclarés ou documentés (RQTH, dys, TDAH, etc.).",
+    q: "Ã€ quoi sert Inclusion / accessibilitÃ© ?",
+    a: "Sur chaque fiche collaborateur, le CTA propose des amÃ©nagements possibles selon les Ã©lÃ©ments dÃ©clarÃ©s ou documentÃ©s (RQTH, dys, TDAH, etc.).",
   },
   {
     q: "Comment fonctionne la messagerie RH ?",
-    a: "Messages permet des échanges rapides collaborateur ? RH sans email, sur le modèle d’une conversation type iMessage.",
+    a: "Messages permet des Ã©changes rapides collaborateur â†” RH sans email, sur le modÃ¨le dâ€™une conversation type iMessage.",
   },
   {
-    q: "Comment créer une offre d’emploi ?",
-    a: "Recrutement ? Mes offres ? Créer, ou via la carte Actions rapides. Renseignez le poste, compétences, expérience et niveau de formation.",
+    q: "Comment crÃ©er une offre dâ€™emploi ?",
+    a: "Recrutement â†’ Mes offres â†’ CrÃ©er, ou via la carte Actions rapides. Renseignez le poste, compÃ©tences, expÃ©rience et niveau de formation.",
   },
   {
-    q: "Comment changer d’abonnement ?",
+    q: "Comment changer dâ€™abonnement ?",
     a: "Consultez Tarifs & abonnement, puis contactez contact@byound.fr pour un devis ou un changement de formule (Skills, Learning, Learning+).",
   },
   {
-    q: "Qui peut accéder au dashboard entreprise ?",
-    a: "Les comptes avec rôle entreprise / RH / manager liés à l’organisation. Les salariés ont leur propre espace apprenant.",
+    q: "Qui peut accÃ©der au dashboard entreprise ?",
+    a: "Les comptes avec rÃ´le entreprise / RH / manager liÃ©s Ã  lâ€™organisation. Les salariÃ©s ont leur propre espace apprenant.",
   },
   {
-    q: "Besoin d’aide urgente ?",
-    a: "Écrivez à contact@byound.fr ou utilisez la messagerie interne pour une question RH rapide auprès de vos équipes.",
+    q: "Besoin dâ€™aide urgente ?",
+    a: "Ã‰crivez Ã  contact@byound.fr ou utilisez la messagerie interne pour une question RH rapide auprÃ¨s de vos Ã©quipes.",
   },
 ] as const;
 
@@ -59,7 +59,7 @@ export default function EntrepriseAidePage() {
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8 max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">Aide</p>
-          <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Centre d’aide</h1>
+          <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Centre dâ€™aide</h1>
           <p className="mt-2 text-sm text-gray-500">
             FAQ pour utiliser le dashboard entreprise Byound au quotidien.
           </p>
@@ -72,7 +72,7 @@ export default function EntrepriseAidePage() {
           >
             <Mail className="h-5 w-5 text-violet-600" />
             <div>
-              <p className="text-sm font-semibold text-gray-900">Écrire au support</p>
+              <p className="text-sm font-semibold text-gray-900">Ã‰crire au support</p>
               <p className="text-xs text-gray-500">contact@byound.fr</p>
             </div>
           </a>
@@ -83,7 +83,7 @@ export default function EntrepriseAidePage() {
             <MessageCircle className="h-5 w-5 text-violet-600" />
             <div>
               <p className="text-sm font-semibold text-gray-900">Messages RH</p>
-              <p className="text-xs text-gray-500">Échanges rapides avec vos équipes</p>
+              <p className="text-xs text-gray-500">Ã‰changes rapides avec vos Ã©quipes</p>
             </div>
           </Link>
         </div>

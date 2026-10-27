@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { createExpertSlot, saveAgendaSettings } from "@/app/dashboard/expert/space-actions";
+import { AppleSuccessOverlay } from "@/components/expert/apple-success-overlay";
 import { ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton, HeroCard, SegmentBar } from "@/components/expert/expert-ui";
 import { addDays, isSameDay, longDayLabel, NOTICE_HOUR_OPTIONS, weekdayShort, type ExpertSlot, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 
@@ -73,8 +75,10 @@ export function AgendaView({
   const [view, setView] = useState<"day" | "week">("day");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const router = useRouter();
   const [defaultFormat, setDefaultFormat] = useState(format);
   const [notice, setNotice] = useState(noticeHours);
+  const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
   const horizonEnd = addDays(today, 7);
   const upcoming = slots.filter((slot) => {
@@ -92,6 +96,13 @@ export function AgendaView({
 
   return (
     <ExpertPageFrame>
+      <AppleSuccessOverlay
+        open={Boolean(success)}
+        title={success?.title ?? ""}
+        subtitle={success?.subtitle}
+        onClose={() => setSuccess(null)}
+        autoCloseMs={2800}
+      />
       <ExpertPageHeader
         title="Mon agenda"
         subtitle="Vos créneaux occupés et vos disponibilités"
@@ -246,6 +257,12 @@ export function AgendaView({
             setOpen(false);
             setDraft(null);
           }}
+          onBooked={(result) => {
+            setOpen(false);
+            setDraft(null);
+            setSuccess({ title: result.title, subtitle: result.subtitle });
+            router.refresh();
+          }}
         />
       ) : null}
     </ExpertPageFrame>
@@ -353,8 +370,14 @@ function AgendaGrid({
                         height: Math.max(22, ((endMin - startMin) / 60) * HOUR_PX),
                       }}
                     >
-                      <p className="font-extrabold">{kindLabel(kind, occupied)}</p>
-                      <p className="truncate">{slot.client || slot.location || slot.title || ""}</p>
+                      <p className="font-extrabold truncate">
+                        {kind === "rendez_vous" && slot.client ? slot.client : kindLabel(kind, occupied)}
+                      </p>
+                      <p className="truncate">
+                        {kind === "rendez_vous" && slot.client
+                          ? kindLabel(kind, occupied)
+                          : slot.client || slot.location || slot.title || ""}
+                      </p>
                     </article>
                   );
                 })}
@@ -412,6 +435,7 @@ function SlotModal({
   patients,
   presetClientId,
   onClose,
+  onBooked,
 }: {
   date: Date;
   start: string;
@@ -420,6 +444,7 @@ function SlotModal({
   patients: AgendaPatient[];
   presetClientId?: string | null;
   onClose: () => void;
+  onBooked: (result: { title: string; subtitle?: string }) => void;
 }) {
   const [pending, setPending] = useState(false);
   const [kind, setKind] = useState<SlotKind>(presetClientId ? "rendez_vous" : "disponible");
@@ -481,11 +506,20 @@ function SlotModal({
       notify,
     });
     if (!result.ok) throw new Error(result.error ?? "Créneau impossible");
-    if (notify && "emailed" in result && result.emailed === false) {
-      toast.message("Rendez-vous enregistré, l'e-mail n'a pas pu partir.");
-    } else {
-      toast.success(notify ? "Patient averti" : "Créneau ajouté");
+    const patient = list.find((row) => row.id === chosen);
+    const name = patient ? patientLabel(patient) : creating ? [String(data.get("first_name") ?? ""), String(data.get("last_name") ?? "")].filter(Boolean).join(" ") : "";
+    if (slotKind === "rendez_vous") {
+      const emailed = "emailed" in result && result.emailed;
+      const emailError = "emailError" in result ? result.emailError : null;
+      onBooked({
+        title: "Rendez-vous confirmé",
+        subtitle: emailed
+          ? `${name || "Patient"} a reçu le mail de confirmation.`
+          : `${name || "Patient"} est bien dans l'agenda.${emailError ? ` ${emailError}` : " Aucun e-mail n'a pu partir."}`,
+      });
+      return;
     }
+    onBooked({ title: "Créneau enregistré", subtitle: kindLabel(slotKind, false) });
   };
 
   return (
@@ -497,10 +531,6 @@ function SlotModal({
           event.preventDefault();
           setPending(true);
           void save(event.currentTarget, false)
-            .then(() => {
-              onClose();
-              window.location.reload();
-            })
             .catch((error) => toast.error(error instanceof Error ? error.message : "Créneau impossible"))
             .finally(() => setPending(false));
         }}
@@ -595,10 +625,6 @@ function SlotModal({
                 if (!form) return;
                 setPending(true);
                 void save(form, true)
-                  .then(() => {
-                    onClose();
-                    window.location.reload();
-                  })
                   .catch((error) => toast.error(error instanceof Error ? error.message : "Envoi impossible"))
                   .finally(() => setPending(false));
               }}

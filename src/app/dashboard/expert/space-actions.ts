@@ -15,7 +15,7 @@ import {
 import { encodeSlotRule, NOTICE_HOUR_OPTIONS, slotsOverlap, type ExpertMission, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 import { sendEmail } from "@/lib/email/resend-client";
 import { buildCareEmail } from "@/lib/expert/care-email";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const decisionSchema = z.object({
   id: z.string().min(1),
@@ -153,8 +153,10 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
   let clientEmail: string | null = null;
   let clientFirst = "";
   const supabase = await getServerClient();
-  if (clientId && supabase) {
-    const { data: patient } = await supabase
+  const admin = getServiceRoleClient();
+  const patientsDb = admin ?? supabase;
+  if (clientId && patientsDb) {
+    const { data: patient } = await patientsDb
       .from("expert_care_clients")
       .select("first_name,last_name,email")
       .eq("id", clientId)
@@ -162,8 +164,8 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
       .maybeSingle();
     if (patient) {
       clientFirst = String(patient.first_name ?? "").trim();
-      clientLabel = [patient.first_name, patient.last_name].filter(Boolean).join(" ").trim() || patient.email;
-      clientEmail = patient.email;
+      clientLabel = [patient.first_name, patient.last_name].filter(Boolean).join(" ").trim() || String(patient.email ?? "");
+      clientEmail = String(patient.email ?? "").trim() || null;
     }
   }
   if (isJadeDemoEmail(session.email)) {
@@ -202,7 +204,7 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
       format: parsed.format,
       location,
       mission_id: null,
-      recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly), clientId),
+      recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly), clientId, clientLabel),
     }));
     const { error } = await supabase.from("expert_slots").insert(rows);
     if (error) {
@@ -213,22 +215,26 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
     }
   }
   let emailed = false;
-  if (parsed.notify && clientEmail) {
+  let emailError: string | null = null;
+  const shouldNotify = parsed.kind === "rendez_vous" && Boolean(clientEmail);
+  if (shouldNotify) {
     const when = start.toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    const expertName = space.profile?.name?.trim() || "Votre expert Byound Care";
     const mailed = await sendEmail({
-      to: clientEmail,
+      to: clientEmail as string,
       subject: "Byound Care — votre rendez-vous",
       html: buildCareEmail({
         preheader: `Rendez-vous le ${when}.`,
         greeting: clientFirst ? `Bonjour ${clientFirst},` : "Bonjour,",
         title: "Votre rendez-vous est confirmé",
-        bodyHtml: `<p style="margin:0 0 12px;">Votre expert Byound Care vous attend le <strong>${when}</strong>.</p><p style="margin:0;">Lieu : ${location || (parsed.format === "visio" ? "Visio" : "à confirmer")}.</p>`,
+        bodyHtml: `<p style="margin:0 0 12px;">${expertName} vous attend le <strong>${when}</strong>.</p><p style="margin:0;">Lieu : ${location || (parsed.format === "visio" ? "Visio" : "à confirmer")}.</p>`,
       }),
     });
     emailed = mailed.success;
+    emailError = mailed.success ? null : mailed.error ?? "L'e-mail n'a pas pu partir.";
   }
   refresh();
-  return { ok: true, emailed };
+  return { ok: true, emailed, emailError };
 }
 
 export async function saveAgendaSettings(input: z.infer<typeof settingsSchema>) {

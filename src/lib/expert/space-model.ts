@@ -61,8 +61,25 @@ export function slotClientIdFromRule(rule: unknown): string | null {
   return match?.[1] ?? null;
 }
 
-export function encodeSlotRule(kind: SlotKind, weekly: boolean, clientId?: string | null) {
-  return [kind, clientId ? `CLIENT:${clientId}` : null, weekly ? "WEEKLY" : null].filter(Boolean).join("|");
+export function slotClientNameFromRule(rule: unknown): string | null {
+  const match = String(rule ?? "").match(/NAME:([^|]+)/);
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]).trim() || null;
+  } catch {
+    return match[1].trim() || null;
+  }
+}
+
+export function encodeSlotRule(kind: SlotKind, weekly: boolean, clientId?: string | null, clientName?: string | null) {
+  return [
+    kind,
+    clientId ? `CLIENT:${clientId}` : null,
+    clientName ? `NAME:${encodeURIComponent(clientName)}` : null,
+    weekly ? "WEEKLY" : null,
+  ]
+    .filter(Boolean)
+    .join("|");
 }
 
 export type ExpertDocumentItem = {

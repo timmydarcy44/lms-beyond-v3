@@ -22,6 +22,7 @@ import {
   type ProfileVisibility,
   asNoticeHours,
   slotClientIdFromRule,
+  slotClientNameFromRule,
   slotKindFromRule,
   type NoticeHours,
   type SlotFormat,
@@ -382,7 +383,8 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id").eq("expert_id", session.id);
   }
   const missionIds = new Set(missions.map((mission) => mission.id));
-  const careClients = await supabase.from("expert_care_clients").select("id,first_name,last_name,email").eq("expert_id", session.id);
+  const admin = getServiceRoleClient();
+  const careClients = await (admin ?? supabase).from("expert_care_clients").select("id,first_name,last_name,email").eq("expert_id", session.id);
   const careById = new Map(
     ((careClients.error ? [] : careClients.data) ?? []).map((row) => [
       String(row.id),
@@ -396,6 +398,7 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
         .map((slot) => {
         const mission = missions.find((item) => item.id === slot.mission_id);
         const clientId = slotClientIdFromRule(slot.recurrence_rule);
+        const storedName = slotClientNameFromRule(slot.recurrence_rule);
         return {
           id: String(slot.id),
           startsAt: String(slot.starts_at),
@@ -405,7 +408,7 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
           location: String(slot.location ?? ""),
           missionId: slot.mission_id ? String(slot.mission_id) : null,
           title: mission?.title ?? null,
-          client: mission?.client ?? (clientId ? careById.get(clientId) ?? null : null),
+          client: mission?.client ?? (clientId ? careById.get(clientId) ?? null : null) ?? storedName,
           clientId,
         };
       });

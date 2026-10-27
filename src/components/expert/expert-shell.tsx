@@ -9,6 +9,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Award,
   CalendarDays,
+  ChevronDown,
   ClipboardList,
   Euro,
   BookOpen,
@@ -32,6 +33,8 @@ import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
+type NavChild = { label: string; href: string };
+
 type NavItem = {
   label: string;
   href: string;
@@ -39,6 +42,7 @@ type NavItem = {
   external?: boolean;
   locked?: boolean;
   badge?: number;
+  children?: NavChild[];
 };
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]";
@@ -60,11 +64,12 @@ function NavLinks({
     <nav aria-label="Navigation expert" className="flex flex-col gap-1">
       {items.map((item) => {
         const Icon = item.icon;
+        const childActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`));
         const active =
           !item.external &&
           (item.href === "/dashboard/expert"
             ? pathname === "/dashboard/expert"
-            : pathname === item.href || pathname.startsWith(`${item.href}/`));
+            : pathname === item.href || pathname.startsWith(`${item.href}/`) || Boolean(childActive));
         const className = cn(
           "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold",
           focusRing,
@@ -93,6 +98,7 @@ function NavLinks({
           <>
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.children?.length ? <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden /> : null}
             {badge}
           </>
         );
@@ -104,15 +110,37 @@ function NavLinks({
           );
         }
         return (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={className}
-            aria-current={active ? "page" : undefined}
-            onClick={onNavigate}
-          >
-            {content}
-          </Link>
+          <div key={item.label}>
+            <Link
+              href={item.href}
+              className={className}
+              aria-current={active && !childActive ? "page" : undefined}
+              onClick={onNavigate}
+            >
+              {content}
+            </Link>
+            {item.children?.length ? (
+              <div className="ml-6 mt-1 flex flex-col gap-0.5">
+                {item.children.map((child) => {
+                  const open = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex h-9 items-center rounded-full px-3 text-sm font-semibold",
+                        focusRing,
+                        open ? "bg-[#1E2130] text-[#F4F5F7]" : "text-[#9096A3] hover:text-[#DADDE4]",
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         );
       })}
     </nav>
@@ -181,16 +209,21 @@ export function ExpertShell({
     { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
     { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
     { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, badge: counts.documents },
-    { label: "Formations", href: "/dashboard/expert/formations", icon: BookOpen },
+    {
+      label: "Formations",
+      href: "/dashboard/expert/formations",
+      icon: BookOpen,
+      children: [{ label: "Mes résultats", href: "/dashboard/expert/resultats" }],
+    },
     { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
     { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
   ];
   if (pole === "care") {
     items.push(
-      { label: "Dossiers clients", href: "/dashboard/expert/dossiers", icon: Users },
+      { label: "CRM", href: "/dashboard/expert/dossiers", icon: Users },
       { label: "Rendez-vous", href: "/dashboard/expert/rendez-vous", icon: CalendarDays },
-      { label: "Facturation particuliers", href: "/dashboard/expert/facturation", icon: Receipt },
-      { label: "Tests Care", href: "/dashboard/expert/tests", icon: FlaskConical },
+      { label: "Facturation", href: "/dashboard/expert/facturation", icon: Receipt },
+      { label: "Byound tests", href: "/dashboard/expert/tests", icon: FlaskConical },
     );
   }
   const switcherPoles = activePoles(memberships);

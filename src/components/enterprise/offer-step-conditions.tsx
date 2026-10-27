@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Segmented } from "@/components/builder/fiche-builder-chrome";
+import { ChoicePills, Segmented } from "@/components/builder/fiche-builder-chrome";
 import {
   BENEFIT_OPTIONS,
+  FREELANCE_PAY_MODES,
   centsToInput,
   eurosToCents,
   formatCents,
+  formatFreelancePay,
   formatOfferPay,
   monthlyCents,
   type SalaryPeriod,
@@ -31,7 +33,10 @@ export function OfferStepConditions({
   const [autreOpen, setAutreOpen] = useState(Boolean(autre?.label));
   const [grid, setGrid] = useState<Grid>(null);
   const alternance = draft.contract_type === "Alternance";
-  const pay = formatOfferPay(draft.salary_min, draft.salary_max, period);
+  const freelance = draft.contract_type === "Freelance";
+  const pay = freelance
+    ? formatFreelancePay(draft.freelance_mode, draft.freelance_percent, draft.freelance_fixe, draft.freelance_tjm)
+    : formatOfferPay(draft.salary_min, draft.salary_max, period);
 
   useEffect(() => {
     if (!alternance) return;
@@ -63,6 +68,63 @@ export function OfferStepConditions({
 
   return (
     <div className="mt-8 space-y-6">
+      {freelance ? (
+      <div>
+        <p className="mb-2 text-sm font-semibold">Rémunération freelance</p>
+        <ChoicePills
+          label="Mode de rémunération freelance"
+          value={FREELANCE_PAY_MODES.find((item) => item.id === draft.freelance_mode)?.label ?? ""}
+          options={FREELANCE_PAY_MODES.map((item) => item.label)}
+          onChange={(label) => {
+            const mode = FREELANCE_PAY_MODES.find((item) => item.label === label)?.id ?? null;
+            onChange({ freelance_mode: mode, salary_min: null, salary_max: null });
+          }}
+        />
+        {draft.freelance_mode === "ca" || draft.freelance_mode === "ca_fixe" ? (
+          <label className="mt-4 block text-sm font-semibold">
+            Pourcentage du CA
+            <input
+              inputMode="decimal"
+              aria-label="Pourcentage du chiffre d'affaires"
+              placeholder="10"
+              value={draft.freelance_percent ?? ""}
+              onChange={(event) => {
+                const amount = Number(event.target.value.replace(",", "."));
+                onChange({ freelance_percent: event.target.value.trim() && Number.isFinite(amount) ? amount : null });
+              }}
+              className={`${fieldClass} mt-2`}
+            />
+          </label>
+        ) : null}
+        {draft.freelance_mode === "ca_fixe" ? (
+          <label className="mt-4 block text-sm font-semibold">
+            Fixe mensuel (€)
+            <input
+              inputMode="decimal"
+              aria-label="Fixe mensuel"
+              placeholder="2 000"
+              defaultValue={centsToInput(draft.freelance_fixe)}
+              onChange={(event) => onChange({ freelance_fixe: eurosToCents(event.target.value) })}
+              className={`${fieldClass} mt-2`}
+            />
+          </label>
+        ) : null}
+        {draft.freelance_mode === "tjm" ? (
+          <label className="mt-4 block text-sm font-semibold">
+            Taux journalier (€)
+            <input
+              inputMode="decimal"
+              aria-label="Taux journalier"
+              placeholder="450"
+              defaultValue={centsToInput(draft.freelance_tjm)}
+              onChange={(event) => onChange({ freelance_tjm: eurosToCents(event.target.value), salary_min: eurosToCents(event.target.value) })}
+              className={`${fieldClass} mt-2`}
+            />
+          </label>
+        ) : null}
+        {pay ? <p className="mt-2 text-sm font-semibold">{pay}</p> : null}
+      </div>
+      ) : (
       <div>
         <p className="mb-2 text-sm font-semibold">Rémunération <span className="font-medium text-[#6B6F7A]">brut</span></p>
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
@@ -92,6 +154,7 @@ export function OfferStepConditions({
         </div>
         {pay ? <p className="mt-2 text-sm font-semibold">{pay}</p> : null}
       </div>
+      )}
 
       {alternance ? (
         <div className="rounded-[20px] bg-[#FFF1E2] px-4 py-3 text-sm text-[#3A3D45]">

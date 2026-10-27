@@ -11,6 +11,13 @@ export const BENEFIT_OPTIONS = [
 
 export type OfferBenefit = { code: string; label: string };
 export type SalaryPeriod = "month" | "year";
+export type FreelancePayMode = "ca" | "ca_fixe" | "tjm";
+
+export const FREELANCE_PAY_MODES: Array<{ id: FreelancePayMode; label: string }> = [
+  { id: "ca", label: "% de CA uniquement" },
+  { id: "ca_fixe", label: "% de CA + fixe" },
+  { id: "tjm", label: "Taux journalier" },
+];
 
 export function eurosToCents(value: string): number | null {
   const cleaned = value.replace(/\s/g, "").replace(",", ".");
@@ -40,6 +47,46 @@ export function formatOfferPay(min: number | null | undefined, max: number | nul
   const unit = period === "year" ? "an" : "mois";
   if (max != null && max > min) return `${formatCents(min)} – ${formatCents(max)} / ${unit}`;
   return `${formatCents(min)} / ${unit}`;
+}
+
+export function formatFreelancePay(mode: FreelancePayMode | null | undefined, percent: number | null | undefined, fixeCents: number | null | undefined, tjmCents: number | null | undefined) {
+  if (mode === "ca" && percent != null && percent > 0) return `${percent} % du CA`;
+  if (mode === "ca_fixe" && percent != null && percent > 0) {
+    const fixe = fixeCents != null && fixeCents > 0 ? ` + ${formatCents(fixeCents)} / mois` : "";
+    return `${percent} % du CA${fixe}`;
+  }
+  if (mode === "tjm" && tjmCents != null && tjmCents > 0) return `${formatCents(tjmCents)} / jour`;
+  return "";
+}
+
+export function parseFreelancePay(raw: string): {
+  mode: FreelancePayMode;
+  percent: number | null;
+  fixeCents: number | null;
+  tjmCents: number | null;
+} | null {
+  const text = raw.trim();
+  if (!text) return null;
+  const tjm = text.match(/([\d\s]+(?:[.,]\d+)?)\s*€?\s*\/\s*jour/i);
+  if (tjm) {
+    const euros = Number(tjm[1].replace(/\s/g, "").replace(",", "."));
+    if (Number.isFinite(euros) && euros > 0) return { mode: "tjm", percent: null, fixeCents: null, tjmCents: Math.round(euros * 100) };
+  }
+  const ca = text.match(/([\d]+(?:[.,]\d+)?)\s*%\s*du\s*CA/i);
+  if (ca) {
+    const percent = Number(ca[1].replace(",", "."));
+    const fixe = text.match(/\+\s*([\d\s]+(?:[.,]\d+)?)\s*€/i);
+    const fixeEuros = fixe ? Number(fixe[1].replace(/\s/g, "").replace(",", ".")) : null;
+    if (Number.isFinite(percent) && percent > 0) {
+      return {
+        mode: fixeEuros && Number.isFinite(fixeEuros) && fixeEuros > 0 ? "ca_fixe" : "ca",
+        percent,
+        fixeCents: fixeEuros && Number.isFinite(fixeEuros) && fixeEuros > 0 ? Math.round(fixeEuros * 100) : null,
+        tjmCents: null,
+      };
+    }
+  }
+  return null;
 }
 
 export function parseLegacySalary(raw: string): { min: number | null; max: number | null; period: SalaryPeriod } {

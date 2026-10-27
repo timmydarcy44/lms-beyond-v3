@@ -13,7 +13,7 @@ import { OfferStepConditions } from "@/components/enterprise/offer-step-conditio
 import { OfferStepSkills, type OfferSkillDraft } from "@/components/enterprise/offer-step-skills";
 import { offerChecklist, OFFER_STEPS } from "@/lib/entreprise/offer-publish";
 import { scanOfferDiscrimination, type DiscriminationFinding } from "@/lib/entreprise/offer-discrimination";
-import { formatOfferPay } from "@/lib/entreprise/offer-conditions";
+import { formatFreelancePay, formatOfferPay } from "@/lib/entreprise/offer-conditions";
 import { prepareCandidature } from "@/lib/entreprise/offer-candidature";
 import { prepareConditions, preparePosteDraft, type OfferPoste } from "@/lib/entreprise/offer-poste";
 import { ANONYMITY_MESSAGE, type AnonymityFlag, type AnonymityRewrite } from "@/lib/offres/anonymity";
@@ -44,7 +44,10 @@ function serializePoste(draft: OfferPoste) {
     start_label: String(draft.start_label ?? "").trim(),
     headcount: typeof draft.headcount === "number" && draft.headcount > 0 ? Math.round(draft.headcount) : null,
     benefits: Array.isArray(draft.benefits) ? draft.benefits : [],
-    salary_range: formatOfferPay(draft.salary_min, draft.salary_max, draft.salary_period === "year" ? "year" : "month") || String(draft.salary_range ?? "").trim(),
+    salary_range:
+      contract === "Freelance"
+        ? formatFreelancePay(draft.freelance_mode, draft.freelance_percent, draft.freelance_fixe, draft.freelance_tjm) || String(draft.salary_range ?? "").trim()
+        : formatOfferPay(draft.salary_min, draft.salary_max, draft.salary_period === "year" ? "year" : "month") || String(draft.salary_range ?? "").trim(),
     recruitment_steps: Array.isArray(draft.recruitment_steps) ? draft.recruitment_steps : [],
     requested_documents: draft.requested_documents ?? { cv: "required", cover_letter: "optional", portfolio: "optional" },
     screening_questions: Array.isArray(draft.screening_questions) ? draft.screening_questions : [],

@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { ChoicePills, Segmented } from "@/components/builder/fiche-builder-chrome";
+import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 import {
   CONTRACT_TYPES,
   EDUCATION_LEVELS,
@@ -35,9 +36,10 @@ export function OfferStepPoste({
   const contract = String(draft.contract_type ?? "");
   const alternance = contract === "Alternance";
   const timed = contract === "CDD" || contract === "Stage" || contract === "Intérim";
-  const contractOptions = CONTRACT_TYPES.includes(contract as (typeof CONTRACT_TYPES)[number]) || !contract
-    ? [...CONTRACT_TYPES]
-    : [...CONTRACT_TYPES, contract];
+  const jobContracts = CONTRACT_TYPES.filter((item) => item !== "Alternance");
+  const contractOptions = jobContracts.includes(contract as (typeof jobContracts)[number]) || !contract
+    ? jobContracts
+    : [...jobContracts, contract];
 
   useEffect(() => {
     const query = String(draft.city ?? "").trim();
@@ -112,18 +114,63 @@ export function OfferStepPoste({
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-semibold">Type de contrat</p>
-        <ChoicePills label="Type de contrat" value={contract} options={contractOptions} onChange={(value) => onChange({ contract_type: value })} />
+        <p className="mb-2 text-sm font-semibold">Nature de l&apos;offre</p>
+        <Segmented
+          label="Nature de l'offre"
+          value={alternance ? "Liée à un cursus" : "Offre d'emploi"}
+          options={["Offre d'emploi", "Liée à un cursus"]}
+          onChange={(value) => {
+            if (value === "Liée à un cursus") {
+              onChange({ contract_type: "Alternance" });
+              return;
+            }
+            onChange({
+              contract_type: contract === "Alternance" ? "CDI" : contract || "CDI",
+              diploma_prepared: "",
+              alternance_school: "",
+              work_rhythm: "",
+            });
+          }}
+        />
+        <p className="mt-2 text-sm text-[#6B6F7A]">
+          {alternance
+            ? "L'offre est rattachée à un cursus Byound, pour un contrat d'alternance."
+            : "Offre d'emploi classique, sans lien avec l'alternance."}
+        </p>
       </div>
+
+      {alternance ? null : (
+      <div>
+        <p className="mb-2 text-sm font-semibold">Type de contrat</p>
+        <ChoicePills label="Type de contrat" value={contract === "Alternance" ? "CDI" : contract} options={contractOptions} onChange={(value) => onChange({ contract_type: value, diploma_prepared: "" })} />
+      </div>
+      )}
 
       {alternance ? (
         <div className="rounded-[20px] bg-[#F1EFFF] p-5">
           <div className="mb-4 flex items-center gap-2">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#6E5BFF] text-xs font-bold text-white">A</span>
-            <p className="font-semibold">Alternance</p>
+            <p className="font-semibold">Cursus</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Diplôme préparé" value={draft.diploma_prepared} onChange={(value) => onChange({ diploma_prepared: value })} placeholder="Bachelor Business Developer (Bac+3)" />
+            <label className="block text-sm font-semibold">
+              Cursus
+              <select
+                className={`${fieldClass} mt-2`}
+                value={CFA_SPECIALIZATIONS.find((item) => item.label === String(draft.diploma_prepared ?? "").trim() || item.value === String(draft.diploma_prepared ?? "").trim())?.value ?? ""}
+                onChange={(event) => {
+                  const chosen = CFA_SPECIALIZATIONS.find((item) => item.value === event.target.value);
+                  onChange({ diploma_prepared: chosen?.label ?? "" });
+                }}
+              >
+                <option value="">Choisir un cursus</option>
+                {CFA_SPECIALIZATIONS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="relative">
               <Field label="École" value={draft.alternance_school} onFocus={() => setSchoolOpen(true)} onChange={(value) => { setSchoolOpen(true); onChange({ alternance_school: value }); }} placeholder="Byound School" />
               {schoolOpen && schools.length > 0 ? (

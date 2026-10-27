@@ -14,6 +14,7 @@ type Props = {
   recipientEmail?: string | null;
   recipientFirstName?: string | null;
   recipientLastName?: string | null;
+  submitUrl?: string;
 };
 
 type Phase = "intro" | "questions" | "done";
@@ -25,6 +26,7 @@ export function JessicaTypeformPlayer({
   recipientEmail,
   recipientFirstName,
   recipientLastName,
+  submitUrl = "/api/public/jessica-questionnaires/submit",
 }: Props) {
   const questions = questionnaire.questions;
   const [phase, setPhase] = useState<Phase>("intro");
@@ -69,7 +71,7 @@ export function JessicaTypeformPlayer({
     }
     setSubmitting(true);
     try {
-      const res = await fetch("/api/public/jessica-questionnaires/submit", {
+      const res = await fetch(submitUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -103,6 +105,7 @@ export function JessicaTypeformPlayer({
     email,
     firstName,
     recipientLastName,
+    submitUrl,
   ]);
 
   const goPrev = () => {

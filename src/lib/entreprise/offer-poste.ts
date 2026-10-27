@@ -1,5 +1,12 @@
 import type { OfferDiffusion, RecruitmentStep, RequestedDocuments, ScreeningQuestion } from "@/lib/entreprise/offer-candidature";
-import { parseLegacySalary, readLegacyBenefits, type OfferBenefit, type SalaryPeriod } from "@/lib/entreprise/offer-conditions";
+import {
+  parseFreelancePay,
+  parseLegacySalary,
+  readLegacyBenefits,
+  type FreelancePayMode,
+  type OfferBenefit,
+  type SalaryPeriod,
+} from "@/lib/entreprise/offer-conditions";
 import type { OfferChecklistInput } from "@/lib/entreprise/offer-publish";
 import { WORK_MODES } from "@/lib/entreprise/offer-publish";
 
@@ -19,6 +26,10 @@ export type OfferPoste = OfferChecklistInput & {
   start_label?: string | null;
   headcount?: number | null;
   benefits?: OfferBenefit[] | null;
+  freelance_mode?: FreelancePayMode | null;
+  freelance_percent?: number | null;
+  freelance_fixe?: number | null;
+  freelance_tjm?: number | null;
   recruitment_steps?: RecruitmentStep[] | null;
   requested_documents?: RequestedDocuments | null;
   screening_questions?: ScreeningQuestion[] | null;
@@ -93,6 +104,16 @@ export function prepareConditions(row: OfferPoste): { draft: OfferPoste; folded:
     }
   }
   if (!draft.salary_period) draft.salary_period = "month";
+  if (String(draft.contract_type ?? "") === "Freelance" && !draft.freelance_mode) {
+    const parsed = parseFreelancePay(String(row.salary_range ?? ""));
+    if (parsed) {
+      draft.freelance_mode = parsed.mode;
+      draft.freelance_percent = parsed.percent;
+      draft.freelance_fixe = parsed.fixeCents;
+      draft.freelance_tjm = parsed.tjmCents;
+      folded = true;
+    }
+  }
   if (!draft.benefits?.length) {
     const legacy = readLegacyBenefits(String(draft.description ?? ""));
     if (legacy.benefits.length) {

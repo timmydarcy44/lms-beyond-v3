@@ -8,11 +8,9 @@ import {
   ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
-  MonitorPlay,
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
 export type EcoleNavLeaf = { label: string; href: string; exact?: boolean };
 
@@ -100,13 +98,6 @@ export const ECOLE_SIDEBAR_NAV: EcoleNavItem[] = [
   },
   { type: "link", label: "Ma todo", href: "/dashboard/ecole/todo", icon: CheckSquare },
   { type: "link", label: "Qualiopi", href: "/dashboard/ecole/qualiopi", icon: ShieldCheck },
-  {
-    type: "link",
-    label: "Byound Online",
-    href: EDGE_ONLINE_APP_SURFACE_PATH,
-    icon: MonitorPlay,
-    activePathPrefix: EDGE_ONLINE_APP_SURFACE_PATH,
-  },
 ];
 
 export const ECOLE_PRICING_NAV = {

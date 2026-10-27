@@ -14,6 +14,7 @@ const FOLDERS = [
   { id: "contrat", label: "Contrats", dot: "bg-[#FF4B4B]" },
   { id: "cv", label: "CV", dot: "bg-[#8DB8FF]" },
   { id: "attestation", label: "Attestations", dot: "bg-[#F2CF6B]" },
+  { id: "facture", label: "Factures", dot: "bg-[#FFB4B8]" },
 ] as const;
 
 export function DocumentsView({ documents, folder }: { documents: ExpertDocumentItem[]; folder: string }) {
@@ -35,7 +36,7 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
       const json = (await response.json()) as { url?: string; error?: string };
       if (!response.ok || !json.url) throw new Error(json.error ?? "Dépôt impossible");
       const folderId = active === "tous" ? "autre" : active;
-      const saved = await saveExpertDocument({ name: file.name, url: json.url, folder: folderId as "contrat" | "cv" | "attestation" | "autre", mime: file.type, size: file.size });
+      const saved = await saveExpertDocument({ name: file.name, url: json.url, folder: folderId as "contrat" | "cv" | "attestation" | "facture" | "autre", mime: file.type, size: file.size });
       if (!saved.ok) throw new Error(saved.error);
       toast.success("Document déposé");
       window.dispatchEvent(new Event("expert-nav-refresh"));
@@ -91,7 +92,7 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
                   key={document.id}
                   leading={<span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1E2130]"><FileText className="h-4 w-4" /></span>}
                   title={document.name}
-                  subtitle={`${document.folder === "contrat" ? "Contrat" : document.folder === "cv" ? "CV" : document.folder === "attestation" ? "Attestation" : "Document"} · ${document.status === "signed" ? `signé le ${when}` : document.status === "to_sign" ? `reçu le ${when}` : `déposé le ${when}`}`}
+                  subtitle={`${document.folder === "contrat" ? "Contrat" : document.folder === "cv" ? "CV" : document.folder === "attestation" ? "Attestation" : document.folder === "facture" ? "Facture" : "Document"} · ${document.status === "signed" ? `signé le ${when}` : document.status === "to_sign" ? `reçu le ${when}` : `déposé le ${when}`}`}
                   trailing={
                     <span className="flex items-center gap-2">
                       {expiry ? <StatusPill tone="alert">{expiry.label}</StatusPill> : <StatusPill tone={document.status === "to_sign" ? "solid" : document.status === "signed" ? "green" : "grey"}>{document.status === "to_sign" ? "À signer" : document.status === "signed" ? "Signé" : "Déposé"}</StatusPill>}

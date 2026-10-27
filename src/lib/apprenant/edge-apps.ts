@@ -14,7 +14,6 @@ import {
   HeartPulse,
   Home,
   LayoutDashboard,
-  MonitorPlay,
   Share2,
   Sparkles,
   TrendingUp,
@@ -22,7 +21,6 @@ import {
 } from "lucide-react";
 
 import type { ApprenantNavItem } from "@/lib/apprenant/connect-nav";
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
 export type EdgeAppId =
   | "profil"
@@ -120,9 +118,9 @@ const SKILLS_NAV: ApprenantNavItem[] = [
 
 const LEARNING_NAV: ApprenantNavItem[] = [
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
+  { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
   { label: "Mes parcours", href: "/dashboard/apprenant/parcours", icon: BookMarked },
-  { label: "Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Statistiques", href: "/dashboard/apprenant/statistiques", icon: GraduationCap },
 ];
 

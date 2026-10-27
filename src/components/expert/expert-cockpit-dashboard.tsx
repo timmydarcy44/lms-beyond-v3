@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -17,12 +16,10 @@ import {
   HelpCircle,
   Inbox,
   MapPin,
-  MessageSquare,
   MoreHorizontal,
   Plus,
   Search,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { addHours, format, parseISO, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -47,12 +44,6 @@ type MissionRow = {
   scheduled_at?: string | null;
   metadata: Record<string, unknown> | null;
 };
-
-const ONLINE_RECO = [
-  { title: "Prompt Engineering", progress: 12, reason: "Aligné avec vos missions IA", icon: Sparkles },
-  { title: "DISC & communication", progress: 0, reason: "Renforce votre posture formateur", icon: MessageSquare },
-  { title: "Ingénierie pédagogique", progress: 34, reason: "Pour votre parcours Byound Certified", icon: GraduationCap },
-];
 
 const QUICK_NAV = [
   { label: "Mon profil", href: "/dashboard/expert/profile", keywords: "profil bio photo" },
@@ -396,8 +387,8 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
                   <div className="absolute left-1/2 top-[88px] z-40 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#121a40] py-1.5 text-left shadow-2xl">
                     {[
                       { label: "Formations", href: "/dashboard/expert/formations", icon: GraduationCap },
+                      { label: "Mes résultats", href: "/dashboard/expert/resultats", icon: Award },
                       { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
-                      { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap },
                       { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
                       { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
                     ].map(({ label, href, icon: Icon }) => (
@@ -664,38 +655,6 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
                   ))}
                 </div>
               )}
-            </div>
-          </section>
-
-          {/* Byound Online */}
-          <section className={cn(CARD, "mt-3 p-5")}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-lg font-semibold">Développez vos compétences</p>
-              <span className="text-xs text-white/45">Recommandations Byound Online personnalisées</span>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {ONLINE_RECO.map(({ title, progress, reason, icon: Icon }) => (
-                <a
-                  key={title}
-                  href={EDGE_ONLINE_EXTERNAL_URL}
-                  className="group rounded-2xl bg-white/[0.04] p-4 transition hover:bg-white/[0.07]"
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.08]">
-                      <Icon className="h-4 w-4 text-white/80" />
-                    </span>
-                    <span className="text-xl font-semibold tabular-nums">{progress}%</span>
-                  </div>
-                  <p className="mt-4 text-sm font-semibold">{title}</p>
-                  <p className="mt-0.5 text-xs text-white/45">{reason}</p>
-                  <div className="mt-3 h-1 rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-[#9AA0FF]" style={{ width: `${progress}%` }} />
-                  </div>
-                  <p className="mt-3 inline-flex items-center gap-1 text-xs font-semibold">
-                    Continuer <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                  </p>
-                </a>
-              ))}
             </div>
           </section>
         </div>

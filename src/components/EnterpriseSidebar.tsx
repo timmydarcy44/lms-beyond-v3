@@ -64,7 +64,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: BookOpen,
     children: [
       { label: "Demander une formation", href: "/dashboard/entreprise/formations/demander" },
-      { label: "Byound Online", href: "/dashboard/entreprise/formations/catalogue" },
       { label: "Créer une formation", href: "/dashboard/entreprise/formations/creer" },
       { label: "Gérer mes formations", href: "/dashboard/entreprise/formations/gerer" },
       { label: "Parcours", href: "/dashboard/entreprise/formations/parcours" },

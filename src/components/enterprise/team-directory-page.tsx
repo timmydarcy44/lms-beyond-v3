@@ -867,8 +867,7 @@ export function TeamDirectoryPage() {
             <p className="mt-1 text-[13px] text-[#6B6F7A]">{assignFor.length} collaborateur{assignFor.length > 1 ? "s" : ""}</p>
             {courses.length === 0 ? (
               <p className="mt-4 text-[14px]">
-                Aucune formation chargée.{" "}
-                <Link href="/dashboard/entreprise/formations/catalogue" className="font-semibold text-[#4B3BD1]">Ouvrir Byound Online</Link>
+                Aucune formation interne chargée. Créez ou gérez vos formations dans l&apos;espace Formations.
               </p>
             ) : (
               <select value={courseId} onChange={(event) => setCourseId(event.target.value)} className="mt-4 h-11 w-full rounded-2xl border border-[#E3E0D8] px-3" aria-label="Formation">

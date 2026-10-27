@@ -79,19 +79,19 @@ export default function EnterpriseActionsHistoryPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
       <EnterpriseSidebar />
-      <main className="relative z-10 flex-1 px-8 py-10 lg:pl-[280px]">
+      <main className="relative z-10 flex-1 px-8 py-10 lg:pl-[104px]">
         <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
           <div>
             <p className="text-sm text-gray-500">Pilotage</p>
             <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-950">Historique des interventions</h1>
-            <p className="mt-2 text-sm text-gray-500">Toutes les actions valid√©es et leur statut.</p>
+            <p className="mt-2 text-sm text-gray-500">Toutes les actions validÈes et leur statut.</p>
           </div>
           <button
             type="button"
             onClick={() => router.push("/dashboard/entreprise")}
             className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
           >
-            ‚Üê Retour au dashboard
+            ? Retour au dashboard
           </button>
         </header>
 
@@ -112,7 +112,7 @@ export default function EnterpriseActionsHistoryPage() {
               </div>
             ) : rows.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 text-sm text-gray-700">
-                Aucune intervention enregistr√©e.
+                Aucune intervention enregistrÈe.
               </div>
             ) : (
               <div className="space-y-3">
@@ -129,7 +129,7 @@ export default function EnterpriseActionsHistoryPage() {
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 text-gray-700">
                         <span className="text-lg" aria-hidden>
-                          {isGroup ? "üë•" : "üë§"}
+                          {isGroup ? "??" : "??"}
                         </span>
                       </div>
 
@@ -139,15 +139,15 @@ export default function EnterpriseActionsHistoryPage() {
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
                           <span>
-                            Expert : {expertName(it.expert)} ‚Ä¢ {formatRelativeDate(it.created_at)}
+                            Expert : {expertName(it.expert)} ï {formatRelativeDate(it.created_at)}
                           </span>
                           {certified ? (
                             <>
                               <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-violet-700">
-                                Certifi√© Beyond
+                                CertifiÈ Beyond
                               </span>
                               <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-gray-700">
-                                M√©thode Beyond valid√©e (A|P|I)
+                                MÈthode Beyond validÈe (A|P|I)
                               </span>
                             </>
                           ) : null}
@@ -165,12 +165,12 @@ export default function EnterpriseActionsHistoryPage() {
                         {isNotified ? (
                           <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800">
                             <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" aria-hidden />
-                            Expert notifi√©
+                            Expert notifiÈ
                           </span>
                         ) : isScheduled ? (
                           <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">
                             <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden />
-                            Planifi√©
+                            PlanifiÈ
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700">

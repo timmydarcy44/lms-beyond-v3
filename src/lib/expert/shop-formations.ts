@@ -52,7 +52,7 @@ export async function loadExpertShopFormations(): Promise<ExpertShopFormation[]>
       title: general.title?.trim() || row.title || "Formation",
       subtitle: general.subtitle?.trim() || "",
       price: formatPrice(typeof amount === "number" ? amount : null),
-      href: row.slug ? `/catalog/formations/${row.slug}` : null,
+      href: row.slug ? `/catalog/formations/${row.slug}?from=expert` : null,
       coverUrl: general.cover_image || general.heroImage || row.cover_image || null,
     });
   }

@@ -72,7 +72,7 @@ export function SalariesDirectory() {
   return (
     <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div className="w-full text-center sm:w-auto sm:text-left">
             <h1 className={ENTREPRISE_H1_CLASS}>Gestion des salariés</h1>

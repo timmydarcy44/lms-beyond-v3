@@ -37,12 +37,14 @@ function NavLink({
     <Link
       href={item.href}
       title={collapsed ? item.label : undefined}
-      className={`expert-nav-item w-full gap-3 px-3 ${collapsed ? "justify-center px-0" : ""} ${
-        active ? "is-active" : "is-idle"
-      }`}
+      className={
+        collapsed
+          ? `revolut-rail-item ${active ? "is-active" : "is-idle"}`
+          : `expert-nav-item w-full gap-3 px-3 ${active ? "is-active" : "is-idle"}`
+      }
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
-      {collapsed ? null : <span className="truncate">{item.label}</span>}
+      <span className={collapsed ? "revolut-rail-label" : "truncate"}>{item.label}</span>
     </Link>
   );
 }
@@ -109,7 +111,7 @@ export function FormateurSidebar({
   return (
     <aside
       className={`expert-glass flex shrink-0 flex-col !p-4 ${
-        layout === "sheet" ? "min-h-0 w-full flex-1" : `h-full ${collapsed ? "w-[76px]" : "w-[248px]"}`
+        layout === "sheet" ? "min-h-0 w-full flex-1" : `h-full ${collapsed ? "w-[88px]" : "w-[248px]"}`
       }`}
     >
       {onToggleCollapse ? (

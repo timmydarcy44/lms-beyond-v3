@@ -36,13 +36,13 @@ export default function EntrepriseMarketplacePage() {
   ).sort();
 
   return (
-    <div className="min-h-screen bg-slate-50 pl-[260px]">
+    <div className="min-h-screen bg-slate-50 pl-[104px]">
       <EnterpriseSidebar />
       <main className="mx-auto max-w-6xl px-8 py-10">
         <header className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">ðŸ§  PsychopÃ©dagogues certifiÃ©s Beyond</h1>
+          <h1 className="text-2xl font-bold text-slate-900">?? Psychopédagogues certifiés Beyond</h1>
           <p className="mt-2 max-w-2xl text-slate-600">
-            Des experts qualifiÃ©s, sÃ©lectionnÃ©s et certifiÃ©s par Beyond pour accompagner vos collaborateurs.
+            Des experts qualifiés, sélectionnés et certifiés par Beyond pour accompagner vos collaborateurs.
           </p>
         </header>
 
@@ -56,7 +56,7 @@ export default function EntrepriseMarketplacePage() {
                 value={specialite}
                 onChange={(e) => setSpecialite(e.target.value)}
               >
-                <option value="">SpÃ©cialitÃ©</option>
+                <option value="">Spécialité</option>
                 {allSpecialites.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -69,13 +69,13 @@ export default function EntrepriseMarketplacePage() {
                 onChange={(e) => setLangue(e.target.value)}
               >
                 <option value="">Langue</option>
-                <option value="FranÃ§ais">FranÃ§ais</option>
+                <option value="Français">Français</option>
                 <option value="Anglais">Anglais</option>
               </select>
             </div>
 
             {loading ? (
-              <p className="text-slate-500">Chargementâ€¦</p>
+              <p className="text-slate-500">Chargement…</p>
             ) : praticiens.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-500">
                 Aucun praticien disponible pour le moment.

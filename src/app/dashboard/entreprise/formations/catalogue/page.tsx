@@ -16,11 +16,11 @@ export default async function EntrepriseFormationsCataloguePage() {
   return (
     <div className="flex min-h-screen bg-[#0b0a12] text-white">
       <EnterpriseSidebar />
-      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <OrgFormationsShell
           basePath="/dashboard/entreprise/formations"
           title="Formations Byound"
-          lead="Parcourez et assignez les formations Byound Online Ã  vos collaborateurs."
+          lead="Parcourez et assignez les formations Byound Online à vos collaborateurs."
           variant="dark"
           hideTabs
         >

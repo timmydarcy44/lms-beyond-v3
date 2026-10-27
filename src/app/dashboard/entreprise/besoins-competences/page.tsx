@@ -150,17 +150,17 @@ export default function BesoinsCompetencesPage() {
   return (
     <div className="flex min-h-screen bg-[#f5f5f7] text-gray-900">
       <EnterpriseSidebar />
-      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="min-h-screen flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <div className="mb-8">
-          <h1 className={ENTREPRISE_H1_CLASS}>Besoins en compÃ©tences</h1>
+          <h1 className={ENTREPRISE_H1_CLASS}>Besoins en compétences</h1>
           <p className="mt-2 text-center text-sm text-gray-500 sm:text-left">
-            Par mÃ©tier / poste Â· Ã©carts Soft Skills (/15) vs cibles attendues
-            {data?.demo_enriched ? " Â· DonnÃ©es dÃ©mo" : ""}
+            Par métier / poste · écarts Soft Skills (/15) vs cibles attendues
+            {data?.demo_enriched ? " · Données démo" : ""}
           </p>
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Analyse des Ã©cartsâ€¦</p>
+          <p className="text-sm text-gray-500">Analyse des écarts…</p>
         ) : error ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : (
@@ -173,11 +173,11 @@ export default function BesoinsCompetencesPage() {
                   hint: `${data?.stats?.employees_with_scores ?? 0} Soft Skills`,
                 },
                 {
-                  label: "MÃ©tiers concernÃ©s",
+                  label: "Métiers concernés",
                   value: String(metiers.length),
-                  hint: `${data?.stats?.needs_count ?? 0} Ã©carts skill`,
+                  hint: `${data?.stats?.needs_count ?? 0} écarts skill`,
                 },
-                { label: "Ã‰chelle", value: "/15", hint: "Test Soft Skills" },
+                { label: "Échelle", value: "/15", hint: "Test Soft Skills" },
               ].map((kpi) => (
                 <div
                   key={kpi.label}
@@ -217,21 +217,21 @@ export default function BesoinsCompetencesPage() {
                     : "bg-white text-gray-700 shadow-sm",
                 )}
               >
-                Tous les mÃ©tiers
+                Tous les métiers
               </button>
             </div>
 
             {metiers.length === 0 ? (
               <div className="rounded-[28px] bg-white p-10 text-center shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
-                <p className="font-semibold text-gray-900">Aucun Ã©cart sous cible</p>
+                <p className="font-semibold text-gray-900">Aucun écart sous cible</p>
                 <p className="mt-2 text-sm text-gray-500">
-                  VÃ©rifiez les cibles Soft Skills des mÃ©tiers et les diagnostics collaborateurs.
+                  Vérifiez les cibles Soft Skills des métiers et les diagnostics collaborateurs.
                 </p>
                 <Link
                   href="/dashboard/entreprise/metiers"
                   className="mt-4 inline-flex text-sm font-semibold text-violet-700 hover:underline"
                 >
-                  GÃ©rer les mÃ©tiers
+                  Gérer les métiers
                 </Link>
               </div>
             ) : (
@@ -254,17 +254,17 @@ export default function BesoinsCompetencesPage() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/15" />
                       <div className="absolute inset-x-0 top-0 flex justify-between p-4">
                         <span className="rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-                          {metier.needs.length} compÃ©tence
-                          {metier.needs.length > 1 ? "s" : ""} Ã  renforcer
+                          {metier.needs.length} compétence
+                          {metier.needs.length > 1 ? "s" : ""} à renforcer
                         </span>
                         <span className="rounded-full bg-black/35 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-                          Ã‰cart {formatGap(metier.worst_gap)}
+                          Écart {formatGap(metier.worst_gap)}
                         </span>
                       </div>
                       <div className="absolute inset-x-0 bottom-0 p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/65">
-                          MÃ©tier / poste
-                          {metier.department ? ` Â· ${metier.department}` : ""}
+                          Métier / poste
+                          {metier.department ? ` · ${metier.department}` : ""}
                         </p>
                         <h2 className="mt-1.5 text-[24px] font-semibold leading-tight tracking-tight text-white [font-family:-apple-system,'SF_Pro_Display',BlinkMacSystemFont,sans-serif]">
                           {metier.metier_title}
@@ -275,7 +275,7 @@ export default function BesoinsCompetencesPage() {
                               key={need.id}
                               className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm"
                             >
-                              {need.skill} Â· {formatScoreOn15(need.avg_observed)}
+                              {need.skill} · {formatScoreOn15(need.avg_observed)}
                             </span>
                           ))}
                           {metier.needs.length > 3 ? (
@@ -285,7 +285,7 @@ export default function BesoinsCompetencesPage() {
                           ) : null}
                         </div>
                         <p className="mt-4 text-[13px] font-semibold text-white">
-                          Voir les Ã©carts â†’
+                          Voir les écarts ?
                         </p>
                       </div>
                     </Link>

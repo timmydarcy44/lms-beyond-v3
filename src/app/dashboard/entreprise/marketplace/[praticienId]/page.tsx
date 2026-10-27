@@ -41,7 +41,7 @@ export default function PraticienProfilePage() {
 
   if (!praticien) {
     return (
-      <div className="min-h-screen bg-slate-50 pl-[260px]">
+      <div className="min-h-screen bg-slate-50 pl-[104px]">
         <EnterpriseSidebar />
         <main className="p-10 text-slate-500">Chargement…</main>
       </div>
@@ -49,7 +49,7 @@ export default function PraticienProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pl-[260px]">
+    <div className="min-h-screen bg-slate-50 pl-[104px]">
       <EnterpriseSidebar />
       <main className="mx-auto max-w-4xl px-8 py-10">
         <Link href="/dashboard/entreprise/marketplace" className="text-sm text-violet-700">

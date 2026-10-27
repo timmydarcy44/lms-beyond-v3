@@ -39,6 +39,7 @@ import {
   outlineKeysContainingLesson,
 } from "@/lib/apprenant/lesson-outline-groups";
 import { GameBlockPlayer } from "@/components/serious-games/GameBlockPlayer";
+import { setDashboardSpace, type DashboardSpace } from "@/lib/dashboard/space";
 import { extractStandaloneHtmlDocument, isHtmlGameUrl, toInteractiveGameFrameSrc } from "@/lib/course-builder/html-game";
 import { cn } from "@/lib/utils";
 import {
@@ -359,6 +360,12 @@ export function LessonPlayView({
 }: LessonPlayViewProps) {
   const isJessica = theme === "jessica";
   const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const from = new URLSearchParams(window.location.search).get("from");
+    if (from === "expert" || from === "apprenant" || from === "formateur" || from === "ecole" || from === "salarie") {
+      setDashboardSpace(from as DashboardSpace);
+    }
+  }, []);
   const [focusMode, setFocusMode] = useState(false);
   const [showLearningStrategyModal, setShowLearningStrategyModal] = useState(false);
   const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
@@ -1911,7 +1918,6 @@ export function LessonPlayView({
                       blockId={String(activeLesson.id)}
                       courseId={courseId}
                       lessonId={String(activeLesson.id)}
-                      reviewBasePath="/dashboard/apprenant/jeux"
                       fill
                     />
                   ) : (

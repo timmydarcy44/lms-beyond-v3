@@ -87,7 +87,7 @@ export default function EntrepriseMessagesPage() {
         return withActivity?.employee_id ?? nextThreads[0]?.employee_id ?? null;
       });
     } catch {
-      setError("Erreur rÃ©seau.");
+      setError("Erreur réseau.");
     } finally {
       setLoading(false);
     }
@@ -194,7 +194,7 @@ export default function EntrepriseMessagesPage() {
         ),
       );
     } catch {
-      setError("Erreur rÃ©seau.");
+      setError("Erreur réseau.");
       setDraft(content);
     } finally {
       setSending(false);
@@ -204,7 +204,7 @@ export default function EntrepriseMessagesPage() {
   return (
     <div className="flex min-h-screen bg-[#f2f2f7] text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex min-h-screen flex-1 flex-col lg:pl-[280px]">
+      <main className="flex min-h-screen flex-1 flex-col lg:pl-[104px]">
         <div className="mx-auto flex h-[100dvh] w-full max-w-6xl flex-col px-3 py-4 sm:px-6 lg:h-screen lg:py-6">
           <header className="mb-4 shrink-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-500">
@@ -212,7 +212,7 @@ export default function EntrepriseMessagesPage() {
             </p>
             <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-gray-950">Messages</h1>
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Ã‰changes rapides entre un collaborateur et le service RH â€” sans email, comme iMessage.
+              Échanges rapides entre un collaborateur et le service RH — sans email, comme iMessage.
             </p>
           </header>
 
@@ -230,7 +230,7 @@ export default function EntrepriseMessagesPage() {
 
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {loading ? (
-                  <p className="p-4 text-sm text-gray-400">Chargementâ€¦</p>
+                  <p className="p-4 text-sm text-gray-400">Chargement…</p>
                 ) : filteredThreads.length === 0 ? (
                   <p className="p-4 text-sm text-gray-400">Aucune conversation.</p>
                 ) : (
@@ -273,7 +273,7 @@ export default function EntrepriseMessagesPage() {
                 {employeesWithoutThread.length > 0 ? (
                   <div className="border-t border-black/5 p-3">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                      DÃ©marrer une conversation
+                      Démarrer une conversation
                     </p>
                     <div className="space-y-1">
                       {employeesWithoutThread.slice(0, 8).map((emp) => {
@@ -318,7 +318,7 @@ export default function EntrepriseMessagesPage() {
                         {selected.employee_name}
                       </p>
                       <p className="truncate text-xs text-gray-500">
-                        {selected.employee_job_title ?? "Collaborateur"} Â· Service RH
+                        {selected.employee_job_title ?? "Collaborateur"} · Service RH
                       </p>
                     </div>
                   </div>
@@ -326,7 +326,7 @@ export default function EntrepriseMessagesPage() {
                   <div className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[radial-gradient(circle_at_top,_#f8f7ff_0%,_#ffffff_45%)] px-4 py-5">
                     {messages.length === 0 ? (
                       <p className="py-16 text-center text-sm text-gray-400">
-                        Aucun message. Ã‰crivez pour dÃ©marrer lâ€™Ã©change.
+                        Aucun message. Écrivez pour démarrer l’échange.
                       </p>
                     ) : (
                       messages.map((msg) => {
@@ -396,7 +396,7 @@ export default function EntrepriseMessagesPage() {
                 </>
               ) : (
                 <div className="flex flex-1 items-center justify-center p-8 text-center text-sm text-gray-400">
-                  SÃ©lectionnez un collaborateur pour ouvrir la conversation.
+                  Sélectionnez un collaborateur pour ouvrir la conversation.
                 </div>
               )}
             </section>

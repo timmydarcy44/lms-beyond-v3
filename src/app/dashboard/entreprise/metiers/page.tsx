@@ -83,7 +83,7 @@ const HARD_SKILL_LIBRARY = Array.from(
     "GPEC",
     "SIRH",
     "Prospection",
-    "NÃ©gociation",
+    "Négociation",
     "SEO",
     "Content marketing",
     "Reporting",
@@ -92,7 +92,7 @@ const HARD_SKILL_LIBRARY = Array.from(
   ]),
 ).sort((a, b) => a.localeCompare(b, "fr"));
 
-/** Cible Soft Skill mÃ©tier : Ã©chelle test Byound /15. */
+/** Cible Soft Skill métier : échelle test Byound /15. */
 const DEFAULT_SOFT_TARGET_ON_15 = 11;
 
 const EMPTY_FORM: RoleFormState = {
@@ -117,7 +117,7 @@ function decodeSoftSkills(values: string[]) {
     const parsed = Number(scoreRaw);
     let score = DEFAULT_SOFT_TARGET_ON_15;
     if (Number.isFinite(parsed)) {
-      // Legacy mÃ©tier targets were 0â€“100
+      // Legacy métier targets were 0–100
       score = parsed > 15 ? Math.round((parsed / 100) * 15) : Math.round(parsed);
       score = Math.max(3, Math.min(15, score));
     }
@@ -349,7 +349,7 @@ export default function EntrepriseMetiersPage() {
   return (
     <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8">
           <h1 className={ENTREPRISE_H1_CLASS}>Metiers</h1>
           <p className="mt-2 text-center text-sm text-gray-500">
@@ -457,7 +457,7 @@ export default function EntrepriseMetiersPage() {
                             key={`${skill.label}-${skill.score}`}
                             className="rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
                           >
-                            {skill.label} Â· {skill.score}/15
+                            {skill.label} · {skill.score}/15
                           </span>
                         ))}
                       </div>
@@ -649,7 +649,7 @@ export default function EntrepriseMetiersPage() {
               <div>
                 <p className="text-sm font-medium text-gray-700">Soft skills et score cible</p>
                 <p className="mt-1 text-xs text-gray-500">
-                  MÃªme Ã©chelle que le test Soft Skills collaborateurs : de 3 Ã  15.
+                  Même échelle que le test Soft Skills collaborateurs : de 3 à 15.
                 </p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">

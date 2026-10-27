@@ -1346,3 +1346,38 @@ body.light {
   opacity: 0.7;
   animation: orb-breathe 3s ease-in-out infinite;
 }
+
+/* Rail d’icônes type Revolut : icône + libellé sous l’icône. */
+.revolut-rail-item {
+  display: flex;
+  min-height: 64px;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 16px;
+  padding: 10px 4px 8px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.48);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.revolut-rail-item.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.revolut-rail-item.is-idle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.revolut-rail-label {
+  max-width: 72px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

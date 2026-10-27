@@ -73,7 +73,7 @@ function Frame({ page }: { page: JadeDemoPage }) {
     return (
       <div className="min-h-screen bg-[#07080B]">
         <EnterpriseSidebar />
-        <div className="lg:pl-[248px]"><Surface page={page} /></div>
+        <div className="lg:pl-[88px]"><Surface page={page} /></div>
       </div>
     );
   }

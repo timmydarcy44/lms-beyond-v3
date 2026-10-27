@@ -56,7 +56,7 @@ export default function EntrepriseComptePage() {
         setNom(String(json.nom ?? ""));
         setPhone(String(json.phone ?? ""));
       } catch {
-        if (!cancelled) setError("Erreur rÃ©seau.");
+        if (!cancelled) setError("Erreur réseau.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -95,9 +95,9 @@ export default function EntrepriseComptePage() {
             }
           : prev,
       );
-      toast.success("Profil mis Ã  jour.");
+      toast.success("Profil mis à jour.");
     } catch {
-      toast.error("Erreur rÃ©seau.");
+      toast.error("Erreur réseau.");
     } finally {
       setSaving(false);
     }
@@ -119,9 +119,9 @@ export default function EntrepriseComptePage() {
       a.download = `edge-rgpd-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export RGPD tÃ©lÃ©chargÃ©.");
+      toast.success("Export RGPD téléchargé.");
     } catch {
-      toast.error("Erreur rÃ©seau.");
+      toast.error("Erreur réseau.");
     } finally {
       setExporting(false);
     }
@@ -129,7 +129,7 @@ export default function EntrepriseComptePage() {
 
   const requestErasure = async () => {
     const ok = window.confirm(
-      "Confirmer la demande dâ€™effacement de vos donnÃ©es personnelles ? Byound traitera la demande sous 30 jours.",
+      "Confirmer la demande d’effacement de vos données personnelles ? Byound traitera la demande sous 30 jours.",
     );
     if (!ok) return;
     setErasing(true);
@@ -144,9 +144,9 @@ export default function EntrepriseComptePage() {
         toast.error(String(json.error ?? "Demande impossible."));
         return;
       }
-      toast.success(String(json.message ?? "Demande enregistrÃ©e."));
+      toast.success(String(json.message ?? "Demande enregistrée."));
     } catch {
-      toast.error("Erreur rÃ©seau.");
+      toast.error("Erreur réseau.");
     } finally {
       setErasing(false);
     }
@@ -157,19 +157,19 @@ export default function EntrepriseComptePage() {
   return (
     <div className="flex min-h-screen bg-[#f7f5fb] text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8 max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">
             Compte
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Mon compte</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Modifiez votre profil. Lâ€™adresse email nâ€™est pas modifiable ici.
+            Modifiez votre profil. L’adresse email n’est pas modifiable ici.
           </p>
         </header>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Chargementâ€¦</p>
+          <p className="text-sm text-gray-500">Chargement…</p>
         ) : error ? (
           <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -182,7 +182,7 @@ export default function EntrepriseComptePage() {
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">PrÃ©nom</span>
+                  <span className="font-semibold text-gray-700">Prénom</span>
                   <input
                     required
                     value={prenom}
@@ -210,16 +210,16 @@ export default function EntrepriseComptePage() {
                   />
                 </label>
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">TÃ©lÃ©phone</span>
+                  <span className="font-semibold text-gray-700">Téléphone</span>
                   <input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="06â€¦"
+                    placeholder="06…"
                     className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
                   />
                 </label>
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">RÃ´le</span>
+                  <span className="font-semibold text-gray-700">Rôle</span>
                   <input
                     value={String(roleLabel)}
                     disabled
@@ -241,7 +241,7 @@ export default function EntrepriseComptePage() {
                 disabled={saving}
                 className="mt-6 inline-flex rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60"
               >
-                {saving ? "Enregistrementâ€¦" : "Enregistrer"}
+                {saving ? "Enregistrement…" : "Enregistrer"}
               </button>
             </form>
 
@@ -249,7 +249,7 @@ export default function EntrepriseComptePage() {
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!supabase || password.length < 6) {
-                  toast.error("Le mot de passe doit contenir au moins 6 caractÃ¨res.");
+                  toast.error("Le mot de passe doit contenir au moins 6 caractères.");
                   return;
                 }
                 setSavingPassword(true);
@@ -284,15 +284,15 @@ export default function EntrepriseComptePage() {
                   setPassword("");
                   setCurrentPassword("");
                   setData((current) => (current ? { ...current, hasPassword: true } : current));
-                  toast.success(data?.hasPassword ? "Mot de passe modifiÃ©." : "Mot de passe dÃ©fini.");
+                  toast.success(data?.hasPassword ? "Mot de passe modifié." : "Mot de passe défini.");
                 })();
               }}
               className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-sm sm:p-8"
             >
               <h2 className="text-lg font-bold text-gray-950">
-                {data?.hasPassword ? "Modifier mon mot de passe" : "DÃ©finir un mot de passe"}
+                {data?.hasPassword ? "Modifier mon mot de passe" : "Définir un mot de passe"}
               </h2>
-              <p className="mt-1 text-sm text-gray-500">Facultatif. Vous pouvez continuer Ã  vous connecter avec un code.</p>
+              <p className="mt-1 text-sm text-gray-500">Facultatif. Vous pouvez continuer à vous connecter avec un code.</p>
               <div className="mt-4 grid gap-4">
                 {data?.hasPassword ? (
                   <label className="grid gap-1.5 text-sm">
@@ -322,7 +322,7 @@ export default function EntrepriseComptePage() {
                 disabled={savingPassword}
                 className="mt-5 inline-flex rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60"
               >
-                {savingPassword ? "Enregistrementâ€¦" : data?.hasPassword ? "Modifier mon mot de passe" : "DÃ©finir un mot de passe"}
+                {savingPassword ? "Enregistrement…" : data?.hasPassword ? "Modifier mon mot de passe" : "Définir un mot de passe"}
               </button>
             </form>
 
@@ -332,7 +332,7 @@ export default function EntrepriseComptePage() {
                 <div>
                   <h2 className="text-lg font-bold text-gray-950">Vos droits RGPD</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    AccÃ¨s, rectification, effacement â€” conformÃ©ment au rÃ¨glement europÃ©en.
+                    Accès, rectification, effacement — conformément au règlement européen.
                   </p>
                 </div>
               </div>
@@ -345,7 +345,7 @@ export default function EntrepriseComptePage() {
                   className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60"
                 >
                   <Download className="h-4 w-4" />
-                  {exporting ? "Exportâ€¦" : "TÃ©lÃ©charger mes donnÃ©es"}
+                  {exporting ? "Export…" : "Télécharger mes données"}
                 </button>
                 <button
                   type="button"
@@ -354,7 +354,7 @@ export default function EntrepriseComptePage() {
                   className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
                 >
                   <Trash2 className="h-4 w-4" />
-                  {erasing ? "Envoiâ€¦" : "Demander la suppression"}
+                  {erasing ? "Envoi…" : "Demander la suppression"}
                 </button>
               </div>
 
@@ -363,13 +363,13 @@ export default function EntrepriseComptePage() {
                   href="/dashboard/entreprise/rgpd/confidentialite"
                   className="font-semibold text-violet-600 hover:text-violet-500"
                 >
-                  Politique de confidentialitÃ© â†’
+                  Politique de confidentialité ?
                 </Link>
                 <Link
                   href="/dashboard/entreprise/rgpd/registre"
                   className="font-semibold text-violet-600 hover:text-violet-500"
                 >
-                  Registre des traitements â†’
+                  Registre des traitements ?
                 </Link>
               </div>
             </section>

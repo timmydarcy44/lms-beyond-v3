@@ -89,7 +89,7 @@ export default function EntrepriseNewCandidatePage() {
   return (
     <div className="flex min-h-screen bg-white text-gray-900">
       <EnterpriseSidebar />
-      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8">
           <h1 className={ENTREPRISE_H1_CLASS}>Nouveau candidat</h1>
           <p className="mt-2 text-center text-sm text-gray-500">
@@ -103,7 +103,7 @@ export default function EntrepriseNewCandidatePage() {
               <article key={candidate.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Nouveau</p>
                 <h2 className="mt-2 text-lg font-semibold">{candidate.name}</h2>
-                <p className="text-sm text-gray-500">{candidate.role} Â· {candidate.city}</p>
+                <p className="text-sm text-gray-500">{candidate.role} · {candidate.city}</p>
                 <p className="mt-3 text-sm font-semibold text-gray-900">Matching {candidate.match} %</p>
               </article>
             ))}

@@ -240,7 +240,7 @@ export function EnterpriseDashboardV2() {
     <div className="relative flex min-h-screen bg-[#f7f5fb] font-sans text-gray-900">
       {showBlockingOverlay ? <EnterpriseLoadingOverlay /> : null}
       <EnterpriseSidebar />
-      <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
+      <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-8 sm:px-6 lg:px-10 lg:pl-[104px]">
         <header className="mb-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-violet-500">
             Espace Entreprise

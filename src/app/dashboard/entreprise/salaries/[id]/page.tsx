@@ -504,7 +504,7 @@ export default function SalarieDetailPage() {
     return (
       <div className="flex min-h-screen bg-[#f7f7f5]">
         <EnterpriseSidebar />
-        <main className={`${manrope.className} flex-1 bg-[#F4F4F1] px-8 py-10 lg:pl-[280px]`}>
+        <main className={`${manrope.className} flex-1 bg-[#F4F4F1] px-8 py-10 lg:pl-[104px]`}>
           <OverviewSkeleton />
         </main>
       </div>
@@ -515,7 +515,7 @@ export default function SalarieDetailPage() {
     return (
       <div className="flex min-h-screen bg-[#f7f7f5]">
         <EnterpriseSidebar />
-        <main className="flex-1 px-8 py-10 lg:pl-[280px]">
+        <main className="flex-1 px-8 py-10 lg:pl-[104px]">
           <p className="text-sm font-semibold text-gray-900">{error ?? "Collaborateur introuvable."}</p>
           <button
             type="button"
@@ -567,7 +567,7 @@ export default function SalarieDetailPage() {
   return (
     <div className={`${manrope.className} flex min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
       <EnterpriseSidebar />
-      <main className="relative z-10 flex-1 px-4 py-8 sm:px-8 lg:pl-[280px]">
+      <main className="relative z-10 flex-1 px-4 py-8 sm:px-8 lg:pl-[104px]">
         {editing ? (
           <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             <span>Mode édition — seules les sections autorisées sont modifiables.</span>

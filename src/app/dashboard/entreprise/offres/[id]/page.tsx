@@ -206,7 +206,7 @@ export default function EntrepriseOfferDetailPage() {
   return (
     <div className={cn("min-h-screen bg-[#F4F4F1] text-[#07080B]", manrope.className)}>
       <EnterpriseSidebar />
-      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[264px]">
+      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]">
         <Link href="/dashboard/entreprise/offres" className="inline-flex h-11 items-center gap-2 rounded-full border border-[#E3E0D8] bg-white px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#6E5BFF]">
           <ArrowLeft className="h-4 w-4" />
           Mes offres

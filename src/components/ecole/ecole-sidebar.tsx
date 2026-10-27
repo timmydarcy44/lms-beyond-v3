@@ -83,6 +83,19 @@ export function EcoleSidebar({
   const renderLink = (item: Extract<EcoleNavItem, { type: "link" }>) => {
     const isActive = isEcoleLinkActive(pathname, item.href, item.activePathPrefix);
     const Icon = item.icon;
+    if (collapsed) {
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          title={item.label}
+          className={`revolut-rail-item ${isActive ? "is-active" : "is-idle"}`}
+        >
+          <Icon className="h-5 w-5" />
+          <span className="revolut-rail-label">{item.label}</span>
+        </Link>
+      );
+    }
     return (
       <Link
         key={item.href}
@@ -99,11 +112,9 @@ export function EcoleSidebar({
           }`}
         />
         <Icon className={`h-4 w-4 ${isActive ? "text-[#007AFF]" : "text-white/40"}`} />
-        {!collapsed ? (
-          <span className={isActive ? "text-white drop-shadow-[0_0_6px_rgba(197,160,89,0.3)]" : ""}>
-            {item.label}
-          </span>
-        ) : null}
+        <span className={isActive ? "text-white drop-shadow-[0_0_6px_rgba(197,160,89,0.3)]" : ""}>
+          {item.label}
+        </span>
       </Link>
     );
   };
@@ -112,6 +123,21 @@ export function EcoleSidebar({
     const isActive = isEcoleGroupActive(pathname, item.children);
     const isOpen = openGroups[item.label] ?? false;
     const Icon = item.icon;
+
+    if (collapsed) {
+      const first = item.children[0];
+      return (
+        <Link
+          key={item.label}
+          href={first?.href ?? "#"}
+          title={item.label}
+          className={`revolut-rail-item ${isActive ? "is-active" : "is-idle"}`}
+        >
+          <Icon className="h-5 w-5" />
+          <span className="revolut-rail-label">{item.label}</span>
+        </Link>
+      );
+    }
 
     return (
       <div key={item.label} className="space-y-1">
@@ -169,7 +195,7 @@ export function EcoleSidebar({
   return (
     <aside
       className={`fixed left-0 top-0 z-30 flex h-screen min-h-0 flex-col border-r border-black/[0.06] bg-[#1C1C1E] px-4 py-6 text-[#F5F2E8] transition-all ${
-        collapsed ? "w-20" : "w-64"
+        collapsed ? "w-[88px] px-1.5" : "w-64"
       } ${className}`}
     >
       <div
@@ -212,26 +238,36 @@ export function EcoleSidebar({
       <div className="shrink-0 space-y-1 border-t border-white/10 pt-3">
         <Link
           href={ECOLE_PRICING_NAV.href}
-          className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-            pricingActive
-              ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
-              : "text-white/70 hover:bg-white/5 hover:text-white"
-          }`}
+          className={
+            collapsed
+              ? `revolut-rail-item ${pricingActive ? "is-active" : "is-idle"}`
+              : `group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
+                  pricingActive
+                    ? "bg-white/10 text-white shadow-[0_8px_30px_rgba(0,0,0,0.2)] backdrop-blur"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`
+          }
         >
-          <span
-            className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
-              pricingActive ? "bg-[#007AFF]" : "bg-transparent"
-            }`}
-          />
-          <Euro className={`h-4 w-4 ${pricingActive ? "text-[#007AFF]" : "text-white/40"}`} />
-          {!collapsed ? <span>{ECOLE_PRICING_NAV.label}</span> : null}
+          {collapsed ? null : (
+            <span
+              className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full ${
+                pricingActive ? "bg-[#007AFF]" : "bg-transparent"
+              }`}
+            />
+          )}
+          <Euro className={collapsed ? "h-5 w-5" : `h-4 w-4 ${pricingActive ? "text-[#007AFF]" : "text-white/40"}`} />
+          <span className={collapsed ? "revolut-rail-label" : undefined}>{ECOLE_PRICING_NAV.label}</span>
         </Link>
         <Link
           href="/logout"
-          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white"
+          className={
+            collapsed
+              ? "revolut-rail-item is-idle"
+              : "flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white"
+          }
         >
-          <LogOut className="h-4 w-4 text-white/40" />
-          {!collapsed ? <span>Déconnexion</span> : null}
+          <LogOut className={collapsed ? "h-5 w-5" : "h-4 w-4 text-white/40"} />
+          <span className={collapsed ? "revolut-rail-label" : undefined}>Déconnexion</span>
         </Link>
       </div>
     </aside>

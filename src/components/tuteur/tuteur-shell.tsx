@@ -43,10 +43,26 @@ function buildNavItems(badges?: { missions?: number; evaluations?: number; livre
   ];
 }
 
-function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+function NavLink({ item, onNavigate, rail }: { item: NavItem; onNavigate?: () => void; rail?: boolean }) {
   const pathname = usePathname();
   const active = pathname === item.href || (item.href !== "/dashboard/tuteur" && pathname?.startsWith(`${item.href}/`));
   const Icon = item.icon;
+  if (rail) {
+    return (
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        title={item.label}
+        className={`revolut-rail-item ${active ? "is-active" : "is-idle"}`}
+      >
+        <span className="relative">
+          <Icon className="h-5 w-5" />
+          {item.badge ? <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-[var(--tutor-accent)]" /> : null}
+        </span>
+        <span className="revolut-rail-label">{item.label}</span>
+      </Link>
+    );
+  }
   return (
     <Link
       href={item.href}
@@ -84,14 +100,14 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
   return (
     <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
       <div className="flex min-h-screen">
-        <aside className="hidden w-[240px] shrink-0 flex-col border-r border-[#262A36] bg-[#07080B] px-3 py-6 lg:flex">
-          <p className="px-4 pb-6 text-sm font-semibold text-[#DADDE4]">Byound School · Espace tuteur</p>
-          <nav className="flex flex-1 flex-col gap-1">
+        <aside className="hidden w-[88px] shrink-0 flex-col border-r border-[#262A36] bg-[#07080B] px-1.5 py-5 lg:flex">
+          <p className="mb-4 text-center text-[10px] font-semibold leading-tight text-[#DADDE4]">Tuteur</p>
+          <nav className="flex flex-1 flex-col gap-0.5">
             {items.map((item) => (
-              <NavLink key={item.href} item={item} />
+              <NavLink key={item.href} item={item} rail />
             ))}
           </nav>
-          <p className="truncate px-4 pt-4 text-sm font-semibold text-[#DADDE4]">{name}</p>
+          <p className="truncate px-1 pt-3 text-center text-[10px] font-semibold text-[#DADDE4]">{name}</p>
         </aside>
         <div className="min-w-0 flex-1">
           <header className="flex items-center justify-between gap-3 border-b border-[#262A36] px-4 py-3 lg:hidden">

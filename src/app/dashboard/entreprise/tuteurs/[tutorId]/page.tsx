@@ -31,7 +31,7 @@ export default function EntrepriseTutorSpacePage() {
   return (
     <div className="min-h-screen bg-[#F4F4F1] text-[#07080B]">
       <EnterpriseSidebar />
-      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[264px]">
+      <main className="px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pl-[104px]">
         <Link href="/dashboard/entreprise/tuteurs" className="text-sm font-semibold text-[#3A3D45]">Espaces tuteurs</Link>
         {error ? <p className="mt-6 rounded-[26px] bg-white p-6">{error}</p> : null}
         {!tutor && !error ? <div className="mt-6 h-36 animate-pulse rounded-[26px] bg-white" /> : null}

@@ -192,7 +192,7 @@ export default function MatchingCandidatsPage() {
   return (
     <div className="min-h-screen bg-[#050505] text-white">
       <EnterpriseSidebar />
-      <main className="min-h-screen px-8 py-10 pl-[260px]">
+      <main className="min-h-screen px-8 py-10 pl-[104px]">
         <div className="space-y-8">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <div>

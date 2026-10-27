@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { jeuxReviewBasePath } from "@/lib/dashboard/space";
 
 /**
  * Lecteur du bloc « Jeu interactif ».
@@ -21,7 +23,9 @@ type Props = {
 
 type GameMsg = { source: "byound-serious-game"; game: string; version: number; event: string; [k: string]: unknown };
 
-export function GameBlockPlayer({ src, title, blockId, courseId, lessonId, reviewBasePath = "/dashboard/apprenant/jeux", fill = false }: Props) {
+export function GameBlockPlayer({ src, title, blockId, courseId, lessonId, reviewBasePath, fill = false }: Props) {
+  const pathname = usePathname();
+  const resolvedReviewBase = reviewBasePath || jeuxReviewBasePath(pathname);
   const ref = useRef<HTMLIFrameElement>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const [height, setHeight] = useState(900);
@@ -84,8 +88,8 @@ export function GameBlockPlayer({ src, title, blockId, courseId, lessonId, revie
         {status === "saved" && done && (
           <>
             <span>Résultat enregistré : {done.score}/100{done.passed ? ", jeu validé" : ""}.</span>
-            <Link className={fill ? "font-medium text-white underline" : "font-medium text-foreground underline"} href={`${reviewBasePath}/${done.attemptId}`}>Revoir mes réponses</Link>
-            <Link className={fill ? "font-medium text-white underline" : "font-medium text-foreground underline"} href={reviewBasePath}>Mon tableau de bord</Link>
+            <Link className={fill ? "font-medium text-white underline" : "font-medium text-foreground underline"} href={`${resolvedReviewBase}/${done.attemptId}`}>Revoir mes réponses</Link>
+            <Link className={fill ? "font-medium text-white underline" : "font-medium text-foreground underline"} href={resolvedReviewBase}>Mon tableau de bord</Link>
           </>
         )}
       </div>

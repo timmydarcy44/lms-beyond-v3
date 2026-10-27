@@ -21,7 +21,7 @@ export default async function ExpertResultatsPage() {
         <ul className="space-y-2">
           {games.map((row) => (
             <li key={row.id}>
-              <Link href={`/dashboard/apprenant/jeux/${row.id}`} className="block rounded-[24px] bg-[#12141A] p-4">
+              <Link href={`/dashboard/expert/jeux/${row.id}`} className="block rounded-[24px] bg-[#12141A] p-4">
                 <p className="font-extrabold">{row.game_id}</p>
                 <p className="text-sm text-[#B5BAC6]">{row.status}{row.score != null ? ` · ${row.score}` : ""}</p>
               </Link>

@@ -10,6 +10,7 @@ import { EcoleFloatingAssistant } from "@/components/beyond-connect/ecole-floati
 import { EdgeAppsLauncher } from "@/components/edge/edge-apps-launcher";
 import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { EcoleSidebar } from "@/components/ecole/ecole-sidebar";
+import { setDashboardSpace } from "@/lib/dashboard/space";
 import {
   ECOLE_APPS,
   ECOLE_APP_BY_ID,
@@ -34,10 +35,14 @@ const MOBILE_TAB_ITEMS = [
 export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [activeAppId, setActiveAppId] = useState<EcoleAppId>("pilotage");
   const [pendingAppId, setPendingAppId] = useState<EcoleAppId | null>(null);
   const isTodo = pathname.startsWith("/dashboard/ecole/todo");
+
+  useEffect(() => {
+    setDashboardSpace("ecole");
+  }, []);
 
   useEffect(() => {
     if (pendingAppId) return;
@@ -92,7 +97,7 @@ export default function SchoolDashboardLayout({ children }: SchoolLayoutProps) {
         ) : null}
         <main
           className={`flex-1 min-h-screen ${isTodo ? "" : "bg-transparent text-[#1D1D1F]"} ${
-            isTodo ? "" : isCollapsed ? "md:ml-20" : "md:ml-64"
+            isTodo ? "" : isCollapsed ? "md:ml-[88px]" : "md:ml-64"
           } pb-24 md:pb-0`}
         >
           {!isTodo ? (

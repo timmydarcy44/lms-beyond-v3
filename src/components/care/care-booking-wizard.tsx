@@ -10,7 +10,7 @@ import { carePaymentsEnabled } from "@/lib/care/care-payments";
 import { formatCarePrice } from "@/lib/care/care.config";
 import { CARE_DOMAINS } from "@/lib/care/domains";
 import { createCareBooking } from "@/lib/care/booking-actions";
-import { careDomainLabel, formatCareDuration } from "@/lib/care/profile";
+import { careDomainLabel, formatCareDuration } from "@/lib/care/profile-format";
 import type { CareDomain } from "@/lib/care/domains";
 import type { CareProfile, CareService } from "@/lib/care/types";
 import { formatCareDateLong } from "@/lib/care/working-days";

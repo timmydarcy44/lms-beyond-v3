@@ -1,5 +1,4 @@
-import { hasCareText } from "@/lib/care/profile";
-import type { CarePublicProfile } from "@/lib/care/profile";
+import { hasCareText, type CarePublicProfile } from "@/lib/care/profile-format";
 
 export const CARE_PUBLICS = ["enfants", "adolescents", "adultes", "parents", "couples", "entreprises"] as const;
 

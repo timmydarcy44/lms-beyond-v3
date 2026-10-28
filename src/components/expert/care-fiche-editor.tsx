@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { CARE_PUBLICS, careCompleteness } from "@/lib/care/completeness";
 import { CARE_DOMAINS } from "@/lib/care/domains";
 import { saveCarePublicProfile } from "@/lib/care/expert-actions";
-import { CARE_LANGUAGE_LABELS, CARE_PAYMENT_LABELS, type CarePublicProfile } from "@/lib/care/profile";
+import { CARE_LANGUAGE_LABELS, CARE_PAYMENT_LABELS, type CarePublicProfile } from "@/lib/care/profile-format";
 import { CareSortableCards } from "@/components/expert/care-sortable-cards";
 import { createClient } from "@/lib/supabase/client";
 import type { CareDomain } from "@/lib/care/domains";

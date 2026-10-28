@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CareLink } from "@/components/care/care-host";
 import { formatCarePrice } from "@/lib/care/care.config";
-import { formatCareDuration } from "@/lib/care/profile";
+import { formatCareDuration } from "@/lib/care/profile-format";
 import { formatCareBookButton, formatCareDayChip, nextOpenDays, parisDateKey } from "@/lib/care/working-days";
 import type { CareService } from "@/lib/care/types";
 

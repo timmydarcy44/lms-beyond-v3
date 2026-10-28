@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { nextOpenDays, parisDateKey } from "../working-days";
-import { hasCareText } from "../profile";
+import { hasCareText } from "../profile-format";
 
 describe("nextOpenDays", () => {
   it("skips the weekend and keeps four weekdays that have slots", () => {

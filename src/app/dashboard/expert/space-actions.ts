@@ -436,7 +436,7 @@ export async function syncCareProfileFromExpertAccount(listing?: Partial<CareLis
     domains,
     publics: listing?.publics ?? (Array.isArray(current?.publics) ? current.publics.map(String) : []),
     payment_methods: listing?.paymentMethods ?? (Array.isArray(current?.payment_methods) ? current.payment_methods.map(String) : ["on_site"]),
-    cancellation_hours: listing?.cancellationHours ?? Number(current?.cancellation_hours) || 24,
+    cancellation_hours: listing?.cancellationHours ?? (Number(current?.cancellation_hours) || 24),
     updated_at: new Date().toISOString(),
   };
   if (!patch.domains.length) {

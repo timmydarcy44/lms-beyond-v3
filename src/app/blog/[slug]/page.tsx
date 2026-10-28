@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { posts } from "../content";
@@ -5,24 +6,29 @@ import { TableOfContents } from "../components/TableOfContents";
 import { ArticleCta } from "../components/ArticleCta";
 import { AuthorBio } from "../components/AuthorBio";
 import { SideCta } from "../components/SideCta";
+import { resolveGeneratedMetadata } from "@/lib/seo/resolve-generated";
 
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }> | { slug: string };
 };
 
 export const generateStaticParams = async () => posts.map((post) => ({ slug: post.slug }));
 
-export const generateMetadata = ({ params }: PageProps) => {
-  const post = posts.find((p) => p.slug === params.slug);
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await Promise.resolve(params);
+  const post = posts.find((p) => p.slug === slug);
   if (!post) return {};
-  return {
-    title: post.title,
-    description: post.description,
-  };
-};
+  return resolveGeneratedMetadata({
+    type: "article",
+    path: `/blog/${slug}`,
+    vars: { titre: post.title, chapô: post.description || post.hero },
+    sourceDescription: post.description,
+  });
+}
 
-export default function BlogArticlePage({ params }: PageProps) {
-  const post = posts.find((p) => p.slug === params.slug);
+export default async function BlogArticlePage({ params }: PageProps) {
+  const { slug } = await Promise.resolve(params);
+  const post = posts.find((p) => p.slug === slug);
   if (!post) return notFound();
 
   return (

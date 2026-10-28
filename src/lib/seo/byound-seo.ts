@@ -8,9 +8,20 @@ import {
   type MarketingPageKey,
 } from "@/lib/edge-site/marketing-content";
 import { EDGE_MARKETING_PATHS } from "@/lib/edge-site/marketing-routes";
+import { parseSeoDraft, type SeoDraftFields } from "@/lib/seo/draft";
+import { seoGroupForPath } from "@/lib/seo/overview";
+import { faqVisibility, questionAppearsInText, seoHeadingsManagedByTool } from "@/lib/seo/parse-html";
+import { scoreSeoPage, type SeoCheckResult, type SeoScorePeer } from "@/lib/seo/score";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export type SeoFaqItem = { question: string; answer: string };
+export type SeoHeadingsCache = {
+  h1: string[];
+  h2: string[];
+  h3: string[];
+  faq_visible?: boolean;
+  text?: string;
+};
 export type SeoPageRecord = {
   path: string;
   title: string;
@@ -20,11 +31,24 @@ export type SeoPageRecord = {
   og_title: string;
   og_description: string;
   keywords: string[];
+  focus_keyword: string;
+  canonical_url: string;
+  og_image_url: string;
+  jsonld_types: string[];
   ai_summary: string;
   faq: SeoFaqItem[];
   noindex: boolean;
+  score: number | null;
+  headings_cache: SeoHeadingsCache | null;
+  headings_cached_at: string | null;
+  draft: SeoDraftFields | null;
+  published_at: string | null;
   updated_at: string | null;
 };
+
+export function defaultCanonicalUrl(path: string): string {
+  return `${BYOUND_PUBLIC_ORIGIN}${path === "/" ? "/" : path}`;
+}
 export type SeoCatalogItem = { path: string; label: string; group: string; key?: MarketingPageKey };
 
 export function marketingPathForKey(key: MarketingPageKey): string {
@@ -44,22 +68,31 @@ export function emptySeoPage(path: string, fallback?: Partial<SeoPageRecord>): S
     og_title: fallback?.og_title ?? "",
     og_description: fallback?.og_description ?? "",
     keywords: fallback?.keywords ?? [],
+    focus_keyword: fallback?.focus_keyword ?? "",
+    canonical_url: fallback?.canonical_url ?? defaultCanonicalUrl(path),
+    og_image_url: fallback?.og_image_url ?? "",
+    jsonld_types: fallback?.jsonld_types ?? [],
     ai_summary: fallback?.ai_summary ?? "",
     faq: fallback?.faq ?? [],
     noindex: fallback?.noindex ?? false,
+    score: fallback?.score ?? null,
+    headings_cache: fallback?.headings_cache ?? null,
+    headings_cached_at: fallback?.headings_cached_at ?? null,
+    draft: fallback?.draft ?? null,
+    published_at: fallback?.published_at ?? null,
     updated_at: fallback?.updated_at ?? null,
   };
 }
 
 export function byoundSeoCatalog(): SeoCatalogItem[] {
   const extra: SeoCatalogItem[] = [
-    { path: "/", label: "Accueil", group: "Marque" },
-    { path: "/entreprises", label: "Entreprises", group: "Business" },
-    { path: "/votre-orientation", label: "Orientation", group: "Apprenants" },
+    { path: "/", label: "Accueil", group: seoGroupForPath("/") },
+    { path: "/entreprises", label: "Entreprises", group: seoGroupForPath("/entreprises") },
+    { path: "/votre-orientation", label: "Orientation", group: seoGroupForPath("/votre-orientation") },
   ];
   const fromMarketing = (Object.keys(MARKETING_PAGES) as MarketingPageKey[]).map((key) => {
     const path = marketingPathForKey(key);
-    return { path, key, label: getMarketingContent(key).label || key, group: "Marque" };
+    return { path, key, label: getMarketingContent(key).label || key, group: seoGroupForPath(path) };
   });
   const map = new Map<string, SeoCatalogItem>();
   for (const item of [...extra, ...fromMarketing]) if (!map.has(item.path)) map.set(item.path, item);
@@ -98,6 +131,23 @@ function parseFaq(raw: unknown): SeoFaqItem[] {
   });
 }
 
+function parseHeadingsCache(raw: unknown): SeoHeadingsCache | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const list = (value: unknown) => (Array.isArray(value) ? value.map(String) : []);
+  return {
+    h1: list(row.h1),
+    h2: list(row.h2),
+    h3: list(row.h3),
+    faq_visible: typeof row.faq_visible === "boolean" ? row.faq_visible : undefined,
+    text: typeof row.text === "string" ? row.text : undefined,
+  };
+}
+
+function parseStringList(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.map(String).map((item) => item.trim()).filter(Boolean) : [];
+}
+
 export const loadSeoOverrides = cache(async () => {
   const db = getServiceRoleClient();
   const map = new Map<string, SeoPageRecord>();
@@ -106,6 +156,7 @@ export const loadSeoOverrides = cache(async () => {
   if (error) return map;
   for (const row of (data ?? []) as Array<Record<string, unknown>>) {
     const path = String(row.path ?? "");
+    const keywords = parseStringList(row.keywords);
     map.set(path, {
       path,
       title: String(row.title ?? ""),
@@ -114,10 +165,19 @@ export const loadSeoOverrides = cache(async () => {
       h2: Array.isArray(row.h2) ? row.h2.map(String) : [],
       og_title: String(row.og_title ?? ""),
       og_description: String(row.og_description ?? ""),
-      keywords: Array.isArray(row.keywords) ? row.keywords.map(String) : [],
+      keywords,
+      focus_keyword: String(row.focus_keyword ?? keywords[0] ?? ""),
+      canonical_url: String(row.canonical_url ?? "") || defaultCanonicalUrl(path),
+      og_image_url: String(row.og_image_url ?? ""),
+      jsonld_types: parseStringList(row.jsonld_types),
       ai_summary: String(row.ai_summary ?? ""),
       faq: parseFaq(row.faq),
       noindex: row.noindex === true,
+      score: typeof row.score === "number" ? row.score : null,
+      headings_cache: parseHeadingsCache(row.headings_cache),
+      headings_cached_at: typeof row.headings_cached_at === "string" ? row.headings_cached_at : null,
+      draft: parseSeoDraft(row.draft),
+      published_at: typeof row.published_at === "string" ? row.published_at : null,
       updated_at: typeof row.updated_at === "string" ? row.updated_at : null,
     });
   }
@@ -139,27 +199,42 @@ export async function loadSeoPage(path: string): Promise<SeoPageRecord> {
   };
 }
 
-export function seoScore(page: SeoPageRecord) {
-  const issues: string[] = [];
-  let score = 0;
-  const t = page.title.trim().length;
-  if (t >= 45 && t <= 65) score += 20;
-  else { issues.push(t ? "Title : viser 50–60 caractères." : "Title manquant."); if (t) score += 8; }
-  const d = page.meta_description.trim().length;
-  if (d >= 120 && d <= 165) score += 20;
-  else { issues.push(d ? "Meta description : viser 140–160 caractères." : "Meta description manquante."); if (d) score += 8; }
-  if (page.h1.trim()) score += 15; else issues.push("H1 manquant.");
-  if (page.h2.filter(Boolean).length >= 2) score += 15; else issues.push("Ajoutez au moins deux H2.");
-  if (page.ai_summary.trim().length >= 80) score += 15; else issues.push("Résumé IA trop court.");
-  if (page.faq.length >= 2) score += 10; else issues.push("FAQ : deux questions minimum.");
-  if (!page.noindex) score += 5; else issues.push("Page en noindex.");
-  return { score: Math.min(100, score), issues };
+export function seoScore(page: SeoPageRecord, peers: SeoScorePeer[] = []) {
+  const scored = scoreSeoPage(
+    {
+      path: page.path,
+      title: page.title,
+      meta_description: page.meta_description,
+      focus_keyword: page.focus_keyword || page.keywords[0] || "",
+      canonical_url: page.canonical_url || defaultCanonicalUrl(page.path),
+      og_image_url: page.og_image_url,
+      jsonld_types: page.jsonld_types,
+      h1: page.h1,
+      h2: page.h2,
+      headings: page.headings_cache,
+      faq: page.faq,
+      faqVisibleOnPage: page.headings_cache?.text
+        ? faqVisibility(
+            page.faq.map((item) => item.question),
+            page.headings_cache.text,
+          ).allVisible
+        : page.headings_cache?.faq_visible,
+      ai_summary: page.ai_summary,
+      noindex: page.noindex,
+    },
+    peers.length ? peers : [{ path: page.path, title: page.title, meta_description: page.meta_description }],
+  );
+  return {
+    score: scored.score,
+    issues: scored.checks.filter((item) => !item.passed).map((item) => item.message),
+    checks: scored.checks as SeoCheckResult[],
+  };
 }
 
 export function toNextMetadata(page: SeoPageRecord): Metadata {
   const title = page.title || "Byound";
   const description = page.meta_description || undefined;
-  const canonical = `${BYOUND_PUBLIC_ORIGIN}${page.path === "/" ? "/" : page.path}`;
+  const canonical = page.canonical_url?.trim() || defaultCanonicalUrl(page.path);
   return {
     metadataBase: new URL(BYOUND_PUBLIC_ORIGIN),
     title,
@@ -167,7 +242,15 @@ export function toNextMetadata(page: SeoPageRecord): Metadata {
     keywords: page.keywords.length ? page.keywords : undefined,
     alternates: { canonical },
     robots: page.noindex ? { index: false, follow: false } : { index: true, follow: true },
-    openGraph: { title: page.og_title || title, description: page.og_description || description, url: canonical, siteName: "Byound", locale: "fr_FR", type: "website" },
+    openGraph: {
+      title: page.og_title || title,
+      description: page.og_description || description,
+      url: canonical,
+      siteName: "Byound",
+      locale: "fr_FR",
+      type: "website",
+      images: page.og_image_url ? [{ url: page.og_image_url, width: 1200, height: 630 }] : undefined,
+    },
     twitter: { card: "summary_large_image", title: page.og_title || title, description: page.og_description || description },
   };
 }
@@ -190,12 +273,23 @@ export async function resolveMarketingContent(key: MarketingPageKey): Promise<Ma
 }
 
 export function webpageJsonLd(page: SeoPageRecord) {
-  const url = `${BYOUND_PUBLIC_ORIGIN}${page.path === "/" ? "/" : page.path}`;
+  const url = page.canonical_url?.trim() || `${BYOUND_PUBLIC_ORIGIN}${page.path === "/" ? "/" : page.path}`;
   const graph: Array<Record<string, unknown>> = [{ "@type": "WebPage", url, name: page.title, description: page.meta_description, inLanguage: "fr-FR" }];
-  if (page.faq.length) {
+  for (const type of page.jsonld_types ?? []) {
+    if (!type || type === "FAQPage" || type === "WebPage") continue;
+    graph.push({ "@type": type, name: type === "Organization" || type === "EducationalOrganization" ? "Byound" : page.title, url, description: page.meta_description });
+  }
+  const catalogKey = byoundSeoCatalog().find((item) => item.path === page.path)?.key;
+  const visibleFaq = page.faq.filter((item) => {
+    if (!item.question.trim() || !item.answer.trim()) return false;
+    if (page.headings_cache?.text) return questionAppearsInText(item.question, page.headings_cache.text);
+    return seoHeadingsManagedByTool(page.path, catalogKey);
+  });
+  const wantFaq = (page.jsonld_types ?? []).includes("FAQPage") || visibleFaq.length > 0;
+  if (wantFaq && visibleFaq.length) {
     graph.push({
       "@type": "FAQPage",
-      mainEntity: page.faq.map((item) => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } })),
+      mainEntity: visibleFaq.map((item) => ({ "@type": "Question", name: item.question, acceptedAnswer: { "@type": "Answer", text: item.answer } })),
     });
   }
   return { "@context": "https://schema.org", "@graph": graph };

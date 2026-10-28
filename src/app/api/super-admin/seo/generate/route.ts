@@ -1,36 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { generateJSON } from "@/lib/ai/openai-client";
-import { defaultsForPath } from "@/lib/seo/byound-seo";
+import { generateSeoProposals } from "@/lib/seo/generate-proposals";
+import { seoFaqSchema } from "@/lib/seo/seo-fields";
+
+const bodySchema = z.object({
+  path: z.string().min(1),
+  batch_id: z.string().uuid().optional(),
+  current: z
+    .object({
+      title: z.string().optional(),
+      meta_description: z.string().optional(),
+      focus_keyword: z.string().optional(),
+      ai_summary: z.string().optional(),
+      faq: z.array(seoFaqSchema).optional(),
+    })
+    .optional(),
+});
 
 export async function POST(req: NextRequest) {
   if (!(await isSuperAdmin())) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  const body = (await req.json().catch(() => null)) as { path?: string } | null;
-  const path = String(body?.path ?? "").trim();
+  const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+  const path = parsed.data.path.trim();
   if (!path.startsWith("/")) return NextResponse.json({ error: "Chemin invalide" }, { status: 400 });
-  const defaults = defaultsForPath(path);
-  const generated = await generateJSON(
-    `Page Byound (www.byound.fr${path}).
-Titre actuel: ${defaults.title}
-H1 actuel: ${defaults.h1}
-Description actuelle: ${defaults.meta_description}
-Rédige un SEO français vouvoiement, factuel, sans superlatifs creux.
-title 50-60 car, meta_description 140-160 car, h1 une phrase, 3 à 5 h2, ai_summary 400-700 car pour citations IA (ChatGPT, Perplexity), 3 FAQ question/answer.
-Réponds uniquement en JSON.`,
-    {
-      type: "object",
-      properties: {
-        title: { type: "string" },
-        meta_description: { type: "string" },
-        h1: { type: "string" },
-        h2: { type: "array", items: { type: "string" } },
-        ai_summary: { type: "string" },
-        faq: { type: "array", items: { type: "object", properties: { question: { type: "string" }, answer: { type: "string" } } } },
-        keywords: { type: "array", items: { type: "string" } },
-      },
-    },
-    "Tu es un expert SEO et GEO (référencement dans les moteurs d'IA) pour Byound, organisme de formation et compétences.",
-  );
-  if (!generated) return NextResponse.json({ error: "Génération IA indisponible." }, { status: 503 });
-  return NextResponse.json({ ok: true, draft: generated });
+  try {
+    const result = await generateSeoProposals({
+      path,
+      batchId: parsed.data.batch_id,
+      current: parsed.data.current,
+    });
+    if (!result.proposals.length) {
+      return NextResponse.json(
+        { error: "Aucune proposition fiable (faits manquants ou chiffres inventés écartés).", skipped: result.skipped },
+        { status: 422 },
+      );
+    }
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Génération impossible" }, { status: 503 });
+  }
 }

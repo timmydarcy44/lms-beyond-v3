@@ -39,6 +39,14 @@
     {
       "path": "/api/cron/business-signaux",
       "schedule": "10 6 * * *"
+    },
+    {
+      "path": "/api/cron/seo-score",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/seo-gsc",
+      "schedule": "20 3 * * *"
     }
   ]
 }

@@ -2059,61 +2059,60 @@ export function LessonPlayView({
               )}
             </div>
           ) : isTestFlow ? (
-            <div className={neo ? "lesson-reader__quiz" : "space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"}>
-              {!testStarted ? (
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    {neo ? null : <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>}
-                    <p className="text-slate-600">
-                      {isQuizLesson
-                        ? "Ce quiz vérifie votre compréhension des notions vues dans ce module."
-                        : "Ce test a pour objectif d'évaluer votre compréhension du contenu que vous venez de voir."}
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <Button
-                      onClick={async () => {
-                        setIsLoadingTest(true);
-                        try {
-                          const testId =
-                            linkedQuizTestId ||
-                            (isTestLessonKind ? activeLesson.id.replace(/^test-/, "") : "");
-                          if (!testId) {
-                            throw new Error("Quiz introuvable");
-                          }
-                          const response = await fetch(`/api/tests/${testId}`);
-                          if (!response.ok) {
-                            throw new Error("Impossible de charger le test");
-                          }
-                          const data = await response.json();
-                          const test = data.test;
+            !testStarted ? (
+            <div className="lesson-reader__quiz-launch">
+              <p className="lesson-reader__quiz-kicker">{isQuizLesson ? "Quiz" : "Évaluation"}</p>
+              <h3>
+                {isQuizLesson ? "Vérifiez ce que vous retenez." : "Mesurez votre compréhension."}
+              </h3>
+              <p>
+                {isQuizLesson
+                  ? "Quelques questions, une seule passe. Pas de piège — seulement ce module."
+                  : "Une évaluation courte pour ancrer ce que vous venez de voir. Score à la fin."}
+              </p>
+              <Button
+                onClick={async () => {
+                  setIsLoadingTest(true);
+                  try {
+                    const testId =
+                      linkedQuizTestId ||
+                      (isTestLessonKind ? activeLesson.id.replace(/^test-/, "") : "");
+                    if (!testId) {
+                      throw new Error("Quiz introuvable");
+                    }
+                    const response = await fetch(`/api/tests/${testId}`);
+                    if (!response.ok) {
+                      throw new Error("Impossible de charger le test");
+                    }
+                    const data = await response.json();
+                    const test = data.test;
 
-                          if (test && test.questions && Array.isArray(test.questions)) {
-                            setTestQuestions(test.questions);
-                            const sm = test?.scoring?.score_minimum ?? test?.scoring?.scoreMinimum;
-                            setTestFlowMeta({
-                              title: String(test.title ?? activeLesson.title ?? "Quiz"),
-                              minScore: typeof sm === "number" && !Number.isNaN(sm) ? Math.min(100, Math.max(0, sm)) : 70,
-                            });
-                            setTestStarted(true);
-                          } else {
-                            throw new Error("Aucune question trouvée dans ce test");
-                          }
-                        } catch (error) {
-                          console.error("Erreur lors du chargement du test:", error);
-                          alert("Erreur lors du chargement du test. Veuillez réessayer.");
-                        } finally {
-                          setIsLoadingTest(false);
-                        }
-                      }}
-                      disabled={isLoadingTest}
-                      className="rounded-full bg-slate-900 px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
-                    >
-                      {isLoadingTest ? "Chargement..." : isQuizLesson ? "Démarrer le quiz" : "Démarrer l'évaluation"}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
+                    if (test && test.questions && Array.isArray(test.questions)) {
+                      setTestQuestions(test.questions);
+                      const sm = test?.scoring?.score_minimum ?? test?.scoring?.scoreMinimum;
+                      setTestFlowMeta({
+                        title: String(test.title ?? activeLesson.title ?? "Quiz"),
+                        minScore: typeof sm === "number" && !Number.isNaN(sm) ? Math.min(100, Math.max(0, sm)) : 70,
+                      });
+                      setTestStarted(true);
+                    } else {
+                      throw new Error("Aucune question trouvée dans ce test");
+                    }
+                  } catch (error) {
+                    console.error("Erreur lors du chargement du test:", error);
+                    alert("Erreur lors du chargement du test. Veuillez réessayer.");
+                  } finally {
+                    setIsLoadingTest(false);
+                  }
+                }}
+                disabled={isLoadingTest}
+                className="lesson-reader__quiz-cta h-[52px] rounded-full bg-white px-7 text-base font-bold tracking-tight text-[#09090b] hover:bg-zinc-100 hover:text-[#09090b]"
+              >
+                {isLoadingTest ? "Chargement…" : "Démarrer"}
+              </Button>
+            </div>
+            ) : (
+            <div className={neo ? "lesson-reader__quiz" : "space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"}>
                 <TestFlowInline
                   testId={linkedQuizTestId || activeLesson.id.replace(/^test-/, "")}
                   title={testFlowMeta.title || activeLesson.title}
@@ -2122,8 +2121,8 @@ export function LessonPlayView({
                   onClose={() => setTestStarted(false)}
                   onQuizCompleted={handleQuizCompletedForNav}
                 />
-              )}
             </div>
+            )
           ) : isResourceLesson && embeddedResourceId ? (
             <EmbeddedLessonResource
               resourceId={embeddedResourceId}

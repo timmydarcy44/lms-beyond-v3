@@ -136,7 +136,7 @@ export function InterviewReadinessGate({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "mx-auto w-full max-w-2xl overflow-hidden rounded-3xl border p-6 shadow-2xl sm:p-8",
+        "mx-auto w-full max-w-2xl overflow-visible rounded-3xl border p-6 shadow-2xl sm:p-8",
         isJessica
           ? "border-[#D2B48C]/45 bg-gradient-to-b from-[#F0EBE3] via-[#F8F5F0] to-[#F0EBE3] text-[#2F2A25]"
           : "border-violet-500/25 bg-gradient-to-b from-[#1a0a2e] via-[#12081f] to-[#050208] text-white",

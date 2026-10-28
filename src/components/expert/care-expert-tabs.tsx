@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/dashboard/expert/care/fiche", label: "Ma fiche publique" },
+  { href: "/dashboard/expert/profile?edit=1#byound-care", label: "Profil" },
   { href: "/dashboard/expert/care/disponibilites", label: "Disponibilités" },
   { href: "/dashboard/expert/care/rendez-vous", label: "Rendez-vous" },
 ];

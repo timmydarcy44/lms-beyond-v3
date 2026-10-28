@@ -78,7 +78,7 @@ export async function ensureCareProfile(db: Db, expertId: string) {
     expert_id: expertId,
     slug,
     is_care: true,
-    published: true,
+    published: false,
     ...seeded,
   });
   if (error) throw new Error(error.message);

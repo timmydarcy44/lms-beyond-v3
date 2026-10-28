@@ -1,9 +1,5 @@
-import { CareFicheEditor } from "@/components/expert/care-fiche-editor";
-import { loadCareExpertWorkspace } from "@/lib/care/expert-workspace";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function CareFichePage() {
-  const workspace = await loadCareExpertWorkspace();
-  return <CareFicheEditor profile={workspace.profile} />;
+export default function CareFichePage() {
+  redirect("/dashboard/expert/profile?edit=1#byound-care");
 }

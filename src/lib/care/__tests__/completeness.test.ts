@@ -16,7 +16,7 @@ const service: CareService = {
 };
 
 describe("careCompleteness", () => {
-  it("blocks publish until photo, title, tagline, domain and service are set", () => {
+  it("tracks missing fields without blocking publication", () => {
     const empty = careCompleteness({
       avatar_url: null,
       title: "",
@@ -24,7 +24,7 @@ describe("careCompleteness", () => {
       domains: [],
       services: [],
     });
-    expect(empty.canPublish).toBe(false);
+    expect(empty.canPublish).toBe(true);
     expect(empty.percent).toBe(0);
     const ready = careCompleteness({
       avatar_url: "https://cdn.example/a.jpg",
@@ -37,7 +37,7 @@ describe("careCompleteness", () => {
     expect(ready.percent).toBe(100);
   });
 
-  it("blocks placeholders in required public fields", () => {
+  it("flags placeholders on required public fields", () => {
     const placeholder = careCompleteness({
       avatar_url: "https://cdn.example/a.jpg",
       title: "[titre]",
@@ -45,7 +45,8 @@ describe("careCompleteness", () => {
       domains: ["famille"],
       services: [service],
     });
-    expect(placeholder.canPublish).toBe(false);
+    expect(placeholder.missing.some((item) => item.id === "title")).toBe(true);
+    expect(placeholder.canPublish).toBe(true);
     expect(isCareDirectoryComplete({
       avatar_url: null,
       title: "Psychologue",

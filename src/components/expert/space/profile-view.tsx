@@ -12,6 +12,8 @@ import {
   SegmentBar,
   StatusPill,
 } from "@/components/expert/expert-ui";
+import type { CareListingSettings } from "@/lib/care/listing-settings";
+import { CARE_PUBLIC_ORIGIN } from "@/lib/care/host";
 import type { ExpertProfileModel } from "@/lib/expert/space-server";
 import { formatEuros } from "@/lib/expert/space-model";
 
@@ -19,7 +21,13 @@ function stars(rating: number) {
   return "★★★★★".slice(0, Math.max(0, Math.min(5, Math.round(rating))));
 }
 
-export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
+export function ProfileView({
+  profile,
+  careListing = null,
+}: {
+  profile: ExpertProfileModel;
+  careListing?: CareListingSettings | null;
+}) {
   const [copied, setCopied] = useState(false);
   const filled = profile.sections.filter((section) => section.filled).length;
   const average = profile.reviews.length
@@ -86,6 +94,29 @@ export function ProfileView({ profile }: { profile: ExpertProfileModel }) {
             />
             <Round href="/dashboard/expert/agenda" icon={CalendarDays} label="Disponibilités" />
           </div>
+          {careListing ? (
+            <div className="mt-6 rounded-[20px] bg-[#1E2130] px-4 py-4">
+              <p className="text-sm font-extrabold">Byound Care</p>
+              <p className="mt-1 text-sm text-[#9096A3]">
+                {careListing.published ? "Visible sur l’annuaire public" : "Non visible sur l’annuaire public"}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-4">
+                {careListing.slug ? (
+                  <a
+                    className="text-sm font-extrabold text-[#FF4B4B]"
+                    href={`${CARE_PUBLIC_ORIGIN}/praticiens/${careListing.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Voir sur byoundcare.fr
+                  </a>
+                ) : null}
+                <a className="text-sm font-extrabold text-[#FF4B4B]" href="/dashboard/expert/profile?edit=1#byound-care">
+                  Modifier
+                </a>
+              </div>
+            </div>
+          ) : null}
           <span className="sr-only">{publicUrl}</span>
         </HeroCard>
         <div className="space-y-4">

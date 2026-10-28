@@ -1,7 +1,7 @@
 "use server";
 
 import { getSession } from "@/lib/auth/session";
-import { careCompleteness, slugifyCareName } from "@/lib/care/completeness";
+import { slugifyCareName } from "@/lib/care/completeness";
 import { sendCareCancellationEmails } from "@/lib/care/booking-emails";
 import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
 import { CARE_DOMAIN_IDS, type CareDomain } from "@/lib/care/domains";
@@ -69,30 +69,6 @@ export async function saveCarePublicProfile(payload: {
   if (services.some((item) => !item.formats.length)) {
     return { ok: false, message: "Chaque prestation doit proposer au moins un format." };
   }
-  const completeness = careCompleteness({
-    avatar_url: payload.avatar_url,
-    title: payload.title,
-    tagline: payload.tagline,
-    domains,
-    services: services.map((item) => ({
-      id: item.id ?? "new",
-      expert_id: ctx.id,
-      position: item.position,
-      name: item.name,
-      domain: item.domain,
-      description: item.description,
-      duration_min: item.duration_min,
-      formats: item.formats,
-      price_cents: item.price_cents,
-      active: item.active,
-    })),
-  });
-  if (payload.published && !completeness.canPublish) {
-    return {
-      ok: false,
-      message: `Impossible de publier : ${completeness.missing.map((item) => item.label).join(", ")}.`,
-    };
-  }
   const { data: current } = await ctx.db.from("care_profiles").select("slug").eq("expert_id", ctx.id).maybeSingle();
   const previousSlug = String(current?.slug ?? "");
   let slug = slugifyCareName(payload.slug || payload.display_name);
@@ -105,7 +81,7 @@ export async function saveCarePublicProfile(payload: {
     expert_id: ctx.id,
     slug,
     is_care: true,
-    published: payload.published && completeness.canPublish,
+    published: payload.published,
     display_name: payload.display_name.trim(),
     title: payload.title.trim(),
     tagline: payload.tagline.trim().slice(0, 140),

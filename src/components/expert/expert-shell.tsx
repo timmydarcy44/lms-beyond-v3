@@ -273,11 +273,10 @@ export function ExpertShell({
     });
     items.push({
       label: "Byound Care",
-      href: "/dashboard/expert/care/fiche",
+      href: "/dashboard/expert/care/disponibilites",
       icon: HeartHandshake,
       locked: restricted,
       children: [
-        { label: "Ma fiche publique", href: "/dashboard/expert/care/fiche" },
         { label: "Disponibilités", href: "/dashboard/expert/care/disponibilites" },
         { label: "Rendez-vous", href: "/dashboard/expert/care/rendez-vous" },
       ],

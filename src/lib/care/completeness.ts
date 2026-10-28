@@ -27,7 +27,7 @@ export function careCompleteness(profile: Pick<CarePublicProfile, "avatar_url" |
     checks,
     missing: checks.filter((item) => !item.ok),
     percent: Math.round((done / checks.length) * 100),
-    canPublish: checks.every((item) => item.ok),
+    canPublish: true,
   };
 }
 

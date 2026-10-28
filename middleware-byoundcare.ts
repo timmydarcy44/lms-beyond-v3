@@ -5,8 +5,8 @@ import {
   careAppToPublicPath,
   carePublicToAppPath,
   isByoundCareHostname,
-  isByoundCareWwwHostname,
   isCarePublicPath,
+  requestHost,
 } from "@/lib/care/host";
 import { isByoundMarketingHost } from "@/lib/edge-site/byound-host";
 
@@ -15,12 +15,7 @@ function hasAuthCookie(request: NextRequest) {
 }
 
 export function handleByoundCareHost(request: NextRequest) {
-  const host = request.headers.get("host") || "";
-  if (isByoundCareWwwHostname(host)) {
-    const url = new URL(request.url);
-    return NextResponse.redirect(`${CARE_PUBLIC_ORIGIN}${url.pathname}${url.search}`, 308);
-  }
-  if (!isByoundCareHostname(host)) return null;
+  if (!isByoundCareHostname(requestHost(request))) return null;
 
   const pathname = request.nextUrl.pathname;
   if (
@@ -54,8 +49,7 @@ export function handleByoundCareHost(request: NextRequest) {
 
 /** Sur byound.fr, les fiches publiques Care pointent vers byoundcare.fr (sauf session : aperçu propriétaire). */
 export function redirectByoundCareOffload(request: NextRequest) {
-  const host = request.headers.get("host") || "";
-  if (!isByoundMarketingHost(host)) return null;
+  if (!isByoundMarketingHost(requestHost(request))) return null;
   const pathname = request.nextUrl.pathname;
   if (pathname !== "/care" && !pathname.startsWith("/care/")) return null;
   if (hasAuthCookie(request)) return null;

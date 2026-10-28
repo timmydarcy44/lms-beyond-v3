@@ -4,6 +4,7 @@ import {
   careAppToPublicPath,
   carePublicToAppPath,
   isByoundCareHostname,
+  requestHost,
   toCareHref,
 } from "../host";
 
@@ -13,6 +14,9 @@ describe("care host paths", () => {
     expect(careAppToPublicPath("/care/praticiens/lea")).toBe("/praticiens/lea");
     expect(carePublicToAppPath("/praticiens")).toBe("/care/praticiens");
     expect(isByoundCareHostname("www.byoundcare.fr")).toBe(true);
+    expect(requestHost({ headers: { get: (name) => (name === "x-forwarded-host" ? "byoundcare.fr" : null) } })).toBe(
+      "byoundcare.fr",
+    );
   });
 
   it("rewrites in-app hrefs on the Care domain", () => {

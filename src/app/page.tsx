@@ -9,6 +9,8 @@ import { getServerClient } from "@/lib/supabase/server";
 import { LandingPage } from "@/components/tenant/landing-page";
 import { BeyondSaasLanding } from "@/components/marketing/beyond-saas-landing";
 import { generateSEOMetadata } from "@/lib/seo/jessica-contentin-seo";
+import { isByoundCareHostname } from "@/lib/care/host";
+import { CARE_SEO, carePageMetadata } from "@/lib/care/seo";
 import { BYOUND_PUBLIC_ORIGIN, bareHostname } from "@/lib/edge-site/byound-host";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
     hostname.includes("localhost");
 
   const hostOnly = bareHostname(hostname);
+  if (isByoundCareHostname(hostname) && !isLocalhost) {
+    return carePageMetadata({
+      title: CARE_SEO.homeTitle,
+      description: CARE_SEO.homeDescription,
+      internalPath: "/care",
+    });
+  }
   if ((hostOnly === "edgebs.fr" || hostOnly === "byound.fr") && !isLocalhost) {
     const { loadSeoPage, toNextMetadata } = await import("@/lib/seo/byound-seo");
     return toNextMetadata(await loadSeoPage("/"));
@@ -69,6 +78,17 @@ export default async function Home() {
   const hostname = headersList.get('host') || '';
   const isLocalhost = hostname.startsWith('localhost') || hostname.startsWith('127.0.0.1') || hostname.includes('localhost');
   const hostOnly = bareHostname(hostname);
+
+  /** Byound Care — domaine dédié (filet si le rewrite / → /care n’est pas appliqué). */
+  if (!isLocalhost && isByoundCareHostname(hostname)) {
+    const { default: CareHomePage } = await import("@/app/care/page");
+    const { default: CareLayout } = await import("@/app/care/layout");
+    return (
+      <CareLayout>
+        <CareHomePage />
+      </CareLayout>
+    );
+  }
 
   /** Beyond Center — agence développement sur mesure */
   if (!isLocalhost && hostOnly === "beyondcenter.fr") {

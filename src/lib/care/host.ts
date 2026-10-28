@@ -5,12 +5,12 @@ export const CARE_PUBLIC_ORIGIN = "https://byoundcare.fr";
 
 export const CARE_PUBLIC_PREFIXES = ["/praticiens", "/reserver", "/reservation"] as const;
 
-export function isByoundCareHostname(host: string | null | undefined) {
-  return bareHostname(host) === "byoundcare.fr";
+export function requestHost(request: { headers: { get(name: string): string | null } }) {
+  return request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
 }
 
-export function isByoundCareWwwHostname(host: string | null | undefined) {
-  return host?.split(":")[0]?.toLowerCase() === "www.byoundcare.fr";
+export function isByoundCareHostname(host: string | null | undefined) {
+  return bareHostname(host) === "byoundcare.fr";
 }
 
 export function careAppToPublicPath(pathname: string) {

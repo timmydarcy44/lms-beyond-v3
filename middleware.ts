@@ -617,6 +617,7 @@ async function runMiddleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/((?!api|_next|_vercel|[\\w-]+\\.\\w+).*)",
   ],
 };

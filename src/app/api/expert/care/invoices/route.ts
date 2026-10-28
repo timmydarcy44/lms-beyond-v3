@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/resend-client";
 import { getSession } from "@/lib/auth/session";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
-import { CARE_INVOICE_EXTRAS } from "@/lib/expert/care-tests";
+import { CARE_INVOICE_EXTRAS, resolveCarePrestations } from "@/lib/expert/care-prestations";
 import { buildCareEmail } from "@/lib/expert/care-email";
 import { careInvoicePdfBuffer, fetchCareLogoPng, type CareInvoiceLine } from "@/lib/expert/care-invoice-pdf";
 import { mergeRegistrationMeta, parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
@@ -26,8 +26,14 @@ export async function GET() {
     return NextResponse.json({ error: missingRelation(error) ? CARE_SQL_HINT : error.message, invoices: [] }, { status: missingRelation(error) ? 200 : 500 });
   }
   const expert = await gate.db.from("experts").select("references").eq("id", gate.expertId).maybeSingle();
-  const sessionPriceCents = parseRegistrationMeta(expert.data?.references)?.care_session_price_cents ?? null;
-  return NextResponse.json({ invoices: data ?? [], sessionPriceCents, extras: CARE_INVOICE_EXTRAS });
+  const meta = parseRegistrationMeta(expert.data?.references);
+  const sessionPriceCents = meta?.care_session_price_cents ?? null;
+  return NextResponse.json({
+    invoices: data ?? [],
+    sessionPriceCents,
+    extras: CARE_INVOICE_EXTRAS,
+    prestations: resolveCarePrestations(meta?.care_prestations),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -38,6 +44,7 @@ export async function POST(req: NextRequest) {
     amount?: string;
     sessionPrice?: string;
     extras?: string[];
+    lines?: Array<{ id?: string; label?: string; amount?: string; cents?: number }>;
     designation?: string;
     address_line?: string;
     postal_code?: string;
@@ -94,19 +101,35 @@ export async function POST(req: NextRequest) {
   }
 
   const expertRow = await gate.db.from("experts").select("references").eq("id", gate.expertId).maybeSingle();
-  const savedSession = parseRegistrationMeta(expertRow.data?.references)?.care_session_price_cents ?? 0;
-  const incomingSession = eurosToCents(body?.sessionPrice ?? body?.amount ?? "");
-  const sessionPriceCents = incomingSession ?? savedSession;
-  if (incomingSession != null) {
-    const references = mergeRegistrationMeta(expertRow.data?.references, { care_session_price_cents: incomingSession });
-    await gate.db.from("experts").update({ references }).eq("id", gate.expertId);
+  const meta = parseRegistrationMeta(expertRow.data?.references);
+  const catalog = resolveCarePrestations(meta?.care_prestations);
+  const incomingLines = Array.isArray(body?.lines) ? body.lines : [];
+  let lines: CareInvoiceLine[] = incomingLines
+    .map((row) => {
+      const fromCatalog = row.id ? catalog.find((item) => item.id === row.id) : null;
+      const label = row.label?.trim() || fromCatalog?.label || "Prestation";
+      const cents =
+        typeof row.cents === "number" && Number.isFinite(row.cents)
+          ? Math.max(0, Math.round(row.cents))
+          : eurosToCents(String(row.amount ?? "")) ?? 0;
+      return { label, cents };
+    })
+    .filter((line) => line.cents > 0);
+  if (!lines.length) {
+    const savedSession = meta?.care_session_price_cents ?? 0;
+    const incomingSession = eurosToCents(body?.sessionPrice ?? body?.amount ?? "");
+    const sessionPriceCents = incomingSession ?? savedSession;
+    if (incomingSession != null) {
+      const references = mergeRegistrationMeta(expertRow.data?.references, { care_session_price_cents: incomingSession });
+      await gate.db.from("experts").update({ references }).eq("id", gate.expertId);
+    }
+    const extraSlugs = Array.isArray(body?.extras) ? body.extras : [];
+    const extras = CARE_INVOICE_EXTRAS.filter((item) => extraSlugs.includes(item.slug));
+    lines = [
+      { label: "Séance d'accompagnement", cents: sessionPriceCents },
+      ...extras.map((item) => ({ label: item.label, cents: item.cents })),
+    ].filter((line) => line.cents > 0);
   }
-  const extraSlugs = Array.isArray(body?.extras) ? body.extras : [];
-  const extras = CARE_INVOICE_EXTRAS.filter((item) => extraSlugs.includes(item.slug));
-  const lines: CareInvoiceLine[] = [
-    { label: "Séance individuelle", cents: sessionPriceCents },
-    ...extras.map((item) => ({ label: item.label, cents: item.cents })),
-  ].filter((line) => line.cents > 0);
   if (!lines.length) {
     return NextResponse.json({ error: "Indiquez le prix de la séance ou un supplément." }, { status: 400 });
   }

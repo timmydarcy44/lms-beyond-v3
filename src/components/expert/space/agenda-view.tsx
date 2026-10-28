@@ -15,6 +15,7 @@ export type AgendaPatient = { id: string; first_name: string; last_name: string;
 type Draft = { date: Date; start: string; end: string };
 
 const HOUR_PX = 52;
+const SNAP_MINUTES = 15;
 const DAY_MINUTES = 24 * 60;
 const GRID_HEIGHT = 24 * HOUR_PX;
 
@@ -286,14 +287,15 @@ function AgendaGrid({
   }, [days.length, days[0]?.toISOString()]);
 
   const resolvePoint = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const root = event.currentTarget;
-    const rect = root.getBoundingClientRect();
+    const grid = event.currentTarget;
+    const rect = grid.getBoundingClientRect();
     const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top + root.scrollTop;
+    const y = event.clientY - rect.top;
     const labelWidth = 56;
-    const colWidth = Math.max(1, (root.clientWidth - labelWidth) / days.length);
+    const colWidth = Math.max(1, (grid.clientWidth - labelWidth) / days.length);
     const dayIndex = Math.max(0, Math.min(days.length - 1, Math.floor((x - labelWidth) / colWidth)));
-    const minutes = Math.max(0, Math.min(DAY_MINUTES - 30, Math.floor(y / HOUR_PX * 60 / 30) * 30));
+    const raw = (y / HOUR_PX) * 60;
+    const minutes = Math.max(0, Math.min(DAY_MINUTES - SNAP_MINUTES, Math.round(raw / SNAP_MINUTES) * SNAP_MINUTES));
     return { dayIndex, minutes };
   };
 
@@ -301,27 +303,8 @@ function AgendaGrid({
     <div
       ref={scroller}
       className="relative mt-4 max-h-[70vh] overflow-auto rounded-[22px] border border-[#1E2130]"
-      onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest("[data-slot]")) return;
-        event.currentTarget.setPointerCapture(event.pointerId);
-        const point = resolvePoint(event);
-        setDrag({ day: point.dayIndex, from: point.minutes, to: point.minutes + 30 });
-      }}
-      onPointerMove={(event) => {
-        if (!drag || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-        const point = resolvePoint(event);
-        setDrag({ ...drag, day: drag.day, to: point.minutes + 30 });
-      }}
-      onPointerUp={(event) => {
-        if (!drag) return;
-        event.currentTarget.releasePointerCapture(event.pointerId);
-        const from = Math.min(drag.from, drag.to - 30);
-        const to = Math.max(drag.from + 30, drag.to);
-        onSelect({ date: days[drag.day] ?? days[0], start: minutesToTime(from), end: minutesToTime(to) });
-        setDrag(null);
-      }}
     >
-      <div className="sticky top-0 z-20 grid border-b border-[#1E2130] bg-[#12141A]" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` }}>
+      <div data-agenda-head className="sticky top-0 z-20 grid border-b border-[#1E2130] bg-[#12141A]" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` }}>
         <div />
         {days.map((day) => (
           <div key={day.toISOString()} className="px-2 py-2 text-center text-xs font-extrabold text-[#B5BAC6]">
@@ -329,7 +312,33 @@ function AgendaGrid({
           </div>
         ))}
       </div>
-      <div className="relative" style={{ height: GRID_HEIGHT, minWidth: days.length > 1 ? 640 : undefined }}>
+      <div
+        data-agenda-grid
+        className="relative touch-none select-none"
+        style={{ height: GRID_HEIGHT, minWidth: days.length > 1 ? 640 : undefined }}
+        onPointerDown={(event) => {
+          if ((event.target as HTMLElement).closest("[data-slot]")) return;
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          const point = resolvePoint(event);
+          setDrag({ day: point.dayIndex, from: point.minutes, to: point.minutes + SNAP_MINUTES });
+        }}
+        onPointerMove={(event) => {
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+          const point = resolvePoint(event);
+          setDrag((current) => (current ? { ...current, to: point.minutes + SNAP_MINUTES } : current));
+        }}
+        onPointerUp={(event) => {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+          setDrag((current) => {
+            if (!current) return current;
+            const from = Math.min(current.from, current.to - SNAP_MINUTES);
+            const to = Math.max(current.from + SNAP_MINUTES, current.to);
+            onSelect({ date: days[current.day] ?? days[0], start: minutesToTime(from), end: minutesToTime(to) });
+            return null;
+          });
+        }}
+      >
         <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` }}>
           <div className="relative">
             {Array.from({ length: 25 }, (_, hour) => (

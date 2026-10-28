@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -62,6 +61,8 @@ type Props = {
   restricted?: boolean;
   formations?: ExpertShopFormation[];
   pole?: "formation" | "care" | null;
+  careOnly?: boolean;
+  appointments?: { thisMonth: number; upcoming: number };
   revenue?: {
     totalCents: number;
     paidCents: number;
@@ -72,13 +73,6 @@ type Props = {
 
 const CARD = "rounded-3xl border border-white/[0.07] bg-[#10173a]/70 backdrop-blur-xl";
 
-function firstNameOnly(first?: string | null) {
-  return (first ?? "").trim() || "Formateur";
-}
-
-function displayName(first?: string | null, last?: string | null) {
-  return [first, last].filter(Boolean).join(" ").trim() || "Expert Byound";
-}
 
 function missionBudget(meta: Record<string, unknown> | null): string {
   const budget = meta?.budget ?? meta?.daily_rate;
@@ -160,7 +154,7 @@ function EmptyRow({ icon: Icon, children }: { icon: typeof Inbox; children: Reac
   );
 }
 
-export function ExpertCockpitDashboard({ restricted = false, formations = [], pole = null, revenue }: Props) {
+export function ExpertCockpitDashboard({ restricted = false, formations = [], pole = null, careOnly = false, appointments, revenue }: Props) {
   const { expert } = useExpertAccess();
   const supabase = useSupabase();
   const router = useRouter();
@@ -209,9 +203,6 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
   }, [moreOpen]);
 
   const photo = expert.avatar_url?.trim() || expert.photo_url?.trim() || meta?.photo_url?.trim() || null;
-  const firstName = firstNameOnly(expert.first_name);
-  const name = displayName(expert.first_name, expert.last_name);
-  const headline = expert.headline?.trim() || "Complétez votre titre dans Mon profil";
   const certified = isEdgeCertified(expert);
   const certProgress = expert.certification_status === "training" ? 42 : certified ? 100 : expert.wants_certification ? 8 : 0;
   const certLabel = byoundCertificationLabel(expert);
@@ -291,24 +282,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
 
       <main className="relative min-h-screen">
         <div className="mx-auto max-w-[1160px] px-4 pb-20 pt-4 lg:pr-8">
-          {/* Top bar */}
-          <div className="flex items-center justify-between gap-4 py-2">
-            <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-white text-[#070b1f]">
-                {photo ? (
-                  <Image src={photo} alt={name} fill className="object-cover" sizes="40px" unoptimized />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-sm font-semibold">
-                    {firstName[0]?.toUpperCase() ?? "E"}
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[15px] font-semibold leading-tight">Bonjour {firstName}</p>
-                <p className="truncate text-xs text-white/50">{headline}</p>
-              </div>
-            </div>
-
+          <div className="flex items-center justify-end gap-4 py-2">
             <div className="flex items-center gap-2">
               <form
                 className="relative hidden md:block"
@@ -384,18 +358,30 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
               <QuickAction icon={Plus} label="Compléter profil" href="/dashboard/expert/profile" />
               <QuickAction icon={CalendarDays} label="Agenda" href="/dashboard/expert/agenda" disabled={restricted} />
               <QuickAction icon={FileText} label="Documents" href="/dashboard/expert/documents" />
-              <QuickAction icon={GraduationCap} label="Formations" href="/dashboard/expert/formations" />
+              {careOnly ? (
+                <QuickAction icon={Briefcase} label="Prestations" href="/dashboard/expert/prestations" />
+              ) : (
+                <QuickAction icon={GraduationCap} label="Formations" href="/dashboard/expert/formations" />
+              )}
               <div ref={moreRef} className="relative">
                 <QuickAction icon={MoreHorizontal} label="Plus" onClick={() => setMoreOpen((v) => !v)} />
                 {moreOpen ? (
                   <div className="absolute left-1/2 top-[88px] z-40 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#121a40] py-1.5 text-left shadow-2xl">
-                    {[
-                      { label: "Formations", href: "/dashboard/expert/formations", icon: GraduationCap },
-                      { label: "Mes résultats", href: "/dashboard/expert/resultats", icon: Award },
-                      { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
-                      { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
-                      { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
-                    ].map(({ label, href, icon: Icon }) => (
+                    {(careOnly
+                      ? [
+                          { label: "Prestations", href: "/dashboard/expert/prestations", icon: Briefcase },
+                          { label: "Facturation", href: "/dashboard/expert/facturation", icon: FileText },
+                          { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
+                          { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
+                        ]
+                      : [
+                          { label: "Formations", href: "/dashboard/expert/formations", icon: GraduationCap },
+                          { label: "Mes résultats", href: "/dashboard/expert/resultats", icon: Award },
+                          { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
+                          { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
+                          { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
+                        ]
+                    ).map(({ label, href, icon: Icon }) => (
                       <Link
                         key={label}
                         href={href}
@@ -438,9 +424,19 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
                 </p>
               </div>
             </Link>
-            <StatTile label="Missions" value={String(missions.length)} />
-            <StatTile label="Interventions à venir" value={String(upcoming.length)} />
-            <StatTile label="Note moyenne" value={avgRating} />
+            {careOnly ? (
+              <>
+                <StatTile label="Rendez-vous ce mois" value={String(appointments?.thisMonth ?? 0)} />
+                <StatTile label="Rendez-vous à venir" value={String(appointments?.upcoming ?? 0)} />
+                <StatTile label="Note moyenne" value={avgRating} />
+              </>
+            ) : (
+              <>
+                <StatTile label="Missions" value={String(missions.length)} />
+                <StatTile label="Interventions à venir" value={String(upcoming.length)} />
+                <StatTile label="Note moyenne" value={avgRating} />
+              </>
+            )}
           </section>
 
           {/* Agenda + revenus / certified */}
@@ -501,6 +497,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
                 </Link>
               </div>
 
+              {careOnly ? null : (
               <div className={cn(CARD, "p-5")}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -524,9 +521,11 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
                   {certified ? "Voir ma certification" : certProgress > 0 ? "Continuer la certification" : "Démarrer la certification"}
                 </Link>
               </div>
+              )}
             </div>
           </section>
 
+          {careOnly ? null : (
           <section className={cn(CARD, "mt-3 p-5")}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-lg font-semibold">Formations</p>
@@ -562,8 +561,9 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
               </div>
             )}
           </section>
+          )}
 
-          {/* Demandes + prochaines missions */}
+          {careOnly ? null : (
           <section className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className={cn(CARD, "p-5")}>
               <div className="mb-4 flex items-center justify-between">
@@ -668,6 +668,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [], po
               )}
             </div>
           </section>
+          )}
         </div>
       </main>
     </div>

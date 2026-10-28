@@ -51,8 +51,4 @@ export function getCareQuestionnaire(slug: string): JessicaQuestionnaireDef | nu
   };
 }
 
-export const CARE_INVOICE_EXTRAS = [
-  { slug: "mai", label: "Test MAI", cents: 5000 },
-  { slug: "soft-skills", label: "Test Soft skills", cents: 19000 },
-  { slug: "stress-academique", label: "Test de stress académique", cents: 5000 },
-] as const;
+export { CARE_INVOICE_EXTRAS } from "@/lib/expert/care-prestations";

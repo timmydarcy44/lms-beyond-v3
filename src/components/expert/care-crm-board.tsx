@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { BYOUND_CARE_TESTS, CARE_INVOICE_EXTRAS } from "@/lib/expert/care-tests";
+import { BYOUND_CARE_TESTS } from "@/lib/expert/care-tests";
+import { DEFAULT_CARE_PRESTATIONS, type CarePrestation } from "@/lib/expert/care-prestations";
 import { CARE_FOLLOW_UPS, followUpLabel, parseFollowUp, type CareFollowUp, validateCareClient } from "@/lib/expert/care-client-fields";
 import { centsToInput } from "@/lib/entreprise/offer-conditions";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
@@ -71,6 +72,9 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [testSlug, setTestSlug] = useState(BYOUND_CARE_TESTS[0].slug);
   const [sessionPrice, setSessionPrice] = useState("");
   const [extras, setExtras] = useState<string[]>([]);
+  const [prestations, setPrestations] = useState<CarePrestation[]>(DEFAULT_CARE_PRESTATIONS);
+  const [invoiceLines, setInvoiceLines] = useState<Array<{ key: string; id: string; label: string; price: string }>>([]);
+  const [addPrestationId, setAddPrestationId] = useState("");
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -87,6 +91,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
     setInvoices(i.invoices ?? []);
     setResponses(r.responses ?? []);
     setHint(c.error || t.error || i.error || r.error || null);
+    if (Array.isArray(i.prestations) && i.prestations.length) setPrestations(i.prestations);
     if (typeof i.sessionPriceCents === "number") setSessionPrice(centsToInput(i.sessionPriceCents));
     const nextClientId = clientId || c.clients?.[0]?.id || "";
     if (!clientId && nextClientId) setClientId(nextClientId);
@@ -198,6 +203,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
           clientId,
           sessionPrice,
           extras,
+          lines: invoiceLines.map((line) => ({ id: line.id, label: line.label, amount: line.price })),
           address_line: invoiceAddress,
           postal_code: invoicePostal,
           city: invoiceCity,
@@ -217,17 +223,15 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
     }
   };
 
-  const extraTotal = extras.reduce((sum, slug) => {
-    const item = CARE_INVOICE_EXTRAS.find((extra) => extra.slug === slug);
-    return sum + (item?.cents ?? 0);
-  }, 0);
-  const sessionCents = Math.round((Number(sessionPrice.replace(",", ".")) || 0) * 100);
-  const invoiceTotal = (sessionCents + extraTotal) / 100;
   const selectedClient = clients.find((item) => item.id === clientId) ?? null;
-  const previewLines = [
-    { label: "Séance individuelle", cents: sessionCents },
-    ...CARE_INVOICE_EXTRAS.filter((item) => extras.includes(item.slug)).map((item) => ({ label: item.label, cents: item.cents })),
-  ].filter((line) => line.cents > 0);
+  const previewLines = invoiceLines
+    .map((line) => ({
+      key: line.key,
+      label: line.label,
+      cents: Math.round((Number(line.price.replace(",", ".")) || 0) * 100),
+    }))
+    .filter((line) => line.cents > 0);
+  const invoiceTotal = previewLines.reduce((sum, line) => sum + line.cents, 0) / 100;
 
   const titles: Record<typeof mode, { title: string; subtitle: string }> = {
     crm: { title: "CRM", subtitle: "Identité du client, adresse, téléphone, et enfants suivis le cas échéant." },
@@ -468,38 +472,76 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
             </div>
           ) : null}
           <div className="rounded-[24px] bg-[#12141A] p-5">
-            <p className="text-sm font-extrabold">Séance individuelle</p>
-            <p className="mt-1 text-xs text-[#9096A3]">Votre tarif est mémorisé. Il ne change que si vous le modifiez.</p>
-            <input
-              className={`${field} mt-3`}
-              placeholder="Prix de la séance (€)"
-              value={sessionPrice}
-              onChange={(event) => setSessionPrice(event.target.value)}
-              inputMode="decimal"
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-extrabold">Suppléments</p>
-            {CARE_INVOICE_EXTRAS.map((extra) => {
-              const checked = extras.includes(extra.slug);
-              return (
-                <label key={extra.slug} className="flex cursor-pointer items-center justify-between rounded-[24px] bg-[#12141A] px-4 py-3 text-sm">
-                  <span>
-                    <span className="font-extrabold">{extra.label}</span>
-                    <span className="text-[#B5BAC6]"> + {(extra.cents / 100).toLocaleString("fr-FR")} €</span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() =>
-                      setExtras((current) =>
-                        checked ? current.filter((slug) => slug !== extra.slug) : [...current, extra.slug],
-                      )
-                    }
-                  />
-                </label>
-              );
-            })}
+            <p className="text-sm font-extrabold">Prestations</p>
+            <p className="mt-1 text-xs text-[#9096A3]">Les tarifs de « Mes prestations » sont préremplis. Vous pouvez les modifier pour cette facture.</p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <select className={selectField} value={addPrestationId} onChange={(event) => setAddPrestationId(event.target.value)} aria-label="Ajouter une prestation">
+                <option value="">Choisir une prestation</option>
+                {prestations.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                    {item.cents == null ? " · prix libre" : ` · ${(item.cents / 100).toLocaleString("fr-FR")} €`}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="h-12 shrink-0 rounded-full bg-[#F4F5F7] px-5 text-sm font-extrabold text-[#07080B]"
+                onClick={() => {
+                  const item = prestations.find((row) => row.id === addPrestationId);
+                  if (!item) return;
+                  setInvoiceLines((current) => [
+                    ...current,
+                    {
+                      key: `${item.id}-${Date.now()}`,
+                      id: item.id,
+                      label: item.label,
+                      price: item.cents == null ? "" : centsToInput(item.cents),
+                    },
+                  ]);
+                  setAddPrestationId("");
+                }}
+              >
+                Ajouter
+              </button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {invoiceLines.length === 0 ? (
+                <p className="text-sm text-[#9096A3]">Ajoutez au moins une prestation.</p>
+              ) : (
+                invoiceLines.map((line) => (
+                  <div key={line.key} className="grid gap-2 rounded-2xl bg-[#0B0C10] p-3 sm:grid-cols-[1fr_7rem_auto]">
+                    <input
+                      className={field}
+                      value={line.label}
+                      onChange={(event) =>
+                        setInvoiceLines((current) =>
+                          current.map((row) => (row.key === line.key ? { ...row, label: event.target.value } : row)),
+                        )
+                      }
+                    />
+                    <input
+                      className={field}
+                      value={line.price}
+                      inputMode="decimal"
+                      placeholder="€"
+                      onChange={(event) =>
+                        setInvoiceLines((current) =>
+                          current.map((row) => (row.key === line.key ? { ...row, price: event.target.value } : row)),
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-[#9096A3]"
+                      onClick={() => setInvoiceLines((current) => current.filter((row) => row.key !== line.key))}
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
           <div className="rounded-[24px] border border-[#1E2130] bg-[#0B0C10] p-5 text-sm">
             <p className="font-extrabold">Aperçu de la facture</p>
@@ -508,7 +550,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
             ) : (
               <ul className="mt-3 space-y-2">
                 {previewLines.map((line) => (
-                  <li key={line.label} className="flex justify-between gap-3">
+                  <li key={line.key} className="flex justify-between gap-3">
                     <span>{line.label}</span>
                     <span className="tabular-nums">{(line.cents / 100).toLocaleString("fr-FR")} €</span>
                   </li>

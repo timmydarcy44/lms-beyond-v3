@@ -103,6 +103,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "IA", href: "/super/ia" },
+  { label: "SEO", href: "/super/seo" },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },
   { label: "Statistiques", href: "/super/statistiques" },
   { label: "Paramètres", href: "/super/parametres" },
@@ -162,6 +163,7 @@ export function SuperAdminHeaderApple() {
             "Business",
             "Utilisateurs",
             "IA",
+            "SEO",
           ];
           return !hiddenLabels.includes(item.label);
         }),

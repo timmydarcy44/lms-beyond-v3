@@ -24,15 +24,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const hostOnly = bareHostname(hostname);
   if ((hostOnly === "edgebs.fr" || hostOnly === "byound.fr") && !isLocalhost) {
-    return {
-      metadataBase: new URL(BYOUND_PUBLIC_ORIGIN),
-      title: "Byound — Développons les compétences qui feront la différence demain",
-      description:
-        "Parce que les organismes de formation doivent évoluer. Identifier, former et valoriser les compétences — avec des résultats mesurables.",
-      alternates: {
-        canonical: `${BYOUND_PUBLIC_ORIGIN}/`,
-      },
-    };
+    const { loadSeoPage, toNextMetadata } = await import("@/lib/seo/byound-seo");
+    return toNextMetadata(await loadSeoPage("/"));
   }
   if ((tenant?.id === "jessica-contentin" || isJessicaContentinMarketingHostname(hostname)) && !isLocalhost) {
     return {

@@ -48,6 +48,7 @@ import {
   Cone,
   CircleCheck,
   FileText,
+  Gamepad2,
   Headphones,
   PlayCircle,
   X,
@@ -1885,22 +1886,24 @@ export function LessonPlayView({
           </div>}
 
           {isInteractiveGame ? (
-            <div className={neo ? "lesson-reader__game" : "mb-6 flex min-h-[420px] flex-col items-start justify-center gap-6 rounded-3xl border border-slate-200 bg-[#0B1020] px-8 py-12 text-white sm:px-12"}>
-              <p className={neo ? "lesson-reader__game-tag" : "text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50"}>
-                {neo ? "Jeu interactif · plein écran" : "Jeu interactif"}
+            <div className={neo ? "lesson-reader__game" : "relative mb-6 overflow-hidden rounded-[32px] bg-[#0B1020] px-8 py-12 text-white sm:px-12"}>
+              <div className={neo ? "lesson-reader__game-art" : "pointer-events-none absolute -right-8 -top-10 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl"} aria-hidden />
+              <p className={neo ? "lesson-reader__game-tag" : "inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70"}>
+                <Gamepad2 className="h-3.5 w-3.5" aria-hidden />
+                Jeu interactif
               </p>
-              <div className="max-w-xl space-y-3">
+              <div className={neo ? "lesson-reader__game-copy" : "relative mt-5 max-w-xl space-y-3"}>
                 <h3 className={neo ? undefined : "text-3xl font-black tracking-tight sm:text-4xl"}>{activeLesson.title || "Jeu"}</h3>
                 <p className={neo ? undefined : "text-sm leading-relaxed text-white/70"}>
                   {neo
-                    ? "Tu peux quitter le jeu à tout moment pour revenir au chapitre."
+                    ? "Mets en pratique ce que tu viens d’apprendre. Tu peux quitter le jeu à tout moment pour revenir au chapitre."
                     : "Le jeu s'ouvre en plein écran. Vous pouvez le quitter à tout moment pour revenir au chapitre."}
                 </p>
               </div>
               <Button
                 type="button"
                 onClick={() => setGameOpen(true)}
-                className={neo ? "lesson-reader__play" : "h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"}
+                className={neo ? "lesson-reader__play" : "relative mt-8 h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"}
               >
                 <PlayCircle className="mr-2 h-4 w-4" aria-hidden />
                 {neo ? "Lancer le jeu" : "Commencer le jeu"}
@@ -2246,8 +2249,7 @@ export function LessonPlayView({
                 </div>
               </div>
             </LessonSmartAssist>
-          ) : // Média déjà affiché au-dessus (vidéo / audio) : ne pas dupliquer un bloc aspect-video « finalisation »
-          isMediaContent && normalizedVideoSrc ? null : (
+          ) : isInteractiveGame || (isMediaContent && normalizedVideoSrc) ? null : (
             <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-center text-slate-600">
               <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
                 <Cone className="h-6 w-6 text-amber-500" aria-hidden="true" />

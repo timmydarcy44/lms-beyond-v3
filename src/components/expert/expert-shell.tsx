@@ -8,6 +8,7 @@ import { Manrope } from "next/font/google";
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
+  Briefcase,
   CalendarDays,
   ChevronDown,
   Euro,
@@ -21,6 +22,8 @@ import {
   User2,
   X,
 } from "lucide-react";
+
+import { DEFAULT_CARE_PRESTATIONS } from "@/lib/expert/care-prestations";
 
 import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
 import { setDashboardSpace } from "@/lib/dashboard/space";
@@ -191,6 +194,7 @@ export function ExpertShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState({ missions: 0, documents: 0 });
+  const [prestations, setPrestations] = useState(DEFAULT_CARE_PRESTATIONS);
 
   useEffect(() => {
     setDashboardSpace("expert");
@@ -224,17 +228,50 @@ export function ExpertShell({
 
   const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
   const careOnly = hasCare && !memberships.some((item) => item.pole === "formation" && item.status === "active");
+
+  useEffect(() => {
+    if (!hasCare) return;
+    let cancelled = false;
+    void fetch("/api/expert/care/prestations", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (cancelled || !Array.isArray(json?.prestations)) return;
+        setPrestations(json.prestations);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [hasCare, pathname]);
   const adminChildren: NavChild[] = [{ label: "Mes documents", href: "/dashboard/expert/documents" }];
   if (hasCare) {
     adminChildren.push(
       { label: "CRM", href: "/dashboard/expert/dossiers" },
       { label: "Byound tests", href: "/dashboard/expert/tests" },
+      { label: "Facturation", href: "/dashboard/expert/facturation" },
     );
   }
   const items: NavItem[] = [
     { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard },
     { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2 },
     { label: "Agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
+  ];
+  if (hasCare) {
+    items.push({
+      label: "Mes prestations",
+      href: "/dashboard/expert/prestations",
+      icon: Briefcase,
+      locked: restricted,
+      children: [
+        ...prestations.map((item) => ({
+          label: item.label,
+          href: `/dashboard/expert/prestations#${item.id}`,
+        })),
+        { label: "Ajouter une prestation", href: "/dashboard/expert/prestations?nouveau=1" },
+      ],
+    });
+  }
+  items.push(
     { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
     {
       label: "Gestion admin",
@@ -243,7 +280,7 @@ export function ExpertShell({
       badge: counts.documents,
       children: adminChildren,
     },
-  ];
+  );
   if (!careOnly) {
     items.push(
       {

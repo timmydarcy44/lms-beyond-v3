@@ -121,7 +121,11 @@ export async function loadCareProfileBySlug(
 }
 
 export async function loadPublishedCareProfile(slug: string): Promise<CarePublicProfile | null> {
-  const profile = await loadCareProfileBySlug(slug);
-  if (!profile || !careCompleteness(profile).canPublish) return null;
-  return profile;
+  try {
+    const profile = await loadCareProfileBySlug(slug);
+    if (!profile || !careCompleteness(profile).canPublish) return null;
+    return profile;
+  } catch {
+    return null;
+  }
 }

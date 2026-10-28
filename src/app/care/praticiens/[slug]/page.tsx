@@ -16,8 +16,9 @@ import {
   loadPublishedCareProfile,
   loadPublishedCareSlugs,
 } from "@/lib/care/profile";
+import { headers } from "next/headers";
 import { getSession } from "@/lib/auth/session";
-import { careAbsoluteUrl } from "@/lib/care/host";
+import { careAbsoluteUrl, isByoundCareHostname } from "@/lib/care/host";
 import { carePageMetadata } from "@/lib/care/seo";
 
 export const revalidate = 600;
@@ -52,13 +53,22 @@ function initials(name: string) {
     .join("");
 }
 
+async function loadOwnerPreview(slug: string) {
+  try {
+    const headerList = await headers();
+    const host = headerList.get("x-forwarded-host") || headerList.get("host");
+    if (isByoundCareHostname(host)) return null;
+    const session = await getSession();
+    if (!session?.id) return null;
+    return loadCareProfileBySlug(slug, { viewerId: session.id });
+  } catch {
+    return null;
+  }
+}
+
 export default async function CarePraticienPage({ params }: Params) {
   const { slug } = await params;
-  let profile = await loadPublishedCareProfile(slug);
-  if (!profile) {
-    const session = await getSession();
-    profile = await loadCareProfileBySlug(slug, { viewerId: session?.id });
-  }
+  const profile = (await loadPublishedCareProfile(slug)) ?? (await loadOwnerPreview(slug));
   if (!profile) notFound();
   const preview = !profile.published || !profile.is_care;
   const certified = profile.badges.length > 0;
@@ -190,7 +200,7 @@ export default async function CarePraticienPage({ params }: Params) {
                       )}
                       <h3>{badge.name}</h3>
                       <p className="care-muted">{badge.issuer}</p>
-                      {badge.awarded_at ? (
+                      {badge.awarded_at && !Number.isNaN(Date.parse(badge.awarded_at)) ? (
                         <p className="care-muted">
                           {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeZone: "Europe/Paris" }).format(
                             new Date(badge.awarded_at),

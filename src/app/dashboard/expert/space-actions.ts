@@ -347,23 +347,33 @@ export async function signExpertDocument(id: string) {
   return { ok: true };
 }
 
+async function resolveCareExpertId(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, sessionId: string, email?: string | null) {
+  const { data: byId } = await db.from("experts").select("id").eq("id", sessionId).maybeSingle();
+  if (byId?.id) return String(byId.id);
+  const normalized = String(email ?? "").trim().toLowerCase();
+  if (!normalized) return sessionId;
+  const { data: byEmail } = await db.from("experts").select("id").eq("email", normalized).maybeSingle();
+  return byEmail?.id ? String(byEmail.id) : sessionId;
+}
+
 export async function getCareListingSettings(): Promise<CareListingSettings | null> {
   const session = await getSession();
   const db = getServiceRoleClient();
   if (!session?.id || !db) return null;
+  const expertId = await resolveCareExpertId(db, session.id, session.email);
   const [{ data: expert }, { data }] = await Promise.all([
-    db.from("experts").select("is_care_expert").eq("id", session.id).maybeSingle(),
+    db.from("experts").select("is_care_expert").eq("id", expertId).maybeSingle(),
     db
       .from("care_profiles")
       .select("published, slug, tagline, approach, city, address, publics, domains, cancellation_hours, payment_methods, is_care")
-      .eq("expert_id", session.id)
+      .eq("expert_id", expertId)
       .maybeSingle(),
   ]);
   if (!expert?.is_care_expert && !data) {
     const { data: membership } = await db
       .from("expert_memberships")
       .select("id")
-      .eq("expert_id", session.id)
+      .eq("expert_id", expertId)
       .eq("pole", "care")
       .eq("status", "active")
       .maybeSingle();
@@ -400,31 +410,41 @@ export async function getCareListingSettings(): Promise<CareListingSettings | nu
 export async function syncCareProfileFromExpertAccount(listing?: Partial<CareListingSettings>) {
   const session = await getSession();
   const db = getServiceRoleClient();
-  if (!session?.id || !db) return { ok: false as const };
-  const slug = await ensureCareProfile(db, session.id);
+  if (!session?.id || !db) return { ok: false as const, error: "Connexion requise" };
+  const expertId = await resolveCareExpertId(db, session.id, session.email);
+  const slug = await ensureCareProfile(db, expertId);
   const { data: expert } = await db
     .from("experts")
     .select("first_name, last_name, headline, bio, bio_long, avatar_url, photo_url, formats_supported, regions, specialties")
-    .eq("id", session.id)
+    .eq("id", expertId)
     .maybeSingle();
   const { data: current } = await db
     .from("care_profiles")
     .select("published, slug, tagline, approach, city, address, publics, domains, cancellation_hours, payment_methods")
-    .eq("expert_id", session.id)
+    .eq("expert_id", expertId)
     .maybeSingle();
   const display = [expert?.first_name, expert?.last_name].filter(Boolean).join(" ").trim() || "Praticien";
   const formats = Array.isArray(expert?.formats_supported) ? expert.formats_supported.map(String) : [];
   const regions = Array.isArray(expert?.regions) ? expert.regions.map(String) : [];
   const specialties = Array.isArray(expert?.specialties) ? expert.specialties.map(String) : [];
-  const domains = (listing?.careDomains ?? (current?.domains as string[] | undefined) ?? []).filter(Boolean);
+  const published = listing?.published ?? current?.published === true;
+  const domains = (listing?.careDomains ?? (current?.domains as string[] | undefined) ?? []).filter((item): item is string =>
+    CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number]),
+  );
+  if (!domains.length) {
+    domains.push(
+      ...specialties.filter((item) => CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number])),
+    );
+  }
+  if (published && !domains.length) domains.push("famille");
   const patch = {
     is_care: true,
-    published: listing?.published ?? current?.published === true,
+    published,
     display_name: display,
     title: String(expert?.headline ?? "").trim(),
     headline: String(expert?.headline ?? "").trim(),
     bio: String(expert?.bio ?? expert?.bio_long ?? "").trim(),
-    tagline: listing?.tagline ?? String(current?.tagline ?? ""),
+    tagline: (listing?.tagline ?? String(current?.tagline ?? "")).slice(0, 140),
     approach: listing?.approach ?? String(current?.approach ?? expert?.bio_long ?? ""),
     avatar_url: String(expert?.avatar_url ?? expert?.photo_url ?? "").trim() || null,
     city: (listing?.city ?? String(current?.city ?? regions[0] ?? "")).trim() || null,
@@ -437,11 +457,11 @@ export async function syncCareProfileFromExpertAccount(listing?: Partial<CareLis
     cancellation_hours: listing?.cancellationHours ?? (Number(current?.cancellation_hours) || 24),
     updated_at: new Date().toISOString(),
   };
-  if (!patch.domains.length) {
-    patch.domains = specialties.filter((item) => CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number]));
-  }
-  await db.from("care_profiles").update(patch).eq("expert_id", session.id);
+  const { error } = await db.from("care_profiles").update(patch).eq("expert_id", expertId);
+  if (error) return { ok: false as const, error: error.message };
   revalidateCarePublicProfile(String(current?.slug ?? slug));
+  refresh();
+  revalidatePath("/care/praticiens");
   return { ok: true as const, slug: String(current?.slug ?? slug) };
 }
 

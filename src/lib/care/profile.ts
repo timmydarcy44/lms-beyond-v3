@@ -49,9 +49,11 @@ async function resolveLiveCareRow(db: NonNullable<ReturnType<typeof getServiceRo
   });
   if (!match?.id) return current;
   await ensureCareProfile(db, String(match.id));
+  const { data: existing } = await db.from("care_profiles").select("domains").eq("expert_id", match.id).maybeSingle();
+  const domains = Array.isArray(existing?.domains) && existing.domains.length ? existing.domains : ["famille"];
   await db
     .from("care_profiles")
-    .update({ published: true, is_care: true, updated_at: new Date().toISOString() })
+    .update({ published: true, is_care: true, domains, updated_at: new Date().toISOString() })
     .eq("expert_id", match.id);
   const { data: live } = await db.from("care_profiles").select("*").eq("expert_id", match.id).maybeSingle();
   return live ?? current;

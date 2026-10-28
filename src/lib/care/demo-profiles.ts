@@ -1,4 +1,3 @@
-import { isCarePlaceholderText } from "@/lib/care/profile-format";
 import { slugifyCareName } from "@/lib/care/completeness";
 
 /** Compte seedé par la migration Care — ce n'est pas un praticien réel. */
@@ -23,11 +22,7 @@ export function isPlaceholderCareRow(row: {
   city?: string | null;
   expert_id?: string | null;
 }) {
-  if (row.expert_id && isCareDemoExpertId(String(row.expert_id))) return true;
-  const title = isCarePlaceholderText(row.title);
-  const tagline = isCarePlaceholderText(row.tagline);
-  const city = isCarePlaceholderText(row.city);
-  return title && tagline && city;
+  return Boolean(row.expert_id && isCareDemoExpertId(String(row.expert_id)));
 }
 
 export function desiredCareSlug(displayName: string) {

@@ -264,7 +264,7 @@ export function ExpertProfileEditor({ careListing = null }: { careListing?: Care
         ({ error } = await supabase.from("experts").update(fallback).eq("id", ctxExpert.id));
       }
       if (error) throw error;
-      await syncCareProfileFromExpertAccount(
+      const synced = await syncCareProfileFromExpertAccount(
         careListing
           ? {
               published: carePublished,
@@ -279,11 +279,18 @@ export function ExpertProfileEditor({ careListing = null }: { careListing?: Care
             }
           : undefined,
       );
+      if (synced && "ok" in synced && synced.ok === false && "error" in synced && synced.error) {
+        throw new Error(synced.error);
+      }
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (err) {
       setSaveState("idle");
-      toast.error("Impossible d'enregistrer les modifications.");
+      const message =
+        err && typeof err === "object" && "message" in err && String((err as { message?: string }).message).trim()
+          ? String((err as { message: string }).message)
+          : "Impossible d'enregistrer les modifications.";
+      toast.error(message);
     }
   }, [
     audiences,

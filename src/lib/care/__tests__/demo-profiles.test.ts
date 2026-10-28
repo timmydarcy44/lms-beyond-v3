@@ -12,6 +12,17 @@ describe("isPlaceholderCareRow", () => {
       }),
     ).toBe(true);
   });
+
+  it("does not hide a real published expert with empty Care fields", () => {
+    expect(
+      isPlaceholderCareRow({
+        expert_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        title: "",
+        tagline: "",
+        city: "",
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("desiredCareSlug", () => {

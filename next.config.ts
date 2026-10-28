@@ -111,16 +111,30 @@ const nextConfig: NextConfig = {
         has: [{ type: "host" as const, value: host }],
       },
     ]);
+    const careHosts = ["byoundcare.fr", "www.byoundcare.fr"] as const;
+    const careSeoRewrites = careHosts.flatMap((host) => [
+      {
+        source: "/sitemap.xml",
+        destination: "/care/sitemap.xml",
+        has: [{ type: "host" as const, value: host }],
+      },
+      {
+        source: "/robots.txt",
+        destination: "/care/robots.txt",
+        has: [{ type: "host" as const, value: host }],
+      },
+    ]);
 
     return [
       ...jessicaSeoRewrites,
+      ...careSeoRewrites,
       {
         source: "/",
         destination: "/app-landing",
       },
       {
         source:
-          "/:path((?!api|super|auth|onboarding|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|llms.txt|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|edgeonline|parcours-guide|parcours|entreprises|tarifs|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills|disc|idmc|q|care-test|byound-tests|p|pj|badgeclasses|wallet|mos|offres|ecole|tuteur).*)",
+          "/:path((?!api|super|auth|onboarding|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|llms.txt|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|edgeonline|parcours-guide|parcours|entreprises|tarifs|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills|disc|idmc|q|care-test|byound-tests|p|pj|badgeclasses|wallet|mos|offres|ecole|tuteur|care|praticiens|reserver|reservation).*)",
         destination: "/app-landing/:path",
       },
     ];

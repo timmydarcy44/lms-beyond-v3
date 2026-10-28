@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth/school-role-type-guards";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
+import { handleByoundCareHost, redirectByoundCareOffload } from "./middleware-byoundcare";
 import { handleEdgeBsRouting, isEdgeBsHostname } from "./middleware-edgebs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -168,6 +169,10 @@ export async function middleware(request: NextRequest) {
 async function runMiddleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
   const hostWithoutPort = hostname.split(":")[0];
+  const careHostResponse = handleByoundCareHost(request);
+  if (careHostResponse) return careHostResponse;
+  const careOffload = redirectByoundCareOffload(request);
+  if (careOffload) return careOffload;
   const edgeBsHost = isEdgeBsHostname(hostWithoutPort);
 
   if (edgeBsHost) {

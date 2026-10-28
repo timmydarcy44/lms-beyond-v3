@@ -14,6 +14,7 @@ import {
   Euro,
   BookOpen,
   FolderCog,
+  HeartHandshake,
   HelpCircle,
   LayoutDashboard,
   Lock,
@@ -268,6 +269,17 @@ export function ExpertShell({
           href: `/dashboard/expert/prestations#${item.id}`,
         })),
         { label: "Ajouter une prestation", href: "/dashboard/expert/prestations?nouveau=1" },
+      ],
+    });
+    items.push({
+      label: "Byound Care",
+      href: "/dashboard/expert/care/fiche",
+      icon: HeartHandshake,
+      locked: restricted,
+      children: [
+        { label: "Ma fiche publique", href: "/dashboard/expert/care/fiche" },
+        { label: "Disponibilités", href: "/dashboard/expert/care/disponibilites" },
+        { label: "Rendez-vous", href: "/dashboard/expert/care/rendez-vous" },
       ],
     });
   }

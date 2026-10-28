@@ -3,7 +3,7 @@ import { nextOpenDays, parisDateKey } from "../working-days";
 import { hasCareText } from "../profile-format";
 
 describe("nextOpenDays", () => {
-  it("skips the weekend and keeps four weekdays that have slots", () => {
+  it("keeps the next four days that have slots, including weekends", () => {
     const slots = [
       "2026-10-30T08:00:00.000Z",
       "2026-10-31T08:00:00.000Z",
@@ -12,7 +12,7 @@ describe("nextOpenDays", () => {
       "2026-11-04T08:00:00.000Z",
       "2026-11-05T08:00:00.000Z",
     ];
-    expect(nextOpenDays(slots, 4)).toEqual(["2026-10-30", "2026-11-02", "2026-11-03", "2026-11-04"]);
+    expect(nextOpenDays(slots, 4)).toEqual(["2026-10-30", "2026-10-31", "2026-11-02", "2026-11-03"]);
     expect(parisDateKey("2026-10-31T08:00:00.000Z")).toBe("2026-10-31");
   });
 });

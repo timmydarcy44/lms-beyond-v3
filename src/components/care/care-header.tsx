@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { CareLogo } from "@/components/care/care-logo";
 import { CareLink, useCareAudience } from "@/components/care/care-host";
@@ -15,9 +15,16 @@ const NAV = [
 
 export function CareHeader() {
   const [open, setOpen] = useState(false);
+  const [solid, setSolid] = useState(false);
   const { audience, setAudience } = useCareAudience();
+  useEffect(() => {
+    const onScroll = () => setSolid(window.scrollY > 16);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   return (
-    <header className="care-header">
+    <header className={`care-header${solid ? " is-solid" : ""}`}>
       <div className="care-halo" style={{ width: 340, height: 340, background: "var(--care-accent)", top: -180, right: 80 }} />
       <div className="care-wrap care-header-inner">
         <CareLogo />

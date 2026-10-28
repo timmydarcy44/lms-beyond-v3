@@ -14,6 +14,8 @@ import {
 } from "@/lib/expert/space-server";
 import { encodeSlotRule, NOTICE_HOUR_OPTIONS, slotsOverlap, type ExpertMission, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 import { writeCareAgendaSlot } from "@/lib/care/expert-agenda";
+import { ensureCareProfile } from "@/lib/care/ensure-profile";
+import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
 import { sendEmail } from "@/lib/email/resend-client";
 import { buildCareEmail } from "@/lib/expert/care-email";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -341,6 +343,15 @@ export async function signExpertDocument(id: string) {
   await supabase.from("expert_documents").update({ status: "signed" }).eq("id", documentId).eq("expert_id", session.id);
   refresh();
   return { ok: true };
+}
+
+export async function syncCareProfileFromExpertAccount() {
+  const session = await getSession();
+  const db = getServiceRoleClient();
+  if (!session?.id || !db) return { ok: false as const };
+  const slug = await ensureCareProfile(db, session.id);
+  revalidateCarePublicProfile(slug);
+  return { ok: true as const };
 }
 
 export async function startCertification() {

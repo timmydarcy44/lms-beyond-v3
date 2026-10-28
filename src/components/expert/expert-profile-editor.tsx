@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Award, Globe, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { syncCareProfileFromExpertAccount } from "@/app/dashboard/expert/space-actions";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { edgeCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-certification";
@@ -250,6 +251,7 @@ export function ExpertProfileEditor() {
         ({ error } = await supabase.from("experts").update(fallback).eq("id", ctxExpert.id));
       }
       if (error) throw error;
+      await syncCareProfileFromExpertAccount();
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {

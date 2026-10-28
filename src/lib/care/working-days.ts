@@ -18,7 +18,6 @@ export function isParisWeekday(isoOrKey: string) {
 export function nextOpenDays(slotIsos: string[], count = 4) {
   const seen: string[] = [];
   for (const iso of [...slotIsos].sort()) {
-    if (!isParisWeekday(iso)) continue;
     const key = parisDateKey(iso);
     if (!seen.includes(key)) seen.push(key);
     if (seen.length >= count) break;

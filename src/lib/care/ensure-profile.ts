@@ -15,23 +15,55 @@ async function uniqueSlug(db: Db, base: string, expertId: string) {
   return `${slug}-${expertId.slice(0, 8)}`;
 }
 
+function fromExpert(expert: Record<string, unknown> | null) {
+  const display = [expert?.first_name, expert?.last_name].filter(Boolean).join(" ").trim() || "Praticien";
+  const formats = Array.isArray(expert?.formats_supported) ? expert.formats_supported.map(String) : [];
+  return {
+    display_name: display,
+    title: String(expert?.headline ?? "").trim(),
+    headline: String(expert?.headline ?? "").trim(),
+    bio: String(expert?.bio ?? "").trim(),
+    avatar_url: String(expert?.avatar_url ?? expert?.photo_url ?? "").trim() || null,
+    city: Array.isArray(expert?.regions) ? String(expert.regions[0] ?? "").trim() || null : null,
+    offers_cabinet: formats.some((item) => /cabinet|presentiel|sur site/i.test(item)),
+    offers_visio: formats.some((item) => /visio|distanciel|en ligne/i.test(item)) || formats.length === 0,
+  };
+}
+
 export async function ensureCareProfile(db: Db, expertId: string) {
-  const { data: existing } = await db.from("care_profiles").select("slug, is_care").eq("expert_id", expertId).maybeSingle();
+  const { data: expert } = await db
+    .from("experts")
+    .select("first_name, last_name, headline, bio, avatar_url, photo_url, formats_supported, regions")
+    .eq("id", expertId)
+    .maybeSingle();
+  const seeded = fromExpert(expert as Record<string, unknown> | null);
+  const { data: existing } = await db
+    .from("care_profiles")
+    .select("slug, is_care, title, headline, bio, avatar_url, city, offers_cabinet, offers_visio, display_name")
+    .eq("expert_id", expertId)
+    .maybeSingle();
   if (existing) {
-    if (existing.is_care !== true) {
-      await db.from("care_profiles").update({ is_care: true, updated_at: new Date().toISOString() }).eq("expert_id", expertId);
+    const patch: Record<string, unknown> = { is_care: true, updated_at: new Date().toISOString() };
+    if (!String(existing.display_name ?? "").trim()) patch.display_name = seeded.display_name;
+    if (!String(existing.title ?? "").trim() && seeded.title) patch.title = seeded.title;
+    if (!String(existing.headline ?? "").trim() && seeded.headline) patch.headline = seeded.headline;
+    if (!String(existing.bio ?? "").trim() && seeded.bio) patch.bio = seeded.bio;
+    if (!existing.avatar_url && seeded.avatar_url) patch.avatar_url = seeded.avatar_url;
+    if (!existing.city && seeded.city) patch.city = seeded.city;
+    if (existing.offers_cabinet !== true && existing.offers_visio !== true) {
+      patch.offers_cabinet = seeded.offers_cabinet;
+      patch.offers_visio = seeded.offers_visio;
     }
+    await db.from("care_profiles").update(patch).eq("expert_id", expertId);
     return String(existing.slug);
   }
-  const { data: expert } = await db.from("experts").select("first_name, last_name").eq("id", expertId).maybeSingle();
-  const display = [expert?.first_name, expert?.last_name].filter(Boolean).join(" ").trim() || "Praticien";
-  const slug = await uniqueSlug(db, slugifyCareName(display), expertId);
+  const slug = await uniqueSlug(db, slugifyCareName(seeded.display_name), expertId);
   const { error } = await db.from("care_profiles").insert({
     expert_id: expertId,
     slug,
     is_care: true,
     published: false,
-    display_name: display,
+    ...seeded,
   });
   if (error) throw new Error(error.message);
   return slug;

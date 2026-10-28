@@ -50,7 +50,7 @@ describe("buildAvailableSlots", () => {
     expect(slots[0]?.startsAt.toISOString()).toBe(parisWallToUtc(monday, "09:30").toISOString());
   });
 
-  it("keeps no slot starting in less than 12 hours", () => {
+  it("keeps no slot starting in less than 2 hours", () => {
     const slots = buildAvailableSlots({
       rules: [{ weekday: 1, startTime: "09:00", endTime: "10:00", format: "visio" }],
       serviceFormats: ["visio"],
@@ -60,5 +60,19 @@ describe("buildAvailableSlots", () => {
       now: parisWallToUtc(monday, "08:00"),
     });
     expect(slots).toEqual([]);
+  });
+
+  it("turns a one-off open exception into bookable slots without weekly rules", () => {
+    const slots = buildAvailableSlots({
+      rules: [],
+      exceptions: [{ date: monday, isClosed: false, startTime: "14:00", endTime: "15:00" }],
+      serviceFormats: ["visio"],
+      durationMin: 60,
+      from,
+      to,
+      now,
+    });
+    expect(slots).toHaveLength(1);
+    expect(slots[0]?.startsAt.toISOString()).toBe(parisWallToUtc(monday, "14:00").toISOString());
   });
 });

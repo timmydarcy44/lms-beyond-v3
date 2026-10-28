@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getServiceRoleClient } from "@/lib/supabase/server";
+import { loadAvailableCareSlots } from "@/lib/care/load-available-slots";
 
 const querySchema = z.object({
   expert: z.string().uuid(),
-  service: z.string().uuid(),
+  service: z.string().uuid().optional(),
   from: z.string().min(10),
   to: z.string().min(10),
 });
@@ -12,7 +12,7 @@ const querySchema = z.object({
 export async function GET(req: NextRequest) {
   const parsed = querySchema.safeParse({
     expert: req.nextUrl.searchParams.get("expert"),
-    service: req.nextUrl.searchParams.get("service"),
+    service: req.nextUrl.searchParams.get("service") || undefined,
     from: req.nextUrl.searchParams.get("from"),
     to: req.nextUrl.searchParams.get("to"),
   });
@@ -22,19 +22,17 @@ export async function GET(req: NextRequest) {
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) {
     return NextResponse.json({ error: "Période invalide" }, { status: 400 });
   }
-  const db = getServiceRoleClient();
-  if (!db) return NextResponse.json({ slots: [] });
-  const { data, error } = await db.rpc("get_available_slots", {
-    p_expert_id: parsed.data.expert,
-    p_service_id: parsed.data.service,
-    p_from: from.toISOString(),
-    p_to: to.toISOString(),
+  const slots = await loadAvailableCareSlots({
+    expertId: parsed.data.expert,
+    serviceId: parsed.data.service,
+    from,
+    to,
   });
-  if (error) return NextResponse.json({ slots: [] });
-  const slots = (data ?? []).map((row: { starts_at?: string; ends_at?: string; format?: string }) => ({
-    starts_at: String(row.starts_at ?? ""),
-    ends_at: String(row.ends_at ?? ""),
-    format: row.format === "cabinet" ? "cabinet" : "visio",
-  }));
-  return NextResponse.json({ slots });
+  return NextResponse.json({
+    slots: slots.map((slot) => ({
+      starts_at: slot.startsAt.toISOString(),
+      ends_at: slot.endsAt.toISOString(),
+      format: slot.format,
+    })),
+  });
 }

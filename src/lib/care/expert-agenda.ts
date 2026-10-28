@@ -8,6 +8,7 @@ import {
 } from "@/lib/care/available-slots";
 import { ensureCareProfile, ensureDefaultCareService } from "@/lib/care/ensure-profile";
 import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
+import { revalidateTag } from "next/cache";
 import type { ExpertSlot, SlotFormat, SlotKind } from "@/lib/expert/space-model";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -162,6 +163,7 @@ export async function writeCareAgendaSlot(input: {
   const db = getServiceRoleClient();
   if (!db) return { ok: false as const, error: "Service indisponible" };
   const slug = await ensureCareProfile(db, input.expertId);
+  if (input.kind === "disponible") await ensureDefaultCareService(db, input.expertId);
   const careFormat = careFormatFromSlot(input.format);
   const start = parisWallToUtc(input.date, input.start);
   const end = parisWallToUtc(input.date, input.end);
@@ -226,5 +228,6 @@ export async function writeCareAgendaSlot(input: {
   }
 
   revalidateCarePublicProfile(slug);
+  revalidateTag("care-slots");
   return { ok: true as const };
 }

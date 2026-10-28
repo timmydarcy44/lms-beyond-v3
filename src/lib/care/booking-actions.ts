@@ -7,6 +7,7 @@ import { buildCareBookingIcs } from "@/lib/care/ics";
 import { canCancelCareBooking } from "@/lib/care/load-booking";
 import { loadPublishedCareProfile } from "@/lib/care/profile";
 import { CARE_PUBLIC_ORIGIN, careAbsoluteUrl } from "@/lib/care/host";
+import { loadAvailableCareSlots } from "@/lib/care/load-available-slots";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export type CareBookingActionResult =
@@ -47,27 +48,27 @@ async function slotStillOpen(expertId: string, serviceId: string, startIso: stri
   const db = getServiceRoleClient();
   if (!db) return false;
   const start = new Date(startIso);
-  const { data, error } = await db.rpc("get_available_slots", {
-    p_expert_id: expertId,
-    p_service_id: serviceId,
-    p_from: new Date(start.getTime() - 60_000).toISOString(),
-    p_to: new Date(start.getTime() + 60_000).toISOString(),
+  const slots = await loadAvailableCareSlots({
+    expertId,
+    serviceId,
+    from: new Date(start.getTime() - 60_000),
+    to: new Date(start.getTime() + 60_000),
   });
-  if (error) {
-    const { data: clash } = await db
-      .from("care_bookings")
-      .select("id")
-      .eq("expert_id", expertId)
-      .eq("status", "confirmed")
-      .lt("starts_at", new Date(start.getTime() + 60_000).toISOString())
-      .gt("ends_at", start.toISOString())
-      .limit(1);
-    return !clash?.length;
+  if (slots.length) {
+    return slots.some((slot) => {
+      const sameTime = Math.abs(slot.startsAt.getTime() - start.getTime()) < 1000;
+      return sameTime && slot.format === format;
+    });
   }
-  return (data ?? []).some((row: { starts_at?: string; format?: string }) => {
-    const sameTime = Math.abs(new Date(String(row.starts_at)).getTime() - start.getTime()) < 1000;
-    return sameTime && (!row.format || row.format === format);
-  });
+  const { data: clash } = await db
+    .from("care_bookings")
+    .select("id")
+    .eq("expert_id", expertId)
+    .eq("status", "confirmed")
+    .lt("starts_at", new Date(start.getTime() + 60_000).toISOString())
+    .gt("ends_at", start.toISOString())
+    .limit(1);
+  return !clash?.length;
 }
 
 export async function createCareBooking(raw: unknown): Promise<CareBookingActionResult> {

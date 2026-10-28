@@ -27,7 +27,7 @@ export type CareFreeSlot = {
 };
 
 const PARIS = "Europe/Paris";
-const LEAD_MS = 12 * 60 * 60 * 1000;
+const LEAD_MS = 2 * 60 * 60 * 1000;
 
 function pad(value: number) {
   return String(value).padStart(2, "0");
@@ -110,7 +110,12 @@ function exceptionRange(dateYmd: string, item: CareAvailabilityException) {
   return { start, end: item.endTime ? end : parisWallToUtc(addDaysYmd(dateYmd, 1), "00:00") };
 }
 
-function applyExceptions(windows: Window[], dateYmd: string, exceptions: CareAvailabilityException[]) {
+function applyExceptions(
+  windows: Window[],
+  dateYmd: string,
+  exceptions: CareAvailabilityException[],
+  fallbackFormats: CareSessionFormat[],
+) {
   const dayItems = exceptions.filter((item) => item.date === dateYmd);
   let next = windows;
   for (const item of dayItems.filter((row) => row.isClosed)) {
@@ -128,9 +133,12 @@ function applyExceptions(windows: Window[], dateYmd: string, exceptions: CareAva
   }
   for (const item of dayItems.filter((row) => !row.isClosed)) {
     const range = exceptionRange(dateYmd, item);
-    const formats = [...new Set(next.map((win) => win.format))];
-    const useFormats = formats.length ? formats : (["visio"] as CareSessionFormat[]);
-    for (const format of useFormats) next.push({ start: range.start, end: range.end, format });
+    const fromWindows = [...new Set(next.map((win) => win.format))];
+    const useFormats = (fromWindows.length ? fromWindows : fallbackFormats).filter((format) =>
+      fallbackFormats.includes(format),
+    );
+    const formats = useFormats.length ? useFormats : fallbackFormats;
+    for (const format of formats) next.push({ start: range.start, end: range.end, format });
   }
   return next.filter((win) => win.end > win.start);
 }
@@ -163,7 +171,7 @@ export function buildAvailableSlots(input: {
         windows.push({ start, end, format });
       }
     }
-    windows = applyExceptions(windows, dateYmd, exceptions);
+    windows = applyExceptions(windows, dateYmd, exceptions, input.serviceFormats);
     for (const win of windows) {
       for (let cursor = win.start.getTime(); cursor + durationMs <= win.end.getTime(); cursor += durationMs) {
         const startsAt = new Date(cursor);

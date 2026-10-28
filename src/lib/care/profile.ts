@@ -40,30 +40,39 @@ export async function loadCareProfileBySlug(
   if (!owner && (profile.published !== true || profile.is_care !== true)) return null;
   let servicesQuery = db.from("care_services").select("*").eq("expert_id", expertId).order("position");
   if (!owner) servicesQuery = servicesQuery.eq("active", true);
-  const [services, experiences, trainings, badges] = await Promise.all([
+  const [services, experiences, trainings, badges, expert] = await Promise.all([
     servicesQuery,
     db.from("care_experiences").select("*").eq("expert_id", expertId).order("position"),
     db.from("care_trainings").select("*").eq("expert_id", expertId).order("position"),
     db.from("care_expert_badges").select("badge_id, name, image_url, verification_url, awarded_at").eq("expert_id", expertId),
+    db.from("experts").select("first_name, last_name, headline, bio, avatar_url, photo_url, specialties, formats_supported, regions").eq("id", expertId).maybeSingle(),
   ]);
+  const expertRow = expert.data;
+  const expertName = [expertRow?.first_name, expertRow?.last_name].filter(Boolean).join(" ").trim();
+  const expertFormats = Array.isArray(expertRow?.formats_supported) ? expertRow.formats_supported.map(String) : [];
+  const offersCabinet = profile.offers_cabinet === true || expertFormats.some((item) => /cabinet|presentiel|sur site/i.test(item));
+  const offersVisio = profile.offers_visio === true || expertFormats.some((item) => /visio|distanciel|en ligne/i.test(item));
   return {
     expert_id: expertId,
     slug: String(profile.slug),
     published: profile.published === true,
     is_care: profile.is_care === true,
-    display_name: String(profile.display_name ?? ""),
-    title: String(profile.title ?? ""),
+    display_name: String(profile.display_name ?? "").trim() || expertName,
+    title: String(profile.title ?? "").trim() || String(expertRow?.headline ?? "").trim(),
     tagline: String(profile.tagline ?? ""),
-    headline: String(profile.headline ?? ""),
-    bio: String(profile.bio ?? ""),
+    headline: String(profile.headline ?? "").trim() || String(expertRow?.headline ?? "").trim(),
+    bio: String(profile.bio ?? "").trim() || String(expertRow?.bio ?? "").trim(),
     approach: String(profile.approach ?? ""),
-    avatar_url: profile.avatar_url ? String(profile.avatar_url) : null,
+    avatar_url:
+      (profile.avatar_url ? String(profile.avatar_url) : null) ||
+      (expertRow?.avatar_url ? String(expertRow.avatar_url) : null) ||
+      (expertRow?.photo_url ? String(expertRow.photo_url) : null),
     domains: (Array.isArray(profile.domains) ? profile.domains : []).map(asDomain).filter((item): item is CareDomain => Boolean(item)),
     publics: Array.isArray(profile.publics) ? profile.publics.map(String) : [],
-    city: profile.city ? String(profile.city) : null,
+    city: profile.city ? String(profile.city) : Array.isArray(expertRow?.regions) ? String(expertRow.regions[0] ?? "") || null : null,
     address: profile.address ? String(profile.address) : null,
-    offers_cabinet: profile.offers_cabinet === true,
-    offers_visio: profile.offers_visio === true,
+    offers_cabinet: offersCabinet,
+    offers_visio: offersVisio,
     languages: Array.isArray(profile.languages) ? profile.languages.map(String) : [],
     payment_methods: Array.isArray(profile.payment_methods) ? profile.payment_methods.map(String) : [],
     cancellation_hours: Number(profile.cancellation_hours) || 24,

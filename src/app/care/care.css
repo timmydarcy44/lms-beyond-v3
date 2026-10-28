@@ -45,7 +45,6 @@
   width: auto;
 }
 
-.care-header,
 .care-hero,
 .care-navy,
 .care-footer,
@@ -71,7 +70,18 @@
 }
 
 .care-header {
-  z-index: 20;
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  overflow: visible;
+  background: transparent;
+  color: var(--care-white);
+  transition: background 280ms ease, box-shadow 280ms ease, backdrop-filter 280ms ease;
+}
+
+.care-header.is-solid {
+  background: var(--care-navy);
+  box-shadow: 0 18px 40px rgba(11, 21, 51, 0.28);
 }
 
 .care-header-inner {
@@ -185,6 +195,8 @@
 
 .care-hero {
   padding: 12px 0 88px;
+  margin-top: -84px;
+  padding-top: 96px;
 }
 
 .care-hero-grid {

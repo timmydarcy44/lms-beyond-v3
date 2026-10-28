@@ -195,7 +195,7 @@ export function ExpertShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState({ missions: 0, documents: 0 });
-  const [prestations, setPrestations] = useState(DEFAULT_CARE_PRESTATIONS);
+  const [prestations, setPrestations] = useState<typeof DEFAULT_CARE_PRESTATIONS>([]);
 
   useEffect(() => {
     setDashboardSpace("expert");

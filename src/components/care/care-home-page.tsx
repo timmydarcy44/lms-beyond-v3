@@ -30,10 +30,17 @@ export function CareHomePage({ practitioners }: { practitioners: CareDirectoryRo
 
       <section id="domaines" className="care-section" style={{ paddingTop: 0 }}>
         <div className="care-wrap">
-          <p className="care-eyebrow">{CARE_HOME.domaines.eyebrow}</p>
-          <h2 className="care-h2" style={{ maxWidth: 720 }}>
-            {CARE_HOME.domaines.title}
-          </h2>
+          <div className="care-section-head">
+            <div>
+              <p className="care-eyebrow">{CARE_HOME.domaines.eyebrow}</p>
+              <h2 className="care-h2" style={{ maxWidth: 720, marginBottom: 0 }}>
+                {CARE_HOME.domaines.title}
+              </h2>
+            </div>
+            <CareLink href="/care/praticiens" className="care-pill care-pill--ink">
+              {CARE_HOME.domaines.cta}
+            </CareLink>
+          </div>
           <div className="care-grid-3" style={{ marginTop: 28 }}>
             {CARE_HOME.domaines.cards.map((card) => (
               <CareLink
@@ -42,7 +49,7 @@ export function CareHomePage({ practitioners }: { practitioners: CareDirectoryRo
                 className={`care-domain${"inverted" in card && card.inverted ? " care-domain--navy" : ""}`}
               >
                 <span className="care-chip">{card.program}</span>
-                <h3 style={{ fontSize: 28, letterSpacing: "-0.04em", fontWeight: 800, margin: "18px 0 10px" }}>{card.name}</h3>
+                <h3 className="care-domain-title">{card.name}</h3>
                 <p style={{ color: "inverted" in card && card.inverted ? "rgba(255,255,255,0.75)" : "var(--care-text-2)", margin: 0 }}>
                   {card.text}
                 </p>
@@ -77,7 +84,7 @@ export function CareHomePage({ practitioners }: { practitioners: CareDirectoryRo
       <section className="care-section">
         <div className="care-wrap">
           <div className="care-network-grid">
-            <div>
+            <div className="care-network-copy">
               <h2 className="care-h2">{CARE_HOME.reseau.title}</h2>
               <div style={{ marginTop: 24 }}>
                 {CARE_HOME.reseau.guarantees.map((item) => (
@@ -124,11 +131,24 @@ export function CareHomePage({ practitioners }: { practitioners: CareDirectoryRo
           </div>
           <div className="care-card" aria-hidden="true">
             <p style={{ fontSize: 12, color: "var(--care-muted)", marginTop: 0 }}>{CARE_HOME.entreprises.dashboardLabel}</p>
-            {[62, 44, 71].map((value) => (
-              <div key={value} className="care-bar" style={{ marginBottom: 12 }}>
-                <span style={{ width: `${value}%` }} />
+            <div className="care-tiles" style={{ marginBottom: 18 }}>
+              {CARE_HOME.entreprises.tiles.map((tile) => (
+                <div key={tile.label}>
+                  <span>{tile.label}</span>
+                  <strong>{tile.value}</strong>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 700, margin: "0 0 10px" }}>{CARE_HOME.entreprises.barsTitle}</p>
+            {CARE_HOME.entreprises.bars.map((bar) => (
+              <div key={bar.label} className="care-bar-row">
+                <span>{bar.label}</span>
+                <div className="care-bar">
+                  <span style={{ width: `${bar.value}%` }} />
+                </div>
               </div>
             ))}
+            <p style={{ fontSize: 12, color: "var(--care-muted)", margin: "14px 0 0" }}>{CARE_HOME.entreprises.illustration}</p>
           </div>
         </div>
       </section>
@@ -142,12 +162,22 @@ export function CareHomePage({ practitioners }: { practitioners: CareDirectoryRo
               <article
                 key={plan.id}
                 className={`care-domain${"featured" in plan && plan.featured ? " care-plan--featured" : ""}`}
-                style={{ minHeight: 260 }}
               >
                 {"featured" in plan && plan.featured ? <span className="care-chip">{CARE_HOME.formules.featured}</span> : null}
                 <h3 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.04em" }}>{plan.name}</h3>
                 <p style={{ fontSize: 40, fontWeight: 800, letterSpacing: "-0.05em", margin: "8px 0" }}>{formatCarePrice(plan.priceCents)}</p>
                 <p style={{ margin: 0, opacity: 0.75 }}>{plan.sessionsLabel}</p>
+                <ul className="care-plan-features">
+                  {plan.features.map((item) => (
+                    <li key={item}>
+                      <Check size={16} />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <CareLink href="/care/praticiens" className="care-pill care-pill--choose">
+                  {CARE_HOME.formules.choose}
+                </CareLink>
               </article>
             ))}
           </div>

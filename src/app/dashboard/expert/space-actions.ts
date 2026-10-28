@@ -13,6 +13,7 @@ import {
   type JadeOverrides,
 } from "@/lib/expert/space-server";
 import { encodeSlotRule, NOTICE_HOUR_OPTIONS, slotsOverlap, type ExpertMission, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
+import { writeCareAgendaSlot } from "@/lib/care/expert-agenda";
 import { sendEmail } from "@/lib/email/resend-client";
 import { buildCareEmail } from "@/lib/expert/care-email";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -188,30 +189,44 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
       ],
     }));
   } else {
-    if (!supabase) return { ok: false, error: "Service indisponible" };
-    if (parsed.kind === "rendez_vous") {
-      for (const slot of built) {
-        const overlapping = space.slots.filter((existing) => existing.kind === "disponible" && slotsOverlap(slot.startsAt, slot.endsAt, existing.startsAt, existing.endsAt));
-        if (overlapping.length) {
-          await supabase.from("expert_slots").delete().in("id", overlapping.map((item) => item.id)).eq("expert_id", session.id);
-        }
-      }
+    const dates = occurrences.map((occurrence) => {
+      const y = occurrence.getFullYear();
+      const m = String(occurrence.getMonth() + 1).padStart(2, "0");
+      const d = String(occurrence.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    });
+    const uniqueDates = parsed.weekly && parsed.kind === "disponible" ? [parsed.date] : dates;
+    for (const date of uniqueDates) {
+      const written = await writeCareAgendaSlot({
+        expertId: session.id,
+        date,
+        start: parsed.start,
+        end: parsed.end,
+        format: parsed.format,
+        kind: parsed.kind,
+        weekly: Boolean(parsed.weekly) && parsed.kind === "disponible" && date === parsed.date,
+        client: clientId
+          ? {
+              first_name: clientFirst,
+              last_name: (clientLabel ?? "").replace(clientFirst, "").trim(),
+              email: clientEmail ?? "",
+            }
+          : null,
+      });
+      if (!written.ok) return { ok: false, error: written.error };
     }
-    const rows = built.map((slot) => ({
-      expert_id: session.id,
-      starts_at: slot.startsAt,
-      ends_at: slot.endsAt,
-      format: parsed.format,
-      location,
-      mission_id: null,
-      recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly), clientId, clientLabel),
-    }));
-    const { error } = await supabase.from("expert_slots").insert(rows);
-    if (error) {
-      if (error.code === "42P01" || error.code === "PGRST205") {
-        return { ok: false, error: "Collez le script SQL de l'espace expert (table expert_slots)." };
-      }
-      return { ok: false, error: error.message };
+    if (parsed.kind === "formation") {
+      if (!supabase) return { ok: false, error: "Service indisponible" };
+      const rows = built.map((slot) => ({
+        expert_id: session.id,
+        starts_at: slot.startsAt,
+        ends_at: slot.endsAt,
+        format: parsed.format,
+        location,
+        mission_id: null,
+        recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly), clientId, clientLabel),
+      }));
+      await supabase.from("expert_slots").insert(rows);
     }
   }
   let emailed = false;
@@ -255,6 +270,10 @@ export async function saveAgendaSettings(input: z.infer<typeof settingsSchema>) 
   });
   const { error } = await supabase.from("experts").update({ references }).eq("id", session.id);
   if (error) return { ok: false, error: error.message };
+  const admin = getServiceRoleClient();
+  if (admin && parsed.noticeHours != null) {
+    await admin.from("care_profiles").update({ cancellation_hours: parsed.noticeHours, updated_at: new Date().toISOString() }).eq("expert_id", session.id);
+  }
   refresh();
   return { ok: true };
 }

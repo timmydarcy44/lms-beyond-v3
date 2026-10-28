@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email/resend-client";
 import { getSession } from "@/lib/auth/session";
 import { CARE_SQL_HINT, missingRelation, requireCareExpert } from "@/lib/expert/care-auth";
-import { CARE_INVOICE_EXTRAS, resolveCarePrestations } from "@/lib/expert/care-prestations";
+import { CARE_INVOICE_EXTRAS, type CarePrestation } from "@/lib/expert/care-prestations";
 import { buildCareEmail } from "@/lib/expert/care-email";
 import { careInvoicePdfBuffer, fetchCareLogoPng, type CareInvoiceLine } from "@/lib/expert/care-invoice-pdf";
 import { mergeRegistrationMeta, parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
@@ -25,14 +25,24 @@ export async function GET() {
   if (error) {
     return NextResponse.json({ error: missingRelation(error) ? CARE_SQL_HINT : error.message, invoices: [] }, { status: missingRelation(error) ? 200 : 500 });
   }
-  const expert = await gate.db.from("experts").select("references").eq("id", gate.expertId).maybeSingle();
-  const meta = parseRegistrationMeta(expert.data?.references);
-  const sessionPriceCents = meta?.care_session_price_cents ?? null;
+  const services = await gate.db
+    .from("care_services")
+    .select("id, name, price_cents, active")
+    .eq("expert_id", gate.expertId)
+    .eq("active", true)
+    .order("position");
+  const prestations: CarePrestation[] = (services.data ?? []).map((row) => ({
+    id: String(row.id),
+    label: String(row.name ?? "Prestation"),
+    cents: Number(row.price_cents) > 0 ? Number(row.price_cents) : null,
+    builtin: false,
+  }));
+  const sessionPriceCents = prestations.find((item) => item.cents != null)?.cents ?? null;
   return NextResponse.json({
     invoices: data ?? [],
     sessionPriceCents,
     extras: CARE_INVOICE_EXTRAS,
-    prestations: resolveCarePrestations(meta?.care_prestations),
+    prestations,
   });
 }
 
@@ -102,7 +112,17 @@ export async function POST(req: NextRequest) {
 
   const expertRow = await gate.db.from("experts").select("references").eq("id", gate.expertId).maybeSingle();
   const meta = parseRegistrationMeta(expertRow.data?.references);
-  const catalog = resolveCarePrestations(meta?.care_prestations);
+  const services = await gate.db
+    .from("care_services")
+    .select("id, name, price_cents, active")
+    .eq("expert_id", gate.expertId)
+    .eq("active", true);
+  const catalog: CarePrestation[] = (services.data ?? []).map((row) => ({
+    id: String(row.id),
+    label: String(row.name ?? "Prestation"),
+    cents: Number(row.price_cents) > 0 ? Number(row.price_cents) : null,
+    builtin: false,
+  }));
   const incomingLines = Array.isArray(body?.lines) ? body.lines : [];
   let lines: CareInvoiceLine[] = incomingLines
     .map((row) => {
@@ -116,7 +136,7 @@ export async function POST(req: NextRequest) {
     })
     .filter((line) => line.cents > 0);
   if (!lines.length) {
-    const savedSession = meta?.care_session_price_cents ?? 0;
+    const savedSession = catalog.find((item) => item.cents != null)?.cents ?? meta?.care_session_price_cents ?? 0;
     const incomingSession = eurosToCents(body?.sessionPrice ?? body?.amount ?? "");
     const sessionPriceCents = incomingSession ?? savedSession;
     if (incomingSession != null) {

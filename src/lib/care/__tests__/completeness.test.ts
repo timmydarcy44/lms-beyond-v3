@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { careCompleteness, slugifyCareName } from "../completeness";
+import { careCompleteness, isCareDirectoryComplete, slugifyCareName } from "../completeness";
 import type { CareService } from "../types";
 
 const service: CareService = {
@@ -35,6 +35,31 @@ describe("careCompleteness", () => {
     });
     expect(ready.canPublish).toBe(true);
     expect(ready.percent).toBe(100);
+  });
+
+  it("blocks placeholders in required public fields", () => {
+    const placeholder = careCompleteness({
+      avatar_url: "https://cdn.example/a.jpg",
+      title: "[titre]",
+      tagline: "Accroche réelle",
+      domains: ["famille"],
+      services: [service],
+    });
+    expect(placeholder.canPublish).toBe(false);
+    expect(isCareDirectoryComplete({
+      avatar_url: null,
+      title: "Psychologue",
+      tagline: "Accroche",
+      domains: ["famille"],
+      min_price_cents: 8000,
+    })).toBe(false);
+    expect(isCareDirectoryComplete({
+      avatar_url: "https://cdn.example/a.jpg",
+      title: "Psychologue",
+      tagline: "Accroche",
+      domains: ["famille"],
+      min_price_cents: 0,
+    })).toBe(true);
   });
 
   it("slugifies display names", () => {

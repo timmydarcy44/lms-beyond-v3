@@ -1,5 +1,6 @@
 import { CARE_DOMAINS, type CareDomain } from "@/lib/care/domains";
 import type { CareSessionFormat } from "@/lib/care/available-slots";
+import { careCompleteness, isCareDirectoryComplete } from "@/lib/care/completeness";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import type { CarePublicProfile } from "@/lib/care/profile-format";
 
@@ -23,8 +24,21 @@ function asDomain(value: unknown): CareDomain | null {
 export async function loadPublishedCareSlugs() {
   const db = getServiceRoleClient();
   if (!db) return [];
-  const { data } = await db.from("care_directory").select("slug");
-  return (data ?? []).map((row) => String(row.slug)).filter(Boolean);
+  const { data } = await db
+    .from("care_directory")
+    .select("slug, avatar_url, title, tagline, domains, min_price_cents");
+  return (data ?? [])
+    .filter((row) =>
+      isCareDirectoryComplete({
+        avatar_url: row.avatar_url ? String(row.avatar_url) : null,
+        title: String(row.title ?? ""),
+        tagline: String(row.tagline ?? ""),
+        domains: Array.isArray(row.domains) ? row.domains : [],
+        min_price_cents: row.min_price_cents == null ? null : Number(row.min_price_cents),
+      }),
+    )
+    .map((row) => String(row.slug))
+    .filter(Boolean);
 }
 
 export async function loadCareProfileBySlug(
@@ -107,5 +121,7 @@ export async function loadCareProfileBySlug(
 }
 
 export async function loadPublishedCareProfile(slug: string): Promise<CarePublicProfile | null> {
-  return loadCareProfileBySlug(slug);
+  const profile = await loadCareProfileBySlug(slug);
+  if (!profile || !careCompleteness(profile).canPublish) return null;
+  return profile;
 }

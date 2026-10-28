@@ -1,4 +1,4 @@
-import { hasCareText, type CarePublicProfile } from "@/lib/care/profile-format";
+import { isCarePlaceholderText, type CarePublicProfile } from "@/lib/care/profile-format";
 
 export const CARE_PUBLICS = ["enfants", "adolescents", "adultes", "parents", "couples", "entreprises"] as const;
 
@@ -13,10 +13,10 @@ export type CarePublishCheck = {
 export function carePublishChecks(profile: Pick<CarePublicProfile, "avatar_url" | "title" | "tagline" | "domains" | "services">): CarePublishCheck[] {
   return [
     { id: "photo", label: "Photo", ok: Boolean(profile.avatar_url?.trim()) },
-    { id: "title", label: "Titre", ok: hasCareText(profile.title) },
-    { id: "tagline", label: "Accroche", ok: hasCareText(profile.tagline) },
+    { id: "title", label: "Titre", ok: !isCarePlaceholderText(profile.title) },
+    { id: "tagline", label: "Accroche", ok: !isCarePlaceholderText(profile.tagline) },
     { id: "domain", label: "Au moins un domaine", ok: profile.domains.length >= 1 },
-    { id: "service", label: "Au moins une prestation", ok: profile.services.some((item) => item.active && hasCareText(item.name)) },
+    { id: "service", label: "Au moins une prestation", ok: profile.services.some((item) => item.active && !isCarePlaceholderText(item.name)) },
   ];
 }
 
@@ -29,6 +29,23 @@ export function careCompleteness(profile: Pick<CarePublicProfile, "avatar_url" |
     percent: Math.round((done / checks.length) * 100),
     canPublish: checks.every((item) => item.ok),
   };
+}
+
+export function isCareDirectoryComplete(row: {
+  avatar_url: string | null;
+  title: string;
+  tagline: string;
+  domains: unknown[];
+  min_price_cents: number | null;
+}) {
+  return (
+    Boolean(row.avatar_url?.trim()) &&
+    !isCarePlaceholderText(row.title) &&
+    !isCarePlaceholderText(row.tagline) &&
+    Array.isArray(row.domains) &&
+    row.domains.length >= 1 &&
+    row.min_price_cents != null
+  );
 }
 
 export function slugifyCareName(value: string) {

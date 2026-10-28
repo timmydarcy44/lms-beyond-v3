@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { BYOUND_CARE_TESTS } from "@/lib/expert/care-tests";
-import { DEFAULT_CARE_PRESTATIONS, type CarePrestation } from "@/lib/expert/care-prestations";
+import { type CarePrestation } from "@/lib/expert/care-prestations";
 import { CARE_FOLLOW_UPS, followUpLabel, parseFollowUp, type CareFollowUp, validateCareClient } from "@/lib/expert/care-client-fields";
 import { centsToInput } from "@/lib/entreprise/offer-conditions";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
@@ -72,7 +72,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [testSlug, setTestSlug] = useState(BYOUND_CARE_TESTS[0].slug);
   const [sessionPrice, setSessionPrice] = useState("");
   const [extras, setExtras] = useState<string[]>([]);
-  const [prestations, setPrestations] = useState<CarePrestation[]>(DEFAULT_CARE_PRESTATIONS);
+  const [prestations, setPrestations] = useState<CarePrestation[]>([]);
   const [invoiceLines, setInvoiceLines] = useState<Array<{ key: string; id: string; label: string; price: string }>>([]);
   const [addPrestationId, setAddPrestationId] = useState("");
   const [busy, setBusy] = useState(false);

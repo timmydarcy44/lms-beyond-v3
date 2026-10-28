@@ -43,6 +43,7 @@ export const CARE_HOME = {
   domaines: {
     eyebrow: "Six domaines de vie",
     title: "Un praticien pour chaque partie de votre vie.",
+    cta: "Voir les praticiens",
     cards: [
       {
         id: CARE_DOMAINS[0].id,
@@ -118,9 +119,9 @@ export const CARE_HOME = {
   reseau: {
     title: "Pas un annuaire de coachs. Un réseau certifié.",
     guarantees: [
-      "Open Badges vérifiables, pas des diplômes auto-déclarés.",
-      "Un cadre déontologique commun à tout le réseau.",
-      "La mesure avant / après, pour chaque accompagnement.",
+      "Une expérience de terrain exigée dans chaque domaine.",
+      "Un socle commun en neuroéducation et une spécialisation, prouvés par des Open Badges vérifiables.",
+      "Des relais cliniques — psychologues, médecins, orthophonistes — quand un diagnostic s'impose.",
     ],
     explorerTitle: "Explorer l'annuaire",
     explorerText: "Tous les praticiens certifiés, filtrés par domaine, format et public.",
@@ -132,11 +133,24 @@ export const CARE_HOME = {
     lead: "Un accès au réseau pour vos collaborateurs. Un tableau de bord RH agrégé et anonyme pour vous. Aucune donnée individuelle n'est exposée.",
     cta: "Demander une démo",
     dashboardLabel: "Agrégé · anonyme",
+    tiles: [
+      { label: "Accompagnés", value: "128" },
+      { label: "Évolution", value: "+18 %" },
+      { label: "Satisfaction", value: "4,6 / 5" },
+    ],
+    barsTitle: "Domaines les plus sollicités",
+    bars: [
+      { label: "Émotions", value: 72 },
+      { label: "Famille", value: 54 },
+      { label: "Carrière", value: 41 },
+    ],
+    illustration: "Illustration — indicateurs réels à brancher",
   },
   formules: {
     eyebrow: "Particuliers",
     title: "Simple. Sans engagement.",
     featured: "Le plus choisi",
+    choose: "Choisir",
   },
   devenir: {
     title: "Rejoignez le réseau Byound Care.",
@@ -147,7 +161,7 @@ export const CARE_HOME = {
     },
     cabinet: {
       title: "Je développe mon cabinet",
-      text: "Vous avez déjà une patientèle. Byound Care vous apporte le bilan, le compagnon et la visibilité.",
+      text: "Vous avez déjà une clientèle. Byound Care vous apporte le bilan, le compagnon et la visibilité.",
       cta: "En savoir plus",
     },
   },

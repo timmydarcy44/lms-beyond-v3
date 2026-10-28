@@ -1,3 +1,4 @@
+import { isCareDirectoryComplete } from "@/lib/care/completeness";
 import { compareCareDirectory, matchesCareDirectory, type CareDirectoryQuery } from "@/lib/care/directory-search";
 import { loadNextCareSlotIso } from "@/lib/care/next-slot";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -11,7 +12,7 @@ async function loadCareDirectoryRows(): Promise<CareDirectoryRow[]> {
   if (!db) return [];
   const { data, error } = await db.from("care_directory").select(DIRECTORY_SELECT);
   if (error || !data) return [];
-  return data as CareDirectoryRow[];
+  return (data as CareDirectoryRow[]).filter(isCareDirectoryComplete);
 }
 
 export async function loadCareDirectoryPreview(limit = 2): Promise<CareDirectoryRow[]> {

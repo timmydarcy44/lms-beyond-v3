@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { CARE_FOR_WHOM_LABELS } from "@/lib/care/booking-schema";
-import { slugifyCareName } from "@/lib/care/completeness";
+import { ensureCareProfile } from "@/lib/care/ensure-profile";
 import { loadCareProfileBySlug, type CarePublicProfile } from "@/lib/care/profile";
 import { requireCarePage } from "@/lib/expert/care-page";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -45,39 +45,13 @@ export type CareExpertWorkspace = {
   bookings: CareExpertBookingRow[];
 };
 
-async function uniqueSlug(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, base: string, expertId: string) {
-  let slug = base || "praticien";
-  for (let i = 0; i < 20; i += 1) {
-    const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
-    const { data } = await db.from("care_profiles").select("expert_id").eq("slug", candidate).maybeSingle();
-    if (!data || String(data.expert_id) === expertId) return candidate;
-  }
-  return `${slug}-${expertId.slice(0, 8)}`;
-}
-
 export async function loadCareExpertWorkspace(): Promise<CareExpertWorkspace> {
   await requireCarePage();
   const session = await getSession();
   const db = getServiceRoleClient();
   if (!session?.id || !db) throw new Error("unavailable");
-  const { data: existing } = await db.from("care_profiles").select("slug, is_care").eq("expert_id", session.id).maybeSingle();
-  if (existing && existing.is_care !== true) {
-    await db.from("care_profiles").update({ is_care: true, updated_at: new Date().toISOString() }).eq("expert_id", session.id);
-  }
-  if (!existing) {
-    const { data: expert } = await db.from("experts").select("first_name, last_name").eq("id", session.id).maybeSingle();
-    const display = [expert?.first_name, expert?.last_name].filter(Boolean).join(" ").trim() || "Praticien";
-    const slug = await uniqueSlug(db, slugifyCareName(display), session.id);
-    await db.from("care_profiles").insert({
-      expert_id: session.id,
-      slug,
-      is_care: true,
-      published: false,
-      display_name: display,
-    });
-  }
-  const { data: row } = await db.from("care_profiles").select("slug").eq("expert_id", session.id).maybeSingle();
-  const profile = await loadCareProfileBySlug(String(row?.slug ?? ""), { viewerId: session.id });
+  const slug = await ensureCareProfile(db, session.id);
+  const profile = await loadCareProfileBySlug(slug, { viewerId: session.id });
   if (!profile) throw new Error("unavailable");
   const [rules, exceptions, bookings] = await Promise.all([
     db.from("care_availability_rules").select("*").eq("expert_id", session.id).order("weekday", { ascending: true }).order("start_time", { ascending: true }),

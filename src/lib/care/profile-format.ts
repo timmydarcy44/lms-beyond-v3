@@ -39,6 +39,14 @@ export function hasCareText(value: string | null | undefined) {
   return Boolean(value?.replace(/\s+/g, " ").trim());
 }
 
+export function isCarePlaceholderText(value: string | null | undefined) {
+  const text = value?.replace(/\s+/g, " ").trim() ?? "";
+  if (!text) return true;
+  if (/^\[[^\]]+\]$/.test(text)) return true;
+  if (/^(lorem|ipsum|todo|tbd|xxx+|placeholder)$/i.test(text)) return true;
+  return false;
+}
+
 export function careDomainLabel(id: CareDomain | string) {
   return CARE_DOMAINS.find((item) => item.id === id)?.label ?? id;
 }

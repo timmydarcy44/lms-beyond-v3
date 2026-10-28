@@ -72,13 +72,13 @@ export function parisWallToUtc(dateYmd: string, timeHm: string): Date {
   return guess;
 }
 
-function addDaysYmd(dateYmd: string, days: number) {
+export function addDaysYmd(dateYmd: string, days: number) {
   const [year, month, day] = dateYmd.split("-").map(Number);
   const next = new Date(Date.UTC(year, month - 1, day + days));
   return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
 }
 
-function weekdayFromYmd(dateYmd: string) {
+export function weekdayFromYmd(dateYmd: string) {
   const noon = parisWallToUtc(dateYmd, "12:00");
   const wd = new Intl.DateTimeFormat("en-US", { timeZone: PARIS, weekday: "short" }).format(noon);
   const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };

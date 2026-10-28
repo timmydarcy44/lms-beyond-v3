@@ -27,6 +27,7 @@ import {
   type NoticeHours,
   type SlotFormat,
 } from "@/lib/expert/space-model";
+import { loadCareAgendaSlots } from "@/lib/care/expert-agenda";
 import { loadExpertPoleState } from "@/lib/expert/poles";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -391,7 +392,7 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
       [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || String(row.email ?? "Patient"),
     ]),
   );
-  const slots: ExpertSlot[] = tableMissing(slotQuery.error)
+  const legacySlots: ExpertSlot[] = tableMissing(slotQuery.error)
     ? []
     : ((slotQuery.data ?? []) as Array<Record<string, unknown>>)
         .filter((slot) => !slot.mission_id || missionIds.has(String(slot.mission_id)))
@@ -412,6 +413,11 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
           clientId,
         };
       });
+  const careSlots = await loadCareAgendaSlots(session.id);
+  const slots: ExpertSlot[] = [
+    ...careSlots,
+    ...legacySlots.filter((slot) => slot.kind === "formation" || Boolean(slot.missionId)),
+  ];
 
   const reviewQuery = await supabase.from("expert_reviews").select("id,client_name,rating,body,mission_label,created_at").eq("expert_id", session.id).order("created_at", { ascending: false }).limit(3);
   const reviews: ExpertReview[] = tableMissing(reviewQuery.error)

@@ -7,13 +7,13 @@ import { toast } from "sonner";
 import { AppleSuccessOverlay } from "@/components/expert/apple-success-overlay";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
 import { centsToInput } from "@/lib/entreprise/offer-conditions";
-import { DEFAULT_CARE_PRESTATIONS, prestationPriceLabel, type CarePrestation } from "@/lib/expert/care-prestations";
+import { prestationPriceLabel, type CarePrestation } from "@/lib/expert/care-prestations";
 
 const field = "h-12 w-full rounded-2xl border border-[#1E2130] bg-[#12141A] px-4 text-sm text-[#F4F5F7] outline-none";
 
 export function CarePrestationsBoard() {
   const search = useSearchParams();
-  const [list, setList] = useState<CarePrestation[]>(DEFAULT_CARE_PRESTATIONS);
+  const [list, setList] = useState<CarePrestation[]>([]);
   const [draftLabel, setDraftLabel] = useState("");
   const [draftAmount, setDraftAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -110,7 +110,7 @@ export function CarePrestationsBoard() {
       />
       <ExpertPageHeader
         title="Mes prestations"
-        subtitle="Ces tarifs sont repris à la facturation. Vous pouvez les ajuster au moment d’émettre une facture."
+        subtitle="Même catalogue que la fiche publique Byound Care : nom, prix, et réservation."
       />
       <div className="space-y-3">
         {catalog.map((item) => (

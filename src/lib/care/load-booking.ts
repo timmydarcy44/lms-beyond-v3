@@ -97,6 +97,24 @@ async function hydrateBooking(
   });
 }
 
+export async function loadCareBookingsForPatient(email: string): Promise<CareBookingRecord[]> {
+  const db = getServiceRoleClient();
+  const normalized = email.trim().toLowerCase();
+  if (!db || !normalized) return [];
+  const { data } = await db
+    .from("care_bookings")
+    .select("*")
+    .eq("client_email", normalized)
+    .order("starts_at", { ascending: false })
+    .limit(40);
+  const rows: CareBookingRecord[] = [];
+  for (const row of data ?? []) {
+    const booking = await hydrateBooking(db, row as Record<string, unknown>);
+    if (booking) rows.push(booking);
+  }
+  return rows;
+}
+
 export function canCancelCareBooking(startsAt: string, hours: number, now = new Date()) {
   return new Date(startsAt).getTime() - now.getTime() >= hours * 60 * 60 * 1000;
 }

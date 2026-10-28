@@ -15,14 +15,34 @@ export function isParisWeekday(isoOrKey: string) {
   return weekday !== "Sat" && weekday !== "Sun";
 }
 
-export function nextOpenDays(slotIsos: string[], count = 4) {
+export function formatParisTime(iso: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    timeZone: PARIS,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(iso));
+}
+
+export function nextOpenDays(slotIsos: string[], count = 8) {
   const seen: string[] = [];
-  for (const iso of [...slotIsos].sort()) {
+  for (const iso of [...slotIsos].sort((a, b) => new Date(a).getTime() - new Date(b).getTime())) {
     const key = parisDateKey(iso);
     if (!seen.includes(key)) seen.push(key);
     if (seen.length >= count) break;
   }
   return seen;
+}
+
+export function uniqueSlotsForParisDay(slots: Array<{ starts_at: string; format?: string }>, dayKey: string) {
+  const unique = new Map<string, { starts_at: string; format: string }>();
+  for (const slot of slots) {
+    if (parisDateKey(slot.starts_at) !== dayKey) continue;
+    const label = formatParisTime(slot.starts_at);
+    if (unique.has(label)) continue;
+    unique.set(label, { starts_at: slot.starts_at, format: slot.format === "cabinet" ? "cabinet" : "visio" });
+  }
+  return [...unique.values()].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 }
 
 export function formatCareDayChip(dateKey: string) {

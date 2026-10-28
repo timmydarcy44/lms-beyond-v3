@@ -106,6 +106,13 @@ const SPACE_BY_KEY: Record<string, DashboardSpace> = {
     description: "Diagnostics, coachings et suivi personnel.",
     category: "COLLABORATEUR",
   },
+  patient: {
+    key: "patient",
+    title: "Espace Patient",
+    href: "/dashboard/patient",
+    description: "Rendez-vous Byound Care, praticien et suivi.",
+    category: "CARE",
+  },
   student_lms: {
     key: "student_lms",
     title: "Mes formations",
@@ -144,6 +151,8 @@ const ROLE_TO_SPACE_KEY: Record<string, string> = {
   salarie: "salarie",
   collaborateur: "salarie",
   employee: "salarie",
+  care_patient: "patient",
+  patient: "patient",
 };
 
 export function collectProfileRoleKeys(profile: ProfileRoutingInput | null): string[] {
@@ -250,6 +259,7 @@ export function pickPrimaryDestination(spaces: DashboardSpace[]): string | null 
     "/dashboard/ecole",
     "/dashboard/tuteur",
     "/dashboard/salarie",
+    "/dashboard/patient",
     "/dashboard/apprenant",
     "/dashboard/student/learning",
     "/dashboard/club",

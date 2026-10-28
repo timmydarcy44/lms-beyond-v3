@@ -26,3 +26,47 @@
 .expert-theme textarea::placeholder {
   color: rgba(244, 245, 247, 0.35);
 }
+
+.expert-apple-banner {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 120;
+  display: flex;
+  width: min(92vw, 360px);
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 14px 16px;
+  text-align: left;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  animation: expert-apple-banner 420ms ease;
+}
+
+.expert-apple-banner-icon {
+  display: flex;
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #ff4b4b;
+  color: #04140c;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+@keyframes expert-apple-banner {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

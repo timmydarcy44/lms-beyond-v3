@@ -149,6 +149,21 @@ export async function createCareBooking(raw: unknown): Promise<CareBookingAction
     description: `Rendez-vous Byound Care. Détail : ${confirmUrl}`,
   });
   const { data: expert } = await db.from("experts").select("email").eq("id", profile.expert_id).maybeSingle();
+  const when = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(start);
+  await db.from("notifications").insert({
+    user_id: profile.expert_id,
+    type: "info",
+    title: "Nouveau rendez-vous",
+    message: `${input.firstName} ${input.lastName} · ${service.name} · ${when}`,
+    read: false,
+  });
   await sendCareBookingEmails({
     clientEmail: emailKey,
     clientFirstName: input.firstName,

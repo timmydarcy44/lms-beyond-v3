@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 
+import { ExpertAppleInbox } from "@/components/expert/expert-apple-inbox";
 import { DEFAULT_CARE_PRESTATIONS } from "@/lib/expert/care-prestations";
 
 import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
@@ -353,6 +354,7 @@ export function ExpertShell({
 
   return (
     <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
+      <ExpertAppleInbox />
       <div className="flex min-h-screen">
         <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
           {brand}

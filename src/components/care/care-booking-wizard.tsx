@@ -14,6 +14,7 @@ import { careDomainLabel, formatCareDuration } from "@/lib/care/profile-format";
 import type { CareDomain } from "@/lib/care/domains";
 import type { CareProfile, CareService } from "@/lib/care/types";
 import { formatCareDateLong } from "@/lib/care/working-days";
+import { CarePatientAuth } from "@/components/care/care-patient-auth";
 
 const STEPS = ["Votre séance", "Vos coordonnées", "Paiement"] as const;
 type ForWhom = "self" | "child" | "relative";
@@ -173,6 +174,14 @@ export function CareBookingWizard({
           ) : null}
           {step === 2 ? (
             <section className="care-fields">
+              <CarePatientAuth
+                identity={{ email, firstName, lastName }}
+                onIdentity={(next) => {
+                  if (next.firstName) setFirstName(next.firstName);
+                  if (next.lastName) setLastName(next.lastName);
+                  if (next.email) setEmail(next.email);
+                }}
+              />
               <label className="care-field">
                 Prénom
                 <input autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} />

@@ -28,8 +28,11 @@ export async function GET(req: NextRequest) {
     from,
     to,
   });
+  const ordered = [...slots].sort(
+    (a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.format.localeCompare(b.format),
+  );
   return NextResponse.json({
-    slots: slots.map((slot) => ({
+    slots: ordered.map((slot) => ({
       starts_at: slot.startsAt.toISOString(),
       ends_at: slot.endsAt.toISOString(),
       format: slot.format,

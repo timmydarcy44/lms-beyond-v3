@@ -80,6 +80,7 @@ export function AgendaView({
   const [defaultFormat, setDefaultFormat] = useState(format);
   const [notice, setNotice] = useState(noticeHours);
   const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
+  const [openedSlot, setOpenedSlot] = useState<ExpertSlot | null>(null);
   const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
   const horizonEnd = addDays(today, 7);
   const upcoming = slots.filter((slot) => {
@@ -176,6 +177,7 @@ export function AgendaView({
             days={gridDays}
             slots={slots}
             onSelect={(range) => openDraft(range)}
+            onOpenSlot={setOpenedSlot}
           />
         </section>
         <div className="space-y-4">
@@ -246,6 +248,7 @@ export function AgendaView({
           </section>
         </div>
       </div>
+      {openedSlot ? <AppointmentSheet slot={openedSlot} onClose={() => setOpenedSlot(null)} /> : null}
       {open && draft ? (
         <SlotModal
           date={draft.date}
@@ -274,10 +277,12 @@ function AgendaGrid({
   days,
   slots,
   onSelect,
+  onOpenSlot,
 }: {
   days: Date[];
   slots: ExpertSlot[];
   onSelect: (draft: Draft) => void;
+  onOpenSlot: (slot: ExpertSlot) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ day: number; from: number; to: number } | null>(null);
@@ -357,21 +362,26 @@ function AgendaGrid({
               {slots
                 .filter((slot) => isSameDay(new Date(slot.startsAt), day))
                 .map((slot) => {
-                  const occupied = Boolean(slot.missionId);
+                  const occupied = Boolean(slot.missionId) || slot.kind === "rendez_vous";
                   const startMin = minutesOfDate(new Date(slot.startsAt));
                   const endMin = minutesOfDate(new Date(slot.endsAt));
                   const kind = slot.kind ?? "rendez_vous";
+                  const clickable = kind === "rendez_vous";
                   return (
                     <article
                       key={slot.id}
                       data-slot
+                      role={clickable ? "button" : undefined}
+                      tabIndex={clickable ? 0 : undefined}
+                      onClick={clickable ? () => onOpenSlot(slot) : undefined}
+                      onKeyDown={clickable ? (event) => event.key === "Enter" && onOpenSlot(slot) : undefined}
                       className={`absolute inset-x-1 overflow-hidden rounded-xl px-2 py-1 text-[11px] ${
                         kind === "indisponible"
                           ? "bg-[#1E2130] text-[#9096A3]"
                           : kind === "disponible"
                             ? "border border-dashed border-[#FF4B4B]/50 bg-[#FF4B4B]/10"
                             : occupied
-                              ? "bg-[#FF4B4B] text-[#04140C]"
+                              ? "cursor-pointer bg-[#FF4B4B] text-[#04140C]"
                               : "bg-[#262A36]"
                       }`}
                       style={{
@@ -419,6 +429,76 @@ function Setting({ label, hint, control }: { label: string; hint: string; contro
         <p className="text-xs text-[#9096A3]">{hint}</p>
       </div>
       {control}
+    </div>
+  );
+}
+
+function AppointmentSheet({ slot, onClose }: { slot: ExpertSlot; onClose: () => void }) {
+  const start = new Date(slot.startsAt);
+  const end = new Date(slot.endsAt);
+  const when = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(start);
+  const until = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(end);
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-4 sm:items-center" onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-[28px] bg-[#12141A] p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-labelledby="agenda-rdv-title"
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9096A3]">Rendez-vous</p>
+        <h2 id="agenda-rdv-title" className="mt-2 text-2xl font-extrabold tracking-tight">
+          {slot.client || "Patient"}
+        </h2>
+        <p className="mt-1 text-sm text-[#B5BAC6]">{slot.serviceName || slot.title || "Séance"}</p>
+        <dl className="mt-5 space-y-3 text-sm">
+          <div>
+            <dt className="text-[#9096A3]">Quand</dt>
+            <dd className="font-extrabold">
+              {when} – {until}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[#9096A3]">Format</dt>
+            <dd className="font-extrabold">{slot.format === "presentiel" ? "Cabinet" : "Visio"}</dd>
+          </div>
+          {slot.clientEmail ? (
+            <div>
+              <dt className="text-[#9096A3]">E-mail</dt>
+              <dd>
+                <a className="font-extrabold text-[#FF4B4B]" href={`mailto:${slot.clientEmail}`}>
+                  {slot.clientEmail}
+                </a>
+              </dd>
+            </div>
+          ) : null}
+          {slot.clientPhone ? (
+            <div>
+              <dt className="text-[#9096A3]">Téléphone</dt>
+              <dd>
+                <a className="font-extrabold text-[#FF4B4B]" href={`tel:${slot.clientPhone}`}>
+                  {slot.clientPhone}
+                </a>
+              </dd>
+            </div>
+          ) : null}
+          {slot.notes ? (
+            <div>
+              <dt className="text-[#9096A3]">Message</dt>
+              <dd className="text-[#DADDE4]">{slot.notes}</dd>
+            </div>
+          ) : null}
+        </dl>
+        <button type="button" className="mt-6 h-12 w-full rounded-full bg-[#F4F5F7] text-sm font-extrabold text-[#07080B]" onClick={onClose}>
+          Fermer
+        </button>
+      </div>
     </div>
   );
 }

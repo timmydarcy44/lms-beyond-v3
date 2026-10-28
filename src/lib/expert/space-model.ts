@@ -46,6 +46,10 @@ export type ExpertSlot = {
   title: string | null;
   client: string | null;
   clientId?: string | null;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  serviceName?: string | null;
+  notes?: string | null;
 };
 
 export function slotKindFromRule(rule: unknown): SlotKind {

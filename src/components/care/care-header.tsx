@@ -54,7 +54,7 @@ export function CareHeader() {
           ))}
         </nav>
         <div className="care-header-cta">
-          <CareLink href="/login?from=/care" className="care-pill care-pill--ghost" style={{ height: 44 }}>
+          <CareLink href="/dashboard/patient" className="care-pill care-pill--ghost" style={{ height: 44 }}>
             {CARE_HOME.nav.connexion}
           </CareLink>
           <CareLink href="/care#formules" className="care-pill care-pill--white" style={{ height: 44, paddingInline: 18 }}>

@@ -111,7 +111,7 @@ export async function loadCareAgendaSlots(expertId: string): Promise<ExpertSlot[
     db.from("care_availability_exceptions").select("id, date, is_closed, start_time, end_time").eq("expert_id", expertId),
     db
       .from("care_bookings")
-      .select("id, starts_at, ends_at, format, status, client_first_name, client_last_name")
+      .select("id, service_id, starts_at, ends_at, format, status, client_first_name, client_last_name, client_email, client_phone, message")
       .eq("expert_id", expertId)
       .in("status", ["confirmed", "completed"])
       .gte("ends_at", from.toISOString())
@@ -136,6 +136,11 @@ export async function loadCareAgendaSlots(expertId: string): Promise<ExpertSlot[
     fromYmd,
     toYmd,
   });
+  const serviceIds = [...new Set((bookings.data ?? []).map((row) => String(row.service_id ?? "")).filter(Boolean))];
+  const { data: services } = serviceIds.length
+    ? await db.from("care_services").select("id, name").in("id", serviceIds)
+    : { data: [] as Array<{ id: string; name: string | null }> };
+  const serviceName = new Map((services ?? []).map((row) => [String(row.id), String(row.name ?? "Séance")]));
   const booked: ExpertSlot[] = (bookings.data ?? []).map((row) => ({
     id: `care-book:${row.id}`,
     startsAt: String(row.starts_at),
@@ -143,9 +148,13 @@ export async function loadCareAgendaSlots(expertId: string): Promise<ExpertSlot[
     format: slotFormatFromCare(String(row.format)),
     kind: "rendez_vous" as SlotKind,
     location: row.format === "cabinet" ? "Cabinet" : "Visio",
-    missionId: null,
-    title: "Rendez-vous",
+    missionId: String(row.id),
+    title: serviceName.get(String(row.service_id)) || "Rendez-vous",
     client: [row.client_first_name, row.client_last_name].filter(Boolean).join(" ").trim() || null,
+    clientEmail: row.client_email ? String(row.client_email) : null,
+    clientPhone: row.client_phone ? String(row.client_phone) : null,
+    serviceName: serviceName.get(String(row.service_id)) || "Rendez-vous",
+    notes: row.message ? String(row.message) : null,
   }));
   return [...expanded, ...booked];
 }

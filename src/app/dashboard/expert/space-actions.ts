@@ -347,8 +347,6 @@ export async function signExpertDocument(id: string) {
   return { ok: true };
 }
 
-export type { CareListingSettings };
-
 export async function getCareListingSettings(): Promise<CareListingSettings | null> {
   const session = await getSession();
   const db = getServiceRoleClient();

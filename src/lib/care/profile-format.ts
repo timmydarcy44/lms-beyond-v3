@@ -39,6 +39,10 @@ export function hasCareText(value: string | null | undefined) {
   return Boolean(value?.replace(/\s+/g, " ").trim());
 }
 
+export function hasCarePublicText(value: string | null | undefined) {
+  return hasCareText(value) && !isCarePlaceholderText(value);
+}
+
 export function isCarePlaceholderText(value: string | null | undefined) {
   const text = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!text) return true;

@@ -38,6 +38,6 @@ export const CARE_PLANS = {
 export type CarePlanId = keyof typeof CARE_PLANS;
 
 export function formatCarePrice(cents: number | null | undefined) {
-  if (cents == null || !Number.isFinite(cents) || cents <= 0) return "[prix]";
+  if (cents == null || !Number.isFinite(cents) || cents <= 0) return "Sur devis";
   return `${Math.round(cents / 100)} €`;
 }

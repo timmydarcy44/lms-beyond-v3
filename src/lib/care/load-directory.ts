@@ -1,5 +1,7 @@
+import { isPlaceholderCareRow } from "@/lib/care/demo-profiles";
 import { compareCareDirectory, matchesCareDirectory, type CareDirectoryQuery } from "@/lib/care/directory-search";
 import { loadNextCareSlotIso } from "@/lib/care/next-slot";
+import { isCarePlaceholderText } from "@/lib/care/profile-format";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import type { CareDirectoryRow } from "@/lib/care/types";
 
@@ -18,7 +20,16 @@ async function loadCareDirectoryRows(): Promise<CareDirectoryRow[]> {
     .eq("published", true)
     .eq("is_care", true);
   if (error || !data) return [];
-  const ids = data.map((row) => String(row.expert_id)).filter(Boolean);
+  const visible = data.filter(
+    (row) =>
+      !isPlaceholderCareRow({
+        expert_id: String(row.expert_id),
+        title: row.title ? String(row.title) : null,
+        tagline: row.tagline ? String(row.tagline) : null,
+        city: row.city ? String(row.city) : null,
+      }),
+  );
+  const ids = visible.map((row) => String(row.expert_id)).filter(Boolean);
   const [{ data: services }, { data: badges }] = ids.length
     ? await Promise.all([
         db.from("care_services").select("expert_id, price_cents, active, name").in("expert_id", ids),
@@ -32,7 +43,7 @@ async function loadCareDirectoryRows(): Promise<CareDirectoryRow[]> {
   for (const service of services ?? []) {
     if (service.active === false) continue;
     const name = asText(service.name).trim();
-    if (!name) continue;
+    if (!name || isCarePlaceholderText(name)) continue;
     const price = Number(service.price_cents);
     if (!Number.isFinite(price)) continue;
     const expertId = String(service.expert_id);
@@ -44,7 +55,7 @@ async function loadCareDirectoryRows(): Promise<CareDirectoryRow[]> {
     const expertId = String(badge.expert_id);
     badgeCount.set(expertId, (badgeCount.get(expertId) ?? 0) + 1);
   }
-  return data.map((row) => {
+  return visible.map((row) => {
     const expertId = String(row.expert_id);
     return {
       expert_id: expertId,

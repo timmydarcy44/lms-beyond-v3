@@ -46,6 +46,9 @@ export function CareBookingWidget({
         const days = nextOpenDays(next.map((slot) => slot.starts_at));
         setDay(days[0] ?? null);
         setStart(null);
+      })
+      .catch(() => {
+        if (!cancelled) setSlots([]);
       });
     return () => {
       cancelled = true;
@@ -95,7 +98,7 @@ export function CareBookingWidget({
           ))}
         </div>
       ) : (
-        <p className="care-muted">Aucun créneau sur les prochains jours ouvrés.</p>
+        <p className="care-muted">Aucun créneau disponible pour le moment.</p>
       )}
       <div className="care-book-times">
         {times.map((slot) => (

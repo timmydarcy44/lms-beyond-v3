@@ -11,7 +11,7 @@ import {
   careDomainLabel,
   formatCareDuration,
   formatCareFormats,
-  hasCareText,
+  hasCarePublicText,
   loadCareProfileBySlug,
   loadPublishedCareProfile,
   loadPublishedCareSlugs,
@@ -21,7 +21,7 @@ import { getSession } from "@/lib/auth/session";
 import { careAbsoluteUrl, isByoundCareHostname } from "@/lib/care/host";
 import { carePageMetadata } from "@/lib/care/seo";
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 
 type Params = { params: Promise<{ slug: string }> };
@@ -35,8 +35,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const profile = await loadPublishedCareProfile(slug);
   if (!profile) return { title: "Praticien" };
-  const title = [profile.display_name, profile.title].filter(hasCareText).join(" — ");
-  const description = hasCareText(profile.tagline) ? profile.tagline : hasCareText(profile.headline) ? profile.headline : "";
+  const title = [profile.display_name, profile.title].filter(hasCarePublicText).join(" — ");
+  const description = hasCarePublicText(profile.tagline) ? profile.tagline : hasCarePublicText(profile.headline) ? profile.headline : "";
   return carePageMetadata({
     title,
     description,
@@ -72,15 +72,15 @@ export default async function CarePraticienPage({ params }: Params) {
   if (!profile) notFound();
   const preview = !profile.published || !profile.is_care;
   const certified = profile.badges.length > 0;
-  const showPresentation = hasCareText(profile.headline) || hasCareText(profile.bio) || hasCareText(profile.approach);
+  const showPresentation = hasCarePublicText(profile.headline) || hasCarePublicText(profile.bio) || hasCarePublicText(profile.approach);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "Person",
         name: profile.display_name,
-        jobTitle: hasCareText(profile.title) ? profile.title : undefined,
-        description: hasCareText(profile.tagline) ? profile.tagline : undefined,
+        jobTitle: hasCarePublicText(profile.title) ? profile.title : undefined,
+        description: hasCarePublicText(profile.tagline) ? profile.tagline : undefined,
         image: profile.avatar_url || undefined,
         address: profile.city ? { "@type": "PostalAddress", addressLocality: profile.city, addressCountry: "FR" } : undefined,
         url: careAbsoluteUrl(`/care/praticiens/${profile.slug}`),
@@ -119,8 +119,8 @@ export default async function CarePraticienPage({ params }: Params) {
                 {certified ? "Certifié·e Byound" : CARE_DIRECTORY_COPY.certInProgress}
               </p>
               <h1 className="care-h1">{profile.display_name}</h1>
-              {hasCareText(profile.title) ? <p className="care-lead">{profile.title}</p> : null}
-              {hasCareText(profile.tagline) ? <p className="care-lead">{profile.tagline}</p> : null}
+              {hasCarePublicText(profile.title) ? <p className="care-lead">{profile.title}</p> : null}
+              {hasCarePublicText(profile.tagline) ? <p className="care-lead">{profile.tagline}</p> : null}
               {profile.domains.length ? (
                 <div className="care-quick">
                   {profile.domains.map((id) => (
@@ -131,7 +131,7 @@ export default async function CarePraticienPage({ params }: Params) {
                 </div>
               ) : null}
               <div className="care-quick">
-                {hasCareText(profile.city) ? <span className="care-chip-link care-chip-link--on-dark">{profile.city}</span> : null}
+                {hasCarePublicText(profile.city) ? <span className="care-chip-link care-chip-link--on-dark">{profile.city}</span> : null}
                 {profile.offers_cabinet ? <span className="care-chip-link care-chip-link--on-dark">Cabinet</span> : null}
                 {profile.offers_visio ? <span className="care-chip-link care-chip-link--on-dark">Visio</span> : null}
                 {certified ? (
@@ -151,11 +151,11 @@ export default async function CarePraticienPage({ params }: Params) {
             {showPresentation ? (
               <section className="care-block">
                 <h2>Présentation</h2>
-                {hasCareText(profile.headline) ? <p className="care-headline">{profile.headline}</p> : null}
-                {hasCareText(profile.bio)
+                {hasCarePublicText(profile.headline) ? <p className="care-headline">{profile.headline}</p> : null}
+                {hasCarePublicText(profile.bio)
                   ? profile.bio.split(/\n+/).map((para, index) => <p key={`${index}-${para.slice(0, 12)}`}>{para}</p>)
                   : null}
-                {hasCareText(profile.approach) ? (
+                {hasCarePublicText(profile.approach) ? (
                   <aside className="care-approach">
                     <h3>Mon approche</h3>
                     <p>{profile.approach}</p>
@@ -174,7 +174,7 @@ export default async function CarePraticienPage({ params }: Params) {
                         <strong>{service.name}</strong>
                         <span className="care-chip">{careDomainLabel(service.domain)}</span>
                       </div>
-                      {hasCareText(service.description) ? <p>{service.description}</p> : null}
+                      {hasCarePublicText(service.description) ? <p>{service.description}</p> : null}
                       <p className="care-muted">
                         {formatCareFormats(service.formats)} · {formatCareDuration(service.duration_min)} · {formatCarePrice(service.price_cents)}
                       </p>
@@ -207,7 +207,7 @@ export default async function CarePraticienPage({ params }: Params) {
                           )}
                         </p>
                       ) : null}
-                      {hasCareText(badge.verification_url) ? (
+                      {hasCarePublicText(badge.verification_url) ? (
                         <a href={badge.verification_url} target="_blank" rel="noreferrer">
                           Vérifier ↗
                         </a>
@@ -220,31 +220,31 @@ export default async function CarePraticienPage({ params }: Params) {
               )}
             </section>
 
-            {profile.experiences.some((item) => hasCareText(item.role) || hasCareText(item.period_label)) ? (
+            {profile.experiences.some((item) => hasCarePublicText(item.role) || hasCarePublicText(item.period_label)) ? (
               <section className="care-block">
                 <h2>Expériences professionnelles</h2>
                 <ol className="care-timeline">
                   {profile.experiences.map((item) => (
                     <li key={item.id}>
-                      {hasCareText(item.period_label) ? <p className="care-muted">{item.period_label}</p> : null}
-                      {hasCareText(item.role) ? <h3>{item.role}</h3> : null}
-                      {hasCareText(item.organization) ? <p>{item.organization}</p> : null}
-                      {hasCareText(item.description) ? <p className="care-muted">{item.description}</p> : null}
+                      {hasCarePublicText(item.period_label) ? <p className="care-muted">{item.period_label}</p> : null}
+                      {hasCarePublicText(item.role) ? <h3>{item.role}</h3> : null}
+                      {hasCarePublicText(item.organization) ? <p>{item.organization}</p> : null}
+                      {hasCarePublicText(item.description) ? <p className="care-muted">{item.description}</p> : null}
                     </li>
                   ))}
                 </ol>
               </section>
             ) : null}
 
-            {profile.trainings.some((item) => hasCareText(item.title) || hasCareText(item.year)) ? (
+            {profile.trainings.some((item) => hasCarePublicText(item.title) || hasCarePublicText(item.year)) ? (
               <section className="care-block">
                 <h2>Diplômes et formations</h2>
                 <div className="care-train-grid">
                   {profile.trainings.map((item) => (
                     <article key={item.id} className="care-train-card">
-                      {hasCareText(item.year) ? <p className="care-muted">{item.year}</p> : null}
-                      {hasCareText(item.title) ? <h3>{item.title}</h3> : null}
-                      {hasCareText(item.organization) ? <p>{item.organization}</p> : null}
+                      {hasCarePublicText(item.year) ? <p className="care-muted">{item.year}</p> : null}
+                      {hasCarePublicText(item.title) ? <h3>{item.title}</h3> : null}
+                      {hasCarePublicText(item.organization) ? <p>{item.organization}</p> : null}
                     </article>
                   ))}
                 </div>
@@ -261,11 +261,11 @@ export default async function CarePraticienPage({ params }: Params) {
             />
             <aside className="care-side-card">
               <h2>Infos pratiques</h2>
-              {profile.offers_cabinet && (hasCareText(profile.address) || hasCareText(profile.city)) ? (
+              {profile.offers_cabinet && (hasCarePublicText(profile.address) || hasCarePublicText(profile.city)) ? (
                 <p>
                   Cabinet
                   <br />
-                  {[profile.address, profile.city].filter(hasCareText).join(", ")}
+                  {[profile.address, profile.city].filter(hasCarePublicText).join(", ")}
                 </p>
               ) : null}
               {profile.offers_visio ? <p>Visio</p> : null}
@@ -281,11 +281,11 @@ export default async function CarePraticienPage({ params }: Params) {
                 <a href="mailto:inclusion@byound.fr">inclusion@byound.fr</a>
               </p>
             </aside>
-            {profile.publics.filter(hasCareText).length ? (
+            {profile.publics.filter(hasCarePublicText).length ? (
               <aside className="care-side-card">
                 <h2>Publics accompagnés</h2>
                 <div className="care-prac-chips">
-                  {profile.publics.filter(hasCareText).map((item) => (
+                  {profile.publics.filter(hasCarePublicText).map((item) => (
                     <span key={item} className="care-chip">
                       {item}
                     </span>

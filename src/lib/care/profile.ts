@@ -1,7 +1,9 @@
 import { CARE_DOMAINS, type CareDomain } from "@/lib/care/domains";
 import type { CareSessionFormat } from "@/lib/care/available-slots";
+import { CARE_SLUG_OWNER_EMAILS, desiredCareSlug, isCareDemoEmail, isPlaceholderCareRow } from "@/lib/care/demo-profiles";
+import { ensureCareProfile } from "@/lib/care/ensure-profile";
 import { getServiceRoleClient } from "@/lib/supabase/server";
-import type { CarePublicProfile } from "@/lib/care/profile-format";
+import { hasCarePublicText, type CarePublicProfile } from "@/lib/care/profile-format";
 
 export {
   CARE_LANGUAGE_LABELS,
@@ -10,6 +12,7 @@ export {
   formatCareDuration,
   formatCareFormats,
   hasCareText,
+  hasCarePublicText,
   type CareExperience,
   type CareExpertBadge,
   type CarePublicProfile,
@@ -27,14 +30,43 @@ export async function loadPublishedCareSlugs() {
   return (data ?? []).map((row) => String(row.slug)).filter(Boolean);
 }
 
+async function resolveLiveCareRow(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, slug: string, current: Record<string, unknown> | null) {
+  if (current && !isPlaceholderCareRow({
+    title: current.title ? String(current.title) : null,
+    tagline: current.tagline ? String(current.tagline) : null,
+    city: current.city ? String(current.city) : null,
+    expert_id: current.expert_id ? String(current.expert_id) : null,
+  })) {
+    return current;
+  }
+  const { data: experts } = await db.from("experts").select("id, first_name, last_name, email");
+  const match = (experts ?? []).find((row) => {
+    const email = String(row.email ?? "").trim().toLowerCase();
+    if (isCareDemoEmail(email)) return false;
+    if ((CARE_SLUG_OWNER_EMAILS[slug] ?? []).includes(email)) return true;
+    const nameSlug = desiredCareSlug([row.first_name, row.last_name].filter(Boolean).join(" "));
+    return nameSlug === slug || desiredCareSlug(String(row.first_name ?? "")) === slug;
+  });
+  if (!match?.id) return current;
+  await ensureCareProfile(db, String(match.id));
+  await db
+    .from("care_profiles")
+    .update({ published: true, is_care: true, updated_at: new Date().toISOString() })
+    .eq("expert_id", match.id);
+  const { data: live } = await db.from("care_profiles").select("*").eq("expert_id", match.id).maybeSingle();
+  return live ?? current;
+}
+
 export async function loadCareProfileBySlug(
   slug: string,
   opts?: { viewerId?: string | null },
 ): Promise<CarePublicProfile | null> {
   const db = getServiceRoleClient();
   if (!db) return null;
-  const { data: profile, error } = await db.from("care_profiles").select("*").eq("slug", slug).maybeSingle();
-  if (error || !profile) return null;
+  const { data: found, error } = await db.from("care_profiles").select("*").eq("slug", slug).maybeSingle();
+  if (error) return null;
+  const profile = await resolveLiveCareRow(db, slug, found as Record<string, unknown> | null);
+  if (!profile) return null;
   const expertId = String(profile.expert_id);
   const owner = Boolean(opts?.viewerId && opts.viewerId === expertId);
   if (!owner && (profile.published !== true || profile.is_care !== true)) return null;
@@ -57,11 +89,11 @@ export async function loadCareProfileBySlug(
     slug: String(profile.slug),
     published: profile.published === true,
     is_care: profile.is_care === true,
-    display_name: String(profile.display_name ?? "").trim() || expertName,
-    title: String(profile.title ?? "").trim() || String(expertRow?.headline ?? "").trim(),
-    tagline: String(profile.tagline ?? ""),
-    headline: String(profile.headline ?? "").trim() || String(expertRow?.headline ?? "").trim(),
-    bio: String(profile.bio ?? "").trim() || String(expertRow?.bio ?? "").trim(),
+    display_name: hasCarePublicText(String(profile.display_name ?? "")) ? String(profile.display_name) : expertName,
+    title: hasCarePublicText(String(profile.title ?? "")) ? String(profile.title) : String(expertRow?.headline ?? "").trim(),
+    tagline: hasCarePublicText(String(profile.tagline ?? "")) ? String(profile.tagline) : "",
+    headline: hasCarePublicText(String(profile.headline ?? "")) ? String(profile.headline) : String(expertRow?.headline ?? "").trim(),
+    bio: hasCarePublicText(String(profile.bio ?? "")) ? String(profile.bio) : String(expertRow?.bio ?? "").trim(),
     approach: String(profile.approach ?? ""),
     avatar_url:
       (profile.avatar_url ? String(profile.avatar_url) : null) ||
@@ -69,7 +101,11 @@ export async function loadCareProfileBySlug(
       (expertRow?.photo_url ? String(expertRow.photo_url) : null),
     domains: (Array.isArray(profile.domains) ? profile.domains : []).map(asDomain).filter((item): item is CareDomain => Boolean(item)),
     publics: Array.isArray(profile.publics) ? profile.publics.map(String) : [],
-    city: profile.city ? String(profile.city) : Array.isArray(expertRow?.regions) ? String(expertRow.regions[0] ?? "") || null : null,
+    city: hasCarePublicText(profile.city ? String(profile.city) : "")
+      ? String(profile.city)
+      : Array.isArray(expertRow?.regions)
+        ? String(expertRow.regions[0] ?? "") || null
+        : null,
     address: profile.address ? String(profile.address) : null,
     offers_cabinet: offersCabinet,
     offers_visio: offersVisio,
@@ -81,7 +117,7 @@ export async function loadCareProfileBySlug(
       id: String(row.id),
       expert_id: expertId,
       position: Number(row.position) || 0,
-      name: String(row.name ?? ""),
+      name: hasCarePublicText(String(row.name ?? "")) ? String(row.name) : "Séance",
       domain: asDomain(row.domain) ?? "famille",
       description: String(row.description ?? ""),
       duration_min: Number(row.duration_min) || 0,

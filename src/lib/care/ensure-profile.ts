@@ -1,4 +1,6 @@
 import { slugifyCareName } from "@/lib/care/completeness";
+import { desiredCareSlug, isCareDemoEmail, isCareDemoExpertId } from "@/lib/care/demo-profiles";
+import { isCarePlaceholderText } from "@/lib/care/profile-format";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import type { CareDomain } from "@/lib/care/domains";
 import type { CareSessionFormat } from "@/lib/care/available-slots";
@@ -11,6 +13,16 @@ async function uniqueSlug(db: Db, base: string, expertId: string) {
     const candidate = i === 0 ? slug : `${slug}-${i + 1}`;
     const { data } = await db.from("care_profiles").select("expert_id").eq("slug", candidate).maybeSingle();
     if (!data || String(data.expert_id) === expertId) return candidate;
+    if (i === 0) {
+      const { data: owner } = await db.from("experts").select("email").eq("id", data.expert_id).maybeSingle();
+      if (isCareDemoExpertId(String(data.expert_id)) || isCareDemoEmail(owner?.email ? String(owner.email) : null)) {
+        await db
+          .from("care_profiles")
+          .update({ slug: `${candidate}-demo`, published: false, updated_at: new Date().toISOString() })
+          .eq("expert_id", data.expert_id);
+        return candidate;
+      }
+    }
   }
   return `${slug}-${expertId.slice(0, 8)}`;
 }
@@ -44,25 +56,29 @@ export async function ensureCareProfile(db: Db, expertId: string) {
     .maybeSingle();
   if (existing) {
     const patch: Record<string, unknown> = { is_care: true, updated_at: new Date().toISOString() };
-    if (!String(existing.display_name ?? "").trim()) patch.display_name = seeded.display_name;
-    if (!String(existing.title ?? "").trim() && seeded.title) patch.title = seeded.title;
-    if (!String(existing.headline ?? "").trim() && seeded.headline) patch.headline = seeded.headline;
-    if (!String(existing.bio ?? "").trim() && seeded.bio) patch.bio = seeded.bio;
+    if (isCarePlaceholderText(existing.display_name) && seeded.display_name) patch.display_name = seeded.display_name;
+    if (isCarePlaceholderText(existing.title) && seeded.title) patch.title = seeded.title;
+    if (isCarePlaceholderText(existing.headline) && seeded.headline) patch.headline = seeded.headline;
+    if (isCarePlaceholderText(existing.bio) && seeded.bio) patch.bio = seeded.bio;
     if (!existing.avatar_url && seeded.avatar_url) patch.avatar_url = seeded.avatar_url;
-    if (!existing.city && seeded.city) patch.city = seeded.city;
+    if (isCarePlaceholderText(existing.city) && seeded.city) patch.city = seeded.city;
     if (existing.offers_cabinet !== true && existing.offers_visio !== true) {
       patch.offers_cabinet = seeded.offers_cabinet;
       patch.offers_visio = seeded.offers_visio;
     }
+    const wanted = desiredCareSlug(seeded.display_name || String(existing.display_name ?? ""));
+    if (wanted && wanted !== existing.slug) {
+      patch.slug = await uniqueSlug(db, wanted, expertId);
+    }
     await db.from("care_profiles").update(patch).eq("expert_id", expertId);
-    return String(existing.slug);
+    return String(patch.slug ?? existing.slug);
   }
   const slug = await uniqueSlug(db, slugifyCareName(seeded.display_name), expertId);
   const { error } = await db.from("care_profiles").insert({
     expert_id: expertId,
     slug,
     is_care: true,
-    published: false,
+    published: true,
     ...seeded,
   });
   if (error) throw new Error(error.message);
@@ -71,14 +87,14 @@ export async function ensureCareProfile(db: Db, expertId: string) {
 
 export async function ensureDefaultCareService(db: Db, expertId: string) {
   await ensureCareProfile(db, expertId);
-  const { data: existing } = await db
+  const existingRows = await db
     .from("care_services")
     .select("id, domain, duration_min, formats, price_cents, name")
     .eq("expert_id", expertId)
     .eq("active", true)
     .order("position")
-    .limit(1)
-    .maybeSingle();
+    .limit(5);
+  const existing = (existingRows.data ?? []).find((row) => !isCarePlaceholderText(String(row.name ?? "")));
   if (existing?.id) {
     return {
       id: String(existing.id),

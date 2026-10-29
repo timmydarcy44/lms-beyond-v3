@@ -1125,6 +1125,19 @@
   color: var(--care-text);
 }
 
+.care-patient-shell .care-h1 {
+  color: var(--care-text);
+  -webkit-text-fill-color: var(--care-text);
+  font-size: 32px;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.care-patient-shell .care-lead {
+  color: var(--care-text-2);
+  -webkit-text-fill-color: var(--care-text-2);
+}
+
 .care-patient-nav {
   display: flex;
   flex-wrap: wrap;

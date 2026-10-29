@@ -4,6 +4,7 @@ import { CarePatientShell, type PatientSearchItem } from "@/components/care/care
 import { parisDateLine, parisGreeting } from "@/app/dashboard/patient/_ui/format";
 import { getSession } from "@/lib/auth/session";
 import { isCarePlaceholderText } from "@/lib/care/profile-format";
+import { countUnopenedDocuments, loadPatientDocuments } from "@/lib/care/patient-documents";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
 import { formatPersonName, personInitials } from "@/lib/care/person-name";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -32,17 +33,25 @@ export default async function PatientLayout({ children }: { children: React.Reac
   const [fullFirst, ...fullRest] = full.split(" ").filter(Boolean);
   const firstName = formatPersonName(String(profile?.first_name || "")) || fullFirst || "";
   const lastName = formatPersonName(String(profile?.last_name || "")) || fullRest.join(" ");
-  const home = await loadPatientCareHome();
-  const searchItems: PatientSearchItem[] = [...home.upcoming, ...home.past].slice(0, 12).map((item) => {
-    const who = formatPersonName(item.practitioner_name) || "Rendez-vous";
-    const service = isCarePlaceholderText(item.service_name) ? "" : item.service_name.trim();
-    return {
+  const [home, documents] = await Promise.all([loadPatientCareHome(), loadPatientDocuments()]);
+  const searchItems: PatientSearchItem[] = [
+    ...[...home.upcoming, ...home.past].slice(0, 12).map((item) => {
+      const who = formatPersonName(item.practitioner_name) || "Rendez-vous";
+      const service = isCarePlaceholderText(item.service_name) ? "" : item.service_name.trim();
+      return {
+        id: item.id,
+        href: "/dashboard/patient/rendez-vous",
+        title: service ? `${who} · ${service}` : who,
+        meta: formatCareDateLong(item.starts_at),
+      };
+    }),
+    ...documents.slice(0, 12).map((item) => ({
       id: item.id,
-      href: "/dashboard/patient/rendez-vous",
-      title: service ? `${who} · ${service}` : who,
-      meta: formatCareDateLong(item.starts_at),
-    };
-  });
+      href: `/dashboard/patient/documents?doc=${item.id}`,
+      title: item.title,
+      meta: item.practitionerName,
+    })),
+  ];
 
   return (
     <div className={`${manrope.className} ${inter.variable}`}>
@@ -55,6 +64,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
           dateLabel: parisDateLine(),
         }}
         searchItems={searchItems}
+        newDocuments={countUnopenedDocuments(documents)}
       >
         {children}
       </CarePatientShell>

@@ -52,10 +52,12 @@ function isCurrent(pathname: string, href: string, exact: boolean) {
 export function CarePatientShell({
   account,
   searchItems,
+  newDocuments = 0,
   children,
 }: {
   account: PatientAccount;
   searchItems: PatientSearchItem[];
+  newDocuments?: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -120,6 +122,9 @@ export function CarePatientShell({
                 <Link key={item.href} href={item.href} aria-current={current ? "page" : undefined}>
                   <Icon size={18} aria-hidden />
                   {item.label}
+                  {item.href.endsWith("/documents") && newDocuments > 0 ? (
+                    <span className={current ? "patient-count is-on" : "patient-count"}>{newDocuments}</span>
+                  ) : null}
                 </Link>
               );
             })}
@@ -181,10 +186,17 @@ export function CarePatientShell({
                   onClick={() => setBellOpen((open) => !open)}
                 >
                   <Bell size={18} aria-hidden />
+                  {newDocuments > 0 ? <span className="patient-bell-dot" /> : null}
                 </button>
                 {bellOpen ? (
                   <div className="patient-bell-panel">
-                    <p>Rien de nouveau.</p>
+                    <p>
+                      {newDocuments > 0
+                        ? newDocuments > 1
+                          ? `${newDocuments} nouveaux documents sont disponibles dans votre espace.`
+                          : "Un nouveau document est disponible dans votre espace."
+                        : "Rien de nouveau."}
+                    </p>
                   </div>
                 ) : null}
               </div>
@@ -205,6 +217,9 @@ export function CarePatientShell({
             <Link key={item.href} href={item.href} aria-current={current ? "page" : undefined}>
               <Icon size={18} aria-hidden />
               {item.label === "Mes documents" ? "Documents" : item.label}
+              {item.href.endsWith("/documents") && newDocuments > 0 ? (
+                <span className={current ? "patient-count is-on" : "patient-count"}>{newDocuments}</span>
+              ) : null}
             </Link>
           );
         })}

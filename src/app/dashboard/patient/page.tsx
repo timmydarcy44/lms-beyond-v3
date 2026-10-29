@@ -4,12 +4,15 @@ import {
   appointmentHeadline,
   bookingPlace,
   bookingSubtitle,
+  parisDayLabel,
   publicPractitionerLine,
   relativeWhenLabel,
   visioWindowOpen,
 } from "@/app/dashboard/patient/_ui/format";
+import { DocumentKindMark } from "@/app/dashboard/patient/_ui/document-kind";
 import { loadCareDirectoryPreview } from "@/lib/care/load-directory";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
+import { loadPatientDocuments } from "@/lib/care/patient-documents";
 import { formatPersonName, personInitials } from "@/lib/care/person-name";
 import { isCarePlaceholderText } from "@/lib/care/profile-format";
 import type { CareBookingRecord } from "@/lib/care/load-booking";
@@ -134,7 +137,7 @@ function NextAppointment({ booking }: { booking: CareBookingRecord }) {
 }
 
 export default async function PatientHomePage() {
-  const { next } = await loadPatientCareHome();
+  const [{ next }, documents] = await Promise.all([loadPatientCareHome(), loadPatientDocuments()]);
   const suggestions = next ? [] : await loadCareDirectoryPreview(3);
   const visibleSuggestions = suggestions.filter((row) => row.slug && !isCarePlaceholderText(row.display_name));
   const practitionerName = next ? formatPersonName(next.practitioner_name) : "";
@@ -182,9 +185,28 @@ export default async function PatientHomePage() {
             <h2>Derniers documents</h2>
             <Link href="/dashboard/patient/documents">Tout voir ›</Link>
           </div>
-          <p className="patient-muted" style={{ marginTop: 0 }}>
-            Aucun document partagé. Il apparaît ici lorsque votre praticien le partage avec vous.
-          </p>
+          {documents.length ? (
+            <div className="patient-doc-home">
+              {documents.slice(0, 4).map((item) => (
+                <Link key={item.id} href={`/dashboard/patient/documents?doc=${item.id}`} className="patient-doc-home-row">
+                  <DocumentKindMark kind={item.kind} />
+                  <span>
+                    <strong>
+                      {item.title}
+                      {!item.openedAt ? <em>Nouveau</em> : null}
+                    </strong>
+                    <small>
+                      Partagé par {item.practitionerName} · {parisDayLabel(item.sharedAt)}
+                    </small>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="patient-muted" style={{ marginTop: 0 }}>
+              Aucun document partagé. Il apparaît ici lorsque votre praticien le partage avec vous.
+            </p>
+          )}
         </article>
       </div>
 
@@ -215,9 +237,28 @@ export default async function PatientHomePage() {
           <div className="patient-card-head">
             <h2>Factures</h2>
           </div>
-          <p className="patient-muted" style={{ marginTop: 0 }}>
-            Aucune facture pour le moment.
-          </p>
+          {documents.some((item) => item.kind === "invoice") ? (
+            <div className="patient-doc-home">
+              {documents
+                .filter((item) => item.kind === "invoice")
+                .slice(0, 2)
+                .map((item) => (
+                  <Link key={item.id} href={`/dashboard/patient/documents?doc=${item.id}`} className="patient-doc-home-row">
+                    <DocumentKindMark kind={item.kind} />
+                    <span>
+                      <strong>{item.title}</strong>
+                      <small>
+                        {parisDayLabel(item.sharedAt)} · {item.practitionerName}
+                      </small>
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          ) : (
+            <p className="patient-muted" style={{ marginTop: 0 }}>
+              Aucune facture pour le moment.
+            </p>
+          )}
         </article>
       </div>
     </div>

@@ -757,3 +757,354 @@
     grid-template-columns: 1fr;
   }
 }
+
+.patient-count {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--p-accent);
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.patient-count.is-on {
+  background: var(--p-accent);
+  color: #fff;
+}
+
+.patient-bell-dot {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--p-accent);
+}
+
+.patient-tabs a {
+  position: relative;
+}
+
+.patient-tabs .patient-count {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  margin: 0;
+  min-width: 16px;
+  height: 16px;
+  font-size: 10px;
+}
+
+.patient-doc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.patient-doc-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.patient-doc-tabs button {
+  border: 0;
+  background: #fff;
+  color: var(--p-ink);
+  border-radius: 999px;
+  min-height: 40px;
+  padding: 0 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.patient-doc-tabs button.is-on {
+  background: var(--p-ink);
+  color: #fff;
+}
+
+.patient-doc-tabs button span {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.patient-doc-search input {
+  height: 42px;
+  width: min(260px, 100%);
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 16px;
+  color: var(--p-ink);
+}
+
+.patient-doc-month {
+  margin-top: 18px;
+}
+
+.patient-doc-month h2 {
+  margin: 0 0 8px;
+  color: var(--p-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.patient-doc-card {
+  padding: 8px;
+}
+
+.patient-doc-row {
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+}
+
+.patient-doc-row.is-on {
+  background: #fbf6f2;
+  box-shadow: inset 3px 0 0 var(--p-accent);
+}
+
+.patient-doc-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.patient-doc-open strong,
+.patient-doc-home-row strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.patient-doc-open small,
+.patient-doc-home-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--p-secondary);
+  font-size: 13px;
+}
+
+.patient-doc-open em,
+.patient-doc-home-row em {
+  font-style: normal;
+  background: var(--p-accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.patient-doc-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.patient-doc-kind {
+  margin-left: auto;
+  background: var(--p-soft);
+  color: var(--p-secondary);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.patient-doc-download {
+  width: 40px;
+  height: 40px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: var(--p-soft);
+  color: var(--p-ink);
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  flex: none;
+}
+
+.patient-doc-home {
+  display: grid;
+}
+
+.patient-doc-home-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.patient-doc-home-row + .patient-doc-home-row {
+  border-top: 1px solid #f0ebe8;
+}
+
+.patient-docs {
+  display: block;
+}
+
+.patient-doc-preview {
+  display: none;
+}
+
+.patient-doc-preview.is-open {
+  display: flex;
+  position: fixed;
+  z-index: 45;
+  inset: 0;
+  background: rgba(42, 31, 36, 0.28);
+  align-items: flex-end;
+}
+
+.patient-doc-panel {
+  width: 100%;
+  max-height: 88vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  padding: 22px 18px 28px;
+}
+
+.patient-doc-panel h2 {
+  margin: 10px 0 6px;
+  font-size: 28px;
+  letter-spacing: -0.6px;
+}
+
+.patient-doc-close {
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 999px;
+  background: var(--p-soft);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.patient-doc-badge {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.patient-doc-frame {
+  width: 100%;
+  height: 420px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--p-soft);
+  margin: 16px 0;
+}
+
+.patient-scores {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.patient-score-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.patient-score-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #f6eee8;
+  overflow: hidden;
+}
+
+.patient-score-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.patient-doc-comment {
+  background: #fbf6f2;
+  border-radius: 18px;
+  padding: 14px 16px;
+}
+
+.patient-doc-comment p {
+  margin: 6px 0 0;
+  color: var(--p-text);
+  line-height: 1.45;
+}
+
+.patient-doc-note {
+  margin: 14px 0 0;
+  color: var(--p-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .patient-doc-kind {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  .patient-docs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 470px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .patient-doc-preview.is-open {
+    display: block;
+    position: sticky;
+    top: 24px;
+    inset: auto;
+    background: none;
+  }
+
+  .patient-doc-panel {
+    max-height: none;
+    border-radius: 30px;
+    padding: 28px;
+  }
+
+  .patient-doc-close {
+    display: none;
+  }
+}
+

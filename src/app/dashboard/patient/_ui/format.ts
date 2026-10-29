@@ -18,6 +18,24 @@ export function parisDateLine(now = new Date()) {
   return `${weekday.charAt(0).toLocaleUpperCase("fr-FR")}${weekday.slice(1)} ${day} ${month}`;
 }
 
+export function parisMonthTitle(iso: string) {
+  const month = part(new Date(iso), { month: "long" }, "month");
+  const year = part(new Date(iso), { year: "numeric" }, "year");
+  return `${month.charAt(0).toLocaleUpperCase("fr-FR")}${month.slice(1)} ${year}`;
+}
+
+export function parisDayLabel(iso: string) {
+  const day = part(new Date(iso), { day: "numeric" }, "day");
+  const month = part(new Date(iso), { month: "short" }, "month").replace(".", "");
+  return `${day} ${month}.`;
+}
+
+export function parisLongDate(iso: string) {
+  const day = part(new Date(iso), { day: "numeric" }, "day");
+  const month = part(new Date(iso), { month: "long" }, "month");
+  return `${day} ${month}`;
+}
+
 export function parisGreeting(firstName: string, now = new Date()) {
   const hour = Number(part(now, { hour: "numeric", hourCycle: "h23" }, "hour"));
   const hello = hour < 18 ? "Bonjour" : "Bonsoir";

@@ -31,7 +31,7 @@
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 120;
+  z-index: 240;
   display: flex;
   width: min(92vw, 360px);
   align-items: flex-start;

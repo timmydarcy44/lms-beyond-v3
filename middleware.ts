@@ -8,7 +8,7 @@ import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { isClubOnlyAccount, canAccessClubDashboard } from "@/lib/auth/club-access";
 import { isPartenaireOnlyAccount, canAccessPartenaireDashboard } from "@/lib/auth/partenaire-access";
-import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
+import { isCarePatientAccount, resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import {
   canServeClubPartenaireDashboards,
   isBeyondCenterHostname,
@@ -427,6 +427,14 @@ async function runMiddleware(request: NextRequest) {
       isPartenaireOnlyAccount(profileLocked.role, profileLocked.role_type, profileLocked.email)
     ) {
       return NextResponse.redirect(new URL("/dashboard/partenaire", request.url));
+    }
+    if (
+      profileLocked &&
+      isCarePatientAccount(profileLocked.role, profileLocked.role_type) &&
+      url.pathname !== "/dashboard/patient" &&
+      !url.pathname.startsWith("/dashboard/patient/")
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/patient", request.url));
     }
   }
 

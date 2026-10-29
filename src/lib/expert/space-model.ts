@@ -50,6 +50,7 @@ export type ExpertSlot = {
   clientPhone?: string | null;
   serviceName?: string | null;
   notes?: string | null;
+  practitionerSlug?: string | null;
 };
 
 export function slotKindFromRule(rule: unknown): SlotKind {

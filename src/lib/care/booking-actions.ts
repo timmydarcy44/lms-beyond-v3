@@ -8,6 +8,7 @@ import { canCancelCareBooking } from "@/lib/care/load-booking";
 import { loadPublishedCareProfile } from "@/lib/care/profile";
 import { CARE_PUBLIC_ORIGIN, careAbsoluteUrl } from "@/lib/care/host";
 import { loadAvailableCareSlots } from "@/lib/care/load-available-slots";
+import { insertCareExpertAlert } from "@/lib/care/expert-alert";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export type CareBookingActionResult =
@@ -157,12 +158,9 @@ export async function createCareBooking(raw: unknown): Promise<CareBookingAction
     hour: "2-digit",
     minute: "2-digit",
   }).format(start);
-  await db.from("notifications").insert({
-    user_id: profile.expert_id,
-    type: "info",
-    title: "Nouveau rendez-vous",
+  await insertCareExpertAlert({
+    expertId: profile.expert_id,
     message: `${input.firstName} ${input.lastName} · ${service.name} · ${when}`,
-    read: false,
   });
   await sendCareBookingEmails({
     clientEmail: emailKey,

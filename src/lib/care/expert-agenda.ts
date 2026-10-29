@@ -106,7 +106,7 @@ export async function loadCareAgendaSlots(expertId: string): Promise<ExpertSlot[
   to.setDate(to.getDate() + 56);
   const fromYmd = from.toISOString().slice(0, 10);
   const toYmd = to.toISOString().slice(0, 10);
-  const [rules, exceptions, bookings] = await Promise.all([
+  const [rules, exceptions, bookings, profile] = await Promise.all([
     db.from("care_availability_rules").select("id, weekday, start_time, end_time, format").eq("expert_id", expertId),
     db.from("care_availability_exceptions").select("id, date, is_closed, start_time, end_time").eq("expert_id", expertId),
     db
@@ -116,7 +116,9 @@ export async function loadCareAgendaSlots(expertId: string): Promise<ExpertSlot[
       .in("status", ["confirmed", "completed"])
       .gte("ends_at", from.toISOString())
       .lte("starts_at", to.toISOString()),
+    db.from("care_profiles").select("slug").eq("expert_id", expertId).maybeSingle(),
   ]);
+  const slug = profile.data?.slug ? String(profile.data.slug) : null;
   if (rules.error && /does not exist|schema cache|PGRST205/i.test(rules.error.message ?? "")) return [];
   const expanded = expandCareRulesToAgendaSlots({
     rules: (rules.data ?? []).map((row) => ({
@@ -155,6 +157,7 @@ export async function loadCareAgendaSlots(expertId: string): Promise<ExpertSlot[
     clientPhone: row.client_phone ? String(row.client_phone) : null,
     serviceName: serviceName.get(String(row.service_id)) || "Rendez-vous",
     notes: row.message ? String(row.message) : null,
+    practitionerSlug: slug,
   }));
   return [...expanded, ...booked];
 }

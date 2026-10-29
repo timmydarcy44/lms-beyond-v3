@@ -21,7 +21,7 @@ export function ExpertAppleInbox() {
       setAlert(next);
     };
     void pull();
-    const timer = window.setInterval(() => void pull(), 8000);
+    const timer = window.setInterval(() => void pull(), 2500);
     return () => {
       cancelled = true;
       window.clearInterval(timer);

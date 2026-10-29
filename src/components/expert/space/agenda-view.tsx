@@ -495,9 +495,17 @@ function AppointmentSheet({ slot, onClose }: { slot: ExpertSlot; onClose: () => 
             </div>
           ) : null}
         </dl>
-        <button type="button" className="mt-6 h-12 w-full rounded-full bg-[#F4F5F7] text-sm font-extrabold text-[#07080B]" onClick={onClose}>
-          Fermer
-        </button>
+        <div className="mt-6 grid gap-2">
+          <a
+            href={slot.practitionerSlug ? `/care/praticiens/${slot.practitionerSlug}` : "/dashboard/expert/care/fiche"}
+            className="flex h-12 items-center justify-center rounded-full bg-[#FF4B4B] text-sm font-extrabold text-[#07080B]"
+          >
+            Voir la fiche
+          </a>
+          <button type="button" className="h-12 w-full rounded-full bg-[#F4F5F7] text-sm font-extrabold text-[#07080B]" onClick={onClose}>
+            Fermer
+          </button>
+        </div>
       </div>
     </div>
   );

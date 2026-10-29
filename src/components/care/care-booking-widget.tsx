@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CareLink } from "@/components/care/care-host";
+import { CarePatientAuth } from "@/components/care/care-patient-auth";
 import { formatCareBookButton, formatCareDayChip, formatParisTime, nextOpenDays, uniqueSlotsForParisDay } from "@/lib/care/working-days";
 import type { CareService } from "@/lib/care/types";
 
@@ -24,6 +25,7 @@ export function CareBookingWidget({
   const [slots, setSlots] = useState<Slot[]>([]);
   const [day, setDay] = useState<string | null>(null);
   const [start, setStart] = useState<string | null>(null);
+  const [identity, setIdentity] = useState({ email: "", firstName: "", lastName: "" });
 
   useEffect(() => {
     if (!firstVisit) return;
@@ -116,6 +118,7 @@ export function CareBookingWidget({
       <p className="care-muted" style={{ marginTop: 12 }}>
         Annulation gratuite jusqu&apos;à {cancellationHours} h avant.
       </p>
+      <CarePatientAuth identity={identity} onIdentity={setIdentity} />
     </aside>
   );
 }

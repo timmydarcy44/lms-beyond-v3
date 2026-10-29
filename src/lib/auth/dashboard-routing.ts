@@ -1,3 +1,4 @@
+import { isCarePatientAccount } from "@/lib/auth/post-login-redirect";
 import { profileRolesIndicateSchoolDashboard } from "@/lib/auth/school-access";
 import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -214,6 +215,10 @@ export async function resolveDashboardSpaces(
   const emailNorm = String(email ?? profile?.email ?? "").trim().toLowerCase();
   const roleKeys = collectProfileRoleKeys(profile);
   const isDemo = roleKeys.includes("demo");
+
+  if (isCarePatientAccount(profile?.role, profile?.role_type) && !isSuperAdminEmailAllowlisted(emailNorm)) {
+    return { spaces: [SPACE_BY_KEY.patient], isDemo: false };
+  }
 
   const spaces: DashboardSpace[] = [];
   const seen = new Set<string>();

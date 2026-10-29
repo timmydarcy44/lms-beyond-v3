@@ -17,11 +17,20 @@ export function CarePatientAuth({
   onIdentity: (next: CarePatientIdentity) => void;
 }) {
   const supabase = useSupabase();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"guest" | "login" | "signup">("guest");
+  const [email, setEmail] = useState(identity.email);
+  const [firstName, setFirstName] = useState(identity.firstName);
+  const [lastName, setLastName] = useState(identity.lastName);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    setEmail(identity.email);
+    setFirstName(identity.firstName);
+    setLastName(identity.lastName);
+  }, [identity.email, identity.firstName, identity.lastName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +55,6 @@ export function CarePatientAuth({
     return () => {
       cancelled = true;
     };
-    // identity is a controlled parent snapshot; we only hydrate once from the session
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
@@ -57,11 +65,11 @@ export function CarePatientAuth({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        mode,
-        email: identity.email,
+        mode: mode === "signup" ? "signup" : "login",
+        email,
         password,
-        firstName: identity.firstName,
-        lastName: identity.lastName,
+        firstName,
+        lastName,
       }),
     });
     const json = (await response.json().catch(() => ({}))) as { error?: string; message?: string; ok?: boolean };
@@ -70,50 +78,86 @@ export function CarePatientAuth({
       setMessage(json.error || "Action impossible.");
       return;
     }
+    onIdentity({ email, firstName, lastName });
     setSignedIn(true);
-    setMessage(json.message || (mode === "login" ? "Connecté." : "Compte créé."));
+    setMessage(json.message || (mode === "login" ? "Connecté." : "Compte patient créé."));
   }
 
   if (signedIn) {
     return (
       <p className="care-patient-auth-ok">
-        Connecté{identity.email ? ` · ${identity.email}` : ""}. Vos rendez-vous seront dans votre espace patient.
+        Connecté{email || identity.email ? ` · ${email || identity.email}` : ""}. Accès : espace patient uniquement.
       </p>
     );
   }
 
   return (
     <div className="care-patient-auth">
+      <p className="care-patient-auth-guest">Prenez un rendez-vous sans compte</p>
+      <p className="care-muted">Choisissez un créneau, puis vos coordonnées. Un compte n’est pas obligatoire.</p>
       <div className="care-patient-auth-toggle" role="tablist" aria-label="Compte">
+        <button type="button" className={mode === "guest" ? "is-on" : ""} onClick={() => setMode("guest")}>
+          Sans compte
+        </button>
         <button type="button" className={mode === "login" ? "is-on" : ""} onClick={() => setMode("login")}>
-          Déjà un compte ?
+          Se connecter
         </button>
         <button type="button" className={mode === "signup" ? "is-on" : ""} onClick={() => setMode("signup")}>
           Créer un compte
         </button>
       </div>
-      <p className="care-muted">
-        {mode === "login"
-          ? "Connectez-vous pour retrouver vos rendez-vous Byound Care."
-          : "Un e-mail, un mot de passe, et votre espace patient est créé."}
-      </p>
-      <label className="care-field">
-        Mot de passe
-        <input
-          type="password"
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </label>
-      {message ? (
-        <p className="care-alert" role="alert">
-          {message}
-        </p>
-      ) : null}
-      <button type="button" className="care-pill care-pill--ink" disabled={pending || !identity.email || password.length < 8} onClick={() => void submit()}>
-        {pending ? "…" : mode === "login" ? "Se connecter" : "Créer mon espace"}
-      </button>
+      {mode === "guest" ? null : (
+        <>
+          <p className="care-muted">
+            {mode === "login"
+              ? "Connexion à votre espace patient Byound Care."
+              : "Ce compte est exclusivement patient : rendez-vous et suivi, rien d’autre."}
+          </p>
+          {mode === "signup" ? (
+            <div className="care-patient-auth-grid">
+              <label className="care-field">
+                Prénom
+                <input autoComplete="given-name" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+              </label>
+              <label className="care-field">
+                Nom
+                <input autoComplete="family-name" value={lastName} onChange={(event) => setLastName(event.target.value)} />
+              </label>
+            </div>
+          ) : null}
+          <label className="care-field">
+            E-mail
+            <input
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          <label className="care-field">
+            Mot de passe
+            <input
+              type="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          {message ? (
+            <p className="care-alert" role="alert">
+              {message}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="care-pill care-pill--ink"
+            disabled={pending || !email || password.length < 8}
+            onClick={() => void submit()}
+          >
+            {pending ? "…" : mode === "login" ? "Se connecter" : "Créer mon espace patient"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CareCancelButton } from "@/components/care/care-cancel-button";
+import { CareLink } from "@/components/care/care-host";
 import { canCancelCareBooking } from "@/lib/care/load-booking";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
 import { formatCareDateLong } from "@/lib/care/working-days";
@@ -20,6 +21,11 @@ export default async function PatientHomePage() {
             {next.service_name} · {next.practitioner_name}
           </p>
           <p className="care-muted">{next.format === "visio" ? "Visio" : "Cabinet"}</p>
+          {next.practitioner_slug ? (
+            <CareLink className="care-pill care-pill--ink" href={`/care/praticiens/${next.practitioner_slug}`} style={{ marginTop: 12, display: "inline-flex" }}>
+              Voir la fiche
+            </CareLink>
+          ) : null}
           {canCancelCareBooking(next.starts_at, next.cancellation_hours) ? (
             <div style={{ marginTop: 12 }}>
               <CareCancelButton id={next.id} token={next.access_token} />

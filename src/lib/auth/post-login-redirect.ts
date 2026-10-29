@@ -86,3 +86,11 @@ export function resolveDestinationFromProfile(
 export function isKnownProfileRole(role: string | null | undefined): boolean {
   return resolveDestinationFromProfileRole(role) !== null;
 }
+
+export function isCarePatientAccount(
+  role: string | null | undefined,
+  roleType?: string | null,
+): boolean {
+  const keys = [role, roleType].map(normalize);
+  return keys.includes("care_patient") || keys.includes("patient");
+}

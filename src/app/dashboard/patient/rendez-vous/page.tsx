@@ -1,4 +1,5 @@
 import { CareCancelButton } from "@/components/care/care-cancel-button";
+import { CareLink } from "@/components/care/care-host";
 import { canCancelCareBooking } from "@/lib/care/load-booking";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
 import { formatCareDateLong } from "@/lib/care/working-days";
@@ -20,6 +21,11 @@ export default async function PatientAppointmentsPage() {
                 {item.service_name} · {item.practitioner_name}
               </p>
               <p className="care-muted">{item.format === "visio" ? "Visio" : "Cabinet"}</p>
+              {item.practitioner_slug ? (
+                <CareLink className="care-pill care-pill--ink" href={`/care/praticiens/${item.practitioner_slug}`} style={{ marginTop: 12, display: "inline-flex" }}>
+                  Voir la fiche
+                </CareLink>
+              ) : null}
               {canCancelCareBooking(item.starts_at, item.cancellation_hours) ? (
                 <div style={{ marginTop: 12 }}>
                   <CareCancelButton id={item.id} token={item.access_token} />

@@ -228,6 +228,13 @@
   margin: 0 0 22px;
 }
 
+.care-profile-hero .care-h1 {
+  font-size: clamp(28px, 4.2vw, 44px);
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 8px 0 14px;
+}
+
 .care-h2 {
   font-weight: 800;
   letter-spacing: -0.045em;
@@ -580,6 +587,10 @@
 
   .care-h1 {
     font-size: clamp(46px, 12vw, 72px);
+  }
+
+  .care-profile-hero .care-h1 {
+    font-size: clamp(26px, 8vw, 36px);
   }
 
   .care-prac-grid,
@@ -1045,17 +1056,32 @@
 }
 
 .care-patient-auth {
-  margin-bottom: 22px;
+  margin-top: 18px;
+  margin-bottom: 8px;
   padding: 16px;
   border: 1px solid var(--care-border);
   border-radius: 20px;
-  background: #fff;
+  background: #f8f9fd;
+}
+
+.care-book .care-patient-auth {
+  margin-top: 18px;
+  margin-left: -4px;
+  margin-right: -4px;
+}
+
+.care-patient-auth-guest {
+  margin: 0 0 6px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1.05rem;
 }
 
 .care-patient-auth-toggle {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
+  margin: 12px 0 10px;
 }
 
 .care-patient-auth-toggle button {
@@ -1064,11 +1090,25 @@
   border-radius: 999px;
   padding: 8px 14px;
   cursor: pointer;
+  font-weight: 650;
 }
 
 .care-patient-auth-toggle button.is-on {
-  border-color: var(--care-accent);
-  background: var(--care-accent-soft);
+  border-color: var(--care-navy);
+  background: var(--care-navy);
+  color: #fff;
+}
+
+.care-patient-auth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .care-patient-auth-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .care-patient-auth-ok {

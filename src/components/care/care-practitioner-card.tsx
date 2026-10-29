@@ -50,11 +50,15 @@ export function CarePractitionerCard({
         </div>
       </div>
       <div className="care-prac-chips">
-        {(row.domains ?? []).map((id) => (
-          <span key={id} className="care-chip">
-            {CARE_DOMAINS.find((item) => item.id === id)?.label ?? id}
-          </span>
-        ))}
+        {(row.domains ?? []).flatMap((id) => {
+          const label = CARE_DOMAINS.find((item) => item.id === id)?.label;
+          if (!label) return [];
+          return [
+            <span key={id} className="care-chip">
+              {label}
+            </span>,
+          ];
+        })}
       </div>
       <p className="care-prac-badges">
         {certified ? `${row.badge_count} Open Badge${row.badge_count > 1 ? "s" : ""}` : C.certInProgress}

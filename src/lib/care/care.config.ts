@@ -5,7 +5,7 @@ export const CARE_PLANS = {
     priceCents: 0,
     sessionsLabel: "[1 séance]",
     features: [
-      "Un bilan unique, dans six domaines de vie",
+      "Un bilan unique, dans cinq domaines de vie",
       "Une restitution avec un praticien certifié",
       "Des pistes d'action concrètes",
     ],

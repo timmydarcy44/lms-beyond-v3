@@ -38,10 +38,10 @@ export const CARE_HOME = {
   manifeste: {
     eyebrow: "Notre conviction",
     title: "On ne performe pas en pièces détachées.",
-    lead: "Votre vie n'est pas compartimentée. Le stress, l'attention, la famille, le couple, la performance, la carrière — tout est relié.",
+    lead: "Votre vie n'est pas compartimentée. Le stress, l'attention, la famille, la performance, la carrière — tout est relié.",
   },
   domaines: {
-    eyebrow: "Six domaines de vie",
+    eyebrow: "Cinq domaines de vie",
     title: "Un praticien pour chaque partie de votre vie.",
     cta: "Voir les praticiens",
     cards: [
@@ -71,20 +71,13 @@ export const CARE_HOME = {
         id: CARE_DOMAINS[3].id,
         program: CARE_DOMAINS[3].program,
         name: CARE_DOMAINS[3].label,
-        text: "Communication, conflits, vie intime. Deux personnes, un même langage.",
-        practitioners: "Praticiens couple · médiation",
+        text: "Sport, scène, haute exigence. Préparer le mental sans casser le corps.",
+        practitioners: "Préparation mentale · coachs",
       },
       {
         id: CARE_DOMAINS[4].id,
         program: CARE_DOMAINS[4].program,
         name: CARE_DOMAINS[4].label,
-        text: "Sport, scène, haute exigence. Préparer le mental sans casser le corps.",
-        practitioners: "Préparation mentale · coachs",
-      },
-      {
-        id: CARE_DOMAINS[5].id,
-        program: CARE_DOMAINS[5].program,
-        name: CARE_DOMAINS[5].label,
         text: "Reconversion, orientation, prise de poste. Choisir la suite en conscience.",
         practitioners: "Orientation · transitions",
       },
@@ -96,7 +89,7 @@ export const CARE_HOME = {
       {
         n: "01",
         title: "Bilan",
-        text: "Un bilan unique, dans six domaines de vie. Vous voyez comment vous fonctionnez, pas seulement ce qui cloche.",
+        text: "Un bilan unique, dans cinq domaines de vie. Vous voyez comment vous fonctionnez, pas seulement ce qui cloche.",
       },
       {
         n: "02",

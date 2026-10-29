@@ -2,7 +2,6 @@ export const CARE_DOMAINS = [
   { id: "emotions", label: "Émotions & stress", program: "Balance" },
   { id: "attention", label: "Attention & organisation", program: "Focus" },
   { id: "famille", label: "Famille & parentalité", program: "Family" },
-  { id: "couple", label: "Couple & vie intime", program: "Duo" },
   { id: "performance", label: "Performance", program: "Peak" },
   { id: "carriere", label: "Carrière & transitions", program: "Shift" },
 ] as const;

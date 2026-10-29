@@ -12,7 +12,6 @@ export type CareDirectoryQuery = {
 export const CARE_QUICK_SEARCHES = [
   "Parentalité",
   "Petite enfance",
-  "Couple",
   "Orientation",
   "Préparation mentale",
 ] as const;
@@ -72,7 +71,6 @@ function haystack(row: CareDirectoryRow) {
 const QUERY_ALIASES: Record<string, string[]> = {
   parentalite: ["famille", "parents", "family"],
   "petite enfance": ["0-3", "0–3", "0-6", "famille", "family"],
-  couple: ["couple", "duo"],
   orientation: ["carriere", "shift", "orientation"],
   "preparation mentale": ["performance", "peak"],
 };

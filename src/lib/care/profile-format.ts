@@ -52,7 +52,7 @@ export function isCarePlaceholderText(value: string | null | undefined) {
 }
 
 export function careDomainLabel(id: CareDomain | string) {
-  return CARE_DOMAINS.find((item) => item.id === id)?.label ?? id;
+  return CARE_DOMAINS.find((item) => item.id === id)?.label ?? null;
 }
 
 export function formatCareDuration(minutes: number) {

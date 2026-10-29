@@ -123,11 +123,15 @@ export default async function CarePraticienPage({ params }: Params) {
               {hasCarePublicText(profile.tagline) ? <p className="care-lead">{profile.tagline}</p> : null}
               {profile.domains.length ? (
                 <div className="care-quick">
-                  {profile.domains.map((id) => (
-                    <span key={id} className="care-chip-link care-chip-link--on-dark is-on">
-                      {careDomainLabel(id)}
-                    </span>
-                  ))}
+                  {profile.domains.flatMap((id) => {
+                    const label = careDomainLabel(id);
+                    if (!label) return [];
+                    return [
+                      <span key={id} className="care-chip-link care-chip-link--on-dark is-on">
+                        {label}
+                      </span>,
+                    ];
+                  })}
                 </div>
               ) : null}
               <div className="care-quick">
@@ -172,7 +176,9 @@ export default async function CarePraticienPage({ params }: Params) {
                     <li key={service.id}>
                       <div>
                         <strong>{service.name}</strong>
-                        <span className="care-chip">{careDomainLabel(service.domain)}</span>
+                        {careDomainLabel(service.domain) ? (
+                          <span className="care-chip">{careDomainLabel(service.domain)}</span>
+                        ) : null}
                       </div>
                       {hasCarePublicText(service.description) ? <p>{service.description}</p> : null}
                       <p className="care-muted">

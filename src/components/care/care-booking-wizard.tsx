@@ -102,7 +102,8 @@ export function CareBookingWizard({
     router.push(toCareHref(`/care/reservation/${result.id}?token=${result.token}`, publicHost));
   }
 
-  const domainOptions = (profile.domains.length ? profile.domains : CARE_DOMAINS.map((item) => item.id)) as CareDomain[];
+  const listedDomains = profile.domains.filter((id): id is CareDomain => CARE_DOMAINS.some((item) => item.id === id));
+  const domainOptions = listedDomains.length ? listedDomains : CARE_DOMAINS.map((item) => item.id);
 
   return (
     <div className="care-reserve">

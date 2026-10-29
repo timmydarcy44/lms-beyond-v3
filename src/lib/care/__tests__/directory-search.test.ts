@@ -37,7 +37,7 @@ describe("matchesCareDirectory", () => {
   });
   it("filters domain and format from the URL", () => {
     expect(matchesCareDirectory(row(), parseCareDirectoryQuery({ domaine: "famille" }))).toBe(true);
-    expect(matchesCareDirectory(row(), parseCareDirectoryQuery({ domaine: "couple" }))).toBe(false);
+    expect(matchesCareDirectory(row(), parseCareDirectoryQuery({ domaine: "performance" }))).toBe(false);
     expect(matchesCareDirectory(row({ offers_cabinet: false }), parseCareDirectoryQuery({ format: "cabinet" }))).toBe(false);
   });
 });

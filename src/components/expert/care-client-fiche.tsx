@@ -8,6 +8,7 @@ import { stripAiMarkup } from "@/lib/ai/strip-markup";
 import { careTestTitle } from "@/lib/expert/care-result-view";
 import { summarizeCareTest } from "@/lib/expert/care-test-summary";
 import { AppleSuccessOverlay } from "@/components/expert/apple-success-overlay";
+import { CarePatientSpacePanel } from "@/components/expert/care-patient-space-panel";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
 
 type Client = {
@@ -227,6 +228,7 @@ export function CareClientFiche({ clientId }: { clientId: string }) {
           </div>
         )}
       </section>
+      <CarePatientSpacePanel clientId={clientId} />
     </ExpertPageFrame>
   );
 }

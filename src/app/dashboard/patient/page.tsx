@@ -10,9 +10,12 @@ import {
   visioWindowOpen,
 } from "@/app/dashboard/patient/_ui/format";
 import { DocumentKindMark } from "@/app/dashboard/patient/_ui/document-kind";
+import { PatientTaskList } from "@/app/dashboard/patient/_ui/task-list";
 import { loadCareDirectoryPreview } from "@/lib/care/load-directory";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
 import { loadPatientDocuments } from "@/lib/care/patient-documents";
+import { activeSubjectId, loadPatientRelatives, sameSubject } from "@/lib/care/patient-relatives";
+import { loadPatientInvoices, loadPatientJourneys } from "@/lib/care/patient-space";
 import { formatPersonName, personInitials } from "@/lib/care/person-name";
 import { isCarePlaceholderText } from "@/lib/care/profile-format";
 import type { CareBookingRecord } from "@/lib/care/load-booking";
@@ -136,10 +139,29 @@ function NextAppointment({ booking }: { booking: CareBookingRecord }) {
   );
 }
 
-export default async function PatientHomePage() {
-  const [{ next }, documents] = await Promise.all([loadPatientCareHome(), loadPatientDocuments()]);
+export default async function PatientHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ personne?: string }>;
+}) {
+  const [{ personne }, relatives, home, documents, journeys, invoices] = await Promise.all([
+    searchParams,
+    loadPatientRelatives(),
+    loadPatientCareHome(),
+    loadPatientDocuments(),
+    loadPatientJourneys(),
+    loadPatientInvoices(),
+  ]);
+  const subjectId = activeSubjectId(personne, relatives);
+  const next = home.upcoming.find((item) => sameSubject(item.subject_relative_id, subjectId)) ?? null;
+  const visibleDocuments = documents.filter((item) => sameSubject(item.subjectRelativeId, subjectId));
+  const journey = journeys.find((item) => sameSubject(item.subjectRelativeId, subjectId)) ?? null;
+  const visibleInvoices = invoices.filter((item) => sameSubject(item.subjectRelativeId, subjectId));
+  const paidCount = visibleInvoices.filter((item) => item.paidAt).length;
+  const dueCount = visibleInvoices.length - paidCount;
   const suggestions = next ? [] : await loadCareDirectoryPreview(3);
   const visibleSuggestions = suggestions.filter((row) => row.slug && !isCarePlaceholderText(row.display_name));
+  const personQuery = subjectId ? `?personne=${subjectId}` : "";
   const practitionerName = next ? formatPersonName(next.practitioner_name) : "";
   const practitionerMeta = next ? publicPractitionerLine(next.practitioner_title, next.practitioner_city) : "";
 
@@ -183,12 +205,12 @@ export default async function PatientHomePage() {
         <article className="patient-card">
           <div className="patient-card-head">
             <h2>Derniers documents</h2>
-            <Link href="/dashboard/patient/documents">Tout voir ›</Link>
+            <Link href={`/dashboard/patient/documents${personQuery}`}>Tout voir ›</Link>
           </div>
-          {documents.length ? (
+          {visibleDocuments.length ? (
             <div className="patient-doc-home">
-              {documents.slice(0, 4).map((item) => (
-                <Link key={item.id} href={`/dashboard/patient/documents?doc=${item.id}`} className="patient-doc-home-row">
+              {visibleDocuments.slice(0, 4).map((item) => (
+                <Link key={item.id} href={`/dashboard/patient/documents${personQuery}${personQuery ? "&" : "?"}doc=${item.id}`} className="patient-doc-home-row">
                   <DocumentKindMark kind={item.kind} />
                   <span>
                     <strong>
@@ -208,6 +230,48 @@ export default async function PatientHomePage() {
             </p>
           )}
         </article>
+
+        {journey?.steps.length ? (
+          <article className="patient-card">
+            <h2>{journey.title}</h2>
+            <p className="patient-muted">Avec {journey.practitionerName}</p>
+            <ol className="patient-journey">
+              {journey.steps.map((step) => (
+                <li key={step.id} data-status={step.status}>
+                  <span />
+                  <strong>{step.title}</strong>
+                  {step.date ? <small>{parisDayLabel(step.date)}</small> : null}
+                </li>
+              ))}
+            </ol>
+          </article>
+        ) : null}
+
+        {journey?.tasks.length ? (
+          <article className="patient-card patient-card--prepare">
+            <h2>{next ? `Avant ${parisDayLabel(next.starts_at)}` : "À préparer"}</h2>
+            <PatientTaskList tasks={journey.tasks} />
+          </article>
+        ) : null}
+
+        {journey?.note ? (
+          <article className="patient-card">
+            <h2>Un mot de {journey.practitionerName}</h2>
+            <p>{journey.note.message}</p>
+          </article>
+        ) : null}
+
+        {journey?.resource ? (
+          <article className="patient-card patient-card--resource">
+            <h2>Ressource recommandée</h2>
+            <a href={journey.resource.url} target="_blank" rel="noreferrer">
+              <strong>{journey.resource.title}</strong>
+              <small>
+                {[journey.resource.kind, journey.resource.durationMin ? `${journey.resource.durationMin} min` : ""].filter(Boolean).join(" · ")}
+              </small>
+            </a>
+          </article>
+        ) : null}
       </div>
 
       <div className="patient-stack">
@@ -236,14 +300,35 @@ export default async function PatientHomePage() {
         <article className="patient-card">
           <div className="patient-card-head">
             <h2>Factures</h2>
+            {visibleInvoices.length ? (
+              <span className={dueCount ? "patient-due" : "patient-settled"}>
+                {dueCount ? `${dueCount} à régler` : "Tout est réglé"}
+              </span>
+            ) : null}
           </div>
-          {documents.some((item) => item.kind === "invoice") ? (
+          {visibleInvoices.length ? (
             <div className="patient-doc-home">
-              {documents
+              {visibleInvoices.slice(0, 3).map((item) => (
+                <div key={item.id} className="patient-doc-home-row">
+                  <span>
+                    <strong>{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(item.amountCents / 100)}</strong>
+                    <small>
+                      {item.practitionerName}
+                      {item.number ? ` · ${item.number}` : ""}
+                      {" · "}
+                      {item.paidAt ? `Réglée le ${parisDayLabel(item.paidAt)}` : "À régler"}
+                    </small>
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : visibleDocuments.some((item) => item.kind === "invoice") ? (
+            <div className="patient-doc-home">
+              {visibleDocuments
                 .filter((item) => item.kind === "invoice")
                 .slice(0, 2)
                 .map((item) => (
-                  <Link key={item.id} href={`/dashboard/patient/documents?doc=${item.id}`} className="patient-doc-home-row">
+                  <Link key={item.id} href={`/dashboard/patient/documents${personQuery}${personQuery ? "&" : "?"}doc=${item.id}`} className="patient-doc-home-row">
                     <DocumentKindMark kind={item.kind} />
                     <span>
                       <strong>{item.title}</strong>
@@ -259,6 +344,11 @@ export default async function PatientHomePage() {
               Aucune facture pour le moment.
             </p>
           )}
+          {paidCount > 0 ? (
+            <a className="patient-pill patient-pill--soft" href={`/api/care/patient/attestation${subjectId ? `?personne=${subjectId}` : ""}`}>
+              Attestation mutuelle
+            </a>
+          ) : null}
         </article>
       </div>
     </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { personInitials } from "@/lib/care/person-name";
 import {
   Bell,
   CalendarDays,
@@ -23,6 +24,14 @@ export type PatientSearchItem = {
   href: string;
   title: string;
   meta: string;
+  subjectRelativeId?: string | null;
+};
+
+export type PatientShellRelative = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  relation: "enfant" | "conjoint" | "autre";
 };
 
 export type PatientAccount = {
@@ -44,28 +53,50 @@ const DESKTOP_NAV = [
 
 const MOBILE_NAV = DESKTOP_NAV.filter((item) => item.href !== "/care/praticiens");
 
+const RELATION_LABEL = { enfant: "Enfant", conjoint: "Conjoint", autre: "Proche" } as const;
+
 function isCurrent(pathname: string, href: string, exact: boolean) {
   if (exact) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function withPerson(href: string, personId: string | null) {
+  if (!personId || !href.startsWith("/dashboard/patient")) return href;
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("personne", personId);
+  return `${path}?${params.toString()}`;
+}
+
 export function CarePatientShell({
   account,
+  relatives,
   searchItems,
-  newDocuments = 0,
+  unopenedSubjects = [],
   children,
 }: {
   account: PatientAccount;
+  relatives: PatientShellRelative[];
   searchItems: PatientSearchItem[];
-  newDocuments?: number;
+  unopenedSubjects?: Array<string | null>;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const isHome = pathname === "/dashboard/patient";
   const [query, setQuery] = useState("");
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [formError, setFormError] = useState("");
+  const requested = searchParams.get("personne");
+  const active = relatives.find((item) => item.id === requested) ?? null;
+  const activeId = active?.id ?? null;
   const fullName = [account.firstName, account.lastName].filter(Boolean).join(" ");
+  const activeName = active ? [active.firstName, active.lastName].filter(Boolean).join(" ") : fullName || "Moi";
+  const activeInitials = active ? personInitials(active.firstName, active.lastName) : account.initials;
+  const newDocuments = unopenedSubjects.filter((id) => (activeId ? id === activeId : id == null)).length;
 
   useEffect(() => {
     setPeopleOpen(false);
@@ -85,11 +116,63 @@ export function CarePatientShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [peopleOpen, bellOpen]);
 
+  useEffect(() => {
+    if (!peopleOpen) return;
+    document.getElementById("patient-people-title")?.closest("[role='dialog']")?.querySelector<HTMLElement>("button, input, select")?.focus();
+  }, [peopleOpen]);
+
   const results = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("fr-FR");
     if (!needle) return [];
-    return searchItems.filter((item) => `${item.title} ${item.meta}`.toLocaleLowerCase("fr-FR").includes(needle)).slice(0, 6);
-  }, [query, searchItems]);
+    return searchItems
+      .filter((item) => {
+        const same = item.subjectRelativeId === undefined || (activeId ? item.subjectRelativeId === activeId : item.subjectRelativeId == null);
+        return same && `${item.title} ${item.meta}`.toLocaleLowerCase("fr-FR").includes(needle);
+      })
+      .slice(0, 6);
+  }, [activeId, query, searchItems]);
+
+  function personHref(personId: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (personId) params.set("personne", personId);
+    else params.delete("personne");
+    const queryString = params.toString();
+    return queryString ? `${pathname}?${queryString}` : pathname;
+  }
+
+  async function addRelative(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError("");
+    setAdding(true);
+    const form = new FormData(event.currentTarget);
+    const year = String(form.get("birthYear") ?? "").trim();
+    const response = await fetch("/api/care/patient/relatives", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: String(form.get("firstName") ?? ""),
+        lastName: String(form.get("lastName") ?? ""),
+        birthYear: year ? Number(year) : null,
+        relation: String(form.get("relation") ?? ""),
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as { id?: string; error?: string } | null;
+    setAdding(false);
+    if (!response.ok || !payload?.id) {
+      setFormError(payload?.error || "Le proche n'a pas pu être ajouté.");
+      return;
+    }
+    setPeopleOpen(false);
+    router.push(personHref(payload.id));
+    router.refresh();
+  }
+
+  async function removeRelative(id: string) {
+    const response = await fetch(`/api/care/patient/relatives/${id}`, { method: "DELETE" });
+    if (!response.ok) return;
+    if (activeId === id) router.push(personHref(null));
+    router.refresh();
+  }
 
   return (
     <div className="patient-root" style={patientCssVars}>
@@ -102,13 +185,27 @@ export function CarePatientShell({
           </Link>
           <div className="patient-people">
             <p>Espace de</p>
-            <div className="patient-people-active">
+            <Link href={personHref(null)} className="patient-people-active" aria-current={activeId ? undefined : "true"}>
               <span className="patient-person-avatar">{account.initials || "Moi"}</span>
               <span>
                 {account.firstName || "Moi"}
                 <small style={{ display: "block", fontWeight: 500, opacity: 0.8 }}>Moi</small>
               </span>
-            </div>
+            </Link>
+            {relatives.map((person) => (
+              <Link
+                key={person.id}
+                href={personHref(person.id)}
+                className="patient-people-active"
+                aria-current={person.id === activeId ? "true" : undefined}
+              >
+                <span className="patient-person-avatar">{personInitials(person.firstName, person.lastName)}</span>
+                <span>
+                  {person.firstName}
+                  <small style={{ display: "block", fontWeight: 500, opacity: 0.8 }}>{RELATION_LABEL[person.relation]}</small>
+                </span>
+              </Link>
+            ))}
             <button type="button" className="patient-people-add" onClick={() => setPeopleOpen(true)}>
               <Plus size={16} aria-hidden />
               Ajouter un proche
@@ -119,7 +216,7 @@ export function CarePatientShell({
               const Icon = item.icon;
               const current = isCurrent(pathname, item.href, item.exact);
               return (
-                <Link key={item.href} href={item.href} aria-current={current ? "page" : undefined}>
+                <Link key={item.href} href={withPerson(item.href, activeId)} aria-current={current ? "page" : undefined}>
                   <Icon size={18} aria-hidden />
                   {item.label}
                   {item.href.endsWith("/documents") && newDocuments > 0 ? (
@@ -141,9 +238,9 @@ export function CarePatientShell({
         <div className="patient-main">
           <header className="patient-top">
             <div className="patient-top-lead">
-              <button type="button" className="patient-person-chip" onClick={() => setPeopleOpen(true)}>
-                <span>{account.initials || "Moi"}</span>
-                {account.firstName || "Moi"}
+              <button type="button" className="patient-person-chip" onClick={() => setPeopleOpen(true)} aria-label={`Espace de ${activeName}`}>
+                <span>{activeInitials || "Moi"}</span>
+                {active?.firstName || account.firstName || "Moi"}
               </button>
               {isHome ? (
                 <div>
@@ -214,7 +311,7 @@ export function CarePatientShell({
           const Icon = item.icon;
           const current = isCurrent(pathname, item.href, item.exact);
           return (
-            <Link key={item.href} href={item.href} aria-current={current ? "page" : undefined}>
+            <Link key={item.href} href={withPerson(item.href, activeId)} aria-current={current ? "page" : undefined}>
               <Icon size={18} aria-hidden />
               {item.label === "Mes documents" ? "Documents" : item.label}
               {item.href.endsWith("/documents") && newDocuments > 0 ? (
@@ -240,14 +337,57 @@ export function CarePatientShell({
                 <X size={18} aria-hidden />
               </button>
             </div>
-            <button type="button" className="patient-sheet-person">
+            <Link href={personHref(null)} className="patient-sheet-person" aria-current={activeId ? undefined : "true"}>
               <span className="patient-person-avatar">{account.initials || "Moi"}</span>
               <span>
                 {fullName || "Moi"}
                 <small style={{ display: "block", fontWeight: 500, color: "var(--p-secondary)" }}>Moi</small>
               </span>
-            </button>
-            <p>Aucun proche n&apos;est rattaché à cet espace.</p>
+            </Link>
+            {relatives.length ? (
+              relatives.map((person) => (
+                <div key={person.id} className="patient-sheet-row">
+                  <Link href={personHref(person.id)} className="patient-sheet-person" aria-current={person.id === activeId ? "true" : undefined}>
+                    <span className="patient-person-avatar">{personInitials(person.firstName, person.lastName)}</span>
+                    <span>
+                      {[person.firstName, person.lastName].filter(Boolean).join(" ")}
+                      <small style={{ display: "block", fontWeight: 500, color: "var(--p-secondary)" }}>{RELATION_LABEL[person.relation]}</small>
+                    </span>
+                  </Link>
+                  <button type="button" className="patient-text-btn" onClick={() => removeRelative(person.id)}>
+                    Retirer
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p>Aucun proche n&apos;est rattaché à cet espace.</p>
+            )}
+            <form className="patient-relative-form" onSubmit={addRelative}>
+              <label>
+                Prénom
+                <input name="firstName" required autoComplete="given-name" />
+              </label>
+              <label>
+                Nom
+                <input name="lastName" autoComplete="family-name" />
+              </label>
+              <label>
+                Lien
+                <select name="relation" defaultValue="enfant" aria-label="Lien">
+                  <option value="enfant">Enfant</option>
+                  <option value="conjoint">Conjoint</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </label>
+              <label>
+                Année de naissance
+                <input name="birthYear" inputMode="numeric" placeholder="Optionnel" aria-label="Année de naissance, optionnel" />
+              </label>
+              {formError ? <p>{formError}</p> : null}
+              <button type="submit" className="patient-pill patient-pill--dark" disabled={adding}>
+                {adding ? "Ajout…" : "Ajouter"}
+              </button>
+            </form>
           </div>
         </div>
       ) : null}

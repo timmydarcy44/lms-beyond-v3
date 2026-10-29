@@ -3,6 +3,7 @@ import { CareCancelButton } from "@/components/care/care-cancel-button";
 import { bookingPlace, bookingSubtitle } from "@/app/dashboard/patient/_ui/format";
 import { canCancelCareBooking, type CareBookingRecord } from "@/lib/care/load-booking";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
+import { activeSubjectId, loadPatientRelatives, sameSubject } from "@/lib/care/patient-relatives";
 import { formatPersonName } from "@/lib/care/person-name";
 import { formatCareDateLong } from "@/lib/care/working-days";
 
@@ -31,8 +32,15 @@ function BookingCard({ item, past = false }: { item: CareBookingRecord; past?: b
   );
 }
 
-export default async function PatientAppointmentsPage() {
-  const { upcoming, past } = await loadPatientCareHome();
+export default async function PatientAppointmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ personne?: string }>;
+}) {
+  const [{ personne }, relatives, home] = await Promise.all([searchParams, loadPatientRelatives(), loadPatientCareHome()]);
+  const subjectId = activeSubjectId(personne, relatives);
+  const upcoming = home.upcoming.filter((item) => sameSubject(item.subject_relative_id, subjectId));
+  const past = home.past.filter((item) => sameSubject(item.subject_relative_id, subjectId));
   return (
     <section>
       <h1 className="patient-page-title">Rendez-vous</h1>

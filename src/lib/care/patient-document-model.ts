@@ -13,6 +13,7 @@ export type PatientDocument = {
   sharedAt: string;
   openedAt: string | null;
   practitionerName: string;
+  subjectRelativeId: string | null;
   hasFile: boolean;
   test: {
     scores: PatientDocumentScore[];

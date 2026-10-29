@@ -235,9 +235,10 @@ function TestPreview({ document }: { document: PatientDocument }) {
 }
 
 function FilePreview({ document, signedUrl, settled }: { document: PatientDocument; signedUrl: string | null; settled: boolean }) {
+  const tone = document.kind === "test_result" ? patientTokens.kinds.test : patientTokens.kinds[document.kind];
   return (
     <div>
-      <p className="patient-doc-badge" style={{ background: patientTokens.kinds[document.kind].bg, color: patientTokens.kinds[document.kind].fg }}>
+      <p className="patient-doc-badge" style={{ background: tone.bg, color: tone.fg }}>
         {DOCUMENT_KIND_LABEL[document.kind]}
       </p>
       <h2>{document.title}</h2>

@@ -42,7 +42,7 @@ export const loadPatientDocuments = cache(async function loadPatientDocuments():
   if (!session?.id || !db) return [];
   const { data, error } = await db
     .from("care_documents")
-    .select("id, kind, title, storage_path, shared_at, opened_at, practitioner_id, created_at")
+    .select("id, kind, title, storage_path, shared_at, opened_at, practitioner_id, subject_relative_id, created_at")
     .eq("patient_account_id", session.id)
     .not("shared_at", "is", null)
     .order("shared_at", { ascending: false });
@@ -80,6 +80,7 @@ export const loadPatientDocuments = cache(async function loadPatientDocuments():
       sharedAt: String(row.shared_at),
       openedAt: row.opened_at ? String(row.opened_at) : null,
       practitionerName: names.get(String(row.practitioner_id)) || "Votre praticien",
+      subjectRelativeId: row.subject_relative_id ? String(row.subject_relative_id) : null,
       hasFile: Boolean(safeStoragePath(row.storage_path)),
       test,
     });

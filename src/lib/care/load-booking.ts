@@ -29,6 +29,7 @@ export type CareBookingRecord = {
   practitioner_title: string;
   practitioner_city: string | null;
   practitioner_avatar_url: string | null;
+  subject_relative_id: string | null;
   offers_visio: boolean;
   service_name: string;
   duration_min: number;
@@ -63,6 +64,7 @@ function mapBooking(row: Record<string, unknown>, extras: Partial<CareBookingRec
     practitioner_title: extras.practitioner_title ?? "",
     practitioner_city: extras.practitioner_city ?? null,
     practitioner_avatar_url: extras.practitioner_avatar_url ?? null,
+    subject_relative_id: row.subject_relative_id ? String(row.subject_relative_id) : null,
     offers_visio: extras.offers_visio ?? false,
     service_name: extras.service_name ?? "",
     duration_min: extras.duration_min ?? 0,

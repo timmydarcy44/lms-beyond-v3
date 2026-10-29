@@ -4,8 +4,9 @@ import { CarePatientShell, type PatientSearchItem } from "@/components/care/care
 import { parisDateLine, parisGreeting } from "@/app/dashboard/patient/_ui/format";
 import { getSession } from "@/lib/auth/session";
 import { isCarePlaceholderText } from "@/lib/care/profile-format";
-import { countUnopenedDocuments, loadPatientDocuments } from "@/lib/care/patient-documents";
+import { loadPatientDocuments } from "@/lib/care/patient-documents";
 import { loadPatientCareHome } from "@/lib/care/patient-home";
+import { loadPatientRelatives } from "@/lib/care/patient-relatives";
 import { formatPersonName, personInitials } from "@/lib/care/person-name";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { formatCareDateLong } from "@/lib/care/working-days";
@@ -33,7 +34,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
   const [fullFirst, ...fullRest] = full.split(" ").filter(Boolean);
   const firstName = formatPersonName(String(profile?.first_name || "")) || fullFirst || "";
   const lastName = formatPersonName(String(profile?.last_name || "")) || fullRest.join(" ");
-  const [home, documents] = await Promise.all([loadPatientCareHome(), loadPatientDocuments()]);
+  const [home, documents, relatives] = await Promise.all([loadPatientCareHome(), loadPatientDocuments(), loadPatientRelatives()]);
   const searchItems: PatientSearchItem[] = [
     ...[...home.upcoming, ...home.past].slice(0, 12).map((item) => {
       const who = formatPersonName(item.practitioner_name) || "Rendez-vous";
@@ -43,6 +44,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
         href: "/dashboard/patient/rendez-vous",
         title: service ? `${who} · ${service}` : who,
         meta: formatCareDateLong(item.starts_at),
+        subjectRelativeId: item.subject_relative_id,
       };
     }),
     ...documents.slice(0, 12).map((item) => ({
@@ -50,6 +52,7 @@ export default async function PatientLayout({ children }: { children: React.Reac
       href: `/dashboard/patient/documents?doc=${item.id}`,
       title: item.title,
       meta: item.practitionerName,
+      subjectRelativeId: item.subjectRelativeId,
     })),
   ];
 
@@ -64,7 +67,8 @@ export default async function PatientLayout({ children }: { children: React.Reac
           dateLabel: parisDateLine(),
         }}
         searchItems={searchItems}
-        newDocuments={countUnopenedDocuments(documents)}
+        relatives={relatives}
+        unopenedSubjects={documents.filter((item) => !item.openedAt).map((item) => item.subjectRelativeId)}
       >
         {children}
       </CarePatientShell>

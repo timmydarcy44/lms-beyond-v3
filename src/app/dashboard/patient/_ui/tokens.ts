@@ -38,7 +38,7 @@ export const patientCssVars = {
   "--p-ink": patientTokens.ink,
   "--p-text": patientTokens.text,
   "--p-secondary": patientTokens.secondary,
-  "--p-muted": patientTokens.muted,
+  "--p-muted": "#6E6267",
   "--p-soft": patientTokens.soft,
   "--p-avatar": patientTokens.avatar,
   "--p-sidebar": patientTokens.sidebar,

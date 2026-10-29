@@ -11,14 +11,11 @@ import { formatCareDateLong } from "@/lib/care/working-days";
 import "../../care/care.css";
 import "./patient.css";
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
+const manrope = Manrope({ subsets: ["latin"], display: "swap" });
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["500"],
+  display: "swap",
   variable: "--font-care-logo",
 });
 

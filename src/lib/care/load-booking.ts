@@ -26,6 +26,9 @@ export type CareBookingRecord = {
   practitioner_slug: string;
   practitioner_email: string | null;
   practitioner_address: string | null;
+  practitioner_title: string;
+  practitioner_city: string | null;
+  practitioner_avatar_url: string | null;
   offers_visio: boolean;
   service_name: string;
   duration_min: number;
@@ -57,6 +60,9 @@ function mapBooking(row: Record<string, unknown>, extras: Partial<CareBookingRec
     practitioner_slug: extras.practitioner_slug ?? "",
     practitioner_email: extras.practitioner_email ?? null,
     practitioner_address: extras.practitioner_address ?? null,
+    practitioner_title: extras.practitioner_title ?? "",
+    practitioner_city: extras.practitioner_city ?? null,
+    practitioner_avatar_url: extras.practitioner_avatar_url ?? null,
     offers_visio: extras.offers_visio ?? false,
     service_name: extras.service_name ?? "",
     duration_min: extras.duration_min ?? 0,
@@ -80,7 +86,7 @@ async function hydrateBooking(
   const expertId = String(row.expert_id);
   const serviceId = String(row.service_id);
   const [profile, service, expert] = await Promise.all([
-    db.from("care_profiles").select("display_name, slug, cancellation_hours, address, offers_visio").eq("expert_id", expertId).maybeSingle(),
+    db.from("care_profiles").select("display_name, slug, cancellation_hours, address, offers_visio, title, city, avatar_url").eq("expert_id", expertId).maybeSingle(),
     db.from("care_services").select("name, duration_min, price_cents").eq("id", serviceId).maybeSingle(),
     db.from("experts").select("email").eq("id", expertId).maybeSingle(),
   ]);
@@ -90,6 +96,9 @@ async function hydrateBooking(
     practitioner_slug: String(profile.data?.slug ?? ""),
     practitioner_email: expert.data?.email ? String(expert.data.email) : null,
     practitioner_address: profile.data?.address ? String(profile.data.address) : null,
+    practitioner_title: profile.data?.title ? String(profile.data.title) : "",
+    practitioner_city: profile.data?.city ? String(profile.data.city) : null,
+    practitioner_avatar_url: profile.data?.avatar_url ? String(profile.data.avatar_url) : null,
     offers_visio: profile.data?.offers_visio === true,
     service_name: String(service.data?.name ?? ""),
     duration_min: Number(service.data?.duration_min) || 0,

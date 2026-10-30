@@ -7,6 +7,7 @@ import {
 import { countLearnerBadgeAttempts } from "@/lib/openbadges/badge-earner-attempt";
 import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
 import { getBadgeCriteriaUrl } from "@/lib/openbadges/urls";
+import { awardedBadgeClassIds } from "@/lib/openbadges/badge-assertions";
 import { getLearnerOpenBadgeAward } from "@/lib/openbadges/open-badge-earner-submissions";
 import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -191,13 +192,18 @@ export async function getLearnerVisibleOpenBadges(
   }
 
   const configById = await loadEvaluationConfigByBadgeIds(rows.map((b) => b.id));
+  const assertionDb = getServiceRoleClient();
+  const assertionBadgeIds = assertionDb
+    ? await awardedBadgeClassIds(assertionDb, userId)
+    : new Set<string>();
 
   const enriched = rows.map((badge) => {
     const eligible = badge.requiresEnrollment
       ? Boolean(badge.requiredCourseId && enrolledCourseIds.has(badge.requiredCourseId))
       : true;
     const evaluationConfig = configById.get(badge.id);
-    const awarded = Boolean(getLearnerOpenBadgeAward(evaluationConfig, userId));
+    const awarded =
+      assertionBadgeIds.has(badge.id) || Boolean(getLearnerOpenBadgeAward(evaluationConfig, userId));
     const attemptsCount = countLearnerBadgeAttempts(evaluationConfig, userId);
     const base = `/dashboard/apprenant/open-badges/${badge.id}`;
     return {
@@ -224,6 +230,45 @@ export async function getLearnerEarnedOpenBadges(
 ): Promise<LearnerEarnedOpenBadge[]> {
   const uid = userId.trim();
   if (!uid) return [];
+
+  const supabase = getServiceRoleClient();
+  if (supabase) {
+    const { data: assertions } = await supabase
+      .from("badge_assertions")
+      .select("badge_class_id, issued_at")
+      .eq("recipient_profile_id", uid);
+    if (assertions && assertions.length > 0) {
+      const classIds = assertions.map((row) => String(row.badge_class_id));
+      const { data: classes } = await supabase
+        .from("open_badges")
+        .select("id, name, title, image_url, evaluation_config")
+        .in("id", classIds);
+      const byId = new Map((classes ?? []).map((row) => [String(row.id), row]));
+      const earned = assertions.flatMap((assertion) => {
+        const badge = byId.get(String(assertion.badge_class_id));
+        if (!badge) return [];
+        const name = String(badge.name ?? badge.title ?? "").trim() || "Open Badge";
+        const shareUrl = getBadgeCriteriaUrl(String(badge.id));
+        return [
+          {
+            id: String(badge.id),
+            name,
+            imageUrl: (badge.image_url as string | null) ?? null,
+            level: parseLevelFromEvaluationConfig(badge.evaluation_config),
+            awardedAt: String(assertion.issued_at),
+            shareUrl,
+            linkedInShareUrl: buildOpenBadgeLinkedInShareUrl({
+              shareUrl,
+              badgeName: name,
+              level: parseLevelFromEvaluationConfig(badge.evaluation_config),
+            }),
+          },
+        ];
+      });
+      earned.sort((a, b) => Date.parse(b.awardedAt) - Date.parse(a.awardedAt));
+      return earned;
+    }
+  }
 
   let rows: Array<{
     id: string;

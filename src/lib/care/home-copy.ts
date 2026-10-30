@@ -29,11 +29,9 @@ export const CARE_HOME = {
       secondary: "Voir l'offre",
     },
   },
-  mocks: {
-    bilanTitle: "Votre bilan Byound",
-    practitionerLabel: "Votre praticienne",
-    practitionerName: "Jessica Contentin",
-    practitionerRole: "Psychopédagogue",
+  heroPhoto: {
+    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/Byound%20Care/Sourire%20au%20coucher%20du%20soleil.png",
+    alt: "Une personne souriante au coucher du soleil",
   },
   manifeste: {
     eyebrow: "Notre conviction",

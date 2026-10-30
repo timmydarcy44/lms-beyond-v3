@@ -197,13 +197,13 @@
   padding: 12px 0 88px;
   margin-top: -84px;
   padding-top: 96px;
+  min-height: 92vh;
 }
 
-.care-hero-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 48px;
-  align-items: center;
+.care-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
 }
 
 .care-kicker {
@@ -257,9 +257,33 @@
   margin-top: 32px;
 }
 
-.care-mocks {
-  position: relative;
-  min-height: 340px;
+.care-hero-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+}
+
+.care-hero-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+}
+
+.care-hero-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(11, 21, 51, 0.78) 0%, rgba(11, 21, 51, 0.46) 46%, rgba(11, 21, 51, 0.22) 100%),
+    linear-gradient(180deg, rgba(11, 21, 51, 0.42) 0%, rgba(11, 21, 51, 0.08) 38%, rgba(11, 21, 51, 0.5) 100%);
+  pointer-events: none;
+}
+
+.care-hero .care-halo {
+  z-index: 1;
 }
 
 .care-card {
@@ -578,7 +602,6 @@
     z-index: 30;
   }
 
-  .care-hero-grid,
   .care-grid-3,
   .care-method-grid,
   .care-split {

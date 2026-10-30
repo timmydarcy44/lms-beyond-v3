@@ -4,11 +4,7 @@ export function buildOpenBadgeLinkedInShareMessage(params: {
   level?: number | null;
 }): string {
   const name = String(params.badgeName ?? "").trim() || "Open Badge";
-  const level =
-    typeof params.level === "number" && Number.isFinite(params.level)
-      ? ` de niveau ${params.level}`
-      : "";
-  return `Bonjour à tous,\nJe suis fièr(e) de vous annoncer que j'ai obtenu(e) l'open badge ${name}${level} de la Byound.`;
+  return `J'ai obtenu l'Open Badge « ${name} » délivré par Byound.`;
 }
 
 export function buildOpenBadgeLinkedInShareUrl(params: {

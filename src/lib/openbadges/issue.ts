@@ -1,3 +1,8 @@
+/**
+ * @deprecated Le schéma Prisma (IssuerProfile, Assertion, Evidence) n'est pas
+ * la source de vérité. L'émission vit dans Supabase (`badge_assertions`).
+ * Ce module reste pour référence et n'est plus le chemin de délivrance.
+ */
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { BadgeClassStatus } from "@prisma/client";

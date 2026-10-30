@@ -11,9 +11,8 @@ describe("buildOpenBadgeLinkedInShareMessage", () => {
       badgeName: "AI Prompting - Level 1",
       level: 1,
     });
-    expect(message).toContain("AI Prompting - Level 1");
-    expect(message).toContain("de niveau 1");
-    expect(message).toContain("de la Byound");
+    expect(message).toBe("J'ai obtenu l'Open Badge « AI Prompting - Level 1 » délivré par Byound.");
+    expect(message).not.toContain("fièr");
   });
 
   it("builds share URL with summary param", () => {
@@ -24,7 +23,7 @@ describe("buildOpenBadgeLinkedInShareMessage", () => {
     });
     expect(url).toContain("linkedin.com/sharing/share-offsite");
     expect(url).toContain("summary=");
-    expect(decodeURIComponent(url)).toContain("open badge AI Prompting");
+    expect(decodeURIComponent(url)).toContain("Open Badge « AI Prompting - Level 1 »");
   });
 
   it("builds feed share URL with prefilled text", () => {

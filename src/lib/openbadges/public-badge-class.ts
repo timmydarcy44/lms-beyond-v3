@@ -38,40 +38,58 @@ export function resolvePublicBadgeImageUrl(
   return `${base}${raw.startsWith("/") ? raw : `/${raw}`}`;
 }
 
-function mapSupabaseRow(row: Record<string, unknown>): PublicBadgeClassView | null {
-  if (!row.id) return null;
-  const config =
-    row.evaluation_config && typeof row.evaluation_config === "object"
-      ? (row.evaluation_config as Record<string, unknown>)
-      : {};
-  const criteriaRaw = Array.isArray(config.criteria) ? config.criteria : [];
-  const structuredCriteria = criteriaRaw
-    .filter((c): c is Record<string, unknown> => Boolean(c && typeof c === "object"))
-    .map((c, index) => ({
-      id: String(c.id ?? `c-${index}`),
-      label: String(c.label ?? ""),
-      description: typeof c.description === "string" ? c.description : null,
-    }))
-    .filter((c) => c.label.trim());
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
 
+function textOrEmpty(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function structuredCriteriaFrom(raw: unknown): PublicBadgeClassView["structuredCriteria"] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object" && !Array.isArray(item)))
+    .map((item, index) => ({
+      id: String(item.id ?? `c-${index}`),
+      label: textOrEmpty(item.label).trim(),
+      description: typeof item.description === "string" ? item.description : null,
+    }))
+    .filter((item) => item.label);
+}
+
+/** Accepte soit la ligne Supabase brute, soit l'objet déjà mappé par le store. Ne stringifie jamais un objet. */
+export function toPublicBadgeClassView(row: Record<string, unknown>): PublicBadgeClassView | null {
+  if (!row.id) return null;
+  const config = asRecord(row.evaluation_config) ?? asRecord(row.evaluationConfig) ?? {};
+  const structuredCriteria = structuredCriteriaFrom(
+    Array.isArray(row.criteria) ? row.criteria : config.criteria,
+  );
+  const criteriaMarkdown =
+    textOrEmpty(row.criteriaMarkdown) ||
+    (typeof row.criteria === "string" ? row.criteria : "") ||
+    textOrEmpty(config.criteriaMarkdown) ||
+    textOrEmpty(config.criteriaText);
+  const levelSource = typeof row.level === "number" || typeof row.level === "string" ? row.level : config.level;
   const level =
-    typeof config.level === "number"
-      ? config.level
-      : typeof config.level === "string" && config.level.trim()
-        ? Number.parseInt(String(config.level), 10)
+    typeof levelSource === "number"
+      ? levelSource
+      : typeof levelSource === "string" && levelSource.trim()
+        ? Number.parseInt(levelSource, 10)
         : null;
+  const image = row.imageUrl ?? row.image_url;
 
   return {
-    id: String(row.id ?? ""),
-    name: String(row.name ?? row.title ?? "Open Badge"),
-    description: String(row.description ?? ""),
-    imageUrl: (row.image_url as string | null) ?? null,
+    id: String(row.id),
+    name: textOrEmpty(row.name) || textOrEmpty(row.title) || "Open Badge",
+    description: textOrEmpty(row.description),
+    imageUrl: typeof image === "string" ? image : null,
     level: Number.isFinite(level) ? level : null,
-    criteriaMarkdown: String(row.criteria ?? config.criteriaMarkdown ?? ""),
+    criteriaMarkdown,
     structuredCriteria,
-    issuerName: "Byound",
-    issuerUrl: getPublicShareBaseUrl(),
-    organizationName: null,
+    issuerName: textOrEmpty(row.issuerName) || "Byound",
+    issuerUrl: typeof row.issuerUrl === "string" ? row.issuerUrl : getPublicShareBaseUrl(),
+    organizationName: typeof row.organizationName === "string" ? row.organizationName : null,
   };
 }
 
@@ -80,38 +98,42 @@ export async function loadPublicBadgeClass(
 ): Promise<PublicBadgeClassView | null> {
   const supabaseRow = await getOpenBadgeClassByIdOnly(badgeClassId);
   if (supabaseRow) {
-    return mapSupabaseRow(supabaseRow);
+    return toPublicBadgeClassView(supabaseRow);
   }
 
   if (!resolveAndApplyDatabaseUrl()) return null;
 
-  const badgeClass = await prisma.badgeClass.findUnique({
-    where: { id: badgeClassId },
-    include: {
-      issuer: true,
-      organization: true,
-      criteria: { orderBy: { sortOrder: "asc" } },
-    },
-  });
+  try {
+    const badgeClass = await prisma.badgeClass.findUnique({
+      where: { id: badgeClassId },
+      include: {
+        issuer: true,
+        organization: true,
+        criteria: { orderBy: { sortOrder: "asc" } },
+      },
+    });
 
-  if (!badgeClass || badgeClass.status !== "ACTIVE") return null;
+    if (!badgeClass || badgeClass.status !== "ACTIVE") return null;
 
-  return {
-    id: badgeClass.id,
-    name: badgeClass.name,
-    description: badgeClass.description,
-    imageUrl: badgeClass.imageUrl ?? badgeClass.imageTemplateUrl ?? null,
-    level: badgeClass.level,
-    criteriaMarkdown: badgeClass.criteriaMarkdown ?? "",
-    structuredCriteria: badgeClass.criteria.map((c) => ({
-      id: c.id,
-      label: c.label,
-      description: c.description,
-    })),
-    issuerName: badgeClass.issuer.name,
-    issuerUrl: badgeClass.issuer.url,
-    organizationName: badgeClass.organization?.name ?? null,
-  };
+    return {
+      id: badgeClass.id,
+      name: badgeClass.name,
+      description: badgeClass.description,
+      imageUrl: badgeClass.imageUrl ?? badgeClass.imageTemplateUrl ?? null,
+      level: badgeClass.level,
+      criteriaMarkdown: badgeClass.criteriaMarkdown ?? "",
+      structuredCriteria: badgeClass.criteria.map((c) => ({
+        id: c.id,
+        label: c.label,
+        description: c.description,
+      })),
+      issuerName: badgeClass.issuer.name,
+      issuerUrl: badgeClass.issuer.url,
+      organizationName: badgeClass.organization?.name ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function buildPublicBadgeShareDescription(badge: PublicBadgeClassView): string {

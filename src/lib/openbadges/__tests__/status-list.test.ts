@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bakePng, unbakePng } from "@/lib/openbadges/baking/png";
+import { publicEvidenceItems } from "@/lib/openbadges/v3/public-badge";
 import { encodeStatusList, isPublicBadgeVisible, statusBit } from "@/lib/openbadges/v3/status-list";
 import { v2AssertionToV3Credential } from "@/lib/openbadges/v3/mappers";
 
@@ -24,7 +25,7 @@ describe("bitstring status list", () => {
 });
 
 describe("baked badge", () => {
-  it("writes the JWT into the openbadges chunk", () => {
+  it("writes the JWT into the openbadgecredential chunk", () => {
     const jwt = "header.payload.signature";
     const baked = bakePng(TINY_PNG, jwt);
     expect(unbakePng(baked)).toBe(jwt);
@@ -48,5 +49,17 @@ describe("v2AssertionToV3Credential", () => {
     expect(credential.id).toBe("https://www.byound.fr/badges/assertion-1");
     expect(JSON.stringify(credential)).not.toContain("holder@");
     expect(credential["@context"]).toContain("https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json");
+  });
+});
+
+describe("public evidence", () => {
+  it("keeps only the deliverables the holder marked public", () => {
+    const items = publicEvidenceItems([
+      { name: "Privé", public: false },
+      { name: "Public", description: "Visible", url: "https://www.byound.fr/livrable", public: true },
+    ]);
+    expect(items).toEqual([
+      { name: "Public", description: "Visible", url: "https://www.byound.fr/livrable" },
+    ]);
   });
 });

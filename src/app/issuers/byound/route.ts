@@ -1,5 +1,6 @@
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
 import { publicCorsPreflight, publicJson } from "@/lib/openbadges/v3/public-json";
+import { publicJwksKeys } from "@/lib/openbadges/v3/sign";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -7,7 +8,7 @@ export async function GET() {
   const { data } = db
     ? await db.from("badge_issuers").select("name, url, email, description, image_url, public_jwks").eq("slug", "byound").maybeSingle()
     : { data: null };
-  const keys = Array.isArray(data?.public_jwks?.keys) ? data.public_jwks.keys : [];
+  const keys = publicJwksKeys(data?.public_jwks?.keys);
   return publicJson({
     "@context": [
       "https://www.w3.org/ns/credentials/v2",

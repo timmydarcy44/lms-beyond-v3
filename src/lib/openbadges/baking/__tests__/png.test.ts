@@ -7,9 +7,9 @@ const samplePng = Buffer.from(
 );
 
 describe("PNG baking", () => {
-  it("bakes and unbakes openbadges iTXt", () => {
-    const baked = bakePng(samplePng, "https://example.com/assertions/1");
-    const extracted = unbakePng(baked);
-    expect(extracted).toBe("https://example.com/assertions/1");
+  it("bakes and unbakes the openbadgecredential iTXt chunk", () => {
+    const baked = bakePng(samplePng, "header.payload.signature");
+    expect(baked.includes(Buffer.from("openbadgecredential"))).toBe(true);
+    expect(unbakePng(baked)).toBe("header.payload.signature");
   });
 });

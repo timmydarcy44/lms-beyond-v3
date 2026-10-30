@@ -77,7 +77,7 @@ const buildITXt = (keyword: string, value: string) => {
 
 export const bakePng = (png: Buffer, payload: string) => {
   const chunks = readChunks(png);
-  const itxt = buildITXt("openbadges", payload);
+  const itxt = buildITXt("openbadgecredential", payload);
   const output: Buffer[] = [PNG_SIGNATURE];
 
   for (const chunk of chunks) {
@@ -98,7 +98,7 @@ export const unbakePng = (png: Buffer) => {
     const keywordEnd = data.indexOf(0x00);
     if (keywordEnd < 0) continue;
     const keyword = data.subarray(0, keywordEnd).toString("latin1");
-    if (keyword !== "openbadges") continue;
+    if (keyword !== "openbadgecredential" && keyword !== "openbadges") continue;
     const compressionFlag = data[keywordEnd + 1];
     const compressionMethod = data[keywordEnd + 2];
     let offset = keywordEnd + 3;

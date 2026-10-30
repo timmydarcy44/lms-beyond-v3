@@ -7,8 +7,7 @@ import {
   type BadgeEvidenceItem,
 } from "@/lib/openbadges/v3/credential";
 import { issueOpenBadgeCredential } from "@/lib/openbadges/v3/issue";
-import { publicJwkFromPrivate, signCredentialJwt } from "@/lib/openbadges/v3/sign";
-import type { JWK } from "jose";
+import { issuerPublicKeys, publicJwksKeys, signCredentialJwt } from "@/lib/openbadges/v3/sign";
 
 export type IssueBadgeAssertionInput = {
   badgeClassId: string;
@@ -100,22 +99,26 @@ async function nextStatusIndex(db: SupabaseClient): Promise<number> {
   return typeof current === "number" ? current + 1 : 0;
 }
 
-async function publishIssuerKey(db: SupabaseClient, kid: string) {
-  const raw = process.env.BADGE_SIGNING_PRIVATE_JWK?.trim();
-  if (!raw) return;
-  let jwk: JWK;
-  try {
-    jwk = JSON.parse(raw) as JWK;
-  } catch {
-    return;
-  }
-  const publicKey = publicJwkFromPrivate(jwk, kid);
+export async function publishIssuerKeys(db: SupabaseClient) {
+  const incoming = issuerPublicKeys();
+  if (incoming.length === 0) return;
   const { data } = await db.from("badge_issuers").select("id, public_jwks").eq("slug", "byound").maybeSingle();
   if (!data?.id) return;
   const current = asRecord(data.public_jwks);
-  const keys = Array.isArray(current.keys) ? [...current.keys] : [];
-  if (keys.some((item) => asRecord(item).kid === kid)) return;
-  keys.push(publicKey);
+  const existing = Array.isArray(current.keys) ? current.keys : [];
+  const incomingKids = new Set(incoming.map((key) => key.kid));
+  const kept = existing.filter((item) => {
+    const kid = asRecord(item).kid;
+    return typeof kid === "string" && !incomingKids.has(kid);
+  });
+  await db.from("badge_issuers").update({ public_jwks: { keys: publicJwksKeys([...incoming, ...kept]) } }).eq("id", data.id);
+}
+
+export async function removeIssuerKey(db: SupabaseClient, kid: string) {
+  const { data } = await db.from("badge_issuers").select("id, public_jwks").eq("slug", "byound").maybeSingle();
+  if (!data?.id) return;
+  const current = asRecord(data.public_jwks);
+  const keys = publicJwksKeys(current.keys).filter((item) => item.kid !== kid);
   await db.from("badge_issuers").update({ public_jwks: { keys } }).eq("id", data.id);
 }
 
@@ -165,7 +168,7 @@ async function signStoredAssertion(
     .eq("id", assertion.id)
     .is("credential_jwt", null);
   if (!error) {
-    await publishIssuerKey(db, signed.kid);
+    await publishIssuerKeys(db);
     return true;
   }
 
@@ -200,7 +203,7 @@ async function signStoredAssertion(
     console.error("[badge-assertions] credential replace:", insertError.message);
     return false;
   }
-  await publishIssuerKey(db, signed.kid);
+  await publishIssuerKeys(db);
   return true;
 }
 
@@ -293,7 +296,7 @@ export async function issueBadgeAssertion(
     .single();
 
   if (insertError || !inserted) return { ok: false, error: "STORAGE" };
-  if (signed) await publishIssuerKey(db, signed.kid);
+  if (signed) await publishIssuerKeys(db);
 
   return {
     ok: true,

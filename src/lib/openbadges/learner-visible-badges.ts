@@ -39,6 +39,8 @@ export type LearnerEarnedOpenBadge = {
   awardedAt: string;
   shareUrl: string;
   linkedInShareUrl: string;
+  assertionId?: string | null;
+  indexable?: boolean;
 };
 
 async function loadEvaluationConfigByBadgeIds(
@@ -233,10 +235,13 @@ export async function getLearnerEarnedOpenBadges(
 
   const supabase = getServiceRoleClient();
   if (supabase) {
-    const { data: assertions } = await supabase
+    const withIndex = await supabase
       .from("badge_assertions")
-      .select("badge_class_id, issued_at")
+      .select("id, badge_class_id, issued_at, indexable")
       .eq("recipient_profile_id", uid);
+    const assertions = withIndex.error
+      ? (await supabase.from("badge_assertions").select("id, badge_class_id, issued_at").eq("recipient_profile_id", uid)).data
+      : withIndex.data;
     if (assertions && assertions.length > 0) {
       const classIds = assertions.map((row) => String(row.badge_class_id));
       const { data: classes } = await supabase
@@ -262,6 +267,8 @@ export async function getLearnerEarnedOpenBadges(
               badgeName: name,
               level: parseLevelFromEvaluationConfig(badge.evaluation_config),
             }),
+            assertionId: assertion.id ? String(assertion.id) : null,
+            indexable: "indexable" in assertion ? assertion.indexable !== false : true,
           },
         ];
       });

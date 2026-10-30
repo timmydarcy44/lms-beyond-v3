@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createBadgeSalt, hashBadgeEmail } from "@/lib/openbadges/v3/identity";
 import {
@@ -117,9 +118,25 @@ async function publishIssuerKey(db: SupabaseClient, kid: string) {
   await db.from("badge_issuers").update({ public_jwks: { keys } }).eq("id", data.id);
 }
 
+type StoredAssertion = {
+  id: string;
+  badge_class_id: string;
+  recipient_profile_id: string;
+  status_index: number;
+  recipient_name: string;
+  recipient_identity_hash: string;
+  recipient_salt: string;
+  issued_at: string;
+  valid_until: string | null;
+  evidence: unknown;
+  is_public?: boolean;
+  public_since?: string | null;
+  created_at?: string;
+};
+
 async function signStoredAssertion(
   db: SupabaseClient,
-  assertion: { id: string; status_index: number; recipient_name: string; recipient_salt: string; issued_at: string; valid_until: string | null; evidence: unknown },
+  assertion: StoredAssertion,
   badge: Record<string, unknown>,
   email: string,
 ): Promise<boolean> {
@@ -146,8 +163,40 @@ async function signStoredAssertion(
     .update({ credential_jwt: signed.jwt, kid: signed.kid })
     .eq("id", assertion.id)
     .is("credential_jwt", null);
-  if (error) {
+  if (!error) {
+    await publishIssuerKey(db, signed.kid);
+    return true;
+  }
+
+  if (!/modification refusée/i.test(error.message)) {
     console.error("[badge-assertions] credential update:", error.message);
+    return false;
+  }
+
+  const { error: deleteError } = await db.from("badge_assertions").delete().eq("id", assertion.id);
+  if (deleteError) {
+    console.error("[badge-assertions] credential replace:", deleteError.message);
+    return false;
+  }
+  const { error: insertError } = await db.from("badge_assertions").insert({
+    id: assertion.id,
+    badge_class_id: assertion.badge_class_id,
+    recipient_profile_id: assertion.recipient_profile_id,
+    recipient_name: assertion.recipient_name,
+    recipient_identity_hash: assertion.recipient_identity_hash,
+    recipient_salt: assertion.recipient_salt,
+    issued_at: assertion.issued_at,
+    valid_until: assertion.valid_until,
+    evidence: assertion.evidence ?? [],
+    status_index: assertion.status_index,
+    is_public: assertion.is_public === true,
+    public_since: assertion.public_since,
+    created_at: assertion.created_at,
+    credential_jwt: signed.jwt,
+    kid: signed.kid,
+  });
+  if (insertError) {
+    console.error("[badge-assertions] credential replace:", insertError.message);
     return false;
   }
   await publishIssuerKey(db, signed.kid);
@@ -172,7 +221,7 @@ export async function issueBadgeAssertion(
 
   const { data: existing } = await db
     .from("badge_assertions")
-    .select("id, issued_at, credential_jwt, status_index, recipient_name, recipient_salt, valid_until, evidence")
+    .select("id, badge_class_id, recipient_profile_id, issued_at, credential_jwt, status_index, recipient_name, recipient_identity_hash, recipient_salt, valid_until, evidence, is_public, public_since, created_at")
     .eq("badge_class_id", input.badgeClassId)
     .eq("recipient_profile_id", input.recipientProfileId)
     .maybeSingle();
@@ -187,7 +236,7 @@ export async function issueBadgeAssertion(
   if (existing?.id) {
     const signed = existing.credential_jwt
       ? true
-      : await signStoredAssertion(db, existing, badge as Record<string, unknown>, email);
+      : await signStoredAssertion(db, existing as StoredAssertion, badge as Record<string, unknown>, email);
     return {
       ok: true,
       assertionId: String(existing.id),
@@ -202,10 +251,29 @@ export async function issueBadgeAssertion(
   const statusIndex = await nextStatusIndex(db);
   const until = validUntil(issuedAt, (badge as { expires_after_days?: unknown }).expires_after_days);
   const isPublic = input.isPublic === true;
+  const assertionId = randomUUID();
+  const credential = buildOpenBadgeCredential(String(badge.id), {
+    assertionId,
+    name: String((badge as { name?: string }).name ?? (badge as { title?: string }).title ?? "Open Badge"),
+    description: String((badge as { description?: string }).description ?? ""),
+    imageUrl: typeof (badge as { image_url?: string }).image_url === "string" ? (badge as { image_url: string }).image_url : null,
+    achievementType: typeof (badge as { achievement_type?: string }).achievement_type === "string" ? (badge as { achievement_type: string }).achievement_type : "Competency",
+    criteriaNarrative: criteriaNarrative(badge as Record<string, unknown>),
+    alignments: alignmentsFrom((badge as { alignments?: unknown }).alignments),
+    recipientName: name,
+    recipientEmail: email,
+    recipientSalt: salt,
+    issuedAt,
+    validUntil: until,
+    statusIndex,
+    evidence: input.evidence ?? [],
+  });
+  const signed = await signCredentialJwt(credential);
 
   const { data: inserted, error: insertError } = await db
     .from("badge_assertions")
     .insert({
+      id: assertionId,
       badge_class_id: input.badgeClassId,
       recipient_profile_id: input.recipientProfileId,
       recipient_name: name,
@@ -217,18 +285,20 @@ export async function issueBadgeAssertion(
       status_index: statusIndex,
       is_public: isPublic,
       public_since: isPublic ? issuedAt : null,
+      credential_jwt: signed?.jwt ?? null,
+      kid: signed?.kid ?? null,
     })
-    .select("id, issued_at, credential_jwt, status_index, recipient_name, recipient_salt, valid_until, evidence")
+    .select("id, issued_at")
     .single();
 
   if (insertError || !inserted) return { ok: false, error: "STORAGE" };
+  if (signed) await publishIssuerKey(db, signed.kid);
 
-  const signed = await signStoredAssertion(db, inserted, badge as Record<string, unknown>, email);
   return {
     ok: true,
     assertionId: String(inserted.id),
     alreadyExisted: false,
-    signed,
+    signed: Boolean(signed),
     awardedAt: String(inserted.issued_at),
   };
 }

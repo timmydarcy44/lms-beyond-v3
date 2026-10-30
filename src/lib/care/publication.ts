@@ -87,16 +87,27 @@ export function isCareListingPublic(input: CarePublicationInput) {
   return true;
 }
 
-export function carePriceLine(services: CarePublicationService[] | null | undefined) {
+const SESSION_NAME = /accompagnement|s[ée]ance|consultation|suivi/i;
+
+/** Le prix affiché suit l'accompagnement. Un test ou un bilan ne fixe pas le tarif de la séance. */
+export function careQuotedServices(services: CarePublicationService[] | null | undefined) {
   const rows = carePublicServices(services);
+  const sessions = rows.filter((item) => SESSION_NAME.test(item.name));
+  return sessions.length ? sessions : rows;
+}
+
+export function carePriceLine(services: CarePublicationService[] | null | undefined) {
+  const rows = careQuotedServices(services);
   const freeIntro = rows.find((item) => item.price_cents <= 0 && /premier|1er/i.test(item.name));
   if (freeIntro) return { main: "Offert", hint: "1er échange" };
   const priced = rows.filter((item) => item.price_cents > 0);
-  if (!priced.length) return rows.length ? { main: "Sur devis", hint: "la séance" } : { main: "Sur devis", hint: "la séance" };
-  const min = Math.min(...priced.map((item) => item.price_cents));
+  if (!priced.length) return { main: "Sur devis", hint: "la séance" };
+  const amounts = [...new Set(priced.map((item) => item.price_cents))];
+  const min = Math.min(...amounts);
   const cheapest = priced.find((item) => item.price_cents === min);
   const hint = cheapest && /bilan/i.test(cheapest.name) ? "bilan complet" : "la séance";
-  return { main: `dès ${Math.round(min / 100)} €`, hint };
+  const euros = `${Math.round(min / 100)} €`;
+  return { main: amounts.length > 1 ? `dès ${euros}` : euros, hint };
 }
 
 export function carePlaceLine(input: { city?: string | null; offers_cabinet?: boolean | null; offers_visio?: boolean | null }) {

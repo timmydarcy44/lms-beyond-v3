@@ -354,9 +354,13 @@
 
 .cf-profile-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
   gap: 22px;
   align-items: start;
+}
+
+.cf-profile-grid > * {
+  min-width: 0;
 }
 
 .cf-back {
@@ -531,10 +535,31 @@
   position: sticky;
   top: 96px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
   padding: 22px;
   background: #fff;
   border-radius: 30px;
+}
+
+.cf-book > *,
+.cf-book select,
+.cf-book .cf-btn {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cf-book-service {
+  display: grid;
+  gap: 6px;
+}
+
+.cf-book select,
+.cf-book .cf-btn {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cf-book h2,

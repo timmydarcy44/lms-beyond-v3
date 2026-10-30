@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { careCompleteness, isCareDirectoryComplete, slugifyCareName } from "../completeness";
-import { isCareListingPublic, isCareTestEmail } from "../publication";
+import { carePriceLine, isCareListingPublic, isCareTestEmail } from "../publication";
 import type { CareService } from "../types";
 
 const service: CareService = {
@@ -51,6 +51,17 @@ describe("careCompleteness", () => {
 
   it("slugifies display names", () => {
     expect(slugifyCareName("Léa Martin")).toBe("lea-martin");
+  });
+});
+
+describe("carePriceLine", () => {
+  it("prend l'accompagnement, pas le test le moins cher", () => {
+    const line = carePriceLine([
+      { name: "Accompagnement individuel", active: true, price_cents: 7500 },
+      { name: "Test sur le niveau de stress scolaire", active: true, price_cents: 5000 },
+      { name: "Comprendre comment j'apprends", active: true, price_cents: 5000 },
+    ]);
+    expect(line).toEqual({ main: "75 €", hint: "la séance" });
   });
 });
 

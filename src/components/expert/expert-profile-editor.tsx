@@ -731,7 +731,7 @@ export function ExpertProfileEditor({ careListing = null }: { careListing?: Care
                       />
                     </div>
                     <div>
-                      <p className="mb-2 text-xs font-medium text-white/45">Domaines Care</p>
+                      <p className="mb-2 text-xs font-medium text-white/45">Domaines Care — le sujet principal proposé à la réservation</p>
                       <TagPicker
                         options={CARE_DOMAINS.map((item) => item.id)}
                         selected={careDomains}

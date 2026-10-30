@@ -54,7 +54,6 @@ export default async function CarePraticienPage({ params }: Params) {
   const price = carePriceLine(profile.services);
   const place = carePlaceLine(profile);
   const firstName = profile.display_name.split(" ")[0] || profile.display_name;
-  const sessionPrice = visibleServices.find((item) => item.price_cents > 0);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -112,8 +111,8 @@ export default async function CarePraticienPage({ params }: Params) {
                   <span>{price.hint}</span>
                 </p>
                 <p>
-                  <strong>{sessionPrice ? formatCarePrice(sessionPrice.price_cents) : price.main}</strong>
-                  <span>la séance</span>
+                  <strong>{place.main}</strong>
+                  <span>{place.hint}</span>
                 </p>
                 <p>
                   <strong>{profile.badges.length}</strong>

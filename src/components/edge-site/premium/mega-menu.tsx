@@ -9,7 +9,6 @@ import "./mega-menu.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
   variable: "--font-neo-mega",
 });
 

@@ -18,7 +18,7 @@ import { prepareCandidature } from "@/lib/entreprise/offer-candidature";
 import { prepareConditions, preparePosteDraft, type OfferPoste } from "@/lib/entreprise/offer-poste";
 import { ANONYMITY_MESSAGE, type AnonymityFlag, type AnonymityRewrite } from "@/lib/offres/anonymity";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 function serializePoste(draft: OfferPoste) {
   const contract = String(draft.contract_type ?? "");

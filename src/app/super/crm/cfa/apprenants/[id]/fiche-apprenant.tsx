@@ -12,7 +12,7 @@ import {
   type CfaApplicationStatus,
 } from "@/lib/cfa-applications";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 const STEPS: Array<{ id: CfaApplicationStatus; label: string }> = [
   { id: "brochure", label: "Fiche cursus" },

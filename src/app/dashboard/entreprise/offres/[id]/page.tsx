@@ -8,7 +8,7 @@ import { Manrope } from "next/font/google";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type Stage = "new" | "interview" | "retained" | "rejected";
 type Phase = "active" | "draft" | "paused" | "closed";

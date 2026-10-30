@@ -14,7 +14,7 @@ import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import "./formation-studio.css";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type ProgressState = "none" | "percent" | "completed";
 type ItemProgress = { state: ProgressState; percent: number | null };

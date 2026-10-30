@@ -5,7 +5,7 @@
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "dev": "cross-env PORT=3001 next dev --webpack -p 3001",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "cross-env PORT=3001 next start -p 3001",
     "lint": "next lint",
     "test": "vitest run",

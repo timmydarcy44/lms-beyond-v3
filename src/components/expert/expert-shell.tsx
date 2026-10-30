@@ -31,7 +31,7 @@ import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
 import { setDashboardSpace } from "@/lib/dashboard/space";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type NavChild = { label: string; href: string };
 

@@ -68,7 +68,7 @@ function badgeModalitiesLabel(badge: OpenBadgeLink | null) {
     .trim();
 }
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 function minutesOf(value: string | undefined) {
   const match = String(value ?? "").match(/(\d+)/);

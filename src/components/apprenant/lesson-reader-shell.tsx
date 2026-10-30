@@ -6,8 +6,8 @@ import { Atkinson_Hyperlegible, Manrope } from "next/font/google";
 import { ChevronLeft, ChevronRight, Gamepad2, List, ListChecks, Lock, MessagesSquare, MoreHorizontal } from "lucide-react";
 import "./lesson-reader.css";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
-const atkinson = Atkinson_Hyperlegible({ subsets: ["latin"], weight: ["400", "700"] });
+const manrope = Manrope({ subsets: ["latin"] });
+const atkinson = Atkinson_Hyperlegible({ subsets: ["latin"], weight: "400" });
 
 const THEME_KEY = "lesson-reading-theme";
 type ThemeChoice = "auto" | "light" | "dark";

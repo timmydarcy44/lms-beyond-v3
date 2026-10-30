@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 const oswald = Oswald({
   subsets: ["latin"],
   variable: "--font-mos-display",
-  weight: ["400", "500", "600", "700"],
 });
 
 const inter = Inter({

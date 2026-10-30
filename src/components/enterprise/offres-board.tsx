@@ -7,7 +7,7 @@ import { ArrowUpRight, AtSign, Download, Link2, Plus, UserPlus } from "lucide-re
 import { Manrope } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type OfferPhase = "active" | "draft" | "paused" | "closed";
 type Stage = "new" | "interview" | "retained";

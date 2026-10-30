@@ -42,7 +42,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type EmployeeRow = {
   id: string;

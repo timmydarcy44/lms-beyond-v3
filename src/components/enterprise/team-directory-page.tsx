@@ -25,7 +25,7 @@ import { JADE_ENTREPRISE_OFFERS, JADE_ORG_COURSES } from "@/lib/demo/jade-dashbo
 import type { EntrepriseEmployee } from "@/lib/entreprise/overview-types";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 const VIEW_KEY = "byound-business-team-view";
 
 type ViewMode = "liste" | "tableau";

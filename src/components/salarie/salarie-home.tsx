@@ -20,7 +20,7 @@ import { listPublicCatalogEntries } from "@/lib/hard-skills/skill-catalog-policy
 import type { EmployeeNextStep } from "@/lib/salarie/employee-next-step";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type Home = {
   profile: { firstName: string; lastName: string; initials: string };

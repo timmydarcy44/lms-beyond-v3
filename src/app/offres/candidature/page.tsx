@@ -7,7 +7,7 @@ import { getSession } from "@/lib/auth/session";
 import { loadHomeApplication } from "@/lib/offres/application-home";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 export const dynamic = "force-dynamic";
 

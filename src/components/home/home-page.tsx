@@ -18,7 +18,6 @@ import "./home.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
 });
 
 export async function HomePage() {

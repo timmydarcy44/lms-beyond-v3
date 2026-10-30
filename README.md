@@ -37,7 +37,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Open Badges
 
-Byound signe des Open Badges 3.0 en VC-JWT (ES256, ECDSA P-256). La clé privée vit dans `BADGE_SIGNING_PRIVATE_JWK`, le kid dans `BADGE_SIGNING_KID`. La valeur actuelle du kid est `byound-es256-2026`. Ces deux variables sont dans Vercel Preview et Production, avec les mêmes valeurs. Elles ne vont jamais dans le dépôt.
+Byound signe des Open Badges 3.0 en VC-JWT (ES256, ECDSA P-256). La clé privée vit dans `BADGE_SIGNING_PRIVATE_JWK`, le kid dans `BADGE_SIGNING_KID`. La valeur actuelle du kid est `https://www.byound.fr/.well-known/keys/byound-es256-2026.json`. Ces deux variables sont dans Vercel Preview et Production, avec les mêmes valeurs. Elles ne vont jamais dans le dépôt.
 
 La clé publique est publiée dans `https://www.byound.fr/.well-known/jwks.json` et dans le profil émetteur. Un badge privé répond 404.
 

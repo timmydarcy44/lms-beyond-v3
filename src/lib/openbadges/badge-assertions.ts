@@ -7,7 +7,7 @@ import {
   type BadgeEvidenceItem,
 } from "@/lib/openbadges/v3/credential";
 import { issueOpenBadgeCredential } from "@/lib/openbadges/v3/issue";
-import { issuerPublicKeys, publicJwksKeys, signCredentialJwt } from "@/lib/openbadges/v3/sign";
+import { issuerPublicKeys, kidsMatch, publicJwksKeys, signCredentialJwt } from "@/lib/openbadges/v3/sign";
 
 export type IssueBadgeAssertionInput = {
   badgeClassId: string;
@@ -106,10 +106,9 @@ export async function publishIssuerKeys(db: SupabaseClient) {
   if (!data?.id) return;
   const current = asRecord(data.public_jwks);
   const existing = Array.isArray(current.keys) ? current.keys : [];
-  const incomingKids = new Set(incoming.map((key) => key.kid));
   const kept = existing.filter((item) => {
     const kid = asRecord(item).kid;
-    return typeof kid === "string" && !incomingKids.has(kid);
+    return typeof kid === "string" && !incoming.some((key) => typeof key.kid === "string" && kidsMatch(kid, key.kid));
   });
   await db.from("badge_issuers").update({ public_jwks: { keys: publicJwksKeys([...incoming, ...kept]) } }).eq("id", data.id);
 }
@@ -118,7 +117,7 @@ export async function removeIssuerKey(db: SupabaseClient, kid: string) {
   const { data } = await db.from("badge_issuers").select("id, public_jwks").eq("slug", "byound").maybeSingle();
   if (!data?.id) return;
   const current = asRecord(data.public_jwks);
-  const keys = publicJwksKeys(current.keys).filter((item) => item.kid !== kid);
+  const keys = publicJwksKeys(current.keys).filter((item) => !item.kid || !kidsMatch(item.kid, kid));
   await db.from("badge_issuers").update({ public_jwks: { keys } }).eq("id", data.id);
 }
 

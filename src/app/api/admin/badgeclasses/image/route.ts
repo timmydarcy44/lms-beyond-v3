@@ -17,7 +17,7 @@ const MIME_TO_EXT: Record<string, string> = {
 };
 
 /** Buckets existants sur le projet Supabase (voir supabase/CREATE_STORAGE_BUCKETS.sql). */
-const SUPABASE_BUCKETS_TO_TRY = ["Public", "public", "avatars"] as const;
+const SUPABASE_BUCKETS_TO_TRY = ["badge-images", "Public", "public", "avatars"] as const;
 
 function resolveExtension(contentType: string, fileName: string): string {
   const fromMime = MIME_TO_EXT[contentType];

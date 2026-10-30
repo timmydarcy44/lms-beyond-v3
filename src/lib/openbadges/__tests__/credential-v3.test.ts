@@ -2,8 +2,9 @@ import { generateKeyPair, exportJWK } from "jose";
 import { describe, expect, it } from "vitest";
 import { buildOpenBadgeCredential, OB_V3_CONTEXT, VC_V2_CONTEXT } from "@/lib/openbadges/v3/credential";
 import { hashBadgeEmail } from "@/lib/openbadges/v3/identity";
-import { resolveBadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
-import { publicJwkFromPrivate, signCredentialJwt, verifyCredentialJwt } from "@/lib/openbadges/v3/sign";
+import { badgeStatGridClass, PUBLIC_ASSERTION_COLUMNS, resolveBadgeVerificationState, visibleBadgeStatLabels } from "@/lib/openbadges/v3/public-badge";
+import { buildReissuedOpenBadgeCredential, preservedIdentityFromCredential, publicCredentialJwt } from "@/lib/openbadges/v3/reissue";
+import { publicJwkFromPrivate, publicJwksKeys, signCredentialJwt, verifyCredentialJwt } from "@/lib/openbadges/v3/sign";
 
 const EMAIL = "holder@example.com";
 
@@ -53,24 +54,71 @@ describe("OpenBadgeCredential 3.0", () => {
     expect(emails).toEqual(["contact@byound.fr"]);
   });
 
-  it("signs and verifies with EdDSA", async () => {
-    const { privateKey, publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
+  it("signs and verifies with ES256", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
     const privateJwk = await exportJWK(privateKey);
-    const kid = "byound-test";
+    const kid = "byound-es256-2026";
     const credential = sampleCredential();
     const signed = await signCredentialJwt(credential, { jwk: privateJwk, kid });
     expect(signed?.jwt.split(".").length).toBe(3);
-    const verified = await verifyCredentialJwt(signed!.jwt, publicJwkFromPrivate(privateJwk, kid));
+    const header = JSON.parse(Buffer.from(signed!.jwt.split(".")[0], "base64url").toString()) as {
+      alg: string;
+      kid: string;
+      typ: string;
+    };
+    expect(header).toEqual({ alg: "ES256", kid, typ: "vc+jwt" });
+    const publicJwk = publicJwkFromPrivate(privateJwk, kid);
+    const verified = await verifyCredentialJwt(signed!.jwt, publicJwk);
     expect(verified.id).toBe(credential.id);
     const exportedPublic = await exportJWK(publicKey);
-    expect(publicJwkFromPrivate(privateJwk, kid).x).toBe(exportedPublic.x);
-    const publicJwk = publicJwkFromPrivate(privateJwk, kid);
+    expect(publicJwk.x).toBe(exportedPublic.x);
+    expect(publicJwk.y).toBe(exportedPublic.y);
     expect(publicJwk).not.toHaveProperty("d");
-    expect(JSON.stringify(publicJwk)).not.toContain(String(privateJwk.d));
+    expect(JSON.stringify(publicJwksKeys([privateJwk, publicJwk]))).not.toContain(String(privateJwk.d));
 
     const tamperedPayload = Buffer.from(JSON.stringify({ ...credential, name: "modifié" })).toString("base64url");
-    const [header, , signature] = signed!.jwt.split(".");
-    await expect(verifyCredentialJwt(`${header}.${tamperedPayload}.${signature}`, publicJwk)).rejects.toThrow();
+    const [protectedHeader, , signature] = signed!.jwt.split(".");
+    await expect(verifyCredentialJwt(`${protectedHeader}.${tamperedPayload}.${signature}`, publicJwk)).rejects.toThrow();
+  });
+
+  it("still verifies an EdDSA credential when that public key is present", async () => {
+    const { privateKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
+    const privateJwk = await exportJWK(privateKey);
+    const kid = "byound-ed25519-2026";
+    const signed = await signCredentialJwt(sampleCredential(), { jwk: privateJwk, kid });
+    const header = JSON.parse(Buffer.from(signed!.jwt.split(".")[0], "base64url").toString()) as { alg: string };
+    expect(header.alg).toBe("EdDSA");
+    const verified = await verifyCredentialJwt(signed!.jwt, [publicJwkFromPrivate(privateJwk, kid)]);
+    expect(verified.id).toBe("https://www.byound.fr/badges/assertion-1");
+  });
+
+  it("keeps an archived credential out of the public response", () => {
+    expect(PUBLIC_ASSERTION_COLUMNS).not.toContain("superseded_credential_jwt");
+    expect(publicCredentialJwt({
+      credential_jwt: "current.es256.jwt",
+      superseded_credential_jwt: "archived.eddsa.jwt",
+    })).toBe("current.es256.jwt");
+  });
+
+  it("reissues without changing the id, the date, the hash or the salt", () => {
+    const original = sampleCredential();
+    const preserved = preservedIdentityFromCredential(original);
+    const reissued = buildReissuedOpenBadgeCredential("class-1", preserved, {
+      name: "Profil comportemental",
+      description: "Validation du profil croisé DISC, IDMC et soft skills.",
+      statusIndex: 0,
+    });
+    const subject = reissued.credentialSubject as {
+      identifier: Array<{ identityHash: string; salt: string }>;
+      achievement: { description: string };
+    };
+    expect(reissued.id).toBe(original.id);
+    expect(reissued.validFrom).toBe(original.validFrom);
+    expect(subject.identifier[0]?.identityHash).toBe(hashBadgeEmail(EMAIL, "salt-1"));
+    expect(subject.identifier[0]?.salt).toBe("salt-1");
+    expect(JSON.stringify(reissued)).not.toMatch(/\bscore\b|\d+\s*%/i);
+    expect(String((reissued.credentialSubject as { achievement: { name: string } }).achievement.name)).toBe("Profil comportemental");
+    expect(subject.achievement.description).not.toContain("EDGE");
   });
 });
 
@@ -80,5 +128,19 @@ describe("badge verification state", () => {
     expect(resolveBadgeVerificationState({ signatureOk: true, revoked: true, expired: false })).toBe("revoked");
     expect(resolveBadgeVerificationState({ signatureOk: true, revoked: false, expired: true })).toBe("expired");
     expect(resolveBadgeVerificationState({ signatureOk: true, revoked: false, expired: false })).toBe("verified");
+  });
+});
+
+describe("public badge stats", () => {
+  it("hides empty counters and fits the remaining cells", () => {
+    const labels = visibleBadgeStatLabels({
+      level: 1,
+      criteriaCount: 5,
+      evidenceCount: 0,
+      hasExpiry: false,
+    });
+    expect(labels).toEqual(["Niveau", "Critères"]);
+    expect(badgeStatGridClass(labels.length)).toBe("grid-cols-2");
+    expect(badgeStatGridClass(3)).toBe("grid-cols-3");
   });
 });

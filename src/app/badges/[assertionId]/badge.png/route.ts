@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
+import { renderDefaultBadgePng } from "@/lib/openbadges/baking/default-badge-png";
 import { bakePng } from "@/lib/openbadges/baking/png";
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
 import { loadPublicBadgeDocument } from "@/lib/openbadges/v3/public-badge";
@@ -29,15 +30,15 @@ export async function GET(_request: NextRequest, context: { params: Promise<Rout
   const db = getServiceRoleClient();
   if (!db) return new NextResponse("Not found", { status: 404 });
   const badge = await loadPublicBadgeDocument(db, assertionId);
-  if (!badge?.imageUrl) return new NextResponse("Not found", { status: 404 });
+  if (!badge) return new NextResponse("Not found", { status: 404 });
 
-  const bytes = await loadBadgeImage(badge.imageUrl);
-  if (!bytes) return new NextResponse("Not found", { status: 404 });
+  const artwork = badge.imageUrl ? await loadBadgeImage(badge.imageUrl) : null;
+  const fallback = () => renderDefaultBadgePng(badge.name);
   let baked: Buffer;
   try {
-    baked = bakePng(bytes, badge.credentialJwt);
+    baked = bakePng(artwork ?? fallback(), badge.credentialJwt);
   } catch {
-    return new NextResponse("Not found", { status: 404 });
+    baked = bakePng(fallback(), badge.credentialJwt);
   }
 
   return new NextResponse(new Uint8Array(baked), {

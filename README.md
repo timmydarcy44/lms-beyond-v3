@@ -37,13 +37,43 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Open Badges
 
-Byound signe des Open Badges 3.0 en VC-JWT (EdDSA, Ed25519). La clé privée vit dans `BADGE_SIGNING_PRIVATE_JWK`, le kid dans `BADGE_SIGNING_KID`. Ces deux variables sont dans Vercel Preview et Production, avec les mêmes valeurs. Elles ne vont jamais dans le dépôt.
+Byound signe des Open Badges 3.0 en VC-JWT (ES256, ECDSA P-256). La clé privée vit dans `BADGE_SIGNING_PRIVATE_JWK`, le kid dans `BADGE_SIGNING_KID`. La valeur actuelle du kid est `byound-es256-2026`. Ces deux variables sont dans Vercel Preview et Production, avec les mêmes valeurs. Elles ne vont jamais dans le dépôt.
 
 La clé publique est publiée dans `https://www.byound.fr/.well-known/jwks.json` et dans le profil émetteur. Un badge privé répond 404.
 
+Pendant une réémission, `BADGE_SIGNING_LEGACY_PRIVATE_JWK` peut contenir l'ancienne clé privée. La vérification accepte alors ES256 et EdDSA. L'ancien JWT est archivé dans `badge_assertions.superseded_credential_jwt` et n'est jamais servi.
+
 ### Rotation de la clé de signature des badges
 
-1. Générer une nouvelle paire Ed25519 et un nouveau kid, par exemple `byound-ed25519-2027`.
-2. Ajouter la nouvelle clé publique à `badge_issuers.public_jwks`, à côté de l'ancienne. Ne pas retirer l'ancienne.
-3. Mettre `BADGE_SIGNING_PRIVATE_JWK` et `BADGE_SIGNING_KID` à jour en Preview, puis en Production, avec la nouvelle paire.
-4. Les badges émis ensuite sont signés avec le nouveau kid. Les badges déjà émis restent vérifiables tant que leur clé publique reste dans la JWKS.
+Générer une paire, sans écrire la clé privée dans un fichier du dépôt :
+
+```bash
+node --input-type=module <<'EOF'
+import { generateKeyPair, exportJWK } from "jose";
+
+const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
+const privateJwk = await exportJWK(privateKey);
+const publicJwk = await exportJWK(publicKey);
+const kid = "byound-es256-2027";
+for (const jwk of [privateJwk, publicJwk]) {
+  jwk.kid = kid;
+  jwk.alg = "ES256";
+  jwk.use = "sig";
+}
+console.log(JSON.stringify(privateJwk));
+console.log(JSON.stringify(publicJwk));
+EOF
+```
+
+La première ligne affichée est la clé privée, à coller dans Vercel. La seconde est la clé publique.
+
+1. Ajouter la nouvelle clé publique à `badge_issuers.public_jwks`, en premier, à côté de l'ancienne. Ne pas retirer l'ancienne.
+2. Mettre `BADGE_SIGNING_PRIVATE_JWK` et `BADGE_SIGNING_KID` à jour en Preview, puis en Production. Conserver l'ancienne clé privée dans `BADGE_SIGNING_LEGACY_PRIVATE_JWK` le temps de réémettre les badges déjà signés.
+3. Les badges émis ensuite sont signés avec le nouveau kid. Les badges déjà émis restent vérifiables tant que leur clé publique reste dans la JWKS.
+
+### Retrait d'une ancienne clé
+
+Quand plus aucun credential servi (page, JWT, PNG, liste de révocation) n'est signé avec l'ancien kid :
+
+1. Retirer cette clé publique de `badge_issuers.public_jwks`.
+2. Supprimer `BADGE_SIGNING_LEGACY_PRIVATE_JWK` dans Vercel, en Preview puis en Production.

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { JWK } from "jose";
 import { BADGE_PUBLIC_ORIGIN, REVOCATION_STATUS_URL } from "@/lib/openbadges/v3/credential";
-import { verifyCredentialJwt } from "@/lib/openbadges/v3/sign";
+import { publicCredentialJwt } from "@/lib/openbadges/v3/reissue";
+import { publicJwksKeys, verifyCredentialJwt } from "@/lib/openbadges/v3/sign";
 import { isPublicBadgeVisible, statusBit } from "@/lib/openbadges/v3/status-list";
 
 export type BadgeVerificationState = "verified" | "expired" | "revoked" | "invalid";
@@ -115,22 +115,45 @@ function levelOf(row: Record<string, unknown>): number | null {
   return Number.isFinite(level) ? level : null;
 }
 
+export const PUBLIC_ASSERTION_COLUMNS =
+  "id, badge_class_id, recipient_name, issued_at, valid_until, revoked_at, revocation_reason, credential_jwt, kid, is_public, status_index, evidence";
+
+export function visibleBadgeStatLabels(input: {
+  level: number | null;
+  criteriaCount: number;
+  evidenceCount: number;
+  hasExpiry: boolean;
+}): string[] {
+  const labels: string[] = [];
+  if (input.level != null) labels.push("Niveau");
+  if (input.criteriaCount > 0) labels.push("Critères");
+  if (input.evidenceCount > 0) labels.push("Livrables");
+  if (input.hasExpiry) labels.push("Expiration");
+  return labels;
+}
+
+export function badgeStatGridClass(count: number): string {
+  if (count <= 1) return "grid-cols-1";
+  if (count === 2) return "grid-cols-2";
+  if (count === 3) return "grid-cols-3";
+  return "grid-cols-2 sm:grid-cols-4";
+}
+
 export async function loadPublicBadgeDocument(
   db: SupabaseClient,
   assertionId: string,
 ): Promise<PublicBadgeDocument | null> {
-  const columns = "id, badge_class_id, recipient_name, issued_at, valid_until, revoked_at, revocation_reason, credential_jwt, kid, is_public, status_index, evidence";
   let { data: assertion, error } = await db
     .from("badge_assertions")
-    .select(`${columns}, indexable`)
+    .select(`${PUBLIC_ASSERTION_COLUMNS}, indexable`)
     .eq("id", assertionId)
     .maybeSingle();
   if (error) {
-    const retry = await db.from("badge_assertions").select(columns).eq("id", assertionId).maybeSingle();
+    const retry = await db.from("badge_assertions").select(PUBLIC_ASSERTION_COLUMNS).eq("id", assertionId).maybeSingle();
     assertion = retry.data ? { ...retry.data, indexable: true } : null;
   }
-  if (!assertion || !isPublicBadgeVisible(assertion)) return null;
-  if (!assertion.credential_jwt) return null;
+  const credentialJwt = assertion ? publicCredentialJwt(assertion) : null;
+  if (!assertion || !isPublicBadgeVisible(assertion) || !credentialJwt) return null;
 
   const { data: badge } = await db
     .from("open_badges")
@@ -140,12 +163,11 @@ export async function loadPublicBadgeDocument(
   if (!badge) return null;
 
   const { data: issuer } = await db.from("badge_issuers").select("public_jwks").eq("slug", "byound").maybeSingle();
-  const keys = Array.isArray(asRecord(issuer?.public_jwks).keys) ? (asRecord(issuer?.public_jwks).keys as JWK[]) : [];
-  const publicKey = keys.find((key) => key.kid === assertion.kid) ?? keys[0];
+  const keys = publicJwksKeys(asRecord(issuer?.public_jwks).keys);
   let signatureOk = false;
-  if (publicKey) {
+  if (keys.length > 0) {
     try {
-      await verifyCredentialJwt(assertion.credential_jwt, publicKey);
+      await verifyCredentialJwt(credentialJwt, keys);
       signatureOk = true;
     } catch {
       signatureOk = false;
@@ -182,7 +204,7 @@ export async function loadPublicBadgeDocument(
     validUntil: assertion.valid_until,
     revokedAt: assertion.revoked_at,
     revocationReason: assertion.revocation_reason,
-    credentialJwt: assertion.credential_jwt,
+    credentialJwt,
     kid: assertion.kid,
     criteria: criteriaOf(badge, assertion.issued_at),
     evidence: publicEvidenceItems(assertion.evidence),

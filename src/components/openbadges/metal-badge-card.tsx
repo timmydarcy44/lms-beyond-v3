@@ -57,7 +57,7 @@ export function MetalBadgeCard({ name, recipientName, issuedLabel, level }: Prop
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#A99BFF] to-[#6E5BFF] text-lg font-bold text-[#050608]">
               B
             </div>
-            <p className="line-clamp-2 text-xl font-bold tracking-[-0.04em] sm:text-2xl">{name}</p>
+            <p className="line-clamp-2 text-xl font-bold tracking-[-0.04em] sm:text-2xl" style={{ textWrap: "balance" }}>{name}</p>
           </div>
           <div className="flex items-end justify-between gap-4 text-sm">
             <div>

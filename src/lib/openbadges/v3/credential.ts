@@ -34,6 +34,8 @@ export type OpenBadgeCredentialInput = {
   recipientName: string;
   recipientEmail: string;
   recipientSalt: string;
+  /** Conserve le hash déjà émis. Sinon il est recalculé depuis l'email et le sel. */
+  identityHash?: string;
   issuedAt: string;
   validUntil?: string | null;
   statusIndex: number;
@@ -96,7 +98,7 @@ export function buildOpenBadgeCredential(
       identifier: [
         {
           type: "IdentityObject",
-          identityHash: hashBadgeEmail(input.recipientEmail, input.recipientSalt),
+          identityHash: input.identityHash ?? hashBadgeEmail(input.recipientEmail, input.recipientSalt),
           identityType: "emailAddress",
           hashed: true,
           salt: input.recipientSalt,

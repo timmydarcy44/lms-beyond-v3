@@ -6,7 +6,7 @@ import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
 import { buildLinkedInAddCertificationUrl } from "@/lib/openbadges/linkedin-share";
 import { loadPublicIssuer } from "@/lib/openbadges/public-issuer";
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
-import { loadPublicBadgeDocument, type BadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
+import { badgeStatGridClass, loadPublicBadgeDocument, visibleBadgeStatLabels, type BadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -51,12 +51,17 @@ export default async function PublicBadgePage({ params }: RouteParams) {
   const status = STATUS[badge.state];
   const revokedOn = badge.revokedAt ? formatDate(badge.revokedAt) : null;
   const filled = badge.criteria.length;
-  const stats = [
-    { label: "Niveau", value: badge.level != null ? String(badge.level) : "—" },
-    { label: "Critères", value: `${filled} / ${filled}` },
-    { label: "Livrables", value: String(badge.evidence.length) },
-    { label: "Expiration", value: badge.validUntil ? formatDate(badge.validUntil) : "Aucune" },
-  ];
+  const stats = visibleBadgeStatLabels({
+    level: badge.level,
+    criteriaCount: badge.criteria.length,
+    evidenceCount: badge.evidence.length,
+    hasExpiry: Boolean(badge.validUntil),
+  }).map((label) => {
+    if (label === "Niveau") return { label, value: String(badge.level) };
+    if (label === "Critères") return { label, value: `${filled} / ${filled}` };
+    if (label === "Livrables") return { label, value: String(badge.evidence.length) };
+    return { label, value: formatDate(badge.validUntil ?? badge.issuedAt) };
+  });
 
   return (
     <BadgePublicShell>
@@ -74,7 +79,19 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             level={badge.level}
           />
           <div className="space-y-4">
-            <h1 className="text-[40px] font-bold leading-[0.95] tracking-[-0.045em] sm:text-[72px]">{badge.name}</h1>
+            <h1 className="max-w-full text-[40px] font-bold leading-[1.05] tracking-[-0.045em] sm:text-[72px] sm:leading-[0.95]" style={{ textWrap: "balance" }}>
+              {badge.name.split(" - ").map((part, index) => (
+                <span key={part}>
+                  {index > 0 ? (
+                    <>
+                      <br className="sm:hidden" />
+                      <span className="hidden sm:inline">{" - "}</span>
+                    </>
+                  ) : null}
+                  {part}
+                </span>
+              ))}
+            </h1>
             <p className="text-lg text-[rgba(242,242,244,0.6)]">
               Délivré à {badge.recipientName} par Byound, le {issued}.
             </p>
@@ -89,7 +106,8 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             pdfUrl={`/badges/${badge.assertionId}/certificate.pdf`}
             pageUrl={pageUrl}
           />
-          <dl className="grid w-full grid-cols-2 gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 sm:grid-cols-4">
+          {stats.length > 0 ? (
+          <dl className={`grid w-full gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 ${badgeStatGridClass(stats.length)}`}>
             {stats.map((item) => (
               <div key={item.label} className="bg-[#050608] px-4 py-5">
                 <dt className="text-sm text-[rgba(242,242,244,0.5)]">{item.label}</dt>
@@ -97,6 +115,7 @@ export default async function PublicBadgePage({ params }: RouteParams) {
               </div>
             ))}
           </dl>
+          ) : null}
         </section>
 
         <div className="mt-16 grid gap-16 lg:grid-cols-[minmax(0,1fr)_400px]">

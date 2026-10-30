@@ -14,8 +14,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const force = request.nextUrl.searchParams.get("force") === "1";
-  if (!force && parisHour() !== 10) {
-    return NextResponse.json({ ok: true, sent: 0, skipped: "hors de 10 h, heure de Paris" });
+  const hour = parisHour();
+  // Un seul cron Hobby, 08:00 UTC : 10 h à Paris l'été, 9 h l'hiver.
+  if (!force && hour !== 9 && hour !== 10) {
+    return NextResponse.json({ ok: true, sent: 0, skipped: "hors de la fenêtre du matin, heure de Paris" });
   }
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ sent: 0 });

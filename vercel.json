@@ -50,7 +50,7 @@
     },
     {
       "path": "/api/cron/care-reminders",
-      "schedule": "0 8,9 * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }

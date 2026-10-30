@@ -1,6 +1,6 @@
 import { generateKeyPair, exportJWK } from "jose";
 import { describe, expect, it } from "vitest";
-import { buildOpenBadgeCredential, OB_V3_CONTEXT, VC_V2_CONTEXT } from "@/lib/openbadges/v3/credential";
+import { buildOpenBadgeCredential, OB_V3_CONTEXT, OB_V3_EXTENSIONS_CONTEXT, VC_V2_CONTEXT } from "@/lib/openbadges/v3/credential";
 import { hashBadgeEmail } from "@/lib/openbadges/v3/identity";
 import { badgeStatGridClass, PUBLIC_ASSERTION_COLUMNS, resolveBadgeVerificationState, visibleBadgeStatLabels } from "@/lib/openbadges/v3/public-badge";
 import { buildReissuedOpenBadgeCredential, preservedIdentityFromCredential, publicCredentialJwt } from "@/lib/openbadges/v3/reissue";
@@ -37,7 +37,7 @@ describe("OpenBadgeCredential 3.0", () => {
     expect(subject.identifier[0]?.identityHash).toBe(hashBadgeEmail(EMAIL, "salt-1"));
     expect(subject.identifier[0]?.hashed).toBe(true);
     expect(subject.identifier[0]?.salt).toBe("salt-1");
-    expect(credential["@context"]).toEqual([VC_V2_CONTEXT, OB_V3_CONTEXT]);
+    expect(credential["@context"]).toEqual([VC_V2_CONTEXT, OB_V3_CONTEXT, OB_V3_EXTENSIONS_CONTEXT]);
     expect(credential.type).toEqual(["VerifiableCredential", "OpenBadgeCredential"]);
     expect(credential.id).toBe("https://www.byound.fr/badges/assertion-1");
     const issuer = credential.issuer as { type: string[]; name: string };

@@ -107,10 +107,8 @@ export function buildOpenBadgeCredential(
       achievement,
     },
     credentialStatus: {
-      type: "BitstringStatusListEntry",
-      statusPurpose: "revocation",
-      statusListIndex: input.statusIndex,
-      statusListCredential: REVOCATION_STATUS_URL,
+      id: REVOCATION_STATUS_URL,
+      type: "1EdTechRevocationList",
     },
   };
 

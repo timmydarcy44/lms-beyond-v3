@@ -47,9 +47,11 @@ describe("OpenBadgeCredential 3.0", () => {
     const achievement = subject.achievement as { criteria: { id: string }; name: string };
     expect(achievement.name).toBe("Profil comportemental");
     expect(achievement.criteria.id).toContain("/criteria");
-    const status = credential.credentialStatus as { statusListIndex: number; statusPurpose: string };
-    expect(status.statusPurpose).toBe("revocation");
-    expect(status.statusListIndex).toBe(0);
+    const status = credential.credentialStatus as { id: string; type: string };
+    expect(status).toEqual({
+      id: "https://www.byound.fr/api/public/status/revocation",
+      type: "1EdTechRevocationList",
+    });
     const emails = serialized.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [];
     expect(emails).toEqual(["contact@byound.fr"]);
   });

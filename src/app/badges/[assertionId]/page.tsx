@@ -137,9 +137,9 @@ export default async function PublicBadgePage({ params }: RouteParams) {
               )}
             </section>
 
-            <section className="space-y-4">
-              <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
-              {badge.evidence.length > 0 ? (
+            {badge.evidence.length > 0 ? (
+              <section className="space-y-4">
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
                 <ul className="grid gap-4">
                   {badge.evidence.map((item) => (
                     <li
@@ -157,40 +157,34 @@ export default async function PublicBadgePage({ params }: RouteParams) {
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="text-[rgba(242,242,244,0.6)]">Aucun livrable n'est public.</p>
-              )}
-            </section>
+              </section>
+            ) : null}
 
-            <section className="space-y-4">
-              <h2 className="text-2xl font-bold tracking-[-0.04em]">Compétences visées</h2>
-              {badge.alignments.length > 0 ? (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    {badge.alignments.map((item) => (
-                      <span key={item.targetName} className="rounded-full border border-white/15 px-3 py-1 text-sm">
-                        {item.targetName}
-                      </span>
-                    ))}
-                  </div>
-                  <ul className="space-y-3">
-                    {badge.alignments.map((item) => (
-                      <li key={`${item.targetFramework}-${item.targetName}`} className="text-[rgba(242,242,244,0.75)]">
-                        {[item.targetFramework, item.targetCode].filter(Boolean).join(" · ")}
-                        {item.targetFramework || item.targetCode ? " — " : ""}
-                        {item.targetUrl ? (
-                          <a href={item.targetUrl} className="text-[#A99BFF]">{item.targetName}</a>
-                        ) : (
-                          item.targetName
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p className="text-[rgba(242,242,244,0.6)]">Aucun alignement ESCO, ROME ou RNCP n'est publié pour ce badge.</p>
-              )}
-            </section>
+            {badge.alignments.length > 0 ? (
+              <section className="space-y-4">
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Compétences visées</h2>
+                <div className="flex flex-wrap gap-2">
+                  {badge.alignments.map((item) => (
+                    <span key={item.targetName} className="rounded-full border border-white/15 px-3 py-1 text-sm">
+                      {item.targetName}
+                    </span>
+                  ))}
+                </div>
+                <ul className="space-y-3">
+                  {badge.alignments.map((item) => (
+                    <li key={`${item.targetFramework}-${item.targetName}`} className="text-[rgba(242,242,244,0.75)]">
+                      {[item.targetFramework, item.targetCode].filter(Boolean).join(" · ")}
+                      {item.targetFramework || item.targetCode ? " — " : ""}
+                      {item.targetUrl ? (
+                        <a href={item.targetUrl} className="text-[#A99BFF]">{item.targetName}</a>
+                      ) : (
+                        item.targetName
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">

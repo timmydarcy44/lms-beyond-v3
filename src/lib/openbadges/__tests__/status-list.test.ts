@@ -25,7 +25,7 @@ describe("bitstring status list", () => {
 });
 
 describe("baked badge", () => {
-  it("writes the JWT into the openbadges chunk", () => {
+  it("writes the JWT into the openbadgecredential chunk", () => {
     const jwt = "header.payload.signature";
     const baked = bakePng(TINY_PNG, jwt);
     expect(unbakePng(baked)).toBe(jwt);

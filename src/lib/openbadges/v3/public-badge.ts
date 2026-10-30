@@ -6,6 +6,17 @@ import { isPublicBadgeVisible, statusBit } from "@/lib/openbadges/v3/status-list
 
 export type BadgeVerificationState = "verified" | "expired" | "revoked" | "invalid";
 
+export function resolveBadgeVerificationState(input: {
+  signatureOk: boolean;
+  revoked: boolean;
+  expired: boolean;
+}): BadgeVerificationState {
+  if (!input.signatureOk) return "invalid";
+  if (input.revoked) return "revoked";
+  if (input.expired) return "expired";
+  return "verified";
+}
+
 export type PublicBadgeCriterion = {
   label: string;
   description: string | null;
@@ -157,7 +168,7 @@ export async function loadPublicBadgeDocument(
 
   const revoked = Boolean(assertion.revoked_at) || listRevoked;
   const expired = Boolean(assertion.valid_until) && Date.parse(assertion.valid_until) < Date.now();
-  const state: BadgeVerificationState = !signatureOk ? "invalid" : revoked ? "revoked" : expired ? "expired" : "verified";
+  const state = resolveBadgeVerificationState({ signatureOk, revoked, expired });
 
   return {
     assertionId: assertion.id,

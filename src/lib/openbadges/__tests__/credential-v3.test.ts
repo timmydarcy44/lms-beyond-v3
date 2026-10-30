@@ -1,7 +1,8 @@
 import { generateKeyPair, exportJWK } from "jose";
 import { describe, expect, it } from "vitest";
-import { buildOpenBadgeCredential } from "@/lib/openbadges/v3/credential";
+import { buildOpenBadgeCredential, OB_V3_CONTEXT, VC_V2_CONTEXT } from "@/lib/openbadges/v3/credential";
 import { hashBadgeEmail } from "@/lib/openbadges/v3/identity";
+import { resolveBadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
 import { publicJwkFromPrivate, signCredentialJwt, verifyCredentialJwt } from "@/lib/openbadges/v3/sign";
 
 const EMAIL = "holder@example.com";
@@ -34,12 +35,22 @@ describe("OpenBadgeCredential 3.0", () => {
     expect(subject.name).toBe("Camille Martin");
     expect(subject.identifier[0]?.identityHash).toBe(hashBadgeEmail(EMAIL, "salt-1"));
     expect(subject.identifier[0]?.hashed).toBe(true);
-    expect(credential["@context"]).toEqual([
-      "https://www.w3.org/ns/credentials/v2",
-      "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json",
-    ]);
+    expect(subject.identifier[0]?.salt).toBe("salt-1");
+    expect(credential["@context"]).toEqual([VC_V2_CONTEXT, OB_V3_CONTEXT]);
     expect(credential.type).toEqual(["VerifiableCredential", "OpenBadgeCredential"]);
     expect(credential.id).toBe("https://www.byound.fr/badges/assertion-1");
+    const issuer = credential.issuer as { type: string[]; name: string };
+    expect(issuer.type).toContain("Profile");
+    expect(issuer.name).toBe("Byound");
+    expect(credential.validFrom).toBe("2026-10-04T15:30:34.157Z");
+    const achievement = subject.achievement as { criteria: { id: string }; name: string };
+    expect(achievement.name).toBe("Profil comportemental");
+    expect(achievement.criteria.id).toContain("/criteria");
+    const status = credential.credentialStatus as { statusListIndex: number; statusPurpose: string };
+    expect(status.statusPurpose).toBe("revocation");
+    expect(status.statusListIndex).toBe(0);
+    const emails = serialized.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [];
+    expect(emails).toEqual(["contact@byound.fr"]);
   });
 
   it("signs and verifies with EdDSA", async () => {
@@ -53,6 +64,21 @@ describe("OpenBadgeCredential 3.0", () => {
     expect(verified.id).toBe(credential.id);
     const exportedPublic = await exportJWK(publicKey);
     expect(publicJwkFromPrivate(privateJwk, kid).x).toBe(exportedPublic.x);
-    expect(JSON.stringify(publicJwkFromPrivate(privateJwk, kid))).not.toContain(String(privateJwk.d));
+    const publicJwk = publicJwkFromPrivate(privateJwk, kid);
+    expect(publicJwk).not.toHaveProperty("d");
+    expect(JSON.stringify(publicJwk)).not.toContain(String(privateJwk.d));
+
+    const tamperedPayload = Buffer.from(JSON.stringify({ ...credential, name: "modifié" })).toString("base64url");
+    const [header, , signature] = signed!.jwt.split(".");
+    await expect(verifyCredentialJwt(`${header}.${tamperedPayload}.${signature}`, publicJwk)).rejects.toThrow();
+  });
+});
+
+describe("badge verification state", () => {
+  it("maps revocation, expiry and a bad signature to distinct statuses", () => {
+    expect(resolveBadgeVerificationState({ signatureOk: false, revoked: false, expired: false })).toBe("invalid");
+    expect(resolveBadgeVerificationState({ signatureOk: true, revoked: true, expired: false })).toBe("revoked");
+    expect(resolveBadgeVerificationState({ signatureOk: true, revoked: false, expired: true })).toBe("expired");
+    expect(resolveBadgeVerificationState({ signatureOk: true, revoked: false, expired: false })).toBe("verified");
   });
 });

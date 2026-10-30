@@ -35,6 +35,15 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## Open Badges v3 (préparation)
-- Les types OB 3.0 et un stub de mapping sont disponibles dans `src/lib/openbadges/v3/`.
-- Pour activer plus tard le mode VC-ready, compléter `v2AssertionToV3Credential()` et exposer un endpoint `/api/public/credentials/[assertionId]`.
+## Open Badges
+
+Byound signe des Open Badges 3.0 en VC-JWT (EdDSA, Ed25519). La clé privée vit dans `BADGE_SIGNING_PRIVATE_JWK`, le kid dans `BADGE_SIGNING_KID`. Ces deux variables sont dans Vercel Preview et Production, avec les mêmes valeurs. Elles ne vont jamais dans le dépôt.
+
+La clé publique est publiée dans `https://www.byound.fr/.well-known/jwks.json` et dans le profil émetteur. Un badge privé répond 404.
+
+### Rotation de la clé de signature des badges
+
+1. Générer une nouvelle paire Ed25519 et un nouveau kid, par exemple `byound-ed25519-2027`.
+2. Ajouter la nouvelle clé publique à `badge_issuers.public_jwks`, à côté de l'ancienne. Ne pas retirer l'ancienne.
+3. Mettre `BADGE_SIGNING_PRIVATE_JWK` et `BADGE_SIGNING_KID` à jour en Preview, puis en Production, avec la nouvelle paire.
+4. Les badges émis ensuite sont signés avec le nouveau kid. Les badges déjà émis restent vérifiables tant que leur clé publique reste dans la JWKS.

@@ -18,16 +18,9 @@ import {
   resolveCrossProfileOpeningParagraph,
 } from "@/lib/learner/cross-profile-opening";
 import { maybeRefreshProfileAnalysisIfStale } from "@/lib/learner/profile-analysis";
-import {
-  PROFIL_COMPORTEMENTAL_BADGE_NAME,
-  resolveProfilComportementalBadgeId,
-} from "@/lib/openbadges/diagnostic-commercial-badge";
-import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
-import {
-  getLearnerOpenBadgeAward,
-  recordOpenBadgeAward,
-} from "@/lib/openbadges/open-badge-earner-submissions";
-import { getBadgeCriteriaUrl } from "@/lib/openbadges/urls";
+import { resolveProfilComportementalBadgeId } from "@/lib/openbadges/diagnostic-commercial-badge";
+import { issueBadgeAssertion } from "@/lib/openbadges/badge-assertions";
+import { getLearnerOpenBadgeAward } from "@/lib/openbadges/open-badge-earner-submissions";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export type CrossProfileCompletionRecord = {
@@ -229,26 +222,16 @@ export async function maybeTriggerCrossProfileCompletion(
     };
   }
 
-  const shareUrl = getBadgeCriteriaUrl(badgeId);
-  const badgeName = String(badgeRow.name ?? PROFIL_COMPORTEMENTAL_BADGE_NAME);
   const awardedAt = new Date().toISOString();
-  const award = {
-    awardedAt,
-    shareUrl,
-    linkedInShareUrl: buildOpenBadgeLinkedInShareUrl({
-      shareUrl,
-      badgeName,
-      level: 1,
-    }),
-    badgeName,
-    imageUrl: badgeRow.image_url ? String(badgeRow.image_url) : null,
-  };
 
-  if (!existingAward) {
-    const stored = await recordOpenBadgeAward(badgeId, uid, award);
-    if (!stored) {
-      return { status: "error", message: "badge_award_failed" };
-    }
+  const issued = await issueBadgeAssertion(service, {
+    badgeClassId: badgeId,
+    recipientProfileId: uid,
+    issuedAt: existingAward?.awardedAt ?? awardedAt,
+    isPublic: false,
+  });
+  if (!issued.ok) {
+    return { status: "error", message: "badge_award_failed" };
   }
 
   const profilHref = isSalarieProfile(profile)

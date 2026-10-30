@@ -106,6 +106,7 @@ export function countLearnerAssessmentAttempts(
   return getLearnerSubmissionsFromConfig(evaluationConfig, earnerId).length;
 }
 
+/** @deprecated Les nouvelles obtentions s'écrivent dans badge_assertions. */
 export async function recordOpenBadgeAward(
   badgeClassId: string,
   earnerId: string,

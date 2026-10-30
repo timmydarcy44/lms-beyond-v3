@@ -1213,7 +1213,9 @@ export function FormateurFormationBuilderWhite({
   const backHref =
     returnTo ||
     (orgIsLocked ? "/dashboard/entreprise/formations/gerer" : "/dashboard/formateur");
-  const formationsHref = editorBase || "/dashboard/formateur/formations";
+  const formationsHref = orgIsLocked
+    ? returnTo || "/dashboard/entreprise/formations/gerer"
+    : editorBase || "/dashboard/formateur/formations";
   const enterpriseStudio = byoundOwned || orgIsLocked;
 
   return (
@@ -1221,7 +1223,10 @@ export function FormateurFormationBuilderWhite({
       title="Création de formation"
       breadcrumbs={[
         { label: "Dashboard", href: backHref },
-        { label: byoundOwned ? "Byound" : "Formateur", href: byoundOwned ? "/super/lms/formations" : "/dashboard/formateur" },
+        {
+          label: byoundOwned ? "Byound" : orgIsLocked ? "Entreprise" : "Formateur",
+          href: byoundOwned ? "/super/lms/formations" : orgIsLocked ? "/dashboard/entreprise" : "/dashboard/formateur",
+        },
         { label: "Formations", href: formationsHref },
         { label: initialCourseId ? "Formation" : "Nouvelle formation" },
       ]}

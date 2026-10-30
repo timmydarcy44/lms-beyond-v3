@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { jadeMatchingCandidates } from "@/lib/demo/jade-dashboard-mocks";
 
 type Candidate = {
   id: string;
@@ -178,16 +179,22 @@ const CANDIDATES: Candidate[] = [
 export default function MatchingCandidatsPage() {
   const params = useParams();
   const offerId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const offerTitle = OFFER_LABELS[offerId ?? "offer-1"] ?? "Offre";
+  const jadeMatch = jadeMatchingCandidates(offerId ?? "");
+  const offerTitle = jadeMatch?.offerTitle ?? OFFER_LABELS[offerId ?? "offer-1"] ?? "Offre";
+  const sourceCandidates = jadeMatch?.candidates ?? CANDIDATES;
   const [sortBy, setSortBy] = useState("matching");
   const [selected, setSelected] = useState<Candidate | null>(null);
 
   const sortedCandidates = useMemo(() => {
-    const list = [...CANDIDATES];
+    const list = [...sourceCandidates];
     if (sortBy === "matching") return list.sort((a, b) => b.match - a.match);
     if (sortBy === "idmc") return list.sort((a, b) => b.idmc - a.idmc);
-    return list;
-  }, [sortBy]);
+    return list.sort(
+      (a, b) =>
+        b.softSkills.reduce((sum, skill) => sum + skill.value, 0) / b.softSkills.length -
+        a.softSkills.reduce((sum, skill) => sum + skill.value, 0) / a.softSkills.length,
+    );
+  }, [sortBy, sourceCandidates]);
 
   return (
     <div className="min-h-screen bg-[#050505] text-white">
@@ -204,7 +211,7 @@ export default function MatchingCandidatsPage() {
                   <div className="text-[10px] text-white/60">Target Radar</div>
                   <div className="mt-1 h-[52px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={CANDIDATES[0].offerRadar}>
+                      <RadarChart data={sourceCandidates[0]?.offerRadar ?? []}>
                         <PolarGrid stroke="rgba(255,255,255,0.08)" />
                         <PolarAngleAxis dataKey="axis" tick={false} />
                         <PolarRadiusAxis domain={[0, 100]} tick={false} />
@@ -283,6 +290,9 @@ export default function MatchingCandidatsPage() {
                         {candidate.match}%
                       </span>
                     </div>
+                    <p className="max-w-[140px] text-[11px] leading-snug text-white/60">
+                      Soft skills, IDMC {candidate.idmc} et test comportemental {candidate.disc}
+                    </p>
                     <div className="h-[120px] w-[180px] rounded-[14px] border border-white/10 bg-[#0B0B0B] p-2">
                       <ResponsiveContainer width="100%" height="100%">
                         <RadarChart data={candidate.offerRadar}>

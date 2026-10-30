@@ -266,6 +266,7 @@ export default function SalarieDetailPage() {
     updatedAt: string | null;
     cached: boolean;
   } | null>(null);
+  const [demoFiche, setDemoFiche] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -306,6 +307,14 @@ export default function SalarieDetailPage() {
           badges_earned?: number;
           activity?: Array<{ id: string; label: string; at: string }>;
           byound_skills?: Array<{ name: string; status: "declared" | "proof" | "badge" }>;
+          demo?: boolean;
+          profile_analysis?: {
+            strengths: string[];
+            improvements: string[];
+            summary: string | null;
+            updatedAt: string | null;
+            cached: boolean;
+          } | null;
           error?: string;
         };
 
@@ -340,6 +349,8 @@ export default function SalarieDetailPage() {
           setBadgesEarned(Number(payload.badges_earned ?? 0));
           setActivity(payload.activity ?? []);
           setByoundSkills(payload.byound_skills ?? []);
+          setDemoFiche(Boolean(payload.demo));
+          if (payload.profile_analysis) setProfileAnalysis(payload.profile_analysis);
           setEditing(false);
         }
       } catch {
@@ -355,7 +366,7 @@ export default function SalarieDetailPage() {
   }, [employeeId]);
 
   useEffect(() => {
-    if (!employeeId || !shareConsent || !hasDiagnostics) return;
+    if (!employeeId || demoFiche || !shareConsent || !hasDiagnostics) return;
 
     let cancelled = false;
     async function loadProfileAnalysis() {
@@ -401,7 +412,7 @@ export default function SalarieDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [employeeId, shareConsent, hasDiagnostics]);
+  }, [employeeId, shareConsent, hasDiagnostics, demoFiche]);
 
   useEffect(() => {
     if (tab !== "tests" || !employeeId) return;

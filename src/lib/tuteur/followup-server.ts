@@ -1,6 +1,8 @@
 import { createHash } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { proposeCursusMissions, skillsFromReferential, type CompanyContext, type ProposedMission } from "@/lib/tuteur/cursus-missions";
+
 export function relationMissing(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   const msg = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
@@ -108,6 +110,151 @@ export async function listBlocks(supabase: SupabaseClient) {
   const { data, error } = await supabase.from("competency_blocks").select("id, code, title, kind").order("code");
   if (relationMissing(error)) return [];
   return data ?? [];
+}
+
+export type LearnerReferentialBlock = { id: string; code: string; title: string };
+
+export type LearnerReferential = {
+  assignmentId: string;
+  learnerId: string;
+  learnerName: string;
+  referential: {
+    id: string;
+    title: string;
+    source: "assignment" | "cursus";
+    company: CompanyContext | null;
+    blocks: LearnerReferentialBlock[];
+    missions: ProposedMission[];
+  } | null;
+};
+
+async function learnerCompanies(supabase: SupabaseClient, learnerIds: string[]) {
+  const map = new Map<string, CompanyContext>();
+  if (!learnerIds.length) return map;
+  const apps = await supabase.from("cfa_applications").select("id, profile_id").in("profile_id", learnerIds);
+  if (relationMissing(apps.error) || !apps.data?.length) return map;
+  const appToLearner = new Map(apps.data.map((row) => [String(row.id), String(row.profile_id)]));
+  const placements = await supabase
+    .from("apprentice_placements")
+    .select("apprentice_id, company_id")
+    .in("apprentice_id", [...appToLearner.keys()])
+    .eq("status", "active");
+  if (relationMissing(placements.error) || !placements.data?.length) return map;
+  const companyIds = [...new Set(placements.data.map((row) => String(row.company_id)))];
+  const companies = await supabase.from("cfa_companies").select("id, company_name, naf_label, city").in("id", companyIds);
+  if (relationMissing(companies.error)) return map;
+  const byId = new Map((companies.data ?? []).map((row) => [String(row.id), row]));
+  for (const placement of placements.data) {
+    const learnerId = appToLearner.get(String(placement.apprentice_id));
+    const company = byId.get(String(placement.company_id));
+    if (!learnerId || !company || map.has(learnerId)) continue;
+    const sector = String(company.naf_label ?? "").trim();
+    map.set(learnerId, {
+      name: String(company.company_name ?? "Entreprise"),
+      sector: sector || "activité non précisée",
+      city: company.city ? String(company.city) : null,
+    });
+  }
+  return map;
+}
+
+/** Référentiel du cursus de l'alternant, missions adaptées à son entreprise. */
+export async function listLearnerReferentials(supabase: SupabaseClient, tutorId: string): Promise<LearnerReferential[]> {
+  const assignments = await supabase
+    .from("tutor_assignments")
+    .select("id, learner_id, referential_id")
+    .eq("tutor_id", tutorId)
+    .in("status", ["active", "paused"]);
+  const rows = assignments.data ?? [];
+  if (!rows.length) return [];
+  const learnerIds = rows.map((row) => String(row.learner_id));
+  const people = await names(supabase, learnerIds);
+  const companies = await learnerCompanies(supabase, learnerIds);
+
+  const refIds = [...new Set(rows.map((row) => row.referential_id).filter(Boolean).map(String))];
+  const library = new Map<string, { title: string; blocks: LearnerReferentialBlock[] }>();
+  if (refIds.length) {
+    const refRes = await supabase.from("tutor_referential_library").select("id, title").in("id", refIds);
+    const blockRes = await supabase.from("competency_blocks").select("id, code, title, referential_id").in("referential_id", refIds);
+    const blocks = relationMissing(blockRes.error) ? [] : blockRes.data ?? [];
+    for (const ref of refRes.data ?? []) {
+      library.set(String(ref.id), {
+        title: String(ref.title ?? "Référentiel"),
+        blocks: blocks
+          .filter((block) => String(block.referential_id) === String(ref.id))
+          .map((block) => ({ id: String(block.id), code: String(block.code ?? ""), title: String(block.title ?? "Bloc") })),
+      });
+    }
+  }
+
+  const cursus = new Map<string, { id: string; title: string; skills: ReturnType<typeof skillsFromReferential> }>();
+  const enroll = await supabase.from("class_enrollments").select("student_id, class_id").in("student_id", learnerIds);
+  const classIds = [...new Set((enroll.data ?? []).map((row) => String(row.class_id)))];
+  if (classIds.length && !relationMissing(enroll.error)) {
+    const withStructure = await supabase.from("school_classes").select("id, name, curriculum_id, referential_structure").in("id", classIds);
+    const classes = relationMissing(withStructure.error)
+      ? await supabase.from("school_classes").select("id, name, curriculum_id").in("id", classIds)
+      : withStructure;
+    const curriculumIds = [...new Set((classes.data ?? []).map((row) => row.curriculum_id).filter(Boolean).map(String))];
+    const curricula = curriculumIds.length
+      ? await supabase.from("school_curricula").select("id, name").in("id", curriculumIds)
+      : { data: [] as Array<{ id: string; name: string }> };
+    const modules = curriculumIds.length
+      ? await supabase.from("school_curriculum_modules").select("id, curriculum_id, name, code, sort_order").in("curriculum_id", curriculumIds).order("sort_order")
+      : { data: [] as Array<{ id: string; curriculum_id: string; name: string; code: string | null }> };
+    const classOf = new Map((classes.data ?? []).map((row) => [String(row.id), row]));
+    for (const row of enroll.data ?? []) {
+      const learnerId = String(row.student_id);
+      if (cursus.has(learnerId)) continue;
+      const classRow = classOf.get(String(row.class_id));
+      if (!classRow) continue;
+      const curriculumId = classRow.curriculum_id ? String(classRow.curriculum_id) : "";
+      const curriculumName = curricula.data?.find((item) => String(item.id) === curriculumId)?.name;
+      const title = String(curriculumName || classRow.name || "Cursus");
+      const moduleSkills = (modules.data ?? [])
+        .filter((item) => curriculumId && String(item.curriculum_id) === curriculumId)
+        .map((item) => ({
+          id: String(item.id),
+          code: item.code ? String(item.code) : "Module",
+          title: String(item.name ?? "Module"),
+        }));
+      const skills = skillsFromReferential(classRow.referential_structure, moduleSkills);
+      if (!skills.length) continue;
+      cursus.set(learnerId, { id: curriculumId || String(classRow.id), title, skills });
+    }
+  }
+
+  return rows.map((row) => {
+    const learnerId = String(row.learner_id);
+    const company = companies.get(learnerId) ?? null;
+    const fromCursus = cursus.get(learnerId);
+    const linked = row.referential_id ? library.get(String(row.referential_id)) : null;
+    const skills = fromCursus?.skills?.length
+      ? fromCursus.skills
+      : (linked?.blocks ?? []).map((block) => ({ id: block.id, code: block.code, title: block.title, brief: block.title }));
+    if (!skills.length) {
+      return {
+        assignmentId: String(row.id),
+        learnerId,
+        learnerName: people.get(learnerId)?.name ?? "Alternant",
+        referential: null,
+      };
+    }
+    const missions = proposeCursusMissions(skills, company);
+    return {
+      assignmentId: String(row.id),
+      learnerId,
+      learnerName: people.get(learnerId)?.name ?? "Alternant",
+      referential: {
+        id: fromCursus?.id ?? String(row.referential_id),
+        title: fromCursus?.title ?? linked?.title ?? "Référentiel",
+        source: fromCursus ? "cursus" : "assignment",
+        company,
+        blocks: skills.map((skill) => ({ id: skill.id, code: skill.code, title: skill.title })),
+        missions,
+      },
+    };
+  });
 }
 
 function addMonths(date: Date, months: number) {

@@ -1,8 +1,24 @@
-const students = [
-  { id: "l-lea", assignmentId: "a-lea", name: "Léa Bernard", first: "Léa", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école" },
-  { id: "l-ines", assignmentId: "a-ines", name: "Inès Morel", first: "Inès", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école" },
-  { id: "l-noah", assignmentId: "a-noah", name: "Noah Petit", first: "Noah", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école" },
-  { id: "l-tom", assignmentId: "a-tom", name: "Tom Leroy", first: "Tom", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école" },
+import { proposeCursusMissions, type CompanyContext } from "@/lib/tuteur/cursus-missions";
+
+const students: Array<{
+  id: string;
+  assignmentId: string;
+  name: string;
+  first: string;
+  formation: string;
+  rythme: string;
+  company: CompanyContext;
+}> = [
+  { id: "l-lea", assignmentId: "a-lea", name: "Léa Bernard", first: "Léa", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école", company: { name: "Byound", sector: "Formation professionnelle", city: "Le Havre" } },
+  { id: "l-ines", assignmentId: "a-ines", name: "Inès Morel", first: "Inès", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école", company: { name: "Horizon Sport", sector: "Commerce d'articles de sport", city: "Le Havre" } },
+  { id: "l-noah", assignmentId: "a-noah", name: "Noah Petit", first: "Noah", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école", company: { name: "Atelier Nova", sector: "Édition de logiciels", city: "Paris" } },
+  { id: "l-tom", assignmentId: "a-tom", name: "Tom Leroy", first: "Tom", formation: "Bachelor · AI Business", rythme: "3 jours entreprise · 2 jours école", company: { name: "Maison Leroy", sector: "Négoce alimentaire", city: "Rouen" } },
+];
+
+const CURSUS_SKILLS = [
+  { id: "b-ccp1", code: "CCP1", title: "Prospection", brief: "Organiser et planifier sa prospection à partir du référentiel Bachelor AI Business" },
+  { id: "b-ccp2", code: "CCP2", title: "Découverte et négociation", brief: "Conduire un entretien de découverte et argumenter selon le référentiel" },
+  { id: "b-ccp3", code: "CCP3", title: "Closing et suivi", brief: "Conclure, formaliser le dossier et assurer le suivi prévu au référentiel" },
 ];
 
 function mission(partial: Record<string, unknown>) {
@@ -34,8 +50,25 @@ export function jadeMissionsBoard() {
     blocks: [
       { id: "b-ccp1", code: "CCP1", title: "Prospection" },
       { id: "b-ccp2", code: "CCP2", title: "Négociation" },
+      { id: "b-ccp3", code: "CCP3", title: "Closing" },
     ],
-    assignments: students.map((student) => ({ id: student.assignmentId, learner_id: student.id })),
+    assignments: students.map((student) => ({ id: student.assignmentId, learner_id: student.id, learnerName: student.name })),
+    referentials: students.map((student) => {
+      const missions = proposeCursusMissions(CURSUS_SKILLS, student.company);
+      return {
+        assignmentId: student.assignmentId,
+        learnerId: student.id,
+        learnerName: student.name,
+        referential: {
+          id: "ref-bachelor-ai-business",
+          title: "Bachelor AI Business",
+          source: "cursus" as const,
+          company: student.company,
+          blocks: CURSUS_SKILLS.map((skill) => ({ id: skill.id, code: skill.code, title: skill.title })),
+          missions,
+        },
+      };
+    }),
   };
 }
 

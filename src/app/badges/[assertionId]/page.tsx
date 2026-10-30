@@ -1,58 +1,71 @@
-import Image from "next/image";
-import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { BadgeMetadataCard } from "@/components/openbadges/badge-metadata-card";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { loadPublicBadgeDocument } from "@/lib/openbadges/v3/public-badge";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
-export default async function BadgeViewerPage({
-  params,
-}: {
-  params: { assertionId: string };
-}) {
-  const assertion = await prisma.assertion.findUnique({
-    where: { id: params.assertionId },
-    include: { badgeClass: true },
+type RouteParams = { params: Promise<{ assertionId: string }> };
+
+const STATUS_LABEL = {
+  verified: "Authenticité vérifiée · signé par Byound",
+  expired: "Expiré",
+  revoked: "Révoqué",
+  invalid: "Signature invalide",
+} as const;
+
+export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
+  const { assertionId } = await params;
+  const db = getServiceRoleClient();
+  const badge = db ? await loadPublicBadgeDocument(db, assertionId) : null;
+  if (!badge) return { title: "Badge introuvable | Byound", robots: { index: false, follow: false } };
+  return {
+    title: `${badge.recipientName} · ${badge.name} | Byound`,
+    description: badge.description,
+    robots: { index: true, follow: true },
+  };
+}
+
+export default async function PublicBadgePage({ params }: RouteParams) {
+  const { assertionId } = await params;
+  const db = getServiceRoleClient();
+  const badge = db ? await loadPublicBadgeDocument(db, assertionId) : null;
+  if (!badge) notFound();
+
+  const issued = new Date(badge.issuedAt).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
-
-  if (!assertion) {
-    return <div className="p-10 text-center text-slate-600">Badge introuvable.</div>;
-  }
-
-  const hostedUrl =
-    assertion.hostedUrl ??
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001"}/api/public/assertions/${assertion.id}`;
-
-  const imageUrl = assertion.bakedImageUrl ?? assertion.badgeClass.imageTemplateUrl;
-  const requestHeaders = await headers();
-  const userRole = requestHeaders.get("x-user-role");
-  const userId = requestHeaders.get("x-user-id");
-  const orgId = requestHeaders.get("x-org-id");
-  const revokeContext =
-    userRole === "SUPER_ADMIN" && userId && orgId
-      ? { assertionId: assertion.id, userId, orgId }
-      : undefined;
+  const revokedOn = badge.revokedAt
+    ? new Date(badge.revokedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-8 p-8">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative h-[360px] w-[360px] overflow-hidden rounded-3xl border border-slate-200 bg-white">
-            <Image src={imageUrl} alt={assertion.badgeClass.name} fill className="object-contain" />
-          </div>
-          <a
-            href={imageUrl}
-            className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700"
-            download
-          >
-            Download
-          </a>
+    <main className="min-h-screen bg-[#050608] px-6 py-16 text-[#F2F2F4]">
+      <article className="mx-auto max-w-3xl space-y-6">
+        <p className={badge.state === "verified" ? "text-[#2FD08A]" : "text-[#ff8b7b]"}>
+          {STATUS_LABEL[badge.state]}
+          {badge.state === "revoked" && revokedOn ? ` le ${revokedOn}` : ""}
+          {badge.state === "revoked" && badge.revocationReason ? ` — ${badge.revocationReason}` : ""}
+        </p>
+        <h1 className="text-4xl font-semibold tracking-tight">{badge.name}</h1>
+        <p className="text-lg text-white/80">
+          Délivré à {badge.recipientName} par Byound, le {issued}.
+        </p>
+        {badge.description ? <p className="text-white/70">{badge.description}</p> : null}
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link className="rounded-full border border-white/15 px-4 py-2" href={`/badges/${badge.assertionId}.json`}>
+            Credential JSON
+          </Link>
+          <Link className="rounded-full border border-white/15 px-4 py-2" href={`/badges/${badge.assertionId}/credential.jwt`}>
+            credential.jwt
+          </Link>
+          <Link className="rounded-full border border-white/15 px-4 py-2" href={`/badges/${badge.assertionId}/badge.png`}>
+            Badge signé
+          </Link>
         </div>
-      </div>
-
-      <BadgeMetadataCard
-        hostedUrl={hostedUrl}
-        bakedImageUrl={assertion.bakedImageUrl}
-        revokeContext={revokeContext}
-      />
-    </div>
+        <p className="text-sm text-white/50">Les résultats des tests ne sont jamais publiés.</p>
+      </article>
+    </main>
   );
 }

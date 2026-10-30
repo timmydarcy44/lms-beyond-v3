@@ -1,27 +1,27 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import { CareBookingWidget } from "@/components/care/care-booking-widget";
+import { Manrope } from "next/font/google";
 import { CareLink } from "@/components/care/care-host";
+import { CareProfileBook } from "@/components/care/care-profile-book";
 import { formatCarePrice } from "@/lib/care/care.config";
-import { CARE_DIRECTORY_COPY } from "@/lib/care/directory-copy";
-import { careAvatarTone } from "@/lib/care/directory-search";
+import { carePlaceLine, carePriceLine, carePublicServices } from "@/lib/care/publication";
 import {
   CARE_LANGUAGE_LABELS,
-  CARE_PAYMENT_LABELS,
   careDomainLabel,
   formatCareDuration,
   formatCareFormats,
   hasCarePublicText,
-  loadCareProfileBySlug,
   loadPublishedCareProfile,
   loadPublishedCareSlugs,
 } from "@/lib/care/profile";
-import { headers } from "next/headers";
-import { getSession } from "@/lib/auth/session";
-import { careAbsoluteUrl, isByoundCareHostname } from "@/lib/care/host";
+import { careAbsoluteUrl } from "@/lib/care/host";
 import { carePageMetadata } from "@/lib/care/seo";
+import { personInitials } from "@/lib/care/person-name";
 
-export const dynamic = "force-dynamic";
+const manrope = Manrope({ subsets: ["latin"], display: "swap" });
+
+export const revalidate = 600;
 export const dynamicParams = true;
 
 type Params = { params: Promise<{ slug: string }> };
@@ -34,45 +34,27 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const profile = await loadPublishedCareProfile(slug);
-  if (!profile) return { title: "Praticien" };
-  const title = [profile.display_name, profile.title].filter(hasCarePublicText).join(" — ");
-  const description = hasCarePublicText(profile.tagline) ? profile.tagline : hasCarePublicText(profile.headline) ? profile.headline : "";
+  if (!profile) return { title: "Praticien", robots: { index: false, follow: false } };
+  const place = profile.city || (profile.offers_visio ? "en visio" : "");
+  const title = [profile.display_name, profile.title, place].filter(Boolean).join(" · ");
   return carePageMetadata({
     title,
-    description,
+    description: hasCarePublicText(profile.tagline) ? profile.tagline : profile.title,
     internalPath: `/care/praticiens/${profile.slug}`,
+    image: profile.avatar_url,
   });
-}
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-async function loadOwnerPreview(slug: string) {
-  try {
-    const headerList = await headers();
-    const host = headerList.get("x-forwarded-host") || headerList.get("host");
-    if (isByoundCareHostname(host)) return null;
-    const session = await getSession();
-    if (!session?.id) return null;
-    return loadCareProfileBySlug(slug, { viewerId: session.id });
-  } catch {
-    return null;
-  }
 }
 
 export default async function CarePraticienPage({ params }: Params) {
   const { slug } = await params;
-  const profile = (await loadPublishedCareProfile(slug)) ?? (await loadOwnerPreview(slug));
+  const profile = await loadPublishedCareProfile(slug);
   if (!profile) notFound();
-  const preview = !profile.published || !profile.is_care;
-  const certified = profile.badges.length > 0;
-  const showPresentation = hasCarePublicText(profile.headline) || hasCarePublicText(profile.bio) || hasCarePublicText(profile.approach);
+  const services = carePublicServices(profile.services.map((item) => ({ ...item, active: item.active })));
+  const visibleServices = profile.services.filter((item) => services.some((row) => row.name === item.name));
+  const price = carePriceLine(profile.services);
+  const place = carePlaceLine(profile);
+  const firstName = profile.display_name.split(" ")[0] || profile.display_name;
+  const sessionPrice = visibleServices.find((item) => item.price_cents > 0);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -96,219 +78,146 @@ export default async function CarePraticienPage({ params }: Params) {
   };
 
   return (
-    <>
-      {preview ? null : <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
-      <section className="care-hero care-profile-hero">
-        <div className="care-halo" style={{ width: 380, height: 380, background: "var(--care-accent)", top: -140, left: -40 }} />
-        <div className="care-wrap">
-          {preview ? <p className="care-kicker">Aperçu — fiche non publiée</p> : null}
-          <CareLink href="/care/praticiens" className="care-back">
-            ← Tous les praticiens
-          </CareLink>
-          <div className="care-profile-hero-grid">
-            {profile.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt="" className="care-avatar-lg" />
-            ) : (
-              <span className="care-avatar-lg" style={{ background: careAvatarTone(profile.expert_id) }}>
-                {initials(profile.display_name)}
-              </span>
-            )}
-            <div>
-              <p className={`care-cert-pill${certified ? "" : " is-pending"}`}>
-                {certified ? "Certifié·e Byound" : CARE_DIRECTORY_COPY.certInProgress}
-              </p>
-              <h1 className="care-h1">{profile.display_name}</h1>
-              {hasCarePublicText(profile.title) ? <p className="care-lead">{profile.title}</p> : null}
-              {hasCarePublicText(profile.tagline) ? <p className="care-lead">{profile.tagline}</p> : null}
-              {profile.domains.length ? (
-                <div className="care-quick">
-                  {profile.domains.flatMap((id) => {
-                    const label = careDomainLabel(id);
-                    if (!label) return [];
-                    return [
-                      <span key={id} className="care-chip-link care-chip-link--on-dark is-on">
-                        {label}
-                      </span>,
-                    ];
-                  })}
-                </div>
-              ) : null}
-              <div className="care-quick">
-                {hasCarePublicText(profile.city) ? <span className="care-chip-link care-chip-link--on-dark">{profile.city}</span> : null}
-                {profile.offers_cabinet ? <span className="care-chip-link care-chip-link--on-dark">Cabinet</span> : null}
-                {profile.offers_visio ? <span className="care-chip-link care-chip-link--on-dark">Visio</span> : null}
-                {certified ? (
-                  <span className="care-chip-link care-chip-link--on-dark">
-                    {profile.badges.length} Open Badge{profile.badges.length > 1 ? "s" : ""}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="care-section" style={{ paddingTop: 32 }}>
-        <div className="care-wrap care-profile-grid">
+    <div className={`${manrope.className} cf-page cf-profile`}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <div className="care-wrap">
+        <CareLink href="/care/praticiens" className="cf-back">
+          ‹ Tous les praticiens
+        </CareLink>
+        <div className="cf-profile-grid">
           <div>
-            {showPresentation ? (
-              <section className="care-block">
-                <h2>Présentation</h2>
-                {hasCarePublicText(profile.headline) ? <p className="care-headline">{profile.headline}</p> : null}
-                {hasCarePublicText(profile.bio)
-                  ? profile.bio.split(/\n+/).map((para, index) => <p key={`${index}-${para.slice(0, 12)}`}>{para}</p>)
-                  : null}
-                {hasCarePublicText(profile.approach) ? (
-                  <aside className="care-approach">
-                    <h3>Mon approche</h3>
-                    <p>{profile.approach}</p>
-                  </aside>
-                ) : null}
-              </section>
-            ) : null}
-
-            {profile.services.length ? (
-              <section className="care-block">
-                <h2>Prestations et tarifs</h2>
-                <ul className="care-service-list">
-                  {profile.services.map((service) => (
-                    <li key={service.id}>
+            <header className="cf-hero">
+              <div className="cf-portrait">
+                {profile.avatar_url ? (
+                  <Image src={profile.avatar_url} alt={`Photo de ${profile.display_name}`} fill sizes="168px" className="cf-photo-img" />
+                ) : (
+                  <span>{personInitials(firstName, profile.display_name.split(" ").slice(1).join(" "))}</span>
+                )}
+                {profile.badges.length ? <i aria-hidden>✓</i> : null}
+              </div>
+              <div>
+                <h1>{profile.display_name}</h1>
+                <p>
+                  {[profile.title, profile.city || (profile.offers_visio ? "Visio" : "")].filter(hasCarePublicText).join(" · ")}
+                </p>
+                <div className="cf-hero-pills">
+                  {profile.badges.length ? <span>✓ Certifié Byound</span> : null}
+                  {profile.offers_cabinet ? <span>Cabinet</span> : null}
+                  {profile.offers_visio ? <span>Visio</span> : null}
+                </div>
+              </div>
+              <div className="cf-hero-stats">
+                <p>
+                  <strong>{price.main}</strong>
+                  <span>{price.hint}</span>
+                </p>
+                <p>
+                  <strong>{sessionPrice ? formatCarePrice(sessionPrice.price_cents) : price.main}</strong>
+                  <span>la séance</span>
+                </p>
+                <p>
+                  <strong>{profile.badges.length}</strong>
+                  <span>Open Badges</span>
+                </p>
+              </div>
+            </header>
+            <nav className="cf-anchors" aria-label="Sections">
+              <a href="#a-propos">À propos</a>
+              <a href="#prestations">Prestations</a>
+              <a href="#badges">Open Badges</a>
+              <a href="#parcours">Parcours</a>
+              <a href="#infos">Infos pratiques</a>
+            </nav>
+            <section id="a-propos" className="cf-block">
+              <h2>À propos</h2>
+              {hasCarePublicText(profile.bio) ? <p>{profile.bio}</p> : null}
+              {hasCarePublicText(profile.approach) ? <p>{profile.approach}</p> : null}
+              <div className="cf-pills">
+                {profile.domains.map((id) => (
+                  <span key={id} className="cf-pill">
+                    {careDomainLabel(id)}
+                  </span>
+                ))}
+              </div>
+            </section>
+            <section id="prestations" className="cf-block">
+              <h2>Prestations</h2>
+              <ul className="cf-services">
+                {visibleServices.map((service) => (
+                  <li key={service.id}>
+                    <span aria-hidden>{service.name.slice(0, 1)}</span>
+                    <div>
+                      <strong>{service.name}</strong>
+                      <p>
+                        {formatCareDuration(service.duration_min)} · {formatCareFormats(service.formats)}
+                      </p>
+                    </div>
+                    <em>{formatCarePrice(service.price_cents)}</em>
+                    <a href={`#reserver`}>Choisir</a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section id="badges" className="cf-block">
+              <h2>Open Badges</h2>
+              {profile.badges.length ? (
+                <ul className="cf-badges">
+                  {profile.badges.map((badge) => (
+                    <li key={badge.badge_id}>
+                      {badge.image_url ? <Image src={badge.image_url} alt="" width={56} height={56} /> : <span>OB</span>}
                       <div>
-                        <strong>{service.name}</strong>
-                        {careDomainLabel(service.domain) ? (
-                          <span className="care-chip">{careDomainLabel(service.domain)}</span>
+                        <strong>{badge.name}</strong>
+                        <p>Délivré par Byound · vérifiable</p>
+                        {hasCarePublicText(badge.verification_url) ? (
+                          <a href={badge.verification_url}>Vérifier le badge</a>
                         ) : null}
                       </div>
-                      {hasCarePublicText(service.description) ? <p>{service.description}</p> : null}
-                      <p className="care-muted">
-                        {formatCareFormats(service.formats)} · {formatCareDuration(service.duration_min)} · {formatCarePrice(service.price_cents)}
-                      </p>
                     </li>
                   ))}
                 </ul>
-              </section>
-            ) : null}
-
-            <section className="care-block">
-              <h2>Open Badges</h2>
-              {profile.badges.length ? (
-                <div className="care-badge-grid">
-                  {profile.badges.map((badge) => (
-                    <article key={badge.badge_id} className="care-badge-card">
-                      {badge.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={badge.image_url} alt="" />
-                      ) : (
-                        <span className="care-avatar" style={{ background: "#0B1533" }}>
-                          OB
-                        </span>
-                      )}
-                      <h3>{badge.name}</h3>
-                      <p className="care-muted">{badge.issuer}</p>
-                      {badge.awarded_at && !Number.isNaN(Date.parse(badge.awarded_at)) ? (
-                        <p className="care-muted">
-                          {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeZone: "Europe/Paris" }).format(
-                            new Date(badge.awarded_at),
-                          )}
-                        </p>
-                      ) : null}
-                      {hasCarePublicText(badge.verification_url) ? (
-                        <a href={badge.verification_url} target="_blank" rel="noreferrer">
-                          Vérifier ↗
-                        </a>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
               ) : (
-                <p className="care-approach">Certification Byound en cours</p>
+                <p>Aucun Open Badge pour le moment.</p>
               )}
             </section>
-
-            {profile.experiences.some((item) => hasCarePublicText(item.role) || hasCarePublicText(item.period_label)) ? (
-              <section className="care-block">
-                <h2>Expériences professionnelles</h2>
-                <ol className="care-timeline">
-                  {profile.experiences.map((item) => (
-                    <li key={item.id}>
-                      {hasCarePublicText(item.period_label) ? <p className="care-muted">{item.period_label}</p> : null}
-                      {hasCarePublicText(item.role) ? <h3>{item.role}</h3> : null}
-                      {hasCarePublicText(item.organization) ? <p>{item.organization}</p> : null}
-                      {hasCarePublicText(item.description) ? <p className="care-muted">{item.description}</p> : null}
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ) : null}
-
-            {profile.trainings.some((item) => hasCarePublicText(item.title) || hasCarePublicText(item.year)) ? (
-              <section className="care-block">
-                <h2>Diplômes et formations</h2>
-                <div className="care-train-grid">
-                  {profile.trainings.map((item) => (
-                    <article key={item.id} className="care-train-card">
-                      {hasCarePublicText(item.year) ? <p className="care-muted">{item.year}</p> : null}
-                      {hasCarePublicText(item.title) ? <h3>{item.title}</h3> : null}
-                      {hasCarePublicText(item.organization) ? <p>{item.organization}</p> : null}
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-          </div>
-
-          <div className="care-profile-side">
-            <CareBookingWidget
-              slug={profile.slug}
-              expertId={profile.expert_id}
-              services={profile.services}
-              cancellationHours={profile.cancellation_hours}
-            />
-            <aside className="care-side-card">
+            <section id="parcours" className="cf-block">
+              <h2>Parcours</h2>
+              <ol className="cf-timeline">
+                {profile.trainings.filter((item) => hasCarePublicText(item.title)).map((item) => (
+                  <li key={item.id}>
+                    <strong>{item.title}</strong>
+                    <p>{[item.year, item.organization].filter(hasCarePublicText).join(" · ")}</p>
+                  </li>
+                ))}
+                {profile.experiences.filter((item) => hasCarePublicText(item.role)).map((item) => (
+                  <li key={item.id}>
+                    <strong>{item.role}</strong>
+                    <p>{[item.period_label, item.organization].filter(hasCarePublicText).join(" · ")}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <section id="infos" className="cf-block">
               <h2>Infos pratiques</h2>
-              {profile.offers_cabinet && (hasCarePublicText(profile.address) || hasCarePublicText(profile.city)) ? (
-                <p>
-                  Cabinet
-                  <br />
-                  {[profile.address, profile.city].filter(hasCarePublicText).join(", ")}
-                </p>
-              ) : null}
-              {profile.offers_visio ? <p>Visio</p> : null}
-              {profile.languages.length ? (
-                <p>{profile.languages.map((code) => CARE_LANGUAGE_LABELS[code] ?? code).join(" · ")}</p>
-              ) : null}
-              {profile.payment_methods.length ? (
-                <p>{profile.payment_methods.map((code) => CARE_PAYMENT_LABELS[code] ?? code).join(" · ")}</p>
-              ) : null}
-              <p>
-                Référente handicap
-                <br />
-                <a href="mailto:inclusion@byound.fr">inclusion@byound.fr</a>
-              </p>
-            </aside>
-            {profile.publics.filter(hasCarePublicText).length ? (
-              <aside className="care-side-card">
-                <h2>Publics accompagnés</h2>
-                <div className="care-prac-chips">
-                  {profile.publics.filter(hasCarePublicText).map((item) => (
-                    <span key={item} className="care-chip">
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </aside>
-            ) : null}
-            <aside className="care-side-card care-side-card--navy">
-              <h2>Une question avant de réserver ?</h2>
-              <p>Écrivez-nous, on vous oriente vers le bon cadre.</p>
-              <a className="care-pill care-pill--white" href="mailto:contact@byound.fr">
-                Contacter Byound Care
-              </a>
-            </aside>
+              <p>{[profile.offers_cabinet ? "Cabinet" : null, profile.offers_visio ? "Visio" : null].filter(Boolean).join(" · ")}</p>
+              {profile.city ? <p>{profile.city}</p> : null}
+              <p className="cf-place-note">{place.main === "Visio" ? "En visio uniquement. Aucune adresse n'est affichée." : `Cabinet à ${profile.city ?? place.main}. L'adresse exacte est envoyée après la réservation.`}</p>
+              {profile.languages.length ? <p>{profile.languages.map((code) => CARE_LANGUAGE_LABELS[code] ?? code).join(" · ")}</p> : null}
+            </section>
           </div>
+          <CareProfileBook
+            slug={profile.slug}
+            expertId={profile.expert_id}
+            firstName={firstName}
+            fullName={profile.display_name}
+            services={visibleServices}
+            cancellationHours={profile.cancellation_hours}
+            city={profile.city}
+          />
         </div>
-      </section>
-    </>
+      </div>
+      <a className="cf-mobile-bar" href="#reserver">
+        Réserver · {price.main}
+      </a>
+    </div>
   );
 }

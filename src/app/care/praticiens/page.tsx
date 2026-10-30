@@ -1,10 +1,16 @@
-import { CareDirectoryFacets, CareDirectorySearch } from "@/components/care/care-directory-filters";
-import { CarePractitionerCard } from "@/components/care/care-practitioner-card";
+import { Manrope } from "next/font/google";
+import { CareFindCard } from "@/components/care/care-find-card";
 import { CareLink } from "@/components/care/care-host";
 import { CARE_DIRECTORY_COPY as C } from "@/lib/care/directory-copy";
-import { carePractitionersCountLabel, parseCareDirectoryQuery } from "@/lib/care/directory-search";
+import { careDirectoryHref, parseCareDirectoryQuery } from "@/lib/care/directory-search";
+import { CARE_DOMAINS } from "@/lib/care/domains";
+import { isCarePlaceholderText } from "@/lib/care/profile-format";
 import { loadFilteredCareDirectory } from "@/lib/care/load-directory";
 import { carePageMetadata, CARE_SEO } from "@/lib/care/seo";
+
+const manrope = Manrope({ subsets: ["latin"], display: "swap" });
+
+export const revalidate = 600;
 
 export const metadata = carePageMetadata({
   title: CARE_SEO.directoryTitle,
@@ -12,65 +18,90 @@ export const metadata = carePageMetadata({
   internalPath: "/care/praticiens",
 });
 
-type Search = { q?: string; domaine?: string; format?: string };
+type Search = {
+  q?: string;
+  besoin?: string;
+  ou?: string;
+  quand?: string;
+  domaine?: string;
+  format?: string;
+  affiche?: string;
+};
 
 export default async function CarePraticiensPage({ searchParams }: { searchParams: Promise<Search> }) {
   const query = parseCareDirectoryQuery(await searchParams);
-  const { rows, nextSlot } = await loadFilteredCareDirectory(query);
+  const { rows } = await loadFilteredCareDirectory(query);
+  const visible = rows.slice(0, query.affiche);
+  const cities = [...new Set(rows.map((row) => row.city).filter((city): city is string => Boolean(city && !isCarePlaceholderText(city))))];
+  const countLabel = `${rows.length} praticien${rows.length > 1 ? "s" : ""} · ${cities.length ? `${cities.join(", ")} et en visio` : "en visio"}`;
   return (
-    <>
-      <section className="care-hero care-dir-hero">
-        <div className="care-halo" style={{ width: 420, height: 420, background: "var(--care-accent)", top: -160, left: -60 }} />
-        <div className="care-halo" style={{ width: 360, height: 360, background: "var(--care-halo)", right: -80, bottom: -140 }} />
-        <div className="care-wrap">
-          <p className="care-kicker">L'annuaire Byound Care</p>
-          <h1 className="care-h1">{C.title}</h1>
-          <p className="care-lead">{C.lead}</p>
-          <CareDirectorySearch query={query} />
-        </div>
-      </section>
-      <section className="care-section" style={{ paddingTop: 40 }}>
-        <div className="care-wrap">
-          <CareDirectoryFacets query={query} />
-          <p className="care-count" aria-live="polite">
-            {carePractitionersCountLabel(rows.length)}
-          </p>
-          {rows.length ? (
-            <div className="care-prac-grid">
-              {rows.map((row) => (
-                <CarePractitionerCard key={row.expert_id} row={row} nextSlot={nextSlot[row.expert_id] ?? null} />
-              ))}
-            </div>
-          ) : (
-            <div className="care-empty">
-              <p>{C.empty}</p>
-              <CareLink href="/care/praticiens" className="care-pill care-pill--accent">
-                {C.clear}
-              </CareLink>
-            </div>
-          )}
-          <div className="care-banners">
-            <article className="care-banner care-banner--navy">
-              <div>
-                <h2>{C.unsureTitle}</h2>
-                <p>{C.unsureLead}</p>
-              </div>
-              <CareLink href="/care#formules" className="care-pill care-pill--white">
-                {C.unsureCta}
-              </CareLink>
-            </article>
-            <article className="care-banner">
-              <div>
-                <h2>{C.joinTitle}</h2>
-                <p>{C.joinLead}</p>
-              </div>
-              <CareLink href="/care#devenir" className="care-pill care-pill--accent">
-                {C.joinCta}
-              </CareLink>
-            </article>
+    <div className={`${manrope.className} cf-page`}>
+      <div className="care-wrap">
+        <header className="cf-head">
+          <div>
+            <h1>{C.title}</h1>
+            <p>{C.lead}</p>
           </div>
+          <p className="cf-count">{countLabel}</p>
+        </header>
+        <form className="cf-search" action="/care/praticiens" method="get">
+          {query.domaine ? <input type="hidden" name="domaine" value={query.domaine} /> : null}
+          {query.format ? <input type="hidden" name="format" value={query.format} /> : null}
+          <label>
+            Besoin
+            <input name="besoin" defaultValue={query.besoin} placeholder="Domaine ou prestation" />
+          </label>
+          <label>
+            Où
+            <input name="ou" defaultValue={query.ou} placeholder="Ville ou visio" />
+          </label>
+          <label>
+            Quand
+            <select name="quand" defaultValue={query.quand ?? ""}>
+              <option value="">Peu importe</option>
+              <option value="aujourdhui">Aujourd&apos;hui</option>
+              <option value="semaine">Cette semaine</option>
+              <option value="mois">Ce mois-ci</option>
+            </select>
+          </label>
+          <button type="submit">Rechercher</button>
+        </form>
+        <div className="cf-pills">
+          <CareLink href={careDirectoryHref({ ...query, domaine: null, format: null, quand: null, affiche: 9 })} className={`cf-pill${!query.domaine && !query.format && !query.quand ? " is-on" : ""}`}>
+            Tous
+          </CareLink>
+          {CARE_DOMAINS.map((domain) => (
+            <CareLink key={domain.id} href={careDirectoryHref({ ...query, domaine: domain.id, affiche: 9 })} className={`cf-pill${query.domaine === domain.id ? " is-on" : ""}`}>
+              {domain.label}
+            </CareLink>
+          ))}
+          <CareLink href={careDirectoryHref({ ...query, format: "visio", affiche: 9 })} className={`cf-pill${query.format === "visio" ? " is-on" : ""}`}>
+            En visio
+          </CareLink>
+          <CareLink href={careDirectoryHref({ ...query, quand: "semaine", affiche: 9 })} className={`cf-pill${query.quand === "semaine" ? " is-on" : ""}`}>
+            Disponible cette semaine
+          </CareLink>
         </div>
-      </section>
-    </>
+        {visible.length ? (
+          <div className="cf-grid">
+            {visible.map((row) => (
+              <CareFindCard key={row.expert_id} row={row} />
+            ))}
+          </div>
+        ) : (
+          <div className="cf-empty">
+            <p>Aucun praticien ne correspond</p>
+            <CareLink href={careDirectoryHref({ ...query, quand: null, ou: "visio", format: "visio" })} className="cf-btn cf-btn--pink">
+              Élargir la recherche
+            </CareLink>
+          </div>
+        )}
+        {rows.length > visible.length ? (
+          <CareLink href={careDirectoryHref({ ...query, affiche: query.affiche + 9 })} className="cf-more-people">
+            Voir plus
+          </CareLink>
+        ) : null}
+      </div>
+    </div>
   );
 }

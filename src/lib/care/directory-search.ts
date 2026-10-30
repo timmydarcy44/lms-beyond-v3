@@ -2,11 +2,16 @@ import { CARE_DOMAINS, isCareDomain, type CareDomain } from "@/lib/care/domains"
 import type { CareDirectoryRow } from "@/lib/care/types";
 
 export type CareDirectoryFormat = "cabinet" | "visio";
+export type CareDirectoryWhen = "aujourdhui" | "semaine" | "mois";
 
 export type CareDirectoryQuery = {
   q: string;
+  besoin: string;
+  ou: string;
+  quand: CareDirectoryWhen | null;
   domaine: CareDomain | null;
   format: CareDirectoryFormat | null;
+  affiche: number;
 };
 
 export const CARE_QUICK_SEARCHES = [
@@ -28,24 +33,38 @@ export function foldCareText(value: string) {
 
 export function parseCareDirectoryQuery(input: {
   q?: string | string[];
+  besoin?: string | string[];
+  ou?: string | string[];
+  quand?: string | string[];
   domaine?: string | string[];
   format?: string | string[];
+  affiche?: string | string[];
 }): CareDirectoryQuery {
   const one = (value?: string | string[]) => (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
   const domaineRaw = one(input.domaine);
   const formatRaw = one(input.format);
+  const quandRaw = one(input.quand);
+  const affiche = Number(one(input.affiche));
   return {
     q: one(input.q),
+    besoin: one(input.besoin),
+    ou: one(input.ou),
+    quand: quandRaw === "aujourdhui" || quandRaw === "semaine" || quandRaw === "mois" ? quandRaw : null,
     domaine: isCareDomain(domaineRaw) ? domaineRaw : null,
     format: formatRaw === "cabinet" || formatRaw === "visio" ? formatRaw : null,
+    affiche: Number.isFinite(affiche) && affiche > 9 ? Math.min(affiche, 90) : 9,
   };
 }
 
 export function careDirectoryHref(query: Partial<CareDirectoryQuery>) {
   const params = new URLSearchParams();
   if (query.q?.trim()) params.set("q", query.q.trim());
+  if (query.besoin?.trim()) params.set("besoin", query.besoin.trim());
+  if (query.ou?.trim()) params.set("ou", query.ou.trim());
+  if (query.quand) params.set("quand", query.quand);
   if (query.domaine) params.set("domaine", query.domaine);
   if (query.format) params.set("format", query.format);
+  if (query.affiche && query.affiche > 9) params.set("affiche", String(query.affiche));
   const suffix = params.toString();
   return suffix ? `/care/praticiens?${suffix}` : "/care/praticiens";
 }
@@ -63,6 +82,7 @@ function haystack(row: CareDirectoryRow) {
       row.headline,
       row.city ?? "",
       ...(row.publics ?? []),
+      ...(row.service_names ?? []),
       ...domainText,
     ].join(" "),
   );
@@ -79,12 +99,30 @@ export function matchesCareDirectory(row: CareDirectoryRow, query: CareDirectory
   if (query.domaine && !(row.domains ?? []).includes(query.domaine)) return false;
   if (query.format === "cabinet" && !row.offers_cabinet) return false;
   if (query.format === "visio" && !row.offers_visio) return false;
+  const where = foldCareText(query.ou);
+  if (where === "visio" && !row.offers_visio) return false;
+  if (where && where !== "visio" && !foldCareText(row.city ?? "").includes(where)) return false;
+  const besoin = foldCareText(query.besoin);
   const q = foldCareText(query.q);
-  if (!q) return true;
+  const needle = [besoin, q].filter(Boolean).join(" ");
+  if (!needle) return true;
   const hay = haystack(row);
-  if (hay.includes(q)) return true;
-  const aliases = QUERY_ALIASES[q] ?? [];
+  if (besoin && isCareDomain(query.besoin) && (row.domains ?? []).includes(query.besoin)) return !q || hay.includes(q);
+  if (hay.includes(needle) || (besoin && hay.includes(besoin) && (!q || hay.includes(q)))) return true;
+  const aliases = QUERY_ALIASES[besoin] ?? QUERY_ALIASES[q] ?? [];
   return aliases.some((alias) => hay.includes(foldCareText(alias)));
+}
+
+export function careSlotInWhen(iso: string, quand: CareDirectoryQuery["quand"], now = new Date()) {
+  if (!quand) return true;
+  const start = new Date(iso).getTime();
+  if (Number.isNaN(start) || start < now.getTime() - 60_000) return false;
+  if (quand === "aujourdhui") {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso))
+      === new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  }
+  const span = quand === "semaine" ? 7 : 31;
+  return start - now.getTime() <= span * 24 * 60 * 60 * 1000;
 }
 
 export function compareCareDirectory(

@@ -5,7 +5,7 @@ import { CARE_PUBLICS, careCompleteness } from "@/lib/care/completeness";
 import { CARE_DOMAINS } from "@/lib/care/domains";
 import { saveCarePublicProfile } from "@/lib/care/expert-actions";
 import { CARE_LANGUAGE_LABELS, CARE_PAYMENT_LABELS, type CarePublicProfile } from "@/lib/care/profile-format";
-import { CareSortableCards } from "@/components/expert/care-sortable-cards";
+import { CarePhotoField } from "@/components/expert/care-photo-field";
 import { createClient } from "@/lib/supabase/client";
 import type { CareDomain } from "@/lib/care/domains";
 import type { CareService } from "@/lib/care/types";
@@ -52,8 +52,19 @@ export function CareFicheEditor({ profile }: { profile: CarePublicProfile }) {
   const [pending, setPending] = useState(false);
 
   const completeness = useMemo(
-    () => careCompleteness({ avatar_url: avatarUrl, title, tagline, domains, services }),
-    [avatarUrl, title, tagline, domains, services],
+    () =>
+      careCompleteness({
+        avatar_url: avatarUrl,
+        tagline,
+        bio,
+        approach,
+        domains,
+        city,
+        offers_cabinet: cabinet,
+        offers_visio: visio,
+        services,
+      }),
+    [approach, avatarUrl, bio, cabinet, city, domains, services, tagline, visio],
   );
 
   function toggle<T extends string>(list: T[], value: T, setter: (next: T[]) => void) {
@@ -114,7 +125,7 @@ export function CareFicheEditor({ profile }: { profile: CarePublicProfile }) {
     });
     setPending(false);
     setMessage(result.ok ? "Fiche enregistrée." : result.message);
-    if (result.ok) setPublished(nextPublished && completeness.canPublish);
+    if (result.ok) setPublished(nextPublished);
   }
 
   return (
@@ -136,7 +147,7 @@ export function CareFicheEditor({ profile }: { profile: CarePublicProfile }) {
           </label>
           <label className="grid gap-1 text-sm">
             Photo
-            <input type="file" accept="image/*" onChange={(event) => event.target.files?.[0] && void onAvatar(event.target.files[0])} />
+            <CarePhotoField expertId={profile.expert_id} value={avatarUrl} onChange={setAvatarUrl} />
           </label>
           {avatarUrl ? <img src={avatarUrl} alt="" className="h-20 w-20 rounded-full object-cover" /> : null}
         </section>
@@ -359,8 +370,9 @@ export function CareFicheEditor({ profile }: { profile: CarePublicProfile }) {
         </button>
       </div>
       <aside className="h-fit rounded-3xl border border-[#1E2130] bg-[#12141A] p-5">
-        <p className="text-sm text-[#9096A3]">Complétude</p>
+        <p className="text-sm text-[#9096A3]">Score d&apos;optimisation</p>
         <p className="text-3xl font-extrabold">{completeness.percent} %</p>
+        <p className="mt-2 text-sm text-[#9096A3]">Conseillé, jamais obligatoire pour publier.</p>
         {completeness.missing.length ? (
           <ul className="mt-3 list-disc pl-4 text-sm text-[#FFB4B8]">
             {completeness.missing.map((item) => (
@@ -368,19 +380,15 @@ export function CareFicheEditor({ profile }: { profile: CarePublicProfile }) {
             ))}
           </ul>
         ) : (
-          <p className="mt-3 text-sm">Prête à publier.</p>
+          <p className="mt-3 text-sm">Profil optimisé.</p>
         )}
         <label className="mt-4 flex items-center justify-between gap-3 text-sm">
-          Publier
+          Publier mon profil
           <input
             type="checkbox"
             checked={published}
             onChange={(event) => {
               const next = event.target.checked;
-              if (next && !completeness.canPublish) {
-                setMessage(`Impossible de publier : ${completeness.missing.map((item) => item.label).join(", ")}.`);
-                return;
-              }
               setPublished(next);
               void onSave(next);
             }}

@@ -84,6 +84,15 @@
   box-shadow: 0 18px 40px rgba(11, 21, 51, 0.28);
 }
 
+.care-header.is-board {
+  background: #10132a;
+}
+
+.care-header.is-board .care-pill--white {
+  background: #ce0058;
+  color: #fff;
+}
+
 .care-header-inner {
   display: flex;
   align-items: center;

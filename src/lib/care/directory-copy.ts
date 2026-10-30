@@ -1,6 +1,6 @@
 export const CARE_DIRECTORY_COPY = {
-  title: "Trouvez la bonne personne.",
-  lead: "Tous nos praticiens sont formés aux neurosciences et certifiés par Open Badges. En cabinet près de chez vous ou en visio.",
+  title: "Trouvez la bonne personne",
+  lead: "Des praticiens formés et certifiés par Byound, au cabinet ou en visio.",
   searchLabel: "Rechercher un praticien",
   searchPlaceholder: "Un besoin, une ville, un nom…",
   reset: "Réinitialiser",

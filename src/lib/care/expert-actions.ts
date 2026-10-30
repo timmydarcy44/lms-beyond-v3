@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { slugifyCareName } from "@/lib/care/completeness";
+import { formatPersonName } from "@/lib/care/person-name";
 import { sendCareCancellationEmails } from "@/lib/care/booking-emails";
 import { loadCareBookingByToken } from "@/lib/care/load-booking";
 import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
@@ -78,12 +79,14 @@ export async function saveCarePublicProfile(payload: {
   if (clash && String(clash.expert_id) !== ctx.id) {
     return { ok: false, message: "Ce slug est déjà utilisé." };
   }
+  const published = payload.published;
+  const displayName = formatPersonName(payload.display_name) || payload.display_name.trim();
   const { error: profileError } = await ctx.db.from("care_profiles").upsert({
     expert_id: ctx.id,
     slug,
     is_care: true,
-    published: payload.published,
-    display_name: payload.display_name.trim(),
+    published,
+    display_name: displayName,
     title: payload.title.trim(),
     tagline: payload.tagline.trim().slice(0, 140),
     headline: payload.headline.trim(),
@@ -202,7 +205,31 @@ export async function saveCareAvailability(payload: {
   }
   const { data: profile } = await ctx.db.from("care_profiles").select("slug").eq("expert_id", ctx.id).maybeSingle();
   if (profile?.slug) revalidateCarePublicProfile(String(profile.slug));
+  if (payload.rules.length) await notifyCareSlotWatches(ctx.db, ctx.id);
   return { ok: true };
+}
+
+async function notifyCareSlotWatches(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, expertId: string) {
+  const { data, error } = await db.from("care_slot_watches").select("id, email").eq("expert_id", expertId).is("notified_at", null);
+  if (error || !data?.length) return;
+  const { data: profile } = await db.from("care_profiles").select("slug, display_name").eq("expert_id", expertId).maybeSingle();
+  const name = formatPersonName(String(profile?.display_name ?? "")) || "votre praticien";
+  const link = `https://byoundcare.fr/praticiens/${profile?.slug ?? ""}`;
+  const { sendEmail } = await import("@/lib/email/resend-client");
+  const { CARE_FROM } = await import("@/lib/care/booking-emails");
+  for (const row of data) {
+    const mailed = await sendEmail({
+      from: CARE_FROM,
+      to: String(row.email),
+      skipBcc: true,
+      subject: `Des créneaux sont ouverts avec ${name}`,
+      html: `<p>Des créneaux viennent de s'ouvrir avec ${name}.</p><p><a href="${link}">Voir la fiche</a></p>`,
+      text: `Des créneaux viennent de s'ouvrir avec ${name}. ${link}`,
+    });
+    if (mailed.success) {
+      await db.from("care_slot_watches").update({ notified_at: new Date().toISOString() }).eq("id", row.id);
+    }
+  }
 }
 
 export async function updateCareExpertBookingStatus(id: string, status: "cancelled_expert" | "completed"): Promise<Result> {

@@ -15,6 +15,7 @@ import {
 import { encodeSlotRule, NOTICE_HOUR_OPTIONS, slotsOverlap, type ExpertMission, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
 import { writeCareAgendaSlot } from "@/lib/care/expert-agenda";
 import { ensureCareProfile } from "@/lib/care/ensure-profile";
+import { formatPersonName } from "@/lib/care/person-name";
 import { CARE_DOMAIN_IDS } from "@/lib/care/domains";
 import type { CareListingSettings } from "@/lib/care/listing-settings";
 import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
@@ -408,8 +409,10 @@ export async function getCareListingSettings(): Promise<CareListingSettings | nu
       careDomains: [],
       cancellationHours: 24,
       paymentMethods: ["on_site"],
+      serviceNames: [],
     };
   }
+  const { data: serviceRows } = await db.from("care_services").select("name, active").eq("expert_id", expertId);
   return {
     published: data.published === true,
     slug: String(data.slug ?? ""),
@@ -421,6 +424,7 @@ export async function getCareListingSettings(): Promise<CareListingSettings | nu
     careDomains: Array.isArray(data.domains) ? data.domains.map(String) : [],
     cancellationHours: Number(data.cancellation_hours) || 24,
     paymentMethods: Array.isArray(data.payment_methods) ? data.payment_methods.map(String) : ["on_site"],
+    serviceNames: (serviceRows ?? []).filter((item) => item.active !== false).map((item) => String(item.name ?? "")),
   };
 }
 
@@ -437,14 +441,13 @@ export async function syncCareProfileFromExpertAccount(listing?: Partial<CareLis
     .maybeSingle();
   const { data: current } = await db
     .from("care_profiles")
-    .select("published, slug, tagline, approach, city, address, publics, domains, cancellation_hours, payment_methods")
+    .select("published, slug, tagline, approach, city, address, publics, domains, cancellation_hours, payment_methods, offers_cabinet, offers_visio")
     .eq("expert_id", expertId)
     .maybeSingle();
   const display = [expert?.first_name, expert?.last_name].filter(Boolean).join(" ").trim() || "Praticien";
   const formats = Array.isArray(expert?.formats_supported) ? expert.formats_supported.map(String) : [];
   const regions = Array.isArray(expert?.regions) ? expert.regions.map(String) : [];
   const specialties = Array.isArray(expert?.specialties) ? expert.specialties.map(String) : [];
-  const published = listing?.published ?? current?.published === true;
   const domains = (listing?.careDomains ?? (current?.domains as string[] | undefined) ?? []).filter((item): item is string =>
     CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number]),
   );
@@ -453,21 +456,43 @@ export async function syncCareProfileFromExpertAccount(listing?: Partial<CareLis
       ...specialties.filter((item) => CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number])),
     );
   }
-  if (published && !domains.length) domains.push("famille");
+  const { data: serviceRows } = await db.from("care_services").select("name, active, price_cents").eq("expert_id", expertId);
+  const offersCabinet = formats.length
+    ? formats.some((item) => /cabinet|presentiel|sur site/i.test(item))
+    : current?.offers_cabinet === true;
+  const offersVisio = formats.length
+    ? formats.some((item) => /visio|distanciel|en ligne/i.test(item))
+    : current?.offers_visio === true;
+  const content = {
+    avatar_url: String(expert?.avatar_url ?? expert?.photo_url ?? "").trim() || null,
+    tagline: (listing?.tagline ?? String(current?.tagline ?? "")).slice(0, 140),
+    bio: String(expert?.bio ?? expert?.bio_long ?? "").trim(),
+    approach: listing?.approach ?? String(current?.approach ?? ""),
+    domains,
+    city: (listing?.city ?? String(current?.city ?? regions[0] ?? "")).trim() || null,
+    offers_cabinet: offersCabinet,
+    offers_visio: offersVisio,
+    services: (serviceRows ?? []).map((item) => ({
+      name: String(item.name ?? ""),
+      active: item.active !== false,
+      price_cents: Number(item.price_cents) || 0,
+    })),
+  };
+  const published = listing?.published ?? current?.published === true;
   const patch = {
     is_care: true,
     published,
-    display_name: display,
+    display_name: formatPersonName(display) || display,
     title: String(expert?.headline ?? "").trim(),
     headline: String(expert?.headline ?? "").trim(),
-    bio: String(expert?.bio ?? expert?.bio_long ?? "").trim(),
-    tagline: (listing?.tagline ?? String(current?.tagline ?? "")).slice(0, 140),
-    approach: listing?.approach ?? String(current?.approach ?? expert?.bio_long ?? ""),
-    avatar_url: String(expert?.avatar_url ?? expert?.photo_url ?? "").trim() || null,
-    city: (listing?.city ?? String(current?.city ?? regions[0] ?? "")).trim() || null,
+    bio: content.bio,
+    tagline: content.tagline,
+    approach: content.approach,
+    avatar_url: content.avatar_url,
+    city: content.city,
     address: (listing?.address ?? String(current?.address ?? "")).trim() || null,
-    offers_cabinet: formats.some((item) => /cabinet|presentiel|sur site/i.test(item)),
-    offers_visio: formats.some((item) => /visio|distanciel|en ligne/i.test(item)) || formats.length === 0,
+    offers_cabinet: offersCabinet,
+    offers_visio: offersVisio,
     domains,
     publics: listing?.publics ?? (Array.isArray(current?.publics) ? current.publics.map(String) : []),
     payment_methods: listing?.paymentMethods ?? (Array.isArray(current?.payment_methods) ? current.payment_methods.map(String) : ["on_site"]),

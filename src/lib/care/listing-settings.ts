@@ -9,4 +9,5 @@ export type CareListingSettings = {
   careDomains: string[];
   cancellationHours: number;
   paymentMethods: string[];
+  serviceNames: string[];
 };

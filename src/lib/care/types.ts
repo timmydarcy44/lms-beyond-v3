@@ -27,6 +27,7 @@ export type CareProfile = {
   payment_methods: string[];
   cancellation_hours: number;
   member_since: string | null;
+  is_test?: boolean;
 };
 
 export type CareService = {
@@ -58,4 +59,10 @@ export type CareDirectoryRow = {
   badge_count: number;
   min_price_cents: number | null;
   member_since: string | null;
+  price_main?: string;
+  price_hint?: string;
+  place_main?: string;
+  place_hint?: string;
+  service_names?: string[];
+  next_slots?: string[];
 };

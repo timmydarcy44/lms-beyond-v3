@@ -43,10 +43,14 @@ export function hasCarePublicText(value: string | null | undefined) {
   return hasCareText(value) && !isCarePlaceholderText(value);
 }
 
+export function containsCareExampleText(value: string | null | undefined) {
+  return /\[[^\]]+\]/.test(value?.replace(/\s+/g, " ").trim() ?? "");
+}
+
 export function isCarePlaceholderText(value: string | null | undefined) {
   const text = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!text) return true;
-  if (/^\[[^\]]+\]$/.test(text)) return true;
+  if (containsCareExampleText(text)) return true;
   if (/^(lorem|ipsum|todo|tbd|xxx+|placeholder)$/i.test(text)) return true;
   return false;
 }

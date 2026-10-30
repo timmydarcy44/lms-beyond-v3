@@ -7,7 +7,8 @@ import { Award, Globe, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { syncCareProfileFromExpertAccount } from "@/app/dashboard/expert/space-actions";
 import type { CareListingSettings } from "@/lib/care/listing-settings";
-import { CARE_PUBLICS } from "@/lib/care/completeness";
+import { CARE_PUBLICS, careCompleteness } from "@/lib/care/completeness";
+import { CarePhotoField } from "@/components/expert/care-photo-field";
 import { CARE_DOMAINS } from "@/lib/care/domains";
 import { CARE_PAYMENT_LABELS } from "@/lib/care/profile-format";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
@@ -191,6 +192,21 @@ export function ExpertProfileEditor({ careListing = null }: { careListing?: Care
   }, [ctxExpert.id, supabase, hydrateFromRow]);
 
   const name = useMemo(() => `${firstName} ${lastName}`.trim() || "Votre nom", [firstName, lastName]);
+  const careGauge = useMemo(
+    () =>
+      careCompleteness({
+        avatar_url: avatarUrl,
+        tagline: careTagline,
+        bio,
+        approach: careApproach || bioLong,
+        domains: careDomains,
+        city: careCity,
+        offers_cabinet: formats.some((item) => /cabinet|presentiel|sur site/i.test(item)),
+        offers_visio: formats.some((item) => /visio|distanciel|en ligne/i.test(item)),
+        services: (careListing?.serviceNames ?? []).map((serviceName) => ({ name: serviceName, active: true, price_cents: 1 })),
+      }),
+    [avatarUrl, bio, bioLong, careApproach, careCity, careDomains, careListing?.serviceNames, careTagline, formats],
+  );
   const completionPct = computeProfileCompletion({
     firstName,
     lastName,
@@ -664,10 +680,16 @@ export function ExpertProfileEditor({ careListing = null }: { careListing?: Care
                 <section id="byound-care" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                   <h2 className="text-sm font-semibold">Byound Care</h2>
                   <p className="mt-1 text-xs text-white/45">
-                    Visibilité sur l&apos;annuaire public. Rien n&apos;est obligatoire pour être visible : photo, bio, villes et tarifs viennent déjà du profil, des prestations et de l&apos;agenda.
+                    Score d&apos;optimisation {careGauge.percent} %. Ces points rendent la fiche plus facile à choisir. Aucun n&apos;empêche de la publier.
                   </p>
+                  <ul className="mt-3 grid gap-1 text-xs text-white/70">
+                    {careGauge.checks.map((item) => (
+                      <li key={item.id}>{item.ok ? "✓" : "·"} {item.label}</li>
+                    ))}
+                  </ul>
+                  <CarePhotoField expertId={ctxExpert.id} value={avatarUrl || null} onChange={setAvatarUrl} />
                   <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm">
-                    Visible sur byoundcare.fr
+                    Publier mon profil
                     <input
                       type="checkbox"
                       checked={carePublished}

@@ -1,8 +1,8 @@
-import { isCarePlaceholderText, type CarePublicProfile } from "@/lib/care/profile-format";
+import { careContentChecks, careContentReady, type CarePublicationInput } from "@/lib/care/publication";
 
 export const CARE_PUBLICS = ["enfants", "adolescents", "adultes", "parents", "couples", "entreprises"] as const;
 
-export type CarePublishCheckId = "photo" | "title" | "tagline" | "domain" | "service";
+export type CarePublishCheckId = "photo" | "tagline" | "presentation" | "domain" | "service" | "place";
 
 export type CarePublishCheck = {
   id: CarePublishCheckId;
@@ -10,42 +10,23 @@ export type CarePublishCheck = {
   ok: boolean;
 };
 
-export function carePublishChecks(profile: Pick<CarePublicProfile, "avatar_url" | "title" | "tagline" | "domains" | "services">): CarePublishCheck[] {
-  return [
-    { id: "photo", label: "Photo", ok: Boolean(profile.avatar_url?.trim()) },
-    { id: "title", label: "Titre", ok: !isCarePlaceholderText(profile.title) },
-    { id: "tagline", label: "Accroche", ok: !isCarePlaceholderText(profile.tagline) },
-    { id: "domain", label: "Au moins un domaine", ok: profile.domains.length >= 1 },
-    { id: "service", label: "Au moins une prestation", ok: profile.services.some((item) => item.active && !isCarePlaceholderText(item.name)) },
-  ];
+export function carePublishChecks(profile: CarePublicationInput): CarePublishCheck[] {
+  return careContentChecks(profile);
 }
 
-export function careCompleteness(profile: Pick<CarePublicProfile, "avatar_url" | "title" | "tagline" | "domains" | "services">) {
+export function careCompleteness(profile: CarePublicationInput) {
   const checks = carePublishChecks(profile);
   const done = checks.filter((item) => item.ok).length;
   return {
     checks,
     missing: checks.filter((item) => !item.ok),
-    percent: Math.round((done / checks.length) * 100),
+    percent: checks.length ? Math.round((done / checks.length) * 100) : 0,
     canPublish: true,
   };
 }
 
-export function isCareDirectoryComplete(row: {
-  avatar_url: string | null;
-  title: string;
-  tagline: string;
-  domains: unknown[];
-  min_price_cents: number | null;
-}) {
-  return (
-    Boolean(row.avatar_url?.trim()) &&
-    !isCarePlaceholderText(row.title) &&
-    !isCarePlaceholderText(row.tagline) &&
-    Array.isArray(row.domains) &&
-    row.domains.length >= 1 &&
-    row.min_price_cents != null
-  );
+export function isCareDirectoryComplete(row: CarePublicationInput) {
+  return careContentReady(row);
 }
 
 export function slugifyCareName(value: string) {

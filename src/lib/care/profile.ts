@@ -1,7 +1,7 @@
 import { CARE_DOMAINS, type CareDomain } from "@/lib/care/domains";
 import type { CareSessionFormat } from "@/lib/care/available-slots";
-import { CARE_SLUG_OWNER_EMAILS, desiredCareSlug, isCareDemoEmail, isPlaceholderCareRow } from "@/lib/care/demo-profiles";
-import { ensureCareProfile } from "@/lib/care/ensure-profile";
+import { formatPersonName } from "@/lib/care/person-name";
+import { isCareListingPublic, type CarePublicationService } from "@/lib/care/publication";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { hasCarePublicText, type CarePublicProfile } from "@/lib/care/profile-format";
 
@@ -26,37 +26,14 @@ function asDomain(value: unknown): CareDomain | null {
 export async function loadPublishedCareSlugs() {
   const db = getServiceRoleClient();
   if (!db) return [];
-  const { data } = await db.from("care_profiles").select("slug").eq("published", true).eq("is_care", true);
-  return (data ?? []).map((row) => String(row.slug)).filter(Boolean);
-}
-
-async function resolveLiveCareRow(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, slug: string, current: Record<string, unknown> | null) {
-  if (current && !isPlaceholderCareRow({
-    title: current.title ? String(current.title) : null,
-    tagline: current.tagline ? String(current.tagline) : null,
-    city: current.city ? String(current.city) : null,
-    expert_id: current.expert_id ? String(current.expert_id) : null,
-  })) {
-    return current;
+  const { data } = await db.from("care_profiles").select("slug, expert_id").eq("published", true).eq("is_care", true);
+  const rows = data ?? [];
+  const visible: string[] = [];
+  for (const row of rows) {
+    const profile = await loadPublishedCareProfile(String(row.slug));
+    if (profile) visible.push(profile.slug);
   }
-  const { data: experts } = await db.from("experts").select("id, first_name, last_name, email");
-  const match = (experts ?? []).find((row) => {
-    const email = String(row.email ?? "").trim().toLowerCase();
-    if (isCareDemoEmail(email)) return false;
-    if ((CARE_SLUG_OWNER_EMAILS[slug] ?? []).includes(email)) return true;
-    const nameSlug = desiredCareSlug([row.first_name, row.last_name].filter(Boolean).join(" "));
-    return nameSlug === slug || desiredCareSlug(String(row.first_name ?? "")) === slug;
-  });
-  if (!match?.id) return current;
-  await ensureCareProfile(db, String(match.id));
-  const { data: existing } = await db.from("care_profiles").select("domains").eq("expert_id", match.id).maybeSingle();
-  const domains = Array.isArray(existing?.domains) && existing.domains.length ? existing.domains : ["famille"];
-  await db
-    .from("care_profiles")
-    .update({ published: true, is_care: true, domains, updated_at: new Date().toISOString() })
-    .eq("expert_id", match.id);
-  const { data: live } = await db.from("care_profiles").select("*").eq("expert_id", match.id).maybeSingle();
-  return live ?? current;
+  return visible;
 }
 
 export async function loadCareProfileBySlug(
@@ -65,10 +42,8 @@ export async function loadCareProfileBySlug(
 ): Promise<CarePublicProfile | null> {
   const db = getServiceRoleClient();
   if (!db) return null;
-  const { data: found, error } = await db.from("care_profiles").select("*").eq("slug", slug).maybeSingle();
-  if (error) return null;
-  const profile = await resolveLiveCareRow(db, slug, found as Record<string, unknown> | null);
-  if (!profile) return null;
+  const { data: profile, error } = await db.from("care_profiles").select("*").eq("slug", slug).maybeSingle();
+  if (error || !profile) return null;
   const expertId = String(profile.expert_id);
   const owner = Boolean(opts?.viewerId && opts.viewerId === expertId);
   if (!owner && (profile.published !== true || profile.is_care !== true)) return null;
@@ -91,7 +66,9 @@ export async function loadCareProfileBySlug(
     slug: String(profile.slug),
     published: profile.published === true,
     is_care: profile.is_care === true,
-    display_name: hasCarePublicText(String(profile.display_name ?? "")) ? String(profile.display_name) : expertName,
+    display_name: formatPersonName(
+      hasCarePublicText(String(profile.display_name ?? "")) ? String(profile.display_name) : expertName,
+    ) || expertName,
     title: hasCarePublicText(String(profile.title ?? "")) ? String(profile.title) : String(expertRow?.headline ?? "").trim(),
     tagline: hasCarePublicText(String(profile.tagline ?? "")) ? String(profile.tagline) : "",
     headline: hasCarePublicText(String(profile.headline ?? "")) ? String(profile.headline) : String(expertRow?.headline ?? "").trim(),
@@ -115,11 +92,12 @@ export async function loadCareProfileBySlug(
     payment_methods: Array.isArray(profile.payment_methods) ? profile.payment_methods.map(String) : [],
     cancellation_hours: Number(profile.cancellation_hours) || 24,
     member_since: profile.member_since ? String(profile.member_since) : null,
+    is_test: profile.is_test === true,
     services: (services.data ?? []).map((row) => ({
       id: String(row.id),
       expert_id: expertId,
       position: Number(row.position) || 0,
-      name: hasCarePublicText(String(row.name ?? "")) ? String(row.name) : "Séance",
+      name: String(row.name ?? "").trim() || "Séance",
       domain: asDomain(row.domain) ?? "famille",
       description: String(row.description ?? ""),
       duration_min: Number(row.duration_min) || 0,
@@ -156,8 +134,37 @@ export async function loadCareProfileBySlug(
 export async function loadPublishedCareProfile(slug: string): Promise<CarePublicProfile | null> {
   try {
     const profile = await loadCareProfileBySlug(slug);
-    if (!profile?.published || !profile.is_care) return null;
-    return profile;
+    if (!profile) return null;
+    const db = getServiceRoleClient();
+    if (!db) return null;
+    const [{ data: expert }, { data: membership }] = await Promise.all([
+      db.from("experts").select("email, review_status, is_active").eq("id", profile.expert_id).maybeSingle(),
+      db.from("expert_memberships").select("status").eq("expert_id", profile.expert_id).eq("pole", "care").maybeSingle(),
+    ]);
+    const services: CarePublicationService[] = profile.services.map((item) => ({
+      name: item.name,
+      active: item.active,
+      price_cents: item.price_cents,
+    }));
+    const visible = isCareListingPublic({
+      published: profile.published,
+      is_care: profile.is_care,
+      is_test: profile.is_test === true,
+      email: expert?.email ? String(expert.email) : null,
+      review_status: expert?.review_status ? String(expert.review_status) : null,
+      care_active: membership?.status === "active",
+      avatar_url: profile.avatar_url,
+      tagline: profile.tagline,
+      bio: profile.bio,
+      approach: profile.approach,
+      domains: profile.domains,
+      city: profile.city,
+      offers_cabinet: profile.offers_cabinet,
+      offers_visio: profile.offers_visio,
+      services,
+    });
+    if (!visible) return null;
+    return { ...profile, address: null };
   } catch {
     return null;
   }

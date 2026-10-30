@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { CareLogo } from "@/components/care/care-logo";
 import { CareLink, useCareAudience } from "@/components/care/care-host";
@@ -16,6 +17,8 @@ const NAV = [
 export function CareHeader() {
   const [open, setOpen] = useState(false);
   const [solid, setSolid] = useState(false);
+  const pathname = usePathname();
+  const board = pathname.startsWith("/care/praticiens") || pathname.startsWith("/praticiens");
   const { audience, setAudience } = useCareAudience();
   useEffect(() => {
     const onScroll = () => setSolid(window.scrollY > 16);
@@ -24,7 +27,7 @@ export function CareHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   return (
-    <header className={`care-header${solid ? " is-solid" : ""}`}>
+    <header className={`care-header${solid || board ? " is-solid" : ""}${board ? " is-board" : ""}`}>
       <div className="care-halo" style={{ width: 340, height: 340, background: "var(--care-accent)", top: -180, right: 80 }} />
       <div className="care-wrap care-header-inner">
         <CareLogo />

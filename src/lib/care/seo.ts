@@ -16,6 +16,7 @@ export function carePageMetadata(input: {
   description: string;
   internalPath: string;
   index?: boolean;
+  image?: string | null;
 }): Metadata {
   const canonical = careAbsoluteUrl(input.internalPath);
   const index = input.index !== false;
@@ -32,11 +33,13 @@ export function carePageMetadata(input: {
       siteName: CARE_SEO.siteName,
       title: `${input.title} · ${CARE_SEO.siteName}`,
       description: input.description,
+      images: input.image ? [{ url: input.image, alt: input.title }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: `${input.title} · ${CARE_SEO.siteName}`,
       description: input.description,
+      images: input.image ? [input.image] : undefined,
     },
   };
 }

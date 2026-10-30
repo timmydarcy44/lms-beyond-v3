@@ -32,7 +32,6 @@ export type CarePublicationCheck = {
 
 const TEST_EMAILS = new Set([
   "anais.care.demo@byound.fr",
-  "timmydarcy44@gmail.com",
   "timmydarcy44+expertpro@gmail.com",
   "timmydarcy44+testexpertlol@gmail.com",
 ]);

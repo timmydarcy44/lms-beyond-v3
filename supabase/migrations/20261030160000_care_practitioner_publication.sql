@@ -9,7 +9,6 @@ from public.experts e
 where e.id = p.expert_id
   and lower(e.email) in (
     'anais.care.demo@byound.fr',
-    'timmydarcy44@gmail.com',
     'timmydarcy44+expertpro@gmail.com',
     'timmydarcy44+testexpertlol@gmail.com'
   );
@@ -35,7 +34,6 @@ as $$
       and p.is_test = false
       and lower(e.email) not in (
         'anais.care.demo@byound.fr',
-        'timmydarcy44@gmail.com',
         'timmydarcy44+expertpro@gmail.com',
         'timmydarcy44+testexpertlol@gmail.com'
       )

@@ -66,8 +66,10 @@ describe("isCareListingPublic", () => {
   };
 
   it("publie un profil incomplet et cache les comptes de test", () => {
-    expect(isCareTestEmail("timmydarcy44@gmail.com")).toBe(true);
-    expect(isCareListingPublic({ ...gate, email: "timmydarcy44@gmail.com" })).toBe(false);
+    expect(isCareTestEmail("timmydarcy44@gmail.com")).toBe(false);
+    expect(isCareListingPublic({ ...gate, email: "timmydarcy44@gmail.com" })).toBe(true);
+    expect(isCareTestEmail("timmydarcy44+expertpro@gmail.com")).toBe(true);
+    expect(isCareListingPublic({ ...gate, email: "timmydarcy44+expertpro@gmail.com" })).toBe(false);
     expect(isCareListingPublic({ ...gate, is_test: true })).toBe(false);
     expect(isCareListingPublic({ ...gate, published: false })).toBe(false);
     expect(isCareListingPublic({ ...gate, avatar_url: null, review_status: "pending_review", care_active: false })).toBe(true);

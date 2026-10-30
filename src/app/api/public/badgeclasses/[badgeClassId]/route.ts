@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { buildBadgeClassJsonLd } from "@/lib/openbadges/v2/builders";
-import { getBaseUrl } from "@/lib/openbadges/urls";
+import { loadPublicBadgeClass } from "@/lib/openbadges/public-badge-class";
+import { byoundIssuerId } from "@/lib/openbadges/public-issuer";
+import { getPublicShareBaseUrl } from "@/lib/openbadges/urls";
 
 const withCors = (response: NextResponse) => {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -17,26 +17,33 @@ export async function GET(
   context: { params: Promise<RouteParams> },
 ) {
   const { badgeClassId } = await context.params;
-  const badgeClass = await prisma.badgeClass.findUnique({
-    where: { id: badgeClassId },
-  });
-
-  if (!badgeClass) {
+  const badge = await loadPublicBadgeClass(badgeClassId);
+  if (!badge) {
     return withCors(NextResponse.json({ error: "NOT_FOUND" }, { status: 404 }));
   }
 
-  const baseUrl = getBaseUrl();
-  const jsonld = buildBadgeClassJsonLd({
-    baseUrl,
-    badgeClass,
-  });
+  const base = getPublicShareBaseUrl();
+  const narrative =
+    badge.criteriaMarkdown.trim() ||
+    badge.structuredCriteria.map((item) => item.label).filter(Boolean).join("\n");
 
-  const response = NextResponse.json(jsonld);
-  response.headers.set("Content-Type", "application/ld+json; charset=utf-8");
-  response.headers.set(
-    "Cache-Control",
-    "public, max-age=60, s-maxage=600, stale-while-revalidate=86400",
-  );
+  const response = NextResponse.json({
+    id: `${base}/badgeclasses/${badge.id}`,
+    type: "BadgeClass",
+    name: badge.name,
+    description: badge.description,
+    image: badge.imageUrl,
+    criteria: {
+      narrative,
+      items: badge.structuredCriteria.map((item) => ({
+        label: item.label,
+        description: item.description,
+      })),
+    },
+    issuer: byoundIssuerId(base),
+  });
+  response.headers.set("Content-Type", "application/json; charset=utf-8");
+  response.headers.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
   return withCors(response);
 }
 

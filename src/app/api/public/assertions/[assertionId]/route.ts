@@ -1,3 +1,7 @@
+/**
+ * @deprecated Lecture Prisma. Les assertions publiques passent par
+ * `/badges/{id}` une fois `badge_assertions` en place. Ne pas supprimer.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildAssertion } from "@/lib/openbadges/v2/builders";

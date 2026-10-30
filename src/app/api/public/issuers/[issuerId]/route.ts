@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { buildIssuerProfile } from "@/lib/openbadges/v2/builders";
+import { loadPublicIssuer } from "@/lib/openbadges/public-issuer";
 
 const withCors = (response: NextResponse) => {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -16,26 +15,14 @@ export async function GET(
   context: { params: Promise<RouteParams> },
 ) {
   const { issuerId } = await context.params;
-  const issuer = await prisma.issuerProfile.findUnique({
-    where: { id: issuerId },
-  });
-
+  const issuer = loadPublicIssuer(issuerId);
   if (!issuer) {
     return withCors(NextResponse.json({ error: "NOT_FOUND" }, { status: 404 }));
   }
 
-  const jsonld = buildIssuerProfile({
-    id: `${process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3001"}/api/public/issuers/${issuer.id}`,
-    name: issuer.name,
-    url: issuer.url,
-    email: issuer.email,
-    description: issuer.description,
-    image: issuer.imageUrl,
-    publicKey: (issuer.publicKeys as any) ?? undefined,
-  });
-
-  const response = NextResponse.json(jsonld);
-  response.headers.set("Content-Type", "application/ld+json; charset=utf-8");
+  const response = NextResponse.json(issuer);
+  response.headers.set("Content-Type", "application/json; charset=utf-8");
+  response.headers.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
   return withCors(response);
 }
 

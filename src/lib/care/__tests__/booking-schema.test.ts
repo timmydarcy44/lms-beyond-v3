@@ -39,14 +39,13 @@ describe("care booking helpers", () => {
   it("builds an ics event", () => {
     const ics = buildCareBookingIcs({
       id: "abc",
-      title: "Bilan",
       startsAt: new Date("2026-11-10T09:00:00.000Z"),
       endsAt: new Date("2026-11-10T10:00:00.000Z"),
       location: "Visio",
-      description: "RDV",
     });
     expect(ics).toContain("BEGIN:VEVENT");
-    expect(ics).toContain("SUMMARY:Bilan");
+    expect(ics).toContain("SUMMARY:Rendez-vous Byound Care");
+    expect(ics).not.toContain("Bilan");
   });
 
   it("blocks cancellation inside the notice window", () => {

@@ -126,6 +126,14 @@ export async function loadCareBookingsForPatient(email: string): Promise<CareBoo
   return rows;
 }
 
+export async function loadCareBookingByAccessToken(token: string): Promise<CareBookingRecord | null> {
+  const db = getServiceRoleClient();
+  if (!db || !token) return null;
+  const { data, error } = await db.from("care_bookings").select("*").eq("access_token", token).maybeSingle();
+  if (error || !data) return null;
+  return hydrateBooking(db, data as Record<string, unknown>);
+}
+
 export function canCancelCareBooking(startsAt: string, hours: number, now = new Date()) {
   return new Date(startsAt).getTime() - now.getTime() >= hours * 60 * 60 * 1000;
 }

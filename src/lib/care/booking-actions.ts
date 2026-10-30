@@ -3,11 +3,9 @@
 import { headers } from "next/headers";
 import { careBookingInputSchema, resolveCareBookingDomain } from "@/lib/care/booking-schema";
 import { sendCareBookingEmails, sendCareCancellationEmails } from "@/lib/care/booking-emails";
-import { buildCareBookingIcs } from "@/lib/care/ics";
-import { canCancelCareBooking } from "@/lib/care/load-booking";
-import { loadPublishedCareProfile } from "@/lib/care/profile";
-import { CARE_PUBLIC_ORIGIN, careAbsoluteUrl } from "@/lib/care/host";
+import { canCancelCareBooking, loadCareBookingByToken } from "@/lib/care/load-booking";
 import { loadAvailableCareSlots } from "@/lib/care/load-available-slots";
+import { loadPublishedCareProfile } from "@/lib/care/profile";
 import { insertCareExpertAlert } from "@/lib/care/expert-alert";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -139,17 +137,6 @@ export async function createCareBooking(raw: unknown): Promise<CareBookingAction
   }
   const token = String(data.access_token);
   const id = String(data.id);
-  const confirmUrl = careAbsoluteUrl(`/care/reservation/${id}?token=${token}`);
-  const icsUrl = `${CARE_PUBLIC_ORIGIN}/api/care/ics/${id}?token=${token}`;
-  const ics = buildCareBookingIcs({
-    id,
-    title: `${service.name} — ${profile.display_name}`,
-    startsAt: start,
-    endsAt,
-    location: input.format === "visio" ? "Visio Byound Care" : profile.address || profile.city || "Cabinet",
-    description: `Rendez-vous Byound Care. Détail : ${confirmUrl}`,
-  });
-  const { data: expert } = await db.from("experts").select("email").eq("id", profile.expert_id).maybeSingle();
   const when = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
     weekday: "short",
@@ -162,21 +149,8 @@ export async function createCareBooking(raw: unknown): Promise<CareBookingAction
     expertId: profile.expert_id,
     message: `${input.firstName} ${input.lastName} · ${service.name} · ${when}`,
   });
-  await sendCareBookingEmails({
-    clientEmail: emailKey,
-    clientFirstName: input.firstName,
-    practitionerEmail: expert?.email ? String(expert.email) : null,
-    practitionerName: profile.display_name,
-    serviceName: service.name,
-    startsAt: start.toISOString(),
-    format: input.format,
-    forWhom: input.forWhom,
-    confirmUrl,
-    icsUrl,
-    cancelUrl: confirmUrl,
-    icsContent: ics,
-    message: input.message,
-  });
+  const booking = await loadCareBookingByToken(id, token);
+  if (booking) await sendCareBookingEmails(booking);
   return { ok: true, id, token };
 }
 
@@ -204,15 +178,7 @@ export async function cancelCareBooking(id: string, token: string): Promise<Care
   }
   const { error: updateError } = await db.from("care_bookings").update({ status: "cancelled_client" }).eq("id", id);
   if (updateError) return { ok: false, code: "error", message: "Annulation impossible." };
-  const { data: service } = await db.from("care_services").select("name").eq("id", row.service_id).maybeSingle();
-  const { data: expert } = await db.from("experts").select("email").eq("id", row.expert_id).maybeSingle();
-  await sendCareCancellationEmails({
-    clientEmail: String(row.client_email),
-    clientFirstName: String(row.client_first_name),
-    practitionerEmail: expert?.email ? String(expert.email) : null,
-    practitionerName: String(profile?.display_name ?? ""),
-    serviceName: String(service?.name ?? ""),
-    startsAt: String(row.starts_at),
-  });
+  const booking = await loadCareBookingByToken(id, token);
+  if (booking) await sendCareCancellationEmails(booking, "client");
   return { ok: true, id, token };
 }

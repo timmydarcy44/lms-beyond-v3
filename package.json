@@ -15,7 +15,8 @@
     "check:db": "node scripts/check-db-setup.js",
     "analyze:competitors": "node scripts/run-competitor-analysis.js",
     "analyze:competitors:manual": "node scripts/competitor-analyzer-manual.js",
-    "release:internal": "node scripts/release-internal.mjs"
+    "release:internal": "node scripts/release-internal.mjs",
+    "email:dev": "echo 'Ouvrez http://localhost:3001/dev/care-emails pendant que pnpm dev tourne.'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
@@ -45,6 +46,8 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.2.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@stripe/stripe-js": "^4.10.0",

@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 
 import { ExpertAppleInbox } from "@/components/expert/expert-apple-inbox";
-import { DEFAULT_CARE_PRESTATIONS } from "@/lib/expert/care-prestations";
 
 import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
 import { setDashboardSpace } from "@/lib/dashboard/space";
@@ -196,7 +195,6 @@ export function ExpertShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState({ missions: 0, documents: 0 });
-  const [prestations, setPrestations] = useState<typeof DEFAULT_CARE_PRESTATIONS>([]);
 
   useEffect(() => {
     setDashboardSpace("expert");
@@ -230,21 +228,6 @@ export function ExpertShell({
 
   const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
   const careOnly = hasCare && !memberships.some((item) => item.pole === "formation" && item.status === "active");
-
-  useEffect(() => {
-    if (!hasCare) return;
-    let cancelled = false;
-    void fetch("/api/expert/care/prestations", { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        if (cancelled || !Array.isArray(json?.prestations)) return;
-        setPrestations(json.prestations);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [hasCare, pathname]);
   const adminChildren: NavChild[] = [{ label: "Mes documents", href: "/dashboard/expert/documents" }];
   if (hasCare) {
     adminChildren.push(
@@ -264,13 +247,6 @@ export function ExpertShell({
       href: "/dashboard/expert/prestations",
       icon: Briefcase,
       locked: restricted,
-      children: [
-        ...prestations.map((item) => ({
-          label: item.label,
-          href: `/dashboard/expert/prestations#${item.id}`,
-        })),
-        { label: "Ajouter une prestation", href: "/dashboard/expert/prestations?nouveau=1" },
-      ],
     });
     items.push({
       label: "Byound Care",
@@ -301,11 +277,18 @@ export function ExpertShell({
         icon: BookOpen,
         children: [
           { label: "Mes formations", href: "/dashboard/expert/formations" },
+          { label: "Proposer une formation", href: "/dashboard/expert/formations/proposer" },
           { label: "Mes résultats", href: "/dashboard/expert/resultats" },
         ],
       },
       { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
     );
+  } else {
+    items.push({
+      label: "Proposer une formation",
+      href: "/dashboard/expert/formations/proposer",
+      icon: BookOpen,
+    });
   }
   items.push({ label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings });
 

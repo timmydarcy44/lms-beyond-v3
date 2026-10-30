@@ -18,8 +18,7 @@ import { ensureCareProfile } from "@/lib/care/ensure-profile";
 import { CARE_DOMAIN_IDS } from "@/lib/care/domains";
 import type { CareListingSettings } from "@/lib/care/listing-settings";
 import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
-import { sendEmail } from "@/lib/email/resend-client";
-import { buildCareEmail } from "@/lib/expert/care-email";
+import { sendCareManualConfirmation } from "@/lib/care/booking-emails";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const decisionSchema = z.object({
@@ -235,19 +234,37 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
   }
   let emailed = false;
   let emailError: string | null = null;
-  const shouldNotify = parsed.kind === "rendez_vous" && Boolean(clientEmail);
-  if (shouldNotify) {
-    const when = start.toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
-    const expertName = space.profile?.name?.trim() || "Votre expert Byound Care";
-    const mailed = await sendEmail({
-      to: clientEmail as string,
-      subject: "Byound Care — votre rendez-vous",
-      html: buildCareEmail({
-        preheader: `Rendez-vous le ${when}.`,
-        greeting: clientFirst ? `Bonjour ${clientFirst},` : "Bonjour,",
-        title: "Votre rendez-vous est confirmé",
-        bodyHtml: `<p style="margin:0 0 12px;">${expertName} vous attend le <strong>${when}</strong>.</p><p style="margin:0;">Lieu : ${location || (parsed.format === "visio" ? "Visio" : "à confirmer")}.</p>`,
-      }),
+  const shouldNotify = parsed.kind === "rendez_vous" && Boolean(clientEmail) && built[0];
+  if (shouldNotify && built[0]) {
+    const profile = admin
+      ? (
+          await admin
+            .from("care_profiles")
+            .select("display_name, title, avatar_url, slug, address, city, cancellation_hours")
+            .eq("expert_id", session.id)
+            .maybeSingle()
+        ).data
+      : null;
+    const place = parsed.format === "visio" ? "visio" : "cabinet";
+    const mailed = await sendCareManualConfirmation({
+      id: `agenda-${session.id}-${built[0].startsAt}`,
+      accessToken: "",
+      startsAt: built[0].startsAt,
+      endsAt: built[0].endsAt,
+      place,
+      serviceName: "Rendez-vous",
+      durationMin: Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000)),
+      clientFirstName: clientFirst,
+      clientEmail: clientEmail as string,
+      practitionerName: String(profile?.display_name || space.profile?.name || ""),
+      practitionerTitle: String(profile?.title ?? ""),
+      practitionerEmail: session.email,
+      practitionerAvatarUrl: profile?.avatar_url ? String(profile.avatar_url) : null,
+      practitionerSlug: profile?.slug ? String(profile.slug) : "",
+      address: place === "cabinet" ? location || (profile?.address ? String(profile.address) : null) : null,
+      city: profile?.city ? String(profile.city) : null,
+      cancellationHours: Number(profile?.cancellation_hours) || 24,
+      noFee: true,
     });
     emailed = mailed.success;
     emailError = mailed.success ? null : mailed.error ?? "L'e-mail n'a pas pu partir.";

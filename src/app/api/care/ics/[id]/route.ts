@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildCareBookingIcs } from "@/lib/care/ics";
 import { loadCareBookingByToken } from "@/lib/care/load-booking";
+import { locationText, mailInputFromBooking } from "@/lib/care/mail-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -8,16 +9,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id } = await context.params;
   const token = request.nextUrl.searchParams.get("token") ?? "";
   const booking = await loadCareBookingByToken(id, token);
-  if (!booking || booking.status !== "confirmed") {
+  if (!booking || booking.status !== "confirmed" || new Date(booking.ends_at).getTime() < Date.now()) {
     return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   }
+  const input = mailInputFromBooking(booking);
   const ics = buildCareBookingIcs({
     id: booking.id,
-    title: `${booking.service_name} — ${booking.practitioner_name}`,
     startsAt: new Date(booking.starts_at),
     endsAt: new Date(booking.ends_at),
-    location: booking.format === "visio" ? "Visio Byound Care" : booking.practitioner_address || "Cabinet",
-    description: "Rendez-vous Byound Care",
+    location: locationText(input),
+    method: "REQUEST",
+    sequence: 0,
   });
   return new NextResponse(ics, {
     headers: {

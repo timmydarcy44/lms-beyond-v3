@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/auth/session";
 import { slugifyCareName } from "@/lib/care/completeness";
 import { sendCareCancellationEmails } from "@/lib/care/booking-emails";
+import { loadCareBookingByToken } from "@/lib/care/load-booking";
 import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
 import { CARE_DOMAIN_IDS, type CareDomain } from "@/lib/care/domains";
 import { requireCarePage } from "@/lib/expert/care-page";
@@ -212,17 +213,8 @@ export async function updateCareExpertBookingStatus(id: string, status: "cancell
   const { error } = await ctx.db.from("care_bookings").update({ status }).eq("id", id).eq("expert_id", ctx.id);
   if (error) return { ok: false, message: "Mise à jour impossible." };
   if (status === "cancelled_expert") {
-    const { data: profile } = await ctx.db.from("care_profiles").select("display_name").eq("expert_id", ctx.id).maybeSingle();
-    const { data: service } = await ctx.db.from("care_services").select("name").eq("id", row.service_id).maybeSingle();
-    await sendCareCancellationEmails({
-      clientEmail: String(row.client_email),
-      clientFirstName: String(row.client_first_name),
-      practitionerEmail: null,
-      practitionerName: String(profile?.display_name ?? ""),
-      serviceName: String(service?.name ?? ""),
-      startsAt: String(row.starts_at),
-      byExpert: true,
-    });
+    const booking = await loadCareBookingByToken(String(row.id), String(row.access_token ?? ""));
+    if (booking) await sendCareCancellationEmails(booking, "expert");
   }
   return { ok: true };
 }

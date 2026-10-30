@@ -1,10 +1,8 @@
-import { buildCareEmail } from "@/lib/expert/care-email";
+import { sendCareDocumentEmail } from "@/lib/care/booking-emails";
 import { careTestTitle } from "@/lib/expert/care-result-view";
 import { summarizeCareTest } from "@/lib/expert/care-test-summary";
-import { careAbsoluteUrl } from "@/lib/care/host";
 import { asDocumentKind, parseDocumentScores } from "@/lib/care/patient-document-model";
 import { formatPersonName } from "@/lib/care/person-name";
-import { sendEmail } from "@/lib/email/resend-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const DOCUMENT_KINDS = new Set(["report", "test_result", "invoice", "other"]);
@@ -139,21 +137,8 @@ export async function readExpertPatientSpace(gate: Gate, clientId: string) {
   };
 }
 
-async function notifyNewDocument(email: string, firstName: string) {
-  const html = buildCareEmail({
-    greeting: firstName ? `Bonjour ${firstName},` : "Bonjour,",
-    title: "Un nouveau document est disponible",
-    bodyHtml: "<p>Un nouveau document est disponible dans votre espace Byound Care.</p>",
-    ctaLabel: "Ouvrir mon espace",
-    ctaUrl: careAbsoluteUrl("/dashboard/patient/documents"),
-    footer: "Byound Care — ce message ne contient pas de diagnostic.",
-  });
-  return sendEmail({
-    to: email,
-    subject: "Un nouveau document est disponible dans votre espace Byound Care",
-    html,
-    skipBcc: true,
-  });
+async function notifyNewDocument(email: string, firstName: string, practitionerName: string, replyTo: string | null) {
+  return sendCareDocumentEmail({ to: email, firstName, practitionerName, replyTo });
 }
 
 export async function storeExpertDocument(gate: Gate, input: { clientId: string; kind: string; title: string; subjectRelativeId: string | null; file: File }) {
@@ -204,7 +189,12 @@ export async function shareExpertDocument(gate: Gate, documentId: string) {
   const { error } = await gate.db.from("care_documents").update({ shared_at: new Date().toISOString() }).eq("id", documentId).eq("practitioner_id", gate.expertId);
   if (error) return { ok: false as const, message: "Le partage n'a pas abouti." };
   const email = profile?.email ? String(profile.email) : "";
-  const sent = email ? await notifyNewDocument(email, formatPersonName(String(profile?.first_name ?? ""))) : { success: false };
+  const { data: expert } = await gate.db.from("experts").select("first_name, last_name, email").eq("id", gate.expertId).maybeSingle();
+  const { data: careProfile } = await gate.db.from("care_profiles").select("display_name").eq("expert_id", gate.expertId).maybeSingle();
+  const practitionerName = String(careProfile?.display_name || [expert?.first_name, expert?.last_name].filter(Boolean).join(" "));
+  const sent = email
+    ? await notifyNewDocument(email, formatPersonName(String(profile?.first_name ?? "")), practitionerName, expert?.email ? String(expert.email) : null)
+    : { success: false };
   return { ok: true as const, already: false, emailSent: sent.success };
 }
 

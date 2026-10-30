@@ -6,8 +6,9 @@ import {
   isEdgebsDemoViewer,
 } from "@/lib/entreprise/edgebs-demo-data";
 import { getEquipeForManager } from "@/lib/radar-equipe/auth";
+import { countCompletedEmployeeDiagnostics } from "@/lib/radar-equipe/live-diagnostics";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -58,8 +59,30 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     });
   }
 
+  const service = getServiceRoleClient();
+  const live = service
+    ? await countCompletedEmployeeDiagnostics(service, String(equipe.organisation_id))
+    : 0;
+  const stored = Number((data as { nb_diagnostics_completes?: number } | null)?.nb_diagnostics_completes ?? 0);
+  const completed = Math.max(stored, live);
+  const today = new Date().toISOString().slice(0, 10);
+  const aggregat = data
+    ? { ...data, nb_diagnostics_completes: completed, insuffisant: completed < 5 ? true : data.insuffisant }
+    : {
+        id: "live",
+        equipe_id: equipe.id,
+        organisation_id: equipe.organisation_id,
+        periode_debut: today,
+        periode_fin: today,
+        nb_membres_actifs: completed,
+        nb_diagnostics_completes: completed,
+        insuffisant: completed < 5,
+        insight_principal: null,
+        created_at: new Date().toISOString(),
+      };
+
   return NextResponse.json({
     equipe: { id: equipe.id, name: equipe.name },
-    aggregat: data ?? null,
+    aggregat,
   });
 }

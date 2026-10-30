@@ -3,6 +3,7 @@ import { getServerClient } from "@/lib/supabase/server";
 import { CourseBuilderSnapshot } from "@/types/course-builder";
 import { syncBadgeToDatabase } from "@/lib/badges/sync-badge-from-snapshot";
 import { resolveOrgIdFromCourseSnapshot } from "@/lib/utils/course-org-id";
+import { ficheColumnsFromSnapshot, recordFormationVersion, writeCourseRow } from "@/lib/courses/fiche-columns";
 
 export async function PATCH(
   request: NextRequest,
@@ -73,6 +74,7 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
       price: snapshot.general.price || 0, // Inclure le prix depuis le snapshot
       org_id: resolveOrgIdFromCourseSnapshot(snapshot),
+      ...ficheColumnsFromSnapshot(snapshot),
     };
 
     console.log("[api/courses/[id]] Données de mise à jour:", {
@@ -82,12 +84,18 @@ export async function PATCH(
       price: courseData.price,
     });
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("courses")
       .update(courseData)
       .eq("id", id)
       .select()
       .single();
+
+    if (error && (error.code === "42703" || error.code === "PGRST204" || /column|schema cache/i.test(error.message ?? ""))) {
+      const fallback = await writeCourseRow(supabase, id, courseData);
+      data = fallback.data as typeof data;
+      error = fallback.error as typeof error;
+    }
 
     if (error) {
       console.error("[api/courses/[id]] Erreur lors de la mise à jour:", error);
@@ -109,6 +117,10 @@ export async function PATCH(
       title: data?.title,
       price: data?.price,
     });
+
+    if (data?.id) {
+      await recordFormationVersion(supabase, data.id, snapshot, user.id, status);
+    }
 
     // Synchroniser avec catalog_items si le module est publié
     if (status === "published") {

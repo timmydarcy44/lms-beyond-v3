@@ -2,6 +2,7 @@ import type { ExpertAccessRow } from "@/lib/expert/expert-access";
 import type { TutorWorkspacePayload } from "@/lib/tuteur/workspace-server";
 import type { EntrepriseOverviewData } from "@/lib/entreprise/overview-types";
 import { summarizeApplications } from "@/lib/entreprise/application-stage";
+import { computeSoftSkillGaps, parseMetierSoftSkillTargets } from "@/lib/entreprise/metier-skill-gaps";
 
 const iso = (daysFromNow: number, hour = 9) => {
   const date = new Date();
@@ -430,9 +431,13 @@ export function buildJadeEmployeeDetailPayload(id: string) {
   const soft = done
     ? JADE_SOFT_SKILLS_RADAR.slice(0, 6).map((row, i) => ({
         skill: row.skill,
-        score: Math.max(3, Math.min(15, Math.round((row.score / 100) * 15) - ((index + i) % 3))),
+        score: i % 3 === 0 ? 8 : i % 3 === 1 ? 11 : 14,
       }))
     : [];
+  const gaps = computeSoftSkillGaps(
+    parseMetierSoftSkillTargets(soft.map((row) => `${row.skill}::13`)),
+    soft,
+  );
   return {
     employee: {
       id: employee.id,
@@ -479,25 +484,73 @@ export function buildJadeEmployeeDetailPayload(id: string) {
     recommended_action: done
       ? {
           id: `${id}-action`,
-          title: "Renforcer la négociation",
+          title: gaps[0] ? `Renforcer ${gaps[0].skill}` : "Renforcer la négociation",
           dimension_key: "negociation",
-          description: "Écart prioritaire de l'équipe commerciale.",
+          description: gaps[0]
+            ? `Écart de ${gaps[0].gap} point(s) : ${gaps[0].actual}/15 contre une cible de ${gaps[0].target}/15.`
+            : "Écart prioritaire de l'équipe commerciale.",
         }
       : null,
-    metier_match: null,
+    metier_match: done
+      ? {
+          id: "jade-role-1",
+          title: employee.job_title ?? "Commerciale B2B",
+          soft_skill_gaps: gaps,
+        }
+      : null,
+    formations_in_progress: employee.formation_title ? 1 : 0,
+    assigned_formations: employee.formation_title
+      ? [{ id: `${id}-formation`, title: employee.formation_title, progress: employee.formation_percent ?? 0 }]
+      : [],
+    declared_skills: employee.skills?.length ?? 0,
+    badges_earned: employee.badge_count ?? 0,
+    activity: [
+      employee.last_activity_at
+        ? { id: `${id}-act-1`, label: "Dernière activité sur la plateforme", at: employee.last_activity_at }
+        : null,
+      employee.diagnostic_at
+        ? { id: `${id}-act-2`, label: `Diagnostic ${employee.diagnostic_label ?? "Byound"}`, at: employee.diagnostic_at }
+        : null,
+    ].filter((item): item is { id: string; label: string; at: string } => Boolean(item)),
+    byound_skills: employee.skills ?? [],
+    missions: done
+      ? [
+          {
+            id: `${id}-mission`,
+            title: gaps[0] ? `Plan sur ${gaps[0].skill}` : "Point de suivi mensuel",
+            description: "Mission de suivi issue des écarts de la fiche métier.",
+            due_date: iso(14).slice(0, 10),
+            status: "in_progress",
+            created_at: iso(-10),
+            updated_at: iso(-1),
+          },
+        ]
+      : [],
+    hr_documents: done
+      ? [
+          {
+            id: `${id}-doc`,
+            title: "Entretien individuel",
+            document_type: "entretien_individuel",
+            document_date: iso(-20).slice(0, 10),
+            notes: "Point sur les écarts de la fiche métier et le plan de formation.",
+            file_url: null,
+            file_name: null,
+            created_at: iso(-20),
+          },
+        ]
+      : [],
     profile_analysis: done
       ? {
           strengths: (employee.skills ?? [])
             .filter((skill) => skill.status !== "declared")
             .map((skill) => `${skill.name} · ${SKILL_STATUS_LABEL[skill.status]}`),
-          improvements: ["Négociation sous la cible du poste"],
+          improvements: gaps.filter((gap) => (gap.gap ?? 0) <= -2).map((gap) => `${gap.skill} · ${gap.actual}/15 contre ${gap.target}/15`),
           summary: `${employee.first_name} ${employee.last_name} · ${employee.job_title ?? "Collaborateur"}.`,
           updatedAt: employee.last_activity_at,
           cached: true,
         }
       : null,
-    missions: [],
-    hr_documents: [],
     inclusion: null,
     demo: true,
   };
@@ -507,6 +560,7 @@ export function buildJadeOfferDetail(id: string) {
   const offer = [...JADE_ENTREPRISE_OFFERS, JADE_DRAFT_OFFER].find((row) => row.id === id);
   if (!offer) return null;
   const applicants = JADE_OFFER_APPLICATIONS.filter((candidate) => candidate.offer_id === offer.id);
+  const scored = jadeMatchingCandidates(id)?.candidates ?? [];
   return {
     offer: {
       id: offer.id,
@@ -521,6 +575,7 @@ export function buildJadeOfferDetail(id: string) {
     },
     applications: applicants.map((candidate) => {
       const [first, ...rest] = candidate.name.split(" ");
+      const score = scored.find((row) => row.id === candidate.id);
       return {
         id: candidate.id,
         created_at: candidate.created_at,
@@ -532,6 +587,9 @@ export function buildJadeOfferDetail(id: string) {
         retained_at: "retained_at" in candidate ? candidate.retained_at : null,
         criteria_met: candidate.criteria_met,
         criteria_total: candidate.criteria_total,
+        match_score: score?.match ?? null,
+        match_idmc: score?.idmc ?? null,
+        match_behavior: score?.disc ?? null,
         profiles: [{ id: candidate.id, first_name: first, last_name: rest.join(" ") }],
       };
     }),
@@ -584,5 +642,64 @@ export function buildJadeSkillsGapPayload() {
       "jade-role-1": [],
     },
     demo_enriched: true,
+  };
+}
+
+const MATCH_SOFT = ["Écoute active", "Gestion du stress", "Collaboration et travail en équipe"] as const;
+const MATCH_BEHAVIOR = ["Influent", "Stable", "Consciencieux", "Dominant"] as const;
+const MATCH_IDMC = [
+  "Connaissance de soi",
+  "Maîtrise des méthodes",
+  "Adaptation au contexte",
+  "Organisation",
+  "Traitement de l'info",
+  "Résolution de problèmes",
+  "Suivi",
+  "Auto-évaluation",
+] as const;
+
+/** Matching recrutement Jade : soft skills, IDMC et test comportemental. */
+export function jadeMatchingCandidates(offerId: string) {
+  const offer = [...JADE_ENTREPRISE_OFFERS, JADE_DRAFT_OFFER].find((row) => row.id === offerId);
+  if (!offer) return null;
+  const rows = JADE_OFFER_APPLICATIONS.filter((row) => row.offer_id === offer.id);
+  return {
+    offerTitle: offer.title,
+    candidates: rows.map((row, index) => {
+      const softSkills = MATCH_SOFT.map((label, skillIndex) => ({
+        label,
+        value: 52 + ((index * 11 + skillIndex * 9) % 40),
+      }));
+      const idmcAxes = MATCH_IDMC.map((axis, axisIndex) => ({
+        axis,
+        value: 50 + ((index * 7 + axisIndex * 5) % 42),
+      }));
+      const idmc = Math.round(idmcAxes.reduce((sum, axis) => sum + axis.value, 0) / idmcAxes.length);
+      const behaviorScore = 55 + ((index * 13) % 38);
+      const softAvg = Math.round(softSkills.reduce((sum, skill) => sum + skill.value, 0) / softSkills.length);
+      const match = Math.round(softAvg * 0.45 + idmc * 0.35 + behaviorScore * 0.2);
+      const disc = MATCH_BEHAVIOR[index % MATCH_BEHAVIOR.length];
+      return {
+        id: row.id,
+        name: row.name,
+        availability: (index % 3 === 0
+          ? "Disponible immédiatement"
+          : index % 3 === 1
+            ? "En recherche active"
+            : "À l'écoute d'opportunités") as "Disponible immédiatement" | "En recherche active" | "À l'écoute d'opportunités",
+        mobility: offer.city ? `Mobile ${offer.city}` : "Mobile",
+        lastCompany: "Parcours Byound",
+        avatar: `https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80&sig=${index}`,
+        match,
+        idmc,
+        disc,
+        behaviorScore,
+        softSkills,
+        offerRadar: softSkills.map((skill) => ({ axis: skill.label, value: 75 })),
+        candidateRadar: softSkills.map((skill) => ({ axis: skill.label, value: skill.value })),
+        idmcAxes,
+        analysis: `Matching ${match} %. Soft skills ${softAvg} %, IDMC ${idmc}/100, test comportemental ${disc} (${behaviorScore} %).`,
+      };
+    }),
   };
 }

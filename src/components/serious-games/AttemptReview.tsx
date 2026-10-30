@@ -39,10 +39,10 @@ export function AttemptReview({ attempt, answers, learnerName }: { attempt: Revi
       {crit.length > 0 && (
         <section className="grid gap-3 sm:grid-cols-2">
           {crit.map(([k, v]) => (
-            <div key={k} className="rounded-3xl border bg-card p-5">
+            <div key={k} className="rounded-3xl border border-white/10 bg-[#12141A] p-5 text-[#F4F5F7]">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold">{CRITERIA_LABEL[k] ?? k}</span>
-                <span className="tabular-nums"><b className="text-2xl">{String(v).replace(".", ",")}</b>{CRITERIA_MAX[k] ? <span className="text-muted-foreground"> / {CRITERIA_MAX[k]}</span> : null}</span>
+                <span className="font-semibold capitalize">{CRITERIA_LABEL[k] ?? k}</span>
+                <span className="tabular-nums"><b className="text-2xl">{String(v).replace(".", ",")}</b>{CRITERIA_MAX[k] ? <span className="text-white/50"> / {CRITERIA_MAX[k]}</span> : null}</span>
               </div>
               <Bar value={v} max={CRITERIA_MAX[k] ?? 100} className="mt-3" />
             </div>
@@ -57,52 +57,52 @@ export function AttemptReview({ attempt, answers, learnerName }: { attempt: Revi
       )}
 
       {attempt.lesson && (
-        <section className="rounded-3xl bg-muted p-5">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">À retenir</div>
+        <section className="rounded-3xl border border-white/10 bg-[#12141A] p-5 text-[#F4F5F7]">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-white/50">À retenir</div>
           <p>{attempt.lesson}</p>
         </section>
       )}
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-bold">Les réponses, étape par étape</h2>
-        {answers.length === 0 && <p className="text-muted-foreground">Aucune réponse enregistrée pour cette partie.</p>}
+        {answers.length === 0 && <p className="text-white/50">Aucune réponse enregistrée pour cette partie.</p>}
         {answers.map((a) => {
           const chosen = new Set(a.chosen_keys?.length ? a.chosen_keys : [a.chosen_key]);
           const multi = (a.chosen_keys?.length ?? 0) > 0;
           return (
-            <article key={a.step_index} className="flex flex-col gap-4 rounded-3xl border bg-card p-5">
+            <article key={a.step_index} className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#12141A] p-5 text-[#F4F5F7]">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Étape {a.step_index}{a.concept ? ` · ${a.concept}` : ""}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Étape {a.step_index}{a.concept ? ` · ${a.concept}` : ""}</span>
                 <ToneChip tone={a.tone} />
               </div>
-              {a.situation && <p className="text-sm italic text-muted-foreground">{a.situation}</p>}
+              {a.situation && <p className="text-sm italic text-white/55">{a.situation}</p>}
               <p className="text-lg font-semibold">{a.question}</p>
-              {multi && <p className="text-sm text-muted-foreground">{a.chosen_text}</p>}
+              {multi && <p className="text-sm text-white/70">{a.chosen_text}</p>}
               <ul className="flex flex-col gap-2">
                 {a.options.map((o) => {
                   const on = chosen.has(o.key);
                   return (
-                    <li key={o.key} className={`flex flex-col gap-1.5 rounded-2xl border p-3 ${on ? "border-indigo-500 bg-indigo-500/10" : "opacity-75"}`}>
+                    <li key={o.key} className={`flex flex-col gap-1.5 rounded-2xl border p-3 ${on ? "border-indigo-400 bg-indigo-500/15" : "border-white/10 opacity-80"}`}>
                       <div className="flex flex-wrap items-start gap-3">
-                        <span className="grid h-6 min-w-6 place-items-center rounded-full bg-foreground px-1.5 text-xs font-bold text-background">{o.key}</span>
+                        <span className="grid h-6 min-w-6 place-items-center rounded-full bg-white px-1.5 text-xs font-bold text-[#07080B]">{o.key}</span>
                         <span className="min-w-0 flex-1">{o.text}</span>
-                        {on && <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-300">{multi ? "Choisi" : "Réponse donnée"}</span>}
+                        {on && <span className="text-xs font-semibold text-indigo-300">{multi ? "Choisi" : "Réponse donnée"}</span>}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 pl-9"><ToneChip tone={o.tone} /><span className="text-xs text-muted-foreground">{o.concept}</span></div>
+                      <div className="flex flex-wrap items-center gap-2 pl-9"><ToneChip tone={o.tone} /><span className="text-xs text-white/50">{o.concept}</span></div>
                       {o.feedback && (on
                         ? <p className="pl-9 text-sm">{o.feedback}</p>
-                        : <details className="pl-9 text-sm"><summary className="cursor-pointer text-muted-foreground">Voir le retour</summary><p className="pt-1">{o.feedback}</p></details>)}
+                        : <details className="pl-9 text-sm"><summary className="cursor-pointer text-white/50">Voir le retour</summary><p className="pt-1">{o.feedback}</p></details>)}
                     </li>
                   );
                 })}
               </ul>
               {a.free_text && (
-                <div className="rounded-2xl bg-muted p-4">
-                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Texte rédigé</div>
+                <div className="rounded-2xl bg-white/[0.06] p-4">
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-white/50">Texte rédigé</div>
                   <p className="whitespace-pre-wrap leading-relaxed">{a.free_text}</p>
                 </div>
               )}
-              {a.feedback && <p className="text-sm text-muted-foreground">{a.feedback}</p>}
+              {a.feedback && <p className="text-sm text-white/55">{a.feedback}</p>}
             </article>
           );
         })}

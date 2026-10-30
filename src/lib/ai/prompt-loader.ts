@@ -107,8 +107,8 @@ La structure doit être :
     }
 
     case "transform-text-schema": {
-      const { text } = variables;
-      return buildSchemaPrompt(text);
+      const { text, schemaType } = variables;
+      return buildSchemaPrompt(text, schemaType);
     }
 
     case "transform-text-translate": {

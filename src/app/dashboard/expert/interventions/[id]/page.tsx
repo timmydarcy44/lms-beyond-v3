@@ -64,14 +64,11 @@ function RealInterventionDetail() {
           .maybeSingle();
         if (error) throw error;
         const r = (data ?? null) as ActionRequestRow | null;
-        if (!cancelled) {
-          if (r && r.expert_id && r.expert_id !== currentExpertId) {
-            setError("Cette intervention n'est pas assignée à votre compte expert.");
-            setRow(null);
-          } else {
-            setRow(r);
-          }
+        if (!r || (r.expert_id && r.expert_id !== currentExpertId)) {
+          if (!cancelled) router.replace("/dashboard/expert");
+          return;
         }
+        if (!cancelled) setRow(r);
       } catch {
         if (!cancelled) {
           setRow(null);
@@ -85,7 +82,7 @@ function RealInterventionDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, supabase]);
+  }, [id, router, supabase]);
 
   const createdLabel = useMemo(() => formatLaunchDate(row?.created_at ?? null), [row]);
   const needLabel =

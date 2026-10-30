@@ -23,6 +23,9 @@ export type EmployeeTestResults = {
   idmc_axes: Record<string, number> | null;
   soft_skills: Array<{ skill: string; score: number }>;
   updated_at: string | null;
+  disc_at?: string | null;
+  idmc_at?: string | null;
+  soft_skills_at?: string | null;
 };
 
 function resolveIdmcAxesFromRow(scores: unknown): Record<string, number> | null {
@@ -100,7 +103,16 @@ export async function loadEmployeeTestResults(
     idmcRow?.updated_at ?? discRow?.updated_at ?? softRow?.taken_at ?? "",
   ) || null;
 
-  return { disc, idmc_score, idmc_axes, soft_skills, updated_at };
+  return {
+    disc,
+    idmc_score,
+    idmc_axes,
+    soft_skills,
+    updated_at,
+    disc_at: disc ? String(discRow?.updated_at ?? "") || null : null,
+    idmc_at: idmc_score != null || idmc_axes ? String(idmcRow?.updated_at ?? "") || null : null,
+    soft_skills_at: soft_skills.length > 0 ? String(softRow?.taken_at ?? "") || null : null,
+  };
 }
 
 /** Convertit les résultats profil en entrée diagnostic pour la fiche entreprise. */

@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { grantUserRole } from "@/lib/auth/user-roles";
+import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export type TutorAuthContext = {
   supabase: SupabaseClient;
@@ -11,6 +13,34 @@ export type TutorAuthContext = {
 };
 
 const tutorRoles = new Set(["tutor", "tuteur"]);
+
+async function linkTutorMembership(userId: string, email: string) {
+  const db = getServiceRoleClient();
+  if (!db) return false;
+  const activated = await afterSuccessfulAuth(db, { userId, email });
+  if (activated.activatedTutor) return true;
+  const normalized = email.trim();
+  const [roles, byUser, byEmail] = await Promise.all([
+    db.from("user_roles").select("role").eq("user_id", userId).in("role", ["tuteur", "tutor"]),
+    db.from("company_tutors").select("id").eq("user_id", userId).limit(1),
+    normalized
+      ? db.from("company_tutors").select("id, user_id").ilike("email", normalized)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const listed = !roles.error && (roles.data?.length ?? 0) > 0;
+  const linked = !byUser.error && (byUser.data?.length ?? 0) > 0;
+  const emailRows = (!byEmail.error ? byEmail.data ?? [] : []) as Array<{ id: string; user_id?: string | null }>;
+  if (!listed && !linked && emailRows.length === 0) return false;
+  const pending = emailRows.filter((row) => !row.user_id).map((row) => row.id);
+  if (pending.length) {
+    await db
+      .from("company_tutors")
+      .update({ user_id: userId, activated_at: new Date().toISOString() })
+      .in("id", pending);
+  }
+  await grantUserRole(db, userId, "tuteur");
+  return true;
+}
 
 function displayNameFromProfile(row: {
   full_name?: string | null;
@@ -53,7 +83,8 @@ export async function requireTutorClient(): Promise<
   const role = String((profile as { role?: string }).role ?? "").toLowerCase();
   const email = String((profile as { email?: string | null }).email ?? user.email ?? "");
   if (!tutorRoles.has(role) && !isJadeDemoEmail(email)) {
-    return { ok: false, status: 403, message: "Accès réservé aux tuteurs" };
+    const allowed = await linkTutorMembership(user.id, email);
+    if (!allowed) return { ok: false, status: 403, message: "Accès réservé aux tuteurs" };
   }
 
   return {

@@ -17,6 +17,7 @@ type ResourcePayload = {
   file_url?: string | null;
   video_url?: string | null;
   audio_url?: string | null;
+  url?: string | null;
 };
 
 const HTML_IFRAME_SANDBOX =
@@ -141,6 +142,11 @@ export function EmbeddedLessonResource({ resourceId, title }: EmbeddedLessonReso
   const mediaType = resolveMediaType(resource);
   const displayTitle = resource.title || title || "Ressource";
   const htmlContent = resource.html_content?.trim() ?? "";
+  const fileUrl = resource.file_url || resource.url || null;
+  const videoUrl = resource.video_url || (mediaType === "video" ? fileUrl : null);
+  const audioUrl = resource.audio_url || (mediaType === "audio" ? fileUrl : null);
+  const sameTitle = displayTitle.trim().toLowerCase() === String(title ?? "").trim().toLowerCase();
+  const pdfSrc = fileUrl && !fileUrl.includes("#") ? `${fileUrl}#zoom=page-width&toolbar=1&navpanes=0` : fileUrl;
 
   if (mediaType === "html" && htmlContent) {
     return (
@@ -151,37 +157,37 @@ export function EmbeddedLessonResource({ resourceId, title }: EmbeddedLessonReso
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h3 className="text-2xl font-semibold leading-tight text-slate-900">{displayTitle}</h3>
+    <div className="lesson-resource mx-auto w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      {sameTitle ? null : <h3 className="px-6 pt-6 text-2xl font-semibold leading-tight text-slate-900">{displayTitle}</h3>}
 
-      {mediaType === "pdf" && resource.file_url ? (
+      {(mediaType === "pdf" || mediaType === "document") && pdfSrc ? (
         <iframe
-          src={resource.file_url}
+          src={pdfSrc}
           title={displayTitle}
-          className="h-[75vh] w-full rounded-2xl border border-slate-200"
+          className="lesson-resource__frame h-[calc(100dvh-168px)] min-h-[82vh] w-full border-0 bg-white"
         />
       ) : null}
 
-      {mediaType === "video" && (resource.video_url || resource.file_url) ? (
+      {mediaType === "video" && videoUrl ? (
         <video
           controls
-          className="aspect-video w-full rounded-2xl border border-slate-200 bg-black"
-          src={resource.video_url || resource.file_url || undefined}
+          className="aspect-video w-full bg-black"
+          src={videoUrl}
         />
       ) : null}
 
-      {mediaType === "audio" && (resource.audio_url || resource.file_url) ? (
-        <audio controls className="w-full" src={resource.audio_url || resource.file_url || undefined}>
+      {mediaType === "audio" && audioUrl ? (
+        <audio controls className="w-full px-6 py-6" src={audioUrl}>
           Votre navigateur ne supporte pas la lecture audio.
         </audio>
       ) : null}
 
       {mediaType === "html" && !htmlContent ? (
-        <p className="text-sm text-slate-600">Le contenu HTML de cette ressource est vide.</p>
+        <p className="px-6 py-6 text-sm text-slate-600">Le contenu HTML de cette ressource est vide.</p>
       ) : null}
 
-      {mediaType !== "html" && !resource.file_url && !resource.video_url && !resource.audio_url ? (
-        <p className="text-sm text-slate-600">Fichier de la ressource non disponible.</p>
+      {mediaType !== "html" && !fileUrl && !videoUrl && !audioUrl ? (
+        <p className="px-6 py-6 text-sm text-slate-600">Fichier de la ressource non disponible.</p>
       ) : null}
     </div>
   );

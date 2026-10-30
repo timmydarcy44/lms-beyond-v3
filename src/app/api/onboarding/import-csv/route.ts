@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
         mapping: detected,
         stats,
         sample: rows.filter((r) => !r._skipReason).slice(0, 5),
+        issues: rows
+          .filter((row) => row._skipReason && row._skipReason !== "Ligne vide")
+          .slice(0, 20)
+          .map((row) => ({ line: row._row, reason: row._skipReason })),
       });
     }
 

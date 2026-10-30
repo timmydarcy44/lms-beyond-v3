@@ -15,6 +15,7 @@ import { NtcEvaluationSection } from "@/components/edge-site/cfa/ntc-evaluation-
 import { ProgramContributorsSection } from "@/components/edge-site/cfa/program-contributors-section";
 import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card";
 import { getProgramContributors } from "@/lib/expert/program-contributors";
+import { AlternantsRecruitingSection } from "@/components/offres/public-offer";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
@@ -529,6 +530,7 @@ export default async function NtcAiBusinessPage() {
           </div>
         </div>
       </section>
+      <AlternantsRecruitingSection cursus="AI Business" />
     </EdgePremiumShell>
   );
 }

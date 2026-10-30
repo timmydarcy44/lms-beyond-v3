@@ -14,14 +14,21 @@ import {
   type ExpertDocumentItem,
   type ExpertMission,
   type ExpertReview,
+  type RevenueLine,
   type ExpertSlot,
   type MissionBilling,
   type MissionStatus,
   type ProfileSectionId,
   type ProfileVisibility,
+  asNoticeHours,
+  slotClientIdFromRule,
+  slotClientNameFromRule,
   slotKindFromRule,
+  type NoticeHours,
   type SlotFormat,
 } from "@/lib/expert/space-model";
+import { loadCareAgendaSlots } from "@/lib/care/expert-agenda";
+import { loadExpertPoleState } from "@/lib/expert/poles";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const COOKIE = "jade_expert_overrides";
@@ -33,7 +40,7 @@ export type JadeOverrides = {
   extraSlots?: ExpertSlot[];
   extraDocuments?: ExpertDocumentItem[];
   format?: SlotFormat;
-  noticeHours?: 24 | 48 | 72;
+  noticeHours?: NoticeHours;
 };
 
 export type ExpertProfileModel = {
@@ -52,6 +59,9 @@ export type ExpertProfileModel = {
   reviews: ExpertReview[];
   missionsDone: number;
   sections: Array<{ id: ProfileSectionId; label: string; filled: boolean; missing: string; values: string[] }>;
+  legalName?: string | null;
+  siret?: string | null;
+  vatLiable?: boolean | null;
 };
 
 export type ExpertCertificationModel = {
@@ -72,7 +82,7 @@ export type ExpertSpaceData = {
   documents: ExpertDocumentItem[];
   certification: ExpertCertificationModel;
   format: SlotFormat;
-  noticeHours: 24 | 48 | 72;
+  noticeHours: NoticeHours;
 };
 
 export async function readJadeOverrides(): Promise<JadeOverrides> {
@@ -139,7 +149,7 @@ function jadeSpace(now: Date): ExpertSpaceData {
   return {
     demo: true,
     format: "visio",
-    noticeHours: 48,
+    noticeHours: 168,
     missions,
     slots: buildJadeSlots(now),
     documents: buildJadeDocuments(now),
@@ -281,7 +291,7 @@ function emptySpace(id: string, name: string): ExpertSpaceData {
   return {
     demo: false,
     format: "visio",
-    noticeHours: 48,
+    noticeHours: 168,
     missions: [],
     slots: [],
     documents: [],
@@ -301,6 +311,9 @@ function emptySpace(id: string, name: string): ExpertSpaceData {
       reviews: [],
       missionsDone: 0,
       sections: profileSections({ headline: "", specialties: [], regions: [], formats: [], dailyRate: null, photoUrl: null, bio: "" }),
+      legalName: null,
+      siret: null,
+      vatLiable: null,
     },
     certification: {
       certified: false,
@@ -350,21 +363,43 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     is_certified_beyond: expert.is_certified_beyond === true,
   });
 
-  const requests = await supabase
+  const poleState = await loadExpertPoleState();
+  void poleState;
+  let requests = await supabase
     .from("action_requests")
     .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
     .eq("expert_id", session.id)
     .order("scheduled_at", { ascending: true });
+  if (requests.error && /pole|column|schema cache/i.test(requests.error.message ?? "")) {
+    requests = await supabase
+      .from("action_requests")
+      .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
+      .eq("expert_id", session.id)
+      .order("scheduled_at", { ascending: true });
+  }
   const missions = (requests.error ? [] : (requests.data ?? [])).map((row) => mapMission(row as Record<string, unknown>, firstName)).filter((mission) => mission.status !== "annulee");
 
   let slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id,recurrence_rule").eq("expert_id", session.id);
   if (slotQuery.error && /recurrence_rule|column/i.test(slotQuery.error.message ?? "")) {
     slotQuery = await supabase.from("expert_slots").select("id,starts_at,ends_at,format,location,mission_id").eq("expert_id", session.id);
   }
-  const slots: ExpertSlot[] = tableMissing(slotQuery.error)
+  const missionIds = new Set(missions.map((mission) => mission.id));
+  const admin = getServiceRoleClient();
+  const careClients = await (admin ?? supabase).from("expert_care_clients").select("id,first_name,last_name,email").eq("expert_id", session.id);
+  const careById = new Map(
+    ((careClients.error ? [] : careClients.data) ?? []).map((row) => [
+      String(row.id),
+      [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || String(row.email ?? "Patient"),
+    ]),
+  );
+  const legacySlots: ExpertSlot[] = tableMissing(slotQuery.error)
     ? []
-    : ((slotQuery.data ?? []) as Array<Record<string, unknown>>).map((slot) => {
+    : ((slotQuery.data ?? []) as Array<Record<string, unknown>>)
+        .filter((slot) => !slot.mission_id || missionIds.has(String(slot.mission_id)))
+        .map((slot) => {
         const mission = missions.find((item) => item.id === slot.mission_id);
+        const clientId = slotClientIdFromRule(slot.recurrence_rule);
+        const storedName = slotClientNameFromRule(slot.recurrence_rule);
         return {
           id: String(slot.id),
           startsAt: String(slot.starts_at),
@@ -374,9 +409,15 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
           location: String(slot.location ?? ""),
           missionId: slot.mission_id ? String(slot.mission_id) : null,
           title: mission?.title ?? null,
-          client: mission?.client ?? null,
+          client: mission?.client ?? (clientId ? careById.get(clientId) ?? null : null) ?? storedName,
+          clientId,
         };
       });
+  const careSlots = await loadCareAgendaSlots(session.id);
+  const slots: ExpertSlot[] = [
+    ...careSlots,
+    ...legacySlots.filter((slot) => slot.kind === "formation" || Boolean(slot.missionId)),
+  ];
 
   const reviewQuery = await supabase.from("expert_reviews").select("id,client_name,rating,body,mission_label,created_at").eq("expert_id", session.id).order("created_at", { ascending: false }).limit(3);
   const reviews: ExpertReview[] = tableMissing(reviewQuery.error)
@@ -398,12 +439,12 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     { id: "badge", label: "Badge publié", detail: "Profil expert et badge vérifiable", at: certified && created ? created.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null, done: certified },
     { id: "renouvellement", label: "Renouvellement", detail: "Missions réalisées et avis clients sur la période", at: certified ? String(now.getFullYear() + 1) : null, done: false },
   ];
-  const notice = Number(meta?.notice_hours) || 48;
+  const notice = asNoticeHours(meta?.notice_hours, 168);
   const format = asFormat(meta?.agenda_format);
   return {
     demo: false,
     format,
-    noticeHours: notice === 24 || notice === 72 ? notice : 48,
+    noticeHours: notice,
     missions,
     slots,
     documents,
@@ -423,6 +464,9 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
       reviews,
       missionsDone: missions.filter((mission) => mission.status === "terminee").length,
       sections: profileSections({ headline, specialties, regions, formats, dailyRate, photoUrl, bio }),
+      legalName: meta?.legal_name ?? null,
+      siret: meta?.siret ?? null,
+      vatLiable: meta?.vat_liable ?? null,
     },
     certification: {
       certified,
@@ -435,6 +479,54 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
     },
   };
 });
+
+export async function loadExpertRevenueExtras(): Promise<RevenueLine[]> {
+  const session = await getSession();
+  const space = await loadExpertSpace();
+  const db = getServiceRoleClient();
+  const extras: RevenueLine[] = [];
+  const missionIds = new Set(space.missions.map((mission) => mission.id));
+  const rateCents = typeof space.profile.dailyRate === "number" ? Math.round(space.profile.dailyRate * 100) : 0;
+  const now = Date.now();
+  for (const slot of space.slots) {
+    if (slot.kind === "indisponible") continue;
+    if (slot.missionId && missionIds.has(slot.missionId)) continue;
+    if (!slot.client && !slot.missionId) continue;
+    const done = new Date(slot.endsAt).getTime() <= now;
+    extras.push({
+      id: `slot-${slot.id}`,
+      title: slot.title || "Rendez-vous",
+      client: slot.client || "Client",
+      at: slot.startsAt,
+      amountCents: rateCents,
+      bucket: "upcoming",
+      pill: done ? "to_invoice" : "upcoming",
+      detail: `${slot.client || "Client"} · ${new Date(slot.startsAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`,
+    });
+  }
+  if (session?.id && db) {
+    const { data, error } = await db
+      .from("expert_care_invoices")
+      .select("id,amount_cents,designation,status,sent_at,created_at,client_id")
+      .eq("expert_id", session.id);
+    if (!error) {
+      for (const row of data ?? []) {
+        const sent = Boolean(row.sent_at) || row.status === "sent";
+        extras.push({
+          id: `invoice-${row.id}`,
+          title: String(row.designation ?? "Facture"),
+          client: "Client Care",
+          at: String(row.sent_at ?? row.created_at ?? new Date().toISOString()),
+          amountCents: Number(row.amount_cents) || 0,
+          bucket: sent ? "paid" : "upcoming",
+          pill: sent ? "paid" : "to_invoice",
+          detail: sent ? "Facture envoyée" : "Facture à envoyer",
+        });
+      }
+    }
+  }
+  return extras;
+}
 
 export async function loadExpertNavCounts() {
   try {

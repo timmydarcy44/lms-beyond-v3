@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ensureCfaSignupCompany } from "@/lib/cfa/signup-company";
 import { generateOrgSlug } from "@/lib/onboarding/slug";
 
 export type EntrepriseSignupInput = {
@@ -99,6 +100,14 @@ export async function provisionEntrepriseSignup(
   if (membership.error) {
     console.warn("[provisionEntrepriseSignup] org_memberships:", membership.error.message);
   }
+
+  await ensureCfaSignupCompany(supabase, {
+    organizationId,
+    companyName: orgName,
+    email: input.email,
+    firstName: input.firstName,
+    lastName: input.lastName,
+  });
 
   return { ok: true, organizationId, trialEndsAt };
 }

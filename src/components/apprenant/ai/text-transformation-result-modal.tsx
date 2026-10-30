@@ -8,7 +8,7 @@ import { Copy, Check, X, Download, Printer, Map, Shapes, Languages, AudioLines, 
 
 import { MermaidDiagram } from "@/components/apprenant/ai/mermaid-diagram";
 import { MindmapViewer } from "@/components/apprenant/mindmap-viewer";
-import { TimelineTube } from "@/components/apprenant/timeline-tube";
+import { SchemaBoard } from "@/components/apprenant/schema-board";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -349,7 +349,7 @@ export function TextTransformationResultModal({
       case "schema":
         return (
           <div className="space-y-4">
-            <TimelineTube data={jsonResult} />
+            <SchemaBoard data={jsonResult} />
             <div className={cn("rounded-lg border p-3 text-xs", isLight ? "border-slate-200 bg-slate-50 text-slate-600" : "border-white/10 bg-white/5 text-white/70")}>Ce visuel est une proposition. Adaptez chaque étape pour correspondre à votre pédagogie.</div>
           </div>
         );

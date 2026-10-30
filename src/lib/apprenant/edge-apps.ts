@@ -14,7 +14,6 @@ import {
   HeartPulse,
   Home,
   LayoutDashboard,
-  MonitorPlay,
   Share2,
   Sparkles,
   TrendingUp,
@@ -120,9 +119,9 @@ const SKILLS_NAV: ApprenantNavItem[] = [
 
 const LEARNING_NAV: ApprenantNavItem[] = [
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
+  { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
   { label: "Mes parcours", href: "/dashboard/apprenant/parcours", icon: BookMarked },
-  { label: "Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Statistiques", href: "/dashboard/apprenant/statistiques", icon: GraduationCap },
 ];
 
@@ -241,6 +240,7 @@ export function setStoredEdgeAppId(id: EdgeAppId) {
 
 export function resolveEdgeAppFromPathname(pathname: string | null | undefined): EdgeAppId {
   const p = String(pathname ?? "");
+  const onlinePath = EDGE_ONLINE_APP_SURFACE_PATH || "/edgeonline";
 
   if (p.startsWith("/dashboard/apprenant/care") || p.startsWith("/dashboard/apprenant/beyond-care")) {
     return "care";
@@ -264,7 +264,7 @@ export function resolveEdgeAppFromPathname(pathname: string | null | undefined):
     p.startsWith("/dashboard/apprenant/parcours") ||
     p.startsWith("/dashboard/apprenant/online") ||
     p.startsWith("/dashboard/apprenant/statistiques") ||
-    p.startsWith(EDGE_ONLINE_APP_SURFACE_PATH) ||
+    p.startsWith(onlinePath) ||
     p.startsWith("/g/edgelab") ||
     p.startsWith("/g/edge-lab")
   ) {

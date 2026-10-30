@@ -1,8 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 function extractMissingColumn(message: string): string | null {
-  const match = message.match(/Could not find the '([^']+)' column/i);
-  return match?.[1] ?? null;
+  const postgrest = message.match(/Could not find the '([^']+)' column/i);
+  if (postgrest?.[1]) return postgrest[1];
+  const quoted = message.match(/column\s+"([a-zA-Z0-9_]+)"/i);
+  if (quoted?.[1]) return quoted[1];
+  const dotted = message.match(/column\s+[\w"]+\.([a-zA-Z0-9_]+)\s+does not exist/i);
+  if (dotted?.[1]) return dotted[1];
+  const plain = message.match(/column\s+([a-zA-Z0-9_]+)\s+does not exist/i);
+  return plain?.[1] ?? null;
 }
 
 function isMissingColumnError(code: string | undefined, message: string): boolean {

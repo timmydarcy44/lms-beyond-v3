@@ -12,6 +12,8 @@ export type CourseBuilderSubchapter = {
   mediaUrl?: string;
   /** Pastille verte : contenu revu et validé manuellement */
   content_validated?: boolean;
+  /** Soft delete. Les lectures ignorent les lignes dont deleted_at est renseigné. */
+  deleted_at?: string | null;
   /** Bloc pédagogique spécial (quiz, entretien expérientiel, …) */
   kind?: CourseBuilderSubchapterKind | string;
   quiz_id?: string;
@@ -50,6 +52,7 @@ export type CourseBuilderChapter = {
   mediaUrl?: string;
   /** Pastille verte : contenu revu et validé manuellement */
   content_validated?: boolean;
+  deleted_at?: string | null;
   access_start_date?: string | null;
   access_end_date?: string | null;
   unlock_condition?: ChapterUnlockCondition;
@@ -61,6 +64,7 @@ export type CourseBuilderSection = {
   title: string;
   description?: string;
   chapters: CourseBuilderChapter[];
+  deleted_at?: string | null;
 };
 
 export type CourseBuilderResource = {
@@ -154,6 +158,20 @@ export type CourseBuilderGeneralInfo = {
   parcours_only?: boolean;
   /** Si `parcours_only` : parcours de destination (dans la galaxie) */
   parcours_only_path_id?: string | null;
+  /** Présentiel, distanciel, mixte ou e-learning. */
+  delivery_format?: string;
+  /** Compétences visées, une entrée par pilule. */
+  competencies?: string[];
+  /** Publics visés, une entrée par pilule. */
+  audiences?: string[];
+  /** Modalités d'évaluation (Qualiopi). */
+  evaluation_modalities?: string;
+  /** Accessibilité (Qualiopi). */
+  accessibility?: string;
+  /** Délai d'accès annoncé à l'apprenant (Qualiopi). */
+  access_delay?: string;
+  /** Texte alternatif de la couverture. */
+  cover_alt?: string;
 };
 
 export type CourseBuilderSnapshot = {

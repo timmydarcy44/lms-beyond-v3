@@ -8,7 +8,7 @@ import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { isClubOnlyAccount, canAccessClubDashboard } from "@/lib/auth/club-access";
 import { isPartenaireOnlyAccount, canAccessPartenaireDashboard } from "@/lib/auth/partenaire-access";
-import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
+import { isCarePatientAccount, resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
 import {
   canServeClubPartenaireDashboards,
   isBeyondCenterHostname,
@@ -20,6 +20,8 @@ import {
   shouldRestrictSchoolDashboardToHandicapOnly,
 } from "@/lib/auth/school-role-type-guards";
 import { createServerClient } from "@supabase/ssr";
+import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
+import { handleByoundCareHost, redirectByoundCareOffload } from "./middleware-byoundcare";
 import { handleEdgeBsRouting, isEdgeBsHostname } from "./middleware-edgebs";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,6 +34,7 @@ async function fetchProfileForRequest(
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
   const cookieAdapter = NextResponse.next();
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
     cookies: {
       get(name) {
         return request.cookies.get(name)?.value;
@@ -163,9 +166,31 @@ export async function middleware(request: NextRequest) {
   }
 }
 
+function negotiateOpenBadgeDocument(request: NextRequest) {
+  const accept = request.headers.get("accept") ?? "";
+  const wantsJson = accept.includes("application/json") || accept.includes("application/ld+json");
+  if (!wantsJson || accept.includes("text/html")) return null;
+  const { pathname } = request.nextUrl;
+  const badge = pathname.match(/^\/badges\/([0-9a-f-]{36})$/i);
+  const badgeClass = pathname.match(/^\/badgeclasses\/([0-9a-f-]{36})$/i);
+  const id = badge?.[1] ?? badgeClass?.[1];
+  if (!id) return null;
+  const url = request.nextUrl.clone();
+  url.pathname = badge
+    ? `/api/public/credentials/${id}`
+    : `/api/public/badgeclasses/${id}`;
+  return NextResponse.rewrite(url);
+}
+
 async function runMiddleware(request: NextRequest) {
+  const badgeDocument = negotiateOpenBadgeDocument(request);
+  if (badgeDocument) return badgeDocument;
   const hostname = request.headers.get("host") || "";
   const hostWithoutPort = hostname.split(":")[0];
+  const careHostResponse = handleByoundCareHost(request);
+  if (careHostResponse) return careHostResponse;
+  const careOffload = redirectByoundCareOffload(request);
+  if (careOffload) return careOffload;
   const edgeBsHost = isEdgeBsHostname(hostWithoutPort);
 
   if (edgeBsHost) {
@@ -421,6 +446,14 @@ async function runMiddleware(request: NextRequest) {
     ) {
       return NextResponse.redirect(new URL("/dashboard/partenaire", request.url));
     }
+    if (
+      profileLocked &&
+      isCarePatientAccount(profileLocked.role, profileLocked.role_type) &&
+      url.pathname !== "/dashboard/patient" &&
+      !url.pathname.startsWith("/dashboard/patient/")
+    ) {
+      return NextResponse.redirect(new URL("/dashboard/patient", request.url));
+    }
   }
 
   if ((clubDashboardPath || partenaireDashboardPath) && SUPABASE_URL && SUPABASE_ANON_KEY) {
@@ -465,6 +498,7 @@ async function runMiddleware(request: NextRequest) {
     SUPABASE_ANON_KEY
   ) {
     const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
       cookies: {
         get(name) {
           return request.cookies.get(name)?.value;
@@ -549,6 +583,7 @@ async function runMiddleware(request: NextRequest) {
 
   if (isDashboardEcolePath && !isEcoleHandicapPath && SUPABASE_URL && SUPABASE_ANON_KEY) {
     const supabaseEcole = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
       cookies: {
         get(name) {
           return request.cookies.get(name)?.value;
@@ -608,6 +643,7 @@ async function runMiddleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/((?!api|_next|_vercel|[\\w-]+\\.\\w+).*)",
   ],
 };

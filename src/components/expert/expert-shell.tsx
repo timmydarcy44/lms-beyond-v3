@@ -8,11 +8,13 @@ import { Manrope } from "next/font/google";
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
+  Briefcase,
   CalendarDays,
-  ClipboardList,
+  ChevronDown,
   Euro,
   BookOpen,
-  FileText,
+  FolderCog,
+  HeartHandshake,
   HelpCircle,
   LayoutDashboard,
   Lock,
@@ -22,9 +24,15 @@ import {
   X,
 } from "lucide-react";
 
+import { ExpertAppleInbox } from "@/components/expert/expert-apple-inbox";
+
+import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
+import { setDashboardSpace } from "@/lib/dashboard/space";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
+
+type NavChild = { label: string; href: string };
 
 type NavItem = {
   label: string;
@@ -33,6 +41,7 @@ type NavItem = {
   external?: boolean;
   locked?: boolean;
   badge?: number;
+  children?: NavChild[];
 };
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]";
@@ -50,17 +59,25 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    setCollapsed({});
+  }, [pathname]);
+
   return (
     <nav aria-label="Navigation expert" className="flex flex-col gap-1">
       {items.map((item) => {
         const Icon = item.icon;
+        const childActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`));
+        const menuOpen =
+          Boolean(item.children?.length) && (collapsed[item.label] === undefined ? Boolean(childActive) : !collapsed[item.label]);
         const active =
           !item.external &&
           (item.href === "/dashboard/expert"
             ? pathname === "/dashboard/expert"
-            : pathname === item.href || pathname.startsWith(`${item.href}/`));
+            : pathname === item.href || pathname.startsWith(`${item.href}/`) || Boolean(childActive));
         const className = cn(
-          "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold",
+          "flex h-11 w-full items-center gap-3 rounded-full px-4 text-sm font-semibold",
           focusRing,
           active ? "bg-[#F4F5F7] font-extrabold text-[#07080B]" : "text-[#DADDE4] hover:bg-[#12141A]",
         );
@@ -86,7 +103,10 @@ function NavLinks({
         const content = (
           <>
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+            {item.children?.length ? (
+              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 opacity-70 transition-transform", menuOpen && "rotate-180")} aria-hidden />
+            ) : null}
             {badge}
           </>
         );
@@ -95,6 +115,46 @@ function NavLinks({
             <a key={item.label} href={item.href} className={className} onClick={onNavigate}>
               {content}
             </a>
+          );
+        }
+        if (item.children?.length) {
+          return (
+            <div key={item.label}>
+              <button
+                type="button"
+                className={className}
+                aria-expanded={menuOpen}
+                onClick={() =>
+                  setCollapsed((current) => ({
+                    ...current,
+                    [item.label]: menuOpen,
+                  }))
+                }
+              >
+                {content}
+              </button>
+              {menuOpen ? (
+                <div className="ml-6 mt-1 flex flex-col gap-0.5">
+                  {item.children.map((child) => {
+                    const open = pathname === child.href || pathname.startsWith(`${child.href}/`);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex h-9 items-center rounded-full px-3 text-sm font-semibold",
+                          focusRing,
+                          open ? "bg-[#1E2130] text-[#F4F5F7]" : "text-[#9096A3] hover:text-[#DADDE4]",
+                        )}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           );
         }
         return (
@@ -119,16 +179,26 @@ export function ExpertShell({
   certified,
   restricted,
   photoUrl,
+  pole = "formation",
+  memberships = [],
+  managerPoles = [],
 }: {
   children: ReactNode;
   name: string;
   certified: boolean;
   restricted: boolean;
   photoUrl?: string | null;
+  pole?: ExpertPole;
+  memberships?: ExpertMembership[];
+  managerPoles?: ExpertPole[];
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState({ missions: 0, documents: 0 });
+
+  useEffect(() => {
+    setDashboardSpace("expert");
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -156,23 +226,71 @@ export function ExpertShell({
     };
   }, [pathname]);
 
+  const hasCare = pole === "care" || memberships.some((item) => item.pole === "care" && item.status === "active");
+  const careOnly = hasCare && !memberships.some((item) => item.pole === "formation" && item.status === "active");
+  const adminChildren: NavChild[] = [{ label: "Mes documents", href: "/dashboard/expert/documents" }];
+  if (hasCare) {
+    adminChildren.push(
+      { label: "CRM", href: "/dashboard/expert/dossiers" },
+      { label: "Byound tests", href: "/dashboard/expert/tests" },
+      { label: "Facturation", href: "/dashboard/expert/facturation" },
+    );
+  }
   const items: NavItem[] = [
     { label: "Tableau de bord", href: "/dashboard/expert", icon: LayoutDashboard },
     { label: "Mon profil", href: "/dashboard/expert/profile", icon: User2 },
-    {
-      label: "Mes missions",
-      href: "/dashboard/expert/interventions",
-      icon: ClipboardList,
-      locked: restricted,
-      badge: counts.missions,
-    },
-    { label: "Mon agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
-    { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
-    { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, badge: counts.documents },
-    { label: "Formations", href: "/dashboard/expert/formations", icon: BookOpen },
-    { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
-    { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
+    { label: "Agenda", href: "/dashboard/expert/agenda", icon: CalendarDays, locked: restricted },
   ];
+  if (hasCare) {
+    items.push({
+      label: "Mes prestations",
+      href: "/dashboard/expert/prestations",
+      icon: Briefcase,
+      locked: restricted,
+    });
+    items.push({
+      label: "Byound Care",
+      href: "/dashboard/expert/care/disponibilites",
+      icon: HeartHandshake,
+      locked: restricted,
+      children: [
+        { label: "Disponibilités", href: "/dashboard/expert/care/disponibilites" },
+        { label: "Rendez-vous", href: "/dashboard/expert/care/rendez-vous" },
+      ],
+    });
+  }
+  items.push(
+    { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, locked: restricted },
+    {
+      label: "Gestion admin",
+      href: "/dashboard/expert/documents",
+      icon: FolderCog,
+      badge: counts.documents,
+      children: adminChildren,
+    },
+  );
+  if (!careOnly) {
+    items.push(
+      {
+        label: "Formations",
+        href: "/dashboard/expert/formations",
+        icon: BookOpen,
+        children: [
+          { label: "Mes formations", href: "/dashboard/expert/formations" },
+          { label: "Proposer une formation", href: "/dashboard/expert/formations/proposer" },
+          { label: "Mes résultats", href: "/dashboard/expert/resultats" },
+        ],
+      },
+      { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
+    );
+  } else {
+    items.push({
+      label: "Proposer une formation",
+      href: "/dashboard/expert/formations/proposer",
+      icon: BookOpen,
+    });
+  }
+  items.push({ label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings });
 
   const identity = (
     <div className="mb-5 flex items-center gap-3 px-2">
@@ -219,10 +337,16 @@ export function ExpertShell({
 
   return (
     <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
+      <ExpertAppleInbox />
       <div className="flex min-h-screen">
         <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
           {brand}
           {identity}
+          {managerPoles.length > 0 ? (
+            <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)}>
+              Appartenances
+            </Link>
+          ) : null}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <NavLinks items={items} />
           </div>
@@ -267,6 +391,11 @@ export function ExpertShell({
               </button>
             </div>
             {identity}
+            {managerPoles.length > 0 ? (
+              <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)} onClick={() => setOpen(false)}>
+                Appartenances
+              </Link>
+            ) : null}
             <div className="min-h-0 flex-1 overflow-y-auto">
               <NavLinks items={items} onNavigate={() => setOpen(false)} />
             </div>

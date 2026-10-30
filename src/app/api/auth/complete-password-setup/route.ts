@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COLLABORATOR_DASHBOARD_PATH } from "@/lib/entreprise/collaborator-invite";
 import { resolveDestinationFromProfile } from "@/lib/auth/post-login-redirect";
-import { getServerClient } from "@/lib/supabase/server";
+import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   const supabase = await getServerClient();
@@ -37,6 +38,13 @@ export async function POST(request: NextRequest) {
   });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  const service = getServiceRoleClient();
+  if (service) {
+    await afterSuccessfulAuth(service, { userId: user.id, email: user.email }).catch((activationError) => {
+      console.error("[complete-password-setup] tutor activation", activationError);
+    });
   }
 
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;

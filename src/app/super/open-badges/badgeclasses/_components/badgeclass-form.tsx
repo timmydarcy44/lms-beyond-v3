@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -48,7 +48,14 @@ type IssuerProfile = {
   organizationName?: string | null;
   type?: string | null;
 };
-type CourseOption = { id: string; title: string };
+type CourseOption = {
+  id: string;
+  title: string;
+  description?: string | null;
+  presentation?: string | null;
+  objectives?: string | null;
+  source?: "org" | "lms";
+};
 type ValidatorOption = {
   id: string;
   first_name?: string | null;
@@ -147,6 +154,45 @@ const statusLabel = (value: BadgeClassRecord["status"]) => {
   return "Brouillon";
 };
 
+function badgeStepForError(key: string) {
+  if (key === "criteria") return 2;
+  if (
+    key === "level" ||
+    key === "evaluationMethods" ||
+    key === "validatorExpertId" ||
+    key === "methodConfigs" ||
+    key === "requiredCourseId"
+  ) {
+    return 3;
+  }
+  return 1;
+}
+
+function CourseSelectItems({ courses }: { courses: CourseOption[] }) {
+  const lms = courses.filter((course) => course.source === "lms");
+  const org = courses.filter((course) => course.source !== "lms");
+  return (
+    <>
+      {lms.length ? (
+        <SelectGroup>
+          <SelectLabel>LMS Byound</SelectLabel>
+          {lms.map((course) => (
+            <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+          ))}
+        </SelectGroup>
+      ) : null}
+      {org.length ? (
+        <SelectGroup>
+          <SelectLabel>Formations du club</SelectLabel>
+          {org.map((course) => (
+            <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+          ))}
+        </SelectGroup>
+      ) : null}
+    </>
+  );
+}
+
 const ensureCriteriaIds = (items: BadgeCriteriaInput[]): BadgeCriteriaInput[] =>
   items.map((item, index) => ({
     ...item,
@@ -183,11 +229,13 @@ export function BadgeClassForm({
   const [status, setStatus] = useState<BadgeClassRecord["status"]>("DRAFT");
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [requiresEnrollment, setRequiresEnrollment] = useState(false);
+  const [formationChoice, setFormationChoice] = useState<"unset" | "existing" | "new">(badgeClassId ? "new" : "unset");
   const [requiredCourseId, setRequiredCourseId] = useState<string | null>(null);
   const [failureRemediationCourseId, setFailureRemediationCourseId] = useState<string | null>(null);
   const [visibleInLearnerDashboard, setVisibleInLearnerDashboard] = useState(false);
   const [receivabilityReviewMode, setReceivabilityReviewMode] = useState<"HUMAN" | "AI" | "MIXED">("HUMAN");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [step, setStep] = useState(1);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -269,7 +317,15 @@ export function BadgeClassForm({
     const loadOrganizations = async () => {
       const res = await fetch("/api/super-admin/organisations?internal_badges_only=1");
       const json = await res.json();
-      setOrganizations(json.organizations ?? []);
+      const orgs = (json.organizations ?? []) as Organization[];
+      setOrganizations(orgs);
+      if (!badgeClassId) {
+        setOrganizationId((current) => {
+          if (current) return current;
+          const byound = orgs.find((org) => formatOrganizationDisplayName(org.name) === "Byound");
+          return byound?.id ?? orgs[0]?.id ?? "";
+        });
+      }
     };
     const loadValidators = async () => {
       const res = await fetch("/api/super-admin/validators");
@@ -321,6 +377,29 @@ export function BadgeClassForm({
     clearFieldError("methodConfigs");
   };
 
+  const fillFromCourse = (courseId: string) => {
+    setRequiredCourseId(courseId || null);
+    const course = courses.find((item) => item.id === courseId);
+    if (!course) return;
+    if (!organizationId) {
+      const byound = organizations.find((org) => formatOrganizationDisplayName(org.name) === "Byound");
+      if (byound) setOrganizationId(byound.id);
+    }
+    setRequiresEnrollment(true);
+    if (course.title) setName(course.title.replace(/^LMS · /, ""));
+    const text = [course.description, course.presentation, course.objectives]
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (Array.isArray(item)) return item.map((entry) => (typeof entry === "string" ? entry : "")).filter(Boolean).join("\n");
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n\n");
+    if (!text) return;
+    setDescription(text.slice(0, 800));
+    setCriteria([{ id: crypto.randomUUID(), label: "Valider la formation", description: text.slice(0, 500), sortOrder: 0 }]);
+  };
+
   const qcmConfig = methodConfigs.find((c) => c.methodId === "qcm");
   const qcmThresholdMissing =
     evaluationMethods.includes("qcm") &&
@@ -329,15 +408,15 @@ export function BadgeClassForm({
 
 
   useEffect(() => {
-    if (!organizationId) return;
     const loadCourses = async () => {
-      const res = await fetch(`/api/admin/courses?organizationId=${organizationId}`, {
-        headers: createHeaders(auth, organizationId),
+      const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
+      const res = await fetch(`/api/admin/courses${query}`, {
+        headers: createHeaders(auth, organizationId || auth.userId),
       });
       const json = await res.json();
       setCourses(json.courses ?? []);
     };
-    loadCourses();
+    void loadCourses();
   }, [organizationId, auth]);
 
   useEffect(() => {
@@ -672,13 +751,13 @@ export function BadgeClassForm({
       ];
       const firstKey = order.find((key) => nextErrors[key]);
       if (firstKey) {
-        const target = document.getElementById(`field-${firstKey}`);
-        if (target) {
+        setStep(badgeStepForError(firstKey));
+        window.setTimeout(() => {
+          const target = document.getElementById(`field-${firstKey}`);
+          if (!target) return;
           target.scrollIntoView({ behavior: "smooth", block: "center" });
-          if ("focus" in target) {
-            (target as HTMLElement).focus();
-          }
-        }
+          if ("focus" in target) (target as HTMLElement).focus();
+        }, 80);
       }
       toast.error("Merci de compléter les champs obligatoires.");
       return false;
@@ -724,16 +803,19 @@ export function BadgeClassForm({
         const errorCode = (json?.error as string | undefined) ?? undefined;
         if (errorCode === "AI_PROMPT_REQUIRED") {
           setErrors((prev) => ({ ...prev, methodConfigs: "Configurez chaque méthode d’évaluation." }));
+          setStep(3);
           toast.error("Configurez chaque méthode d’évaluation.");
           return;
         }
         if (errorCode === "REQUIRED_COURSE_ID" || errorCode === "REQUIRED_COURSE_MISSING") {
           setErrors((prev) => ({ ...prev, requiredCourseId: "Formation requise." }));
+          setStep(3);
           toast.error("Formation requise.");
           return;
         }
         if (errorCode === "COURSE_NOT_FOUND") {
           setErrors((prev) => ({ ...prev, requiredCourseId: "Formation introuvable." }));
+          setStep(3);
           toast.error("Formation introuvable.");
           return;
         }
@@ -741,6 +823,7 @@ export function BadgeClassForm({
           const field = (json?.field as string | undefined) ?? undefined;
           if (field === "name") {
             setErrors((prev) => ({ ...prev, name: "Un badge avec ce nom existe déjà." }));
+            setStep(1);
           }
         }
         if (errorCode === "FK_INVALID") {
@@ -808,8 +891,31 @@ export function BadgeClassForm({
     }
   };
 
+  const badgeSteps = [
+    { id: 1, label: "Identité" },
+    { id: 2, label: "Critères" },
+    { id: 3, label: "Évaluation" },
+    { id: 4, label: "Aperçu" },
+  ] as const;
+
   return (
-    <div className="space-y-6 text-slate-900">
+    <div className="super-lms-light space-y-6 rounded-[28px] bg-[#F4F4F1] p-4 text-[#07080B] md:p-6">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Étapes du badge">
+        {badgeSteps.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={step === item.id}
+            onClick={() => setStep(item.id)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${step === item.id ? "bg-[#07080B] text-white" : "border border-[#E3E0D8] bg-white text-[#07080B]"}`}
+          >
+            {item.id}. {item.label}
+          </button>
+        ))}
+      </div>
+      {step === 1 ? (
+      <>
       <Card className="border-violet-200 bg-gradient-to-br from-violet-50/80 to-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-slate-900 flex items-center gap-2">
@@ -845,6 +951,33 @@ export function BadgeClassForm({
           <CardTitle className="text-slate-900">Informations principales</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!badgeClassId ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Rattacher ce badge à une formation déjà existante ?</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" variant={formationChoice === "existing" ? "default" : "outline"} onClick={() => setFormationChoice("existing")}>
+                  Oui, une formation existante
+                </Button>
+                <Button type="button" variant={formationChoice === "new" ? "default" : "outline"} onClick={() => { setFormationChoice("new"); setRequiredCourseId(null); }}>
+                  Non, sans formation
+                </Button>
+              </div>
+              {formationChoice === "existing" ? (
+                <div className="mt-4 space-y-2">
+                  <Label className="text-slate-900">Formation</Label>
+                  <Select value={requiredCourseId ?? ""} onValueChange={fillFromCourse}>
+                    <SelectTrigger className="border-slate-300 bg-white text-slate-900">
+                      <SelectValue placeholder={courses.length ? "Choisir la formation" : "Chargement des formations…"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <CourseSelectItems courses={courses} />
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">Le nom, la description et le critère du badge reprennent ce qui existe déjà sur la formation.</p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-slate-900">Club / Organisation</Label>
@@ -982,11 +1115,7 @@ export function BadgeClassForm({
                     <SelectValue placeholder="Sélectionner une formation" />
                   </SelectTrigger>
                   <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
+                    <CourseSelectItems courses={courses} />
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-muted-foreground">
@@ -1031,11 +1160,7 @@ export function BadgeClassForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Aucune</SelectItem>
-                  {courses.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>
-                      {course.title}
-                    </SelectItem>
-                  ))}
+                  <CourseSelectItems courses={courses} />
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
@@ -1144,10 +1269,13 @@ export function BadgeClassForm({
           ) : null}
         </CardContent>
       </Card>
+      </>
+      ) : null}
 
+      {step === 2 ? (
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-slate-900">Critères détaillés (optionnel)</CardTitle>
+          <CardTitle className="text-slate-900">Critères détaillés</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -1210,7 +1338,9 @@ export function BadgeClassForm({
           </Button>
         </CardContent>
       </Card>
+      ) : null}
 
+      {step === 3 ? (
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
           <CardTitle className="text-slate-900">Évaluation & validation</CardTitle>
@@ -1403,6 +1533,7 @@ export function BadgeClassForm({
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
       <EvaluationMethodConfigDialog
         open={configDialogOpen}
@@ -1417,23 +1548,25 @@ export function BadgeClassForm({
         onSave={saveMethodConfig}
       />
 
-      <Card className="border border-zinc-700 bg-zinc-800 shadow-lg text-zinc-100">
-        <CardHeader className="border-b border-zinc-700/80 pb-4">
-          <CardTitle className="text-lg font-semibold text-white">
-            Aperçu (informations du badge)
+      {step === 4 ? (
+      <>
+      <Card className="border border-[#E3E0D8] bg-white text-[#07080B] shadow-sm">
+        <CardHeader className="border-b border-[#E3E0D8] pb-4">
+          <CardTitle className="text-lg font-semibold text-[#07080B]">
+            Aperçu
           </CardTitle>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[#6B6F7A]">
             Résumé du verso du badge tel qu&apos;il sera présenté.
           </p>
         </CardHeader>
         <CardContent className="space-y-5 pt-6 text-sm">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Nom du badge</p>
-            <p className="text-base font-semibold text-white">{name.trim() || "—"}</p>
+            <p className="text-base font-semibold text-[#07080B]">{name.trim() || "—"}</p>
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Niveau</p>
-            <p className="text-white">{level ? `Niveau ${level}` : "—"}</p>
+            <p className="text-[#07080B]">{level ? `Niveau ${level}` : "—"}</p>
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Description</p>
@@ -1520,10 +1653,19 @@ export function BadgeClassForm({
           organizationId={organizationId}
         />
       ) : null}
+      </>
+      ) : null}
 
-      <Separator />
-
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          disabled={step === 1}
+          onClick={() => setStep((current) => Math.max(1, current - 1))}
+          className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold text-[#07080B] disabled:opacity-40"
+        >
+          Précédent
+        </button>
+        <div className="flex flex-wrap gap-3">
         <Button onClick={() => saveBadge("DRAFT")} disabled={loading || imageUploading}>
           Enregistrer (brouillon)
         </Button>
@@ -1541,6 +1683,15 @@ export function BadgeClassForm({
         >
           Archiver
         </Button>
+        </div>
+        <button
+          type="button"
+          disabled={step === 4}
+          onClick={() => setStep((current) => Math.min(4, current + 1))}
+          className="rounded-full bg-[#07080B] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+        >
+          Suivant
+        </button>
       </div>
     </div>
   );

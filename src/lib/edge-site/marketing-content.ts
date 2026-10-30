@@ -22,6 +22,7 @@ export type MarketingPageContent = {
   };
   sections: MarketingSection[];
   ctas?: MarketingCta[];
+  faq?: Array<{ question: string; answer: string }>;
 };
 
 export function marketingMetadata(content: MarketingPageContent): Metadata {

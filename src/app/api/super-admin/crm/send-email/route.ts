@@ -3,6 +3,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendEmail } from "@/lib/email/resend-client";
 import { getCrmUsers } from "@/lib/queries/super-admin";
 import { formatCrmRoleLabel } from "@/lib/crm/crm-shared";
+import { edgeEmailBrand } from "@/lib/emails/edge-email-shell";
 
 type InlineImage = {
   id?: string;
@@ -46,7 +47,7 @@ function buildCampaignEmail(title: string, bodyHtml: string): string {
     <tr><td style="padding:48px 24px 64px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;margin:0 auto;">
         <tr><td>
-          <p style="margin:0 0 28px;font-size:22px;font-weight:700;letter-spacing:-0.03em;color:#0b0b0c;">Byound</p>
+          ${edgeEmailBrand("light")}
           ${heading}
           ${bodyHtml}
           <p style="margin:40px 0 0;padding-top:24px;border-top:1px solid #ececec;font-size:13px;line-height:1.5;color:#6b6f7a;">

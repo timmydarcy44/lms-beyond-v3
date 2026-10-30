@@ -12,6 +12,8 @@ import { FormationStudio } from "./formation-studio";
 import type { Episode } from "./view";
 import { edgeOnlinePublicHref, type EdgeOnlineHrefPrefix } from "@/lib/edge-online-public-path";
 
+export const dynamic = "force-dynamic";
+
 const CATEGORY_LABEL: Record<LearnerCategory, string> = {
   formations: "Formation",
   parcours: "Parcours",

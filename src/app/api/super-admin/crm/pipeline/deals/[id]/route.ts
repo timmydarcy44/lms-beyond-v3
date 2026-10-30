@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-fields";
 import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
+import { syncSchoolCompany } from "@/lib/cfa/sync-school-company";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { ensureQualiopiSessionForDeal, isSignedDealStage } from "@/lib/crm/qualiopi-sessions";
 import {
@@ -87,6 +88,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
   if (body?.email !== undefined) patch.email = body.email ? String(body.email).trim() : null;
   if (body?.phone !== undefined) patch.phone = body.phone ? String(body.phone).trim() : null;
+  if (body?.offers_business !== undefined) patch.offers_business = body.offers_business === true;
+  if (body?.offers_school !== undefined) patch.offers_school = body.offers_school === true;
   if (body?.notes !== undefined) patch.notes = body.notes ? String(body.notes).trim() : null;
   if (body?.sort_order != null) patch.sort_order = Number(body.sort_order);
 
@@ -102,7 +105,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   const { data, error } = await updatePipelineDeal(supabase, id, patch);
 
+  if (error && /offers_business|offers_school/i.test(error.message)) {
+    return NextResponse.json({ error: "Collez d'abord le script SQL des cases Business et School." }, { status: 400 });
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  if (data?.offers_school === true) {
+    await syncSchoolCompany(supabase, data);
+  }
 
   const prevStage = existingDeal?.stage_slug ? String(existingDeal.stage_slug) : null;
   const nextStage = String(data?.stage_slug ?? patch.stage_slug ?? "");

@@ -10,7 +10,10 @@ import {
   COLLABORATOR_INVITE_FLOW,
   isCollaboratorInviteMetadata,
 } from "@/lib/entreprise/collaborator-invite";
+import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
 import { env } from "@/lib/env";
+import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isJessicaMarketingHostname } from "@/lib/jessica-contentin/studio-config";
 
 export async function GET(request: NextRequest) {
@@ -27,6 +30,7 @@ export async function GET(request: NextRequest) {
     const cookieCarrier = NextResponse.next();
 
     const supabase = createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -47,6 +51,12 @@ export async function GET(request: NextRequest) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    const service = getServiceRoleClient();
+    if (service && user?.id) {
+      await afterSuccessfulAuth(service, { userId: user.id, email: user.email }).catch((error) => {
+        console.error("[auth/callback] tutor activation", error);
+      });
+    }
     const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
     const isInvite =
       type === "invite" ||

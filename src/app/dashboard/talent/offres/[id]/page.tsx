@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Target, Zap } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { TalentDashboardShell } from "@/components/beyond-connect/talent-dashboard-shell";
@@ -22,6 +22,8 @@ type JobOffer = {
 
 export default function TalentOfferDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const preview = searchParams.get("apercu") === "1";
   const supabase = useSupabase();
   const [offer, setOffer] = useState<JobOffer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,14 +32,44 @@ export default function TalentOfferDetailPage() {
 
   useEffect(() => {
     const loadOffer = async () => {
-      if (!supabase) return;
+      if (!supabase && !preview) return;
       setLoading(true);
+      if (preview) {
+        const res = await fetch(`/api/dashboard/entreprise/job-offers/${params.id}`, { credentials: "include" });
+        if (res.ok) {
+          const json = (await res.json()) as { offer?: JobOffer };
+          if (json.offer) {
+            const contract = String(json.offer.contract_type ?? "");
+            setOffer({
+              ...json.offer,
+              company_name: null,
+              salary_range: /alternance|apprentissage/i.test(contract) ? "Selon l'âge et l'année du contrat" : json.offer.salary_range,
+            });
+            setLoading(false);
+            return;
+          }
+        }
+      }
+      if (!supabase) {
+        setOffer(null);
+        setLoading(false);
+        return;
+      }
       const { data } = await supabase
         .from("job_offers")
         .select("id, title, city, contract_type, salary_range, description, requirements")
         .eq("id", params.id)
         .maybeSingle();
-      setOffer(data || null);
+      const revealed = await fetch(`/api/candidat/entreprise?jobId=${params.id}`, { credentials: "include" })
+        .then((res) => res.json() as Promise<{ companies?: Array<{ companyName: string }> }>)
+        .catch(() => ({ companies: [] as Array<{ companyName: string }> }));
+      const companyName = revealed.companies?.[0]?.companyName ?? null;
+      const contract = String(data?.contract_type ?? "");
+      setOffer(data ? {
+        ...data,
+        company_name: companyName,
+        salary_range: /alternance|apprentissage/i.test(contract) ? "Selon l'âge et l'année du contrat" : data.salary_range,
+      } : null);
       const { data: userData } = await supabase.auth.getUser();
       if (userData?.user?.id) {
         const { data: existing } = await supabase
@@ -51,7 +83,7 @@ export default function TalentOfferDetailPage() {
       setLoading(false);
     };
     loadOffer();
-  }, [supabase, params.id]);
+  }, [supabase, params.id, preview]);
 
   const handleApply = async () => {
     if (!supabase || applying || applied || !offer) return;
@@ -91,6 +123,11 @@ export default function TalentOfferDetailPage() {
           Retour aux offres
         </Link>
 
+        {preview ? (
+          <p className="rounded-2xl bg-[#EEEBFF] px-4 py-3 text-sm font-semibold text-[#4B3BD1]">
+            Prévisualisation. Le bouton de candidature est inactif.
+          </p>
+        ) : null}
         {loading ? (
           <div className="rounded-2xl border border-gray-100 bg-white p-6 text-sm text-gray-500 shadow-sm">
             Chargement...
@@ -105,9 +142,9 @@ export default function TalentOfferDetailPage() {
                 </span>
               </div>
               <p className="mt-2 text-sm text-gray-500">{offer.city || "Ville non precisee"}</p>
-              {!offer.company_hidden_from_learner && offer.company_name?.trim() ? (
-                <p className="mt-1 text-sm font-medium text-gray-700">{offer.company_name.trim()}</p>
-              ) : null}
+              <p className="mt-1 text-sm font-medium text-gray-700">
+                {offer.company_name?.trim() || "Entreprise partenaire"}
+              </p>
 
               <div className="mt-8 space-y-6 text-sm text-black/70">
                 <section>
@@ -145,14 +182,14 @@ export default function TalentOfferDetailPage() {
               <button
                 type="button"
                 onClick={handleApply}
-                disabled={applied || applying}
+                disabled={preview || applied || applying}
                 className={`mt-6 inline-flex w-full items-center justify-center rounded-2xl py-4 text-base font-semibold shadow-xl transition ${
-                  applied
+                  preview || applied
                     ? "cursor-not-allowed bg-gray-200 text-gray-500"
                     : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-[1.01]"
                 }`}
               >
-                {applied ? "Candidature envoyée ✅" : applying ? "Envoi en cours..." : "Postuler a cette offre"}
+                {preview ? "Prévisualisation" : applied ? "Candidature envoyée ✅" : applying ? "Envoi en cours..." : "Postuler a cette offre"}
               </button>
             </div>
           </div>

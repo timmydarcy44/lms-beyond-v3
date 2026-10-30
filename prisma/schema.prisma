@@ -74,6 +74,8 @@ model User {
   createdBadgeClasses    BadgeClass[] @relation("BadgeClassCreator")
 }
 
+/// DEPRECATED — plan seulement. Les badges vivent dans Supabase
+/// (open_badges, badge_issuers, badge_assertions). Ne pas migrer ces modèles.
 model IssuerProfile {
   id          String   @id @default(uuid())
   orgId       String

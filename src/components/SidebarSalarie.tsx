@@ -23,8 +23,8 @@ export default function SidebarSalarie() {
             href={item.href}
             onClick={() => setOpen(false)}
             className={cn(
-              "flex h-11 items-center gap-3 rounded-full px-3 text-sm font-semibold text-[#B5BAC6]",
-              active && "bg-[#1E2130] font-extrabold text-white",
+              "flex h-11 items-center gap-3 rounded-full px-4 text-sm font-semibold text-[#B5BAC6]",
+              active && "bg-[#6E5BFF] font-extrabold text-white",
             )}
           >
             <Icon size={18} strokeWidth={1.75} />

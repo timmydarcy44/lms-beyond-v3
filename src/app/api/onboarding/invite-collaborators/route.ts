@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
-import {
-  buildCollaboratorInviteMetadata,
-  buildCollaboratorSetPasswordUrl,
-} from "@/lib/entreprise/collaborator-invite";
-import { syncCollaboratorProfileAfterInvite } from "@/lib/entreprise/sync-collaborator-profile";
-import { sendCollaboratorInviteEmail } from "@/lib/onboarding/emails";
-import { appOrigin } from "@/lib/onboarding/slug";
+import { deliverCollaboratorInvite } from "@/lib/entreprise/deliver-collaborator-invite";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +49,6 @@ export async function POST(request: NextRequest) {
     .not("email", "is", null);
 
   const withEmail = (employees ?? []).filter((e) => e.email && String(e.email).includes("@"));
-  const origin = appOrigin();
   let sent = 0;
   const failures: string[] = [];
 
@@ -63,37 +56,17 @@ export async function POST(request: NextRequest) {
     const email = String(emp.email).trim().toLowerCase();
     const firstName = String(emp.first_name ?? "").trim();
     try {
-      const setPasswordUrl = buildCollaboratorSetPasswordUrl(origin);
-      const inviteMetadata = buildCollaboratorInviteMetadata({
-        firstName,
-        organizationId: organisationId,
-        employeeId: emp.id,
-      });
-      const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
-        data: inviteMetadata,
-        redirectTo: setPasswordUrl,
-      });
-      if (inviteErr) {
-        failures.push(`${email}: ${inviteErr.message}`);
-        continue;
-      }
-      const invitedUserId = inviteData?.user?.id;
-      if (invitedUserId) {
-        await syncCollaboratorProfileAfterInvite(service, {
-          userId: invitedUserId,
-          email,
-          firstName,
-          lastName: "",
-          organizationId: organisationId,
-          employeeId: emp.id,
-        });
-      }
-      await sendCollaboratorInviteEmail({
+      const invite = await deliverCollaboratorInvite(service, {
         email,
         firstName,
         companyName: String(org.name),
-        inviteLink: setPasswordUrl,
+        organizationId: organisationId,
+        employeeId: emp.id,
       });
+      if (!invite.sent) {
+        failures.push(`${email}: ${invite.error ?? "envoi refusé"}`);
+        continue;
+      }
       sent += 1;
     } catch (e) {
       failures.push(`${email}: ${e instanceof Error ? e.message : "erreur"}`);

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Manrope } from "next/font/google";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import {
   EnterpriseEmployeeMissions,
@@ -22,7 +23,14 @@ import {
   resolveIdmcAxisMasteryLevel,
   type AxisKey,
 } from "@/lib/idmc/idmc-display";
+import { EmployeeHeader, ProfileTabs, parseEmployeeTab, type EmployeeTabId } from "@/components/salarie/employee-fiche-chrome";
+import { OverviewSkeleton } from "@/components/salarie/employee-fiche-blocks";
+import { EmployeeOverview } from "@/components/salarie/employee-overview";
+import { EmployeeSkills } from "@/components/salarie/employee-skills";
+import { EmployeeTests } from "@/components/salarie/employee-tests";
+import { EmployeeFollow } from "@/components/salarie/employee-follow";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Briefcase,
   Building2,
@@ -34,14 +42,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  ResponsiveContainer,
-} from "recharts";
+const manrope = Manrope({ subsets: ["latin"] });
 
 type EmployeeRow = {
   id: string;
@@ -53,6 +54,7 @@ type EmployeeRow = {
   job_title: string | null;
   department: string | null;
   metier?: string | null;
+  profile_id?: string | null;
 };
 
 type DiagnosticResultsJson = Partial<
@@ -80,10 +82,32 @@ function clamp01(n: number) {
 
 function scoreToVigilance(stressScore: number | null | undefined) {
   const v = typeof stressScore === "number" ? stressScore : null;
-  if (v == null) return { label: "Attention", tone: "amber" as const };
-  if (v < 30) return { label: "Critique", tone: "red" as const };
-  if (v < 60) return { label: "Attention", tone: "amber" as const };
-  return { label: "OK", tone: "emerald" as const };
+  if (v == null) {
+    return {
+      label: "Non mesurée",
+      tone: "amber" as const,
+      hint: "Le score de gestion du stress n'est pas encore disponible. La vigilance se calcule à partir de cet axe IDMC.",
+    };
+  }
+  if (v < 30) {
+    return {
+      label: "Critique",
+      tone: "red" as const,
+      hint: `Gestion du stress à ${Math.round(v)}/100. Le niveau est bas : un échange sur la charge est recommandé. Ce n'est pas un diagnostic médical.`,
+    };
+  }
+  if (v < 60) {
+    return {
+      label: "Attention",
+      tone: "amber" as const,
+      hint: `Gestion du stress à ${Math.round(v)}/100. Le niveau est fragile : la charge et le suivi méritent d'être allégés. Ce n'est pas un diagnostic médical.`,
+    };
+  }
+  return {
+    label: "OK",
+    tone: "emerald" as const,
+    hint: `Gestion du stress à ${Math.round(v)}/100. Le niveau mesuré est stable.`,
+  };
 }
 
 function initials(first?: string | null, last?: string | null) {
@@ -159,31 +183,6 @@ function ProgressRing({ value }: { value: number }) {
   );
 }
 
-function BehavioralRadar({
-  disc,
-}: {
-  disc: { D: number; I: number; S: number; C: number };
-}) {
-  const data = [
-    { axis: "Décisionnel", score: Math.round(disc.D) },
-    { axis: "Relationnel", score: Math.round(disc.I) },
-    { axis: "Stable", score: Math.round(disc.S) },
-    { axis: "Structuré", score: Math.round(disc.C) },
-  ];
-  return (
-    <div className="h-[280px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <RadarChart data={data}>
-          <PolarGrid stroke="rgba(15,23,42,0.10)" />
-          <PolarAngleAxis dataKey="axis" tick={{ fill: "rgba(15,23,42,0.8)", fontSize: 12 }} />
-          <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-          <Radar dataKey="score" stroke="#0f766e" fill="rgba(15,118,110,0.22)" strokeWidth={2} />
-        </RadarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
 function SoftSkillsRanking({ skills }: { skills: Array<{ skill: string; score: number }> }) {
   const ranked = [...skills].sort((a, b) => b.score - a.score);
   return (
@@ -214,11 +213,16 @@ function SoftSkillsRanking({ skills }: { skills: Array<{ skill: string; score: n
 export default function SalarieDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = parseEmployeeTab(searchParams.get("tab"));
 
   const employeeId = params?.id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [saveRequest, setSaveRequest] = useState(0);
+  const [resendingInvite, setResendingInvite] = useState(false);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
   const [hasDiagnostics, setHasDiagnostics] = useState(false);
@@ -229,6 +233,9 @@ export default function SalarieDetailPage() {
     idmc_score: number | null;
     idmc_axes?: Record<string, number> | null;
     soft_skills: Array<{ skill: string; score: number }>;
+    disc_at?: string | null;
+    idmc_at?: string | null;
+    soft_skills_at?: string | null;
   } | null>(null);
   const [metierMatch, setMetierMatch] = useState<{
     id: string;
@@ -240,7 +247,16 @@ export default function SalarieDetailPage() {
   const [inclusion, setInclusion] = useState<EmployeeInclusionProfile | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [recommendedAction, setRecommendedAction] = useState<RecommendedActionRow | null>(null);
+  const [formationsInProgress, setFormationsInProgress] = useState(0);
+  const [assignedFormations, setAssignedFormations] = useState<Array<{ id: string; title: string; progress: number }>>([]);
+  const [interviewSignal, setInterviewSignal] = useState(0);
+  const [declaredSkills, setDeclaredSkills] = useState(0);
+  const [badgesEarned, setBadgesEarned] = useState(0);
+  const [activity, setActivity] = useState<Array<{ id: string; label: string; at: string }>>([]);
+  const [byoundSkills, setByoundSkills] = useState<Array<{ name: string; status: "declared" | "proof" | "badge" }>>([]);
+  const [inclusionSignal, setInclusionSignal] = useState(0);
   const [shareConsent, setShareConsent] = useState(false);
+  const [shareConsentAt, setShareConsentAt] = useState<string | null>(null);
   const [profileAnalysisLoading, setProfileAnalysisLoading] = useState(false);
   const [profileAnalysisError, setProfileAnalysisError] = useState<string | null>(null);
   const [profileAnalysis, setProfileAnalysis] = useState<{
@@ -250,6 +266,7 @@ export default function SalarieDetailPage() {
     updatedAt: string | null;
     cached: boolean;
   } | null>(null);
+  const [demoFiche, setDemoFiche] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -270,8 +287,11 @@ export default function SalarieDetailPage() {
             idmc_score: number | null;
             idmc_axes?: Record<string, number> | null;
             soft_skills: Array<{ skill: string; score: number }>;
+            disc_at?: string | null;
+            idmc_at?: string | null;
+            soft_skills_at?: string | null;
           };
-          test_status?: { share_consent?: boolean };
+          test_status?: { share_consent?: boolean; share_consent_at?: string | null };
           missions?: EmployeeMission[];
           hr_documents?: HrDocument[];
           inclusion?: EmployeeInclusionProfile | null;
@@ -280,6 +300,20 @@ export default function SalarieDetailPage() {
             id: string;
             title: string;
             soft_skill_gaps: SoftSkillGap[];
+          } | null;
+          formations_in_progress?: number;
+          assigned_formations?: Array<{ id: string; title: string; progress: number }>;
+          declared_skills?: number;
+          badges_earned?: number;
+          activity?: Array<{ id: string; label: string; at: string }>;
+          byound_skills?: Array<{ name: string; status: "declared" | "proof" | "badge" }>;
+          demo?: boolean;
+          profile_analysis?: {
+            strengths: string[];
+            improvements: string[];
+            summary: string | null;
+            updatedAt: string | null;
+            cached: boolean;
           } | null;
           error?: string;
         };
@@ -298,6 +332,9 @@ export default function SalarieDetailPage() {
           setHasDiagnostics(Boolean(payload.has_diagnostics));
           setPendingShareConsent(Boolean(payload.pending_share_consent));
           setShareConsent(Boolean(payload.test_status?.share_consent));
+          setShareConsentAt(
+            payload.test_status?.share_consent ? payload.test_status.share_consent_at ?? null : null,
+          );
           setTestResults(payload.test_results ?? null);
           setMetierMatch(payload.metier_match ?? null);
           setProfileAnalysis(null);
@@ -306,6 +343,14 @@ export default function SalarieDetailPage() {
           setHrDocuments(payload.hr_documents ?? []);
           setInclusion(payload.inclusion ?? null);
           setRecommendedAction(payload.recommended_action ?? null);
+          setFormationsInProgress(Number(payload.formations_in_progress ?? 0));
+          setAssignedFormations(payload.assigned_formations ?? []);
+          setDeclaredSkills(Number(payload.declared_skills ?? 0));
+          setBadgesEarned(Number(payload.badges_earned ?? 0));
+          setActivity(payload.activity ?? []);
+          setByoundSkills(payload.byound_skills ?? []);
+          setDemoFiche(Boolean(payload.demo));
+          if (payload.profile_analysis) setProfileAnalysis(payload.profile_analysis);
           setEditing(false);
         }
       } catch {
@@ -321,7 +366,7 @@ export default function SalarieDetailPage() {
   }, [employeeId]);
 
   useEffect(() => {
-    if (!employeeId || !shareConsent || !hasDiagnostics) return;
+    if (!employeeId || demoFiche || !shareConsent || !hasDiagnostics) return;
 
     let cancelled = false;
     async function loadProfileAnalysis() {
@@ -367,7 +412,14 @@ export default function SalarieDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [employeeId, shareConsent, hasDiagnostics]);
+  }, [employeeId, shareConsent, hasDiagnostics, demoFiche]);
+
+  useEffect(() => {
+    if (tab !== "tests" || !employeeId) return;
+    void fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/test-views`, {
+      method: "POST",
+    });
+  }, [tab, employeeId]);
 
   const displayEmployee = employee;
   const latest = diagnostics[0] ?? null;
@@ -393,26 +445,22 @@ export default function SalarieDetailPage() {
     });
   }, [testResults?.idmc_axes]);
 
-  const radarData = useMemo(
-    () => idmcAxesList.map((d) => ({ skill: d.label, score: d.score })),
-    [idmcAxesList],
-  );
-
   const aiInsight = useMemo(() => {
     if (!hasDiagnostics) return null;
     const weakIdmc = [...idmcAxesList].sort((a, b) => a.score - b.score)[0];
     const weakSoft = [...(testResults?.soft_skills ?? [])].sort((a, b) => a.score - b.score)[0];
+    const subject = employee?.first_name?.trim() || "Ce collaborateur";
     if (weakIdmc && weakIdmc.score < 55) {
-      return `Priorité IDMC : renforcer « ${weakIdmc.label} » (${weakIdmc.score}/100 — ${weakIdmc.mastery}).`;
+      return `Priorité IDMC pour ${subject} : renforcer « ${weakIdmc.label} » (${weakIdmc.score}/100 — ${weakIdmc.mastery}).`;
     }
     if (weakSoft && weakSoft.score < 60) {
-      return `Priorité soft skills : travailler « ${weakSoft.skill} » (${Math.round(weakSoft.score)}/15).`;
+      return `Priorité soft skills pour ${subject} : travailler « ${weakSoft.skill} » (${Math.round(weakSoft.score)}/15).`;
     }
     if (stressScore != null && stressScore < 50) {
-      return "Gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.";
+      return `${subject} gagne en efficacité quand la charge est stabilisée et que les attentes sont explicites.`;
     }
-    return "Progresse plus vite avec des consignes concrètes, un suivi régulier et un plan ciblé sur 1–2 axes faibles.";
-  }, [hasDiagnostics, idmcAxesList, testResults?.soft_skills, stressScore]);
+    return `${subject} progresse plus vite avec des consignes concrètes, un suivi régulier et un plan ciblé sur 1 ou 2 axes faibles.`;
+  }, [hasDiagnostics, idmcAxesList, testResults?.soft_skills, stressScore, employee?.first_name]);
 
   const actionBlock = useMemo(() => {
     if (!hasDiagnostics) return null;
@@ -467,7 +515,9 @@ export default function SalarieDetailPage() {
     return (
       <div className="flex min-h-screen bg-[#f7f7f5]">
         <EnterpriseSidebar />
-        <main className="flex-1 px-8 py-10 lg:pl-[280px] text-sm text-gray-500">Chargement…</main>
+        <main className={`${manrope.className} flex-1 bg-[#F4F4F1] px-8 py-10 lg:pl-[280px]`}>
+          <OverviewSkeleton />
+        </main>
       </div>
     );
   }
@@ -492,21 +542,49 @@ export default function SalarieDetailPage() {
 
   const fullName = `${displayEmployee.first_name ?? ""} ${displayEmployee.last_name ?? ""}`.trim() || "Collaborateur";
   const softSkills = testResults?.soft_skills ?? [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextInterview = hrDocuments
+    .map((doc) => doc.document_date)
+    .filter((value): value is string => Boolean(value))
+    .filter((value) => {
+      const date = new Date(value);
+      return !Number.isNaN(date.getTime()) && date.getTime() >= today.getTime();
+    })
+    .sort()[0];
+  const formatPillDate = (value: string | null | undefined) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  };
+  const pills = [
+    hasDiagnostics && latest?.created_at
+      ? `Diagnostic complété le ${formatPillDate(latest.created_at)}`
+      : "Diagnostic en attente",
+    formationsInProgress > 0
+      ? `${formationsInProgress} formation${formationsInProgress > 1 ? "s" : ""} en cours`
+      : "Aucune formation en cours",
+    nextInterview ? `Entretien prévu le ${formatPillDate(nextInterview)}` : "Aucun entretien prévu",
+  ];
+  const goTab = (next: EmployeeTabId) => {
+    const query = new URLSearchParams(searchParams.toString());
+    if (next === "overview") query.delete("tab");
+    else query.set("tab", next);
+    const suffix = query.toString();
+    router.replace(suffix ? `${pathname}?${suffix}` : pathname);
+  };
 
   return (
-    <div className="flex min-h-screen bg-[#f7f7f5] font-sans text-gray-900">
+    <div className={`${manrope.className} flex min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
       <EnterpriseSidebar />
       <main className="relative z-10 flex-1 px-4 py-8 sm:px-8 lg:pl-[280px]">
-        {error ? (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>
-        ) : null}
-
         {editing ? (
           <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             <span>Mode édition — seules les sections autorisées sont modifiables.</span>
             <button
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={() => setSaveRequest((n) => n + 1)}
               className="inline-flex items-center gap-1 font-semibold text-amber-900"
             >
               <X className="h-4 w-4" /> Terminer
@@ -514,8 +592,56 @@ export default function SalarieDetailPage() {
           </div>
         ) : null}
 
+        {error ? (
+          <div className="mb-6 rounded-2xl border border-[#E3E0D8] bg-white p-4 text-sm">{error}</div>
+        ) : null}
+
+        <a href="/dashboard/entreprise/salaries" className="inline-flex h-11 items-center rounded-full bg-white px-4 text-sm font-semibold">
+          ‹ Mes équipes
+        </a>
+        <div className="mt-4">
+          <EmployeeHeader
+            name={fullName}
+            initials={initials(displayEmployee.first_name, displayEmployee.last_name)}
+            subtitle={[displayEmployee.job_title, displayEmployee.department, displayEmployee.metier ?? metierMatch?.title].filter(Boolean).join(" · ") || "Poste non renseigné"}
+            pills={pills}
+            email={displayEmployee.email?.trim() || "Non renseigné"}
+            phone={displayEmployee.phone?.trim() || "Non renseigné"}
+            seniority={seniority || "Non renseigné"}
+            inclusion={inclusion?.summary?.trim() || (inclusion && inclusion.status !== "none" ? "Besoin déclaré" : "Aucun besoin déclaré")}
+            showInvite={!displayEmployee.profile_id}
+            inviteBusy={resendingInvite}
+            onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
+            onPlanInterview={() => {
+              goTab("overview");
+              window.setTimeout(() => document.getElementById("employee-entretiens")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+            }}
+            onResendInvite={() => {
+              if (!employeeId) return;
+              setResendingInvite(true);
+              void fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/resend-invite`, { method: "POST" })
+                .then(async (res) => {
+                  const json = (await res.json()) as { error?: string };
+                  if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
+                  toast.success("Invitation renvoyée");
+                })
+                .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Envoi impossible"))
+                .finally(() => setResendingInvite(false));
+            }}
+            onEdit={() => setEditing(true)}
+            onInclusion={() => setInclusionSignal((value) => value + 1)}
+          />
+        </div>
+        <EnterpriseEmployeeInclusionCta
+          employeeName={fullName}
+          profile={inclusion}
+          hideButton
+          openSignal={inclusionSignal}
+        />
+        <ProfileTabs current={tab} onChange={goTab} />
+
         {/* Header profil */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 flex-1 gap-5">
               <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0f766e] to-[#134e4a] text-2xl font-black text-white shadow-inner sm:h-28 sm:w-28 sm:text-3xl">
@@ -533,7 +659,7 @@ export default function SalarieDetailPage() {
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <Briefcase className="h-4 w-4 text-gray-400" />
-                    {metierMatch?.title ?? displayEmployee.metier ?? "Métier non lié"}
+                    {displayEmployee.metier ?? metierMatch?.title ?? "Métier non lié"}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <MapPin className="h-4 w-4 text-gray-400" />
@@ -553,6 +679,7 @@ export default function SalarieDetailPage() {
                       >
                         Vigilance {vigilance.label}
                       </span>
+                      <p className="basis-full text-sm leading-relaxed text-gray-600">{vigilance.hint}</p>
                       {testResults?.behavioral_profile ? (
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                           Profil {testResults.behavioral_profile}
@@ -581,12 +708,36 @@ export default function SalarieDetailPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => setEditing(false)}
+                  onClick={() => setSaveRequest((n) => n + 1)}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0f766e] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0d9488]"
                 >
-                  Terminer l&apos;édition
+                  Enregistrer
                 </button>
               )}
+              <button
+                type="button"
+                disabled={resendingInvite || !displayEmployee.email}
+                onClick={() => {
+                  if (!employeeId) return;
+                  setResendingInvite(true);
+                  void fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/resend-invite`, {
+                    method: "POST",
+                  })
+                    .then(async (res) => {
+                      const json = (await res.json()) as { error?: string };
+                      if (!res.ok) throw new Error(json.error ?? "Envoi impossible");
+                      toast.success("Invitation renvoyée");
+                    })
+                    .catch((e: unknown) => {
+                      toast.error(e instanceof Error ? e.message : "Envoi impossible");
+                    })
+                    .finally(() => setResendingInvite(false));
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-900 transition hover:bg-gray-50 disabled:opacity-60"
+              >
+                <Mail className="h-4 w-4" />
+                {resendingInvite ? "Envoi…" : "Renvoyer l'invitation"}
+              </button>
               <EnterpriseEmployeeInclusionCta
                 employeeName={
                   [displayEmployee.first_name, displayEmployee.last_name].filter(Boolean).join(" ") ||
@@ -628,7 +779,7 @@ export default function SalarieDetailPage() {
             <div className="rounded-xl border border-gray-100 bg-[#f7f7f5] px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Fiche métier</p>
               <p className="mt-1 truncate text-sm font-semibold text-gray-900">
-                {metierMatch?.title ?? displayEmployee.metier ?? "—"}
+                {displayEmployee.metier ?? metierMatch?.title ?? "—"}
               </p>
             </div>
             <div className="rounded-xl border border-gray-100 bg-[#f7f7f5] px-4 py-3">
@@ -638,287 +789,115 @@ export default function SalarieDetailPage() {
           </div>
         </section>
 
-        {/* Recommandations juste sous la présentation */}
-        {hasDiagnostics ? (
-          <section className="mt-6 rounded-2xl border border-teal-200 bg-teal-50/40 p-6 shadow-sm">
-            <h2 className="text-xl font-black tracking-tight text-gray-950">Recommandations</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Synthèse actionnable à partir du profil comportemental, de l&apos;IDMC et des soft skills.
-            </p>
-            {!shareConsent ? (
-              <p className="mt-4 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm text-violet-950">
-                Consentement de partage entreprise requis pour afficher l&apos;analyse croisée.
-              </p>
-            ) : profileAnalysisLoading ? (
-              <p className="mt-4 text-sm text-gray-500">Génération des recommandations…</p>
-            ) : profileAnalysisError ? (
-              <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                {profileAnalysisError}
-              </p>
-            ) : (
-              <>
-                {aiInsight ? <p className="mt-4 text-sm leading-relaxed text-gray-800">{aiInsight}</p> : null}
-                {profileAnalysis?.summary ? (
-                  <p className="mt-3 text-sm leading-relaxed text-gray-700">{profileAnalysis.summary}</p>
-                ) : null}
-                {profileAnalysis ? (
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-xl border border-emerald-200 bg-white/80 p-4">
-                      <p className="text-xs font-black uppercase tracking-widest text-emerald-700">Forces</p>
-                      <ul className="mt-3 space-y-2 text-sm text-emerald-900">
-                        {(profileAnalysis.strengths.length > 0
-                          ? profileAnalysis.strengths
-                          : ["Analyse en cours."]
-                        ).map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="rounded-xl border border-amber-200 bg-white/80 p-4">
-                      <p className="text-xs font-black uppercase tracking-widest text-amber-800">
-                        Axes d&apos;amélioration
-                      </p>
-                      <ul className="mt-3 space-y-2 text-sm text-amber-900">
-                        {(profileAnalysis.improvements.length > 0
-                          ? profileAnalysis.improvements
-                          : ["Aucun axe prioritaire."]
-                        ).map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            )}
-            {actionBlock ? (
-              <div className="mt-5 rounded-xl border border-teal-300 bg-white p-4">
-                <p className="text-sm font-bold text-teal-950">{actionBlock.title}</p>
-                <p className="mt-1 text-sm text-teal-900/80">{actionBlock.description}</p>
-                <button
-                  type="button"
-                  onClick={() => router.push("/dashboard/entreprise/actions/demo-stress")}
-                  className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-teal-900"
-                >
-                  Accéder aux experts <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {!hasDiagnostics && pendingShareConsent ? (
-          <div className="mt-6 rounded-2xl border border-violet-200 bg-violet-50 px-6 py-5 text-sm text-violet-950">
-            <p className="font-semibold">En attente du consentement RGPD</p>
-            <p className="mt-1 text-violet-900/80">
-              Les résultats restent privés tant que le collaborateur n&apos;a pas validé le partage.
-            </p>
-          </div>
-        ) : null}
-
-        {!hasDiagnostics && !pendingShareConsent ? (
-          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5 text-sm text-amber-950">
-            <p className="font-semibold">Aucun diagnostic enregistré</p>
-            <p className="mt-1 text-amber-900/80">
-              Les scores IDMC, le profil comportemental et les soft skills apparaîtront après les tests apprenant.
-            </p>
-          </div>
-        ) : null}
-
-        {/* Corps : infos + compétences */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">Localisation &amp; contact</h2>
-              <ul className="mt-4 space-y-3 text-sm text-gray-700">
-                <li className="flex items-start gap-2">
-                  <Mail className="mt-0.5 h-4 w-4 text-gray-400" />
-                  <span className="break-all">{displayEmployee.email ?? "—"}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Phone className="mt-0.5 h-4 w-4 text-gray-400" />
-                  <span>{displayEmployee.phone?.trim() || "—"}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Building2 className="mt-0.5 h-4 w-4 text-gray-400" />
-                  <span>{displayEmployee.department ?? "—"}</span>
-                </li>
-              </ul>
-            </div>
-
-            {hasDiagnostics ? (
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">IDMC</h2>
-                <div className="mt-3 flex justify-center">
-                  <ProgressRing value={idmc} />
-                </div>
-                <p className="mt-4 text-sm leading-relaxed text-gray-600">
-                  L&apos;IDMC mesure 8 axes de maturité décisionnelle : connaissance de soi, méthodes,
-                  adaptation, organisation, traitement de l&apos;information, résolution de difficultés,
-                  suivi de progression et auto-évaluation. Le score global est la moyenne de ces axes.
-                </p>
-                <p className="mt-3 text-xs text-gray-500">
-                  Vigilance associée : <span className="font-semibold">{vigilance.label}</span>
-                  {stressScore != null ? ` (gestion du stress ${Math.round(stressScore)})` : ""}
-                </p>
-              </div>
-            ) : null}
-
-            {editing ? (
-              <EnterpriseEmployeeHrPanel
-                employeeId={employeeId!}
-                email={displayEmployee.email ?? null}
-                phone={displayEmployee.phone ?? null}
-                hireDate={displayEmployee.hire_date ?? null}
-                documents={hrDocuments}
-                editing
-                showContactOnly
-                onProfileChange={(patch) =>
-                  setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))
-                }
-                onDocumentsChange={setHrDocuments}
-              />
-            ) : null}
-          </aside>
-
-          <div className="space-y-6">
-            {hasDiagnostics && softSkills.length > 0 ? (
-              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-xl font-black tracking-tight text-gray-950">
-                  Classement soft skills ({softSkills.length}/20)
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Référentiel Byound complet : communication, leadership, stress, créativité, etc.
-                </p>
-                <div className="mt-5">
-                  <SoftSkillsRanking skills={softSkills} />
-                </div>
-              </section>
-            ) : null}
-
-            {hasDiagnostics && testResults?.disc ? (
-              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-xl font-black tracking-tight text-gray-950">Test comportemental</h2>
-                {testResults.behavioral_profile ? (
-                  <p className="mt-2 text-lg font-bold text-[#0f766e]">
-                    Profil dominant : {testResults.behavioral_profile}
-                  </p>
-                ) : null}
-                <p className="mt-1 text-sm text-gray-600">
-                  Quatre dimensions : Décisionnel, Relationnel, Stable, Structuré.
-                </p>
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <BehavioralRadar disc={testResults.disc} />
-                  <div className="space-y-3">
-                    {[
-                      { key: "D" as const, label: "Décisionnel", value: testResults.disc.D },
-                      { key: "I" as const, label: "Relationnel", value: testResults.disc.I },
-                      { key: "S" as const, label: "Stable", value: testResults.disc.S },
-                      { key: "C" as const, label: "Structuré", value: testResults.disc.C },
-                    ].map((dim) => (
-                      <MiniBar key={dim.key} label={dim.label} score={Math.round(dim.value)} />
-                    ))}
-                  </div>
-                </div>
-              </section>
-            ) : null}
-
-            {hasDiagnostics && metierMatch && metierMatch.soft_skill_gaps.length > 0 ? (
-              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-xl font-black tracking-tight text-gray-950">Écarts vs fiche métier</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Cibles de « {metierMatch.title} » comparées aux soft skills du collaborateur (échelle /15).
-                </p>
-                <div className="mt-5 space-y-3">
-                  {metierMatch.soft_skill_gaps.map((gap) => {
-                    const tone =
-                      gap.status === "ok"
-                        ? "border-emerald-200 bg-emerald-50/50 text-emerald-900"
-                        : gap.status === "attention"
-                          ? "border-amber-200 bg-amber-50/50 text-amber-950"
-                          : gap.status === "critical"
-                            ? "border-red-200 bg-red-50/50 text-red-900"
-                            : "border-gray-200 bg-gray-50 text-gray-700";
-                    return (
-                      <div
-                        key={gap.skill}
-                        className={cn(
-                          "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3",
-                          tone,
-                        )}
-                      >
-                        <div>
-                          <p className="font-semibold">{gap.skill}</p>
-                          <p className="text-xs opacity-80">{gapStatusLabel(gap.status)}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-4 text-sm font-semibold">
-                          <span>Cible {gap.target}/15</span>
-                          <span>Collab. {gap.actual != null ? `${gap.actual}/15` : "—"}</span>
-                          <span>
-                            Écart {gap.gap == null ? "—" : gap.gap > 0 ? `+${gap.gap}` : String(gap.gap)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ) : null}
-
-            {hasDiagnostics && idmcAxesList.length > 0 ? (
-              <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-xl font-black tracking-tight text-gray-950">
-                  Profil IDMC (8 axes)
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Score global {Math.round(idmc)}/100 — détail des 8 dimensions mesurées par le test.
-                </p>
-                <div className="mt-4 grid gap-6 lg:grid-cols-2">
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={radarData}>
-                        <PolarGrid stroke="rgba(15,23,42,0.10)" />
-                        <PolarAngleAxis
-                          dataKey="skill"
-                          tick={{ fill: "rgba(15,23,42,0.75)", fontSize: 9 }}
-                        />
-                        <PolarRadiusAxis domain={[0, 100]} tick={false} />
-                        <Radar
-                          dataKey="score"
-                          stroke="#0f766e"
-                          fill="rgba(15,118,110,0.20)"
-                          strokeWidth={2}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="space-y-3">
-                    {idmcAxesList.map((d) => (
-                      <div key={d.key}>
-                        <MiniBar label={d.label} score={d.score} />
-                        <p className="mt-1 text-[11px] text-gray-500">{d.mastery}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            ) : null}
-
-            <EnterpriseEmployeeMissions
+        <div role="tabpanel" id={`employee-panel-${tab}`} aria-labelledby={`employee-tab-${tab}`}>
+        {tab === "overview" ? (
+        <>
+        <EmployeeOverview
+          shareConsent={shareConsent}
+          hasDiagnostics={hasDiagnostics}
+          analysisLoading={profileAnalysisLoading}
+          analysisError={profileAnalysisError}
+          analysis={profileAnalysis}
+          diagnosticAt={latest?.created_at ?? null}
+          gaps={metierMatch?.soft_skill_gaps ?? []}
+          formationsInProgress={formationsInProgress}
+          declaredSkills={declaredSkills}
+          badgesEarned={badgesEarned}
+          documents={hrDocuments}
+          activity={activity}
+          onOpenSkills={() => goTab("skills")}
+          onOpenTests={() => goTab("tests")}
+          onOpenFollow={() => goTab("follow")}
+          onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
+          onPrepareInterview={() => {
+            window.setTimeout(() => document.getElementById("employee-entretiens")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+          }}
+          onEdit={() => setEditing(true)}
+        />
+        {editing ? (
+          <div className="mt-6">
+            <EnterpriseEmployeeHrPanel
               employeeId={employeeId!}
-              missions={missions}
-              onChange={setMissions}
-              editing={editing}
+              email={displayEmployee.email ?? null}
+              phone={displayEmployee.phone ?? null}
+              hireDate={displayEmployee.hire_date ?? null}
+              jobTitle={displayEmployee.job_title ?? null}
+              metier={displayEmployee.metier ?? null}
+              documents={hrDocuments}
+              editing
+              showContactOnly
+              onProfileChange={(patch) => setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))}
+              onDocumentsChange={setHrDocuments}
+              saveRequest={saveRequest}
+              onSaved={() => setEditing(false)}
             />
           </div>
-        </div>
-
+        ) : null}
         <div className="mt-6">
+          <EnterpriseEmployeeMissions
+            employeeId={employeeId!}
+            missions={missions}
+            onChange={setMissions}
+            editing={editing}
+          />
+        </div>
+        </>
+        ) : tab === "skills" ? (
+          <EmployeeSkills
+            employeeId={employeeId!}
+            firstName={displayEmployee.first_name?.trim() || "ce collaborateur"}
+            metierTitle={displayEmployee.metier ?? metierMatch?.title ?? null}
+            shareConsent={shareConsent}
+            gaps={metierMatch?.soft_skill_gaps ?? []}
+            softSkills={softSkills}
+            byoundSkills={byoundSkills}
+            onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
+            onEdit={() => setEditing(true)}
+          />
+        ) : tab === "tests" ? (
+          <EmployeeTests
+            employeeId={employeeId!}
+            firstName={displayEmployee.first_name?.trim() || "Ce collaborateur"}
+            shareConsent={shareConsent}
+            shareConsentAt={shareConsentAt}
+            disc={testResults?.disc ?? null}
+            idmcScore={testResults?.idmc_score ?? null}
+            idmcAxes={testResults?.idmc_axes ?? null}
+            softSkills={softSkills}
+            discAt={testResults?.disc_at ?? null}
+            idmcAt={testResults?.idmc_at ?? null}
+            softSkillsAt={testResults?.soft_skills_at ?? null}
+          />
+        ) : (
+          <EmployeeFollow
+            employeeId={employeeId!}
+            firstName={displayEmployee.first_name?.trim() || "Ce collaborateur"}
+            fullName={fullName}
+            hireDate={displayEmployee.hire_date ?? null}
+            documents={hrDocuments}
+            missions={missions}
+            onMissionsChange={setMissions}
+            gaps={metierMatch?.soft_skill_gaps ?? []}
+            shareConsent={shareConsent}
+            disc={testResults?.disc ?? null}
+            idmcAxes={testResults?.idmc_axes ?? null}
+            formations={assignedFormations}
+            byoundSkills={byoundSkills}
+            onPlanInterview={() => setInterviewSignal((value) => value + 1)}
+            onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
+          />
+        )}
+        <div id="employee-entretiens" className={tab === "overview" ? "mt-6" : undefined}>
           <EnterpriseEmployeeEntretiensSection
             employeeId={employeeId!}
+            employeeName={fullName}
+            employeeFirstName={displayEmployee.first_name}
             documents={hrDocuments}
             onDocumentsChange={setHrDocuments}
+            openSignal={interviewSignal}
+            hideSection={tab !== "overview"}
           />
+        </div>
         </div>
       </main>
     </div>

@@ -293,10 +293,10 @@ export function ApprenantConnectOverview({
             <EdgeDashboardActionCard
               accent="red"
               icon={BookOpen}
-              eyebrow="Parcours"
-              title="Byound Online"
-              subtitle="Ouvrir le catalogue"
-              href={catalogHref}
+              eyebrow="Formations"
+              title="Mes formations"
+              subtitle="Cursus et modules assignés"
+              href="/dashboard/apprenant/formations"
             />
             <EdgeDashboardActionCard
               accent="green"

@@ -49,6 +49,21 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose, trackin
       Math.round((Date.now() - new Date(startedAtRef.current).getTime()) / 1000),
     );
     try {
+      if (typeof window !== "undefined" && trackingContext) {
+        window.localStorage.setItem(
+          `flash-review-${trackingContext.courseId}-${trackingContext.scopeId}`,
+          JSON.stringify({
+            known: knownCountRef.current,
+            unknown: unknownCountRef.current,
+            total,
+            at: Date.now(),
+            results: cardResultsRef.current.map((row) => ({
+              cardId: row.cardId,
+              known: row.result === "known",
+            })),
+          }),
+        );
+      }
       await fetch("/api/learner/flashcard-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

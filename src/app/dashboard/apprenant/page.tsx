@@ -11,7 +11,17 @@ export const dynamic = "force-dynamic";
 
 export default async function ApprenantHomePage() {
   const session = await getSession();
-  const data = await getApprenantDashboardData();
+  let data;
+  try {
+    data = await getApprenantDashboardData();
+  } catch (error) {
+    console.error("[dashboard/apprenant]", error);
+    data = {
+      parcours: [] as Array<{ title?: string; href?: string }>,
+      visibleOpenBadges: [],
+      earnedOpenBadges: [],
+    };
+  }
   const email = session?.email ?? null;
   const isPsgApprenant =
     isPsgDemoViewer(email) && String(email ?? "").toLowerCase().includes("demoapprenant@psg.fr");

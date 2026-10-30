@@ -1,7 +1,23 @@
 export type MissionStatus = "nouvelle" | "acceptee" | "planifiee" | "terminee" | "annulee";
 export type MissionBilling = "paid" | "to_invoice" | "upcoming" | "none";
 export type SlotFormat = "visio" | "presentiel";
-export type SlotKind = "indisponible" | "rendez_vous" | "formation";
+export type SlotKind = "indisponible" | "rendez_vous" | "formation" | "disponible";
+export type NoticeHours = 24 | 48 | 72 | 168 | 336 | 504 | 720;
+
+export const NOTICE_HOUR_OPTIONS: Array<{ value: NoticeHours; label: string }> = [
+  { value: 24, label: "24 h" },
+  { value: 48, label: "48 h" },
+  { value: 72, label: "72 h" },
+  { value: 168, label: "7 jours" },
+  { value: 336, label: "14 jours" },
+  { value: 504, label: "21 jours" },
+  { value: 720, label: "30 jours" },
+];
+
+export function asNoticeHours(value: unknown, fallback: NoticeHours = 168): NoticeHours {
+  const hours = Number(value);
+  return NOTICE_HOUR_OPTIONS.some((option) => option.value === hours) ? (hours as NoticeHours) : fallback;
+}
 
 export type ExpertMission = {
   id: string;
@@ -29,23 +45,52 @@ export type ExpertSlot = {
   missionId: string | null;
   title: string | null;
   client: string | null;
+  clientId?: string | null;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  serviceName?: string | null;
+  notes?: string | null;
+  practitionerSlug?: string | null;
 };
 
 export function slotKindFromRule(rule: unknown): SlotKind {
   const value = String(rule ?? "");
   if (value.includes("indisponible")) return "indisponible";
   if (value.includes("formation")) return "formation";
+  if (value.includes("disponible")) return "disponible";
   return "rendez_vous";
 }
 
-export function encodeSlotRule(kind: SlotKind, weekly: boolean) {
-  return weekly ? `${kind}|WEEKLY` : kind;
+export function slotClientIdFromRule(rule: unknown): string | null {
+  const match = String(rule ?? "").match(/CLIENT:([0-9a-f-]{36})/i);
+  return match?.[1] ?? null;
+}
+
+export function slotClientNameFromRule(rule: unknown): string | null {
+  const match = String(rule ?? "").match(/NAME:([^|]+)/);
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]).trim() || null;
+  } catch {
+    return match[1].trim() || null;
+  }
+}
+
+export function encodeSlotRule(kind: SlotKind, weekly: boolean, clientId?: string | null, clientName?: string | null) {
+  return [
+    kind,
+    clientId ? `CLIENT:${clientId}` : null,
+    clientName ? `NAME:${encodeURIComponent(clientName)}` : null,
+    weekly ? "WEEKLY" : null,
+  ]
+    .filter(Boolean)
+    .join("|");
 }
 
 export type ExpertDocumentItem = {
   id: string;
   name: string;
-  folder: "contrat" | "cv" | "attestation" | "autre";
+  folder: "contrat" | "cv" | "attestation" | "facture" | "modele" | "autre";
   status: "to_sign" | "signed" | "deposited";
   uploadedAt: string;
   expiresAt: string | null;

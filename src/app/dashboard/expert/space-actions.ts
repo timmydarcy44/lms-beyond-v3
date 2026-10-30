@@ -12,8 +12,15 @@ import {
   writeJadeOverrides,
   type JadeOverrides,
 } from "@/lib/expert/space-server";
-import { encodeSlotRule, slotsOverlap, type ExpertMission, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
-import { getServerClient } from "@/lib/supabase/server";
+import { encodeSlotRule, NOTICE_HOUR_OPTIONS, slotsOverlap, type ExpertMission, type NoticeHours, type SlotFormat, type SlotKind } from "@/lib/expert/space-model";
+import { writeCareAgendaSlot } from "@/lib/care/expert-agenda";
+import { ensureCareProfile } from "@/lib/care/ensure-profile";
+import { formatPersonName } from "@/lib/care/person-name";
+import { CARE_DOMAIN_IDS } from "@/lib/care/domains";
+import type { CareListingSettings } from "@/lib/care/listing-settings";
+import { revalidateCarePublicProfile } from "@/lib/care/revalidate-profile";
+import { sendCareManualConfirmation } from "@/lib/care/booking-emails";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const decisionSchema = z.object({
   id: z.string().min(1),
@@ -25,20 +32,25 @@ const slotSchema = z.object({
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
   format: z.enum(["visio", "presentiel"]),
-  kind: z.enum(["indisponible", "rendez_vous", "formation"]),
+  kind: z.enum(["indisponible", "rendez_vous", "formation", "disponible"]),
   location: z.string().trim().max(120).optional(),
   weekly: z.boolean().optional(),
+  clientId: z.string().uuid().optional().nullable(),
+  notify: z.boolean().optional(),
 });
 
 const settingsSchema = z.object({
   format: z.enum(["visio", "presentiel"]).optional(),
-  noticeHours: z.union([z.literal(24), z.literal(48), z.literal(72)]).optional(),
+  noticeHours: z
+    .number()
+    .refine((value): value is NoticeHours => NOTICE_HOUR_OPTIONS.some((option) => option.value === value))
+    .optional(),
 });
 
 const documentSchema = z.object({
   name: z.string().min(1),
   url: z.string().min(1),
-  folder: z.enum(["contrat", "cv", "attestation", "autre"]),
+  folder: z.enum(["contrat", "cv", "attestation", "facture", "modele", "autre"]),
   mime: z.string().optional(),
   size: z.number().optional(),
 });
@@ -132,9 +144,35 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
     const slotEnd = new Date(occurrence.getTime() + (end.getTime() - start.getTime()));
     return { startsAt: occurrence.toISOString(), endsAt: slotEnd.toISOString() };
   });
-  const clash = built.some((slot) => space.slots.some((existing) => slotsOverlap(slot.startsAt, slot.endsAt, existing.startsAt, existing.endsAt)));
+  const clash = built.some((slot) =>
+    space.slots.some((existing) => {
+      if (!slotsOverlap(slot.startsAt, slot.endsAt, existing.startsAt, existing.endsAt)) return false;
+      if (parsed.kind === "rendez_vous" && existing.kind === "disponible") return false;
+      return true;
+    }),
+  );
   if (clash) return { ok: false, error: "Ce créneau chevauche un créneau existant." };
   const location = parsed.location?.trim() || (parsed.format === "visio" ? "Visio" : "");
+  const clientId = parsed.clientId || null;
+  let clientLabel: string | null = null;
+  let clientEmail: string | null = null;
+  let clientFirst = "";
+  const supabase = await getServerClient();
+  const admin = getServiceRoleClient();
+  const patientsDb = admin ?? supabase;
+  if (clientId && patientsDb) {
+    const { data: patient } = await patientsDb
+      .from("expert_care_clients")
+      .select("first_name,last_name,email")
+      .eq("id", clientId)
+      .eq("expert_id", session.id)
+      .maybeSingle();
+    if (patient) {
+      clientFirst = String(patient.first_name ?? "").trim();
+      clientLabel = [patient.first_name, patient.last_name].filter(Boolean).join(" ").trim() || String(patient.email ?? "");
+      clientEmail = String(patient.email ?? "").trim() || null;
+    }
+  }
   if (isJadeDemoEmail(session.email)) {
     await mutateJade((current) => ({
       ...current,
@@ -148,33 +186,92 @@ export async function createExpertSlot(input: z.infer<typeof slotSchema>) {
           kind: parsed.kind as SlotKind,
           location,
           missionId: null,
-          title: null,
-          client: null,
+          title: parsed.kind === "rendez_vous" ? "Rendez-vous" : null,
+          client: clientLabel,
+          clientId,
         })),
       ],
     }));
-    return { ok: true };
-  }
-  const supabase = await getServerClient();
-  if (!supabase) return { ok: false, error: "Service indisponible" };
-  const rows = built.map((slot) => ({
-    expert_id: session.id,
-    starts_at: slot.startsAt,
-    ends_at: slot.endsAt,
-    format: parsed.format,
-    location,
-    mission_id: null,
-    recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly)),
-  }));
-  const { error } = await supabase.from("expert_slots").insert(rows);
-  if (error) {
-    if (error.code === "42P01" || error.code === "PGRST205") {
-      return { ok: false, error: "Collez le script SQL de l'espace expert (table expert_slots)." };
+  } else {
+    const dates = occurrences.map((occurrence) => {
+      const y = occurrence.getFullYear();
+      const m = String(occurrence.getMonth() + 1).padStart(2, "0");
+      const d = String(occurrence.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    });
+    const uniqueDates = parsed.weekly && parsed.kind === "disponible" ? [parsed.date] : dates;
+    for (const date of uniqueDates) {
+      const written = await writeCareAgendaSlot({
+        expertId: session.id,
+        date,
+        start: parsed.start,
+        end: parsed.end,
+        format: parsed.format,
+        kind: parsed.kind,
+        weekly: Boolean(parsed.weekly) && parsed.kind === "disponible" && date === parsed.date,
+        client: clientId
+          ? {
+              first_name: clientFirst,
+              last_name: (clientLabel ?? "").replace(clientFirst, "").trim(),
+              email: clientEmail ?? "",
+            }
+          : null,
+      });
+      if (!written.ok) return { ok: false, error: written.error };
     }
-    return { ok: false, error: error.message };
+    if (parsed.kind === "formation") {
+      if (!supabase) return { ok: false, error: "Service indisponible" };
+      const rows = built.map((slot) => ({
+        expert_id: session.id,
+        starts_at: slot.startsAt,
+        ends_at: slot.endsAt,
+        format: parsed.format,
+        location,
+        mission_id: null,
+        recurrence_rule: encodeSlotRule(parsed.kind, Boolean(parsed.weekly), clientId, clientLabel),
+      }));
+      await supabase.from("expert_slots").insert(rows);
+    }
+  }
+  let emailed = false;
+  let emailError: string | null = null;
+  const shouldNotify = parsed.kind === "rendez_vous" && Boolean(clientEmail) && built[0];
+  if (shouldNotify && built[0]) {
+    const profile = admin
+      ? (
+          await admin
+            .from("care_profiles")
+            .select("display_name, title, avatar_url, slug, address, city, cancellation_hours")
+            .eq("expert_id", session.id)
+            .maybeSingle()
+        ).data
+      : null;
+    const place = parsed.format === "visio" ? "visio" : "cabinet";
+    const mailed = await sendCareManualConfirmation({
+      id: `agenda-${session.id}-${built[0].startsAt}`,
+      accessToken: "",
+      startsAt: built[0].startsAt,
+      endsAt: built[0].endsAt,
+      place,
+      serviceName: "Rendez-vous",
+      durationMin: Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000)),
+      clientFirstName: clientFirst,
+      clientEmail: clientEmail as string,
+      practitionerName: String(profile?.display_name || space.profile?.name || ""),
+      practitionerTitle: String(profile?.title ?? ""),
+      practitionerEmail: session.email,
+      practitionerAvatarUrl: profile?.avatar_url ? String(profile.avatar_url) : null,
+      practitionerSlug: profile?.slug ? String(profile.slug) : "",
+      address: place === "cabinet" ? location || (profile?.address ? String(profile.address) : null) : null,
+      city: profile?.city ? String(profile.city) : null,
+      cancellationHours: Number(profile?.cancellation_hours) || 24,
+      noFee: true,
+    });
+    emailed = mailed.success;
+    emailError = mailed.success ? null : mailed.error ?? "L'e-mail n'a pas pu partir.";
   }
   refresh();
-  return { ok: true };
+  return { ok: true, emailed, emailError };
 }
 
 export async function saveAgendaSettings(input: z.infer<typeof settingsSchema>) {
@@ -195,6 +292,10 @@ export async function saveAgendaSettings(input: z.infer<typeof settingsSchema>) 
   });
   const { error } = await supabase.from("experts").update({ references }).eq("id", session.id);
   if (error) return { ok: false, error: error.message };
+  const admin = getServiceRoleClient();
+  if (admin && parsed.noticeHours != null) {
+    await admin.from("care_profiles").update({ cancellation_hours: parsed.noticeHours, updated_at: new Date().toISOString() }).eq("expert_id", session.id);
+  }
   refresh();
   return { ok: true };
 }
@@ -262,6 +363,148 @@ export async function signExpertDocument(id: string) {
   await supabase.from("expert_documents").update({ status: "signed" }).eq("id", documentId).eq("expert_id", session.id);
   refresh();
   return { ok: true };
+}
+
+async function resolveCareExpertId(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, sessionId: string, email?: string | null) {
+  const { data: byId } = await db.from("experts").select("id").eq("id", sessionId).maybeSingle();
+  if (byId?.id) return String(byId.id);
+  const normalized = String(email ?? "").trim().toLowerCase();
+  if (!normalized) return sessionId;
+  const { data: byEmail } = await db.from("experts").select("id").eq("email", normalized).maybeSingle();
+  return byEmail?.id ? String(byEmail.id) : sessionId;
+}
+
+export async function getCareListingSettings(): Promise<CareListingSettings | null> {
+  const session = await getSession();
+  const db = getServiceRoleClient();
+  if (!session?.id || !db) return null;
+  const expertId = await resolveCareExpertId(db, session.id, session.email);
+  const [{ data: expert }, { data }] = await Promise.all([
+    db.from("experts").select("is_care_expert").eq("id", expertId).maybeSingle(),
+    db
+      .from("care_profiles")
+      .select("published, slug, tagline, approach, city, address, publics, domains, cancellation_hours, payment_methods, is_care")
+      .eq("expert_id", expertId)
+      .maybeSingle(),
+  ]);
+  if (!expert?.is_care_expert && !data) {
+    const { data: membership } = await db
+      .from("expert_memberships")
+      .select("id")
+      .eq("expert_id", expertId)
+      .eq("pole", "care")
+      .eq("status", "active")
+      .maybeSingle();
+    if (!membership) return null;
+  }
+  if (!data) {
+    return {
+      published: false,
+      slug: "",
+      tagline: "",
+      approach: "",
+      city: "",
+      address: "",
+      publics: [],
+      careDomains: [],
+      cancellationHours: 24,
+      paymentMethods: ["on_site"],
+      serviceNames: [],
+    };
+  }
+  const { data: serviceRows } = await db.from("care_services").select("name, active").eq("expert_id", expertId);
+  return {
+    published: data.published === true,
+    slug: String(data.slug ?? ""),
+    tagline: String(data.tagline ?? ""),
+    approach: String(data.approach ?? ""),
+    city: String(data.city ?? ""),
+    address: String(data.address ?? ""),
+    publics: Array.isArray(data.publics) ? data.publics.map(String) : [],
+    careDomains: Array.isArray(data.domains) ? data.domains.map(String) : [],
+    cancellationHours: Number(data.cancellation_hours) || 24,
+    paymentMethods: Array.isArray(data.payment_methods) ? data.payment_methods.map(String) : ["on_site"],
+    serviceNames: (serviceRows ?? []).filter((item) => item.active !== false).map((item) => String(item.name ?? "")),
+  };
+}
+
+export async function syncCareProfileFromExpertAccount(listing?: Partial<CareListingSettings>) {
+  const session = await getSession();
+  const db = getServiceRoleClient();
+  if (!session?.id || !db) return { ok: false as const, error: "Connexion requise" };
+  const expertId = await resolveCareExpertId(db, session.id, session.email);
+  const slug = await ensureCareProfile(db, expertId);
+  const { data: expert } = await db
+    .from("experts")
+    .select("first_name, last_name, headline, bio, bio_long, avatar_url, photo_url, formats_supported, regions, specialties")
+    .eq("id", expertId)
+    .maybeSingle();
+  const { data: current } = await db
+    .from("care_profiles")
+    .select("published, slug, tagline, approach, city, address, publics, domains, cancellation_hours, payment_methods, offers_cabinet, offers_visio")
+    .eq("expert_id", expertId)
+    .maybeSingle();
+  const display = [expert?.first_name, expert?.last_name].filter(Boolean).join(" ").trim() || "Praticien";
+  const formats = Array.isArray(expert?.formats_supported) ? expert.formats_supported.map(String) : [];
+  const regions = Array.isArray(expert?.regions) ? expert.regions.map(String) : [];
+  const specialties = Array.isArray(expert?.specialties) ? expert.specialties.map(String) : [];
+  const domains = (listing?.careDomains ?? (current?.domains as string[] | undefined) ?? []).filter((item): item is string =>
+    CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number]),
+  );
+  if (!domains.length) {
+    domains.push(
+      ...specialties.filter((item) => CARE_DOMAIN_IDS.includes(item as (typeof CARE_DOMAIN_IDS)[number])),
+    );
+  }
+  const { data: serviceRows } = await db.from("care_services").select("name, active, price_cents").eq("expert_id", expertId);
+  const offersCabinet = formats.length
+    ? formats.some((item) => /cabinet|presentiel|sur site/i.test(item))
+    : current?.offers_cabinet === true;
+  const offersVisio = formats.length
+    ? formats.some((item) => /visio|distanciel|en ligne/i.test(item))
+    : current?.offers_visio === true;
+  const content = {
+    avatar_url: String(expert?.avatar_url ?? expert?.photo_url ?? "").trim() || null,
+    tagline: (listing?.tagline ?? String(current?.tagline ?? "")).slice(0, 140),
+    bio: String(expert?.bio ?? expert?.bio_long ?? "").trim(),
+    approach: listing?.approach ?? String(current?.approach ?? ""),
+    domains,
+    city: (listing?.city ?? String(current?.city ?? regions[0] ?? "")).trim() || null,
+    offers_cabinet: offersCabinet,
+    offers_visio: offersVisio,
+    services: (serviceRows ?? []).map((item) => ({
+      name: String(item.name ?? ""),
+      active: item.active !== false,
+      price_cents: Number(item.price_cents) || 0,
+    })),
+  };
+  const published = listing?.published ?? current?.published === true;
+  const patch = {
+    is_care: true,
+    published,
+    display_name: formatPersonName(display) || display,
+    title: String(expert?.headline ?? "").trim(),
+    headline: String(expert?.headline ?? "").trim(),
+    bio: content.bio,
+    tagline: content.tagline,
+    approach: content.approach,
+    avatar_url: content.avatar_url,
+    city: content.city,
+    address: (listing?.address ?? String(current?.address ?? "")).trim() || null,
+    offers_cabinet: offersCabinet,
+    offers_visio: offersVisio,
+    domains,
+    publics: listing?.publics ?? (Array.isArray(current?.publics) ? current.publics.map(String) : []),
+    payment_methods: listing?.paymentMethods ?? (Array.isArray(current?.payment_methods) ? current.payment_methods.map(String) : ["on_site"]),
+    cancellation_hours: listing?.cancellationHours ?? (Number(current?.cancellation_hours) || 24),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await db.from("care_profiles").update(patch).eq("expert_id", expertId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidateCarePublicProfile(String(current?.slug ?? slug));
+  refresh();
+  revalidatePath("/care/praticiens");
+  return { ok: true as const, slug: String(current?.slug ?? slug) };
 }
 
 export async function startCertification() {

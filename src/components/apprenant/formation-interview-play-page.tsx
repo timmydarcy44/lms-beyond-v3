@@ -85,28 +85,30 @@ export async function FormationInterviewPlayPage({
     <DyslexiaModeProvider>
       <LearningSessionTracker contentType="course" contentId={String(card.id)} showIndicator={false}>
       <div
-        className={
-          isJessica
-            ? "fixed inset-0 z-[80] flex min-h-dvh flex-col overflow-hidden bg-[#FAFAFA] text-slate-900"
-            : "fixed inset-0 z-[80] flex min-h-dvh flex-col overflow-hidden bg-[#050208] text-white"
-        }
+      className={
+        isJessica
+          ? "fixed inset-0 z-[80] flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#FAFAFA] text-slate-900"
+          : "fixed inset-0 z-[80] flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#050208] text-white"
+      }
       >
-        <InterviewPlayClient
-          contextText={contextText}
-          interviewObjectives={interviewObjectives || undefined}
-          chapterTitle={displayChapterTitle}
-          courseTitle={card.title}
-          courseId={String(card.id)}
-          lessonId={activeLesson.id}
-          returnHref={returnHref}
-          revisionItems={revisionItems}
-          theme={isJessica ? "jessica" : "edge"}
-          interviewStyle={interviewStyle}
-          audience={audience}
-          situation={
-            (activeLesson as { situation_public?: SituationPublic | null }).situation_public ?? null
-          }
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <InterviewPlayClient
+            contextText={contextText}
+            interviewObjectives={interviewObjectives || undefined}
+            chapterTitle={displayChapterTitle}
+            courseTitle={card.title}
+            courseId={String(card.id)}
+            lessonId={activeLesson.id}
+            returnHref={returnHref}
+            revisionItems={revisionItems}
+            theme={isJessica ? "jessica" : "edge"}
+            interviewStyle={interviewStyle}
+            audience={audience}
+            situation={
+              (activeLesson as { situation_public?: SituationPublic | null }).situation_public ?? null
+            }
+          />
+        </div>
       </div>
       </LearningSessionTracker>
     </DyslexiaModeProvider>

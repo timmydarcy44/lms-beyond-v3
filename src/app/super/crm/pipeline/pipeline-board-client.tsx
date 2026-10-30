@@ -181,6 +181,20 @@ export const PipelineBoardClient = forwardRef<
     else setOwnerFilter("all");
   }, [isBtoc, isJerome]);
 
+  const updateOffer = useCallback(async (id: string, offers: { offers_business: boolean; offers_school: boolean }) => {
+    setDeals((current) => current.map((deal) => deal.id === id ? { ...deal, ...offers } : deal));
+    const response = await fetch(`/api/super-admin/crm/pipeline/deals/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(offers),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      toast.error(result.error || "Enregistrement impossible");
+      void load({ silent: true });
+    }
+  }, [load]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -993,7 +1007,13 @@ export const PipelineBoardClient = forwardRef<
                   <div
                     key={deal.id}
                     draggable
-                    onDragStart={(e) => e.dataTransfer.setData("dealId", deal.id)}
+                    onDragStart={(e) => {
+                      if ((e.target as HTMLElement).closest("[data-no-drag]")) {
+                        e.preventDefault();
+                        return;
+                      }
+                      e.dataTransfer.setData("dealId", deal.id);
+                    }}
                     className={
                       isPrescripteur
                         ? "relative cursor-grab overflow-hidden rounded-xl border border-amber-400/30 bg-gradient-to-br from-slate-950 via-amber-950 to-orange-950 p-3 text-white shadow-lg active:cursor-grabbing"
@@ -1009,7 +1029,21 @@ export const PipelineBoardClient = forwardRef<
                     />
                     <div className="relative">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium text-sm leading-tight">{deal.company_name}</p>
+                        <div>
+                          <p className="font-medium text-sm leading-tight">{deal.company_name}</p>
+                          {!isBtoc ? (
+                            <div className="mt-2 flex gap-3 text-[11px]" data-no-drag onMouseDown={(event) => event.stopPropagation()}>
+                              <label className="flex items-center gap-1">
+                                <input type="checkbox" checked={deal.offers_business !== false} onChange={(event) => void updateOffer(deal.id, { offers_business: event.target.checked, offers_school: deal.offers_school === true })} />
+                                Business
+                              </label>
+                              <label className="flex items-center gap-1">
+                                <input type="checkbox" checked={deal.offers_school === true} onChange={(event) => void updateOffer(deal.id, { offers_business: deal.offers_business !== false, offers_school: event.target.checked })} />
+                                School
+                              </label>
+                            </div>
+                          ) : null}
+                        </div>
                         <div className="flex shrink-0 items-center gap-1">
                           {isPrescripteur ? (
                             <Badge

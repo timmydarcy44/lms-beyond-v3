@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSupabase } from "@/components/providers/supabase-provider";
 import EnterpriseSidebar, {
   invalidateEnterpriseViewerCache,
 } from "@/components/EnterpriseSidebar";
@@ -19,6 +20,7 @@ type AccountData = {
   role?: string | null;
   role_type?: string | null;
   organisationName?: string | null;
+  hasPassword?: boolean;
 };
 
 export default function EntrepriseComptePage() {
@@ -31,6 +33,10 @@ export default function EntrepriseComptePage() {
   const [exporting, setExporting] = useState(false);
   const [erasing, setErasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const supabase = useSupabase();
 
   useEffect(() => {
     let cancelled = false;
@@ -236,6 +242,87 @@ export default function EntrepriseComptePage() {
                 className="mt-6 inline-flex rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60"
               >
                 {saving ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            </form>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!supabase || password.length < 6) {
+                  toast.error("Le mot de passe doit contenir au moins 6 caractères.");
+                  return;
+                }
+                setSavingPassword(true);
+                void (async () => {
+                  const { data: auth } = await supabase.auth.getUser();
+                  const email = auth.user?.email;
+                  if (data?.hasPassword) {
+                    if (!email || !currentPassword) {
+                      toast.error("Indiquez le mot de passe actuel.");
+                      setSavingPassword(false);
+                      return;
+                    }
+                    const { error: signInError } = await supabase.auth.signInWithPassword({
+                      email,
+                      password: currentPassword,
+                    });
+                    if (signInError) {
+                      toast.error("Mot de passe actuel incorrect.");
+                      setSavingPassword(false);
+                      return;
+                    }
+                  }
+                  const { error: updateError } = await supabase.auth.updateUser({
+                    password,
+                    data: { needs_password_setup: false },
+                  });
+                  setSavingPassword(false);
+                  if (updateError) {
+                    toast.error(updateError.message || "Impossible d'enregistrer le mot de passe.");
+                    return;
+                  }
+                  setPassword("");
+                  setCurrentPassword("");
+                  setData((current) => (current ? { ...current, hasPassword: true } : current));
+                  toast.success(data?.hasPassword ? "Mot de passe modifié." : "Mot de passe défini.");
+                })();
+              }}
+              className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-sm sm:p-8"
+            >
+              <h2 className="text-lg font-bold text-gray-950">
+                {data?.hasPassword ? "Modifier mon mot de passe" : "Définir un mot de passe"}
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">Facultatif. Vous pouvez continuer à vous connecter avec un code.</p>
+              <div className="mt-4 grid gap-4">
+                {data?.hasPassword ? (
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Mot de passe actuel</span>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                      className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                    />
+                  </label>
+                ) : null}
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-semibold text-gray-700">
+                    {data?.hasPassword ? "Nouveau mot de passe" : "Mot de passe"}
+                  </span>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                  />
+                </label>
+              </div>
+              <button
+                type="submit"
+                disabled={savingPassword}
+                className="mt-5 inline-flex rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60"
+              >
+                {savingPassword ? "Enregistrement…" : data?.hasPassword ? "Modifier mon mot de passe" : "Définir un mot de passe"}
               </button>
             </form>
 

@@ -83,14 +83,21 @@ export default function ApprenantMatchingPage() {
       try {
         const { data: offersData } = await supabase
           .from("job_offers")
-          .select(
-            "id, title, city, contract_type, salary_range, description, company_name, company_hidden_from_learner"
-          )
+          .select("id, title, city, contract_type, salary_range, description")
           .eq("status", "active")
           .order("created_at", { ascending: false })
           .limit(12);
-
-        setOffers(offersData ?? []);
+        const revealed = await fetch("/api/candidat/entreprise", { credentials: "include" })
+          .then((res) => res.json() as Promise<{ companies?: Array<{ jobId: string; companyName: string }> }>)
+          .catch(() => ({ companies: [] as Array<{ jobId: string; companyName: string }> }));
+        const names = new Map((revealed.companies ?? []).map((item) => [item.jobId, item.companyName]));
+        setOffers((offersData ?? []).map((offer) => ({
+          ...offer,
+          company_name: names.get(String(offer.id)) ?? null,
+          salary_range: /alternance|apprentissage/i.test(String(offer.contract_type ?? ""))
+            ? "Selon l'âge et l'année du contrat"
+            : offer.salary_range,
+        })));
       } catch {
         setOffers([]);
       } finally {
@@ -138,9 +145,9 @@ export default function ApprenantMatchingPage() {
                   <div className={APPRENANT_CARD_TITLE}>
                     {offer.title || "Offre en recrutement"}
                   </div>
-                  {!offer.company_hidden_from_learner && offer.company_name?.trim() ? (
-                    <div className="mt-1 text-xs font-medium text-sky-200/80">{offer.company_name.trim()}</div>
-                  ) : null}
+                  <div className="mt-1 text-xs font-medium text-sky-200/80">
+                    {offer.company_name?.trim() || "Entreprise partenaire"}
+                  </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/45">
                     <span className="rounded-full border border-white/[0.12] px-2.5 py-1">
                       {offer.contract_type || "Contrat"}

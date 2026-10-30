@@ -10,17 +10,25 @@ import type { ExpertAccessRow } from "@/lib/expert/expert-access";
 import { isExpertApproved } from "@/lib/expert/expert-access";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_EXPERT } from "@/lib/demo/jade-dashboard-mocks";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { getSession } from "@/lib/auth/session";
+import { loadExpertPoleState, type ExpertMembership, type ExpertPole } from "@/lib/expert/poles";
 import { getServerClient } from "@/lib/supabase/server";
 import "@/styles/expert-theme.css";
 
 function ExpertFrame({
   expert,
   emailConfirmed,
+  pole,
+  memberships,
+  managerPoles,
   children,
 }: {
   expert: ExpertAccessRow;
   emailConfirmed: boolean;
+  pole: ExpertPole;
+  memberships: ExpertMembership[];
+  managerPoles: ExpertPole[];
   children: React.ReactNode;
 }) {
   const name = [expert.first_name, expert.last_name].filter(Boolean).join(" ").trim() || "Expert";
@@ -33,6 +41,9 @@ function ExpertFrame({
             certified={isEdgeCertified(expert)}
             restricted={!isExpertApproved(expert)}
             photoUrl={expert.photo_url || expert.avatar_url}
+            pole={pole}
+            memberships={memberships}
+            managerPoles={managerPoles}
           >
             <JadeInternalFill>{children}</JadeInternalFill>
           </ExpertShell>
@@ -50,15 +61,16 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
 
   if (isJadeDemoEmail(session.email)) {
     return (
-      <ExpertFrame expert={JADE_EXPERT} emailConfirmed>
+      <ExpertFrame expert={JADE_EXPERT} emailConfirmed pole="formation" memberships={[]} managerPoles={[]}>
         {children}
       </ExpertFrame>
     );
   }
 
+  const superAdmin = isSuperAdminEmailAllowlisted(session.email);
   const supabase = await getServerClient();
   if (!supabase) {
-    redirect("/login?next=/dashboard/expert");
+    redirect(superAdmin ? "/super" : "/login?next=/dashboard/expert");
   }
 
   const {
@@ -72,13 +84,25 @@ export default async function ExpertDashboardLayout({ children }: { children: Re
   const expert = await loadOrCreateExpertProfile(supabase, session.id, user);
 
   if (!expert) {
-    redirect("/login?next=/dashboard/expert");
+    redirect(superAdmin ? "/super" : "/login?next=/dashboard/expert");
   }
 
   const emailConfirmed = Boolean(user?.email_confirmed_at) || user?.user_metadata?.needs_password_setup === false;
+  let poles: Awaited<ReturnType<typeof loadExpertPoleState>>;
+  try {
+    poles = await loadExpertPoleState();
+  } catch {
+    poles = { ready: false, pole: "formation", memberships: [], managerPoles: [] };
+  }
 
   return (
-    <ExpertFrame expert={expert} emailConfirmed={emailConfirmed}>
+    <ExpertFrame
+      expert={expert}
+      emailConfirmed={emailConfirmed}
+      pole={poles.pole}
+      memberships={poles.memberships}
+      managerPoles={poles.managerPoles}
+    >
       {children}
     </ExpertFrame>
   );

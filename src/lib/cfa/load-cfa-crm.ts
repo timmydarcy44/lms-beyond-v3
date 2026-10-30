@@ -1,8 +1,9 @@
+import { hasSensitiveKey, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Db = NonNullable<ReturnType<typeof getServiceRoleClient>>;
 
-export async function loadCfaApplicationBoard(db: Db) {
+export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" = "staff") {
   const { data, error } = await db
     .from("cfa_applications")
     .select("*")
@@ -22,7 +23,9 @@ export async function loadCfaApplicationBoard(db: Db) {
       >;
       const [cvSigned, motivationSigned, documentEntries, privateFileEntries] = await Promise.all([
         application.cv_path
-          ? db.storage.from("cfa-applications").createSignedUrl(String(application.cv_path), 3600)
+          ? String(application.cv_path).startsWith("http")
+            ? Promise.resolve({ data: { signedUrl: String(application.cv_path) } })
+            : db.storage.from("cfa-applications").createSignedUrl(String(application.cv_path), 3600)
           : Promise.resolve({ data: null }),
         application.motivation_media_url && !String(application.motivation_media_url).startsWith("http")
           ? db.storage.from("cfa-applications").createSignedUrl(String(application.motivation_media_url), 3600)
@@ -42,8 +45,17 @@ export async function loadCfaApplicationBoard(db: Db) {
           }),
         ),
       ]);
+      const storedCerfa = (application.cerfa_data ?? {}) as Record<string, string>;
+      const merged = mergeSealedCerfa(storedCerfa, {});
+      if (
+        hasSensitiveKey() &&
+        (merged.cerfa.socialSecurityNumber !== storedCerfa.socialSecurityNumber || merged.cerfa.rqth !== storedCerfa.rqth)
+      ) {
+        await db.from("cfa_applications").update({ cerfa_data: merged.cerfa }).eq("id", application.id);
+      }
       return {
         ...application,
+        cerfa_data: presentCerfa(merged.cerfa, access),
         cv_url: cvSigned.data?.signedUrl ?? null,
         motivation_media_signed_url: motivationSigned.data?.signedUrl ?? application.motivation_media_url ?? null,
         administrative_document_urls: Object.fromEntries(documentEntries),
@@ -75,5 +87,24 @@ export async function loadCfaCompanies(db: Db) {
     if (error.code === "42P01" || error.code === "42703") return { companies: [], migrationRequired: true };
     return { error: error.message };
   }
-  return { companies: data ?? [] };
+  const companies = (data ?? []) as Array<Record<string, unknown>>;
+  const actions = await db
+    .from("cfa_company_activities")
+    .select("company_id, next_action, next_action_at")
+    .is("done_at", null)
+    .not("next_action_at", "is", null);
+  if (actions.error) return { companies };
+  const byCompany = new Map(
+    ((actions.data ?? []) as { company_id: string; next_action: string | null; next_action_at: string | null }[]).map((row) => [row.company_id, row]),
+  );
+  return {
+    companies: companies.map((company) => {
+      const action = byCompany.get(String(company.id ?? ""));
+      return {
+        ...company,
+        next_action: action?.next_action ?? null,
+        next_action_at: action?.next_action_at ?? null,
+      };
+    }),
+  };
 }

@@ -50,10 +50,16 @@ export function previewStats(rows: ParsedEmployeeRow[]) {
     ...new Set(valid.map((r) => r.department?.trim()).filter(Boolean) as string[]),
   ];
   const sansEmail = valid.filter((r) => !r.email).length;
+  const counts = new Map<string, number>();
+  for (const row of valid) {
+    const name = row.department?.trim() || "Sans équipe";
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+  }
   return {
     total: valid.length,
     departments,
+    departmentCounts: [...counts.entries()].map(([name, count]) => ({ name, count })),
     sansEmail,
-    skipped: rows.filter((r) => r._skipReason).length,
+    skipped: rows.filter((r) => r._skipReason && r._skipReason !== "Ligne vide").length,
   };
 }

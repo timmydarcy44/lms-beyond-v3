@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyCollaboratorTestComplete } from "@/lib/entreprise/notify-test-complete";
 import { getServerClient } from "@/lib/supabase/server";
 import { SOFT_SKILLS, SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills";
 
@@ -68,6 +69,12 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    await notifyCollaboratorTestComplete({
+      userId: user.id,
+      email: user.email,
+      test: "soft_skills",
+    });
 
     return NextResponse.json({
       learner_id: user.id,

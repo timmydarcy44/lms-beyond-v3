@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState, useTransition } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState, useTransition } from "react";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { CourseBuilderWorkspace } from "@/components/formateur/course-builder/course-builder-workspace";
+import { FormationFicheExtras } from "@/components/formation-builder/fiche-extras";
+import { EntrepriseFormationStudio } from "@/components/formation-builder/entreprise-studio";
+import { LineList } from "@/components/formation-builder/line-list";
 import { BadgeCreatorOverlay } from "@/components/studio/badge-creator-overlay";
 import type { OpenBadgeSavePayload } from "@/components/super-admin/open-badge-types";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
@@ -55,9 +58,8 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Loader2, Sparkles } from "lucide-react";
-import { X, Plus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Settings } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -76,6 +78,11 @@ type OpenBadgeRow = {
   description?: string | null;
   image_url?: string | null;
   issuer?: string | null;
+  course_id?: string | null;
+  required_course_id?: string | null;
+  criteria?: string | null;
+  modalities?: unknown;
+  evaluation_config?: unknown;
 };
 
 function isCoverVideoUrl(url: string | null | undefined): boolean {
@@ -193,6 +200,7 @@ export function FormateurFormationBuilderWhite({
   const updateGeneral = useCourseBuilder((s) => s.updateGeneral);
   const snapshot = useCourseBuilder((s) => s.snapshot);
   const hydrateFromSnapshot = useCourseBuilder((s) => s.hydrateFromSnapshot);
+  const resetBuilder = useCourseBuilder((s) => s.reset);
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const isTimmy = String(userEmail ?? "").trim().toLowerCase() === "timmydarcy44@gmail.com";
@@ -598,14 +606,20 @@ export function FormateurFormationBuilderWhite({
       setValidatorsLoading(true);
       try {
         const supabase = createSupabaseBrowserClient();
-        const { data, error } = await supabase.from("validators").select("*");
+        const [{ data, error }, admin] = await Promise.all([
+          supabase.from("validators").select("*"),
+          fetch("/api/super-admin/validators")
+            .then(async (response) => (response.ok ? response.json() : null))
+            .catch(() => null),
+        ]);
         if (ignore) return;
-        if (error) {
+        if (error && !admin) {
           console.warn("[validators] fetch failed", error);
           setValidators([]);
           return;
         }
-        const rows = ((data ?? []) as any[])
+        const source = Array.isArray(admin?.validators) ? admin.validators : ((data ?? []) as unknown[]);
+        const rows = (source as Array<Record<string, unknown>>)
           .filter((r) => Boolean(r?.id))
           .map((r) => {
             const first = String(r?.first_name ?? "").trim();
@@ -621,6 +635,17 @@ export function FormateurFormationBuilderWhite({
               avatarUrl,
             } satisfies ValidatorRow;
           }) as ValidatorRow[];
+        const seen = new Set(rows.map((row) => row.id));
+        const seenNames = new Set(rows.map((row) => row.name.toLocaleLowerCase("fr")));
+        for (const person of (Array.isArray(admin?.formateurs) ? admin.formateurs : []) as Array<{ id?: string; name?: string }>) {
+          const id = String(person?.id ?? "");
+          const name = String(person?.name ?? "").trim() || id;
+          const key = name.toLocaleLowerCase("fr");
+          if (!id || seen.has(id) || seenNames.has(key)) continue;
+          seen.add(id);
+          seenNames.add(key);
+          rows.push({ id, name, avatarUrl: null });
+        }
 
         rows.sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
         setValidators(rows);
@@ -659,6 +684,13 @@ export function FormateurFormationBuilderWhite({
     return rows;
   };
 
+  useEffect(() => {
+    const id = courseId || initialCourseId;
+    if (!id || selectedOpenBadgeId !== "none") return;
+    const linked = openBadges.find((badge) => badge.course_id === id || badge.required_course_id === id);
+    if (linked) setSelectedOpenBadgeId(String(linked.id));
+  }, [openBadges, courseId, initialCourseId, selectedOpenBadgeId]);
+
   const selectedBadge = selectedOpenBadgeId !== "none" ? badgeById.get(selectedOpenBadgeId) : null;
 
   useEffect(() => {
@@ -669,6 +701,12 @@ export function FormateurFormationBuilderWhite({
       badgeImage: selectedBadge.image_url ?? undefined,
     });
   }, [selectedBadge, updateGeneral]);
+
+  useLayoutEffect(() => {
+    if (initialCourseId?.trim()) return;
+    resetBuilder();
+    setCourseId(null);
+  }, [initialCourseId, resetBuilder]);
 
   useEffect(() => {
     if (!initialCourseId) return;
@@ -766,17 +804,10 @@ export function FormateurFormationBuilderWhite({
         }
 
         const objectifs = Array.isArray(data?.structure?.objectifs) ? data.structure.objectifs : [];
-        if (objectifs.length) {
-          const safe = objectifs
-            .map((x: any) => String(x ?? "").trim())
-            .filter((x: string) => x.length > 0)
-            .slice(0, 12);
-          if (safe.length) {
-            updateGeneral({
-              objectifs: safe,
-            });
-          }
-        }
+        const safeObjectifs = objectifs
+          .map((x: any) => String(x ?? "").trim())
+          .filter((x: string) => x.length > 0)
+          .slice(0, 12);
 
         const sections = Array.isArray(data?.structure?.sections) ? data.structure.sections : [];
         if (!sections.length) {
@@ -785,6 +816,10 @@ export function FormateurFormationBuilderWhite({
 
         hydrateFromSnapshot({
           ...latestSnapshot,
+          general: {
+            ...latestSnapshot.general,
+            ...(safeObjectifs.length ? { objectifs: safeObjectifs } : {}),
+          },
           sections: sections.map((section: any, sectionIndex: number) => ({
             id: `section-${Date.now()}-${sectionIndex}`,
             title: String(section.title ?? `Section ${sectionIndex + 1}`),
@@ -836,18 +871,22 @@ export function FormateurFormationBuilderWhite({
     });
   };
 
-  const handlePersistBeyondIA = async () => {
+  const handlePersistBeyondIA = async (silent = false) => {
     if (!snapshot.general.title?.trim()) {
-      toast.error("Titre requis", {
-        description: "Saisissez un titre avant d'enregistrer.",
-      });
-      return;
+      if (!silent) {
+        toast.error("Titre requis", {
+          description: "Saisissez un titre avant d'enregistrer.",
+        });
+      }
+      return false;
     }
     if (Boolean((snapshot.general as any)?.parcours_only) && !String((snapshot.general as any)?.parcours_only_path_id ?? "").trim()) {
-      toast.error("Parcours requis", {
-        description: "Choisissez le parcours de la galaxie (Paramètres généraux) pour une formation uniquement visible dans un parcours.",
-      });
-      return;
+      if (!silent) {
+        toast.error("Parcours requis", {
+          description: "Choisissez le parcours de la galaxie (Paramètres généraux) pour une formation uniquement visible dans un parcours.",
+        });
+      }
+      return false;
     }
     setIsPersisting(true);
     try {
@@ -902,7 +941,7 @@ export function FormateurFormationBuilderWhite({
         body: JSON.stringify({
           snapshot: snapshotForApi,
           openBadgeId: selectedOpenBadgeId !== "none" ? selectedOpenBadgeId : null,
-          courseId,
+          courseId: courseId || initialCourseId || null,
           creator_id: user?.id ?? null,
           flashcards: flashcardsPayload,
         }),
@@ -920,26 +959,38 @@ export function FormateurFormationBuilderWhite({
               ? data.message.trim()
               : "";
         toast.error(detail ? `${msg} — ${detail}` : msg);
-        return;
+        return false;
       }
       if (data?.courseId && !courseId) {
         const id = String(data.courseId);
         setCourseId(id);
-        router.replace(
-          editorBase ? `${editorBase.replace(/\/$/, "")}/${id}` : returnTo || `/dashboard/formateur/formations/${id}`,
-        );
+        if (!initialCourseId) {
+          if (orgIsLocked && !byoundOwned) {
+            const params = new URLSearchParams(window.location.search);
+            params.set("courseId", id);
+            router.replace(`/dashboard/entreprise/formations/creer?${params.toString()}`);
+          } else {
+            router.replace(
+              editorBase ? `${editorBase.replace(/\/$/, "")}/${id}` : returnTo || `/dashboard/formateur/formations/${id}`,
+            );
+          }
+        }
         // On navigue → overlay inutile ici.
-        toast.success("Enregistré", {
-          description: data?.message || "Le cours a été sauvegardé.",
-        });
-        return;
+        if (!silent) {
+          toast.success("Enregistré", {
+            description: data?.message || "Le cours a été sauvegardé.",
+          });
+        }
+        return true;
       }
-      // Succès : afficher l'overlay Apple-style (même pour draft) pour feedback immédiat.
-      setSuccessOverlayStatus(data?.status === "published" ? "published" : "draft");
-      setPublishSuccessOpen(true);
+      if (!silent) {
+        toast.success("Formation enregistrée");
+      }
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Impossible d'enregistrer.";
       toast.error(msg);
+      return false;
     } finally {
       setIsPersisting(false);
     }
@@ -1119,7 +1170,7 @@ export function FormateurFormationBuilderWhite({
           snapshot: snapshotForApi,
           openBadgeId: selectedOpenBadgeId !== "none" ? selectedOpenBadgeId : null,
           status: "published",
-          courseId,
+          courseId: courseId || initialCourseId || null,
           creator_id: user?.id ?? null,
           flashcards: flashcardsPayload,
         }),
@@ -1162,14 +1213,20 @@ export function FormateurFormationBuilderWhite({
   const backHref =
     returnTo ||
     (orgIsLocked ? "/dashboard/entreprise/formations/gerer" : "/dashboard/formateur");
-  const formationsHref = editorBase || "/dashboard/formateur/formations";
+  const formationsHref = orgIsLocked
+    ? returnTo || "/dashboard/entreprise/formations/gerer"
+    : editorBase || "/dashboard/formateur/formations";
+  const enterpriseStudio = byoundOwned || orgIsLocked;
 
   return (
     <DashboardShell
       title="Création de formation"
       breadcrumbs={[
         { label: "Dashboard", href: backHref },
-        { label: byoundOwned ? "Byound" : "Formateur", href: byoundOwned ? "/super/lms/formations" : "/dashboard/formateur" },
+        {
+          label: byoundOwned ? "Byound" : orgIsLocked ? "Entreprise" : "Formateur",
+          href: byoundOwned ? "/super/lms/formations" : orgIsLocked ? "/dashboard/entreprise" : "/dashboard/formateur",
+        },
         { label: "Formations", href: formationsHref },
         { label: initialCourseId ? "Formation" : "Nouvelle formation" },
       ]}
@@ -1180,6 +1237,36 @@ export function FormateurFormationBuilderWhite({
       hideSidebar
       hideHeader
     >
+      {enterpriseStudio ? (
+        <EntrepriseFormationStudio
+          courseId={courseId || initialCourseId}
+          organizations={organizations}
+          thematics={thematics}
+          instructors={instructors.map((person) => ({
+            id: person.id,
+            name: person.full_name?.trim() || person.email || "Formateur",
+          }))}
+          paths={availablePaths}
+          validators={validators}
+          isTimmy={isTimmy}
+          byoundOwned={byoundOwned}
+          saving={isPersisting}
+          publishing={isPublishing}
+          backHref={backHref}
+          onSave={handlePersistBeyondIA}
+          onPublish={() => void handlePublishBeyondIA()}
+          openBadges={openBadges}
+          onOpenAi={() => setIsBeyondIAOpen(true)}
+          onCreateValidator={() => {
+            setCreateValidatorFirstName("");
+            setCreateValidatorLastName("");
+            setCreateValidatorDescription("");
+            setCreateValidatorPhotoUrl("");
+            setCreateValidatorOpen(true);
+          }}
+        />
+      ) : (
+      <>
       <div className="sticky top-0 z-20 pt-4">
         <div className="mx-4 overflow-hidden rounded-2xl bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] shadow-lg backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3 md:px-8">
@@ -1701,6 +1788,12 @@ export function FormateurFormationBuilderWhite({
                       placeholder="Ou collez une URL (https://...)"
                       className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
                     />
+                    <Input
+                      value={snapshot.general.cover_alt || ""}
+                      onChange={(e) => updateGeneral({ cover_alt: e.target.value })}
+                      placeholder="Texte alternatif de la couverture"
+                      className="rounded-2xl border border-slate-200 bg-white text-slate-950 placeholder:text-slate-400"
+                    />
                   </div>
                 </div>
               </div>
@@ -1810,12 +1903,60 @@ export function FormateurFormationBuilderWhite({
           </CardContent>
         </Card>
 
+        <FormationFicheExtras />
+
         <CourseBuilderWorkspace
           previewHref="/dashboard/formateur/formations/new/preview"
           theme="light"
           courseId={initialCourseId}
         />
 
+        {/* Section "Open Badge & Certification" retirée (refonte UI). */}
+      </div>
+      </>
+      )}
+
+      {publishSuccessOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/35 px-6 backdrop-blur-xl"
+          onClick={() => setPublishSuccessOpen(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 26 }}
+            className="w-full max-w-sm rounded-[2rem] border border-white/20 bg-white/92 p-10 text-center shadow-2xl ring-1 ring-black/5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <motion.div
+              initial={{ scale: 0, rotate: -25 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.05 }}
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+            >
+              <Check className="h-9 w-9" strokeWidth={2.5} />
+            </motion.div>
+            <p className="mt-8 text-xl font-semibold tracking-tight text-slate-900">
+              {successOverlayStatus === "published" ? "Votre cours est en ligne" : "Cours enregistré"}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              {successOverlayStatus === "published"
+                ? "Votre formation est visible pour les apprenants."
+                : "Vos modifications ont été sauvegardées."}
+            </p>
+            <Button
+              type="button"
+              className="mt-10 h-12 w-full rounded-full bg-slate-950 text-sm font-semibold text-white hover:bg-slate-900"
+              onClick={() => {
+                setPublishSuccessOpen(false);
+                router.push(returnTo || "/dashboard/formateur/formations");
+              }}
+            >
+              {successOverlayStatus === "published" ? "Accéder au catalogue" : "Retour au catalogue"}
+            </Button>
+          </motion.div>
+        </div>
+      ) : null}
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
           <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-white text-slate-950 shadow-xl">
             <DialogHeader>
@@ -1972,51 +2113,6 @@ export function FormateurFormationBuilderWhite({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Section "Open Badge & Certification" retirée (refonte UI). */}
-      </div>
-
-      {publishSuccessOpen ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/35 px-6 backdrop-blur-xl"
-          onClick={() => setPublishSuccessOpen(false)}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 26 }}
-            className="w-full max-w-sm rounded-[2rem] border border-white/20 bg-white/92 p-10 text-center shadow-2xl ring-1 ring-black/5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <motion.div
-              initial={{ scale: 0, rotate: -25 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.05 }}
-              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
-            >
-              <Check className="h-9 w-9" strokeWidth={2.5} />
-            </motion.div>
-            <p className="mt-8 text-xl font-semibold tracking-tight text-slate-900">
-              {successOverlayStatus === "published" ? "Votre cours est en ligne" : "Cours enregistré"}
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              {successOverlayStatus === "published"
-                ? "Votre formation est visible pour les apprenants."
-                : "Vos modifications ont été sauvegardées."}
-            </p>
-            <Button
-              type="button"
-              className="mt-10 h-12 w-full rounded-full bg-slate-950 text-sm font-semibold text-white hover:bg-slate-900"
-              onClick={() => {
-                setPublishSuccessOpen(false);
-                router.push(returnTo || "/dashboard/formateur/formations");
-              }}
-            >
-              {successOverlayStatus === "published" ? "Accéder au catalogue" : "Retour au catalogue"}
-            </Button>
-          </motion.div>
-        </div>
-      ) : null}
     </DashboardShell>
   );
 }
@@ -2054,101 +2150,6 @@ function ObjectivesMirror({ items, empty }: { items: string[]; empty: string }) 
         <li key={`${idx}-${item.slice(0, 16)}`}>{item}</li>
       ))}
     </ul>
-  );
-}
-
-function splitLines(text: string) {
-  return text.split(/\r?\n/).map((line) => line.replace(/^[\s\-*•\d.)]+/, "").trim()).filter(Boolean);
-}
-
-function LineList({
-  value,
-  onChange,
-  placeholder,
-  kind,
-  title,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-  placeholder: string;
-  kind: "objectifs" | "prerequis";
-  title: string;
-}) {
-  const rows = value.length ? value : [""];
-  const [mode, setMode] = useState<"lines" | "paste" | "ai">("lines");
-  const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const append = (lines: string[]) => {
-    const kept = rows.map((row) => row.trim()).filter(Boolean);
-    onChange([...kept, ...lines]);
-    setDraft("");
-    setMode("lines");
-  };
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant={mode === "paste" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "paste" ? "lines" : "paste")}>Faire un copier/coller</Button>
-        <Button type="button" variant={mode === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "ai" ? "lines" : "ai")}>Avec l&apos;IA</Button>
-      </div>
-      {mode === "paste" ? (
-        <div className="space-y-2">
-          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Une ligne par élément" className="min-h-[120px] rounded-2xl border-0 bg-slate-50 text-slate-950" />
-          <Button type="button" className="rounded-full" onClick={() => append(splitLines(draft))}>Ajouter ces lignes</Button>
-        </div>
-      ) : null}
-      {mode === "ai" ? (
-        <div className="space-y-2">
-          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Décrivez le public et le sujet" className="min-h-[96px] rounded-2xl border-0 bg-slate-50 text-slate-950" />
-          <Button
-            type="button"
-            disabled={busy}
-            className="rounded-full"
-            onClick={() => {
-              setBusy(true);
-              void fetch("/api/course-builder/lines", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ kind, title, prompt: draft }),
-              })
-                .then(async (response) => {
-                  const json = (await response.json()) as { lines?: string[]; error?: string };
-                  if (!response.ok || !json.lines?.length) {
-                    toast.error(json.error ?? "L'IA n'a pas répondu");
-                    return;
-                  }
-                  append(json.lines);
-                })
-                .finally(() => setBusy(false));
-            }}
-          >
-            {busy ? "Génération…" : "Générer"}
-          </Button>
-        </div>
-      ) : null}
-      <AnimatePresence initial={false}>
-        {rows.map((row, idx) => (
-          <motion.div key={`${kind}-${idx}`} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
-            <Input
-              value={row}
-              onChange={(event) => {
-                const next = [...rows];
-                next[idx] = event.target.value;
-                onChange(next);
-              }}
-              placeholder={`${placeholder} ${idx + 1}`}
-              className="rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
-            />
-            <Button type="button" variant="ghost" onClick={() => { const next = rows.filter((_, index) => index !== idx); onChange(next.length ? next : [""]); }} className="h-10 w-10 rounded-full bg-slate-100 p-0 text-slate-700 hover:bg-slate-200" aria-label="Supprimer">
-              <X className="h-4 w-4" />
-            </Button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-      <Button type="button" onClick={() => onChange([...rows, ""])} className="rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-5 py-2 text-sm font-medium text-white hover:opacity-95">
-        <Plus className="mr-2 h-4 w-4" />
-        Ajouter une ligne
-      </Button>
-    </div>
   );
 }
 

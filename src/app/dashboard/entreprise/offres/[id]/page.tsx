@@ -8,7 +8,7 @@ import { Manrope } from "next/font/google";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type Stage = "new" | "interview" | "retained" | "rejected";
 type Phase = "active" | "draft" | "paused" | "closed";
@@ -36,6 +36,9 @@ type ApplicationItem = {
   retained_at?: string | null;
   criteria_met?: number | null;
   criteria_total?: number | null;
+  match_score?: number | null;
+  match_idmc?: number | null;
+  match_behavior?: string | null;
   profiles?: Array<{ id?: string | null; first_name?: string | null; last_name?: string | null }> | null;
 };
 
@@ -301,7 +304,11 @@ export default function EntrepriseOfferDetailPage() {
                                 <span className="block truncate text-[13px] text-[#6B6F7A]">{contextLine(application, stage)}</span>
                               </span>
                             </Link>
-                            {total > 0 ? (
+                            {typeof application.match_score === "number" ? (
+                              <span className="max-w-[220px] shrink-0 rounded-full bg-[#EEEBFF] px-2.5 py-1 text-right text-[11px] font-semibold leading-snug text-[#4B3BD1]">
+                                {application.match_score}% · soft skills, IDMC {application.match_idmc ?? "—"}, {application.match_behavior ?? "comportemental"}
+                              </span>
+                            ) : total > 0 ? (
                               <span className={cn("hidden shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold sm:inline", complete ? "bg-[#EEEBFF] text-[#4B3BD1]" : "bg-[#ECE9E1] text-[#3A3D45]")}>
                                 {typeof met === "number" ? met : "—"} / {total} critères
                               </span>

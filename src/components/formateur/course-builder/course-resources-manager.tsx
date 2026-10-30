@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { AddCourseResourceModal } from "./add-course-resource-modal";
+import { subscribeQuizBuilder } from "./quiz-builder-bus";
 
 type GeneratedQuestion = {
   question: string;
@@ -64,6 +65,27 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const [placementType, setPlacementType] = useState("end");
   const [placementId, setPlacementId] = useState("");
   const [quizTitle, setQuizTitle] = useState("");
+
+  useEffect(() => {
+    return subscribeQuizBuilder((detail) => {
+      setSelectedSectionIds({});
+      if (detail.chapterId) {
+        const section = snapshot.sections.find((item) =>
+          item.chapters.some((chapter) => chapter.id === detail.chapterId),
+        );
+        const chapter = section?.chapters.find((item) => item.id === detail.chapterId);
+        setSelectedChapterIds({ [detail.chapterId]: true });
+        setSelectedSubchapterIds(
+          Object.fromEntries((chapter?.subchapters ?? []).map((sub) => [sub.id, true])),
+        );
+        setPlacementType("after_chapter");
+        setPlacementId(detail.chapterId);
+      }
+      setQuizTitle("");
+      setGeneratedQuestions([]);
+      setIsQuizModalOpen(true);
+    });
+  }, [snapshot.sections]);
 
   const usedResourceIds = useMemo(
     () =>

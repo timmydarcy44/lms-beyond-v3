@@ -1,57 +1,55 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { suggestProfessionalEmail } from "@/lib/entreprise/signup-fields";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Role = "admin_hr" | "manager";
 
-type Row = {
+type Added = {
   id: string;
   email: string;
-  full_name: string;
   role: Role;
 };
 
 type Props = {
   organisationId: string;
+  viewerName?: string;
+  viewerEmail?: string;
   onBack?: () => void;
   onNext: () => void;
 };
 
-function normalizeEmail(v: string) {
-  return v.trim().toLowerCase();
+const ADMIN_LIMIT = 3;
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
 }
 
-function isValidEmail(v: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-export function AdminTeamStep({ organisationId, onBack, onNext }: Props) {
+function nameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? "Collegue";
+  return local
+    .replace(/[._+-]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toLocaleUpperCase("fr") + part.slice(1))
+    .join(" ");
+}
+
+export function AdminTeamStep({ organisationId, viewerName, viewerEmail, onBack, onNext }: Props) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const [me, setMe] = useState<{ full_name: string; email: string } | null>(null);
-  const [rows, setRows] = useState<Row[]>([
-    { id: crypto.randomUUID(), email: "", full_name: "", role: "admin_hr" },
-  ]);
+  const [me, setMe] = useState<{ full_name: string; email: string } | null>(
+    viewerName || viewerEmail ? { full_name: viewerName || "Vous", email: viewerEmail || "" } : null,
+  );
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role>("admin_hr");
+  const [added, setAdded] = useState<Added[]>([]);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -60,184 +58,220 @@ export function AdminTeamStep({ organisationId, onBack, onNext }: Props) {
       const { data } = await supabase.auth.getUser();
       const user = data.user;
       if (!user?.id) return;
-      const email = user.email ?? "";
-      const { data: p } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, email")
         .eq("id", user.id)
         .maybeSingle();
-      const name = String(p?.full_name ?? user.user_metadata?.full_name ?? "").trim();
       setMe({
-        full_name: name || "DRH principal",
-        email: String(p?.email ?? email),
+        full_name: String(profile?.full_name ?? user.user_metadata?.full_name ?? "").trim() || "Vous",
+        email: String(profile?.email ?? user.email ?? ""),
       });
     })();
   }, [supabase]);
 
-  const addRow = () => {
-    setRows((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), email: "", full_name: "", role: "admin_hr" },
-    ]);
-  };
+  const used = 1 + added.length;
+  const suggestion = suggestProfessionalEmail(email);
+  const atLimit = used >= ADMIN_LIMIT;
 
-  const removeRow = (id: string) => {
-    setRows((prev) => prev.filter((r) => r.id !== id));
-  };
-
-  const updateRow = (id: string, patch: Partial<Row>) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  const addColleague = () => {
+    const next = normalizeEmail(email);
+    if (!isValidEmail(next) || suggestion) {
+      setFieldError(suggestion ? `Vous vouliez dire ${suggestion} ?` : "Cette adresse email n'est pas valide.");
+      return;
+    }
+    if (me && next === normalizeEmail(me.email)) {
+      setFieldError("Cette adresse est déjà la vôtre.");
+      return;
+    }
+    if (added.some((row) => row.email === next)) {
+      setFieldError("Ce collègue est déjà dans la liste.");
+      return;
+    }
+    if (atLimit) return;
+    setAdded((prev) => [...prev, { id: crypto.randomUUID(), email: next, role }]);
+    setEmail("");
+    setFieldError(null);
   };
 
   const submit = async () => {
-    const cleaned = rows
-      .map((r) => ({
-        email: normalizeEmail(r.email),
-        full_name: r.full_name.trim(),
-        role: r.role,
-      }))
-      .filter((r) => r.email || r.full_name);
-
-    for (const r of cleaned) {
-      if (!r.email || !isValidEmail(r.email)) {
-        toast.error("Vérifiez les emails des administrateurs.");
-        return;
-      }
-      if (!r.full_name) {
-        toast.error("Renseignez prénom/nom pour chaque administrateur.");
-        return;
-      }
-    }
-
-    // optionnel : rien à inviter
-    if (cleaned.length === 0) {
+    if (added.length === 0) {
       onNext();
       return;
     }
-
     setSaving(true);
     try {
       const res = await fetch(`/api/onboarding/organisation/${organisationId}/admins`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ admins: cleaned }),
+        body: JSON.stringify({
+          admins: added.map((row) => ({
+            email: row.email,
+            full_name: nameFromEmail(row.email),
+            role: row.role,
+          })),
+        }),
       });
-      const json = (await res.json().catch(() => null)) as
-        | { success?: boolean; invited?: Array<{ email: string; status: string; error?: string }> ; error?: string; step?: string; detail?: string }
-        | null;
-      if (!res.ok) {
-        const msg = [json?.error, json?.step ? `(${json.step})` : "", json?.detail]
-          .filter(Boolean)
-          .join(" — ");
-        throw new Error(msg || `Erreur (${res.status})`);
-      }
-      toast.success("Invitations envoyées");
+      const json = (await res.json().catch(() => null)) as { error?: string; detail?: string } | null;
+      if (!res.ok) throw new Error(json?.error || json?.detail || "Enregistrement impossible.");
       onNext();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Enregistrement impossible.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white p-6">
-      <h2 className="text-lg font-bold text-gray-900">② Configurez votre équipe RH</h2>
-      <p className="mt-2 text-sm text-gray-600">
-        Qui aura accès à l&apos;espace administrateur Beyond ?
+    <div>
+      <h1 className="text-[36px] font-extrabold leading-tight tracking-[-1.2px]">Qui gère l&apos;espace avec vous ?</h1>
+      <p className="mt-3 text-[16px] leading-relaxed text-[#6B6F7A]">
+        Ajoutez vos collègues RH ou managers. Ils reçoivent une invitation.
       </p>
 
-      <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Vous (DRH principal)</p>
-        <p className="mt-1 text-sm text-emerald-900">
-          {me ? `${me.full_name} — ${me.email} — déjà configuré ✅` : "Chargement…"}
-        </p>
-      </div>
-
-      <div className="mt-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+      <div
+        className="relative mt-8 overflow-hidden rounded-[24px] p-6 text-white"
+        style={{ background: "radial-gradient(ellipse 80% 80% at 100% 0%, #6E5BFF59, transparent 60%), #070C1C" }}
+      >
+        <span className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#6E5BFF33]" aria-hidden />
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#6E5BFF] text-[16px] font-extrabold">
+            {(me?.full_name ?? "V").slice(0, 1).toLocaleUpperCase("fr")}
+          </span>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">
-              Ajouter des administrateurs supplémentaires
-            </p>
-            <p className="mt-1 text-sm text-gray-600">
-              Optionnel — ex : RH, managers, assistants.
-            </p>
+            <p className="text-[16px] font-extrabold">{me ? `${me.full_name} · vous` : "Chargement…"}</p>
+            <p className="text-[14px] text-[#B5BAC6]">{me?.email}</p>
           </div>
-          <Button type="button" variant="outline" onClick={addRow}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Ajouter un administrateur
-          </Button>
+          <span className="ml-auto rounded-full bg-white/10 px-3 py-1 text-[12px] font-extrabold">DRH principal</span>
         </div>
-
-        <div className="mt-4 rounded-2xl border border-gray-200">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Prénom Nom</TableHead>
-                <TableHead>Rôle</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>
-                    <Label className="sr-only">Email</Label>
-                    <Input
-                      value={r.email}
-                      onChange={(e) => updateRow(r.id, { email: e.target.value })}
-                      placeholder="email@entreprise.fr"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Label className="sr-only">Prénom Nom</Label>
-                    <Input
-                      value={r.full_name}
-                      onChange={(e) => updateRow(r.id, { full_name: e.target.value })}
-                      placeholder="Prénom Nom"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select value={r.role} onValueChange={(v) => updateRow(r.id, { role: v as Role })}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Choisir rôle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin_hr">Admin RH</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removeRow(r.id)}>
-                      <Trash2 className="h-4 w-4 text-gray-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <p className="mt-3 text-xs text-gray-500">
-          ℹ️ Ils recevront un email d&apos;invitation et auront accès au dashboard RH Beyond.
-        </p>
-        <p className="mt-2 text-xs text-gray-500">
-          Licences admin incluses : Core → 3 admins · Grow → 5 admins · Transform → 10
-        </p>
       </div>
 
-      <div className="mt-8 flex items-center justify-between gap-3">
-        <Button type="button" variant="outline" onClick={onBack} disabled={!onBack || saving}>
-          ← Retour
-        </Button>
-        <Button type="button" onClick={() => void submit()} disabled={saving}>
-          {saving ? "Envoi…" : "Continuer →"}
-        </Button>
+      <div className="mt-4 rounded-[24px] border border-[#E3E0D8] bg-white p-5">
+        {added.length > 0 ? (
+          <ul className="mb-4 space-y-3">
+            {added.map((row) => (
+              <li key={row.id} className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEEBFF] text-[13px] font-extrabold text-[#4B3BD1]">
+                  {row.email.slice(0, 1).toLocaleUpperCase("fr")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-extrabold">{row.email}</p>
+                  <p className="text-[12px] text-[#6B6F7A]">Invitation envoyée quand vous continuez</p>
+                </div>
+                <span className="rounded-full bg-[#F4F4F1] px-3 py-1 text-[12px] font-extrabold">
+                  {row.role === "manager" ? "Manager" : "Admin RH"}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Retirer ${row.email}`}
+                  onClick={() => setAdded((prev) => prev.filter((item) => item.id !== row.id))}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E3E0D8] text-[18px]"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="block flex-1">
+            <span className="mb-2 block text-[13px] font-extrabold">Email d&apos;un collègue</span>
+            <input
+              type="email"
+              value={email}
+              inputMode="email"
+              autoComplete="email"
+              aria-invalid={Boolean(fieldError)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setFieldError(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addColleague();
+                }
+              }}
+              className={`h-14 w-full rounded-[18px] bg-white px-4 text-[16px] outline-none focus:ring-2 focus:ring-[#6E5BFF] ${
+                fieldError ? "border-[1.5px] border-[#D6334A]" : "border border-[#E3E0D8]"
+              }`}
+            />
+          </label>
+          <div className="flex h-14 rounded-full bg-[#F4F4F1] p-1" role="radiogroup" aria-label="Rôle">
+            {(
+              [
+                ["admin_hr", "Admin RH"],
+                ["manager", "Manager"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={role === id}
+                onClick={() => setRole(id)}
+                className={`rounded-full px-4 text-[13px] font-extrabold ${
+                  role === id ? "bg-[#07080B] text-white" : "text-[#6B6F7A]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addColleague}
+            disabled={atLimit}
+            className="h-14 rounded-full bg-[#07080B] px-5 text-[14px] font-extrabold text-white disabled:opacity-40"
+          >
+            Ajouter
+          </button>
+        </div>
+        {suggestion ? (
+          <p role="alert" className="mt-2 text-[13px] font-semibold text-[#B42318]">
+            Vous vouliez dire{" "}
+            <button type="button" className="font-extrabold underline" onClick={() => setEmail(suggestion)}>
+              {suggestion}
+            </button>{" "}
+            ?
+          </p>
+        ) : fieldError ? (
+          <p role="alert" className="mt-2 text-[13px] font-semibold text-[#B42318]">
+            {fieldError}
+          </p>
+        ) : null}
       </div>
-    </section>
+
+      <div className="mt-4">
+        <div className="flex gap-1">
+          {Array.from({ length: ADMIN_LIMIT }, (_, index) => (
+            <span key={index} className={`h-1.5 flex-1 rounded-full ${index < used ? "bg-[#6E5BFF]" : "bg-[#E3E0D8]"}`} />
+          ))}
+        </div>
+        <p className="mt-2 text-[13px] text-[#6B6F7A]">
+          {used} / {ADMIN_LIMIT} licences admin utilisées pendant l&apos;essai
+        </p>
+        {atLimit ? (
+          <p className="mt-1 text-[13px] font-semibold text-[#3A3D45]">Passez à l&apos;offre Grow pour plus d&apos;administrateurs.</p>
+        ) : null}
+      </div>
+
+      <div className="mt-8 flex items-center gap-3">
+        {onBack ? (
+          <button type="button" onClick={onBack} aria-label="Retour" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#E3E0D8] bg-white text-[22px]">
+            ‹
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={saving}
+          className="h-14 flex-1 rounded-full bg-[#6E5BFF] text-[16px] font-extrabold text-white disabled:opacity-60"
+        >
+          {saving ? "Enregistrement…" : "Continuer"}
+        </button>
+      </div>
+    </div>
   );
 }
-

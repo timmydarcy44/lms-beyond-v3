@@ -8,8 +8,6 @@ import {
   resolvePublicBadgeImageUrl,
 } from "@/lib/openbadges/public-badge-class";
 import { getPublicShareBaseUrl } from "@/lib/openbadges/urls";
-import { buildOpenBadgeLinkedInShareMessage } from "@/lib/openbadges/linkedin-share";
-
 export const revalidate = 600;
 
 type RouteParams = { params: Promise<{ badgeClassId: string }> | { badgeClassId: string } };
@@ -73,10 +71,6 @@ export default async function BadgeCriteriaPage({ params }: RouteParams) {
 
   const shareBase = getPublicShareBaseUrl();
   const imageUrl = resolvePublicBadgeImageUrl(badge.imageUrl, shareBase);
-  const linkedInPreview = buildOpenBadgeLinkedInShareMessage({
-    badgeName: badge.name,
-    level: badge.level,
-  });
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white">
@@ -99,7 +93,7 @@ export default async function BadgeCriteriaPage({ params }: RouteParams) {
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.35em] text-[#FF3B30]">Open Badge Byound</p>
+            <p className="text-sm font-medium text-[#FF3B30]">Open Badge Byound</p>
             <h1 className="text-3xl font-semibold sm:text-4xl">{badge.name}</h1>
             {badge.level != null ? (
               <p className="text-sm text-white/60">Niveau {badge.level}</p>
@@ -108,9 +102,6 @@ export default async function BadgeCriteriaPage({ params }: RouteParams) {
               <p className="mx-auto max-w-xl text-base text-white/75">{badge.description}</p>
             ) : null}
           </div>
-          <blockquote className="max-w-lg rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left text-sm italic leading-relaxed text-white/80">
-            {linkedInPreview}
-          </blockquote>
         </div>
       </section>
 

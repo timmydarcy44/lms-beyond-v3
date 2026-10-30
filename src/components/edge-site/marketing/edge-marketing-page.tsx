@@ -98,6 +98,17 @@ export function EdgeMarketingPage({ content }: Props) {
               <p className="mt-3 text-base leading-relaxed text-black/50">{section.body}</p>
             </article>
           ))}
+          {content.faq?.length ? (
+            <div className="space-y-6 border-t border-black/[0.06] pt-10">
+              <h2 className="text-xl font-semibold tracking-tight text-edge-black-deep sm:text-2xl">Questions fréquentes</h2>
+              {content.faq.map((item) => (
+                <article key={item.question}>
+                  <h3 className="text-base font-semibold text-edge-black-deep">{item.question}</h3>
+                  <p className="mt-2 text-base leading-relaxed text-black/50">{item.answer}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 

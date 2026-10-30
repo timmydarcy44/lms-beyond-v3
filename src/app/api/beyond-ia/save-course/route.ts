@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
+import { resolveValidatorId } from "@/lib/lms/resolve-validator";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { getSupabasePublicUrl } from "@/lib/supabase-public-url";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+import { ficheColumnsFromSnapshot, recordFormationVersion } from "@/lib/courses/fiche-columns";
 import { z } from "zod";
 
 type Payload = {
@@ -128,10 +131,12 @@ export async function POST(req: NextRequest) {
 
     const parsed = SaveCoursePayloadSchema.safeParse(body);
     if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      const where = first?.path.join(".") || "payload";
       return NextResponse.json(
         {
           success: false,
-          error: "Erreur de validation",
+          error: first ? `Erreur de validation (${where} : ${first.message})` : "Erreur de validation",
           validation: {
             issues: parsed.error.issues.map((issue) => ({
               path: issue.path.join("."),
@@ -313,20 +318,49 @@ export async function POST(req: NextRequest) {
       presentation: snapshot.general.presentation || null,
       hero_image_url: hero_image_url,
       cover_image: cover_image_for_row,
+      ...ficheColumnsFromSnapshot(snapshot),
     };
 
     const existingId = body.courseId ? String(body.courseId) : null;
+    const writeClient = isSuperAdminEmailAllowlisted(user.email) ? (getServiceRoleClient() ?? supabase) : supabase;
+    let peerId = validatedByPeerId;
+    if (peerId) {
+      const resolved = await resolveValidatorId(writeClient, peerId);
+      if (!resolved) {
+        return NextResponse.json(
+          { error: "Ce formateur ne peut pas encore valider la formation." },
+          { status: 400 },
+        );
+      }
+      peerId = resolved;
+      (snapshot.general as { validated_by_peer_id?: string }).validated_by_peer_id = resolved;
+    }
+    upsertRow.validated_by_peer_id = peerId;
     if (existingId) {
       upsertRow.id = existingId;
+      const { data: existing } = await writeClient
+        .from("courses")
+        .select("slug, owner_id, creator_id")
+        .eq("id", existingId)
+        .maybeSingle();
+      const keptSlug = String((existing as { slug?: string } | null)?.slug ?? "").trim();
+      if (keptSlug) upsertRow.slug = keptSlug;
+      const keptOwner = String((existing as { owner_id?: string } | null)?.owner_id ?? "").trim();
+      const keptCreator = String((existing as { creator_id?: string } | null)?.creator_id ?? "").trim();
+      if (keptOwner) upsertRow.owner_id = keptOwner;
+      if (keptCreator) upsertRow.creator_id = keptCreator;
+    }
+    if (!String(upsertRow.slug ?? "").trim()) {
+      upsertRow.slug = `course-${Date.now()}`;
     }
 
     const upsertWithFallback = async (row: Record<string, unknown>) => {
       const currentRow = { ...row };
-      for (let attempt = 0; attempt < 6; attempt += 1) {
+      for (let attempt = 0; attempt < 8; attempt += 1) {
         if (attempt === 0) {
           console.log("Niveau envoyé à la DB :", currentRow.level);
         }
-        const { data, error } = await supabase
+        const { data, error } = await writeClient
           .from("courses")
           .upsert(currentRow as never, { onConflict: "id" })
           .select("id")
@@ -345,6 +379,11 @@ export async function POST(req: NextRequest) {
             delete (currentRow as Record<string, unknown>)[col];
             continue;
           }
+        }
+        if (code === "23505" && /slug/i.test(msg)) {
+          const base = String(currentRow.slug ?? "course").replace(/-\d+$/, "");
+          currentRow.slug = `${base}-${Date.now().toString().slice(-6)}`;
+          continue;
         }
         return { data: null, error, rowUsed: currentRow };
       }
@@ -538,6 +577,10 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         console.warn("[save-course] flashcards sync exception:", e);
       }
+    }
+
+    if (courseId) {
+      await recordFormationVersion(supabase, courseId, snapshot, user.id, status);
     }
 
     return NextResponse.json({

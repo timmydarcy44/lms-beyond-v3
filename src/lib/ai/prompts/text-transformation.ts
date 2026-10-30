@@ -1,4 +1,11 @@
-export const SCHEMA_PROMPT_VERSION = "timeline-tube-v2";
+export const SCHEMA_PROMPT_VERSION = "schema-kinds-v1";
+
+export const SCHEMA_KINDS = ["timeline", "flow", "cycle", "pyramid", "compare"] as const;
+export type SchemaKind = (typeof SCHEMA_KINDS)[number];
+
+export function normalizeSchemaKind(value: unknown): SchemaKind {
+  return SCHEMA_KINDS.includes(value as SchemaKind) ? (value as SchemaKind) : "timeline";
+}
 export const SENTENCE_CASE_PROMPT_VERSION = "sentence-case-v1";
 
 const SENTENCE_CASE_RULE = "N'utilise surtout pas de 'Title Case'. Écris en casse phrase: seule la première lettre d'une phrase ou les noms propres sont en majuscule.";
@@ -79,38 +86,64 @@ La carte mentale doit :
 Réponds uniquement avec le JSON, sans texte additionnel.`;
 }
 
-export function buildSchemaPrompt(text: string): string {
-  return `À partir du texte suivant, génère un visuel de type "timeline tubulaire" au format JSON :
+export function buildSchemaPrompt(text: string, kind: unknown = "timeline"): string {
+  const schemaKind = normalizeSchemaKind(kind);
+  const shared = `À partir du texte suivant, construis un schéma de type "${schemaKind}". Le dessin doit suivre le texte : interdiction de recycler un plan générique en quatre étapes identiques d'un texte à l'autre.
 
 "${text}"
 
-Format JSON attendu :
+Règles communes :
+- "kind" vaut exactement "${schemaKind}".
+- Français, casse phrase, pas de Title Case.
+- Titres courts (4 à 6 mots). Descriptions concrètes, tirées du texte.
+- Réponds uniquement avec le JSON, sans texte additionnel.`;
+
+  if (schemaKind === "compare") {
+    return `${shared}
+
+JSON attendu :
 {
-  "title": "Titre court et impactant",
-  "subtitle": "Phrase qui met en contexte la progression",
+  "kind": "compare",
+  "title": "Ce que le texte oppose ou rapproche",
+  "subtitle": "Une phrase de contexte",
+  "left": { "title": "Premier pôle", "points": ["fait tiré du texte", "autre fait"] },
+  "right": { "title": "Second pôle", "points": ["fait tiré du texte", "autre fait"] },
+  "cta": "Phrase de synthèse"
+}
+
+3 à 5 points par colonne. Les deux pôles doivent être réellement distincts dans le texte.`;
+  }
+
+  const shape =
+    schemaKind === "flow"
+      ? "Enchaîne des actions dans l'ordre où on les fait. Chaque étape commence par un verbe. 4 à 6 étapes."
+      : schemaKind === "cycle"
+        ? "Boucle fermée : la dernière étape ramène à la première. 4 ou 5 étapes, pas une liste linéaire déguisée."
+        : schemaKind === "pyramid"
+          ? "Empile du plus large (la base, l'idée générale) au plus étroit (le sommet, l'essentiel). 4 niveaux exactement, du bas vers le haut dans le tableau steps."
+          : "Frise dans le temps ou dans une progression début → fin. 4 à 6 étapes, chacune avec un repère de durée si le texte en donne un.";
+
+  return `${shared}
+
+${shape}
+
+JSON attendu :
+{
+  "kind": "${schemaKind}",
+  "title": "Titre court",
+  "subtitle": "Phrase de contexte",
   "steps": [
     {
       "id": "etape-1",
       "title": "Nom de l'étape",
-      "description": "Résumé de 1 à 2 phrases, concret et actionnable",
-      "takeaway": "Message clé à retenir",
-      "duration": "Durée indicative (optionnel)",
-      "icon": "mot-clé pour l'illustration (ex: cible, fusée, ampoule)",
-      "color": "Couleur suggérée en hex (optionnel)"
+      "description": "1 à 2 phrases tirées du texte",
+      "takeaway": "À retenir",
+      "duration": "optionnel",
+      "icon": "mot court"
     }
   ],
-  "cta": "Phrase finale qui encourage à passer à l'action"
-}
-
-Contraintes :
-- Propose 4 à 6 étapes maximum.
-- Les titres doivent être courts (4 à 6 mots) et dynamiques.
-- Les descriptions doivent expliquer ce qui se passe à cette étape.
-- La timeline doit refléter une progression logique (début → fin).
-- Utilise un vocabulaire positif et motivant.
-- Écris chaque titre ou description en casse phrase (évite le Title Case).
-
-Réponds uniquement avec le JSON, sans texte additionnel.`;
+  "cta": "Phrase finale"
+}`;
 }
 
 export function buildRevisionSheetPrompt(text: string): string {

@@ -1,3 +1,4 @@
+import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import type { LearnerCard, LearnerDetail, LearnerLesson, LearnerModule } from "@/lib/queries/apprenant";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -18,9 +19,11 @@ function buildModulesFromSnapshot(snapshotRaw: unknown): LearnerModule[] {
   const modules: LearnerModule[] = [];
   const sections = Array.isArray(snapshot?.sections) ? snapshot!.sections! : [];
 
-  sections.forEach((section, sIdx) => {
+  sections.filter((section) => isCourseNodeVisible(section as { deleted_at?: string | null })).forEach((section, sIdx) => {
     const lessons: LearnerLesson[] = [];
-    const chapters = Array.isArray(section.chapters) ? (section.chapters as Array<Record<string, unknown>>) : [];
+    const chapters = (Array.isArray(section.chapters) ? (section.chapters as Array<Record<string, unknown>>) : []).filter((chapter) =>
+      isCourseNodeVisible(chapter as { deleted_at?: string | null }),
+    );
 
     for (const chapter of chapters) {
       if (chapter.content || chapter.title || chapter.videoUrl || chapter.mediaUrl) {
@@ -35,9 +38,10 @@ function buildModulesFromSnapshot(snapshotRaw: unknown): LearnerModule[] {
         } as LearnerLesson);
       }
 
-      const subs = Array.isArray(chapter.subchapters)
+      const subs = (Array.isArray(chapter.subchapters)
         ? (chapter.subchapters as Array<Record<string, unknown>>)
-        : [];
+        : []
+      ).filter((sub) => isCourseNodeVisible(sub as { deleted_at?: string | null }));
       for (const sub of subs) {
         if (sub.content || sub.title || sub.videoUrl || sub.mediaUrl || sub.kind) {
           const isQuiz = sub.kind === "quiz" || Boolean(sub.quiz_id);
@@ -65,6 +69,7 @@ function buildModulesFromSnapshot(snapshotRaw: unknown): LearnerModule[] {
       }
     }
 
+    if (lessons.length === 0) return;
     modules.push({
       id: String(section.id ?? `section-${sIdx}`),
       title: String(section.title ?? "Section"),

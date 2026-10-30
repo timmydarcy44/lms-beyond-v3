@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
+import { JADE_ENTREPRISE_OFFERS, jadeMatchingCandidates } from "@/lib/demo/jade-dashboard-mocks";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -360,7 +361,35 @@ const trainingCards = [
 export default function CandidatProfilPage() {
   const params = useParams();
   const candidateId = Array.isArray(params.candidateId) ? params.candidateId[0] : params.candidateId;
-  const candidate = useMemo(() => CANDIDATES.find((item) => item.id === candidateId), [candidateId]);
+  const candidate = useMemo(() => {
+    const listed = CANDIDATES.find((item) => item.id === candidateId);
+    if (listed) return listed;
+    for (const offer of JADE_ENTREPRISE_OFFERS) {
+      const match = jadeMatchingCandidates(offer.id)?.candidates.find((item) => item.id === candidateId);
+      if (!match) continue;
+      return {
+        id: match.id,
+        name: match.name,
+        availability: match.availability,
+        mobility: match.mobility,
+        lastCompany: match.lastCompany,
+        avatar: match.avatar,
+        match: match.match,
+        idmc: match.idmc,
+        disc: match.disc,
+        softSkills: match.softSkills.map((skill) => ({ label: skill.label, level: `${skill.value}%` })),
+        idmcAxes: match.idmcAxes,
+        discScores: { D: 55, I: match.behaviorScore, S: 60, C: 58 },
+        experiences: [{ role: "Candidature", company: match.lastCompany, duration: "En cours" }],
+        diplomas: [],
+        languages: ["Français"],
+        certifications: [],
+        achievements: {} as Record<string, string[]>,
+        badges: [],
+      } satisfies Candidate;
+    }
+    return undefined;
+  }, [candidateId]);
 
   if (!candidate) {
     return (

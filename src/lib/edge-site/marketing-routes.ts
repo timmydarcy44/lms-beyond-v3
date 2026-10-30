@@ -59,6 +59,7 @@ export const EDGE_MARKETING_PATHS = {
   guides: "/guides",
   webinaires: "/webinaires",
   tarifs: "/tarifs",
+  entrepriseSignup: "/entreprises/connexion",
   contact: "/contact",
   login: "/login",
   parcours: "/parcours",

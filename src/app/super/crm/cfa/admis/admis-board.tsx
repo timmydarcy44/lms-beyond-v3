@@ -213,7 +213,7 @@ export function AdmisBoard() {
                 {CERFA_FIELDS.map(([key, name]) => (
                   <div key={key}>
                     <dt className="text-xs text-slate-400">{name}</dt>
-                    <dd className="text-sm">{selected.cerfa_data?.[key] || "—"}</dd>
+                    <dd className="text-sm">{key === "socialSecurityNumber" ? (selected.cerfa_data?.socialSecurityNumberMask || "—") : (selected.cerfa_data?.[key] || "—")}</dd>
                   </div>
                 ))}
               </dl>

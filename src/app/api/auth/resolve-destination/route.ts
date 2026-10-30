@@ -10,7 +10,8 @@ import {
   isClubDashboardPath,
   isPartenaireDashboardPath,
 } from "@/lib/auth/beyond-center-host";
-import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
+import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
+import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const supabase = await getServerClient();
@@ -29,6 +30,13 @@ export async function POST(request: Request) {
   const service = await getServiceRoleClientOrFallback();
   if (!service) {
     return NextResponse.json({ destination: "/dashboard" });
+  }
+
+  const activationDb = getServiceRoleClient();
+  if (activationDb) {
+    await afterSuccessfulAuth(activationDb, { userId: user.id, email: user.email }).catch((error) => {
+      console.error("[resolve-destination] tutor activation", error);
+    });
   }
 
   const { data: profileById } = await service
@@ -54,7 +62,9 @@ export async function POST(request: Request) {
   const isClubPartenaireHref = (href: string) =>
     isClubDashboardPath(href) || isPartenaireDashboardPath(href);
 
-  const roleDestination = resolveDestinationFromProfile(profile);
+  const roleDestination = resolveDestinationFromProfile(
+    profile ? { ...profile, email: profile.email ?? emailValue } : emailValue ? { email: emailValue } : null,
+  );
   if (roleDestination && (clubPartenaireEnabled || !isClubPartenaireHref(roleDestination))) {
     return NextResponse.json({ destination: roleDestination });
   }

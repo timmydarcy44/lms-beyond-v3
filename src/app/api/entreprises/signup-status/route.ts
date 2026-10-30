@@ -38,11 +38,14 @@ export async function GET() {
     });
   }
 
-  const { data: org } = await db
+  const fullOrg = await db
     .from("organizations")
-    .select("id, name, logo_url, company_size_band, edge_profile_completed")
+    .select("id, name, logo_url, company_size_band, edge_profile_completed, siret")
     .eq("id", orgId)
     .maybeSingle();
+  const org = fullOrg.error?.message?.includes("siret")
+    ? (await db.from("organizations").select("id, name, logo_url, company_size_band, edge_profile_completed").eq("id", orgId).maybeSingle()).data
+    : fullOrg.data;
 
   const edgeProfileCompleted = Boolean((org as { edge_profile_completed?: boolean } | null)?.edge_profile_completed);
   const needsProfileCompletion = isEdgeEntreprise && !edgeProfileCompleted;
@@ -54,6 +57,7 @@ export async function GET() {
     onboarding_href: `/onboarding/${orgId}`,
     prefill: {
       company_name: String((org as { name?: string } | null)?.name ?? meta.company_name ?? "").trim(),
+      siret: String((org as { siret?: string | null } | null)?.siret ?? meta.siret ?? "").trim(),
       first_name: String(profile?.first_name ?? meta.first_name ?? "").trim(),
       last_name: String(profile?.last_name ?? meta.last_name ?? "").trim(),
       email: String(profile?.email ?? user.email ?? "").trim(),

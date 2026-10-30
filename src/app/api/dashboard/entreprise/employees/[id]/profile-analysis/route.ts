@@ -136,7 +136,8 @@ export async function GET(
       discScores: (results.disc ?? {}) as Record<string, number>,
       idmcScores: results.idmc_axes ?? {},
       softSkillsTop: results.soft_skills.slice(0, 5),
-    });
+      audience: "hr",
+    }, { audience: "hr" });
 
     return NextResponse.json({
       analysis: resolved.analysis,

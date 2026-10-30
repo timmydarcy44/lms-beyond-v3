@@ -1,67 +1,145 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Manrope } from "next/font/google";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Building2, Loader2, Mail } from "lucide-react";
+import { EntrepriseCodeScreen } from "@/components/edge-site/entreprise-code-screen";
 import { useSupabase } from "@/components/providers/supabase-provider";
-import { EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
+import {
+  CONSUMER_EMAIL_WARNING,
+  entrepriseSignupSchema,
+  isConsumerEmail,
+  signupFieldErrors,
+  suggestProfessionalEmail,
+  type SignupField,
+} from "@/lib/entreprise/signup-fields";
 
-const BYOUND_ACCENT = "#3D7BFF";
-const BYOUND_PAGE_BG =
-  "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(61,123,255,0.18), transparent), #060912";
+const manrope = Manrope({
+  subsets: ["latin"],
+});
+
+const PLAN_LABELS: Record<string, string> = {
+  skills: "Byound Skills",
+  learning: "Byound Learning",
+  "learning-plus": "Byound Learning+",
+};
 
 type Mode = "signup" | "login";
 
 type SignupForm = {
+  company_name: string;
+  siret: string;
   first_name: string;
   last_name: string;
-  company_name: string;
   email: string;
+};
+
+const EMPTY_FORM: SignupForm = {
+  company_name: "",
+  siret: "",
+  first_name: "",
+  last_name: "",
+  email: "",
 };
 
 export function EntrepriseConnexionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useSupabase();
+  const planLabel = PLAN_LABELS[searchParams.get("plan") ?? ""] ?? null;
+  const seats = searchParams.get("seats");
   const [mode, setMode] = useState<Mode>("signup");
-  const [signupForm, setSignupForm] = useState<SignupForm>({
-    first_name: "",
-    last_name: "",
-    company_name: "",
-    email: "",
-  });
+  const [form, setForm] = useState<SignupForm>(EMPTY_FORM);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<SignupField, string>>>({});
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [signupSuccess, setSignupSuccess] = useState<{ email: string; firstName: string } | null>(null);
+  const [step, setStep] = useState<"form" | "code" | "password">("form");
+  const [codeEmail, setCodeEmail] = useState("");
+  const [codeLength, setCodeLength] = useState(8);
 
-  const handleSignupChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setSignupForm((prev) => ({ ...prev, [name]: value }));
+  const suggestion = suggestProfessionalEmail(form.email);
+  const consumerWarning = !suggestion && isConsumerEmail(form.email) ? CONSUMER_EMAIL_WARNING : null;
+  const companyLabel = form.company_name.trim() || "Votre entreprise";
+
+  const openCode = (email: string, digits?: number) => {
+    setCodeEmail(email);
+    if (digits && digits >= 6) setCodeLength(digits);
+    setStep("code");
+  };
+
+  const setField = (name: SignupField, value: string) => {
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   const handleSignup = async (event: React.FormEvent) => {
     event.preventDefault();
+    const parsed = entrepriseSignupSchema.safeParse(form);
+    if (!parsed.success) {
+      setFieldErrors(signupFieldErrors(parsed.error));
+      return;
+    }
     setIsLoading(true);
-    setErrorMessage(null);
-
+    setFieldErrors({});
     try {
       const response = await fetch("/api/entreprises/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupForm),
+        body: JSON.stringify(parsed.data),
       });
-      const data = (await response.json()) as { error?: string; success?: boolean };
-
+      const data = (await response.json()) as {
+        error?: string;
+        fields?: Partial<Record<SignupField, string>>;
+        step?: string;
+        digits?: number;
+      };
       if (!response.ok) {
-        throw new Error(data.error || "Une erreur est survenue.");
+        setFieldErrors(data.fields ?? { email: data.error || "Une erreur est survenue." });
+        return;
       }
+      if (data.step === "password") {
+        setLoginEmail(parsed.data.email);
+        setMode("login");
+        setStep("password");
+        return;
+      }
+      openCode(parsed.data.email, data.digits);
+    } catch {
+      setFieldErrors({ email: "Une erreur est survenue." });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      setSignupSuccess({ email: signupForm.email, firstName: signupForm.first_name });
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Une erreur est survenue.");
+  const handleLoginStart = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const email = loginEmail.trim().toLowerCase();
+    if (!email.includes("@")) {
+      setLoginError("Cette adresse email n'est pas valide.");
+      return;
+    }
+    setIsLoading(true);
+    setLoginError(null);
+    try {
+      const response = await fetch("/api/entreprises/login-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string; step?: string; digits?: number };
+      if (!response.ok) {
+        setLoginError(data.error || "Impossible de continuer.");
+        return;
+      }
+      if (data.step === "password") {
+        setStep("password");
+        return;
+      }
+      openCode(email, data.digits);
+    } catch {
+      setLoginError("Impossible de continuer.");
     } finally {
       setIsLoading(false);
     }
@@ -70,18 +148,13 @@ export function EntrepriseConnexionPage() {
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
-    setErrorMessage(null);
-
+    setLoginError(null);
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: loginEmail.trim(),
         password: loginPassword,
       });
-
-      if (signInError) {
-        throw new Error(signInError.message || "Identifiants incorrects.");
-      }
-
+      if (signInError) throw new Error(signInError.message || "Identifiants incorrects.");
       const res = await fetch("/api/auth/resolve-destination", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,211 +164,340 @@ export function EntrepriseConnexionPage() {
       const payload = (await res.json().catch(() => ({}))) as { destination?: string };
       router.push(payload.destination ?? "/dashboard/entreprise");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Impossible de se connecter.");
+      setLoginError(error instanceof Error ? error.message : "Impossible de se connecter.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (signupSuccess) {
-    const title = signupSuccess.firstName.trim()
-      ? `${signupSuccess.firstName.trim()}, vérifiez votre boîte mail`
-      : "Vérifiez votre boîte mail";
-
-    return (
-      <div
-        className="flex min-h-dvh items-center justify-center px-6 text-white"
-        style={{ background: BYOUND_PAGE_BG }}
-      >
-        <div className="relative z-10 w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3D7BFF]/15">
-            <Mail className="h-6 w-6 text-[#9EC0FF]" aria-hidden />
-          </div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7BA7FF]/90">
-            Byound Business
-          </p>
-          <h1 className="mt-3 text-[26px] font-semibold leading-snug tracking-tight">{title}</h1>
-          <p className="mt-4 text-[15px] leading-relaxed text-white/55">
-            Un email de confirmation vient de vous être envoyé à{" "}
-            <span className="font-medium text-white/85">{signupSuccess.email}</span>. Cliquez sur le lien pour activer
-            votre essai gratuit de 30 jours.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSignupSuccess(null);
-              setMode("login");
-            }}
-            className="mt-10 w-full rounded-2xl bg-white px-8 py-4 text-[15px] font-semibold text-[#0a0a0a] transition hover:opacity-95"
-          >
-            Compris
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const leaveCode = () => {
+    setStep("form");
+    if (mode === "login") setLoginEmail(codeEmail);
+    else setField("email", codeEmail);
+  };
 
   return (
-    <div className="min-h-dvh text-white" style={{ background: BYOUND_PAGE_BG }}>
-      <header className="border-b border-white/[0.08]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/entreprises" className="flex items-center gap-2">
-            <Image src={EDGE_LOGO_PATH} alt="Byound" width={112} height={28} className="h-7 w-auto" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
-              Business
-            </span>
-          </Link>
-          <Link href="/entreprises" className="text-[12px] font-medium text-white/50 hover:text-white/80">
-            Retour
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto grid max-w-6xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1fr_420px] lg:items-start lg:py-24">
+    <div className={`${manrope.className} min-h-dvh bg-[#F4F4F1] text-[#07080B] lg:grid lg:grid-cols-[1.05fr_1fr]`}>
+      <aside
+        className="relative hidden min-h-dvh flex-col justify-between px-14 py-10 text-white lg:flex"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 55% at 18% 88%, #6E5BFF59, transparent 62%), #070C1C",
+        }}
+      >
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#3D7BFF]/35 bg-[#3D7BFF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9EC0FF]">
-            <Building2 className="h-3.5 w-3.5" aria-hidden />
-            Essai 30 jours
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[13px] font-extrabold text-[#07080B]">
+              BY
+            </span>
+            <span className="text-[15px] font-extrabold">Byound Business</span>
           </div>
-          <h1 className="mt-6 text-[clamp(2rem,5vw,3.25rem)] font-bold leading-[1.05] tracking-[-0.03em]">
+          <p className="mt-10 inline-flex rounded-full bg-[#6E5BFF] px-3 py-1.5 text-[13px] font-extrabold text-white">
+            Essai gratuit de 30 jours
+          </p>
+          <h1 className="mt-6 max-w-[560px] text-[54px] font-extrabold leading-[1.02] tracking-[-2px]">
             Pilotez la montée en compétences de vos équipes.
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55 sm:text-lg">
-            Créez votre espace RH Byound : diagnostics DISC & compétences, dashboard temps réel, plan d&apos;action
-            personnalisé. Essai gratuit 30 jours, sans carte bancaire.
+          <p className="mt-5 max-w-[460px] text-[16px] leading-relaxed text-[#B5BAC6]">
+            Diagnostics, formations et invitations de vos collaborateurs, dans un seul espace. Sans carte bancaire.
           </p>
-          <ul className="mt-8 space-y-3 text-sm text-white/60">
-            <li>· 3 licences RH incluses pendant l&apos;essai</li>
-            <li>· Invitations collaborateurs en quelques clics</li>
-            <li>· Accès Byound Learn (micro-formations)</li>
+        </div>
+        <div className="flex items-end gap-8 pb-4">
+          <div
+            className="relative h-[210px] w-[340px] shrink-0 overflow-hidden rounded-[26px] p-6 text-white shadow-[0_30px_60px_#00000066]"
+            style={{
+              background: "linear-gradient(135deg, #8B7BFF, #6E5BFF 55%, #4B3BD1)",
+              transform: "rotate(-4deg)",
+            }}
+          >
+            <span className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/15" aria-hidden />
+            <div className="flex items-start justify-between">
+              <p className="text-[14px] font-extrabold">Espace RH</p>
+              <span className="rounded-full bg-white/20 px-3 py-1 text-[12px] font-extrabold">30 jours</span>
+            </div>
+            <p className="mt-14 truncate text-[28px] font-extrabold tracking-[-0.6px]">{companyLabel}</p>
+            <p className="mt-1 text-[13px] text-white/80">3 licences RH · collaborateurs illimités</p>
+          </div>
+          <ul className="mb-6 space-y-3 text-[14px] font-semibold">
+            {["3 licences RH incluses", "Invitations en quelques clics", "Accès à Byound Online"].map((item) => (
+              <li key={item} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FFFFFF1A]" aria-hidden>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 6.2 4.8 8.5 9.5 3.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </span>
+                {item}
+              </li>
+            ))}
           </ul>
         </div>
+      </aside>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-          <div className="mb-6 flex rounded-full bg-white/[0.06] p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("signup");
-                setErrorMessage(null);
-              }}
-              className={`flex-1 rounded-full py-2.5 text-[13px] font-semibold transition ${
-                mode === "signup" ? "bg-white text-[#0a0a0a]" : "text-white/55 hover:text-white/80"
-              }`}
-            >
-              Créer un compte
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("login");
-                setErrorMessage(null);
-              }}
-              className={`flex-1 rounded-full py-2.5 text-[13px] font-semibold transition ${
-                mode === "login" ? "bg-white text-[#0a0a0a]" : "text-white/55 hover:text-white/80"
-              }`}
-            >
-              Se connecter
-            </button>
+      <main className="flex min-h-dvh flex-col px-5 py-6 sm:px-8">
+        <div className="mb-8 flex items-center justify-between lg:hidden">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#07080B] text-[12px] font-extrabold text-white">
+              BY
+            </span>
+            <span className="text-[14px] font-extrabold">Byound Business</span>
+          </div>
+          <span className="rounded-full bg-[#EEEBFF] px-3 py-1 text-[12px] font-extrabold text-[#4B3BD1]">
+            Essai gratuit de 30 jours
+          </span>
+        </div>
+
+        <div className={`mx-auto flex w-full flex-1 flex-col justify-center ${step === "code" ? "max-w-[520px]" : "max-w-[440px]"}`}>
+          {step === "code" && codeEmail ? (
+            <EntrepriseCodeScreen email={codeEmail} length={codeLength} onBack={leaveCode} />
+          ) : (
+          <>
+          <div className="flex rounded-full bg-white p-1" role="radiogroup" aria-label="Créer un compte ou se connecter">
+            {(
+              [
+                ["signup", "Créer un compte"],
+                ["login", "Se connecter"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={mode === id}
+                onClick={() => {
+                  setMode(id);
+                  setStep("form");
+                  setFieldErrors({});
+                  setLoginError(null);
+                }}
+                className={`h-11 flex-1 rounded-full text-[14px] font-extrabold ${
+                  mode === id ? "bg-[#07080B] text-white" : "text-[#6B6F7A]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {mode === "signup" ? (
-            <form onSubmit={handleSignup} className="space-y-3">
-              <input
-                type="text"
-                name="company_name"
-                required
-                value={signupForm.company_name}
-                onChange={handleSignupChange}
-                placeholder="Nom de l'entreprise"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-white/25"
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="text"
-                  name="first_name"
-                  required
-                  value={signupForm.first_name}
-                  onChange={handleSignupChange}
-                  placeholder="Prénom"
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-white/25"
+            <form onSubmit={handleSignup} className="mt-8" noValidate>
+              <h2 className="text-[30px] font-extrabold tracking-[-0.8px]">Créez votre espace</h2>
+              <p className="mt-2 text-[15px] text-[#6B6F7A]">Moins d&apos;une minute. Vous recevrez un code par email.</p>
+              {planLabel ? (
+                <p className="mt-3 text-[13px] font-extrabold text-[#4B3BD1]">
+                  Offre choisie : {planLabel}
+                  {seats ? ` · ${seats} collaborateurs` : ""}
+                </p>
+              ) : null}
+
+              <div className="mt-8 space-y-4">
+                <Field
+                  label="Votre entreprise"
+                  name="company_name"
+                  value={form.company_name}
+                  error={fieldErrors.company_name}
+                  onChange={setField}
+                  autoComplete="organization"
                 />
-                <input
-                  type="text"
-                  name="last_name"
-                  required
-                  value={signupForm.last_name}
-                  onChange={handleSignupChange}
-                  placeholder="Nom"
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-white/25"
+                <Field
+                  label="SIRET (facultatif)"
+                  name="siret"
+                  value={form.siret}
+                  error={fieldErrors.siret}
+                  onChange={setField}
+                  inputMode="numeric"
                 />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field
+                    label="Prénom"
+                    name="first_name"
+                    value={form.first_name}
+                    error={fieldErrors.first_name}
+                    onChange={setField}
+                    autoComplete="given-name"
+                  />
+                  <Field
+                    label="Nom"
+                    name="last_name"
+                    value={form.last_name}
+                    error={fieldErrors.last_name}
+                    onChange={setField}
+                    autoComplete="family-name"
+                  />
+                </div>
+                <Field
+                  label="Email professionnel"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  error={suggestion ? "Cette adresse semble contenir une faute de frappe." : fieldErrors.email}
+                  onChange={setField}
+                  autoComplete="email"
+                  inputMode="email"
+                />
+                {suggestion ? (
+                  <p role="alert" className="-mt-2 text-[13px] font-semibold text-[#B42318]">
+                    Vous vouliez dire{" "}
+                    <button
+                      type="button"
+                      className="font-extrabold underline"
+                      onClick={() => setField("email", suggestion)}
+                    >
+                      {suggestion}
+                    </button>{" "}
+                    ?
+                  </p>
+                ) : null}
+                {consumerWarning ? <p className="-mt-2 text-[13px] text-[#6B6F7A]">{consumerWarning}</p> : null}
+                {!suggestion && fieldErrors.email ? (
+                  <p role="alert" className="-mt-2 text-[13px] font-semibold text-[#B42318]">
+                    {fieldErrors.email}
+                  </p>
+                ) : null}
               </div>
-              <input
-                type="email"
-                name="email"
-                required
-                value={signupForm.email}
-                onChange={handleSignupChange}
-                placeholder="Email professionnel"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-white/25"
-              />
+
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[14px] font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ backgroundColor: BYOUND_ACCENT }}
+                className="mt-6 h-14 w-full rounded-full bg-[#6E5BFF] text-[16px] font-extrabold text-white disabled:opacity-60"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Création en cours…
-                  </>
-                ) : (
-                  <>
-                    Démarrer l&apos;essai gratuit
-                    <ArrowRight className="h-4 w-4" aria-hidden />
-                  </>
-                )}
+                {isLoading ? "Création en cours…" : "Démarrer l'essai gratuit"}
               </button>
-              <p className="text-center text-[12px] leading-relaxed text-white/40">
-                30 jours gratuits · sans carte bancaire · sans engagement
+
+              <p className="mt-5 text-center text-[12px] leading-relaxed text-[#6B6F7A]">
+                30 jours gratuits · sans carte bancaire · sans engagement. En créant un compte, vous acceptez les{" "}
+                <a href="#" className="font-extrabold text-[#4B3BD1] underline">
+                  conditions
+                </a>{" "}
+                et la{" "}
+                <a href="#" className="font-extrabold text-[#4B3BD1] underline">
+                  politique de confidentialité
+                </a>
+                .
               </p>
             </form>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-3">
-              <input
-                type="email"
-                required
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-white/25"
-              />
-              <input
-                type="password"
-                required
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Mot de passe"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] text-white outline-none placeholder:text-white/30 focus:border-white/25"
-              />
+            <form onSubmit={step === "password" ? handleLogin : handleLoginStart} className="mt-8" noValidate>
+              <h2 className="text-[30px] font-extrabold tracking-[-0.8px]">Se connecter</h2>
+              <p className="mt-2 text-[15px] text-[#6B6F7A]">Retrouvez votre espace Byound Business.</p>
+              <div className="mt-8 space-y-4">
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-extrabold">Email</span>
+                  <input
+                    type="email"
+                    required
+                    value={loginEmail}
+                    autoComplete="email"
+                    onChange={(event) => setLoginEmail(event.target.value)}
+                    className="h-14 w-full rounded-[18px] border border-[#E3E0D8] bg-white px-4 text-[16px] outline-none focus:ring-2 focus:ring-[#6E5BFF]"
+                  />
+                </label>
+                {step === "password" ? (
+                  <label className="block">
+                    <span className="mb-2 block text-[13px] font-extrabold">Mot de passe</span>
+                    <input
+                      type="password"
+                      required
+                      value={loginPassword}
+                      autoComplete="current-password"
+                      onChange={(event) => setLoginPassword(event.target.value)}
+                      className="h-14 w-full rounded-[18px] border border-[#E3E0D8] bg-white px-4 text-[16px] outline-none focus:ring-2 focus:ring-[#6E5BFF]"
+                    />
+                  </label>
+                ) : null}
+              </div>
+              {loginError ? (
+                <p role="alert" className="mt-3 text-[13px] font-semibold text-[#B42318]">
+                  {loginError}
+                </p>
+              ) : null}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[14px] font-semibold text-[#0a0a0a] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-6 h-14 w-full rounded-full bg-[#6E5BFF] text-[16px] font-extrabold text-white disabled:opacity-60"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Se connecter"}
+                {isLoading ? "Connexion…" : step === "password" ? "Se connecter" : "Continuer"}
               </button>
+              {step === "password" ? (
+                <button
+                  type="button"
+                  className="mt-4 w-full text-center text-[14px] font-extrabold text-[#4B3BD1]"
+                  onClick={() => {
+                    const email = loginEmail.trim().toLowerCase();
+                    if (!email.includes("@")) {
+                      setLoginError("Cette adresse email n'est pas valide.");
+                      return;
+                    }
+                    setIsLoading(true);
+                    void fetch("/api/entreprises/send-login-code", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email }),
+                    })
+                      .then(async (response) => {
+                        const data = (await response.json().catch(() => ({}))) as { error?: string; digits?: number };
+                        if (!response.ok) {
+                          setLoginError(data.error || "Le code n'a pas pu être envoyé.");
+                          return;
+                        }
+                        openCode(email, data.digits);
+                      })
+                      .finally(() => setIsLoading(false));
+                  }}
+                >
+                  Recevoir un code à la place
+                </button>
+              ) : null}
             </form>
           )}
-
-          {errorMessage ? (
-            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[13px] text-white/85">
-              {errorMessage}
-            </div>
-          ) : null}
+          </>
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+function Field({
+  label,
+  name,
+  value,
+  error,
+  onChange,
+  type = "text",
+  autoComplete,
+  inputMode,
+}: {
+  label: string;
+  name: SignupField;
+  value: string;
+  error?: string;
+  onChange: (name: SignupField, value: string) => void;
+  type?: string;
+  autoComplete?: string;
+  inputMode?: "email" | "text" | "numeric";
+}) {
+  const describedBy = error ? `${name}-error` : undefined;
+  return (
+    <label className="block">
+      <span className="mb-2 block text-[13px] font-extrabold">{label}</span>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy}
+        onChange={(event) => onChange(name, event.target.value)}
+        className={`h-14 w-full rounded-[18px] bg-white px-4 text-[16px] outline-none focus:ring-2 focus:ring-[#6E5BFF] ${
+          error ? "border-[1.5px] border-[#D6334A]" : "border border-[#E3E0D8]"
+        }`}
+      />
+      {error && name !== "email" ? (
+        <span id={describedBy} role="alert" className="mt-1.5 block text-[13px] font-semibold text-[#B42318]">
+          {error}
+        </span>
+      ) : null}
+    </label>
   );
 }

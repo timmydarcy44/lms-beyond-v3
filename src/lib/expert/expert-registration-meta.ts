@@ -10,7 +10,7 @@ export type ExpertDocumentMeta = {
   status?: "to_sign" | "signed" | "deposited" | null;
   expires_at?: string | null;
   pages?: number | null;
-  folder?: "contrat" | "cv" | "attestation" | "autre" | null;
+  folder?: "contrat" | "cv" | "attestation" | "facture" | "modele" | "autre" | null;
 };
 
 export type EdgeRegistrationMeta = {
@@ -31,6 +31,11 @@ export type EdgeRegistrationMeta = {
   visibility?: Partial<Record<"titre" | "specialites" | "regions" | "formats" | "tarif" | "photo" | "bio", "public" | "private">>;
   agenda_format?: "visio" | "presentiel" | null;
   notice_hours?: number | null;
+  care_session_price_cents?: number | null;
+  care_prestations?: Array<{ id: string; label: string; cents: number | null }>;
+  legal_name?: string | null;
+  siret?: string | null;
+  vat_liable?: boolean | null;
 };
 
 const META_TYPE = "edge_registration_meta";
@@ -62,6 +67,31 @@ export function parseRegistrationMeta(references: unknown): EdgeRegistrationMeta
     visibility: raw.visibility && typeof raw.visibility === "object" ? (raw.visibility as EdgeRegistrationMeta["visibility"]) : undefined,
     agenda_format: raw.agenda_format === "presentiel" || raw.agenda_format === "visio" ? raw.agenda_format : null,
     notice_hours: typeof raw.notice_hours === "number" ? raw.notice_hours : null,
+    care_session_price_cents:
+      typeof raw.care_session_price_cents === "number" && Number.isFinite(raw.care_session_price_cents)
+        ? Math.max(0, Math.round(raw.care_session_price_cents))
+        : null,
+    care_prestations: Array.isArray(raw.care_prestations)
+      ? raw.care_prestations
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const row = item as Record<string, unknown>;
+            const id = typeof row.id === "string" ? row.id.trim() : "";
+            const label = typeof row.label === "string" ? row.label.trim() : "";
+            if (!id || !label) return null;
+            const cents =
+              row.cents == null
+                ? null
+                : typeof row.cents === "number" && Number.isFinite(row.cents)
+                  ? Math.max(0, Math.round(row.cents))
+                  : null;
+            return { id, label, cents };
+          })
+          .filter((item): item is { id: string; label: string; cents: number | null } => Boolean(item))
+      : [],
+    legal_name: typeof raw.legal_name === "string" && raw.legal_name.trim() ? raw.legal_name.trim() : null,
+    siret: typeof raw.siret === "string" && raw.siret.trim() ? raw.siret.replace(/\s+/g, "") : null,
+    vat_liable: typeof raw.vat_liable === "boolean" ? raw.vat_liable : null,
     documents: Array.isArray(raw.documents)
       ? (raw.documents as ExpertDocumentMeta[]).filter((d) => d && typeof d.id === "string")
       : [],

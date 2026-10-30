@@ -2,6 +2,7 @@ import { CertifiedView } from "@/components/expert/space/certified-view";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getSession } from "@/lib/auth/session";
 import { loadExpertShopFormations } from "@/lib/expert/shop-formations";
+import { loadExpertPoleState } from "@/lib/expert/poles";
 import { loadExpertSpace } from "@/lib/expert/space-server";
 import { getServerClient } from "@/lib/supabase/server";
 
@@ -13,7 +14,9 @@ export default async function ExpertCertificationPage({
   searchParams: Promise<{ payment?: string }>;
 }) {
   const params = await searchParams;
-  if (String(params.payment ?? "").toLowerCase() === "success") {
+  const poles = await loadExpertPoleState();
+  const care = poles.ready && poles.pole === "care";
+  if (!care && String(params.payment ?? "").toLowerCase() === "success") {
     const session = await getSession();
     const supabase = await getServerClient();
     if (session?.id && supabase && !isJadeDemoEmail(session.email)) {
@@ -21,5 +24,5 @@ export default async function ExpertCertificationPage({
     }
   }
   const [space, formations] = await Promise.all([loadExpertSpace(), loadExpertShopFormations()]);
-  return <CertifiedView certification={space.certification} formations={formations} />;
+  return <CertifiedView certification={space.certification} formations={formations} care={care} />;
 }

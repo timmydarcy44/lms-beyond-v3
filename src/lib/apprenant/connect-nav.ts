@@ -4,8 +4,6 @@ import {
 
   LayoutDashboard,
 
-  MonitorPlay,
-
   UserCircle,
 
   BookMarked,
@@ -29,8 +27,6 @@ import {
 } from "lucide-react";
 
 
-
-import { EDGE_LAB_ONLINE_CATALOG_HREF, EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 
 import type { ApprenantConnectVariant } from "@/lib/apprenant/connect-theme";
 
@@ -79,7 +75,6 @@ const BASE: ApprenantNavItem[] = [
   },
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
   { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
-  { label: "Byound Online", href: EDGE_ONLINE_APP_SURFACE_PATH, icon: MonitorPlay },
   { label: "Parcours", href: PARCOURS_HREF, icon: BookMarked },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },

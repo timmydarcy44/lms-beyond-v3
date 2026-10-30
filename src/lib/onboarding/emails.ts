@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/email/resend-client";
+import { getCollaboratorInviteEmail } from "@/lib/emails/templates/collaborator-mail";
 import { appOrigin } from "@/lib/onboarding/slug";
 
 const configuredNotify = process.env.ONBOARDING_NOTIFY_EMAIL?.trim() || "timmydarcy44@gmail.com";
@@ -57,16 +58,18 @@ export async function sendCollaboratorInviteEmail(params: {
   companyName: string;
   inviteLink: string;
 }) {
-  await sendEmail({
-    from: "Beyond <noreply@byound.fr>",
-    to: params.email,
-    subject: `${params.companyName} vous invite sur Beyond`,
-    html: `
-      <p>Bonjour ${params.firstName},</p>
-      <p><strong>${params.companyName}</strong> vous invite sur Beyond pour passer vos tests et accéder à votre parcours de développement.</p>
-      <p>Cliquez sur le lien ci-dessous pour <strong>créer votre mot de passe</strong> et activer votre compte :</p>
-      <p><a href="${params.inviteLink}">Créer mon mot de passe et rejoindre Beyond →</a></p>
-      <p style="color:#666;font-size:12px">Si vous étiez déjà connecté avec un autre compte, déconnectez-vous ou ouvrez ce lien en navigation privée.</p>
-    `,
+  const mail = getCollaboratorInviteEmail({
+    firstName: params.firstName,
+    companyName: params.companyName,
+    inviteLink: params.inviteLink,
   });
+  const sent = await sendEmail({
+    to: params.email,
+    subject: mail.subject,
+    html: mail.html,
+  });
+  if (!sent.success) {
+    console.error("[collaborator-invite] resend", params.email, sent.error);
+  }
+  return sent;
 }

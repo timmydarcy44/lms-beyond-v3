@@ -6,6 +6,7 @@ import {
 } from "@/lib/radar-equipe/constants";
 import { buildRadarInsightPrompt } from "@/lib/radar-equipe/insight-prompt";
 import type { DiagnosticRow, EquipeAggregat } from "@/lib/radar-equipe/types";
+import { countCompletedEmployeeDiagnostics } from "@/lib/radar-equipe/live-diagnostics";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 function moyenne(values: number[]): number {
@@ -209,7 +210,8 @@ export async function computeEquipeAggregats(equipeId: string): Promise<{
 
   const organisationId = equipe.organisation_id as string;
   const diagnostics = await loadDiagnosticsForEquipe(service, equipeId, organisationId);
-  const nb = diagnostics.length;
+  const live = await countCompletedEmployeeDiagnostics(service, organisationId);
+  const nb = Math.max(diagnostics.length, live);
 
   const now = new Date();
   const periodeFin = now.toISOString().slice(0, 10);

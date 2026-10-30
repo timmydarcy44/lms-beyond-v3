@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen, ExternalLink } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 import {
   APPRENANT_CARD_BODY,
@@ -12,7 +12,6 @@ import {
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_COURSES } from "@/lib/demo/jade-dashboard-mocks";
 import { getSession } from "@/lib/auth/session";
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
 
 export const dynamic = "force-dynamic";
@@ -47,8 +46,7 @@ export default async function ApprenantMesFormationsPage() {
         <p className={APPRENANT_PAGE_KICKER}>Formations</p>
         <h1 className={APPRENANT_PAGE_TITLE}>Mes formations</h1>
         <p className={APPRENANT_PAGE_LEAD}>
-          Formations qui vous sont assignées par votre organisation, plus l’accès au catalogue Byound
-          Online.
+          Formations qui vous sont assignées par votre organisation.
         </p>
       </section>
 
@@ -59,13 +57,6 @@ export default async function ApprenantMesFormationsPage() {
           <p className="mt-1 max-w-md text-sm text-white/45">
             Dès qu’une formation de votre organisation vous est assignée, elle apparaîtra ici.
           </p>
-          <Link
-            href={EDGE_ONLINE_APP_SURFACE_PATH}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black"
-          >
-            Catalogue Byound Online
-            <ExternalLink className="h-4 w-4" />
-          </Link>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -73,7 +64,7 @@ export default async function ApprenantMesFormationsPage() {
             const href =
               f.href?.startsWith("http") || f.href?.startsWith("/")
                 ? f.href
-                : `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/${"slug" in f ? f.slug || f.id : f.id}`;
+                : `/dashboard/apprenant/formations/${"slug" in f ? f.slug || f.id : f.id}`;
             const cover = f.cover_url || f.cover_image || f.image || null;
             const percent = Math.max(0, Math.min(100, Math.round(Number(f.progress ?? 0)) || 0));
             return (

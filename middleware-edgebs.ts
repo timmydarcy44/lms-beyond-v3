@@ -52,6 +52,7 @@ export function shouldSkipEdgeBsMiddleware(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname === "/sitemap.xml") return true;
+  if (pathname === "/llms.txt") return true;
   if (STATIC_FILE_RE.test(pathname)) return true;
   return false;
 }

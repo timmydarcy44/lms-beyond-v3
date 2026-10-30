@@ -47,10 +47,23 @@ export function TutorMissionsPage() {
   const router = useRouter();
   const statut = params.get("statut") ?? "a_valider";
   const [missions, setMissions] = useState<MissionRow[]>([]);
-  const [blocks, setBlocks] = useState<Array<{ id: string; code: string; title: string }>>([]);
-  const [assignments, setAssignments] = useState<Array<{ id: string; learner_id: string }>>([]);
+  const [assignments, setAssignments] = useState<Array<{ id: string; learner_id: string; learnerName?: string }>>([]);
+  const [referentials, setReferentials] = useState<Array<{
+    assignmentId: string;
+    learnerName: string;
+    referential: {
+      id: string;
+      title: string;
+      company: { name: string; sector: string; city: string | null } | null;
+      missions: Array<{ id: string; code: string; title: string; description: string; deliverable: string; competency: string }>;
+    } | null;
+  }>>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [openCreate, setOpenCreate] = useState(false);
+  const [createMode, setCreateMode] = useState<"scratch" | "referential">("scratch");
+  const [createAssignment, setCreateAssignment] = useState("");
+  const [pickedBlocks, setPickedBlocks] = useState<string[]>([]);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [selected, setSelected] = useState<MissionRow | null>(null);
   const [comment, setComment] = useState("");
 
@@ -60,9 +73,10 @@ export function TutorMissionsPage() {
     const json = await res.json();
     const rows = (json.missions ?? []) as MissionRow[];
     setMissions(rows);
-    setBlocks(json.blocks ?? []);
     setAssignments(json.assignments ?? []);
-    setNames(Object.fromEntries(rows.map((row) => [row.assignmentId, row.learnerName])));
+    setReferentials(json.referentials ?? []);
+    const fromAssignments = Object.fromEntries((json.assignments ?? []).map((row: { id: string; learnerName?: string }) => [row.id, row.learnerName ?? ""]));
+    setNames({ ...fromAssignments, ...Object.fromEntries(rows.map((row) => [row.assignmentId, row.learnerName])) });
   }
 
   useEffect(() => { void load(); }, []);
@@ -94,26 +108,71 @@ export function TutorMissionsPage() {
     await load();
   }
 
+  function missionsOf(assignmentId: string) {
+    return referentials.find((row) => row.assignmentId === assignmentId)?.referential?.missions ?? [];
+  }
+
+  function selectLearner(assignmentId: string) {
+    setCreateAssignment(assignmentId);
+    setPickedBlocks(missionsOf(assignmentId).map((mission) => mission.id));
+    setCreateError(null);
+  }
+
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const block = blocks.find((item) => item.id === String(form.get("blockId")));
-    await fetch("/api/tuteur/missions-board", {
+    const assignmentId = String(form.get("assignmentId") || createAssignment);
+    const dueDate = String(form.get("dueDate") ?? "");
+    const deliverable = String(form.get("deliverable") ?? "");
+    const linked = referentials.find((row) => row.assignmentId === assignmentId)?.referential;
+    const chosen = (linked?.missions ?? []).filter((mission) => pickedBlocks.includes(mission.id));
+    const items = createMode === "referential"
+      ? chosen.map((mission) => ({
+          title: mission.title,
+          description: mission.description,
+          dueDate,
+          deliverable: deliverable || mission.deliverable,
+          blockId: mission.id,
+          blockCode: mission.code,
+          blockTitle: mission.competency,
+        }))
+      : [{
+          title: String(form.get("title") ?? ""),
+          description: String(form.get("description") ?? ""),
+          dueDate,
+          deliverable,
+          blockId: "",
+          blockCode: "",
+          blockTitle: "",
+        }];
+    if (!assignmentId) {
+      setCreateError("Choisissez un alternant.");
+      return;
+    }
+    if (!items.length || items.some((item) => !item.title.trim())) {
+      setCreateError(createMode === "referential" ? "Cochez au moins une mission du référentiel." : "Indiquez un titre.");
+      return;
+    }
+    const res = await fetch("/api/tuteur/missions-board", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        assignmentId: form.get("assignmentId"),
-        blockId: block?.id,
-        blockCode: block?.code,
-        blockTitle: block?.title,
-        title: form.get("title"),
-        description: form.get("description"),
-        dueDate: form.get("dueDate"),
-        deliverable: form.get("deliverable"),
-      }),
+      body: JSON.stringify({ assignmentId, items }),
     });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      setCreateError(typeof json?.error === "string" ? json.error : "Création impossible.");
+      return;
+    }
     setOpenCreate(false);
+    setPickedBlocks([]);
+    setCreateError(null);
+    if (Array.isArray(json?.created) && json.created.length) {
+      setMissions((current) => [...json.created, ...current]);
+      router.push("/dashboard/tuteur/missions?statut=en_cours");
+      return;
+    }
     await load();
+    router.push("/dashboard/tuteur/missions?statut=en_cours");
   }
 
   return (
@@ -123,7 +182,7 @@ export function TutorMissionsPage() {
           <h1 className="text-4xl font-extrabold tracking-tight">Missions</h1>
           <p className="mt-2 text-sm text-[var(--tutor-text-3)]">Toutes les missions de vos alternants, rattachées au référentiel</p>
         </div>
-        <button type="button" className="rounded-full bg-[var(--tutor-accent)] px-4 py-2 text-sm font-bold text-[var(--tutor-on-accent)]" onClick={() => setOpenCreate(true)}>+ Créer une mission</button>
+        <button type="button" className="rounded-full bg-[var(--tutor-accent)] px-4 py-2 text-sm font-bold text-[var(--tutor-on-accent)]" onClick={() => { setCreateMode("scratch"); setCreateError(null); selectLearner(assignments[0]?.id ?? ""); setOpenCreate(true); }}>+ Créer une mission</button>
       </div>
       <div className="mt-6 grid gap-3 md:grid-cols-3">
         <article className="relative overflow-hidden rounded-[28px] bg-[var(--tutor-accent)] p-5 text-[var(--tutor-on-accent)]">
@@ -194,21 +253,64 @@ export function TutorMissionsPage() {
       ) : null}
       {openCreate ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <form onSubmit={create} className="w-full max-w-md space-y-3 rounded-[28px] bg-[var(--tutor-surface)] p-5">
+          <form onSubmit={create} className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-[28px] bg-[var(--tutor-surface)] p-5">
             <h2 className="text-lg font-extrabold">Créer une mission</h2>
-            <select name="assignmentId" required className="w-full rounded-xl bg-[var(--tutor-hero)] p-2">
-              {assignments.map((item) => <option key={item.id} value={item.id}>{names[item.id] ?? "Alternant"}</option>)}
+            <div className="flex gap-2">
+              <button type="button" className={`rounded-full px-3 py-1.5 text-sm font-semibold ${createMode === "scratch" ? "bg-[var(--tutor-accent)] text-[var(--tutor-on-accent)]" : "bg-[var(--tutor-surface-2)]"}`} onClick={() => setCreateMode("scratch")}>À partir de zéro</button>
+              <button type="button" className={`rounded-full px-3 py-1.5 text-sm font-semibold ${createMode === "referential" ? "bg-[var(--tutor-accent)] text-[var(--tutor-on-accent)]" : "bg-[var(--tutor-surface-2)]"}`} onClick={() => { setCreateMode("referential"); setPickedBlocks(missionsOf(createAssignment).map((mission) => mission.id)); }}>Depuis le référentiel</button>
+            </div>
+            <select
+              name="assignmentId"
+              required
+              value={createAssignment}
+              onChange={(event) => selectLearner(event.target.value)}
+              className="w-full rounded-xl bg-[var(--tutor-hero)] p-2"
+            >
+              <option value="">Choisir un alternant</option>
+              {assignments.map((item) => <option key={item.id} value={item.id}>{names[item.id] || item.learnerName || "Alternant"}</option>)}
             </select>
-            <select name="blockId" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2">
-              <option value="">Bloc du référentiel</option>
-              {blocks.map((block) => <option key={block.id} value={block.id}>{block.code} · {block.title}</option>)}
-            </select>
-            <input name="title" required placeholder="Titre" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
-            <textarea name="description" placeholder="Description" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
+            {createMode === "referential" ? (
+              <div className="space-y-3 rounded-xl bg-[var(--tutor-hero)] p-3">
+                {(() => {
+                  const linked = referentials.find((row) => row.assignmentId === createAssignment)?.referential;
+                  if (!linked) return <p className="text-sm">Aucun référentiel n'est rattaché au cursus de cet alternant.</p>;
+                  return (
+                    <>
+                      <p className="text-sm font-semibold">Cursus · {linked.title}</p>
+                      <p className="text-sm text-[var(--tutor-text-3)]">
+                        {linked.company
+                          ? `${linked.company.name}${linked.company.city ? ` · ${linked.company.city}` : ""} · ${linked.company.sector}`
+                          : "Entreprise non renseignée"}
+                      </p>
+                      {linked.missions.map((mission) => (
+                        <label key={mission.id} className="flex items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={pickedBlocks.includes(mission.id)}
+                            onChange={(event) => setPickedBlocks((current) => event.target.checked ? [...current, mission.id] : current.filter((id) => id !== mission.id))}
+                          />
+                          <span>
+                            <span className="font-semibold">{mission.code} · {mission.title}</span>
+                            <span className="mt-1 block text-[var(--tutor-text-3)]">{mission.description}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              <>
+                <input name="title" required placeholder="Titre" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
+                <textarea name="description" placeholder="Description" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
+              </>
+            )}
             <input name="dueDate" type="date" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
             <input name="deliverable" placeholder="Livrable attendu" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
+            {createError ? <p className="text-sm text-[var(--tutor-alert)]">{createError}</p> : null}
             <div className="flex gap-2">
-              <button className="rounded-full bg-[var(--tutor-accent)] px-4 py-2 text-sm font-bold text-[var(--tutor-on-accent)]" type="submit">Créer</button>
+              <button className="rounded-full bg-[var(--tutor-accent)] px-4 py-2 text-sm font-bold text-[var(--tutor-on-accent)]" type="submit">{createMode === "referential" ? "Créer les missions" : "Créer"}</button>
               <button className="rounded-full bg-[var(--tutor-surface-2)] px-4 py-2 text-sm" type="button" onClick={() => setOpenCreate(false)}>Fermer</button>
             </div>
           </form>

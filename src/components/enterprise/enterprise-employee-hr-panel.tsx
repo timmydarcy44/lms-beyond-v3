@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Calendar, FileText, Mail, Phone, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { formatSeniority } from "@/lib/entreprise/seniority";
@@ -28,14 +28,24 @@ type Props = {
   email: string | null;
   phone: string | null;
   hireDate: string | null;
+  jobTitle?: string | null;
+  metier?: string | null;
   documents: HrDocument[];
   editing?: boolean;
   /** Affiche uniquement les coordonnées (sans entretiens). */
   showContactOnly?: boolean;
   /** Affiche uniquement la section entretiens. */
   showEntretiensOnly?: boolean;
-  onProfileChange: (patch: { phone?: string | null; hire_date?: string | null }) => void;
+  onProfileChange: (patch: {
+    phone?: string | null;
+    hire_date?: string | null;
+    job_title?: string | null;
+    metier?: string | null;
+  }) => void;
   onDocumentsChange: (docs: HrDocument[]) => void;
+  /** Incrémenté par « Terminer » pour enregistrer poste et téléphone. */
+  saveRequest?: number;
+  onSaved?: () => void;
 };
 
 export function EnterpriseEmployeeHrPanel({
@@ -43,15 +53,22 @@ export function EnterpriseEmployeeHrPanel({
   email,
   phone,
   hireDate,
+  jobTitle = null,
+  metier = null,
   documents,
   editing = false,
   showContactOnly = false,
   showEntretiensOnly = false,
   onProfileChange,
   onDocumentsChange,
+  saveRequest = 0,
+  onSaved,
 }: Props) {
   const [editPhone, setEditPhone] = useState(phone ?? "");
   const [editHireDate, setEditHireDate] = useState(hireDate ?? "");
+  const [editPoste, setEditPoste] = useState(jobTitle ?? "");
+  const [editMetier, setEditMetier] = useState(metier ?? "");
+  const [metiers, setMetiers] = useState<{ id: string; title: string }[]>([]);
   const [savingProfile, setSavingProfile] = useState(false);
   const [docType, setDocType] = useState("entretien_individuel");
   const [docTitle, setDocTitle] = useState("");
@@ -63,36 +80,77 @@ export function EnterpriseEmployeeHrPanel({
   useEffect(() => {
     setEditPhone(phone ?? "");
     setEditHireDate(hireDate ?? "");
-  }, [phone, hireDate]);
+    setEditPoste(jobTitle ?? "");
+    setEditMetier(metier ?? "");
+  }, [phone, hireDate, jobTitle, metier]);
+
+  useEffect(() => {
+    if (!editing) return;
+    let cancelled = false;
+    void fetch("/api/dashboard/entreprise/metiers")
+      .then((res) => res.json())
+      .then((json: { roles?: { id: string; title: string }[] }) => {
+        if (!cancelled) setMetiers(json.roles ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [editing]);
 
   const seniority = formatSeniority(hireDate);
   const showContact = !showEntretiensOnly;
   const showEntretiens = !showContactOnly;
 
+  const draftRef = useRef({ phone: "", hireDate: "", poste: "", metier: "" });
+  draftRef.current = {
+    phone: editPhone,
+    hireDate: editHireDate,
+    poste: editPoste,
+    metier: editMetier,
+  };
+
   const saveProfile = async () => {
+    const current = draftRef.current;
     setSavingProfile(true);
     try {
       const res = await fetch(`/api/dashboard/entreprise/employees/${employeeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: editPhone.trim() || null,
-          hire_date: editHireDate || null,
+          phone: current.phone.trim() || null,
+          hire_date: current.hireDate || null,
+          job_title: current.poste.trim() || null,
+          metier: current.metier.trim() || null,
         }),
       });
-      const json = (await res.json()) as { error?: string };
+      const json = (await res.json()) as { error?: string; warning?: string };
       if (!res.ok) throw new Error(json.error ?? "Erreur");
+      if (json.warning) toast.warning(json.warning);
       onProfileChange({
-        phone: editPhone.trim() || null,
-        hire_date: editHireDate || null,
+        phone: current.phone.trim() || null,
+        hire_date: current.hireDate || null,
+        job_title: current.poste.trim() || null,
+        metier: current.metier.trim() || null,
       });
       toast.success("Fiche mise à jour");
+      return true;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
+      return false;
     } finally {
       setSavingProfile(false);
     }
   };
+
+  useEffect(() => {
+    if (!saveRequest) return;
+    void saveProfile().then((ok) => {
+      if (ok) onSaved?.();
+    });
+    // L'incrément vient du bouton Terminer, avec les champs déjà à jour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveRequest]);
 
   const addDocument = async () => {
     if (!docTitle.trim()) {
@@ -218,6 +276,42 @@ export function EnterpriseEmployeeHrPanel({
               </div>
             </div>
           </div>
+          {editing ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Poste</label>
+                <input
+                  value={editPoste}
+                  onChange={(e) => setEditPoste(e.target.value)}
+                  placeholder="Ex. Responsable commercial"
+                  className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Métier</label>
+                <select
+                  value={editMetier}
+                  onChange={(e) => setEditMetier(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
+                >
+                  <option value="">Choisir un métier</option>
+                  {editMetier && !metiers.some((role) => role.title === editMetier) ? (
+                    <option value={editMetier}>{editMetier}</option>
+                  ) : null}
+                  {metiers.map((role) => (
+                    <option key={role.id} value={role.title}>
+                      {role.title}
+                    </option>
+                  ))}
+                </select>
+                {metiers.length === 0 ? (
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Ajoutez d&apos;abord un métier dans la section Métiers.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           {editing ? (
             <button
               type="button"

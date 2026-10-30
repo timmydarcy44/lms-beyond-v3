@@ -1,0 +1,153 @@
+.lms-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 18px 0;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  padding: 20px 22px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.lms-callout__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lms-callout__badge {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lms-callout__label {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.lms-callout__text,
+.lesson-reader__prose .lms-callout .lms-callout__text,
+.lesson-reader__prose .lms-callout .lms-callout__text strong {
+  color: #1f2128;
+  line-height: 1.65;
+}
+
+.lms-callout__text p,
+.lms-callout__text li {
+  margin: 0;
+  color: #1f2128;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+.lms-callout--definition {
+  background: #fdeff0;
+}
+
+.lms-callout--definition .lms-callout__badge {
+  background: #d6334a;
+  color: #ffffff;
+}
+
+.lms-callout--definition .lms-callout__label {
+  background: #f9d7db;
+  color: #9e1c2e;
+}
+
+.lms-callout--definition .lms-callout__text {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.lms-callout--example {
+  background: #ecf8f1;
+}
+
+.lms-callout--example .lms-callout__badge {
+  background: #1f9d57;
+  color: #ffffff;
+}
+
+.lms-callout--example .lms-callout__label {
+  background: #d5f0e0;
+  color: #126b3b;
+}
+
+.lms-callout--example .lms-callout__text {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.lms-callout--key {
+  background: #fff7e0;
+}
+
+.lms-callout--key .lms-callout__badge {
+  background: #e2b23a;
+  color: #2a2312;
+}
+
+.lms-callout--key .lms-callout__label {
+  background: #fbebb8;
+  color: #6b5210;
+}
+
+.lms-callout--key .lms-callout__text {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.lesson-reader__prose .lms-callout--definition .lms-callout__text,
+.lesson-reader__prose .lms-callout--definition .lms-callout__text p {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.lesson-reader__prose .lms-callout--example .lms-callout__text,
+.lesson-reader__prose .lms-callout--example .lms-callout__text p,
+.lesson-reader__prose .lms-callout--key .lms-callout__text,
+.lesson-reader__prose .lms-callout--key .lms-callout__text p {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+@media (max-width: 639px) {
+  .lms-callout {
+    padding: 16px 18px;
+  }
+
+  .lms-callout--definition .lms-callout__text,
+  .lesson-reader__prose .lms-callout--definition .lms-callout__text,
+  .lesson-reader__prose .lms-callout--definition .lms-callout__text p {
+    font-size: 18px;
+  }
+}
+
+.lesson-reader[data-reading-theme="dys"] .lms-callout__text,
+.lesson-reader[data-reading-theme="dys"] .lms-callout__text p,
+.lesson-reader[data-reading-theme="dys"] .lms-callout__text li,
+.lesson-reader[data-reading-theme="dys"] .lesson-reader__prose .lms-callout__text,
+.lesson-reader[data-reading-theme="dys"] .lesson-reader__prose .lms-callout__text p {
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}

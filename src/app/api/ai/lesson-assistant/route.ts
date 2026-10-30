@@ -10,6 +10,7 @@ import {
   buildSchemaPrompt,
   buildSynthesisSheetPrompt,
   buildTranslatePrompt,
+  normalizeSchemaKind,
   SCHEMA_PROMPT_VERSION,
   SENTENCE_CASE_PROMPT_VERSION,
 } from "@/lib/ai/prompts/text-transformation";
@@ -129,6 +130,7 @@ function normalizeOptions(action: string, options?: TransformationOptions): Tran
       break;
     }
     case "schema": {
+      normalized.schemaType = normalizeSchemaKind(safeOptions["schemaType"]);
       normalized.promptVersion = SCHEMA_PROMPT_VERSION;
       normalized.caseVersion = SENTENCE_CASE_PROMPT_VERSION;
       break;
@@ -272,7 +274,7 @@ export async function POST(request: NextRequest) {
         break;
       }
       case "schema": {
-        const prompt = buildSchemaPrompt(text);
+        const prompt = buildSchemaPrompt(text, normalizedOptions.schemaType);
         result = await generateJSON(prompt);
         format = "json";
         break;

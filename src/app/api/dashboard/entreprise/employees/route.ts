@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildEmployeeInsertRow } from "@/lib/entreprise/employees-insert";
-import {
-  buildCollaboratorInviteMetadata,
-  buildCollaboratorSetPasswordUrl,
-} from "@/lib/entreprise/collaborator-invite";
+import { deliverCollaboratorInvite } from "@/lib/entreprise/deliver-collaborator-invite";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
-import {
-  resolveAuthUserIdByEmail,
-  syncCollaboratorProfileAfterInvite,
-} from "@/lib/entreprise/sync-collaborator-profile";
-import { publicAppUrl } from "@/lib/env";
-import { sendCollaboratorInviteEmail } from "@/lib/onboarding/emails";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -80,46 +71,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: insertErr.message }, { status: 400 });
   }
 
-  let inviteSent = false;
-  try {
-    const siteBase = publicAppUrl();
-    const setPasswordUrl = buildCollaboratorSetPasswordUrl(siteBase);
-    const inviteMetadata = buildCollaboratorInviteMetadata({
-      firstName: first_name,
-      lastName: last_name,
-      organizationId: orgId,
-      employeeId: employee.id,
-    });
-    const { data: inviteData, error: inviteErr } = await service.auth.admin.inviteUserByEmail(email, {
-      data: inviteMetadata,
-      redirectTo: setPasswordUrl,
-    });
-    const invitedUserId = inviteData?.user?.id ?? (await resolveAuthUserIdByEmail(service, email));
-    if (invitedUserId) {
-      await service.auth.admin.updateUserById(invitedUserId, {
-        user_metadata: inviteMetadata,
-      });
-      await syncCollaboratorProfileAfterInvite(service, {
-        userId: invitedUserId,
-        email,
-        firstName: first_name,
-        lastName: last_name,
-        organizationId: orgId,
-        employeeId: employee.id,
-      });
-    }
-    if (!inviteErr) {
-      await sendCollaboratorInviteEmail({
-        email,
-        firstName: first_name,
-        companyName: String((org as { name?: string })?.name ?? "votre entreprise"),
-        inviteLink: setPasswordUrl,
-      });
-      inviteSent = true;
-    }
-  } catch {
-    /* invitation optionnelle */
-  }
+  const invite = await deliverCollaboratorInvite(service, {
+    email,
+    firstName: first_name,
+    lastName: last_name,
+    companyName: String((org as { name?: string })?.name ?? "votre entreprise"),
+    organizationId: orgId,
+    employeeId: employee.id,
+  });
+  const inviteSent = invite.sent;
 
   return NextResponse.json({ id: employee.id, invite_sent: inviteSent });
 }

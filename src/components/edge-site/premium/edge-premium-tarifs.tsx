@@ -30,6 +30,7 @@ import {
 type Props = {
   demoHref: string;
   contactHref: string;
+  signupHref: string;
 };
 
 function clampSeats(n: number) {
@@ -211,7 +212,7 @@ function FormationsPicker({
   );
 }
 
-export function EdgePremiumTarifs({ demoHref, contactHref }: Props) {
+export function EdgePremiumTarifs({ demoHref, contactHref, signupHref }: Props) {
   const [billing, setBilling] = useState<EdgeBilling>("monthly");
   const [seats, setSeats] = useState(EDGE_SEATS_DEFAULT);
   const [selected, setSelected] = useState<EdgePlanId>("learning");
@@ -486,14 +487,22 @@ export function EdgePremiumTarifs({ demoHref, contactHref }: Props) {
                   </div>
                 ) : null}
 
-                <div className="mt-8" onClick={(e) => e.stopPropagation()}>
+                <div className="mt-8 space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <EdgePremiumButton
+                    href={`${signupHref}?plan=${plan.id}&seats=${seats}&billing=${billing}`}
+                    variant={active ? "primary" : "secondary-light"}
+                    shape="revolut"
+                    className="w-full"
+                  >
+                    Créer un compte
+                  </EdgePremiumButton>
                   <EdgePremiumButton
                     href={`${demoHref}?plan=${plan.id}&seats=${seats}&billing=${billing}${
                       formations.length && plan.formationsPicker
                         ? `&formations=${formations.join(",")}`
                         : ""
                     }`}
-                    variant={active ? "primary" : "secondary-light"}
+                    variant="secondary-light"
                     shape="revolut"
                     className="w-full"
                   >

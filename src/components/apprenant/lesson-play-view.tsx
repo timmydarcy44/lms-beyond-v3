@@ -14,6 +14,9 @@ import "katex/dist/katex.min.css";
 
 import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-resource";
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
+import { ByoundCardsPrompt, type ByoundCardsReview } from "@/components/apprenant/byound-cards-prompt";
+import { ReadingContent } from "@/components/lms/ReadingContent";
+import { splitSectionTitle } from "@/lib/lms/reading-transform";
 import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
@@ -36,6 +39,7 @@ import {
   outlineKeysContainingLesson,
 } from "@/lib/apprenant/lesson-outline-groups";
 import { GameBlockPlayer } from "@/components/serious-games/GameBlockPlayer";
+import { setDashboardSpace, type DashboardSpace } from "@/lib/dashboard/space";
 import { extractStandaloneHtmlDocument, isHtmlGameUrl, toInteractiveGameFrameSrc } from "@/lib/course-builder/html-game";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +48,7 @@ import {
   Cone,
   CircleCheck,
   FileText,
+  Gamepad2,
   Headphones,
   PlayCircle,
   X,
@@ -80,6 +85,13 @@ function readerMark(lesson: LearnerLesson): "quiz" | "game" | "interview" | unde
   if (isInterviewLikeLesson(lesson)) return "interview";
   if (type === "interactive_game" || /jeu\s+interactif/i.test(title)) return "game";
   return undefined;
+}
+
+function readingNodeText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map((item) => readingNodeText(item)).join("");
+  return "";
 }
 
 function prepareReadingHtml(html: string, title: string) {
@@ -321,6 +333,8 @@ type LessonPlayViewProps = {
   activeModule?: LearnerModule;
   videoSrc?: string | null;
   cardHref: string;
+  /** Base des liens de leçon. Par défaut, `cardHref`. */
+  lessonBaseHref?: string;
   flashcards: LearnerFlashcard[];
   previousLesson?: { id: string; title: string };
   nextLesson?: { id: string; title: string };
@@ -337,6 +351,7 @@ export function LessonPlayView({
   activeModule,
   videoSrc,
   cardHref,
+  lessonBaseHref,
   flashcards,
   previousLesson,
   nextLesson,
@@ -346,6 +361,12 @@ export function LessonPlayView({
 }: LessonPlayViewProps) {
   const isJessica = theme === "jessica";
   const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const from = new URLSearchParams(window.location.search).get("from");
+    if (from === "expert" || from === "apprenant" || from === "formateur" || from === "ecole" || from === "salarie") {
+      setDashboardSpace(from as DashboardSpace);
+    }
+  }, []);
   const [focusMode, setFocusMode] = useState(false);
   const [showLearningStrategyModal, setShowLearningStrategyModal] = useState(false);
   const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
@@ -770,7 +791,10 @@ export function LessonPlayView({
     setFocusMode(isPomodoroFocus);
   }, [pomodoroState.phase, pomodoroState.isActive]);
 
-  const lessonHref = useMemo(() => (lessonId: string) => `${cardHref}/play/${lessonId}`, [cardHref]);
+  const lessonHref = useMemo(
+    () => (lessonId: string) => `${lessonBaseHref ?? cardHref}/play/${lessonId}`,
+    [cardHref, lessonBaseHref],
+  );
 
   useEffect(() => {
     if (!courseId) return;
@@ -1059,6 +1083,35 @@ export function LessonPlayView({
   }, [sanitizedContent]);
 
   const showBeyondFlashCta = beyondFlashCards.length > 0;
+  const flashReview = useMemo<ByoundCardsReview | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(`flash-review-${courseId}-${String(activeLesson.id)}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as {
+        known?: number;
+        unknown?: number;
+        results?: Array<{ cardId?: string; known?: boolean }>;
+      };
+      const known = Math.max(0, Number(parsed.known ?? 0));
+      const unknown = Math.max(0, Number(parsed.unknown ?? 0));
+      const results = (parsed.results ?? [])
+        .map((row) => ({ cardId: String(row.cardId ?? ""), known: Boolean(row.known) }))
+        .filter((row) => row.cardId);
+      if (known + unknown === 0 && results.length === 0) return null;
+      return { known, results };
+    } catch {
+      return null;
+    }
+  }, [activeLesson.id, beyondFlashStorageEpoch, courseId, isBeyondFlashOpen]);
+
+  const cardsPrompt = showBeyondFlashCta ? (
+    <ByoundCardsPrompt
+      cardIds={beyondFlashCards.map((card) => card.id)}
+      reviewed={flashReview}
+      onStart={() => setIsBeyondFlashOpen(true)}
+    />
+  ) : null;
 
   const isHtmlContent = useMemo(() => /<\/?[a-z][\s\S]*>/i.test(sanitizedContent ?? ""), [sanitizedContent]);
 
@@ -1833,22 +1886,24 @@ export function LessonPlayView({
           </div>}
 
           {isInteractiveGame ? (
-            <div className={neo ? "lesson-reader__game" : "mb-6 flex min-h-[420px] flex-col items-start justify-center gap-6 rounded-3xl border border-slate-200 bg-[#0B1020] px-8 py-12 text-white sm:px-12"}>
-              <p className={neo ? "lesson-reader__game-tag" : "text-[11px] font-semibold uppercase tracking-[0.28em] text-white/50"}>
-                {neo ? "Jeu interactif · plein écran" : "Jeu interactif"}
+            <div className={neo ? "lesson-reader__game" : "relative mb-6 overflow-hidden rounded-[32px] bg-[#0B1020] px-8 py-12 text-white sm:px-12"}>
+              <div className={neo ? "lesson-reader__game-art" : "pointer-events-none absolute -right-8 -top-10 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl"} aria-hidden />
+              <p className={neo ? "lesson-reader__game-tag" : "inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70"}>
+                <Gamepad2 className="h-3.5 w-3.5" aria-hidden />
+                Jeu interactif
               </p>
-              <div className="max-w-xl space-y-3">
+              <div className={neo ? "lesson-reader__game-copy" : "relative mt-5 max-w-xl space-y-3"}>
                 <h3 className={neo ? undefined : "text-3xl font-black tracking-tight sm:text-4xl"}>{activeLesson.title || "Jeu"}</h3>
                 <p className={neo ? undefined : "text-sm leading-relaxed text-white/70"}>
                   {neo
-                    ? "Tu peux quitter le jeu à tout moment pour revenir au chapitre."
+                    ? "Mets en pratique ce que tu viens d’apprendre. Tu peux quitter le jeu à tout moment pour revenir au chapitre."
                     : "Le jeu s'ouvre en plein écran. Vous pouvez le quitter à tout moment pour revenir au chapitre."}
                 </p>
               </div>
               <Button
                 type="button"
                 onClick={() => setGameOpen(true)}
-                className={neo ? "lesson-reader__play" : "h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"}
+                className={neo ? "lesson-reader__play" : "relative mt-8 h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"}
               >
                 <PlayCircle className="mr-2 h-4 w-4" aria-hidden />
                 {neo ? "Lancer le jeu" : "Commencer le jeu"}
@@ -1866,7 +1921,6 @@ export function LessonPlayView({
                       blockId={String(activeLesson.id)}
                       courseId={courseId}
                       lessonId={String(activeLesson.id)}
-                      reviewBasePath="/dashboard/apprenant/jeux"
                       fill
                     />
                   ) : (
@@ -2005,61 +2059,60 @@ export function LessonPlayView({
               )}
             </div>
           ) : isTestFlow ? (
-            <div className={neo ? "lesson-reader__quiz" : "space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"}>
-              {!testStarted ? (
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    {neo ? null : <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>}
-                    <p className="text-slate-600">
-                      {isQuizLesson
-                        ? "Ce quiz vérifie votre compréhension des notions vues dans ce module."
-                        : "Ce test a pour objectif d'évaluer votre compréhension du contenu que vous venez de voir."}
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <Button
-                      onClick={async () => {
-                        setIsLoadingTest(true);
-                        try {
-                          const testId =
-                            linkedQuizTestId ||
-                            (isTestLessonKind ? activeLesson.id.replace(/^test-/, "") : "");
-                          if (!testId) {
-                            throw new Error("Quiz introuvable");
-                          }
-                          const response = await fetch(`/api/tests/${testId}`);
-                          if (!response.ok) {
-                            throw new Error("Impossible de charger le test");
-                          }
-                          const data = await response.json();
-                          const test = data.test;
+            !testStarted ? (
+            <div className="lesson-reader__quiz-launch">
+              <p className="lesson-reader__quiz-kicker">{isQuizLesson ? "Quiz" : "Évaluation"}</p>
+              <h3>
+                {isQuizLesson ? "Vérifiez ce que vous retenez." : "Mesurez votre compréhension."}
+              </h3>
+              <p>
+                {isQuizLesson
+                  ? "Quelques questions, une seule passe. Pas de piège — seulement ce module."
+                  : "Une évaluation courte pour ancrer ce que vous venez de voir. Score à la fin."}
+              </p>
+              <Button
+                onClick={async () => {
+                  setIsLoadingTest(true);
+                  try {
+                    const testId =
+                      linkedQuizTestId ||
+                      (isTestLessonKind ? activeLesson.id.replace(/^test-/, "") : "");
+                    if (!testId) {
+                      throw new Error("Quiz introuvable");
+                    }
+                    const response = await fetch(`/api/tests/${testId}`);
+                    if (!response.ok) {
+                      throw new Error("Impossible de charger le test");
+                    }
+                    const data = await response.json();
+                    const test = data.test;
 
-                          if (test && test.questions && Array.isArray(test.questions)) {
-                            setTestQuestions(test.questions);
-                            const sm = test?.scoring?.score_minimum ?? test?.scoring?.scoreMinimum;
-                            setTestFlowMeta({
-                              title: String(test.title ?? activeLesson.title ?? "Quiz"),
-                              minScore: typeof sm === "number" && !Number.isNaN(sm) ? Math.min(100, Math.max(0, sm)) : 70,
-                            });
-                            setTestStarted(true);
-                          } else {
-                            throw new Error("Aucune question trouvée dans ce test");
-                          }
-                        } catch (error) {
-                          console.error("Erreur lors du chargement du test:", error);
-                          alert("Erreur lors du chargement du test. Veuillez réessayer.");
-                        } finally {
-                          setIsLoadingTest(false);
-                        }
-                      }}
-                      disabled={isLoadingTest}
-                      className="rounded-full bg-slate-900 px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
-                    >
-                      {isLoadingTest ? "Chargement..." : isQuizLesson ? "Démarrer le quiz" : "Démarrer l'évaluation"}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
+                    if (test && test.questions && Array.isArray(test.questions)) {
+                      setTestQuestions(test.questions);
+                      const sm = test?.scoring?.score_minimum ?? test?.scoring?.scoreMinimum;
+                      setTestFlowMeta({
+                        title: String(test.title ?? activeLesson.title ?? "Quiz"),
+                        minScore: typeof sm === "number" && !Number.isNaN(sm) ? Math.min(100, Math.max(0, sm)) : 70,
+                      });
+                      setTestStarted(true);
+                    } else {
+                      throw new Error("Aucune question trouvée dans ce test");
+                    }
+                  } catch (error) {
+                    console.error("Erreur lors du chargement du test:", error);
+                    alert("Erreur lors du chargement du test. Veuillez réessayer.");
+                  } finally {
+                    setIsLoadingTest(false);
+                  }
+                }}
+                disabled={isLoadingTest}
+                className="lesson-reader__quiz-cta h-[52px] rounded-full bg-white px-7 text-base font-bold tracking-tight text-[#09090b] hover:bg-zinc-100 hover:text-[#09090b]"
+              >
+                {isLoadingTest ? "Chargement…" : "Démarrer"}
+              </Button>
+            </div>
+            ) : (
+            <div className={neo ? "lesson-reader__quiz" : "space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"}>
                 <TestFlowInline
                   testId={linkedQuizTestId || activeLesson.id.replace(/^test-/, "")}
                   title={testFlowMeta.title || activeLesson.title}
@@ -2068,8 +2121,8 @@ export function LessonPlayView({
                   onClose={() => setTestStarted(false)}
                   onQuizCompleted={handleQuizCompletedForNav}
                 />
-              )}
             </div>
+            )
           ) : isResourceLesson && embeddedResourceId ? (
             <EmbeddedLessonResource
               resourceId={embeddedResourceId}
@@ -2082,6 +2135,7 @@ export function LessonPlayView({
               lessonId={activeLesson.id}
               courseTitle={courseTitle}
               lessonTitle={activeLesson.title}
+              afterContent={cardsPrompt}
             >
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
@@ -2098,17 +2152,21 @@ export function LessonPlayView({
                   <div className="space-y-4">
                     {neo ? null : <h3 className="text-[30px] font-semibold leading-tight text-slate-900">Contenu du chapitre</h3>}
                     {isHtmlContent ? (
+                      neo ? (
+                        <div data-dyslexia-content="true" className="lesson-reader__prose">
+                          <ReadingContent html={prepareReadingHtml(sanitizedContent, readingHeading)} />
+                        </div>
+                      ) : (
                       <div
                         data-dyslexia-content="true"
-                        className={neo ? "lesson-reader__prose" : "text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"}
-                        style={neo ? undefined : {
+                        className="text-slate-900 font-['SF_Pro_Display',_sans-serif] prose prose-slate max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-p:my-1 prose-table:border prose-p:!text-slate-900 prose-li:!text-slate-900 prose-strong:!text-slate-900 prose-th:!text-slate-900 prose-td:!text-slate-900 [&_p]:!text-slate-900 [&_p]:opacity-100"
+                        style={{
                           isolation: "isolate",
                           whiteSpace: "pre-wrap",
                         }}
-                        dangerouslySetInnerHTML={{
-                          __html: neo ? prepareReadingHtml(sanitizedContent, readingHeading) : sanitizedContent,
-                        }}
+                        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                       />
+                      )
                     ) : (
                       <div
                         data-dyslexia-content="true"
@@ -2127,8 +2185,24 @@ export function LessonPlayView({
                               if (text === readingHeading.toLowerCase()) return null;
                               return <h2>{children}</h2>;
                             },
-                            h2: (props: { children?: ReactNode }) => <h2 {...props} />,
-                            h3: (props: { children?: ReactNode }) => <h3 {...props} />,
+                            h2: ({ children }: { children?: ReactNode }) => {
+                              const split = splitSectionTitle(readingNodeText(children));
+                              return (
+                                <h2 className="lesson-section-title">
+                                  {split.number ? <span className="lesson-section-title__num">{split.number}</span> : null}
+                                  <span>{split.title}</span>
+                                </h2>
+                              );
+                            },
+                            h3: ({ children }: { children?: ReactNode }) => {
+                              const split = splitSectionTitle(readingNodeText(children));
+                              return (
+                                <h2 className="lesson-section-title">
+                                  {split.number ? <span className="lesson-section-title__num">{split.number}</span> : null}
+                                  <span>{split.title}</span>
+                                </h2>
+                              );
+                            },
                             p: (props: { children?: ReactNode }) => <p {...props} />,
                             strong: (props: { children?: ReactNode }) => <strong {...props} />,
                             li: (props: { children?: ReactNode }) => <li {...props} />,
@@ -2165,6 +2239,7 @@ export function LessonPlayView({
               lessonId={activeLesson.id}
               courseTitle={courseTitle}
               lessonTitle={activeLesson.title}
+              afterContent={cardsPrompt}
             >
               <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
                 <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-slate-500">
@@ -2173,8 +2248,7 @@ export function LessonPlayView({
                 </div>
               </div>
             </LessonSmartAssist>
-          ) : // Média déjà affiché au-dessus (vidéo / audio) : ne pas dupliquer un bloc aspect-video « finalisation »
-          isMediaContent && normalizedVideoSrc ? null : (
+          ) : isInteractiveGame || (isMediaContent && normalizedVideoSrc) ? null : (
             <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-center text-slate-600">
               <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
                 <Cone className="h-6 w-6 text-amber-500" aria-hidden="true" />
@@ -2186,17 +2260,7 @@ export function LessonPlayView({
             </div>
           )}
 
-          {showBeyondFlashCta ? (
-            <div className="mt-8 flex justify-center">
-              <Button
-                type="button"
-                onClick={() => setIsBeyondFlashOpen(true)}
-                className="rounded-full bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] px-6 py-2.5 text-sm font-bold text-white hover:opacity-95"
-              >
-                S&apos;entraîner avec le Byound Card
-              </Button>
-            </div>
-          ) : null}
+          {isInteractiveGame || (isMediaContent && !hasTextContent) ? cardsPrompt : null}
 
           {neo ? null : <div className="flex w-full max-w-5xl flex-wrap items-start justify-start gap-3 pl-1 sm:pl-2 lg:pl-11">
             {previousLesson ? (
@@ -2656,7 +2720,10 @@ export function LessonPlayView({
         ? createPortal(
             <FlashcardPlayer
               cards={beyondFlashCards}
-              onClose={() => setIsBeyondFlashOpen(false)}
+              onClose={() => {
+                setIsBeyondFlashOpen(false);
+                setBeyondFlashStorageEpoch((value) => value + 1);
+              }}
               trackingContext={{
                 courseId,
                 scopeId: String(activeLesson.id),

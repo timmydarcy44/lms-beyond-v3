@@ -246,8 +246,8 @@ function ClassicInterviewPlay({
       data-interview-immersive
       className={
         isJessica
-          ? "relative min-h-dvh w-full bg-[#FAFAFA] text-slate-900"
-          : "relative min-h-dvh w-full bg-[#050208] text-white"
+          ? "relative flex h-full min-h-0 w-full flex-col bg-[#FAFAFA] text-slate-900"
+          : "relative flex h-full min-h-0 w-full flex-col bg-[#050208] text-white"
       }
     >
       <InterviewCinematicTransition
@@ -257,21 +257,23 @@ function ClassicInterviewPlay({
       />
 
       {flowPhase === "readiness" ? (
-        <div className="flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6">
-          <InterviewReadinessGate
-            chapterTitle={chapterTitle}
-            courseTitle={courseTitle}
-            interviewObjectives={interviewObjectives}
-            onReady={startInterview}
-            onRevise={() => setFlowPhase("revision")}
-            theme={theme}
-            interviewStyle={interviewStyle}
-          />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-8 sm:px-6">
+          <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center py-2">
+            <InterviewReadinessGate
+              chapterTitle={chapterTitle}
+              courseTitle={courseTitle}
+              interviewObjectives={interviewObjectives}
+              onReady={startInterview}
+              onRevise={() => setFlowPhase("revision")}
+              theme={theme}
+              interviewStyle={interviewStyle}
+            />
+          </div>
         </div>
       ) : null}
 
       {flowPhase === "revision" ? (
-        <div className="flex min-h-dvh items-start justify-center overflow-y-auto px-4 py-8 sm:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-8 sm:px-6">
           <InterviewRevisionPanel
             chapterTitle={chapterTitle}
             contextText={contextText}
@@ -285,7 +287,7 @@ function ClassicInterviewPlay({
       ) : null}
 
       {flowPhase === "chat" ? (
-        <div className="flex h-[100dvh] min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div
             className={
               isJessica

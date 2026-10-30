@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Rocket,
   Handshake,
+  Bot,
   FileBadge,
   ClipboardList,
   ChevronDown,
@@ -79,9 +80,23 @@ const CFA_LINKS: CrmNavLink[] = [
     section: "commercial",
   },
   {
+    href: "/super/crm/cfa/agent-business-dev",
+    label: "Agent Business Dev",
+    icon: Bot,
+    featured: true,
+    section: "commercial",
+  },
+  {
     href: "/super/crm/cfa/admis",
     label: "Étudiants admis",
     icon: UserCheck,
+    featured: true,
+    section: "commercial",
+  },
+  {
+    href: "/super/offres-publiques",
+    label: "Offres à relire",
+    icon: ClipboardList,
     featured: true,
     section: "commercial",
   },
@@ -105,6 +120,13 @@ const CRM_LINKS: CrmNavLink[] = [
     icon: Handshake,
     nested: true,
     prescripteurOnly: true,
+    section: "commercial",
+  },
+  {
+    href: "/super/crm/pipeline/signaux",
+    label: "Signaux formation",
+    icon: Bot,
+    nested: true,
     section: "commercial",
   },
   { href: "/super/crm/pipeline?type=btoc", label: "Pipeline B2C", icon: ShoppingBag, section: "clients" },
@@ -143,11 +165,17 @@ function isLinkActive(
   if (isPrescripteur) {
     return pathname.startsWith("/super/crm/pipeline/prescripteurs");
   }
+  if (item.href === "/super/crm/pipeline/signaux") {
+    return pathname.startsWith("/super/crm/pipeline/signaux");
+  }
   if (item.href === "/super/crm/cfa") {
     return pathname === "/super/crm/cfa";
   }
   if (item.href === "/super/crm/cfa/entreprises") {
     return pathname.startsWith("/super/crm/cfa/entreprises");
+  }
+  if (item.href === "/super/crm/cfa/agent-business-dev") {
+    return pathname.startsWith("/super/crm/cfa/agent-business-dev");
   }
   if (item.href === "/super/crm/cfa/admis") {
     return pathname.startsWith("/super/crm/cfa/admis");
@@ -269,7 +297,7 @@ export function CrmSidebar() {
                   onClick={() => toggleSection(section.key)}
                   aria-expanded={!isCollapsed}
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                  <span className="text-[11px] font-semibold text-gray-400">
                     {section.label}
                   </span>
                   <ChevronDown

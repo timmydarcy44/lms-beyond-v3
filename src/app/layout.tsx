@@ -6,6 +6,7 @@ import { PomodoroProvider } from "@/components/apprenant/pomodoro-provider";
 import { AuthHashRedirect } from "@/components/auth/auth-hash-redirect";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
 import { Toaster } from "sonner";
+import { AppleActionConfirmHost } from "@/components/lms/apple-action-confirm-host";
 import { headers } from "next/headers";
 import { BYOUND_PUBLIC_ORIGIN, bareHostname } from "@/lib/edge-site/byound-host";
 import { getServerClient } from "@/lib/supabase/server";
@@ -109,6 +110,7 @@ export default async function RootLayout({
             {children}
           </PomodoroProvider>
           <Toaster richColors position="top-center" />
+          <AppleActionConfirmHost />
         </SupabaseProvider>
       </body>
     </html>

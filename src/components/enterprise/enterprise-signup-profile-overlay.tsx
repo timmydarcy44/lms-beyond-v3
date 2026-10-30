@@ -8,6 +8,7 @@ import { COMPANY_SIZE_BANDS } from "@/lib/entreprise/company-size-bands";
 
 type Prefill = {
   company_name: string;
+  siret: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -61,6 +62,7 @@ export function EnterpriseSignupProfileOverlay({
   const supabase = useSupabase();
   const [form, setForm] = useState({
     company_name: prefill.company_name,
+    siret: prefill.siret ?? "",
     first_name: prefill.first_name,
     last_name: prefill.last_name,
     email: prefill.email,
@@ -162,6 +164,17 @@ export function EnterpriseSignupProfileOverlay({
             placeholder="Nom de l'entreprise"
             className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-black/25"
           />
+          <label className="block text-sm font-semibold text-black/70">
+            Votre entreprise · SIRET (facultatif)
+            <input
+              name="siret"
+              inputMode="numeric"
+              value={form.siret}
+              onChange={handleChange}
+              placeholder="14 chiffres"
+              className="mt-1 w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] font-normal outline-none focus:border-black/25"
+            />
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <input
               name="first_name"

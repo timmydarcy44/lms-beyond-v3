@@ -8,7 +8,11 @@ export default async function ExpertFormationsPage() {
 
   return (
     <ExpertPageFrame>
-      <ExpertPageHeader title="Formations" subtitle="Formations Byound proposées à l'achat." />
+      <ExpertPageHeader
+        title="Formations"
+        subtitle="Formations Byound proposées à l'achat."
+        action={<ExpertPrimaryButton href="/dashboard/expert/formations/proposer">Proposer une formation</ExpertPrimaryButton>}
+      />
       {courses.length === 0 ? (
         <EmptyState title="Aucune formation en vente" text="Les formations publiées pour l'espace expert apparaîtront ici." />
       ) : (

@@ -242,7 +242,10 @@ export function getEdgePremiumConfig(host?: string | null) {
           ],
         },
       ],
-      actions: [{ label: "Parlons de vos besoins", href: R.contact, primary: true }],
+      actions: [
+        { label: "Tarifs", href: R.tarifs, primary: false },
+        { label: "Créer un compte", href: R.entrepriseSignup, primary: true },
+      ],
     },
     megaParticulier: {
       headerTitle: "Byound Life",
@@ -335,7 +338,8 @@ export function getMobileNavCategories(config: EdgePremiumConfig): EdgeMobileNav
       label: "Compte",
       links: [
         { label: "Connexion", href: R.login },
-        { label: "Découvrir l'alternance", href: R.alternance },
+        { label: "Créer un compte", href: R.entrepriseSignup },
+        { label: "Tarifs", href: R.tarifs },
       ],
     },
   ];

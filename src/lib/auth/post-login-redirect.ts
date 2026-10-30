@@ -3,6 +3,7 @@
  * Prioritaire sur les heuristiques multi-espaces pour les rôles métier connus.
  */
 
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
 import { resolveJessicaPostLoginDestination } from "@/lib/jessica-contentin/studio-config";
 
 const normalize = (value: unknown) =>
@@ -34,6 +35,8 @@ export const PROFILE_ROLE_DESTINATIONS: Record<string, string> = {
   expert: "/dashboard/expert",
   praticien_bct: "/dashboard/praticien",
   praticien: "/dashboard/praticien",
+  care_patient: "/dashboard/patient",
+  patient: "/dashboard/patient",
   club: "/dashboard/club",
   partenaire: "/dashboard/partenaire",
   demo: "/dashboard/apprenant",
@@ -64,6 +67,7 @@ export function resolveDestinationFromProfile(
   if (!profile) return null;
   const jessicaDest = resolveJessicaPostLoginDestination(profile.email);
   if (jessicaDest) return jessicaDest;
+  if (isSuperAdminEmailAllowlisted(profile.email)) return "/super";
 
   const roleDest = resolveDestinationFromProfileRole(profile.role);
   const roleTypeDest = resolveDestinationFromProfileRole(profile.role_type);
@@ -81,4 +85,12 @@ export function resolveDestinationFromProfile(
 
 export function isKnownProfileRole(role: string | null | undefined): boolean {
   return resolveDestinationFromProfileRole(role) !== null;
+}
+
+export function isCarePatientAccount(
+  role: string | null | undefined,
+  roleType?: string | null,
+): boolean {
+  const keys = [role, roleType].map(normalize);
+  return keys.includes("care_patient") || keys.includes("patient");
 }

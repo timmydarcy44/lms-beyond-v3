@@ -63,6 +63,7 @@ export async function GET() {
     role: (profile as { role?: string | null } | null)?.role ?? null,
     role_type: (profile as { role_type?: string | null } | null)?.role_type ?? null,
     organisationName,
+    hasPassword: user.user_metadata?.needs_password_setup !== true,
   });
 }
 

@@ -1,12 +1,9 @@
-import type { Metadata } from "next";
-
 import { EntreprisesPageContent } from "@/components/edge-site/entreprises-page-content";
 
-export const metadata: Metadata = {
-  title: "Entreprises — Former autrement | Byound",
-  description:
-    "On diagnostique avant de former. On mesure après. Diagnostic Beyond, licences plateforme et interventions sur-mesure pour vos équipes.",
-};
+export async function generateMetadata() {
+  const { loadSeoPage, toNextMetadata } = await import("@/lib/seo/byound-seo");
+  return toNextMetadata(await loadSeoPage("/entreprises"));
+}
 
 export default function EntreprisesPage() {
   return <EntreprisesPageContent />;

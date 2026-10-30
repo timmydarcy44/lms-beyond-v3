@@ -36,5 +36,27 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   return NextResponse.json({
     ...data,
     employee_count: count ?? 0,
+    viewer_name: String(profile?.full_name ?? "").trim(),
+    viewer_email: String(profile?.email ?? "").trim(),
   });
+}
+
+export async function PATCH(request: NextRequest, ctx: Ctx) {
+  const { id } = await ctx.params;
+  const { profile } = await getCurrentProfileWithAccess();
+  if (!profile?.company_id || profile.company_id !== id) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { onboarding_step?: string };
+  if (body.onboarding_step !== "active") {
+    return NextResponse.json({ error: "Étape invalide" }, { status: 400 });
+  }
+
+  const service = getServiceRoleClient();
+  if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const { error } = await service.from("organizations").update({ onboarding_step: "active" }).eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }

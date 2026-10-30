@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Award, Globe, MapPin, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { syncCareProfileFromExpertAccount } from "@/app/dashboard/expert/space-actions";
+import type { CareListingSettings } from "@/lib/care/listing-settings";
+import { CARE_PUBLICS, careCompleteness } from "@/lib/care/completeness";
+import { CarePhotoField } from "@/components/expert/care-photo-field";
+import { CARE_DOMAINS } from "@/lib/care/domains";
+import { CARE_PAYMENT_LABELS } from "@/lib/care/profile-format";
 import { useExpertAccess } from "@/components/expert/expert-access-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { edgeCertificationLabel, isEdgeCertified } from "@/lib/expert/expert-certification";
@@ -43,7 +49,7 @@ function toggleInList(list: string[], value: string): string[] {
   return list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
 }
 
-export function ExpertProfileEditor() {
+export function ExpertProfileEditor({ careListing = null }: { careListing?: CareListingSettings | null }) {
   const { expert: ctxExpert } = useExpertAccess();
   const supabase = useSupabase();
 
@@ -59,6 +65,9 @@ export function ExpertProfileEditor() {
   const [bio, setBio] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [dailyRate, setDailyRate] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [siret, setSiret] = useState("");
+  const [vatLiable, setVatLiable] = useState(false);
 
   const [domains, setDomains] = useState<string[]>([]);
   const [primaryDomain, setPrimaryDomain] = useState("");
@@ -77,6 +86,15 @@ export function ExpertProfileEditor() {
   const [wantsCertification, setWantsCertification] = useState(false);
   const [certificationStatus, setCertificationStatus] = useState<string | null>(null);
 
+  const [carePublished, setCarePublished] = useState(Boolean(careListing?.published));
+  const [careTagline, setCareTagline] = useState(careListing?.tagline ?? "");
+  const [careApproach, setCareApproach] = useState(careListing?.approach ?? "");
+  const [careCity, setCareCity] = useState(careListing?.city ?? "");
+  const [careAddress, setCareAddress] = useState(careListing?.address ?? "");
+  const [carePublics, setCarePublics] = useState<string[]>(careListing?.publics ?? []);
+  const [careDomains, setCareDomains] = useState<string[]>(careListing?.careDomains ?? []);
+  const [careNotice, setCareNotice] = useState(String(careListing?.cancellationHours ?? 24));
+  const [carePayments, setCarePayments] = useState<string[]>(careListing?.paymentMethods?.length ? careListing.paymentMethods : ["on_site"]);
   const [bioLong, setBioLong] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,6 +121,9 @@ export function ExpertProfileEditor() {
           ? String(meta.daily_rate)
           : "",
     );
+    setLegalName(meta?.legal_name ?? "");
+    setSiret(meta?.siret ?? "");
+    setVatLiable(meta?.vat_liable === true);
     setDomains(meta?.domains?.length ? meta.domains : ((data.specialties as string[]) ?? ctxExpert.specialties ?? []));
     setPrimaryDomain(meta?.primary_domain ?? meta?.domains?.[0] ?? "");
     setSpecialties((data.specialties as string[]) ?? ctxExpert.specialties ?? []);
@@ -171,6 +192,21 @@ export function ExpertProfileEditor() {
   }, [ctxExpert.id, supabase, hydrateFromRow]);
 
   const name = useMemo(() => `${firstName} ${lastName}`.trim() || "Votre nom", [firstName, lastName]);
+  const careGauge = useMemo(
+    () =>
+      careCompleteness({
+        avatar_url: avatarUrl,
+        tagline: careTagline,
+        bio,
+        approach: careApproach || bioLong,
+        domains: careDomains,
+        city: careCity,
+        offers_cabinet: formats.some((item) => /cabinet|presentiel|sur site/i.test(item)),
+        offers_visio: formats.some((item) => /visio|distanciel|en ligne/i.test(item)),
+        services: (careListing?.serviceNames ?? []).map((serviceName) => ({ name: serviceName, active: true, price_cents: 1 })),
+      }),
+    [avatarUrl, bio, bioLong, careApproach, careCity, careDomains, careListing?.serviceNames, careTagline, formats],
+  );
   const completionPct = computeProfileCompletion({
     firstName,
     lastName,
@@ -205,6 +241,9 @@ export function ExpertProfileEditor() {
         bio_long: bioLong.trim() || null,
         website_url: websiteUrl.trim() || null,
         daily_rate: dailyRate.trim() ? Number(dailyRate) : null,
+        legal_name: legalName.trim() || null,
+        siret: siret.replace(/\s+/g, "") || null,
+        vat_liable: vatLiable,
       };
 
       const refsWithMeta = mergeRegistrationMeta(
@@ -241,11 +280,33 @@ export function ExpertProfileEditor() {
         ({ error } = await supabase.from("experts").update(fallback).eq("id", ctxExpert.id));
       }
       if (error) throw error;
+      const synced = await syncCareProfileFromExpertAccount(
+        careListing
+          ? {
+              published: carePublished,
+              tagline: careTagline,
+              approach: careApproach,
+              city: careCity,
+              address: careAddress,
+              publics: carePublics,
+              careDomains,
+              cancellationHours: Number(careNotice) || 24,
+              paymentMethods: carePayments,
+            }
+          : undefined,
+      );
+      if (synced && "ok" in synced && synced.ok === false && "error" in synced && synced.error) {
+        throw new Error(synced.error);
+      }
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (err) {
       setSaveState("idle");
-      toast.error("Impossible d'enregistrer les modifications.");
+      const message =
+        err && typeof err === "object" && "message" in err && String((err as { message?: string }).message).trim()
+          ? String((err as { message: string }).message)
+          : "Impossible d'enregistrer les modifications.";
+      toast.error(message);
     }
   }, [
     audiences,
@@ -270,6 +331,19 @@ export function ExpertProfileEditor() {
     websiteUrl,
     yearsExperience,
     availabilities,
+    legalName,
+    siret,
+    vatLiable,
+    careListing,
+    carePublished,
+    careTagline,
+    careApproach,
+    careCity,
+    careAddress,
+    carePublics,
+    careDomains,
+    careNotice,
+    carePayments,
   ]);
 
   const scheduleAutosave = useCallback(() => {
@@ -315,6 +389,18 @@ export function ExpertProfileEditor() {
     availabilities,
     yearsExperience,
     references,
+    legalName,
+    siret,
+    vatLiable,
+    carePublished,
+    careTagline,
+    careApproach,
+    careCity,
+    careAddress,
+    carePublics,
+    careDomains,
+    careNotice,
+    carePayments,
     scheduleAutosave,
   ]);
 
@@ -322,10 +408,12 @@ export function ExpertProfileEditor() {
     options,
     selected,
     onChange,
+    labels,
   }: {
     options: readonly string[];
     selected: string[];
     onChange: (next: string[]) => void;
+    labels?: Record<string, string>;
   }) => (
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => {
@@ -342,7 +430,7 @@ export function ExpertProfileEditor() {
                 : "border-white/10 bg-white/[0.05] text-white/60 hover:border-[#635BFF]/20",
             )}
           >
-            {opt}
+            {labels?.[opt] ?? opt}
           </button>
         );
       })}
@@ -459,6 +547,44 @@ export function ExpertProfileEditor() {
                 </div>
               </section>
 
+              <section id="facturation" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
+                <h2 className="text-sm font-semibold">Société / auto-entreprise</h2>
+                <p className="mt-1 text-xs text-white/45">
+                  Ces mentions apparaissent sur vos factures Byound Care. Si vous n&apos;êtes pas assujetti à la TVA, la mention de l&apos;article 293 B du CGI est ajoutée automatiquement.
+                </p>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <input
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    placeholder="Raison sociale ou nom de l'auto-entreprise"
+                    className="sm:col-span-2 rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                  />
+                  <input
+                    value={siret}
+                    onChange={(e) => setSiret(e.target.value)}
+                    placeholder="Numéro SIRET"
+                    inputMode="numeric"
+                    className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                  />
+                  <label className="flex items-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={vatLiable}
+                      onChange={(e) => setVatLiable(e.target.checked)}
+                      className="h-4 w-4 accent-[#FF4B4B]"
+                    />
+                    Assujetti à la TVA
+                  </label>
+                </div>
+                {!vatLiable ? (
+                  <p className="mt-3 text-xs text-white/45">
+                    Mention facture : TVA non applicable, article 293 B du CGI.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs text-white/45">Mention facture : TVA applicable.</p>
+                )}
+              </section>
+
               <section id="tarif" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                 <h2 className="text-sm font-semibold">Tarif journalier</h2>
                 <p className="mt-1 text-xs text-white/45">Montant en euros pour une journée. Il reste privé et n&apos;apparaît pas sur le profil public.</p>
@@ -549,6 +675,90 @@ export function ExpertProfileEditor() {
                   </div>
                 </div>
               </section>
+
+              {careListing ? (
+                <section id="byound-care" className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
+                  <h2 className="text-sm font-semibold">Byound Care</h2>
+                  <p className="mt-1 text-xs text-white/45">
+                    Score d&apos;optimisation {careGauge.percent} %. Ces points rendent la fiche plus facile à choisir. Aucun n&apos;empêche de la publier.
+                  </p>
+                  <ul className="mt-3 grid gap-1 text-xs text-white/70">
+                    {careGauge.checks.map((item) => (
+                      <li key={item.id}>{item.ok ? "✓" : "·"} {item.label}</li>
+                    ))}
+                  </ul>
+                  <CarePhotoField expertId={ctxExpert.id} value={avatarUrl || null} onChange={setAvatarUrl} />
+                  <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm">
+                    Publier mon profil
+                    <input
+                      type="checkbox"
+                      checked={carePublished}
+                      onChange={(e) => setCarePublished(e.target.checked)}
+                      className="h-4 w-4 accent-[#FF4B4B]"
+                    />
+                  </label>
+                  {careListing.slug ? (
+                    <p className="mt-2 text-xs text-white/45">
+                      Fiche : /praticiens/{careListing.slug}
+                    </p>
+                  ) : null}
+                  <div className="mt-5 grid gap-4">
+                    <input
+                      value={careTagline}
+                      onChange={(e) => setCareTagline(e.target.value)}
+                      placeholder="Accroche courte (une phrase)"
+                      className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                    />
+                    <textarea
+                      value={careApproach}
+                      onChange={(e) => setCareApproach(e.target.value)}
+                      rows={4}
+                      placeholder="Mon approche"
+                      className="w-full resize-none rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <input
+                        value={careCity}
+                        onChange={(e) => setCareCity(e.target.value)}
+                        placeholder="Ville"
+                        className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                      />
+                      <input
+                        value={careAddress}
+                        onChange={(e) => setCareAddress(e.target.value)}
+                        placeholder="Adresse du cabinet (optionnel)"
+                        className="rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-white/45">Domaines Care — le sujet principal proposé à la réservation</p>
+                      <TagPicker
+                        options={CARE_DOMAINS.map((item) => item.id)}
+                        selected={careDomains}
+                        onChange={setCareDomains}
+                        labels={Object.fromEntries(CARE_DOMAINS.map((item) => [item.id, item.label]))}
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-white/45">Publics Care</p>
+                      <TagPicker options={[...CARE_PUBLICS]} selected={carePublics} onChange={setCarePublics} />
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-medium text-white/45">Paiement</p>
+                      <TagPicker options={Object.keys(CARE_PAYMENT_LABELS)} selected={carePayments} onChange={setCarePayments} labels={CARE_PAYMENT_LABELS} />
+                    </div>
+                    <label className="text-xs font-medium text-white/45">
+                      Annulation gratuite (heures)
+                      <input
+                        value={careNotice}
+                        onChange={(e) => setCareNotice(e.target.value)}
+                        inputMode="numeric"
+                        className="mt-2 w-full max-w-xs rounded-2xl border border-white/10 px-4 py-3 text-sm outline-none focus:border-[#7C83FF]/70"
+                      />
+                    </label>
+                  </div>
+                </section>
+              ) : null}
 
               <section className="rounded-[28px] border border-white/[0.07] bg-[#10173a]/70 p-6 shadow-sm sm:p-8">
                 <h2 className="text-sm font-semibold">Présentation</h2>

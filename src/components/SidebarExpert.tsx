@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 import {
   Award,
   Bell,
@@ -12,7 +11,6 @@ import {
   ClipboardList,
   Euro,
   FileText,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   Lock,
@@ -30,7 +28,6 @@ const NAV_ITEMS = [
   { label: "Mes revenus", href: "/dashboard/expert/revenus", icon: Euro, lockedWhenRestricted: true, external: false },
   { label: "Documents", href: "/dashboard/expert/documents", icon: FileText, lockedWhenRestricted: false, external: false },
   { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award, lockedWhenRestricted: false, external: false },
-  { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap, lockedWhenRestricted: false, external: true },
   { label: "Notifications", href: "/dashboard/expert/notifications", icon: Bell, lockedWhenRestricted: false, external: false },
   { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings, lockedWhenRestricted: false, external: false },
 ] as const;

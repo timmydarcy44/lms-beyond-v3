@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { EntrepriseConnexionPage } from "@/components/edge-site/entreprise-connexion-page";
 
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function EntrepriseConnexionRoutePage() {
-  return <EntrepriseConnexionPage />;
+  return (
+    <Suspense>
+      <EntrepriseConnexionPage />
+    </Suspense>
+  );
 }

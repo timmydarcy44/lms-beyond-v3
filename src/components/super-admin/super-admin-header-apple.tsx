@@ -63,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "CRM Apprenant", href: "/super/crm/cfa", exact: true, menuGroup: "Commercial" },
       { label: "CRM Entreprise", href: "/super/crm/cfa/entreprises", menuGroup: "Commercial" },
+      { label: "Agent Business Dev", href: "/super/crm/cfa/agent-business-dev", menuGroup: "Commercial" },
       { label: "Cursus", href: "/super/crm/cfa/cursus", menuGroup: "Scolarité" },
       { label: "Étudiants admis", href: "/super/crm/cfa/admis", menuGroup: "Scolarité" },
       { label: "Formateurs", href: "/super/experts", menuGroup: "Ressources humaines" },
@@ -95,12 +96,14 @@ const NAV_ITEMS: NavItem[] = [
     activePrefixes: ["/super/crm/pipeline", "/super/utilisateurs", "/super/organisations", "/super/crm/emails"],
     children: [
       { label: "Pipeline", href: "/super/crm/pipeline" },
+      { label: "Signaux formation", href: "/super/crm/pipeline/signaux" },
       { label: "Contacts", href: "/super/utilisateurs", exact: true },
       { label: "Organisations", href: "/super/organisations" },
       { label: "Emails", href: "/super/crm/emails" },
     ],
   },
   { label: "IA", href: "/super/ia" },
+  { label: "SEO", href: "/super/seo" },
   { label: "Chiffre d'affaires", href: "/super/chiffre-affaires" },
   { label: "Statistiques", href: "/super/statistiques" },
   { label: "Paramètres", href: "/super/parametres" },
@@ -160,6 +163,7 @@ export function SuperAdminHeaderApple() {
             "Business",
             "Utilisateurs",
             "IA",
+            "SEO",
           ];
           return !hiddenLabels.includes(item.label);
         }),

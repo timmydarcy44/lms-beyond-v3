@@ -20,7 +20,7 @@ import { listPublicCatalogEntries } from "@/lib/hard-skills/skill-catalog-policy
 import type { EmployeeNextStep } from "@/lib/salarie/employee-next-step";
 import { cn } from "@/lib/utils";
 
-const manrope = Manrope({ subsets: ["latin"], weight: ["500", "600", "700", "800"] });
+const manrope = Manrope({ subsets: ["latin"] });
 
 type Home = {
   profile: { firstName: string; lastName: string; initials: string };
@@ -74,7 +74,7 @@ function monthLabel(iso: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-export function SalarieHome() {
+export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" }) {
   const [home, setHome] = useState<Home | null>(null);
   const [error, setError] = useState(false);
   const [tab, setTab] = useState<TabId | null>(null);
@@ -103,7 +103,6 @@ export function SalarieHome() {
     if (!home) return [];
     const items: Array<{ id: TabId; label: string }> = [];
     if (home.formation) items.push({ id: "formation", label: "Ma formation" });
-    if (home.bilans.completed > 0) items.push({ id: "bilans", label: "Bilans" });
     if (home.skills.declared > 0) items.push({ id: "skills", label: "Compétences" });
     if (home.badges.count > 0) items.push({ id: "badges", label: "Badges" });
     return items;
@@ -140,6 +139,93 @@ export function SalarieHome() {
   }
 
   const active = tab ?? tabs[0]?.id ?? null;
+
+  if (variant === "bilans") {
+    const pending = [
+      !home.bilans.disc ? { href: "/dashboard/salarie/test-disc", label: "Test comportemental" } : null,
+      !home.bilans.idmc ? { href: "/dashboard/salarie/test-idmc", label: "Test IDMC" } : null,
+      !home.bilans.soft ? { href: "/dashboard/salarie/test-soft-skills", label: "Soft skills" } : null,
+    ].filter((item): item is { href: string; label: string } => Boolean(item));
+
+    return (
+      <div className={cn(manrope.className, "mx-auto w-full max-w-[980px] px-4 pb-16 pt-6 text-[#F4F5F7] sm:px-6")}>
+        <p className="text-[13px] text-[#8A8F98]">Espace salarié</p>
+        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Mes bilans</h1>
+        <p className="mt-2 max-w-xl text-sm text-[#B5BAC6]">
+          Les résultats de vos tests. L&apos;accueil reste le résumé du jour.
+        </p>
+        <section className="mt-8">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold">{home.bilans.completed} sur {home.bilans.expected}</h2>
+            {home.analysis ? (
+              <button type="button" onClick={() => setAnalysisOpen(true)} className="text-sm font-semibold text-[#C9C2FF]">
+                Synthèse croisée
+              </button>
+            ) : null}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {home.bilans.disc ? (
+              <Link href="/dashboard/salarie/test-disc" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#E7782C] p-5 text-white">
+                <DatePill date={home.bilans.disc.takenAt} />
+                <p className="text-sm font-semibold text-white/80">Profil comportemental</p>
+                <p className="mt-2 text-[34px] font-extrabold leading-none">{home.bilans.disc.dominant}</p>
+                <div className="mt-6 space-y-2">
+                  {home.bilans.disc.bars.map((bar) => (
+                    <div key={bar.key} className="flex items-center gap-2 text-xs">
+                      <span className="w-4 font-bold">{bar.key}</span>
+                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/20">
+                        <span className="block h-full rounded-full bg-white" style={{ width: `${Math.max(0, Math.min(100, bar.value))}%` }} />
+                      </span>
+                      <span className="w-8 text-right">{Math.round(bar.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </Link>
+            ) : null}
+            {home.bilans.idmc ? (
+              <Link href="/dashboard/salarie/test-idmc" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#2F7CF6] p-5 text-white">
+                <DatePill date={home.bilans.idmc.takenAt} />
+                <p className="text-sm font-semibold text-white/80">Point fort</p>
+                <p className="mt-2 max-w-[220px] text-[26px] font-extrabold leading-tight">{home.bilans.idmc.strong}</p>
+                {home.bilans.idmc.weak ? <p className="mt-6 text-sm text-white/85">À renforcer : {home.bilans.idmc.weak}</p> : null}
+              </Link>
+            ) : null}
+            {home.bilans.soft ? (
+              <Link href="/soft-skills/resultats?from=salarie" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#14A38B] p-5 text-white">
+                <DatePill date={home.bilans.soft.takenAt} />
+                <p className="text-sm font-semibold text-white/80">Soft skills</p>
+                <ul className="mt-4 space-y-2">
+                  {home.bilans.soft.top.map((skill, index) => (
+                    <li key={skill} className="text-lg font-extrabold leading-tight">
+                      {index + 1}. {skill}
+                    </li>
+                  ))}
+                </ul>
+              </Link>
+            ) : null}
+            {pending.map((item) => (
+              <Link key={item.href} href={item.href} className="flex min-h-[220px] flex-col justify-between rounded-[26px] border border-[#262A36] bg-[#12141A] p-5">
+                <p className="text-sm text-[#B5BAC6]">Pas encore passé</p>
+                <p className="text-2xl font-extrabold">{item.label}</p>
+                <p className="text-sm font-semibold text-[#C9C2FF]">Commencer</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+        {analysisOpen && home.analysis ? (
+          <dialog open className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={() => setAnalysisOpen(false)}>
+            <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-[28px] bg-[#12141A] p-6" onClick={(event) => event.stopPropagation()}>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-lg font-extrabold">Synthèse croisée</h3>
+                <button type="button" aria-label="Fermer" onClick={() => setAnalysisOpen(false)}><X className="h-4 w-4" /></button>
+              </div>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#DADDE4]">{home.analysis}</p>
+            </div>
+          </dialog>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className={cn(manrope.className, "mx-auto w-full max-w-[980px] px-4 pb-16 pt-4 text-[#F4F5F7] sm:px-6")}>
@@ -213,7 +299,16 @@ export function SalarieHome() {
             ))}
           </div>
         ) : (
-          <p className="relative text-sm text-[#B5BAC6]">Aucun bilan, formation, compétence ou badge pour le moment.</p>
+          <div className="relative">
+            <p className="text-sm text-[#B5BAC6]">
+              {home.bilans.completed > 0
+                ? `${home.bilans.completed} bilan${home.bilans.completed > 1 ? "s" : ""} enregistré${home.bilans.completed > 1 ? "s" : ""}. Le détail est dans Mes bilans.`
+                : "Aucune formation, compétence ou badge pour le moment."}
+            </p>
+            <Link href="/dashboard/salarie/bilans" className="mt-4 inline-flex text-sm font-semibold text-[#C9C2FF]">
+              Ouvrir mes bilans
+            </Link>
+          </div>
         )}
         {active === "formation" && home.formation ? (
           <HeroFigure
@@ -225,14 +320,6 @@ export function SalarieHome() {
                 ? `${home.formation.completed} sous-chapitres terminés sur ${home.formation.total}`
                 : "La progression par sous-chapitre n'est pas encore disponible."
             }
-          />
-        ) : null}
-        {active === "bilans" ? (
-          <HeroFigure
-            legend="DISC · IDMC · Soft skills"
-            value={String(home.bilans.completed)}
-            unit={`/ ${home.bilans.expected}`}
-            caption="bilans complétés"
           />
         ) : null}
         {active === "skills" ? (
@@ -272,59 +359,17 @@ export function SalarieHome() {
 
       <NextStepCard step={home.nextStep} onNeed={() => setNeedOpen(true)} />
 
-      <section id="bilans" className="mt-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold">Mes bilans</h2>
-          {home.analysis ? (
-            <button type="button" onClick={() => setAnalysisOpen(true)} className="text-sm font-semibold text-[#C9C2FF]">
-              Synthèse croisée
-            </button>
-          ) : null}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {home.bilans.disc ? (
-            <Link href="/dashboard/salarie/test-disc" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#E7782C] p-5 text-white">
-              <DatePill date={home.bilans.disc.takenAt} />
-              <p className="text-sm font-semibold text-white/80">Dominante</p>
-              <p className="mt-2 text-[34px] font-extrabold leading-none">{home.bilans.disc.dominant}</p>
-              <div className="mt-8 flex h-10 items-end gap-2">
-                {home.bilans.disc.bars.map((bar) => {
-                  const max = Math.max(...home.bilans.disc!.bars.map((item) => item.value), 1);
-                  const dominant = bar.value === max;
-                  return (
-                    <div key={bar.key} className="flex flex-1 flex-col items-center gap-1">
-                      <div className="w-full rounded-full bg-white" style={{ height: `${Math.max(8, (bar.value / max) * 28)}px`, opacity: dominant ? 1 : 0.35 }} />
-                      <span className="text-[11px] font-bold">{bar.key}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </Link>
-          ) : null}
-          {home.bilans.idmc ? (
-            <Link href="/dashboard/salarie/test-idmc" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#2F7CF6] p-5 text-white">
-              <DatePill date={home.bilans.idmc.takenAt} />
-              <IdmcWatermark values={home.bilans.idmc.axes} />
-              <p className="text-sm font-semibold text-white/80">Point fort</p>
-              <p className="mt-2 max-w-[220px] text-[26px] font-extrabold leading-tight">{home.bilans.idmc.strong}</p>
-              {home.bilans.idmc.weak ? <p className="mt-6 text-sm text-white/85">À renforcer : {home.bilans.idmc.weak}</p> : null}
-            </Link>
-          ) : null}
-          {home.bilans.soft ? (
-            <Link href="/soft-skills/resultats?from=salarie" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#14A38B] p-5 text-white">
-              <DatePill date={home.bilans.soft.takenAt} />
-              <p className="text-sm font-semibold text-white/80">Votre force n°1</p>
-              <p className="mt-2 text-[26px] font-extrabold leading-tight">{home.bilans.soft.top[0]}</p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {home.bilans.soft.top.slice(1).map((label) => (
-                  <span key={label} className="rounded-full bg-black/15 px-3 py-1 text-xs font-semibold">{label}</span>
-                ))}
-              </div>
-              {home.bilans.soft.flat ? (
-                <p className="mt-4 text-xs text-white/80">Les scores ne départagent pas les compétences : classement seul.</p>
-              ) : null}
-            </Link>
-          ) : null}
+      <section id="bilans" className="mt-8 rounded-[28px] bg-[#12141A] p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-extrabold">Aujourd&apos;hui</h2>
+            <p className="mt-1 text-sm text-[#B5BAC6]">
+              {home.bilans.completed} bilan{home.bilans.completed > 1 ? "s" : ""} sur {home.bilans.expected}. Le détail est dans Mes bilans.
+            </p>
+          </div>
+          <Link href="/dashboard/salarie/bilans" className="shrink-0 text-sm font-semibold text-[#C9C2FF]">
+            Mes bilans
+          </Link>
         </div>
       </section>
 
@@ -412,20 +457,6 @@ function DatePill({ date }: { date: string | null }) {
   const label = formatDate(date);
   if (!label) return null;
   return <span className="absolute right-4 top-4 rounded-full bg-black/20 px-2.5 py-1 text-[11px] font-semibold">{label}</span>;
-}
-
-function IdmcWatermark({ values }: { values: number[] }) {
-  const max = Math.max(...values, 1);
-  const points = values.map((value, index) => {
-    const angle = (Math.PI * 2 * index) / Math.max(values.length, 1) - Math.PI / 2;
-    const radius = 28 + (value / max) * 36;
-    return `${80 + Math.cos(angle) * radius},${78 + Math.sin(angle) * radius}`;
-  });
-  return (
-    <svg viewBox="0 0 160 150" className="pointer-events-none absolute -right-2 bottom-0 h-36 w-36 opacity-30" aria-hidden>
-      <polygon points={points.join(" ")} fill="none" stroke="white" strokeWidth="2" />
-    </svg>
-  );
 }
 
 function NextStepCard({ step, onNeed }: { step: EmployeeNextStep; onNeed: () => void }) {

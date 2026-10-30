@@ -18,6 +18,7 @@ import {
   CreditCard,
   CircleHelp,
   Award,
+  GraduationCap,
 } from "lucide-react";
 
 type NavLeaf = { label: string; href: string; section?: string };
@@ -63,7 +64,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: BookOpen,
     children: [
       { label: "Demander une formation", href: "/dashboard/entreprise/formations/demander" },
-      { label: "Byound Online", href: "/dashboard/entreprise/formations/catalogue" },
       { label: "Créer une formation", href: "/dashboard/entreprise/formations/creer" },
       { label: "Gérer mes formations", href: "/dashboard/entreprise/formations/gerer" },
       { label: "Parcours", href: "/dashboard/entreprise/formations/parcours" },
@@ -111,6 +111,45 @@ async function fetchViewer(): Promise<ViewerState | null> {
       viewerInflight = null;
     });
   return viewerInflight;
+}
+
+type TutorNavLink = { id: string; firstName: string; lastName: string };
+
+let tutorNavCache: { show: boolean; tutors: TutorNavLink[] } | null = null;
+let tutorNavInflight: Promise<{ show: boolean; tutors: TutorNavLink[] }> | null = null;
+
+function loadTutorNav() {
+  if (tutorNavCache) return Promise.resolve(tutorNavCache);
+  if (!tutorNavInflight) {
+    tutorNavInflight = fetch("/api/dashboard/entreprise/tuteurs", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) return { show: false, tutors: [] as TutorNavLink[] };
+        const json = (await response.json()) as { hasApprentices?: boolean; tutors?: TutorNavLink[] };
+        return { show: Boolean(json.hasApprentices), tutors: json.tutors ?? [] };
+      })
+      .catch(() => ({ show: false, tutors: [] as TutorNavLink[] }))
+      .then((value) => {
+        tutorNavCache = value;
+        tutorNavInflight = null;
+        return value;
+      });
+  }
+  return tutorNavInflight;
+}
+
+function tutorNavItem(tutors: TutorNavLink[]): NavItem {
+  return {
+    type: "group",
+    label: "Alternance",
+    href: "/dashboard/entreprise/tuteurs",
+    icon: GraduationCap,
+    children: tutors.length
+      ? tutors.map((tutor) => ({
+          label: `${tutor.firstName} ${tutor.lastName}`.trim(),
+          href: `/dashboard/entreprise/tuteurs/${tutor.id}`,
+        }))
+      : [{ label: "Espaces tuteurs", href: "/dashboard/entreprise/tuteurs" }],
+  };
 }
 
 function isPathActive(pathname: string, href: string) {
@@ -276,15 +315,17 @@ function NavLinks({
   onNavigate,
   openGroups,
   toggleGroup,
+  extraItems = [],
 }: {
   pathname: string;
   onNavigate?: () => void;
   openGroups: Record<string, boolean>;
   toggleGroup: (label: string) => void;
+  extraItems?: NavItem[];
 }) {
   return (
     <>
-      {NAV_ITEMS.map((item) => {
+      {[...NAV_ITEMS, ...extraItems].map((item) => {
         const Icon = item.icon;
         if (item.type === "link") {
           const active = isPathActive(pathname, item.href);
@@ -361,6 +402,11 @@ export function EnterpriseMobileNav() {
   const orgName = overviewCtx?.data?.organisation?.name || "Beyond Enterprise";
   const orgLogo = overviewCtx?.data?.organisation?.logo_url || null;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [tutorItem, setTutorItem] = useState<NavItem | null>(null);
+
+  useEffect(() => {
+    void loadTutorNav().then((nav) => setTutorItem(nav.show ? tutorNavItem(nav.tutors) : null));
+  }, []);
 
   useEffect(() => {
     setOpenGroups((prev) => ({
@@ -382,6 +428,7 @@ export function EnterpriseMobileNav() {
         pathname.startsWith("/dashboard/entreprise/recrutement")
           ? true
           : prev.Recrutement,
+      Alternance: pathname.startsWith("/dashboard/entreprise/tuteurs") ? true : prev.Alternance,
     }));
   }, [pathname]);
 
@@ -413,6 +460,7 @@ export function EnterpriseMobileNav() {
                 onNavigate={() => setOpen(false)}
                 openGroups={openGroups}
                 toggleGroup={toggleGroup}
+                extraItems={tutorItem ? [tutorItem] : []}
               />
               <AccountMenuFooter
                 pathname={pathname}
@@ -445,6 +493,11 @@ export default function EnterpriseSidebar() {
     Formations: true,
     Salariés: false,
   });
+  const [tutorItem, setTutorItem] = useState<NavItem | null>(null);
+
+  useEffect(() => {
+    void loadTutorNav().then((nav) => setTutorItem(nav.show ? tutorNavItem(nav.tutors) : null));
+  }, []);
 
   useEffect(() => {
     invalidateEnterpriseViewerCache();
@@ -481,6 +534,7 @@ export default function EnterpriseSidebar() {
         pathname.startsWith("/dashboard/entreprise/recrutement")
           ? true
           : prev.Recrutement,
+      Alternance: pathname.startsWith("/dashboard/entreprise/tuteurs") ? true : prev.Alternance,
     }));
   }, [pathname]);
 
@@ -528,7 +582,7 @@ export default function EnterpriseSidebar() {
         className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1 [scrollbar-color:#FFFFFF1A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10"
         aria-label="Navigation entreprise"
       >
-        <NavLinks pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} />
+        <NavLinks pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} extraItems={tutorItem ? [tutorItem] : []} />
         <div className="mt-auto pt-3">
           <AccountMenuFooter pathname={pathname} />
         </div>

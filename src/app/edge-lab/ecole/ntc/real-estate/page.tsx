@@ -6,6 +6,7 @@ import { ArrowRight, BadgeCheck, BriefcaseBusiness, Check, CheckCircle2, Graduat
 import { NtcEvaluationSection } from "@/components/edge-site/cfa/ntc-evaluation-section";
 import { ProgramContributorsSection } from "@/components/edge-site/cfa/program-contributors-section";
 import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card";
+import { AlternantsRecruitingSection } from "@/components/offres/public-offer";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { getProgramContributors } from "@/lib/expert/program-contributors";
@@ -365,6 +366,7 @@ export default async function NtcRealEstatePage() {
           </div>
         </div>
       </section>
+      <AlternantsRecruitingSection cursus="Real Estate" />
     </EdgePremiumShell>
   );
 }

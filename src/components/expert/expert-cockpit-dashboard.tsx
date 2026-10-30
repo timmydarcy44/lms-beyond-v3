@@ -1,9 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EDGE_ONLINE_EXTERNAL_URL } from "@/lib/training-courses/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -17,12 +15,10 @@ import {
   HelpCircle,
   Inbox,
   MapPin,
-  MessageSquare,
   MoreHorizontal,
   Plus,
   Search,
   Settings,
-  Sparkles,
 } from "lucide-react";
 import { addHours, format, parseISO, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -48,15 +44,9 @@ type MissionRow = {
   metadata: Record<string, unknown> | null;
 };
 
-const ONLINE_RECO = [
-  { title: "Prompt Engineering", progress: 12, reason: "Aligné avec vos missions IA", icon: Sparkles },
-  { title: "DISC & communication", progress: 0, reason: "Renforce votre posture formateur", icon: MessageSquare },
-  { title: "Ingénierie pédagogique", progress: 34, reason: "Pour votre parcours Byound Certified", icon: GraduationCap },
-];
-
 const QUICK_NAV = [
   { label: "Mon profil", href: "/dashboard/expert/profile", keywords: "profil bio photo" },
-  { label: "Mes missions", href: "/dashboard/expert/interventions", keywords: "missions interventions demandes" },
+  { label: "Agenda", href: "/dashboard/expert/agenda", keywords: "agenda calendrier rendez-vous" },
   { label: "Mon agenda", href: "/dashboard/expert/agenda", keywords: "agenda calendrier disponibilités" },
   { label: "Mes revenus", href: "/dashboard/expert/revenus", keywords: "revenus ca factures paiement" },
   { label: "Documents", href: "/dashboard/expert/documents", keywords: "documents contrat supports" },
@@ -70,17 +60,19 @@ const QUICK_NAV = [
 type Props = {
   restricted?: boolean;
   formations?: ExpertShopFormation[];
+  pole?: "formation" | "care" | null;
+  careOnly?: boolean;
+  appointments?: { thisMonth: number; upcoming: number };
+  revenue?: {
+    totalCents: number;
+    paidCents: number;
+    upcomingCents: number;
+    bars: Array<{ month: string; value: number }>;
+  };
 };
 
 const CARD = "rounded-3xl border border-white/[0.07] bg-[#10173a]/70 backdrop-blur-xl";
 
-function firstNameOnly(first?: string | null) {
-  return (first ?? "").trim() || "Formateur";
-}
-
-function displayName(first?: string | null, last?: string | null) {
-  return [first, last].filter(Boolean).join(" ").trim() || "Expert Byound";
-}
 
 function missionBudget(meta: Record<string, unknown> | null): string {
   const budget = meta?.budget ?? meta?.daily_rate;
@@ -162,7 +154,7 @@ function EmptyRow({ icon: Icon, children }: { icon: typeof Inbox; children: Reac
   );
 }
 
-export function ExpertCockpitDashboard({ restricted = false, formations = [] }: Props) {
+export function ExpertCockpitDashboard({ restricted = false, formations = [], pole = null, careOnly = false, appointments, revenue }: Props) {
   const { expert } = useExpertAccess();
   const supabase = useSupabase();
   const router = useRouter();
@@ -180,19 +172,26 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
         if (!cancelled) setMissions(JADE_EXPERT_MISSIONS);
         return;
       }
-      const { data: rows } = await supabase
-        .from("action_requests")
-        .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
-        .eq("expert_id", expert.id)
-        .order("created_at", { ascending: false })
-        .limit(30);
+      const run = (withPole: boolean) => {
+        let query = supabase
+          .from("action_requests")
+          .select("id,action_type,target_label,status,created_at,scheduled_at,metadata")
+          .eq("expert_id", expert.id)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (withPole && pole) query = query.eq("pole", pole);
+        return query;
+      };
+      const first = await run(Boolean(pole));
+      const rows =
+        first.error && /pole|column|schema cache/i.test(first.error.message ?? "") ? (await run(false)).data : first.data;
       if (!cancelled) setMissions((rows ?? []) as MissionRow[]);
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [expert.id, supabase]);
+  }, [expert.id, pole, supabase]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -204,9 +203,6 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
   }, [moreOpen]);
 
   const photo = expert.avatar_url?.trim() || expert.photo_url?.trim() || meta?.photo_url?.trim() || null;
-  const firstName = firstNameOnly(expert.first_name);
-  const name = displayName(expert.first_name, expert.last_name);
-  const headline = expert.headline?.trim() || "Complétez votre titre dans Mon profil";
   const certified = isEdgeCertified(expert);
   const certProgress = expert.certification_status === "training" ? 42 : certified ? 100 : expert.wants_certification ? 8 : 0;
   const certLabel = byoundCertificationLabel(expert);
@@ -228,17 +224,15 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
   const pendingRequests = missions.filter((m) => m.status === "expert_notified");
   const completed = missions.filter((m) => m.status === "completed");
 
-  const revenueTotal = completed.length * 1400;
+  const revenueTotal = revenue ? revenue.totalCents / 100 : 0;
   const revenueBars = useMemo(() => {
+    if (revenue?.bars?.length) return revenue.bars;
     return Array.from({ length: 6 }, (_, i) => {
       const d = new Date();
       d.setMonth(d.getMonth() - (5 - i));
-      return {
-        month: format(d, "MMM", { locale: fr }).replace(".", ""),
-        value: completed.length > 0 ? Math.round((completed.length * 1400 * (i + 1)) / 6) : 0,
-      };
+      return { month: format(d, "MMM", { locale: fr }).replace(".", ""), value: 0 };
     });
-  }, [completed.length]);
+  }, [revenue]);
   const maxBar = Math.max(...revenueBars.map((b) => b.value), 1);
 
   const avgRating = completed.length > 0 ? "4,8" : "—";
@@ -288,24 +282,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
 
       <main className="relative min-h-screen">
         <div className="mx-auto max-w-[1160px] px-4 pb-20 pt-4 lg:pr-8">
-          {/* Top bar */}
-          <div className="flex items-center justify-between gap-4 py-2">
-            <div className="flex items-center gap-3">
-              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-white text-[#070b1f]">
-                {photo ? (
-                  <Image src={photo} alt={name} fill className="object-cover" sizes="40px" unoptimized />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-sm font-semibold">
-                    {firstName[0]?.toUpperCase() ?? "E"}
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[15px] font-semibold leading-tight">Bonjour {firstName}</p>
-                <p className="truncate text-xs text-white/50">{headline}</p>
-              </div>
-            </div>
-
+          <div className="flex items-center justify-end gap-4 py-2">
             <div className="flex items-center gap-2">
               <form
                 className="relative hidden md:block"
@@ -362,7 +339,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
               </span>
               <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-medium text-white/70">{certLabel}</span>
             </div>
-            <p className="mt-6 text-sm font-medium text-white/60">CA généré · EUR</p>
+            <p className="mt-6 text-sm font-medium text-white/60">Mes revenus · ce mois</p>
             <p className="mt-1 font-semibold tabular-nums tracking-[-0.04em]">
               <span className="text-[clamp(3.5rem,7vw,5.5rem)] leading-none">{amount.int}</span>
               <span className="text-[clamp(1.75rem,3.5vw,2.75rem)] text-white/90">,{amount.dec} €</span>
@@ -381,18 +358,30 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
               <QuickAction icon={Plus} label="Compléter profil" href="/dashboard/expert/profile" />
               <QuickAction icon={CalendarDays} label="Agenda" href="/dashboard/expert/agenda" disabled={restricted} />
               <QuickAction icon={FileText} label="Documents" href="/dashboard/expert/documents" />
-              <QuickAction icon={GraduationCap} label="Formations" href="/dashboard/expert/formations" />
+              {careOnly ? (
+                <QuickAction icon={Briefcase} label="Prestations" href="/dashboard/expert/prestations" />
+              ) : (
+                <QuickAction icon={GraduationCap} label="Formations" href="/dashboard/expert/formations" />
+              )}
               <div ref={moreRef} className="relative">
                 <QuickAction icon={MoreHorizontal} label="Plus" onClick={() => setMoreOpen((v) => !v)} />
                 {moreOpen ? (
                   <div className="absolute left-1/2 top-[88px] z-40 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#121a40] py-1.5 text-left shadow-2xl">
-                    {[
-                      { label: "Formations", href: "/dashboard/expert/formations", icon: GraduationCap },
-                      { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
-                      { label: "Byound Online", href: EDGE_ONLINE_EXTERNAL_URL, icon: GraduationCap },
-                      { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
-                      { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
-                    ].map(({ label, href, icon: Icon }) => (
+                    {(careOnly
+                      ? [
+                          { label: "Prestations", href: "/dashboard/expert/prestations", icon: Briefcase },
+                          { label: "Facturation", href: "/dashboard/expert/facturation", icon: FileText },
+                          { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
+                          { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
+                        ]
+                      : [
+                          { label: "Formations", href: "/dashboard/expert/formations", icon: GraduationCap },
+                          { label: "Mes résultats", href: "/dashboard/expert/resultats", icon: Award },
+                          { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },
+                          { label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings },
+                          { label: "Centre d'aide", href: "/dashboard/expert/support", icon: HelpCircle },
+                        ]
+                    ).map(({ label, href, icon: Icon }) => (
                       <Link
                         key={label}
                         href={href}
@@ -435,9 +424,19 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
                 </p>
               </div>
             </Link>
-            <StatTile label="Missions" value={String(missions.length)} />
-            <StatTile label="Interventions à venir" value={String(upcoming.length)} />
-            <StatTile label="Note moyenne" value={avgRating} />
+            {careOnly ? (
+              <>
+                <StatTile label="Rendez-vous ce mois" value={String(appointments?.thisMonth ?? 0)} />
+                <StatTile label="Rendez-vous à venir" value={String(appointments?.upcoming ?? 0)} />
+                <StatTile label="Note moyenne" value={avgRating} />
+              </>
+            ) : (
+              <>
+                <StatTile label="Missions" value={String(missions.length)} />
+                <StatTile label="Interventions à venir" value={String(upcoming.length)} />
+                <StatTile label="Note moyenne" value={avgRating} />
+              </>
+            )}
           </section>
 
           {/* Agenda + revenus / certified */}
@@ -453,11 +452,18 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
               <div className={cn(CARD, "flex flex-1 flex-col p-5")}>
                 <div className="flex items-start justify-between">
                   <p className="text-lg font-semibold">Mes revenus</p>
-                  <span className="text-xs text-white/45">6 derniers mois</span>
+                  <Link href="/dashboard/expert/revenus" className="text-xs text-white/45 hover:text-white">
+                    Voir le détail
+                  </Link>
                 </div>
                 <p className="mt-2 text-3xl font-semibold tabular-nums tracking-tight">
-                  {revenueTotal.toLocaleString("fr-FR")} €
+                  {revenueTotal.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
                 </p>
+                {revenue ? (
+                  <p className="mt-1 text-xs text-white/45">
+                    {(revenue.paidCents / 100).toLocaleString("fr-FR")} € versés · {(revenue.upcomingCents / 100).toLocaleString("fr-FR")} € à venir
+                  </p>
+                ) : null}
                 <div className="mt-auto flex h-28 items-end gap-2 pt-6">
                   {revenueBars.map((bar, i) => {
                     const isLast = i === revenueBars.length - 1;
@@ -491,6 +497,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
                 </Link>
               </div>
 
+              {careOnly ? null : (
               <div className={cn(CARD, "p-5")}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -514,9 +521,11 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
                   {certified ? "Voir ma certification" : certProgress > 0 ? "Continuer la certification" : "Démarrer la certification"}
                 </Link>
               </div>
+              )}
             </div>
           </section>
 
+          {careOnly ? null : (
           <section className={cn(CARD, "mt-3 p-5")}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-lg font-semibold">Formations</p>
@@ -552,8 +561,9 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
               </div>
             )}
           </section>
+          )}
 
-          {/* Demandes + prochaines missions */}
+          {careOnly ? null : (
           <section className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className={cn(CARD, "p-5")}>
               <div className="mb-4 flex items-center justify-between">
@@ -658,38 +668,7 @@ export function ExpertCockpitDashboard({ restricted = false, formations = [] }: 
               )}
             </div>
           </section>
-
-          {/* Byound Online */}
-          <section className={cn(CARD, "mt-3 p-5")}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-lg font-semibold">Développez vos compétences</p>
-              <span className="text-xs text-white/45">Recommandations Byound Online personnalisées</span>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {ONLINE_RECO.map(({ title, progress, reason, icon: Icon }) => (
-                <a
-                  key={title}
-                  href={EDGE_ONLINE_EXTERNAL_URL}
-                  className="group rounded-2xl bg-white/[0.04] p-4 transition hover:bg-white/[0.07]"
-                >
-                  <div className="flex items-start justify-between">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.08]">
-                      <Icon className="h-4 w-4 text-white/80" />
-                    </span>
-                    <span className="text-xl font-semibold tabular-nums">{progress}%</span>
-                  </div>
-                  <p className="mt-4 text-sm font-semibold">{title}</p>
-                  <p className="mt-0.5 text-xs text-white/45">{reason}</p>
-                  <div className="mt-3 h-1 rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-[#9AA0FF]" style={{ width: `${progress}%` }} />
-                  </div>
-                  <p className="mt-3 inline-flex items-center gap-1 text-xs font-semibold">
-                    Continuer <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                  </p>
-                </a>
-              ))}
-            </div>
-          </section>
+          )}
         </div>
       </main>
     </div>

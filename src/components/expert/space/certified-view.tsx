@@ -11,9 +11,11 @@ import type { ExpertCertificationModel } from "@/lib/expert/space-server";
 export function CertifiedView({
   certification,
   formations = [],
+  care = false,
 }: {
   certification: ExpertCertificationModel;
   formations?: ExpertShopFormation[];
+  care?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const next = certification.steps.find((step) => !step.done);
@@ -32,7 +34,11 @@ export function CertifiedView({
     <ExpertPageFrame>
       <ExpertPageHeader title="Byound Certified" subtitle="Votre certification d'experte et votre badge public" />
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        {certification.certified ? (
+        {care ? (
+          <article className="rounded-[32px] bg-[#12141A] p-6">
+            <h2 className="text-[32px] font-extrabold tracking-[-0.04em]">Certification Byound Care — bientôt disponible</h2>
+          </article>
+        ) : certification.certified ? (
           <article className="relative min-h-[290px] overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#F7DD8A,#E2B94E_45%,#B8913A)] p-6 text-[#2A2312]">
             <span className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/30" aria-hidden />
             <span className="pointer-events-none absolute bottom-0 right-16 h-36 w-36 rounded-full bg-white/20" aria-hidden />

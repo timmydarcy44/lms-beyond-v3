@@ -19,7 +19,7 @@ export function Sparkline({ values, max = 100, width = 160, height = 44 }: { val
 export function Bar({ value, max, className = "" }: { value: number; max: number; className?: string }) {
   const pct = Math.max(0, Math.min(100, (value / (max || 1)) * 100));
   return (
-    <div className={`h-2 w-full overflow-hidden rounded-full bg-muted ${className}`}>
+    <div className={`h-2 w-full overflow-hidden rounded-full bg-white/10 ${className}`}>
       <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500" style={{ width: `${pct}%` }} />
     </div>
   );
@@ -49,5 +49,7 @@ export function ToneChip({ tone }: { tone: "good" | "mid" | "bad" | null }) {
 export const CRITERIA_LABEL: Record<string, string> = {
   sources: "Pertinence des sources", analyse: "Qualité de l'analyse",
   opportunitesRisques: "Opportunités et risques", justification: "Justification",
+  attention: "Attention", engagement: "Engagement", consolidation: "Consolidation",
+  stressinverse: "Stress inverse",
 };
 export const CRITERIA_MAX: Record<string, number> = { sources: 25, analyse: 30, opportunitesRisques: 20, justification: 25 };

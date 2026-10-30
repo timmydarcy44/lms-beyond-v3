@@ -1,5 +1,4 @@
-import { EDGE_ONLINE_APP_SURFACE_PATH } from "@/lib/galaxy-branding";
-import { isEdgebsDemoViewer } from "@/lib/entreprise/edgebs-demo-data";
+import { collectLearnerProfileCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export type SalarieAssignedFormation = {
@@ -10,6 +9,7 @@ export type SalarieAssignedFormation = {
   presentation: string | null;
   meta: string | null;
   progress: number;
+  coverImage: string | null;
 };
 
 const UUID_RE =
@@ -17,48 +17,65 @@ const UUID_RE =
 
 function formationHref(slug: string | null, id: string) {
   const key = (slug || id).trim();
-  return `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/${encodeURIComponent(key)}`;
+  return `/dashboard/salarie/formations/${encodeURIComponent(key)}`;
+}
+
+function courseCover(row: { cover_image?: string | null; builder_snapshot?: unknown }) {
+  const direct = String(row.cover_image ?? "").trim();
+  if (direct) return direct;
+  let snapshot = row.builder_snapshot;
+  if (typeof snapshot === "string") {
+    try {
+      snapshot = JSON.parse(snapshot) as unknown;
+    } catch {
+      snapshot = null;
+    }
+  }
+  const general =
+    snapshot && typeof snapshot === "object"
+      ? (snapshot as { general?: { cover_image?: unknown; heroImage?: unknown } }).general
+      : null;
+  const fromSnapshot = String(general?.cover_image || general?.heroImage || "").trim();
+  return fromSnapshot || null;
 }
 
 /** Formations assignées au salarié (enrollments + course_enrollments), sans filtre org_id cours. */
 export async function listSalarieAssignedFormations(
   userId: string,
+  email?: string | null,
 ): Promise<SalarieAssignedFormation[]> {
   if (!UUID_RE.test(userId)) return [];
   const client = await getServiceRoleClientOrFallback();
   if (!client) return [];
 
   const courseIds = new Set<string>();
+  const profileIds = await collectLearnerProfileCandidates(client, userId, email);
+  const userIds = profileIds.length ? profileIds : [userId];
 
-  const { data: enrollments } = await client
-    .from("enrollments")
-    .select("course_id")
-    .eq("user_id", userId)
-    .limit(200);
-
-  for (const row of enrollments ?? []) {
-    const id = String((row as { course_id?: string }).course_id ?? "").trim();
-    if (id) courseIds.add(id);
-  }
-
-  if (courseIds.size === 0) {
-    const { data: fallback } = await client
-      .from("course_enrollments")
-      .select("course_id")
-      .eq("user_id", userId)
-      .limit(200);
-    for (const row of fallback ?? []) {
+  const pull = async (table: "enrollments" | "course_enrollments", column: "user_id" | "learner_id") => {
+    const withRole = await client.from(table).select("course_id, role").in(column, userIds).limit(200);
+    const rows = withRole.error
+      ? (await client.from(table).select("course_id").in(column, userIds).limit(200)).data
+      : withRole.data;
+    for (const row of rows ?? []) {
+      const role = String((row as { role?: string }).role ?? "student").trim().toLowerCase();
+      if (role && !["student", "learner", "apprenant", "salarie", "collaborateur"].includes(role)) continue;
       const id = String((row as { course_id?: string }).course_id ?? "").trim();
       if (id) courseIds.add(id);
     }
-  }
+  };
+
+  await pull("enrollments", "user_id");
+  await pull("enrollments", "learner_id");
+  await pull("course_enrollments", "user_id");
+  await pull("course_enrollments", "learner_id");
 
   if (courseIds.size === 0) return [];
 
   const ids = Array.from(courseIds);
   const { data: courses, error } = await client
     .from("courses")
-    .select("id, title, description, presentation, slug, status")
+    .select("id, title, description, presentation, slug, status, cover_image, builder_snapshot")
     .in("id", ids)
     .limit(200);
 
@@ -89,6 +106,8 @@ export async function listSalarieAssignedFormations(
       presentation?: string | null;
       slug?: string | null;
       status?: string | null;
+      cover_image?: string | null;
+      builder_snapshot?: unknown;
     };
     const status = String(row.status ?? "").toLowerCase();
     if (status === "draft" || status === "archived" || status === "deleted") continue;
@@ -100,35 +119,9 @@ export async function listSalarieAssignedFormations(
       presentation: row.presentation ?? null,
       meta: row.description ?? null,
       progress: progressByCourse.get(row.id) ?? 0,
+      coverImage: courseCover(row),
     });
   }
 
   return out.sort((a, b) => a.title.localeCompare(b.title, "fr"));
-}
-
-/** Fallback présentation démo Byound Business si aucune inscription réelle. */
-export function edgebsDemoAssignedFormationsFallback(
-  email: string | null | undefined,
-): SalarieAssignedFormation[] {
-  if (!isEdgebsDemoViewer(email)) return [];
-  return [
-    {
-      id: "edgebs-demo-assigned-1",
-      title: "Modern Prospecting",
-      slug: "modern-prospecting",
-      href: `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/modern-prospecting`,
-      presentation: "Techniques de prospection B2B et pipeline commercial.",
-      meta: "Assignée par votre RH — compte démo Byound Business",
-      progress: 32,
-    },
-    {
-      id: "edgebs-demo-assigned-2",
-      title: "Communication assertive",
-      slug: "communication-assertive",
-      href: `${EDGE_ONLINE_APP_SURFACE_PATH}/formations/communication-assertive`,
-      presentation: "Renforcer impact relationnel et feedback en équipe.",
-      meta: "Assignée par votre RH — compte démo Byound Business",
-      progress: 12,
-    },
-  ];
 }

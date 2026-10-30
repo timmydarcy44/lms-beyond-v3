@@ -148,7 +148,7 @@ const nextConfig: NextConfig = {
         },
         {
           source:
-            "/:path((?!api|super|auth|onboarding|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|llms.txt|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|edgeonline|parcours-guide|parcours|entreprises|tarifs|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills|disc|idmc|q|care-test|byound-tests|p|pj|badgeclasses|wallet|mos|offres|ecole|tuteur|care|praticiens|reserver|reservation|rdv|dev).*)",
+            "/:path((?!api|super|auth|onboarding|formations|catalog|catalogue|note-app|_next|app-landing|login|dashboard|g|favicon.ico|robots.txt|sitemap.xml|llms.txt|programmes|specialites|jessica-contentin|consultations|a-propos|orientation|postuler|edge-lab|edgeonline|parcours-guide|parcours|entreprises|tarifs|edge-online|online|ressources|blog|inscription|mon-compte|panier|confirmer|forgot-password|reset-password|register|prix|pricing|tarif|for-education|unauthorized|soft-skills|disc|idmc|q|care-test|byound-tests|p|pj|badgeclasses|badges|issuers|\.well-known|wallet|mos|offres|ecole|tuteur|care|praticiens|reserver|reservation|rdv|dev).*)",
           destination: "/app-landing/:path",
         },
       ],

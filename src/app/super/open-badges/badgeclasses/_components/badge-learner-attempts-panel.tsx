@@ -58,7 +58,7 @@ function statusBadge(status: LearnerAttempt["status"]) {
   return <Badge variant="outline">En cours</Badge>;
 }
 
-function AttemptCard({ attempt }: { attempt: LearnerAttempt }) {
+function AttemptCard({ attempt, badgeClassId }: { attempt: LearnerAttempt; badgeClassId: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -177,6 +177,32 @@ function AttemptCard({ attempt }: { attempt: LearnerAttempt }) {
               ))}
             </div>
           ) : null}
+          {attempt.awarded ? (
+            <button
+              type="button"
+              className="text-sm font-medium text-red-700"
+              onClick={async () => {
+                const reason = window.prompt("Motif de révocation") ?? "";
+                if (!reason.trim()) return;
+                const response = await fetch("/api/admin/badge-assertions/revoke", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    badgeClassId,
+                    recipientProfileId: attempt.earnerId,
+                    reason,
+                  }),
+                });
+                if (!response.ok) {
+                  toast.error("La révocation a échoué.");
+                  return;
+                }
+                toast.success("Badge révoqué.");
+              }}
+            >
+              Révoquer
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -285,6 +311,7 @@ export function BadgeLearnerAttemptsPanel({
               <AttemptCard
                 key={`${attempt.earnerId}-${attempt.attemptIndex}-${attempt.evaluatedAt ?? "pending"}`}
                 attempt={attempt}
+                badgeClassId={badgeClassId}
               />
             ))
           )}

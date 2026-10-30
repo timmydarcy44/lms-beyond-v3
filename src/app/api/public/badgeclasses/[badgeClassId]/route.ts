@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loadPublicBadgeClass } from "@/lib/openbadges/public-badge-class";
-import { byoundIssuerId } from "@/lib/openbadges/public-issuer";
-import { getPublicShareBaseUrl } from "@/lib/openbadges/urls";
+import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
 
 const withCors = (response: NextResponse) => {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -22,25 +21,32 @@ export async function GET(
     return withCors(NextResponse.json({ error: "NOT_FOUND" }, { status: 404 }));
   }
 
-  const base = getPublicShareBaseUrl();
   const narrative =
     badge.criteriaMarkdown.trim() ||
-    badge.structuredCriteria.map((item) => item.label).filter(Boolean).join("\n");
+    badge.structuredCriteria
+      .map((item) => [item.label, item.description].filter(Boolean).join(" — "))
+      .filter(Boolean)
+      .join("\n");
+  const id = `${BADGE_PUBLIC_ORIGIN}/badgeclasses/${badge.id}`;
 
   const response = NextResponse.json({
-    id: `${base}/badgeclasses/${badge.id}`,
-    type: "BadgeClass",
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json",
+    ],
+    id,
+    type: ["Achievement"],
+    achievementType: "Competency",
     name: badge.name,
     description: badge.description,
-    image: badge.imageUrl,
-    criteria: {
-      narrative,
-      items: badge.structuredCriteria.map((item) => ({
-        label: item.label,
-        description: item.description,
-      })),
+    criteria: { id: `${id}/criteria`, narrative },
+    ...(badge.imageUrl ? { image: { id: badge.imageUrl, type: "Image" } } : {}),
+    creator: {
+      id: `${BADGE_PUBLIC_ORIGIN}/issuers/byound`,
+      type: ["Profile"],
+      name: "Byound",
+      url: BADGE_PUBLIC_ORIGIN,
     },
-    issuer: byoundIssuerId(base),
   });
   response.headers.set("Content-Type", "application/json; charset=utf-8");
   response.headers.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");

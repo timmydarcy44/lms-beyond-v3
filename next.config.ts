@@ -137,6 +137,10 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: careHostRewrites,
       afterFiles: [
+        {
+          source: "/badges/:assertionId.json",
+          destination: "/api/public/credentials/:assertionId",
+        },
         ...jessicaSeoRewrites,
         {
           source: "/",

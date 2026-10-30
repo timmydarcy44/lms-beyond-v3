@@ -6,6 +6,7 @@ import {
   type BadgeAlignment,
   type BadgeEvidenceItem,
 } from "@/lib/openbadges/v3/credential";
+import { issueOpenBadgeCredential } from "@/lib/openbadges/v3/issue";
 import { publicJwkFromPrivate, signCredentialJwt } from "@/lib/openbadges/v3/sign";
 import type { JWK } from "jose";
 
@@ -252,7 +253,7 @@ export async function issueBadgeAssertion(
   const until = validUntil(issuedAt, (badge as { expires_after_days?: unknown }).expires_after_days);
   const isPublic = input.isPublic === true;
   const assertionId = randomUUID();
-  const credential = buildOpenBadgeCredential(String(badge.id), {
+  const issued = await issueOpenBadgeCredential(String(badge.id), {
     assertionId,
     name: String((badge as { name?: string }).name ?? (badge as { title?: string }).title ?? "Open Badge"),
     description: String((badge as { description?: string }).description ?? ""),
@@ -268,7 +269,7 @@ export async function issueBadgeAssertion(
     statusIndex,
     evidence: input.evidence ?? [],
   });
-  const signed = await signCredentialJwt(credential);
+  const signed = issued.signed;
 
   const { data: inserted, error: insertError } = await db
     .from("badge_assertions")

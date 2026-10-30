@@ -166,7 +166,25 @@ export async function middleware(request: NextRequest) {
   }
 }
 
+function negotiateOpenBadgeDocument(request: NextRequest) {
+  const accept = request.headers.get("accept") ?? "";
+  const wantsJson = accept.includes("application/json") || accept.includes("application/ld+json");
+  if (!wantsJson || accept.includes("text/html")) return null;
+  const { pathname } = request.nextUrl;
+  const badge = pathname.match(/^\/badges\/([0-9a-f-]{36})$/i);
+  const badgeClass = pathname.match(/^\/badgeclasses\/([0-9a-f-]{36})$/i);
+  const id = badge?.[1] ?? badgeClass?.[1];
+  if (!id) return null;
+  const url = request.nextUrl.clone();
+  url.pathname = badge
+    ? `/api/public/credentials/${id}`
+    : `/api/public/badgeclasses/${id}`;
+  return NextResponse.rewrite(url);
+}
+
 async function runMiddleware(request: NextRequest) {
+  const badgeDocument = negotiateOpenBadgeDocument(request);
+  if (badgeDocument) return badgeDocument;
   const hostname = request.headers.get("host") || "";
   const hostWithoutPort = hostname.split(":")[0];
   const careHostResponse = handleByoundCareHost(request);

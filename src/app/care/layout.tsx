@@ -8,7 +8,6 @@ import "./care.css";
 
 const careSans = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-care",
   display: "swap",
 });

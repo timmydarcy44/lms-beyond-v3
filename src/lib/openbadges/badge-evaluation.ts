@@ -1,11 +1,11 @@
 /** Méthodes d'évaluation configurables pour un BadgeClass (Open Badges). */
 export const BADGE_EVALUATION_METHODS = [
-  { id: "qcm", label: "Évaluation" },
+  { id: "qcm", label: "Questionnaire" },
   { id: "case_study", label: "Étude de cas" },
-  { id: "dictation", label: "Dictée" },
+  { id: "dictation", label: "Réponse orale" },
   { id: "video", label: "Vidéo" },
-  { id: "pdf_upload", label: "Upload PDF" },
-  { id: "playground", label: "Playground" },
+  { id: "pdf_upload", label: "Document" },
+  { id: "playground", label: "Playground IA" },
 ] as const;
 
 export const PLAYGROUND_DEFAULT_MAX_ATTEMPTS = 2;

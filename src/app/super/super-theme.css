@@ -291,3 +291,50 @@
     display: none !important;
   }
 }
+
+.super-theme .badge-builder {
+  --foreground: #eef0f7;
+  color: #eef0f7;
+  background: #0a0f1e;
+  font-family: var(--font-badge-builder), Manrope, sans-serif;
+}
+
+.super-theme .badge-builder :is(h1, h2, h3, h4, p, li, label, span, button, a, legend) {
+  color: inherit;
+}
+
+.super-theme .badge-builder :is(.text-slate-900, .text-slate-800, .text-gray-900, .text-\[\#07080B\]) {
+  color: #eef0f7 !important;
+}
+
+.super-theme .badge-builder :is(.text-slate-600, .text-slate-500, .text-muted-foreground, .text-zinc-500, .text-zinc-400, .text-zinc-300) {
+  color: #8c94b2 !important;
+}
+
+.super-theme .badge-builder :is(.text-destructive, .border-destructive) {
+  color: #f2c15a !important;
+  border-color: #f2c15a !important;
+}
+
+.super-theme .badge-builder :is(.bg-white, .bg-slate-50, .bg-gray-50) {
+  background-color: #111831 !important;
+}
+
+.super-theme .badge-builder [data-slot="card"],
+.super-theme .badge-builder .super-glass-panel {
+  border-color: #1a2340 !important;
+  background: #111831 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.super-theme .badge-builder :is(input, textarea, select) {
+  border-color: #26304f !important;
+  color: #eef0f7 !important;
+  background-color: #0b1122 !important;
+}
+
+.super-theme .badge-builder .bb-white {
+  background: #eef0f7 !important;
+  color: #0a0f1e !important;
+}

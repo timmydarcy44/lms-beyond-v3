@@ -11,6 +11,7 @@ type Props = {
   level: number | null;
   imageUrl?: string | null;
   state?: BadgeVerificationState;
+  compact?: boolean;
 };
 
 const EDGES = [
@@ -36,7 +37,15 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function BadgeCard3D({ name, recipientName, issuedLabel, level, imageUrl, state = "verified" }: Props) {
+export function BadgeCard3D({
+  name,
+  recipientName,
+  issuedLabel,
+  level,
+  imageUrl,
+  state = "verified",
+  compact = false,
+}: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const shadowRef = useRef<HTMLDivElement>(null);
   const [photoOk, setPhotoOk] = useState(Boolean(imageUrl));
@@ -145,7 +154,7 @@ export function BadgeCard3D({ name, recipientName, issuedLabel, level, imageUrl,
   }, []);
 
   return (
-    <div className={styles.stage}>
+    <div className={`${styles.stage} ${compact ? styles.stageCompact : ""}`}>
       <div ref={shadowRef} className={styles.shadow} />
       <div className={styles.perspective}>
         <div ref={cardRef} className={styles.card} data-badge-card="true" aria-hidden="true">
@@ -203,8 +212,12 @@ export function BadgeCard3D({ name, recipientName, issuedLabel, level, imageUrl,
           </div>
         </div>
       </div>
-      <p className={`${styles.hint} ${styles.desktopHint}`}>Survolez la carte pour la faire pivoter</p>
-      <p className={`${styles.hint} ${styles.mobileHint}`}>Inclinez votre téléphone</p>
+      {compact ? null : (
+        <>
+          <p className={`${styles.hint} ${styles.desktopHint}`}>Survolez la carte pour la faire pivoter</p>
+          <p className={`${styles.hint} ${styles.mobileHint}`}>Inclinez votre téléphone</p>
+        </>
+      )}
     </div>
   );
 }

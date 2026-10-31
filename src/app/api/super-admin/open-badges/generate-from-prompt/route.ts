@@ -18,17 +18,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "OpenAI non configuré" }, { status: 500 });
   }
 
-  const system = `Tu es un expert Open Badges (1EdTech). À partir du brief utilisateur, génère un badge professionnel en JSON strict :
+  const system = `Tu proposes un Open Badge. L'humain décide. JSON strict :
 {
-  "name": "titre court du badge",
-  "description": "2 phrases max",
-  "level": 1-5,
-  "criteriaMarkdown": "texte des critères en langage simple",
-  "criteria": [{"label": "critère court", "description": "détail optionnel"}],
-  "evaluationMethods": ["qcm"|"case_study"|"video"|"pdf_upload"|"dictation"] (1 à 3 ids),
-  "suggestedEvaluationPrompt": "consigne pour l'évaluateur ou l'IA"
+  "name": "titre court",
+  "description": "une ou deux phrases, 300 caractères maximum, écrites pour un recruteur",
+  "level": 1,
+  "domain": "Intelligence artificielle" | "Management" | "Commercial" | "Sport" | "Care" | "Communication" | "Industrie",
+  "achievementType": "Competency" | "Certification" | "Achievement",
+  "skills": ["compétence courte"],
+  "criteria": [{"label": "titre", "description": "précision", "expectedOutcome": "ce que l'expert doit constater"}],
+  "evaluationMethods": ["qcm"|"case_study"|"video"|"pdf_upload"|"dictation"|"playground"],
+  "suggestedEvaluationPrompt": "consigne confidentielle pour la correction"
 }
-Réponds UNIQUEMENT avec le JSON, sans markdown.`;
+level vaut 1, 2 ou 3. Réponds uniquement avec le JSON.`;
 
   try {
     const completion = await openai.chat.completions.create({

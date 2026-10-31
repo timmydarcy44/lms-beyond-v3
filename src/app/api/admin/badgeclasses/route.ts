@@ -121,15 +121,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "INVALID_REVIEW_MODE" }, { status: 400 });
     }
 
+    const publishing = String(payload.status ?? "DRAFT").toUpperCase() === "ACTIVE";
     const validationIssues: string[] = [];
     if (!payload.name || String(payload.name).trim().length === 0) validationIssues.push("name manquant");
-    if (!payload.description || String(payload.description).trim().length === 0) {
+    if (publishing && (!payload.description || String(payload.description).trim().length === 0)) {
       validationIssues.push("description manquante");
     }
     if (!payload.receivability || typeof payload.receivability !== "object") {
-      validationIssues.push("receivability manquant");
+      payload.receivability = { expectedModalities: "", aiEvaluationPrompt: "", methodConfigs: [] };
     }
-    if (!payload.imageUrl && !payload.imageTemplateUrl) {
+    if (publishing && !payload.imageUrl && !payload.imageTemplateUrl) {
       validationIssues.push("imageUrl manquant");
     }
 
@@ -198,7 +199,15 @@ export async function POST(request: Request) {
         ? payload.criteriaMarkdown.trim()
         : null;
 
+    if (publishing && !evaluationConfig.ok) {
+      return NextResponse.json(
+        { ok: false, error: "VALIDATION_ERROR", details: evaluationConfig.issues },
+        { status: 400 },
+      );
+    }
     const evalData = evaluationConfig.ok ? evaluationConfig.data : null;
+    const draftLevel =
+      typeof payload.level === "number" && Number.isInteger(payload.level) ? payload.level : null;
     const orgId = organizationId ?? auth.user.orgId;
 
     if (canUseOpenBadgesSupabaseRepo()) {
@@ -207,7 +216,7 @@ export async function POST(request: Request) {
           orgId,
           createdByUserId: auth.user.id,
           name: payload.name,
-          description: payload.description,
+          description: String(payload.description ?? ""),
           imageUrl: payload.imageUrl ?? payload.imageTemplateUrl ?? null,
           imageTemplateUrl: payload.imageUrl ?? payload.imageTemplateUrl ?? "",
           criteriaUrl: shouldAutofillCriteriaUrl ? null : payload.criteriaUrl,
@@ -221,9 +230,17 @@ export async function POST(request: Request) {
           requiresEnrollment,
           requiredCourseId: requiresEnrollment ? requiredCourseId : null,
           visibleInLearnerDashboard,
-          level: evalData?.level ?? null,
-          evaluationMethods: evalData?.evaluationMethods ?? [],
-          validatorExpertId: evalData?.validatorExpertId ?? null,
+          level: evalData?.level ?? draftLevel,
+          evaluationMethods: evalData?.evaluationMethods ?? (Array.isArray(payload.evaluationMethods) ? payload.evaluationMethods : []),
+          validatorExpertId: evalData?.validatorExpertId ?? (typeof payload.validatorExpertId === "string" ? payload.validatorExpertId : null),
+          failureRemediationCourseId:
+            typeof payload.failureRemediationCourseId === "string" ? payload.failureRemediationCourseId : null,
+          builder: payload.builder ?? null,
+          achievementType: typeof payload.achievementType === "string" ? payload.achievementType : null,
+          expiresAfterDays:
+            payload.expiresAfterDays === null || typeof payload.expiresAfterDays === "number"
+              ? payload.expiresAfterDays
+              : null,
           criteria: Array.isArray(payload.criteria)
             ? payload.criteria.map((criterion: { label: string; description?: string; sortOrder?: number }, index: number) => ({
                 label: criterion.label,
@@ -231,11 +248,11 @@ export async function POST(request: Request) {
                 sortOrder: Number(criterion.sortOrder ?? index),
               }))
             : [],
-          receivability: payload.receivability && evalData
+          receivability: payload.receivability
             ? {
-                expectedModalities: evalData.expectedModalities,
-                aiEvaluationPrompt: evalData.aiEvaluationPrompt,
-                methodConfigs: evalData.methodConfigs,
+                expectedModalities: evalData?.expectedModalities ?? String(payload.receivability.expectedModalities ?? ""),
+                aiEvaluationPrompt: evalData?.aiEvaluationPrompt ?? String(payload.receivability.aiEvaluationPrompt ?? ""),
+                methodConfigs: evalData?.methodConfigs ?? payload.receivability.methodConfigs ?? [],
               }
             : null,
           autofillCriteriaUrl: shouldAutofillCriteriaUrl,

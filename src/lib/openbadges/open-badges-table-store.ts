@@ -57,6 +57,9 @@ export function openBadgeRowToBadgeClass(row: OpenBadgeRow): Record<string, unkn
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     createdByUserId: row.created_by_user_id ?? null,
+    achievementType: row.achievement_type ?? null,
+    expiresAfterDays: row.expires_after_days ?? null,
+    builder: config.builder ?? null,
   };
 }
 
@@ -76,6 +79,7 @@ function buildEvaluationConfig(payload: CreateBadgeClassRpcPayload, criteriaUrl:
     tags: payload.tags ?? [],
     alignment: payload.alignment ?? null,
     version: payload.version ?? 1,
+    builder: payload.builder ?? null,
   };
 }
 
@@ -100,6 +104,9 @@ function buildInsertRow(payload: CreateBadgeClassRpcPayload, criteriaUrl: string
     requires_enrollment: payload.requiresEnrollment ?? false,
     required_course_id: payload.requiresEnrollment ? payload.requiredCourseId : null,
     evaluation_config: buildEvaluationConfig(payload, criteriaUrl),
+    achievement_type: payload.achievementType ?? "Competency",
+    expires_after_days: payload.expiresAfterDays ?? null,
+    level: payload.level ?? null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -137,7 +144,7 @@ async function updateWithColumnFallback(id: string, patch: Record<string, unknow
   const supabase = getServiceRoleClient();
   if (!supabase) throw new Error("SUPABASE_SERVICE_ROLE_KEY manquant.");
 
-  const current = { ...patch, updated_at: new Date().toISOString() };
+  const current: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const { data, error } = await supabase
       .from("open_badges")
@@ -252,6 +259,7 @@ export async function updateOpenBadgeClassRow(
               : null,
         }
       : {}),
+    ...(payload.builder !== undefined ? { builder: payload.builder } : {}),
   };
 
   const requiresEnrollment =
@@ -274,6 +282,9 @@ export async function updateOpenBadgeClassRow(
     ...(payload.visibleInLearnerDashboard !== undefined
       ? { visible_in_learner_dashboard: payload.visibleInLearnerDashboard }
       : {}),
+    ...(payload.achievementType !== undefined ? { achievement_type: payload.achievementType } : {}),
+    ...(payload.expiresAfterDays !== undefined ? { expires_after_days: payload.expiresAfterDays } : {}),
+    ...(payload.level !== undefined ? { level: payload.level } : {}),
     evaluation_config: nextConfig,
   };
 

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Manrope } from "next/font/google";
 import { resolveValidatorPhotoUrl } from "@/lib/validators/photo-url";
 import { getBaseUrl } from "@/lib/openbadges/urls";
 import { toast } from "sonner";
@@ -33,7 +35,21 @@ import {
 } from "@/lib/openbadges/badge-method-config";
 import { EvaluationMethodConfigDialog } from "@/app/super/open-badges/badgeclasses/_components/evaluation-method-config-dialog";
 import { BadgeLearnerAttemptsPanel } from "@/app/super/open-badges/badgeclasses/_components/badge-learner-attempts-panel";
-import { Sparkles } from "lucide-react";
+import { Check, MoreHorizontal } from "lucide-react";
+import { BadgeBuilderPreview } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-preview";
+import { BadgeBuilderStepIdentity } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-step-identity";
+import {
+  ACHIEVEMENT_TYPES,
+  achievementLabel,
+  cropSquareBadgeImage,
+  emptyBuilderState,
+  expiresAfterDays,
+  readBuilderState,
+  validityLabel,
+  type BadgeBuilderState,
+} from "@/lib/openbadges/badge-builder";
+
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-badge-builder" });
 
 type AuthHeaders = {
   userId: string;
@@ -100,6 +116,9 @@ type BadgeClassPayload = {
   evaluationMethods?: string[];
   validatorExpertId?: string | null;
   methodConfigs?: BadgeMethodConfig[];
+  builder?: BadgeBuilderState;
+  achievementType?: string;
+  expiresAfterDays?: number | null;
 };
 
 type BadgeClassRecord = {
@@ -220,7 +239,7 @@ export function BadgeClassForm({
   const [criteriaUrl, setCriteriaUrl] = useState("");
   const [criteriaMarkdown, setCriteriaMarkdown] = useState("");
   const [criteria, setCriteria] = useState<BadgeCriteriaInput[]>([emptyCriteria()]);
-  const [level, setLevel] = useState<string>("");
+  const [level, setLevel] = useState<string>(badgeClassId ? "" : "1");
   const [evaluationMethods, setEvaluationMethods] = useState<string[]>([]);
   const [methodConfigs, setMethodConfigs] = useState<BadgeMethodConfig[]>([]);
   const [validatorExpertId, setValidatorExpertId] = useState("");
@@ -235,6 +254,18 @@ export function BadgeClassForm({
   const [visibleInLearnerDashboard, setVisibleInLearnerDashboard] = useState(false);
   const [receivabilityReviewMode, setReceivabilityReviewMode] = useState<"HUMAN" | "AI" | "MIXED">("HUMAN");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const router = useRouter();
+  const [builder, setBuilder] = useState<BadgeBuilderState>(emptyBuilderState());
+  const [previewMode, setPreviewMode] = useState<"card" | "page">("card");
+  const [visitedStep, setVisitedStep] = useState(1);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [localId, setLocalId] = useState(badgeClassId ?? "");
+  const idRef = useRef(badgeClassId ?? "");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [customMonths, setCustomMonths] = useState("");
+  const skipSaveRef = useRef(true);
   const [step, setStep] = useState(1);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -265,13 +296,23 @@ export function BadgeClassForm({
       if (typeof badge.name === "string" && badge.name.trim()) setName(badge.name.trim());
       if (typeof badge.description === "string") setDescription(badge.description.trim());
       if (typeof badge.criteriaMarkdown === "string") setCriteriaMarkdown(badge.criteriaMarkdown.trim());
-      if (typeof badge.level === "number") setLevel(String(badge.level));
+      if (typeof badge.level === "number") setLevel(String(Math.min(3, Math.max(1, badge.level))));
+      if (typeof badge.domain === "string" && badge.domain.trim()) {
+        setBuilder((current) => ({ ...current, domain: badge.domain as string }));
+      }
+      if (typeof badge.achievementType === "string" && ACHIEVEMENT_TYPES.some((item) => item.id === badge.achievementType)) {
+        setBuilder((current) => ({ ...current, achievementType: badge.achievementType as BadgeBuilderState["achievementType"] }));
+      }
+      if (Array.isArray(badge.skills)) {
+        const skills = badge.skills.map((item) => String(item)).filter(Boolean);
+        setBuilder((current) => ({ ...current, skills }));
+      }
       if (Array.isArray(badge.criteria) && badge.criteria.length > 0) {
         setCriteria(
-          badge.criteria.map((c: { label?: string; description?: string }, i: number) => ({
+          badge.criteria.map((c: { label?: string; description?: string; expectedOutcome?: string }, i: number) => ({
             id: crypto.randomUUID(),
             label: String(c.label ?? ""),
-            description: c.description ? String(c.description) : "",
+            description: [c.description, c.expectedOutcome].filter(Boolean).join(" — "),
             sortOrder: i,
           })),
         );
@@ -467,6 +508,19 @@ export function BadgeClassForm({
       setRequiredCourseId(badge.requiredCourseId ?? null);
       setFailureRemediationCourseId(badge.failureRemediationCourseId ?? null);
       setVisibleInLearnerDashboard(Boolean(badge.visibleInLearnerDashboard));
+      const record = badge as BadgeClassRecord & {
+        builder?: unknown;
+        achievementType?: string | null;
+        expiresAfterDays?: number | null;
+      };
+      const nextBuilder = readBuilderState(record.builder, record.expiresAfterDays);
+      if (record.achievementType && ACHIEVEMENT_TYPES.some((item) => item.id === record.achievementType)) {
+        nextBuilder.achievementType = record.achievementType as BadgeBuilderState["achievementType"];
+      }
+      setBuilder(nextBuilder);
+      setCustomMonths(nextBuilder.validityMonths ? String(nextBuilder.validityMonths) : "");
+      setVisitedStep(4);
+      skipSaveRef.current = true;
       hydratingBadgeRef.current = false;
     };
     void loadBadge();
@@ -474,51 +528,8 @@ export function BadgeClassForm({
 
   const handleOrganizationChange = (nextOrgId: string) => {
     setOrganizationId(nextOrgId);
-    setErrors({});
-    setName("");
-    setDescription("");
-    setImageUrl("");
-    setCriteriaUrl("");
-    setCriteriaMarkdown("");
-    setCriteria([emptyCriteria()]);
-    setLevel("");
-    setEvaluationMethods([]);
-    setValidatorExpertId("");
-    setMethodConfigs([]);
-    setReceivabilityReviewMode("HUMAN");
-    setStatus("DRAFT");
-    setCreatedAt(null);
-    setRequiresEnrollment(false);
-    setRequiredCourseId(null);
-    setFailureRemediationCourseId(null);
-    setUploadFile(null);
+    clearFieldError("organizationId");
   };
-
-  useEffect(() => {
-    if (!organizationId) return;
-    if (hydratingBadgeRef.current) {
-      previousOrgId.current = organizationId;
-      return;
-    }
-    if (previousOrgId.current && previousOrgId.current !== organizationId) {
-      setName("");
-      setDescription("");
-      setImageUrl("");
-      setCriteriaUrl("");
-      setCriteriaMarkdown("");
-      setCriteria([emptyCriteria()]);
-      setLevel("");
-      setEvaluationMethods([]);
-      setValidatorExpertId("");
-      setMethodConfigs([]);
-      setReceivabilityReviewMode("HUMAN");
-      setRequiresEnrollment(false);
-      setRequiredCourseId(null);
-      setErrors({});
-      setUploadFile(null);
-    }
-    previousOrgId.current = organizationId;
-  }, [organizationId]);
 
   const formationBuilderHref = useMemo(() => {
     const params = new URLSearchParams();
@@ -611,12 +622,46 @@ export function BadgeClassForm({
       }
       setImageUrl(imageUrl);
       clearFieldError("imageUrl");
-      toast.success("Image uploadée");
+      toast.success("Image enregistrée");
     } catch (error) {
       if (process.env.NODE_ENV !== "production") {
         console.error("[badgeclass][upload] exception", error);
       }
       toast.error(String(error));
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const generateBadgeVisual = async () => {
+    if (!organizationId) {
+      toast.error("Choisissez d'abord l'émetteur");
+      return;
+    }
+    if (!name.trim()) {
+      toast.error("Indiquez d'abord le nom du badge");
+      return;
+    }
+    setImageUploading(true);
+    try {
+      const res = await fetch("/api/admin/badgeclasses/image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...createHeaders(auth, organizationId) },
+        body: JSON.stringify({
+          name: name.trim(),
+          domain: builder.domain,
+          description: description.trim(),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.imageUrl) {
+        toast.error(json?.error ?? "Génération du visuel impossible");
+        return;
+      }
+      setImageUrl(String(json.imageUrl));
+      toast.success("Visuel généré");
+    } catch {
+      toast.error("Génération du visuel impossible");
     } finally {
       setImageUploading(false);
     }
@@ -668,13 +713,18 @@ export function BadgeClassForm({
     }
   };
 
+  const narrativeFromCriteria = criteria
+    .map((item) => [item.label.trim(), (item.description ?? "").trim()].filter(Boolean).join(" — "))
+    .filter(Boolean)
+    .join("\n");
+
   const serializePayload = (nextStatus?: BadgeClassRecord["status"]): BadgeClassPayload => ({
     organizationId,
     name,
-    description,
+    description: description.slice(0, 300),
     imageUrl,
     criteriaUrl: criteriaUrl || null,
-    criteriaMarkdown: criteriaMarkdown || null,
+    criteriaMarkdown: narrativeFromCriteria || criteriaMarkdown || null,
     criteria: criteria.map((item, index) => ({
       ...item,
       sortOrder: index,
@@ -694,6 +744,15 @@ export function BadgeClassForm({
     evaluationMethods,
     validatorExpertId: validatorExpertId || null,
     methodConfigs,
+    builder: {
+      ...builder,
+      validityMonths: builder.validityMode === "custom" ? Number(customMonths) || null : builder.validityMode === "12" ? 12 : builder.validityMode === "24" ? 24 : null,
+    },
+    achievementType: builder.achievementType,
+    expiresAfterDays: expiresAfterDays(
+      builder.validityMode,
+      builder.validityMode === "custom" ? Number(customMonths) || null : null,
+    ),
   });
 
   const validateForm = () => {
@@ -710,7 +769,6 @@ export function BadgeClassForm({
     if (!trimmedCriteriaMarkdown && !hasCriteriaLabel) {
       nextErrors.criteria = "Ajoutez au moins un critère.";
     }
-    if (!imageUrl) nextErrors.imageUrl = "Image requise.";
     if (!level) nextErrors.level = "Niveau requis.";
     if (evaluationMethods.length === 0) nextErrors.evaluationMethods = "Choisissez au moins une méthode.";
     if (!validatorExpertId) nextErrors.validatorExpertId = "Validateur requis.";
@@ -766,7 +824,7 @@ export function BadgeClassForm({
   };
 
   const saveBadge = async (nextStatus?: BadgeClassRecord["status"]) => {
-    if (!validateForm()) return;
+    if (nextStatus !== "ARCHIVED" && !validateForm()) return;
     setLoading(true);
     try {
       const method = badgeClassId ? "PUT" : "POST";
@@ -891,385 +949,233 @@ export function BadgeClassForm({
     }
   };
 
+  const locked = status === "ACTIVE";
+  const activeId = localId || badgeClassId || "";
+  idRef.current = activeId;
+
+  const persistDraft = async () => {
+    if (locked || !organizationId || !name.trim()) return;
+    setSaveState("saving");
+    try {
+      const payload = { ...serializePayload("DRAFT"), organizationId };
+      const currentId = idRef.current;
+      const res = await fetch(currentId ? `/api/admin/badgeclasses/${currentId}` : "/api/admin/badgeclasses", {
+        method: currentId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json", ...createHeaders(auth, organizationId) },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        setSaveState("error");
+        return;
+      }
+      const createdId = String(json?.badgeClass?.id ?? "");
+      if (!currentId && createdId) {
+        idRef.current = createdId;
+        setLocalId(createdId);
+        window.history.replaceState(null, "", `/super/open-badges/badgeclasses/${createdId}/edit`);
+      }
+      setSavedAt(Date.now());
+      setSaveState("saved");
+    } catch {
+      setSaveState("error");
+    }
+  };
+
+  const forkBadge = async (mode: "version" | "copy") => {
+    if (!organizationId || !name.trim()) return;
+    setMenuOpen(false);
+    setLoading(true);
+    try {
+      const source = serializePayload("DRAFT");
+      const payload = {
+        ...source,
+        name: mode === "copy" ? `Copie de ${name.trim()}` : name.trim(),
+        status: "DRAFT",
+        builder: {
+          ...source.builder,
+          version: mode === "version" ? (builder.version || 1) + 1 : 1,
+          parentBadgeId: mode === "version" ? activeId || null : null,
+        },
+      };
+      const res = await fetch("/api/admin/badgeclasses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...createHeaders(auth, organizationId) },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.badgeClass?.id) {
+        toast.error("Impossible de créer la copie");
+        return;
+      }
+      router.push(`/super/open-badges/badgeclasses/${json.badgeClass.id}/edit`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (locked || hydratingBadgeRef.current || !organizationId || !name.trim()) return;
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      void persistDraft();
+    }, 1500);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- le brouillon suit les champs saisis
+  }, [
+    name,
+    description,
+    imageUrl,
+    level,
+    organizationId,
+    builder,
+    customMonths,
+    criteria,
+    criteriaMarkdown,
+    evaluationMethods,
+    methodConfigs,
+    validatorExpertId,
+    requiresEnrollment,
+    requiredCourseId,
+    failureRemediationCourseId,
+    visibleInLearnerDashboard,
+    receivabilityReviewMode,
+    locked,
+  ]);
+
+  const savedLabel = (() => {
+    if (saveState === "saving") return "Enregistrement…";
+    if (saveState === "error") return "Enregistrement impossible";
+    if (!savedAt) return "";
+    const seconds = Math.max(0, Math.round((clock - savedAt) / 1000));
+    return `Brouillon enregistré il y a ${seconds} s`;
+  })();
+
   const badgeSteps = [
-    { id: 1, label: "Identité" },
+    { id: 1, label: "Le badge" },
     { id: 2, label: "Critères" },
-    { id: 3, label: "Évaluation" },
-    { id: 4, label: "Aperçu" },
+    { id: 3, label: "Épreuve" },
+    { id: 4, label: "Publication" },
   ] as const;
 
-  return (
-    <div className="super-lms-light space-y-6 rounded-[28px] bg-[#F4F4F1] p-4 text-[#07080B] md:p-6">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Étapes du badge">
-        {badgeSteps.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={step === item.id}
-            onClick={() => setStep(item.id)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${step === item.id ? "bg-[#07080B] text-white" : "border border-[#E3E0D8] bg-white text-[#07080B]"}`}
-          >
-            {item.id}. {item.label}
-          </button>
-        ))}
-      </div>
-      {step === 1 ? (
-      <>
-      <Card className="border-violet-200 bg-gradient-to-br from-violet-50/80 to-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-slate-900 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-violet-600" />
-            Créer avec l’IA
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Décrivez le badge en langage naturel : l’IA remplit le nom, la description, les critères et
-            suggère les méthodes d’évaluation.
-          </p>
-          <Textarea
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
-            rows={3}
-            placeholder="Ex. : Badge niveau 2 « Analyse vidéo tactique » pour valider la capacité à décrypter un match de foot…"
-            className="border-violet-200 bg-white"
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={aiGenerating}
-            onClick={() => void generateFromAiPrompt()}
-          >
-            {aiGenerating ? "Génération…" : "Générer le badge"}
-          </Button>
-        </CardContent>
-      </Card>
+  const issuerName = formatOrganizationDisplayName(
+    organizations.find((org) => org.id === organizationId)?.name ?? "Byound",
+  );
+  const expertName = validators.find((item) => item.id === validatorExpertId)
+    ? validatorLabel(validators.find((item) => item.id === validatorExpertId)!)
+    : "";
+  const pageTitle = builder.version > 1 && name.trim() ? `${name.trim()} · v${builder.version}` : "Nouveau badge";
+  const goToStep = (next: number) => {
+    const target = Math.min(4, Math.max(1, next));
+    setStep(target);
+    setVisitedStep((current) => Math.max(current, target));
+  };
 
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-slate-900">Informations principales</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!badgeClassId ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Rattacher ce badge à une formation déjà existante ?</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" variant={formationChoice === "existing" ? "default" : "outline"} onClick={() => setFormationChoice("existing")}>
-                  Oui, une formation existante
-                </Button>
-                <Button type="button" variant={formationChoice === "new" ? "default" : "outline"} onClick={() => { setFormationChoice("new"); setRequiredCourseId(null); }}>
-                  Non, sans formation
-                </Button>
-              </div>
-              {formationChoice === "existing" ? (
-                <div className="mt-4 space-y-2">
-                  <Label className="text-slate-900">Formation</Label>
-                  <Select value={requiredCourseId ?? ""} onValueChange={fillFromCourse}>
-                    <SelectTrigger className="border-slate-300 bg-white text-slate-900">
-                      <SelectValue placeholder={courses.length ? "Choisir la formation" : "Chargement des formations…"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <CourseSelectItems courses={courses} />
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-muted-foreground">Le nom, la description et le critère du badge reprennent ce qui existe déjà sur la formation.</p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-slate-900">Club / Organisation</Label>
-              <Select value={organizationId} onValueChange={handleOrganizationChange}>
-                <SelectTrigger
-                  id="field-organizationId"
-                  className={`border-slate-300 bg-white text-slate-900 ${
-                    errors.organizationId ? "border-destructive" : ""
-                  }`}
-                  aria-invalid={Boolean(errors.organizationId)}
-                  aria-describedby={errors.organizationId ? "error-organizationId" : undefined}
-                >
-                  <SelectValue placeholder="Sélectionner une organisation" />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {formatOrganizationDisplayName(org.name)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                Organisations ayant activé les badges internes (case sur la fiche entreprise /super).
-              </p>
-              {errors.organizationId ? (
-                <p id="error-organizationId" className="text-sm text-destructive">
-                  {errors.organizationId}
-                </p>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-slate-900">Émetteur</Label>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <div className="text-sm text-slate-900">
-                  {formatOrganizationDisplayName(
-                    organizations.find((org) => org.id === organizationId)?.name ?? "—",
-                  )}
-                </div>
-                <p className="text-xs text-slate-500">
-                  L’émetteur est automatiquement le club/organisation sélectionné.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-slate-900">Nom du badge</Label>
-            <Input
-              id="field-name"
-              className={`border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 ${
-                errors.name ? "border-destructive" : ""
-              }`}
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                clearFieldError("name");
-              }}
-              placeholder="Ex : Analyse vidéo – Niveau 1"
-              aria-invalid={Boolean(errors.name)}
-              aria-describedby={errors.name ? "error-name" : undefined}
-            />
-            <p className="text-sm text-muted-foreground">
-              Le titre affiché dans le badge (ex : “Analyse vidéo – Niveau 1”).
-            </p>
-            {errors.name ? (
-              <p id="error-name" className="text-sm text-destructive">
-                {errors.name}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <Label className="text-slate-900">Description</Label>
-            <Textarea
-              id="field-description"
-              className={`border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 ${
-                errors.description ? "border-destructive" : ""
-              }`}
-              value={description}
-              onChange={(event) => {
-                setDescription(event.target.value);
-                clearFieldError("description");
-              }}
-              rows={4}
-              placeholder="Décrivez en 1 ou 2 phrases ce que valide ce badge."
-              aria-invalid={Boolean(errors.description)}
-              aria-describedby={errors.description ? "error-description" : undefined}
-            />
-            <p className="text-sm text-muted-foreground">
-              Expliquez en une ou deux phrases ce que valide ce badge.
-            </p>
-            {errors.description ? (
-              <p id="error-description" className="text-sm text-destructive">
-                {errors.description}
-              </p>
-            ) : null}
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <Label className="text-slate-900">Formation obligatoire avant de postuler</Label>
-                <p className="text-sm text-muted-foreground">
-                  Activez si l’apprenant doit suivre une formation avant d’envoyer une preuve.
-                </p>
-              </div>
-              <Switch
-                checked={requiresEnrollment}
-                onCheckedChange={(checked) => {
-                  setRequiresEnrollment(checked);
-                  if (!checked) {
-                    setRequiredCourseId(null);
-                  } else {
-                    setVisibleInLearnerDashboard(false);
-                  }
-                }}
-              />
-            </div>
-            {requiresEnrollment ? (
-              <div className="mt-4 space-y-2">
-                <Label className="text-slate-900">Formation requise</Label>
-                <Select
-                  value={requiredCourseId ?? ""}
-                  onValueChange={(value) => {
-                    setRequiredCourseId(value);
-                    clearFieldError("requiredCourseId");
-                  }}
-                >
-                  <SelectTrigger
-                    id="field-requiredCourseId"
-                    className={`border-slate-300 bg-white text-slate-900 ${
-                      errors.requiredCourseId ? "border-destructive" : ""
-                    }`}
-                    aria-invalid={Boolean(errors.requiredCourseId)}
-                    aria-describedby={errors.requiredCourseId ? "error-requiredCourseId" : undefined}
-                  >
-                    <SelectValue placeholder="Sélectionner une formation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <CourseSelectItems courses={courses} />
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  L’apprenant doit être inscrit à cette formation avant de postuler.
-                </p>
-                {errors.requiredCourseId ? (
-                  <p id="error-requiredCourseId" className="text-sm text-destructive">
-                    {errors.requiredCourseId}
-                  </p>
+  return (
+    <div className={`${manrope.variable} badge-builder min-h-screen px-4 pb-28 pt-6 md:px-8`}>
+      <div className="mx-auto max-w-[1180px]">
+        <p className="text-sm text-[#8C94B2]">
+          <Link href="/super/open-badges/badgeclasses" className="text-[#A9B0CC]">Open Badges</Link>
+          {" › "}
+          Nouveau badge
+        </p>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+          <h1 className="text-3xl font-semibold">{pageTitle}</h1>
+          <div className="flex items-center gap-3">
+            {savedLabel ? <p className="text-sm text-[#3DDCAB]">{saveState === "saved" ? <Check className="mr-1 inline h-4 w-4" /> : null}{savedLabel}</p> : null}
+            {activeId ? (
+              <a href={`/super/open-badges/badgeclasses/${activeId}/essai`} target="_blank" rel="noreferrer" className="rounded-full border border-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#B9B2FF]">
+                Tester l&apos;épreuve
+              </a>
+            ) : (
+              <span className="rounded-full border border-[#26304F] px-4 py-2 text-sm text-[#5F688A]">Tester l&apos;épreuve</span>
+            )}
+            {activeId ? (
+              <div className="relative">
+                <button type="button" aria-label="Autres actions" onClick={() => setMenuOpen((open) => !open)} className="rounded-full border border-[#26304F] p-2">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+                {menuOpen ? (
+                  <div className="absolute right-0 z-20 mt-2 w-48 rounded-2xl border border-[#1A2340] bg-[#111831] p-1 text-sm shadow-xl">
+                    <button type="button" className="block w-full rounded-xl px-3 py-2 text-left hover:bg-[#0B1122]" onClick={() => void forkBadge("copy")}>Dupliquer</button>
+                    <button type="button" className="block w-full rounded-xl px-3 py-2 text-left hover:bg-[#0B1122]" onClick={() => void forkBadge("version")}>Nouvelle version</button>
+                    <button type="button" className="block w-full rounded-xl px-3 py-2 text-left hover:bg-[#0B1122]" onClick={() => { setMenuOpen(false); void saveBadge("ARCHIVED"); }}>Archiver</button>
+                  </div>
                 ) : null}
               </div>
-            ) : (
-              <div className="mt-4 flex items-center justify-between gap-4 border-t border-slate-200 pt-4">
-                <div>
-                  <Label className="text-slate-900">Visible dans le dashboard apprenant</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Affiche le badge sur l&apos;accueil apprenant avec la pastille « Disponible pour
-                    vous ».
-                  </p>
-                </div>
-                <Switch
-                  checked={visibleInLearnerDashboard}
-                  onCheckedChange={setVisibleInLearnerDashboard}
-                />
-              </div>
-            )}
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="space-y-2">
-              <Label className="text-slate-900">Formation à proposer si échec</Label>
-              <Select
-                value={failureRemediationCourseId ?? "__none__"}
-                onValueChange={(value) => {
-                  setFailureRemediationCourseId(value === "__none__" ? null : value);
-                }}
-              >
-                <SelectTrigger
-                  id="field-failureRemediationCourseId"
-                  className="border-slate-300 bg-white text-slate-900"
-                >
-                  <SelectValue placeholder="Aucune (optionnel)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Aucune</SelectItem>
-                  <CourseSelectItems courses={courses} />
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                Affichée sur l&apos;écran de résultat en cas d&apos;échec. Distincte de la formation
-                obligatoire avant de postuler.
-              </p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-slate-900">Image du badge</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="field-imageUrl"
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml"
-                className={`border-slate-300 bg-white text-slate-900 ${
-                  errors.imageUrl ? "border-destructive" : ""
-                }`}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    setUploadFile(file);
-                    handleImageUpload(file);
-                  }
-                }}
-                disabled={!organizationId || imageUploading}
-                aria-invalid={Boolean(errors.imageUrl)}
-                aria-describedby={errors.imageUrl ? "error-imageUrl" : undefined}
-              />
-              {imageUploading ? <Badge>Upload...</Badge> : null}
-            </div>
-            {process.env.NODE_ENV !== "production" ? (
-              <div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleImageDryRun}
-                  disabled={!uploadFile || imageUploading}
-                >
-                  Tester l’upload
-                </Button>
-              </div>
-            ) : null}
-            {imageUrl ? (
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <span>URL:</span>
-                <Link href={imageUrl} className="underline" target="_blank">
-                  {imageUrl}
-                </Link>
-              </div>
-            ) : null}
-            <p className="text-sm text-muted-foreground">
-              L’image officielle du badge (PNG ou SVG). Elle servira de “recto”.
-            </p>
-            {errors.imageUrl ? (
-              <p id="error-imageUrl" className="text-sm text-destructive">
-                {errors.imageUrl}
-              </p>
             ) : null}
           </div>
-          <div className="space-y-2">
-            <Label className="text-slate-900">Lien public des critères (auto)</Label>
-            <Input
-              className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400"
-              value={criteriaUrlDisplay}
-              readOnly
-              placeholder="Sera disponible après création"
-            />
-            <p className="text-sm text-muted-foreground">
-              Ce lien est généré automatiquement. Il sert à la vérification externe (wallets).
-              En local, l’URL affiche{" "}
-              <span className="font-mono text-xs">{getBaseUrl().replace(/\/$/, "")}</span> ; en
-              production, définissez <span className="font-mono text-xs">NEXT_PUBLIC_BASE_URL</span>{" "}
-              (ex. https://www.byound.fr) pour obtenir le domaine public.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-slate-900">Critères (en texte)</Label>
-            <Textarea
-              id="field-criteria"
-              className={`border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 ${
-                errors.criteria ? "border-destructive" : ""
-              }`}
-              value={criteriaMarkdown}
-              onChange={(event) => {
-                setCriteriaMarkdown(event.target.value);
-                clearFieldError("criteria");
-              }}
-              rows={4}
-              placeholder="Décrivez les critères en langage simple."
-              aria-invalid={Boolean(errors.criteria)}
-              aria-describedby={errors.criteria ? "error-criteria" : undefined}
-            />
-            <p className="text-sm text-muted-foreground">
-              Décrivez ce qu’il faut faire pour obtenir le badge, en langage simple.
-            </p>
-            {errors.criteria ? (
-              <p id="error-criteria" className="text-sm text-destructive">
-                {errors.criteria}
-              </p>
-            ) : null}
-          </div>
-          {createdAt ? (
-            <div className="text-xs text-slate-500">Créé le: {new Date(createdAt).toLocaleString()}</div>
-          ) : null}
-        </CardContent>
-      </Card>
-      </>
+        </div>
+        {locked ? (
+          <p className="mt-4 rounded-2xl border border-[#F2C15A]/40 bg-[#F2C15A]/10 px-4 py-3 text-sm text-[#F2C15A]">
+            Ce badge est publié. Les badges déjà délivrés gardent cette version. Créez une nouvelle version pour le modifier.
+          </p>
+        ) : null}
+        <div className="mt-6 grid grid-cols-4 gap-3" role="tablist" aria-label="Étapes du badge">
+          {badgeSteps.map((item) => {
+            const done = item.id < step;
+            const enabled = item.id <= Math.max(visitedStep, step);
+            return (
+              <button key={item.id} type="button" role="tab" aria-selected={step === item.id} disabled={!enabled} onClick={() => goToStep(item.id)} className="text-left disabled:opacity-40">
+                <span className="mb-2 block h-1 rounded-full" style={{ background: item.id <= step ? "#6E5BFF" : "#1A2340" }} />
+                <span className="flex items-center gap-2 text-sm">
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${item.id <= step ? "bg-[#6E5BFF] text-white" : "border border-[#26304F] text-[#8C94B2]"}`}>{done ? "✓" : item.id}</span>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_470px]">
+          <div className={locked ? "pointer-events-none opacity-70" : ""}>
+      {step === 1 ? (
+        <BadgeBuilderStepIdentity
+          aiPrompt={aiPrompt}
+          aiGenerating={aiGenerating}
+          onAiPrompt={setAiPrompt}
+          onGenerate={() => void generateFromAiPrompt()}
+          name={name}
+          onName={(value) => { setName(value); clearFieldError("name"); }}
+          level={level}
+          onLevel={(value) => { setLevel(value); clearFieldError("level"); }}
+          description={description}
+          onDescription={(value) => { setDescription(value); clearFieldError("description"); }}
+          imageUploading={imageUploading}
+          organizationId={organizationId}
+          onPickImage={(file) => {
+            void cropSquareBadgeImage(file).then((cropped) => handleImageUpload(cropped)).catch((error) => {
+              toast.error(error instanceof Error ? error.message : "Image refusée");
+            });
+          }}
+          onGenerateImage={() => void generateBadgeVisual()}
+          builder={builder}
+          onBuilder={(patch) => setBuilder((current) => ({ ...current, ...patch }))}
+          customMonths={customMonths}
+          onCustomMonths={setCustomMonths}
+          organizations={organizations}
+          organizationName={formatOrganizationDisplayName}
+          onOrganization={handleOrganizationChange}
+          courses={courses}
+          requiresEnrollment={requiresEnrollment}
+          onRequiresEnrollment={(value) => {
+            setRequiresEnrollment(value);
+            if (!value) setRequiredCourseId(null);
+            else setVisibleInLearnerDashboard(false);
+          }}
+          requiredCourseId={requiredCourseId}
+          onRequiredCourse={(id) => { setRequiredCourseId(id); clearFieldError("requiredCourseId"); }}
+          failureCourseId={failureRemediationCourseId}
+          onFailureCourse={setFailureRemediationCourseId}
+          errors={errors}
+        />
       ) : null}
 
       {step === 2 ? (
@@ -1428,7 +1334,7 @@ export function BadgeClassForm({
                 </SelectContent>
               </Select>
               <p className="text-sm text-muted-foreground">
-                Personne chargée de valider les preuves (table validators).
+                Personne qui valide les preuves.
               </p>
               {errors.validatorExpertId ? (
                 <p id="error-validatorExpertId" className="text-sm text-destructive">
@@ -1511,7 +1417,7 @@ export function BadgeClassForm({
           <Separator />
 
           <div className="space-y-2">
-            <Label className="text-slate-900">Qui valide la recevabilité ?</Label>
+            <Label className="text-slate-900">Qui corrige l&apos;épreuve ?</Label>
             <Select
               value={receivabilityReviewMode}
               onValueChange={(value) => setReceivabilityReviewMode(value as "HUMAN" | "AI" | "MIXED")}
@@ -1556,7 +1462,7 @@ export function BadgeClassForm({
             Aperçu
           </CardTitle>
           <p className="text-sm text-[#6B6F7A]">
-            Résumé du verso du badge tel qu&apos;il sera présenté.
+            Résumé avant publication.
           </p>
         </CardHeader>
         <CardContent className="space-y-5 pt-6 text-sm">
@@ -1613,7 +1519,7 @@ export function BadgeClassForm({
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Méthodes d&apos;évaluation (certification)
+              Épreuve
             </p>
             <p className="text-zinc-200">
               {evaluationMethods.length > 0
@@ -1656,53 +1562,54 @@ export function BadgeClassForm({
       </>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="button"
-          disabled={step === 1}
-          onClick={() => setStep((current) => Math.max(1, current - 1))}
-          className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold text-[#07080B] disabled:opacity-40"
-        >
-          Précédent
-        </button>
-        <div className="flex flex-wrap gap-3">
-        <Button onClick={() => saveBadge("DRAFT")} disabled={loading || imageUploading}>
-          Enregistrer (brouillon)
-        </Button>
-        {badgeClassId ? (
-          <Button variant="outline" asChild>
-            <a href={`/super/open-badges/badgeclasses/${badgeClassId}/essai`} target="_blank" rel="noreferrer">
-              Tester l&apos;épreuve
-            </a>
-          </Button>
-        ) : (
-          <Button variant="outline" disabled title="Enregistrez le brouillon pour tester l'épreuve">
-            Tester l&apos;épreuve
-          </Button>
-        )}
-        <Button
-          variant="secondary"
-          onClick={() => saveBadge("ACTIVE")}
-          disabled={loading || imageUploading || status === "ACTIVE"}
-        >
-          {status === "ACTIVE" ? "Publié" : "Publier"}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => saveBadge("ARCHIVED")}
-          disabled={loading || imageUploading}
-        >
-          Archiver
-        </Button>
+          </div>
+          <BadgeBuilderPreview
+            name={name}
+            description={description}
+            level={level ? Number.parseInt(level, 10) : null}
+            imageUrl={imageUrl}
+            typeLabel={achievementLabel(builder.achievementType)}
+            validityLabel={validityLabel(builder.validityMode, builder.validityMode === "custom" ? Number(customMonths) || null : builder.validityMonths)}
+            criteriaCount={criteria.filter((item) => item.label.trim()).length}
+            skills={builder.skills}
+            methodsLabel={formatEvaluationMethodsSummary(evaluationMethods)}
+            expertName={expertName}
+            issuerName={issuerName}
+            mode={previewMode}
+            onMode={setPreviewMode}
+          />
         </div>
-        <button
-          type="button"
-          disabled={step === 4}
-          onClick={() => setStep((current) => Math.min(4, current + 1))}
-          className="rounded-full bg-[#07080B] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-        >
-          Suivant
-        </button>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#1A2340] bg-[#0A0F1E]/95 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3">
+          <button
+            type="button"
+            disabled={step === 1}
+            onClick={() => goToStep(step - 1)}
+            className="rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold text-[#EEF0F7] disabled:opacity-40"
+          >
+            ← Précédent
+          </button>
+          <p className="text-sm text-[#8C94B2]">Étape {step} sur 4 · {badgeSteps[step - 1]?.label}</p>
+          {step < 4 ? (
+            <button
+              type="button"
+              onClick={() => goToStep(step + 1)}
+              className="bb-white rounded-full px-5 py-2 text-sm font-semibold"
+            >
+              Continuer · {badgeSteps[step]?.label} →
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void saveBadge("ACTIVE")}
+              disabled={loading || locked}
+              className="bb-white rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-40"
+            >
+              {locked ? "Publié" : "Publier le badge"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

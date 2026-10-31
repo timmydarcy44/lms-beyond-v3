@@ -129,7 +129,7 @@ describe("company deliverables", () => {
       ],
       [quiz],
     );
-    expect(items.map((item) => item.methodLabel)).toEqual(["Évaluation", "Playground", "Upload PDF"]);
+    expect(items.map((item) => item.methodLabel)).toEqual(["Questionnaire", "Playground IA", "Document"]);
     expect(items[0]?.text).toContain("Quel élément ouvre un prompt ?");
     expect(items[0]?.text).toContain("Le contexte");
     expect(JSON.stringify(items)).not.toMatch(/score|isCorrect|Dominant|promptQuality/i);

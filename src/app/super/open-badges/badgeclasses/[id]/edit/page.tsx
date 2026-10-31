@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { SuperAdminShell } from "@/components/super-admin/super-admin-shell";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { BadgeClassForm } from "../../_components/badgeclass-form";
@@ -23,18 +22,9 @@ export default async function SuperAdminBadgeClassEditPage({ params }: RoutePara
   }
 
   return (
-    <SuperAdminShell
-      title="Éditer un Badge Class"
-      breadcrumbs={[
-        { label: "Super Admin", href: "/super" },
-        { label: "Open Badges", href: "/super/open-badges/badgeclasses" },
-        { label: "Édition" },
-      ]}
-    >
-      <BadgeClassForm
-        auth={{ userId: data.user.id, userRole: "SUPER_ADMIN" }}
-        badgeClassId={badgeClassId}
-      />
-    </SuperAdminShell>
+    <BadgeClassForm
+      auth={{ userId: data.user.id, userRole: "SUPER_ADMIN" }}
+      badgeClassId={badgeClassId}
+    />
   );
 }

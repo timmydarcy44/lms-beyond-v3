@@ -112,15 +112,17 @@ export async function PUT(
     || Object.prototype.hasOwnProperty.call(payload, "evaluationMethods")
     || Object.prototype.hasOwnProperty.call(payload, "validatorExpertId");
 
+  const publishing = String(payload.status ?? "").toUpperCase() === "ACTIVE";
   let evaluationConfig: ReturnType<typeof parseBadgeEvaluationConfig> | null = null;
   if (hasEvaluationFields) {
     evaluationConfig = parseBadgeEvaluationConfig(payload);
-    if (!evaluationConfig.ok) {
+    if (!evaluationConfig.ok && publishing) {
       return NextResponse.json(
         { ok: false, error: "VALIDATION_ERROR", details: evaluationConfig.issues },
         { status: 400 },
       );
     }
+    if (!evaluationConfig.ok) evaluationConfig = null;
   }
   const receivabilityReviewMode = payload.receivabilityReviewMode as ReceivabilityReviewMode | undefined;
   const payloadOrgId = typeof payload.organizationId === "string" ? payload.organizationId.trim() : null;
@@ -146,11 +148,14 @@ export async function PUT(
   if (canUseOpenBadgesSupabaseRepo()) {
     try {
       const existingRpc = await getBadgeClassViaSupabase(id, auth.user.orgId ?? payloadOrgId);
-      if (!existingRpc) {
-        const byId = await getBadgeClassViaSupabase(id, null);
-        if (byId) existingOrgId = String(byId.orgId ?? "").trim() || null;
-      } else {
-        existingOrgId = String(existingRpc.orgId ?? auth.user.orgId ?? "").trim() || null;
+      const loaded = existingRpc ?? (await getBadgeClassViaSupabase(id, null));
+      if (loaded) {
+        existingOrgId = String(loaded.orgId ?? auth.user.orgId ?? "").trim() || null;
+        const currentStatus = String(loaded.status ?? "").toUpperCase();
+        const nextStatus = String(payload.status ?? currentStatus).toUpperCase();
+        if (currentStatus === "ACTIVE" && nextStatus !== "ARCHIVED") {
+          return NextResponse.json({ ok: false, error: "PUBLISHED_LOCKED" }, { status: 409 });
+        }
       }
     } catch (supabaseErr) {
       if (!(supabaseErr instanceof OpenBadgesRpcUnavailableError)) {

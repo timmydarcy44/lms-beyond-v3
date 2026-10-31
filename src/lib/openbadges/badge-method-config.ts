@@ -186,7 +186,6 @@ const METHOD_LABELS = Object.fromEntries(
 ) as Record<BadgeEvaluationMethodId, string>;
 
 export function methodConfigLabel(methodId: BadgeEvaluationMethodId): string {
-  if (methodId === "qcm") return "Évaluation";
   return METHOD_LABELS[methodId] ?? methodId;
 }
 

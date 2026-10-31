@@ -66,6 +66,9 @@ export type CreateBadgeClassRpcPayload = {
   evaluationMethods?: string[];
   validatorExpertId?: string | null;
   failureRemediationCourseId?: string | null;
+  builder?: unknown;
+  achievementType?: string | null;
+  expiresAfterDays?: number | null;
   criteria?: Array<{ label: string; description?: string | null; sortOrder?: number }>;
   receivability?: {
     expectedModalities: string;

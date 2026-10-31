@@ -26,6 +26,11 @@ const PLAN_LABELS: Record<string, string> = {
 
 type Mode = "signup" | "login";
 
+function badgePageReturn(value: string | null) {
+  if (!value || !/^\/badges\/[0-9a-f-]{36}$/i.test(value)) return null;
+  return value;
+}
+
 type SignupForm = {
   company_name: string;
   siret: string;
@@ -48,7 +53,8 @@ export function EntrepriseConnexionPage() {
   const supabase = useSupabase();
   const planLabel = PLAN_LABELS[searchParams.get("plan") ?? ""] ?? null;
   const seats = searchParams.get("seats");
-  const [mode, setMode] = useState<Mode>("signup");
+  const returnTo = badgePageReturn(searchParams.get("next"));
+  const [mode, setMode] = useState<Mode>(searchParams.get("mode") === "login" ? "login" : "signup");
   const [form, setForm] = useState<SignupForm>(EMPTY_FORM);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -162,7 +168,7 @@ export function EntrepriseConnexionPage() {
         credentials: "same-origin",
       });
       const payload = (await res.json().catch(() => ({}))) as { destination?: string };
-      router.push(payload.destination ?? "/dashboard/entreprise");
+      router.push(returnTo ?? payload.destination ?? "/dashboard/entreprise");
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : "Impossible de se connecter.");
     } finally {
@@ -248,7 +254,7 @@ export function EntrepriseConnexionPage() {
 
         <div className={`mx-auto flex w-full flex-1 flex-col justify-center ${step === "code" ? "max-w-[520px]" : "max-w-[440px]"}`}>
           {step === "code" && codeEmail ? (
-            <EntrepriseCodeScreen email={codeEmail} length={codeLength} onBack={leaveCode} />
+            <EntrepriseCodeScreen email={codeEmail} length={codeLength} onBack={leaveCode} returnTo={returnTo} />
           ) : (
           <>
           <div className="flex rounded-full bg-white p-1" role="radiogroup" aria-label="Créer un compte ou se connecter">

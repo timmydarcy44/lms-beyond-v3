@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Award } from "lucide-react";
 import type { LearnerEarnedOpenBadge } from "@/lib/openbadges/learner-visible-badges";
 import { BadgeSearchIndexToggle } from "@/components/apprenant/badge-search-index-toggle";
+import { BadgeWalletPrivacy } from "@/components/apprenant/badge-wallet-privacy";
 import { LinkedInBadgeShareButton } from "@/components/apprenant/linkedin-badge-share-button";
 import {
   APPRENANT_CARD_BODY,
@@ -66,12 +67,24 @@ export function ApprenantWalletBadgesGrid({
               </p>
             </div>
           </div>
-          <LinkedInBadgeShareButton
-            badgeName={badge.name}
-            level={badge.level}
-            shareUrl={badge.shareUrl}
-            variant="wallet-light"
-          />
+          {badge.assertionId ? (
+            <BadgeWalletPrivacy
+              assertionId={badge.assertionId}
+              isPublic={badge.isPublic === true}
+              deliverablesShared={badge.deliverablesShared === true}
+              evidence={badge.evidence ?? []}
+              badgeName={badge.name}
+              level={badge.level}
+              shareUrl={badge.shareUrl}
+            />
+          ) : (
+            <LinkedInBadgeShareButton
+              badgeName={badge.name}
+              level={badge.level}
+              shareUrl={badge.shareUrl}
+              variant="wallet-light"
+            />
+          )}
           {badge.assertionId ? (
             <BadgeSearchIndexToggle assertionId={badge.assertionId} indexable={badge.indexable !== false} />
           ) : null}

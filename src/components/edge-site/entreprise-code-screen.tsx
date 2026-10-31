@@ -7,13 +7,14 @@ type Props = {
   email: string;
   length?: number;
   onBack: () => void;
+  returnTo?: string | null;
 };
 
 function emptyDigits(length: number) {
   return Array.from({ length }, () => "");
 }
 
-export function EntrepriseCodeScreen({ email, length = 8, onBack }: Props) {
+export function EntrepriseCodeScreen({ email, length = 8, onBack, returnTo = null }: Props) {
   const router = useRouter();
   const size = Math.min(10, Math.max(6, length));
   const mid = Math.ceil(size / 2);
@@ -51,11 +52,11 @@ export function EntrepriseCodeScreen({ email, length = 8, onBack }: Props) {
           inputs.current[0]?.focus();
           return;
         }
-        router.push(data.destination);
+        router.push(returnTo || data.destination);
       })
       .catch(() => setError("Code incorrect ou expiré."))
       .finally(() => setBusy(false));
-  }, [code, email, router, size]);
+  }, [code, email, returnTo, router, size]);
 
   const writeDigits = (next: string[]) => {
     setError(null);

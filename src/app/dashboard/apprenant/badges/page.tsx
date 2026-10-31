@@ -21,8 +21,8 @@ export default async function DashboardApprenantWalletPage() {
         <p className={APPRENANT_PAGE_KICKER}>Wallet</p>
         <h1 className={APPRENANT_PAGE_TITLE}>Mes Open Badges obtenus</h1>
         <p className={APPRENANT_PAGE_LEAD}>
-          Retrouve ici tes badges Byound validés. Partage-les sur LinkedIn en un clic avec un message
-          pré-rédigé.
+          Retrouve ici tes badges Byound. Rends un badge public quand tu veux le montrer, choisis les
+          livrables visibles, puis partage-le sur LinkedIn.
         </p>
       </section>
 

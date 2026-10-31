@@ -7,6 +7,9 @@ import {
 import { countLearnerBadgeAttempts } from "@/lib/openbadges/badge-earner-attempt";
 import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
 import { getBadgeCriteriaUrl } from "@/lib/openbadges/urls";
+import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
+import { deliverablesSharedWithCompanies } from "@/lib/openbadges/v3/company-deliverables";
+import { walletEvidenceChoices, type WalletEvidenceChoice } from "@/lib/openbadges/v3/wallet-privacy";
 import { awardedBadgeClassIds } from "@/lib/openbadges/badge-assertions";
 import { getLearnerOpenBadgeAward } from "@/lib/openbadges/open-badge-earner-submissions";
 import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
@@ -41,6 +44,9 @@ export type LearnerEarnedOpenBadge = {
   linkedInShareUrl: string;
   assertionId?: string | null;
   indexable?: boolean;
+  isPublic?: boolean;
+  deliverablesShared?: boolean;
+  evidence?: WalletEvidenceChoice[];
 };
 
 async function loadEvaluationConfigByBadgeIds(
@@ -237,7 +243,7 @@ export async function getLearnerEarnedOpenBadges(
   if (supabase) {
     const withIndex = await supabase
       .from("badge_assertions")
-      .select("id, badge_class_id, issued_at, indexable")
+      .select("id, badge_class_id, issued_at, indexable, is_public, evidence")
       .eq("recipient_profile_id", uid);
     const assertions = withIndex.error
       ? (await supabase.from("badge_assertions").select("id, badge_class_id, issued_at").eq("recipient_profile_id", uid)).data
@@ -253,22 +259,25 @@ export async function getLearnerEarnedOpenBadges(
         const badge = byId.get(String(assertion.badge_class_id));
         if (!badge) return [];
         const name = String(badge.name ?? badge.title ?? "").trim() || "Open Badge";
-        const shareUrl = getBadgeCriteriaUrl(String(badge.id));
+        const assertionId = assertion.id ? String(assertion.id) : null;
+        const shareUrl = assertionId
+          ? `${BADGE_PUBLIC_ORIGIN}/badges/${assertionId}`
+          : getBadgeCriteriaUrl(String(badge.id));
+        const level = parseLevelFromEvaluationConfig(badge.evaluation_config);
         return [
           {
             id: String(badge.id),
             name,
             imageUrl: (badge.image_url as string | null) ?? null,
-            level: parseLevelFromEvaluationConfig(badge.evaluation_config),
+            level,
             awardedAt: String(assertion.issued_at),
             shareUrl,
-            linkedInShareUrl: buildOpenBadgeLinkedInShareUrl({
-              shareUrl,
-              badgeName: name,
-              level: parseLevelFromEvaluationConfig(badge.evaluation_config),
-            }),
-            assertionId: assertion.id ? String(assertion.id) : null,
+            linkedInShareUrl: buildOpenBadgeLinkedInShareUrl({ shareUrl, badgeName: name, level }),
+            assertionId,
             indexable: "indexable" in assertion ? assertion.indexable !== false : true,
+            isPublic: "is_public" in assertion ? assertion.is_public === true : false,
+            deliverablesShared: "evidence" in assertion ? deliverablesSharedWithCompanies(assertion.evidence) : false,
+            evidence: "evidence" in assertion ? walletEvidenceChoices(assertion.evidence) : [],
           },
         ];
       });

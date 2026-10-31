@@ -6,6 +6,7 @@ import {
   type BadgeAlignment,
   type BadgeEvidenceItem,
 } from "@/lib/openbadges/v3/credential";
+import { sendOpenBadgeAwardEmail } from "@/lib/openbadges/award-email";
 import { issueOpenBadgeCredential } from "@/lib/openbadges/v3/issue";
 import { issuerPublicKeys, kidsMatch, publicJwksKeys, signCredentialJwt } from "@/lib/openbadges/v3/sign";
 
@@ -296,6 +297,8 @@ export async function issueBadgeAssertion(
 
   if (insertError || !inserted) return { ok: false, error: "STORAGE" };
   if (signed) await publishIssuerKeys(db);
+  const badgeName = String((badge as { name?: string }).name ?? (badge as { title?: string }).title ?? "Open Badge");
+  await sendOpenBadgeAwardEmail(email, badgeName);
 
   return {
     ok: true,

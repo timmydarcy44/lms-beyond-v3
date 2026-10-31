@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import { BadgePublicActions } from "@/components/openbadges/badge-public-actions";
 import { BadgePublicShell } from "@/components/openbadges/badge-public-shell";
 import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
-import { buildLinkedInAddCertificationUrl } from "@/lib/openbadges/linkedin-share";
+import { resolveMethodConfigsForBadge } from "@/lib/openbadges/badge-method-config";
+import { getLearnerSubmissionsFromConfig } from "@/lib/openbadges/open-badge-earner-submissions";
 import { loadPublicIssuer } from "@/lib/openbadges/public-issuer";
+import { companyDeliverablesFromSubmissions, deliverablesSharedWithCompanies } from "@/lib/openbadges/v3/company-deliverables";
+import { viewerIsCompanyAccount } from "@/lib/openbadges/v3/company-viewer";
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
 import { badgeStatGridClass, loadPublicBadgeDocument, visibleBadgeStatLabels, type BadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -19,6 +25,26 @@ const STATUS: Record<BadgeVerificationState, { label: string; tone: string }> = 
   revoked: { label: "Révoqué", tone: "border-red-400/40 bg-red-400/10 text-red-200" },
   invalid: { label: "Signature invalide", tone: "border-red-400/40 bg-red-400/10 text-red-200" },
 };
+
+async function loadCompanyDeliverables(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, assertionId: string) {
+  const { data: assertion } = await db
+    .from("badge_assertions")
+    .select("recipient_profile_id, badge_class_id, evidence")
+    .eq("id", assertionId)
+    .maybeSingle();
+  if (!assertion || !deliverablesSharedWithCompanies(assertion.evidence)) return [];
+  const { data: badgeClass } = await db
+    .from("open_badges")
+    .select("evaluation_config")
+    .eq("id", assertion.badge_class_id)
+    .maybeSingle();
+  const config = badgeClass?.evaluation_config;
+  const submissions = getLearnerSubmissionsFromConfig(config, String(assertion.recipient_profile_id));
+  const methods = resolveMethodConfigsForBadge(
+    config && typeof config === "object" && !Array.isArray(config) ? (config as Record<string, unknown>) : {},
+  );
+  return companyDeliverablesFromSubmissions(submissions, methods);
+}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -45,6 +71,14 @@ export default async function PublicBadgePage({ params }: RouteParams) {
   const badge = db ? await loadPublicBadgeDocument(db, assertionId) : null;
   if (!badge) notFound();
 
+  const host = (await headers()).get("x-forwarded-host") ?? (await headers()).get("host");
+  const companyAccountHref = (mode: "login" | "signup") =>
+    edgeMarketingHref(
+      `/entreprises/connexion?mode=${mode}&next=${encodeURIComponent(`/badges/${badge.assertionId}`)}`,
+      host,
+    );
+  const companyViewer = await viewerIsCompanyAccount();
+  const companyDeliverables = companyViewer && db ? await loadCompanyDeliverables(db, assertionId) : [];
   const issuer = loadPublicIssuer("byound");
   const pageUrl = `${BADGE_PUBLIC_ORIGIN}/badges/${badge.assertionId}`;
   const issued = formatDate(badge.issuedAt);
@@ -97,12 +131,6 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             </p>
           </div>
           <BadgePublicActions
-            linkedInUrl={buildLinkedInAddCertificationUrl({
-              badgeName: badge.name,
-              issuedAt: badge.issuedAt,
-              certUrl: pageUrl,
-              certId: badge.assertionId,
-            })}
             pdfUrl={`/badges/${badge.assertionId}/certificate.pdf`}
             pageUrl={pageUrl}
           />
@@ -179,6 +207,55 @@ export default async function PublicBadgePage({ params }: RouteParams) {
               </section>
             ) : null}
 
+            {!companyViewer ? (
+              <section className="rounded-3xl border border-white/10 p-6 sm:p-8">
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">
+                  Vous souhaitez voir les livrables concernant l&apos;obtention du badge ?
+                </h2>
+                <p className="mt-3 max-w-2xl text-[rgba(242,242,244,0.7)]">
+                  Connectez-vous ou créez un compte entreprise. Les résultats des tests restent privés.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href={companyAccountHref("login")}
+                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#050608]"
+                  >
+                    Se connecter
+                  </Link>
+                  <Link
+                    href={companyAccountHref("signup")}
+                    className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold"
+                  >
+                    Créer un compte
+                  </Link>
+                </div>
+              </section>
+            ) : companyDeliverables.length > 0 ? (
+              <section className="space-y-4">
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables partagés avec les entreprises</h2>
+                <ul className="grid gap-4">
+                  {companyDeliverables.map((item, index) => (
+                    <li
+                      key={`${item.methodLabel}-${index}`}
+                      className="rounded-3xl border border-white/[0.07] p-5"
+                      style={{ background: "linear-gradient(180deg, #14151B, #0D0E13)" }}
+                    >
+                      <p className="text-sm text-[#A99BFF]">{item.methodLabel}</p>
+                      {item.text ? <p className="mt-2 whitespace-pre-wrap text-[rgba(242,242,244,0.8)]">{item.text}</p> : null}
+                      {item.url ? (
+                        <a href={item.url} className="mt-3 inline-block text-sm text-[#A99BFF]">Ouvrir le fichier</a>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : (
+              <section className="rounded-3xl border border-white/10 p-6">
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
+                <p className="mt-3 text-[rgba(242,242,244,0.7)]">Le titulaire n&apos;a pas autorisé le partage de ses livrables.</p>
+              </section>
+            )}
+
             {badge.alignments.length > 0 ? (
               <section className="space-y-4">
                 <h2 className="text-2xl font-bold tracking-[-0.04em]">Compétences visées</h2>
@@ -252,7 +329,7 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             </section>
 
             <p className="px-1 text-sm leading-relaxed text-[rgba(242,242,244,0.5)]">
-              Les résultats des tests ne sont jamais publiés. Seuls le nom du badge, le nom du titulaire et les livrables qu'il a choisis apparaissent ici.
+              Les résultats des tests ne sont jamais publiés. Les livrables de l'épreuve ne sont visibles que par une entreprise connectée, si la personne l'a accepté.
             </p>
 
             <a

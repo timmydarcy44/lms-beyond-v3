@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bakePng, unbakePng } from "@/lib/openbadges/baking/png";
 import { publicEvidenceItems } from "@/lib/openbadges/v3/public-badge";
+import { revocationListDocument } from "@/lib/openbadges/v3/revocation";
 import { encodeStatusList, isPublicBadgeVisible, statusBit } from "@/lib/openbadges/v3/status-list";
 import { v2AssertionToV3Credential } from "@/lib/openbadges/v3/mappers";
 
@@ -15,6 +16,16 @@ describe("bitstring status list", () => {
     expect(statusBit(encoded, 0)).toBe(true);
     expect(statusBit(encoded, 1)).toBe(false);
     expect(statusBit(encoded, 3)).toBe(true);
+  });
+
+  it("publishes revoked credential ids for the 1EdTech list", () => {
+    const document = revocationListDocument([
+      { id: "https://www.byound.fr/badges/assertion-1", revoked: true, revocationReason: "Erreur d'attribution" },
+    ]);
+    expect(document.id).toBe("https://www.byound.fr/api/public/status/revocation");
+    expect(document.issuer).toBe("https://www.byound.fr/issuers/byound");
+    expect(document.revokedCredential).toEqual(document.revokedCredentials);
+    expect(document.revokedCredential[0]?.id).toBe("https://www.byound.fr/badges/assertion-1");
   });
 
   it("hides a private badge and keeps a public revoked badge visible", () => {

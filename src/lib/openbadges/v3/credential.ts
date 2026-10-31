@@ -2,6 +2,7 @@ import { hashBadgeEmail } from "@/lib/openbadges/v3/identity";
 
 export const BADGE_PUBLIC_ORIGIN = "https://www.byound.fr";
 export const OB_V3_CONTEXT = "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json";
+export const OB_V3_EXTENSIONS_CONTEXT = "https://purl.imsglobal.org/spec/ob/v3p0/extensions.json";
 export const VC_V2_CONTEXT = "https://www.w3.org/ns/credentials/v2";
 export const REVOCATION_STATUS_URL = `${BADGE_PUBLIC_ORIGIN}/api/public/status/revocation`;
 
@@ -80,7 +81,7 @@ export function buildOpenBadgeCredential(
   }
 
   const credential: Record<string, unknown> = {
-    "@context": [VC_V2_CONTEXT, OB_V3_CONTEXT],
+    "@context": [VC_V2_CONTEXT, OB_V3_CONTEXT, OB_V3_EXTENSIONS_CONTEXT],
     id: credentialId,
     type: ["VerifiableCredential", "OpenBadgeCredential"],
     name: input.name,
@@ -107,10 +108,8 @@ export function buildOpenBadgeCredential(
       achievement,
     },
     credentialStatus: {
-      type: "BitstringStatusListEntry",
-      statusPurpose: "revocation",
-      statusListIndex: input.statusIndex,
-      statusListCredential: REVOCATION_STATUS_URL,
+      id: REVOCATION_STATUS_URL,
+      type: "1EdTechRevocationList",
     },
   };
 

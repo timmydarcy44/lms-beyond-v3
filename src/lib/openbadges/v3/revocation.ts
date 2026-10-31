@@ -1,5 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BADGE_PUBLIC_ORIGIN, REVOCATION_STATUS_URL } from "@/lib/openbadges/v3/credential";
 import { encodeStatusList } from "@/lib/openbadges/v3/status-list";
+
+export type RevokedCredentialEntry = {
+  id: string;
+  revoked: boolean;
+  revocationReason?: string;
+};
+
+/** Liste publique décrite par 1EdTech Revocation List v1.0, sections 3 et 4.1. */
+export function revocationListDocument(entries: RevokedCredentialEntry[]) {
+  return {
+    id: REVOCATION_STATUS_URL,
+    issuer: `${BADGE_PUBLIC_ORIGIN}/issuers/byound`,
+    revokedCredential: entries,
+    revokedCredentials: entries,
+  };
+}
 
 export async function refreshRevocationList(db: SupabaseClient) {
   const { data, error } = await db.from("badge_assertions").select("status_index, revoked_at");

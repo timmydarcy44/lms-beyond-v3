@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Award } from "lucide-react";
 import type { LearnerEarnedOpenBadge } from "@/lib/openbadges/learner-visible-badges";
+import { BadgeCard3D } from "@/components/openbadges/badge-card-3d";
+import { formatBadgeCardDate } from "@/lib/openbadges/v3/badge-page-display";
 import { BadgeSearchIndexToggle } from "@/components/apprenant/badge-search-index-toggle";
 import { BadgeWalletPrivacy } from "@/components/apprenant/badge-wallet-privacy";
 import { LinkedInBadgeShareButton } from "@/components/apprenant/linkedin-badge-share-button";
@@ -39,6 +41,13 @@ export function ApprenantWalletBadgesGrid({
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {badges.map((badge) => (
         <article key={badge.id} className={`${APPRENANT_CARD_BODY} gap-4`}>
+          <BadgeCard3D
+            name={badge.name}
+            recipientName=""
+            issuedLabel={formatBadgeCardDate(badge.awardedAt)}
+            level={badge.level}
+            imageUrl={badge.imageUrl}
+          />
           <div className="flex items-start gap-4">
             {badge.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
+import { formatBadgeLongDate, formatPersonName } from "@/lib/openbadges/v3/badge-page-display";
 import { badgeCertificatePdf } from "@/lib/openbadges/certificate-pdf";
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
 import { loadPublicBadgeDocument } from "@/lib/openbadges/v3/public-badge";
@@ -29,12 +30,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
   });
   const pdf = badgeCertificatePdf({
     name: badge.name,
-    recipientName: badge.recipientName,
-    issuedLabel: new Date(badge.issuedAt).toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }),
+    recipientName: formatPersonName(badge.recipientName) || badge.recipientName,
+    issuedLabel: formatBadgeLongDate(badge.issuedAt),
     assertionId: badge.assertionId,
     pageUrl,
     stateLabel: STATUS[badge.state],

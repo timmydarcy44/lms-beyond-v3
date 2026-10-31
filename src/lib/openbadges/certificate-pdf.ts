@@ -16,38 +16,50 @@ export function badgeCertificatePdf(input: {
   doc.setFillColor(5, 6, 8);
   doc.rect(0, 0, width, height, "F");
 
-  doc.setFillColor(26, 27, 34);
-  doc.roundedRect(36, 36, width - 72, height - 72, 24, 24, "F");
+  const cardX = 150;
+  const cardY = 118;
+  const cardW = 520;
+  const cardH = 328;
+  doc.setFillColor(10, 11, 15);
+  doc.roundedRect(cardX + 14, cardY + 16, cardW, cardH, 22, 22, "F");
+  doc.setFillColor(28, 29, 36);
+  doc.roundedRect(cardX, cardY, cardW, cardH, 22, 22, "F");
+  doc.setFillColor(59, 60, 71);
+  doc.roundedRect(cardX, cardY, cardW, 86, 22, 22, "F");
+  doc.setFillColor(28, 29, 36);
+  doc.rect(cardX, cardY + 48, cardW, 40, "F");
 
-  doc.setTextColor(242, 242, 244);
+  doc.setTextColor(240, 240, 246);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("Byound", 64, 78);
+  doc.text("Byound", cardX + 28, cardY + 42);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
-  doc.setTextColor(169, 155, 255);
-  doc.text(input.stateLabel, 64, 102);
+  doc.setTextColor(185, 174, 255);
+  doc.text(input.stateLabel, cardX + 28, cardY + 64);
 
-  doc.setTextColor(242, 242, 244);
+  doc.setTextColor(240, 240, 246);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(32);
+  doc.setFontSize(28);
   const title = doc.splitTextToSize(input.name, 460);
-  doc.text(title, 64, 160);
+  doc.text(title, cardX + 28, cardY + 140);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(14);
-  doc.setTextColor(242, 242, 244);
-  doc.text(`Délivré à ${input.recipientName}`, 64, 250);
+  doc.setFontSize(13);
+  doc.setTextColor(240, 240, 246);
+  doc.text(`Délivré à ${input.recipientName}`, cardX + 28, cardY + 230);
   doc.setTextColor(160, 160, 170);
-  doc.text(`Obtenu le ${input.issuedLabel}`, 64, 274);
+  doc.text(`Obtenu le ${input.issuedLabel}`, cardX + 28, cardY + 252);
   doc.setFontSize(11);
-  doc.text("Open Badges 3.0", 64, 310);
-  doc.text(input.assertionId, 64, 328);
-  doc.text(input.pageUrl, 64, 346);
+  doc.setTextColor(185, 174, 255);
+  doc.text("Open Badges 3.0", cardX + 28, cardY + 286);
+  doc.setTextColor(160, 160, 170);
+  doc.text(input.assertionId, cardX + 28, cardY + 304);
+  doc.text(input.pageUrl, cardX + 28, cardY + 320);
 
   if (input.qrPng) {
-    doc.addImage(input.qrPng, "PNG", width - 196, height - 196, 120, 120);
+    doc.addImage(input.qrPng, "PNG", width - 140, 36, 96, 96);
   }
 
   return Buffer.from(doc.output("arraybuffer"));

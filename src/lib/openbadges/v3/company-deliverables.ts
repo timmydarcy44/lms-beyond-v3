@@ -13,6 +13,7 @@ export type CompanyDeliverable = {
   methodLabel: string;
   text: string | null;
   url: string | null;
+  submittedAt: string | null;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -83,7 +84,8 @@ export function companyDeliverablesFromSubmissions(submissions: unknown, configs
       const text = responseText(raw, methodId, configByMethod.get(methodId)).slice(0, 4000);
       const url = firstUrl(text);
       if (!text && !url) continue;
-      items.push({ methodLabel: METHOD_LABEL[methodId], text: text || null, url });
+      const submittedAt = typeof raw.submittedAt === "string" ? raw.submittedAt : null;
+      items.push({ methodLabel: METHOD_LABEL[methodId], text: text || null, url, submittedAt });
     }
   }
   return items;

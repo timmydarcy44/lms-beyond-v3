@@ -5,14 +5,19 @@ import { notFound } from "next/navigation";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import { BadgePublicActions } from "@/components/openbadges/badge-public-actions";
 import { BadgePublicShell } from "@/components/openbadges/badge-public-shell";
-import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
-import { resolveMethodConfigsForBadge } from "@/lib/openbadges/badge-method-config";
-import { getLearnerSubmissionsFromConfig } from "@/lib/openbadges/open-badge-earner-submissions";
+import { BadgeCard3D } from "@/components/openbadges/badge-card-3d";
+import { BadgeVerificationPanel } from "@/components/openbadges/badge-verification-panel";
 import { loadPublicIssuer } from "@/lib/openbadges/public-issuer";
-import { companyDeliverablesFromSubmissions, deliverablesSharedWithCompanies } from "@/lib/openbadges/v3/company-deliverables";
+import { loadDeliverableAccess, type DeliverableCard } from "@/lib/openbadges/v3/badge-deliverable-access";
+import {
+  criteriaShareOneDate,
+  formatBadgeCardDate,
+  formatBadgeLongDate,
+  formatPersonName,
+} from "@/lib/openbadges/v3/badge-page-display";
 import { viewerIsCompanyAccount } from "@/lib/openbadges/v3/company-viewer";
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
-import { badgeStatGridClass, loadPublicBadgeDocument, visibleBadgeStatLabels, type BadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
+import { loadPublicBadgeDocument, type BadgeVerificationState } from "@/lib/openbadges/v3/public-badge";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,28 +31,75 @@ const STATUS: Record<BadgeVerificationState, { label: string; tone: string }> = 
   invalid: { label: "Signature invalide", tone: "border-red-400/40 bg-red-400/10 text-red-200" },
 };
 
-async function loadCompanyDeliverables(db: NonNullable<ReturnType<typeof getServiceRoleClient>>, assertionId: string) {
-  const { data: assertion } = await db
-    .from("badge_assertions")
-    .select("recipient_profile_id, badge_class_id, evidence")
-    .eq("id", assertionId)
-    .maybeSingle();
-  if (!assertion || !deliverablesSharedWithCompanies(assertion.evidence)) return [];
-  const { data: badgeClass } = await db
-    .from("open_badges")
-    .select("evaluation_config")
-    .eq("id", assertion.badge_class_id)
-    .maybeSingle();
-  const config = badgeClass?.evaluation_config;
-  const submissions = getLearnerSubmissionsFromConfig(config, String(assertion.recipient_profile_id));
-  const methods = resolveMethodConfigsForBadge(
-    config && typeof config === "object" && !Array.isArray(config) ? (config as Record<string, unknown>) : {},
-  );
-  return companyDeliverablesFromSubmissions(submissions, methods);
+function verificationStatus(state: BadgeVerificationState, expiredAt: string | null, revokedAt: string | null) {
+  if (state === "revoked") return `Révoqué le ${formatBadgeLongDate(revokedAt ?? "")}`;
+  if (state === "expired") return `Expiré le ${formatBadgeLongDate(expiredAt ?? "")}`;
+  if (state === "invalid") return "Signature invalide";
+  return "Actif, non révoqué";
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+function LockedDeliverables({ count, loginHref, signupHref }: { count: number; loginHref: string; signupHref: string }) {
+  const ghosts = Array.from({ length: Math.min(count, 3) }, (_, index) => index);
+  const label = count > 1 ? `${count} livrables réservés aux entreprises` : "1 livrable réservé aux entreprises";
+  return (
+    <section className="space-y-3">
+      <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
+      <p className="text-sm text-[rgba(242,242,244,0.5)]">Les preuves de l&apos;épreuve sont réservées aux entreprises connectées.</p>
+      <div className="relative overflow-hidden rounded-[28px] border border-white/10">
+        <ul aria-hidden="true" className="pointer-events-none select-none space-y-3 p-4 blur-md">
+          {ghosts.map((index) => (
+            <li key={index} className="rounded-2xl border border-white/10 bg-[#14151B] p-5">
+              <p className="font-semibold">Livrable</p>
+              <p className="mt-2 text-sm text-[rgba(242,242,244,0.55)]">Contenu réservé aux entreprises</p>
+            </li>
+          ))}
+        </ul>
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-black/50">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+          </span>
+          <p className="mt-4 text-lg font-semibold">{label}</p>
+          <p className="mt-2 max-w-md text-sm text-[rgba(242,242,244,0.7)]">
+            Connectez-vous avec votre compte entreprise pour les consulter. Les résultats des tests restent toujours privés.
+          </p>
+          <div className="mt-5 flex w-full max-w-sm flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link href={loginHref} className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#050608]">
+              Se connecter
+            </Link>
+            <Link href={signupHref} className="rounded-full bg-[#2C2D36] px-5 py-2.5 text-sm font-semibold">
+              Créer un compte entreprise
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CompanyDeliverables({ assertionId, cards }: { assertionId: string; cards: DeliverableCard[] }) {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
+      <ul className="grid gap-4">
+        {cards.map((item, index) => (
+          <li key={`${item.title}-${index}`} className="rounded-3xl border border-white/[0.07] bg-[#101117] p-5">
+            <p className="font-semibold">{item.title}</p>
+            {item.description ? <p className="mt-2 whitespace-pre-wrap text-[rgba(242,242,244,0.75)]">{item.description}</p> : null}
+            {item.dateLabel ? <p className="mt-2 text-sm text-[rgba(242,242,244,0.5)]">{item.dateLabel}</p> : null}
+            {item.validatedBy ? <p className="mt-1 text-sm text-[rgba(242,242,244,0.5)]">Validé par {item.validatedBy}</p> : null}
+            {item.fileIndex != null ? (
+              <a className="mt-3 inline-block text-sm text-[#A99BFF]" href={`/api/badges/${assertionId}/deliverables/${item.fileIndex}`}>
+                Consulter ›
+              </a>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 export async function generateMetadata({ params }: RouteParams): Promise<Metadata> {
@@ -55,7 +107,8 @@ export async function generateMetadata({ params }: RouteParams): Promise<Metadat
   const db = getServiceRoleClient();
   const badge = db ? await loadPublicBadgeDocument(db, assertionId) : null;
   if (!badge) return { title: "Badge introuvable | Byound", robots: { index: false, follow: false } };
-  const title = `${badge.recipientName} · ${badge.name} | Byound`;
+  const holder = formatPersonName(badge.recipientName) || badge.recipientName;
+  const title = `${holder} · ${badge.name} | Byound`;
   const url = `${BADGE_PUBLIC_ORIGIN}/badges/${badge.assertionId}`;
   return {
     title,
@@ -78,76 +131,50 @@ export default async function PublicBadgePage({ params }: RouteParams) {
       host,
     );
   const companyViewer = await viewerIsCompanyAccount();
-  const companyDeliverables = companyViewer && db ? await loadCompanyDeliverables(db, assertionId) : [];
+  const access = db ? await loadDeliverableAccess(db, assertionId) : null;
+  const deliverableCount = access?.count ?? 0;
   const issuer = loadPublicIssuer("byound");
   const pageUrl = `${BADGE_PUBLIC_ORIGIN}/badges/${badge.assertionId}`;
-  const issued = formatDate(badge.issuedAt);
+  const holder = formatPersonName(badge.recipientName) || badge.recipientName;
+  const issued = formatBadgeLongDate(badge.issuedAt);
+  const cardDate = formatBadgeCardDate(badge.issuedAt);
   const status = STATUS[badge.state];
-  const revokedOn = badge.revokedAt ? formatDate(badge.revokedAt) : null;
-  const filled = badge.criteria.length;
-  const stats = visibleBadgeStatLabels({
-    level: badge.level,
-    criteriaCount: badge.criteria.length,
-    evidenceCount: badge.evidence.length,
-    hasExpiry: Boolean(badge.validUntil),
-  }).map((label) => {
-    if (label === "Niveau") return { label, value: String(badge.level) };
-    if (label === "Critères") return { label, value: `${filled} / ${filled}` };
-    if (label === "Livrables") return { label, value: String(badge.evidence.length) };
-    return { label, value: formatDate(badge.validUntil ?? badge.issuedAt) };
-  });
+  const filled = badge.criteria.filter((item) => item.validatedAt).length;
+  const total = badge.criteria.length;
+  const sharedValidation = criteriaShareOneDate(badge.criteria.map((item) => item.validatedAt));
+  const subtitle = [
+    `Délivré à ${holder} par Byound, le ${issued}`,
+    badge.level != null ? `Niveau ${badge.level}` : null,
+    total > 0 ? `${filled} / ${total} critères` : null,
+  ].filter(Boolean).join(" · ");
 
   return (
     <BadgePublicShell>
-      <main className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
-        <section className="mx-auto flex max-w-3xl flex-col items-center gap-8 pt-6 text-center">
+      <main className="mx-auto max-w-6xl overflow-x-clip px-5 pb-24 sm:px-8">
+        <section className="mx-auto flex max-w-3xl flex-col items-center gap-6 pt-6 text-center">
           <p className={`rounded-full border px-4 py-2 text-sm ${status.tone}`}>
             {badge.state === "verified" ? "✓ " : ""}
             {status.label}
-            {badge.state === "revoked" && revokedOn ? ` le ${revokedOn}` : ""}
           </p>
-          <MetalBadgeCard
+          <BadgeCard3D
             name={badge.name}
-            recipientName={badge.recipientName}
-            issuedLabel={issued}
+            recipientName={holder}
+            issuedLabel={cardDate}
             level={badge.level}
+            imageUrl={badge.imageUrl}
+            state={badge.state}
           />
           <div className="space-y-4">
-            <h1 className="max-w-full text-[40px] font-bold leading-[1.05] tracking-[-0.045em] sm:text-[72px] sm:leading-[0.95]" style={{ textWrap: "balance" }}>
-              {badge.name.split(" - ").map((part, index) => (
-                <span key={part}>
-                  {index > 0 ? (
-                    <>
-                      <br className="sm:hidden" />
-                      <span className="hidden sm:inline">{" - "}</span>
-                    </>
-                  ) : null}
-                  {part}
-                </span>
-              ))}
+            <h1 className="max-w-full break-words text-[40px] font-bold leading-[1.05] tracking-[-0.045em] sm:text-[72px] sm:leading-[0.95]" style={{ textWrap: "balance" }}>
+              {badge.name}
             </h1>
-            <p className="text-lg text-[rgba(242,242,244,0.6)]">
-              Délivré à {badge.recipientName} par Byound, le {issued}.
-            </p>
+            <p className="text-base text-[rgba(242,242,244,0.6)] sm:text-lg">{subtitle}</p>
           </div>
-          <BadgePublicActions
-            pdfUrl={`/badges/${badge.assertionId}/certificate.pdf`}
-            pageUrl={pageUrl}
-          />
-          {stats.length > 0 ? (
-          <dl className={`grid w-full gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 ${badgeStatGridClass(stats.length)}`}>
-            {stats.map((item) => (
-              <div key={item.label} className="bg-[#050608] px-4 py-5">
-                <dt className="text-sm text-[rgba(242,242,244,0.5)]">{item.label}</dt>
-                <dd className="mt-1 text-2xl font-bold tracking-[-0.04em]">{item.value}</dd>
-              </div>
-            ))}
-          </dl>
-          ) : null}
+          <BadgePublicActions pdfUrl={`/badges/${badge.assertionId}/certificate.pdf`} pageUrl={pageUrl} />
         </section>
 
-        <div className="mt-16 grid gap-16 lg:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="space-y-16 text-left">
+        <div className="mt-16 grid min-w-0 gap-16 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          <div className="min-w-0 space-y-16 text-left">
             <section className="space-y-4">
               <h2 className="text-2xl font-bold tracking-[-0.04em]">Ce que ce badge atteste</h2>
               <p className="text-[28px] font-medium leading-snug tracking-[-0.03em] text-[rgba(242,242,244,0.92)]">
@@ -157,9 +184,12 @@ export default async function PublicBadgePage({ params }: RouteParams) {
 
             <section className="space-y-6">
               <div className="flex items-end justify-between gap-4">
-                <h2 className="text-2xl font-bold tracking-[-0.04em]">Critères d'obtention</h2>
-                <p className="text-sm text-[rgba(242,242,244,0.55)]">{filled} / {filled} remplis</p>
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Critères d&apos;obtention</h2>
+                <p className="text-sm text-[rgba(242,242,244,0.55)]">{filled} / {total} remplis</p>
               </div>
+              {sharedValidation ? (
+                <p className="text-sm text-[rgba(242,242,244,0.55)]">Tous validés le {formatBadgeLongDate(sharedValidation)}</p>
+              ) : null}
               {badge.criteria.length > 0 ? (
                 <ol className="space-y-5">
                   {badge.criteria.map((criterion, index) => (
@@ -167,13 +197,13 @@ export default async function PublicBadgePage({ params }: RouteParams) {
                       <span className="w-10 shrink-0 text-lg font-light text-[#A99BFF]">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold">{criterion.label}</p>
                         {criterion.description ? (
                           <p className="mt-1 text-[rgba(242,242,244,0.6)]">{criterion.description}</p>
                         ) : null}
-                        {criterion.validatedAt ? (
-                          <p className="mt-2 text-sm text-[rgba(242,242,244,0.5)]">Validé le {formatDate(criterion.validatedAt)}</p>
+                        {!sharedValidation && criterion.validatedAt ? (
+                          <p className="mt-2 text-sm text-[rgba(242,242,244,0.5)]">Validé le {formatBadgeLongDate(criterion.validatedAt)}</p>
                         ) : null}
                       </div>
                     </li>
@@ -184,77 +214,22 @@ export default async function PublicBadgePage({ params }: RouteParams) {
               )}
             </section>
 
-            {badge.evidence.length > 0 ? (
-              <section className="space-y-4">
-                <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
-                <ul className="grid gap-4">
-                  {badge.evidence.map((item) => (
-                    <li
-                      key={item.name}
-                      className="rounded-3xl border border-white/[0.07] p-5"
-                      style={{ background: "linear-gradient(180deg, #14151B, #0D0E13)" }}
-                    >
-                      <p className="font-semibold">{item.name}</p>
-                      {item.description ? <p className="mt-2 text-[rgba(242,242,244,0.6)]">{item.description}</p> : null}
-                      {item.url ? (
-                        <a href={item.url} className="mt-3 inline-block text-sm text-[#A99BFF]">
-                          Ouvrir le livrable
-                        </a>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+            {!companyViewer && deliverableCount > 0 ? (
+              <LockedDeliverables
+                count={deliverableCount}
+                loginHref={companyAccountHref("login")}
+                signupHref={companyAccountHref("signup")}
+              />
             ) : null}
-
-            {!companyViewer ? (
-              <section className="rounded-3xl border border-white/10 p-6 sm:p-8">
-                <h2 className="text-2xl font-bold tracking-[-0.04em]">
-                  Vous souhaitez voir les livrables concernant l&apos;obtention du badge ?
-                </h2>
-                <p className="mt-3 max-w-2xl text-[rgba(242,242,244,0.7)]">
-                  Connectez-vous ou créez un compte entreprise. Les résultats des tests restent privés.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href={companyAccountHref("login")}
-                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#050608]"
-                  >
-                    Se connecter
-                  </Link>
-                  <Link
-                    href={companyAccountHref("signup")}
-                    className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold"
-                  >
-                    Créer un compte
-                  </Link>
-                </div>
-              </section>
-            ) : companyDeliverables.length > 0 ? (
-              <section className="space-y-4">
-                <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables partagés avec les entreprises</h2>
-                <ul className="grid gap-4">
-                  {companyDeliverables.map((item, index) => (
-                    <li
-                      key={`${item.methodLabel}-${index}`}
-                      className="rounded-3xl border border-white/[0.07] p-5"
-                      style={{ background: "linear-gradient(180deg, #14151B, #0D0E13)" }}
-                    >
-                      <p className="text-sm text-[#A99BFF]">{item.methodLabel}</p>
-                      {item.text ? <p className="mt-2 whitespace-pre-wrap text-[rgba(242,242,244,0.8)]">{item.text}</p> : null}
-                      {item.url ? (
-                        <a href={item.url} className="mt-3 inline-block text-sm text-[#A99BFF]">Ouvrir le fichier</a>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : (
+            {companyViewer && access && access.cards.length > 0 ? (
+              <CompanyDeliverables assertionId={badge.assertionId} cards={access.cards} />
+            ) : null}
+            {companyViewer && deliverableCount > 0 && (access?.cards.length ?? 0) === 0 ? (
               <section className="rounded-3xl border border-white/10 p-6">
                 <h2 className="text-2xl font-bold tracking-[-0.04em]">Livrables</h2>
                 <p className="mt-3 text-[rgba(242,242,244,0.7)]">Le titulaire n&apos;a pas autorisé le partage de ses livrables.</p>
               </section>
-            )}
+            ) : null}
 
             {badge.alignments.length > 0 ? (
               <section className="space-y-4">
@@ -283,43 +258,22 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             ) : null}
           </div>
 
-          <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">
-            <section id="verification" className="rounded-3xl border border-white/10 p-6">
-              <h2 className="text-xl font-bold tracking-[-0.04em]">Vérification</h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[rgba(242,242,244,0.5)]">Signature</dt>
-                  <dd>{badge.state === "invalid" ? "Invalide" : "Valide"}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[rgba(242,242,244,0.5)]">Statut</dt>
-                  <dd>{status.label}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[rgba(242,242,244,0.5)]">Émis le</dt>
-                  <dd>{issued}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[rgba(242,242,244,0.5)]">Standard</dt>
-                  <dd>Open Badges 3.0</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[rgba(242,242,244,0.5)]">Identifiant</dt>
-                  <dd className="truncate">{badge.assertionId}</dd>
-                </div>
-              </dl>
-              <div className="mt-5 flex flex-col gap-2">
-                <a className="rounded-full bg-white px-4 py-2.5 text-center text-sm font-semibold text-[#050608]" href={`/badges/${badge.assertionId}/badge.png`}>
-                  Télécharger le badge signé
-                </a>
-                <a className="text-center text-sm text-[#A99BFF]" href={`/badges/${badge.assertionId}/credential.jwt`}>
-                  credential.jwt
-                </a>
-              </div>
-            </section>
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
+            <BadgeVerificationPanel
+              signature={badge.state === "invalid" ? "Invalide" : "Valide · ES256"}
+              status={verificationStatus(badge.state, badge.validUntil, badge.revokedAt)}
+              issued={issued}
+              assertionId={badge.assertionId}
+              pngUrl={`/badges/${badge.assertionId}/badge.png`}
+              jwtUrl={`/badges/${badge.assertionId}/credential.jwt`}
+              jsonUrl={`/badges/${badge.assertionId}/credential.json`}
+            />
 
-            <section className="rounded-3xl border border-white/10 p-6">
-              <h2 className="text-xl font-bold tracking-[-0.04em]">{issuer?.name ?? "Byound"}</h2>
+            <section className="rounded-3xl border border-white/10 bg-[#101117] p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F2F2F4] text-lg font-extrabold text-[#121318]">B</span>
+                <h2 className="text-xl font-bold tracking-[-0.04em]">{issuer?.name ?? "Byound"}</h2>
+              </div>
               <p className="mt-3 text-sm leading-relaxed text-[rgba(242,242,244,0.65)]">{issuer?.description}</p>
               <div className="mt-4 flex flex-col gap-2 text-sm">
                 <a className="text-[#A99BFF]" href="https://www.byound.fr">byound.fr</a>
@@ -329,17 +283,16 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             </section>
 
             <p className="px-1 text-sm leading-relaxed text-[rgba(242,242,244,0.5)]">
-              Les résultats des tests ne sont jamais publiés. Les livrables de l'épreuve ne sont visibles que par une entreprise connectée, si la personne l'a accepté.
+              Les résultats des tests ne sont jamais publiés. Les livrables ne sont visibles que par les entreprises connectées.
             </p>
 
-            <a
-              href="https://www.byound.fr/business"
-              className="block rounded-3xl p-6 text-[#F2F2F4]"
-              style={{ background: "linear-gradient(135deg, #6E5BFF, #A99BFF)" }}
-            >
+            <section className="rounded-3xl p-6 text-[#F2F2F4]" style={{ background: "linear-gradient(135deg, #6E5BFF, #A99BFF)" }}>
               <p className="text-xl font-bold tracking-[-0.04em]">Vous recrutez ?</p>
               <p className="mt-2 text-sm text-white/80">Vérifiez les compétences de vos équipes avec Byound Business.</p>
-            </a>
+              <a href="https://www.byound.fr/business" className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#2A215F]">
+                Découvrir Byound Business ›
+              </a>
+            </section>
           </aside>
         </div>
       </main>

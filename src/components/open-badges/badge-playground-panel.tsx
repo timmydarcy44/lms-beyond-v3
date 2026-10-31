@@ -27,6 +27,7 @@ type Props = {
   onAttemptRecorded: (nextUsed: number) => void;
   onAllAttemptsDone: () => void;
   getIntegritySnapshot: () => BadgeIntegrityMetrics;
+  preview?: boolean;
   integrityProps: {
     startWriting: () => void;
     stopWriting: () => void;
@@ -42,6 +43,7 @@ export function BadgePlaygroundPanel({
   onAttemptRecorded,
   onAllAttemptsDone,
   getIntegritySnapshot,
+  preview = false,
   integrityProps,
 }: Props) {
   const [phase, setPhase] = useState<Phase>("compose");
@@ -83,7 +85,7 @@ export function BadgePlaygroundPanel({
             credentials: "include",
             headers: authHeaders,
             signal: controller.signal,
-            body: JSON.stringify({ prompt: promptText, attemptNumber }),
+            body: JSON.stringify({ prompt: promptText, attemptNumber, preview }),
           },
         );
 
@@ -111,6 +113,15 @@ export function BadgePlaygroundPanel({
         };
 
         const integrityMetrics = getIntegritySnapshot();
+        if (preview) {
+          onAttemptRecorded(Math.min(maxAttempts, attemptNumber));
+          setLastAiResponse(aiResponse);
+          setLastAttemptNumber(attemptNumber);
+          setPhase("reading");
+          setPrompt("");
+          toast.success(`Essai ${attemptNumber} — non enregistré`);
+          return;
+        }
         const submitRes = await fetch(`/api/earner/badges/${badgeClassId}/submit`, {
           method: "POST",
           credentials: "include",
@@ -181,6 +192,7 @@ export function BadgePlaygroundPanel({
       getIntegritySnapshot,
       maxAttempts,
       onAttemptRecorded,
+      preview,
     ],
   );
 
@@ -202,6 +214,10 @@ export function BadgePlaygroundPanel({
 
   const finishWithCurrentAttempt = useCallback(async () => {
     if (loading || !lastAttemptNumber) return;
+    if (preview) {
+      onAllAttemptsDone();
+      return;
+    }
     setLoading(true);
     try {
       const integrityMetrics = getIntegritySnapshot();
@@ -248,6 +264,7 @@ export function BadgePlaygroundPanel({
     lastAttemptNumber,
     loading,
     onAllAttemptsDone,
+    preview,
   ]);
 
   const canComposeAnotherAttempt =

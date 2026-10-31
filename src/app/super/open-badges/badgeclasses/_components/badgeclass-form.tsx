@@ -1669,6 +1669,17 @@ export function BadgeClassForm({
         <Button onClick={() => saveBadge("DRAFT")} disabled={loading || imageUploading}>
           Enregistrer (brouillon)
         </Button>
+        {badgeClassId ? (
+          <Button variant="outline" asChild>
+            <a href={`/super/open-badges/badgeclasses/${badgeClassId}/essai`} target="_blank" rel="noreferrer">
+              Tester l&apos;épreuve
+            </a>
+          </Button>
+        ) : (
+          <Button variant="outline" disabled title="Enregistrez le brouillon pour tester l'épreuve">
+            Tester l&apos;épreuve
+          </Button>
+        )}
         <Button
           variant="secondary"
           onClick={() => saveBadge("ACTIVE")}

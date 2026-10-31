@@ -109,6 +109,9 @@ export function BadgeClassList({ auth }: { auth: AuthHeaders }) {
                   <div className="flex items-center gap-2">
                     <Badge>{badgeClass.status}</Badge>
                     <Button variant="outline" size="sm" asChild>
+                      <Link href={`/super/open-badges/badgeclasses/${badgeClass.id}/essai`}>Tester</Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
                       <Link href={`/super/open-badges/badgeclasses/${badgeClass.id}/edit`}>Éditer</Link>
                     </Button>
                   </div>

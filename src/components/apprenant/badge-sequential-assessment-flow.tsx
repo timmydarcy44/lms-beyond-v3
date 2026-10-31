@@ -67,11 +67,14 @@ export function BadgeSequentialAssessmentFlow({
   presentationHref,
   initialAuth,
   initialConfig,
+  preview = false,
 }: {
   badgeClassId: string;
   presentationHref: string;
   initialAuth?: EarnerAuth | null;
   initialConfig?: InitialConfig | null;
+  /** Essai super admin : aucune réponse n'est enregistrée, aucun badge n'est délivré. */
+  preview?: boolean;
 }) {
   const [auth, setAuth] = useState<EarnerAuth | null>(initialAuth ?? null);
   const [config, setConfig] = useState<InitialConfig | null>(null);
@@ -114,6 +117,13 @@ export function BadgeSequentialAssessmentFlow({
 
   useEffect(() => {
     if (!auth) return;
+
+    if (preview && initialConfigRef.current?.methodConfigs?.length) {
+      const next = { ...initialConfigRef.current, mustRestartAssessment: false };
+      setConfig(next);
+      applyProgress(next, []);
+      return;
+    }
 
     const load = async () => {
       const headers = {
@@ -179,7 +189,7 @@ export function BadgeSequentialAssessmentFlow({
 
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial uniquement
-  }, [auth, badgeClassId]);
+  }, [auth, badgeClassId, preview]);
 
   const markMethodComplete = useCallback(
     (methodId: string) => {
@@ -227,6 +237,17 @@ export function BadgeSequentialAssessmentFlow({
     >;
   }) => {
     if (!auth || !config) return;
+    if (preview) {
+      toast.success(`${methodConfigLabel(payload.methodId as BadgeEvaluationMethodId)} — essai, non enregistré`);
+      markMethodComplete(payload.methodId);
+      setConfig((c) => {
+        if (!c) return c;
+        const nextSubmitted = Array.from(new Set([...(c.submittedMethodIds ?? []), payload.methodId]));
+        const ready = c.methodConfigs.every((m) => nextSubmitted.includes(m.methodId));
+        return { ...c, submittedMethodIds: nextSubmitted, readyForFinalEvaluation: ready };
+      });
+      return;
+    }
     setLoading(true);
     const res = await fetch(`/api/earner/badges/${badgeClassId}/submit`, {
       method: "POST",
@@ -337,6 +358,19 @@ export function BadgeSequentialAssessmentFlow({
   }
 
   if (readyForFinalEvaluation) {
+    if (preview) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-[#030303] px-6 text-center text-white">
+          <p className="text-2xl font-bold">Essai terminé</p>
+          <p className="mt-3 max-w-md text-white/70">
+            Aucun Open Badge n&apos;a été délivré. Les réponses n&apos;ont pas été enregistrées.
+          </p>
+          <Link href={presentationHref} className="mt-6 text-[#FF3B30] hover:underline">
+            Retour à l&apos;édition
+          </Link>
+        </div>
+      );
+    }
     return (
       <BadgeEpreuveCompletion badgeClassId={badgeClassId} badgeName={config.name} auth={auth} />
     );
@@ -354,8 +388,14 @@ export function BadgeSequentialAssessmentFlow({
           className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Présentation du badge
+          {preview ? "Retour à l'édition" : "Présentation du badge"}
         </Link>
+
+        {preview ? (
+          <p className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+            Essai privé. Rien n&apos;est enregistré et aucun badge n&apos;est délivré. Publiez le badge pour le mettre en ligne.
+          </p>
+        ) : null}
 
         <header className="mt-8 space-y-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[#FF3B30]/90">
@@ -399,6 +439,7 @@ export function BadgeSequentialAssessmentFlow({
               method={activeMethod}
               userId={auth.userId}
               earnerAuth={auth}
+              preview={preview}
               playgroundAttemptsUsed={
                 activeMethod.methodId === "playground" ? config.playgroundAttemptsUsed ?? 0 : 0
               }

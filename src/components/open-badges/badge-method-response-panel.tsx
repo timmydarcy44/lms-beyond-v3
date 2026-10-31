@@ -37,6 +37,7 @@ type Props = {
   }) => void | Promise<void>;
   onPlaygroundComplete?: () => void;
   loading?: boolean;
+  preview?: boolean;
 };
 
 function formatDuration(seconds: number) {
@@ -55,6 +56,7 @@ export function BadgeMethodResponsePanel({
   onSubmit,
   onPlaygroundComplete,
   loading,
+  preview = false,
 }: Props) {
   const [responseText, setResponseText] = useState("");
 
@@ -112,6 +114,7 @@ export function BadgeMethodResponsePanel({
         auth={earnerAuth}
         attemptsUsed={playgroundAttemptsUsed}
         onAttemptRecorded={(nextUsed) => onPlaygroundAttemptRecorded?.(nextUsed)}
+        preview={preview}
         onAllAttemptsDone={() => onPlaygroundComplete?.()}
         getIntegritySnapshot={getMetricsSnapshot}
         integrityProps={{

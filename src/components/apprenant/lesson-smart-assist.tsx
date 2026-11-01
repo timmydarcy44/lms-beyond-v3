@@ -17,6 +17,8 @@ import { ByoundAiPanel, historyMetric } from "@/components/apprenant/ai/byound-a
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import type { AIAction } from "@/lib/ai/utils";
 import { isValidAIAction } from "@/lib/ai/utils";
+import { htmlToPlain, selectionPlain } from "@/lib/lms/html-plain";
+import type { ReadingAnchor } from "@/lib/lms/reading-notes";
 
 type LessonSmartAssistProps = {
   children: React.ReactNode;
@@ -31,8 +33,9 @@ type LessonSmartAssistProps = {
 
 type SelectionState = {
   text: string;
-  top: number;
-  left: number;
+  x: number;
+  y: number;
+  below: boolean;
 };
 
 const REPHRASE_OPTIONS = [
@@ -126,7 +129,7 @@ type HistoryItem = {
   lesson_id: string | null;
   course_id: string | null;
   selection_excerpt: string | null;
-  action: AIAction;
+  action: AIAction | "highlight";
   options: Record<string, unknown> | null;
   transformation: {
     id: string;
@@ -162,8 +165,9 @@ export function LessonSmartAssist({
   afterContent,
 }: LessonSmartAssistProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const [, setSelection] = useState<SelectionState | null>(null);
+  const toolbarRef = useRef<HTMLButtonElement>(null);
+  const rangeRef = useRef<Range | null>(null);
+  const [selection, setSelection] = useState<SelectionState | null>(null);
   const [selectionExcerpt, setSelectionExcerpt] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRephraseOptions, setShowRephraseOptions] = useState(false);
@@ -180,12 +184,12 @@ export function LessonSmartAssist({
   useEffect(() => {
     const handleSelection = () => {
       const selectionObject = window.getSelection();
-      if (!selectionObject || selectionObject.isCollapsed) {
+      if (!selectionObject || selectionObject.rangeCount === 0 || selectionObject.isCollapsed) {
         setSelection(null);
         return;
       }
 
-      const text = selectionObject.toString().trim();
+      const text = selectionPlain(selectionObject.getRangeAt(0));
       if (!text || text.length < 5) {
         setSelection(null);
         return;
@@ -210,21 +214,18 @@ export function LessonSmartAssist({
       }
 
       const rect = range.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
-
-      if (!rect || !containerRect) {
+      if (!rect.width && !rect.height) {
         setSelection(null);
         return;
       }
 
-      const top = rect.top - containerRect.top - 48;
-      const center = rect.left - containerRect.left + rect.width / 2;
-      const left = containerRect.width <= 160 ? containerRect.width / 2 : Math.min(Math.max(center, 80), containerRect.width - 80);
-
+      const below = rect.top < 72;
+      rangeRef.current = range.cloneRange();
       setSelection({
         text,
-        top: Math.max(0, top),
-        left,
+        x: Math.min(window.innerWidth - 24, Math.max(24, rect.left + rect.width / 2)),
+        y: below ? rect.bottom + 8 : rect.top - 8,
+        below,
       });
       setSelectionExcerpt(text);
     };
@@ -241,6 +242,21 @@ export function LessonSmartAssist({
       document.removeEventListener("keyup", deferredHandle);
     };
   }, []);
+
+  useEffect(() => {
+    const root = containerRef.current?.querySelector("[data-dyslexia-content]");
+    if (!root) return;
+    let index = 0;
+    root.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li, blockquote").forEach((node) => {
+      if (!node.getAttribute("data-note-block")) {
+        index += 1;
+        node.setAttribute("data-note-block", `b${index}`);
+      } else {
+        const current = Number(node.getAttribute("data-note-block")?.replace(/\D/g, "") || 0);
+        if (current > index) index = current;
+      }
+    });
+  }, [lessonId]);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -416,7 +432,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
   }
 
   const lessonText = () =>
-    (containerRef.current?.querySelector("[data-dyslexia-content]")?.textContent ?? "").replace(/\s+/g, " ").trim();
+    htmlToPlain(containerRef.current?.querySelector("[data-dyslexia-content]")?.innerHTML ?? "");
   const text = selectionExcerpt || lessonText();
   if (text.length < 5) {
     setTransformError("Sélectionne un passage du sous-chapitre.");
@@ -437,6 +453,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
 };
 
   const openHistoryItem = (item: HistoryItem) => {
+    if (item.action === "highlight") return;
     const transformation = item.transformation;
     if (!transformation) {
       toast.error("Résultat introuvable pour cette transformation.");
@@ -477,8 +494,72 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
     setTransformError(null);
   };
 
-  const lessonLabel = lessonTitle?.trim() || "Sous-chapitre";
+  const anchorFromRange = (range: Range | null): ReadingAnchor => {
+    const node = range?.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range?.startContainer.parentElement;
+    const block = node?.closest("[data-note-block]");
+    return {
+      blockId: block?.getAttribute("data-note-block") ?? "",
+      offset: range?.startOffset ?? 0,
+      excerpt: (range ? selectionPlain(range) : selectionExcerpt).slice(0, 180),
+    };
+  };
 
+  const saveHighlight = async () => {
+    const text = selectionExcerpt.trim();
+    if (text.length < 5) return;
+    const anchor = anchorFromRange(rangeRef.current);
+    const current = window.getSelection();
+    if (current && current.rangeCount > 0 && typeof CSS !== "undefined" && CSS.highlights) {
+      const stored = current.getRangeAt(0).cloneRange();
+      const group = CSS.highlights.get("lesson-note") ?? new Highlight();
+      group.add(stored);
+      CSS.highlights.set("lesson-note", group);
+    }
+    setSelection(null);
+    setSelectionExcerpt("");
+    rangeRef.current = null;
+    window.getSelection()?.removeAllRanges();
+    try {
+      const response = await fetch("/api/ai/lesson-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          action: "highlight",
+          anchor,
+          context: {
+            courseId: isUuid(courseId) ? courseId : null,
+            lessonId: isUuid(lessonId) ? lessonId : null,
+            chapterLocalId: lessonId && !isUuid(lessonId) ? String(lessonId) : null,
+          },
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.saved) {
+        toast.error(typeof data?.error === "string" ? data.error : "La prise de note n'a pas été enregistrée");
+        return;
+      }
+      window.dispatchEvent(new CustomEvent("open-reading-notes"));
+      toast.success("Ajouté à Mes notes");
+      void fetchHistory();
+    } catch {
+      toast.error("La prise de note n'a pas été enregistrée");
+    }
+  };
+
+  const lessonLabel = lessonTitle?.trim() || "Sous-chapitre";
+  const highlightButton = selection ? (
+    <button
+      ref={toolbarRef}
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => void saveHighlight()}
+      style={{ left: selection.x, top: selection.y, transform: selection.below ? "translate(-50%, 0)" : "translate(-50%, -100%)" }}
+      className="fixed z-40 rounded-full bg-[#1F1D1A] px-3 py-1.5 text-xs font-semibold text-[#FAFAF7] shadow-lg"
+    >
+      Surligner
+    </button>
+  ) : null;
   const copyResult = async () => {
     if (!transformationResult) return;
     const value = transformationResult.result;
@@ -521,6 +602,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
       <div ref={containerRef}>
         {children}
         {afterContent}
+        {highlightButton}
       </div>
     );
   }
@@ -529,6 +611,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
     <div ref={containerRef} className={className}>
       {children}
       {afterContent}
+      {highlightButton}
       <ByoundAiPanel
         dyslexia={isDyslexiaMode}
         lessonTitle={lessonLabel}
@@ -545,7 +628,7 @@ const handleAction = (actionId: string, options?: Record<string, any>) => {
               }
             : null
         }
-        history={history.map((item) => ({
+        history={history.filter((item): item is HistoryItem & { action: AIAction } => item.action !== "highlight").map((item) => ({
           id: item.id,
           action: item.action,
           created_at: item.created_at,

@@ -1,0 +1,364 @@
+.notes-lecture {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.62);
+  color: #f4f5f7;
+  font-family: Manrope, sans-serif;
+}
+
+.notes-lecture__panel {
+  display: flex;
+  width: min(900px, 100%);
+  height: min(90vh, 100%);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #23262f;
+  border-radius: 30px;
+  background: #111318;
+  outline: none;
+}
+
+.notes-lecture__panel:focus-visible,
+.notes-lecture button:focus-visible,
+.notes-lecture input:focus-visible,
+.notes-lecture textarea:focus-visible {
+  outline: 2px solid #f5c85c;
+  outline-offset: 2px;
+}
+
+.notes-lecture__head,
+.notes-lecture__tools {
+  padding: 22px 28px 0;
+}
+
+.notes-lecture__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notes-lecture__head h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+.notes-lecture__count {
+  margin: 6px 0 0;
+  color: #9a9fb2;
+  font-size: 14px;
+}
+
+.notes-lecture__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notes-lecture__pdf,
+.notes-lecture__close,
+.notes-lecture__menu button,
+.notes-lecture__link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notes-lecture__pdf,
+.notes-lecture__menu > button {
+  border-radius: 999px;
+  background: #1c1f27;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.notes-lecture__close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 999px;
+  background: #1c1f27;
+  font-size: 18px;
+}
+
+.notes-lecture__tools {
+  display: flex;
+  gap: 10px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.notes-lecture__tools input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  border-radius: 999px;
+  background: #1c1f27;
+  padding: 10px 16px;
+  color: #f4f5f7;
+  font: inherit;
+  font-size: 14px;
+}
+
+.notes-lecture__menu {
+  position: relative;
+}
+
+.notes-lecture__menu ul {
+  position: absolute;
+  right: 0;
+  z-index: 2;
+  margin: 8px 0 0;
+  min-width: 220px;
+  list-style: none;
+  border: 1px solid #23262f;
+  border-radius: 16px;
+  background: #1c1f27;
+  padding: 8px;
+}
+
+.notes-lecture__menu li button {
+  width: 100%;
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.notes-lecture__menu li button[aria-current="true"] {
+  background: #262a35;
+}
+
+.notes-lecture__scroll {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 0 28px 28px;
+}
+
+.notes-lecture__chapter {
+  margin: 8px 0 14px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.notes-lecture__chapter span {
+  color: #9a9fb2;
+  font-weight: 650;
+}
+
+.notes-lecture__note {
+  border-top: 1px solid #23262f;
+  padding: 18px 0 16px;
+}
+
+.notes-lecture__source {
+  margin: 0 0 10px;
+  color: #9a9fb2;
+  font-size: 14px;
+}
+
+.notes-lecture__source strong {
+  font-weight: 700;
+}
+
+.notes-lecture__source strong[data-kind="highlight"] { color: #f5c85c; }
+.notes-lecture__source strong[data-kind="schema"] { color: #b9aeff; }
+.notes-lecture__source strong[data-kind="summary"] { color: #8ff2c4; }
+.notes-lecture__source strong[data-kind="personal"] { color: #fff; }
+
+.notes-lecture__passage {
+  margin: 0;
+  border-left: 4px solid #f5c85c;
+  padding-left: 14px;
+  font-size: 19px;
+  line-height: 1.7;
+}
+
+.notes-lecture__mine {
+  margin: 10px 0 0;
+  color: #c9c2ff;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.notes-lecture__summary {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.notes-lecture__summary[data-clamped="true"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notes-lecture__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.notes-lecture__row button,
+.notes-lecture__more {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.notes-lecture__more {
+  margin-top: 8px;
+  color: #8ff2c4;
+}
+
+.notes-lecture__editor {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #23262f;
+  border-radius: 16px;
+  background: #1c1f27;
+  padding: 12px;
+  color: #f4f5f7;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.notes-lecture__confirm {
+  margin-top: 8px;
+  color: #9a9fb2;
+  font-size: 14px;
+}
+
+.notes-lecture__schema {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-radius: 18px;
+  background: #1c1f27;
+  padding: 16px;
+}
+
+.notes-lecture__schema span,
+.notes-lecture__zoom span {
+  border-radius: 14px;
+  background: #262a35;
+  padding: 12px 16px;
+  font-weight: 700;
+}
+
+.notes-lecture__schema i,
+.notes-lecture__zoom i {
+  color: #9a9fb2;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.notes-lecture__zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.72);
+  padding: 24px;
+}
+
+.notes-lecture__zoom div {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: 24px;
+  background: #1c1f27;
+  padding: 32px;
+}
+
+.notes-lecture__empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 48px 12px;
+  color: #9a9fb2;
+  text-align: center;
+}
+
+.notes-lecture__sheet {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .notes-lecture {
+    padding: 0;
+  }
+
+  .notes-lecture__panel {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .notes-lecture__head,
+  .notes-lecture__tools,
+  .notes-lecture__scroll {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .notes-lecture__head h2 {
+    font-size: 26px;
+  }
+
+  .notes-lecture__tools {
+    flex-wrap: wrap;
+  }
+
+  .notes-lecture__tools input {
+    flex: 1 1 100%;
+  }
+
+  .notes-lecture__menu ul {
+    display: none;
+  }
+
+  .notes-lecture__sheet {
+    position: fixed;
+    inset: auto 0 0;
+    display: block;
+    border-radius: 24px 24px 0 0;
+    background: #1c1f27;
+    padding: 12px 12px 24px;
+  }
+
+  .notes-lecture__sheet button {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 12px;
+    color: #f4f5f7;
+    text-align: left;
+    font-size: 16px;
+  }
+}

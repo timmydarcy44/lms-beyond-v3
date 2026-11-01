@@ -52,6 +52,7 @@ type Props = {
   dyslexia: boolean;
   onToggleDyslexia: () => void;
   onOpenStrategy: () => void;
+  onOpenNotes: () => void;
   parts: ReaderPart[];
   initialOpenPartId: string | null;
   children: ReactNode;
@@ -88,6 +89,7 @@ export function LessonReaderShell({
   dyslexia,
   onToggleDyslexia,
   onOpenStrategy,
+  onOpenNotes,
   parts,
   initialOpenPartId,
   children,
@@ -301,6 +303,7 @@ export function LessonReaderShell({
               <p className="lesson-reader__kicker">{kicker}</p>
               <p className="lesson-reader__part">{partTitle}</p>
             </div>
+            <button type="button" className="lesson-reader__notes" onClick={onOpenNotes}>Mes notes</button>
             <div id="byound-ai-trigger" className="lesson-reader__ai-trigger" />
             <button type="button" className="lesson-reader__icon-btn" aria-label="Sommaire" onClick={() => {
               if (window.matchMedia("(min-width: 1024px)").matches) setDesktopOutline((value) => !value);
@@ -328,6 +331,15 @@ export function LessonReaderShell({
                   {item === "auto" ? "Auto" : item === "light" ? "Clair" : "Sombre"}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onOpenNotes();
+                }}
+              >
+                Mes notes
+              </button>
               <button
                 type="button"
                 onClick={() => {

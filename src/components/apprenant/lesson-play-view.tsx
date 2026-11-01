@@ -21,6 +21,9 @@ import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { LessonReaderShell, type ReaderPart } from "@/components/apprenant/lesson-reader-shell";
+import { ReadingNotesPanel } from "@/components/apprenant/reading-notes-panel";
+import { stampNoteBlocks } from "@/lib/lms/html-plain";
+import { revealReadingAnchor } from "@/lib/lms/reading-notes";
 import { CaseStudyWorkspace } from "@/components/apprenant/CaseStudyWorkspace";
 import { FlashcardPlayer, type FlashcardItem } from "@/components/beyond-flash/FlashcardPlayer";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
@@ -101,11 +104,11 @@ function prepareReadingHtml(html: string, title: string) {
     const stripped = stripLessonNumber(text).toLowerCase();
     return stripped === plain || text === plain ? "" : block;
   });
-  return withoutDuplicate.replace(
+  return stampNoteBlocks(withoutDuplicate.replace(
     /<(h2|h3|p|strong)[^>]*>\s*(?:<strong>)?\s*À retenir\s*(?:<\/strong>)?\s*<\/\1>\s*((?:<p[\s\S]*?<\/p>|<ul[\s\S]*?<\/ul>)?)/i,
     (_all, _tag, body) =>
       `<aside class="lesson-reader__callout"><span class="lesson-reader__callout-icon" aria-hidden="true">💡</span><div><p class="lesson-reader__callout-label">À retenir</p>${body || ""}</div></aside>`,
-  );
+  ));
 }
 import TestFlow from "@/app/dashboard/student/learning/tests/[slug]/test-flow";
 import type { TestQuestion } from "@/hooks/use-test-sessions";
@@ -368,7 +371,33 @@ export function LessonPlayView({
     }
   }, []);
   const [focusMode, setFocusMode] = useState(false);
+  useEffect(() => {
+    const openNotes = () => setNotesOpen(true);
+    window.addEventListener("open-reading-notes", openNotes);
+    return () => window.removeEventListener("open-reading-notes", openNotes);
+  }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const blockId = params.get("noteBlock") ?? "";
+    const excerpt = params.get("noteExcerpt") ?? "";
+    if (!blockId && !excerpt) return;
+    let tries = 0;
+    let timer = 0;
+    const tick = () => {
+      const found = revealReadingAnchor(document, { blockId, offset: 0, excerpt });
+      if (found) return;
+      tries += 1;
+      if (tries > 8) {
+        toast.message("Ce passage a été modifié depuis votre note");
+        return;
+      }
+      timer = window.setTimeout(tick, 250);
+    };
+    timer = window.setTimeout(tick, 200);
+    return () => window.clearTimeout(timer);
+  }, [activeLesson.id]);
   const [showLearningStrategyModal, setShowLearningStrategyModal] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [orgBranding, setOrgBranding] = useState<{ logoUrl: string | null; name: string | null }>({
     logoUrl: null,
     name: null,
@@ -1827,6 +1856,9 @@ export function LessonPlayView({
                 <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                 Retour
               </Button>
+              <Button type="button" onClick={() => setNotesOpen(true)} variant="ghost" size="sm" className="h-8 shrink-0 rounded-full border border-slate-200 bg-white px-3 text-[10px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+                Mes notes
+              </Button>
             </div>
             <h2 className="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">{activeLesson.title}</h2>
             {activeModule && activeModule.title !== activeLesson.title ? (
@@ -2756,6 +2788,27 @@ export function LessonPlayView({
         onClose={() => setShowLearningStrategyModal(false)}
         onFocusModeChange={setFocusMode}
       />
+      <ReadingNotesPanel
+        open={notesOpen}
+        onClose={() => setNotesOpen(false)}
+        courseId={courseId}
+        courseTitle={courseTitle || detail.title}
+        playBase={lessonBaseHref ?? cardHref}
+        chapters={modules.map((module, index) => ({
+          id: module.id,
+          number: index + 1,
+          title: module.title,
+          lessons: (module.lessons ?? []).map((lesson) => ({ id: lesson.id, title: lesson.title })),
+        }))}
+        currentLessonId={activeLesson.id}
+        onJump={(note) => {
+          const key = note.chapterLocalId || note.lessonId;
+          if (key !== activeLesson.id) return false;
+          const found = revealReadingAnchor(document, note.anchor);
+          if (!found) toast.message("Ce passage a été modifié depuis votre note");
+          return true;
+        }}
+      />
 
       {!neo && mounted &&
         createPortal(
@@ -2836,6 +2889,7 @@ export function LessonPlayView({
           dyslexia={isDyslexiaMode}
           onToggleDyslexia={() => toggleDyslexiaMode()}
           onOpenStrategy={handleOpenLearningStrategy}
+          onOpenNotes={() => setNotesOpen(true)}
           parts={reader.parts}
           initialOpenPartId={reader.current?.id ?? null}
         >

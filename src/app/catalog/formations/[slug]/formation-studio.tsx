@@ -12,6 +12,9 @@ import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
+import { htmlToPlain } from "@/lib/lms/html-plain";
+import { ReadingNotesPanel } from "@/components/apprenant/reading-notes-panel";
+import type { NoteChapter } from "@/lib/lms/reading-notes";
 import "./formation-studio.css";
 
 const manrope = Manrope({ subsets: ["latin"] });
@@ -99,13 +102,7 @@ function lockExplanation(previousTitle: string, condition?: string): string {
 }
 
 function plainText(value: string): string {
-  return value
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .trim();
+  return htmlToPlain(value);
 }
 
 function hidesChapterKicker(title: string): boolean {
@@ -115,18 +112,6 @@ function hidesChapterKicker(title: string): boolean {
 function joinMeta(parts: Array<string | false | null | undefined>): string {
   return parts.map((part) => (typeof part === "string" ? part.trim() : "")).filter(Boolean).join(" · ");
 }
-
-const NOTE_LABELS: Record<string, string> = {
-  rephrase: "Reformulation",
-  mindmap: "Carte mentale",
-  schema: "Schéma",
-  translate: "Traduction",
-  audio: "Audio",
-  insights: "Analyse",
-  synthesis: "Fiche",
-};
-
-const COURSE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function nodeProgress(node: Node): ItemProgress {
   if (!node.leaves.length) return node.progress;
@@ -178,8 +163,6 @@ export function FormationStudio({
   const [moreOpen, setMoreOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState<"presentation" | "objectives" | "prerequisites" | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [notes, setNotes] = useState<Array<{ id: string; action: string; createdAt: string; excerpt: string; result: string }>>([]);
-  const [notesLoading, setNotesLoading] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachQuestion, setCoachQuestion] = useState("");
   const [coachFeedback, setCoachFeedback] = useState("");
@@ -262,6 +245,19 @@ export function FormationStudio({
     return built;
   }, [playBase, progressById, snapshot]);
 
+  const noteChapters: NoteChapter[] = useMemo(
+    () =>
+      chapters.map((chapter) => ({
+        id: chapter.id,
+        number: chapter.number,
+        title: chapter.title,
+        lessons: chapter.nodes.flatMap((node) => [
+          { id: node.id, title: node.title },
+          ...node.leaves.filter((leaf) => !leaf.id.endsWith("-reading")).map((leaf) => ({ id: leaf.id, title: leaf.title })),
+        ]),
+      })),
+    [chapters],
+  );
   const flatLeaves = useMemo(
     () =>
       chapters.flatMap((chapter) =>
@@ -478,29 +474,6 @@ export function FormationStudio({
     }
     return parts.join("\n\n").slice(0, 12000);
   }, [progressById, snapshot]);
-  const loadNotes = async () => {
-    if (!COURSE_UUID.test(courseId)) {
-      setNotes([]);
-      return;
-    }
-    setNotesLoading(true);
-    try {
-      const response = await fetch(`/api/ai/lesson-assistant?courseId=${encodeURIComponent(courseId)}&limit=50`);
-      const data = await response.json().catch(() => null);
-      const items = Array.isArray(data?.items) ? data.items : [];
-      setNotes(
-        items.map((item: { id?: string; action?: string; created_at?: string; selection_excerpt?: string; transformation?: { result_text?: string | null; result_json?: unknown } }) => ({
-          id: String(item.id ?? ""),
-          action: NOTE_LABELS[String(item.action ?? "")] ?? "Transformation",
-          createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "",
-          excerpt: String(item.selection_excerpt ?? "").trim(),
-          result: String(item.transformation?.result_text ?? (item.transformation?.result_json ? JSON.stringify(item.transformation.result_json) : "")).trim(),
-        })),
-      );
-    } finally {
-      setNotesLoading(false);
-    }
-  };
   const requestQuestion = async (history: Array<{ question: string; answer: string }>) => {
     if (!readMaterial) return;
     setCoachBusy(true);
@@ -797,10 +770,7 @@ export function FormationStudio({
               type="button"
               className="formation-studio__action"
               aria-label="Mes notes"
-              onClick={() => {
-                setNotesOpen(true);
-                void loadNotes();
-              }}
+              onClick={() => setNotesOpen(true)}
             >
               <span className="formation-studio__round formation-studio__round--quiet">
                 <NotebookPen size={22} strokeWidth={2} />
@@ -1017,32 +987,14 @@ export function FormationStudio({
           </div>
         </div>
       ) : null}
-      {notesOpen ? (
-        <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label="Mes notes">
-          <button type="button" className="formation-studio__sheet-backdrop" aria-label="Fermer" onClick={() => setNotesOpen(false)} />
-          <div className="formation-studio__sheet-panel">
-            <h2>Mes notes</h2>
-            <p>Les transformations enregistrées pendant la lecture de cette formation.</p>
-            {notesLoading ? <p>Chargement…</p> : null}
-            {!notesLoading && notes.length === 0 ? <p>Aucune transformation enregistrée pour le moment.</p> : null}
-            {notes.length ? (
-              <ul className="formation-studio__notes">
-                {notes.map((note) => (
-                  <li key={note.id || `${note.action}-${note.createdAt}`}>
-                    <strong>{note.action}</strong>
-                    {note.createdAt ? <small>{note.createdAt}</small> : null}
-                    {note.excerpt ? <p>{note.excerpt}</p> : null}
-                    {note.result ? <p>{note.result.slice(0, 500)}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <button type="button" className="formation-studio__pill" onClick={() => setNotesOpen(false)}>
-              Fermer
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <ReadingNotesPanel
+        open={notesOpen}
+        onClose={() => setNotesOpen(false)}
+        courseId={courseId}
+        courseTitle={title}
+        playBase={playBase}
+        chapters={noteChapters}
+      />
       {coachOpen ? (
         <div className="formation-studio__sheet" role="dialog" aria-modal="true" aria-label="Coach IA">
           <button type="button" className="formation-studio__sheet-backdrop" aria-label="Fermer" onClick={() => setCoachOpen(false)} />

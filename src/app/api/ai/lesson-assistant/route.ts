@@ -16,6 +16,8 @@ import {
 } from "@/lib/ai/prompts/text-transformation";
 import type { AIAction } from "@/lib/ai/utils";
 import { isValidAIAction } from "@/lib/ai/utils";
+import { htmlToPlain } from "@/lib/lms/html-plain";
+import { noteKindOf, type ReadingAnchor } from "@/lib/lms/reading-notes";
 import { getServerClient } from "@/lib/supabase/server";
 import { logAIUsageEvent } from "@/lib/ai/usage-logger";
 
@@ -58,18 +60,20 @@ function isDuplicate(error?: { code?: string | null }): boolean {
   return !!error && error.code === "23505";
 }
 
+const OPTIONAL_NOTE_COLUMNS = ["chapter_local_id", "note_kind", "anchor", "personal_note"];
+
 async function rememberUserTransformation(
   supabase: NonNullable<Awaited<ReturnType<typeof getServerClient>>>,
   payload: Record<string, unknown>,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const attempts: Array<Record<string, unknown>> = [payload];
-  if ("chapter_local_id" in payload) {
-    const { chapter_local_id: _chapter, ...withoutChapter } = payload;
-    attempts.push(withoutChapter);
-  }
-
+  const queue: Array<Record<string, unknown>> = [{ ...payload }];
+  const seen = new Set<string>();
   let lastError = "Enregistrement impossible";
-  for (const row of attempts) {
+  while (queue.length) {
+    const row = queue.shift()!;
+    const signature = Object.keys(row).sort().join(",");
+    if (seen.has(signature)) continue;
+    seen.add(signature);
     const conflict = "chapter_local_id" in row
       ? "user_id,transformation_id,lesson_id,chapter_local_id"
       : "user_id,lesson_id,transformation_id";
@@ -78,8 +82,15 @@ async function rememberUserTransformation(
     const inserted = await supabase.from(USER_HISTORY_TABLE).insert(row);
     if (!inserted.error || isDuplicate(inserted.error)) return { ok: true };
     lastError = inserted.error.message || upserted.error.message || lastError;
-    const missingColumn = inserted.error.code === "42703" || upserted.error.code === "42703";
+    const missingColumn = inserted.error.code === "42703" || upserted.error.code === "42703" || inserted.error.code === "PGRST204" || upserted.error.code === "PGRST204";
     if (!missingColumn) break;
+    for (const field of OPTIONAL_NOTE_COLUMNS) {
+      if (field in row) {
+        const next = { ...row };
+        delete next[field];
+        queue.push(next);
+      }
+    }
   }
   return { ok: false, error: lastError };
 }
@@ -164,6 +175,48 @@ function buildInputHash(text: string, action: string, options: TransformationOpt
     .digest("hex");
 }
 
+async function saveLessonHighlight(
+  text: string,
+  context?: { courseId?: string | null; lessonId?: string | null; chapterLocalId?: string | null },
+  anchor?: ReadingAnchor | null,
+) {
+  const excerpt = htmlToPlain(text).slice(0, 2000);
+  if (excerpt.length < 5) {
+    return NextResponse.json({ error: "Le texte doit contenir au moins 5 caractères" }, { status: 400 });
+  }
+  const supabase = await getServerClient();
+  if (!supabase) return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData?.user?.id) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+  const courseId = isUuid(context?.courseId) ? context?.courseId ?? null : null;
+  const lessonId = isUuid(context?.lessonId) ? context?.lessonId ?? null : null;
+  const chapterLocalRaw = String(context?.chapterLocalId ?? "").trim();
+  const chapterLocalId =
+    chapterLocalRaw || (context?.lessonId != null && !isUuid(context.lessonId) ? String(context.lessonId).trim() : "") || null;
+  const inputHash = buildInputHash(excerpt, "highlight", { place: chapterLocalId || lessonId || courseId || "cours" });
+  const cached = await supabase.from(TRANSFORMATION_TABLE).upsert(
+    { input_hash: inputHash, action: "highlight", format: "text", options: {}, result_text: excerpt, model: "manual" },
+    { onConflict: "input_hash" },
+  ).select("id").single();
+  if (cached.error || !cached.data?.id) {
+    return NextResponse.json({ error: "Enregistrement impossible" }, { status: 500 });
+  }
+  const saved = await rememberUserTransformation(supabase, {
+    user_id: authData.user.id,
+    transformation_id: cached.data.id,
+    course_id: courseId,
+    lesson_id: lessonId,
+    selection_excerpt: excerpt,
+    action: "highlight",
+    note_kind: "highlight",
+    anchor: anchor?.excerpt ? anchor : { blockId: "", offset: 0, excerpt: excerpt.slice(0, 180) },
+    options: { anchor: anchor?.excerpt ? anchor : { blockId: "", offset: 0, excerpt: excerpt.slice(0, 180) } },
+    ...(chapterLocalId ? { chapter_local_id: chapterLocalId } : {}),
+  });
+  return NextResponse.json({ success: true, result: excerpt, saved: saved.ok, saveError: saved.ok ? null : saved.error, action: "highlight" });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -180,6 +233,14 @@ export async function POST(request: NextRequest) {
 
     if (!text || typeof text !== "string" || text.trim().length < 5) {
       return NextResponse.json({ error: "Le texte doit contenir au moins 5 caractères" }, { status: 400 });
+    }
+
+    if (action === "highlight") {
+      const rawAnchor = (body as { anchor?: ReadingAnchor }).anchor;
+      const anchor = rawAnchor && typeof rawAnchor === "object"
+        ? { blockId: String(rawAnchor.blockId ?? ""), offset: Number(rawAnchor.offset) || 0, excerpt: htmlToPlain(String(rawAnchor.excerpt ?? "")).slice(0, 180) }
+        : null;
+      return await saveLessonHighlight(text, context, anchor);
     }
 
     if (!action || !isValidAIAction(action)) {
@@ -390,7 +451,7 @@ export async function POST(request: NextRequest) {
           ? String(context.lessonId).trim()
           : "") ||
         null;
-      const excerpt = text.length > 2000 ? `${text.slice(0, 2000)}…` : text;
+      const excerpt = htmlToPlain(text).slice(0, 2000);
 
       const historyPayload: Record<string, unknown> = {
         user_id: authData.user.id,
@@ -399,6 +460,7 @@ export async function POST(request: NextRequest) {
         lesson_id: lessonId,
         selection_excerpt: excerpt,
         action,
+        note_kind: noteKindOf(action),
         options: normalizedOptions,
       };
       if (chapterLocalId) {
@@ -484,7 +546,7 @@ export async function GET(request: NextRequest) {
     const lessonId = isUuid(rawLessonId) ? rawLessonId : null;
     const courseId = isUuid(rawCourseId) ? rawCourseId : null;
     const limitParam = request.nextUrl.searchParams.get("limit");
-    const limit = limitParam ? Math.min(Number(limitParam) || 20, 50) : 20;
+    const limit = limitParam ? Math.min(Number(limitParam) || 20, 200) : 20;
 
     let query = supabase
       .from(USER_HISTORY_TABLE)
@@ -497,6 +559,10 @@ export async function GET(request: NextRequest) {
         selection_excerpt,
         chapter_local_id,
         action,
+        note_kind,
+        personal_note,
+        anchor,
+        updated_at,
         options,
         transformation:${TRANSFORMATION_TABLE}(
           id,
@@ -533,6 +599,7 @@ export async function GET(request: NextRequest) {
           lesson_id,
           course_id,
           selection_excerpt,
+          chapter_local_id,
           action,
           options,
           transformation:${TRANSFORMATION_TABLE}(
@@ -555,6 +622,39 @@ export async function GET(request: NextRequest) {
       const recovered = await fallback;
       data = recovered.data;
       error = recovered.error;
+      if (error?.code === "42703") {
+        let older = supabase
+          .from(USER_HISTORY_TABLE)
+          .select(
+            `
+            id,
+            created_at,
+            lesson_id,
+            course_id,
+            selection_excerpt,
+            action,
+            options,
+            transformation:${TRANSFORMATION_TABLE}(
+              id,
+              format,
+              result_text,
+              result_json,
+              audio_base64,
+              audio_mime_type,
+              audio_voice,
+              options
+            )
+            `,
+          )
+          .eq("user_id", authData.user.id)
+          .order("created_at", { ascending: false })
+          .limit(limit);
+        if (lessonId) older = older.eq("lesson_id", lessonId);
+        else if (courseId) older = older.eq("course_id", courseId);
+        const again = await older;
+        data = again.data;
+        error = again.error;
+      }
     }
     if (error) {
       if (isTableMissing(error)) {
@@ -577,6 +677,60 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("[ai] Error in lesson-assistant GET", error);
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const id = String(body?.id ?? "");
+    const personalNote = htmlToPlain(String(body?.personalNote ?? "")).slice(0, 2000);
+    if (!isUuid(id)) return NextResponse.json({ error: "Note introuvable" }, { status: 400 });
+    const supabase = await getServerClient();
+    if (!supabase) return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData?.user?.id) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const missingColumn = (code?: string, message?: string) =>
+      code === "42703" || code === "PGRST204" || /column|schema cache/i.test(message ?? "");
+    let updated = await supabase
+      .from(USER_HISTORY_TABLE)
+      .update({ personal_note: personalNote, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", authData.user.id);
+    if (updated.error && missingColumn(updated.error.code, updated.error.message)) {
+      updated = await supabase
+        .from(USER_HISTORY_TABLE)
+        .update({ personal_note: personalNote })
+        .eq("id", id)
+        .eq("user_id", authData.user.id);
+    }
+    if (updated.error && missingColumn(updated.error.code, updated.error.message)) {
+      const current = await supabase.from(USER_HISTORY_TABLE).select("options").eq("id", id).eq("user_id", authData.user.id).maybeSingle();
+      const options = { ...((current.data?.options as Record<string, unknown> | null) ?? {}), personal_note: personalNote };
+      updated = await supabase.from(USER_HISTORY_TABLE).update({ options }).eq("id", id).eq("user_id", authData.user.id);
+    }
+    if (updated.error) return NextResponse.json({ error: "Enregistrement impossible" }, { status: 500 });
+    return NextResponse.json({ success: true, personalNote });
+  } catch (error) {
+    console.error("[ai] Error in lesson-assistant PATCH", error);
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const id = request.nextUrl.searchParams.get("id")?.trim() ?? "";
+    if (!isUuid(id)) return NextResponse.json({ error: "Note introuvable" }, { status: 400 });
+    const supabase = await getServerClient();
+    if (!supabase) return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData?.user?.id) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const removed = await supabase.from(USER_HISTORY_TABLE).delete().eq("id", id).eq("user_id", authData.user.id);
+    if (removed.error) return NextResponse.json({ error: "Suppression impossible" }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[ai] Error in lesson-assistant DELETE", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }

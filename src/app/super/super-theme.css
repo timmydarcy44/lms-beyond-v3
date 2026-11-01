@@ -338,3 +338,18 @@
   background: #eef0f7 !important;
   color: #0a0f1e !important;
 }
+
+.badge-exam-panel {
+  color: #eef0f7;
+}
+
+.badge-exam-panel :is(input, textarea, select) {
+  color: #eef0f7 !important;
+  -webkit-text-fill-color: #eef0f7;
+  caret-color: #eef0f7;
+}
+
+.badge-exam-panel :is(input, textarea, select)::placeholder {
+  color: #8c94b2 !important;
+  -webkit-text-fill-color: #8c94b2;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
+import { openQuestionOf, type BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
 import { useBadgeAssessmentIntegrity } from "@/hooks/use-badge-assessment-integrity";
 import type { BadgeIntegrityMetrics } from "@/lib/openbadges/badge-assessment-integrity";
 import { PassageCase } from "@/components/open-badges/passage/passage-case";
@@ -97,7 +97,7 @@ export function PassageExamHost({
   }
 
   const send = (text: string) => onSubmit(text, integrity.getMetricsSnapshot());
-  const prompt = method.learnerInstruction || method.evaluationPrompt;
+  const prompt = openQuestionOf(method);
 
   if (method.methodId === "qcm") {
     return <PassageQuiz method={method} seed={seed} secondsLeft={left} warning={integrity.warning} onSubmit={send} />;

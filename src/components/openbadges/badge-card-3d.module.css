@@ -59,7 +59,7 @@
 .face {
   transform: translateZ(0.1px);
   overflow: hidden;
-  background: linear-gradient(135deg, #3b3c47 0%, #1c1d24 22%, #2f303a 41%, #121318 63%, #2b2c35 83%, #17181e 100%);
+  background: #101218;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
     inset 0 -1px 0 rgba(0, 0, 0, 0.7),
@@ -138,12 +138,29 @@
 
 .holo {
   position: relative;
-  width: calc(76 / 560 * 100cqi);
-  height: calc(76 / 560 * 100cqi);
+  width: calc(168 / 560 * 100cqi);
+  height: calc(168 / 560 * 100cqi);
   flex: none;
-  border-radius: calc(20 / 560 * 100cqi);
+  border-radius: calc(36 / 560 * 100cqi);
   background: conic-gradient(from var(--angle, 120deg), #b9aeff, #7ff0d9, #ffd6f2, #9ec5ff, #c9b8ff, #b9aeff);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.facePhoto {
+  background: #101218;
+}
+
+.holoPhoto {
+  background: transparent;
+  box-shadow: none;
+}
+
+.holoPhoto .stripes {
+  display: none;
+}
+
+.holoPhoto .photo {
+  inset: 0;
 }
 
 .stripes {

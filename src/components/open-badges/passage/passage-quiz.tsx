@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { drawQuizQuestions, type BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
+import { drawQuizQuestions, quizAskedCount, type BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
 import { PassageButton } from "@/components/open-badges/passage/passage-chrome";
 
 export function PassageQuiz({
@@ -19,8 +19,8 @@ export function PassageQuiz({
 }) {
   const bank = method.quiz?.questions ?? [];
   const questions = useMemo(() => {
-    const count = method.quiz?.randomDraw ? method.quiz.questionCount || bank.length : bank.length;
-    return method.quiz?.randomDraw ? drawQuizQuestions(bank, count, seed) : bank;
+    const count = quizAskedCount(method.quiz);
+    return count < bank.length ? drawQuizQuestions(bank, count, seed) : bank;
   }, [bank, method.quiz, seed]);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -102,7 +102,7 @@ export function PassageQuiz({
         {questions.map((item, itemIndex) => (
           <span
             key={item.id}
-            style={{ background: itemIndex < index ? "#6E5BFF" : itemIndex === index ? "#F2F2F5" : "#1E2130" }}
+            style={{ background: itemIndex < index ? "var(--passage-progress-done)" : itemIndex === index ? "var(--passage-progress-now)" : "var(--passage-progress-todo)" }}
             className="h-1 flex-1 rounded-full"
           />
         ))}
@@ -113,7 +113,7 @@ export function PassageQuiz({
       {warning ? <p className="mt-4 text-sm text-[#F2C15A]">{warning}</p> : null}
       <article className="mt-6 rounded-3xl bg-[#15171E] p-6">
         <p className="text-xs text-[#8A8FA3]">{multiple ? "Plusieurs réponses possibles" : "Une seule réponse"}</p>
-        <h2 className="mt-3 text-xl font-semibold">{question.prompt}</h2>
+        <h2 className="mt-3 text-xl font-semibold" data-passage-prompt>{question.prompt}</h2>
         <div className="mt-5 space-y-2">
           {question.choices.map((choice, choiceIndex) => {
             const on = selected.includes(choice.id);

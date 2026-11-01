@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MODULE_IFRAME_SANDBOX, playgroundSubtitle, type PlaygroundActivity, type PlaygroundActivityType, type SituationMoment } from "@/lib/openbadges/playground-activity";
 
 function fieldClass() {
-  return "w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm";
+  return "w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm text-[#EEF0F7] placeholder:text-[#8C94B2]";
 }
 
 const TYPES: PlaygroundActivityType[] = ["sandbox", "situation", "module"];

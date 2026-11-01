@@ -1,7 +1,28 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Check, Circle } from "lucide-react";
+import { clearPassageMarks, PassageMarks, PassageNotes } from "@/components/open-badges/passage/passage-marks";
+import "./passage-theme.css";
+
+const PILL = { background: "var(--passage-action)", color: "var(--passage-action-text)" };
+
+function usePassageTheme() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    const stored = window.localStorage.getItem("badge-passage-theme");
+    if (stored === "light" || stored === "dark") setTheme(stored);
+  }, []);
+  const choose = (next: "dark" | "light") => {
+    setTheme(next);
+    try {
+      window.localStorage.setItem("badge-passage-theme", next);
+    } catch {
+      /* ignore */
+    }
+  };
+  return [theme, choose] as const;
+}
 
 export type PassageStep = {
   id: string;
@@ -30,7 +51,7 @@ export function PassageButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      style={{ background: "#F2F2F5", color: "#0B0C10" }}
+      style={PILL}
       className={`inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-40 ${className}`}
     >
       {children}
@@ -64,17 +85,76 @@ export function PassageFrame({
   integrityQuit: boolean;
   children: ReactNode;
 }) {
+  const [theme, chooseTheme] = usePassageTheme();
+  const [notesOpen, setNotesOpen] = useState(true);
   const [confirm, setConfirm] = useState(false);
+  const [readingOpen, setReadingOpen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [adapted, setAdapted] = useState(false);
+  const [rewrite, setRewrite] = useState("");
+  const [rewriting, setRewriting] = useState(false);
+  const [readingError, setReadingError] = useState("");
+
+  useEffect(() => () => clearPassageMarks(), []);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("badge-passage-reading") ?? "{}") as { scale?: number; adapted?: boolean };
+      if (stored.scale && stored.scale >= 1 && stored.scale <= 1.5) setScale(stored.scale);
+      if (stored.adapted) setAdapted(true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const remember = (nextScale: number, nextAdapted: boolean) => {
+    setScale(nextScale);
+    setAdapted(nextAdapted);
+    try {
+      localStorage.setItem("badge-passage-reading", JSON.stringify({ scale: nextScale, adapted: nextAdapted }));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const reformulate = async () => {
+    const text = Array.from(document.querySelectorAll("[data-passage-prompt]"))
+      .map((node) => node.textContent?.trim() ?? "")
+      .filter((line) => line.length > 4)
+      .join("\n\n");
+    if (!text) return;
+    setRewriting(true);
+    setReadingError("");
+    try {
+      const response = await fetch("/api/ai/transform-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, action: "rephrase", options: { style: "simplify" } }),
+      });
+      const payload = await response.json();
+      if (!response.ok || typeof payload.result !== "string") {
+        setReadingError(payload.error ?? "Reformulation impossible");
+        return;
+      }
+      setRewrite(payload.result.trim());
+    } catch {
+      setReadingError("Reformulation impossible");
+    } finally {
+      setRewriting(false);
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-[200] overflow-y-auto bg-[#0B0C10] text-[#F2F2F5]">
+    <div className="passage-root fixed inset-0 z-[200] flex bg-[#0B0C10] text-[#F2F2F5]" data-theme={theme}>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto">
       {preview ? (
         <p className="bg-[#15171E] px-4 py-1.5 text-center text-[11px] text-[#8A8FA3]">
           Essai privé. Rien n&apos;est enregistré. Le contrôle d&apos;intégrité est simulé.
         </p>
       ) : null}
       <header className="sticky top-0 z-10 bg-[#0B0C10]/95 px-4 py-3 backdrop-blur sm:px-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <button type="button" onClick={() => setConfirm(true)} className="text-sm text-[#B4B8C8]">
             ‹ Quitter
           </button>
@@ -85,20 +165,50 @@ export function PassageFrame({
             <p className="truncate text-sm font-semibold">{badgeName}</p>
             <p className="text-xs text-[#8A8FA3]">Open Badge · Niveau {level}</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {secondsLeft != null ? (
               <span className="rounded-full bg-[#15171E] px-3 py-1.5 text-xs text-[#F2F2F5]" aria-live="polite">
                 {clock(secondsLeft)}
               </span>
             ) : null}
             <span className="rounded-full bg-[#15171E] px-3 py-1.5 text-xs text-[#2FD08A]">{savedLabel.replace("● ", "● ")}</span>
+            <div className="flex rounded-full p-0.5 text-xs" style={{ background: "var(--passage-chip)" }}>
+              <button type="button" onClick={() => chooseTheme("dark")} style={theme === "dark" ? PILL : undefined} className={`rounded-full px-2.5 py-1 ${theme === "dark" ? "" : "text-[#B4B8C8]"}`}>
+                Sombre
+              </button>
+              <button type="button" onClick={() => chooseTheme("light")} style={theme === "light" ? PILL : undefined} className={`rounded-full px-2.5 py-1 ${theme === "light" ? "" : "text-[#B4B8C8]"}`}>
+                Clair
+              </button>
+            </div>
+            <button type="button" aria-expanded={readingOpen} onClick={() => setReadingOpen((open) => !open)} className="rounded-full bg-[#15171E] px-3 py-1.5 text-xs text-[#F2F2F5]">
+              Aa
+            </button>
           </div>
         </div>
+        {readingOpen ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            {[1, 1.15, 1.3, 1.5].map((value) => (
+              <button key={value} type="button" onClick={() => remember(value, adapted)} style={scale === value ? PILL : undefined} className={`rounded-full px-3 py-1 ${scale === value ? "" : "bg-[#15171E] text-[#B4B8C8]"}`}>
+                {Math.round(value * 100)} %
+              </button>
+            ))}
+            <button type="button" onClick={() => remember(scale, !adapted)} style={adapted ? PILL : undefined} className={`rounded-full px-3 py-1 ${adapted ? "" : "bg-[#15171E] text-[#B4B8C8]"}`}>
+              {adapted ? "Typo adaptée" : "Typo standard"}
+            </button>
+            <button type="button" disabled={rewriting} onClick={() => void reformulate()} className="rounded-full bg-[#15171E] px-3 py-1 text-[#C9C2FF] disabled:opacity-50">
+              {rewriting ? "Reformulation…" : "Reformuler"}
+            </button>
+            <button type="button" onClick={() => clearPassageMarks()} className="rounded-full bg-[#15171E] px-3 py-1 text-[#B4B8C8]">
+              Effacer les prises de note
+            </button>
+            {readingError ? <span className="text-[#F2C15A]">{readingError}</span> : null}
+          </div>
+        ) : null}
         <div className="mt-3 flex justify-center gap-2 overflow-x-auto">
           {steps.map((step) => (
             <span
               key={step.id}
-              style={step.current ? { background: "#F2F2F5", color: "#0B0C10" } : undefined}
+              style={step.current ? PILL : undefined}
               className={`inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs ${
                 step.done
                   ? "bg-[#12352A] text-[#2FD08A]"
@@ -113,7 +223,29 @@ export function PassageFrame({
           ))}
         </div>
       </header>
-      {children}
+      <div style={{ zoom: scale, fontFamily: adapted ? "OpenDyslexic, Verdana, sans-serif" : undefined, letterSpacing: adapted ? "0.04em" : undefined, lineHeight: adapted ? 1.65 : undefined }}>
+        {rewrite ? (
+          <aside className="mx-auto max-w-3xl px-4 pt-4 sm:px-6">
+            <div className="rounded-3xl bg-[#15171E] p-5">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-xs text-[#8A8FA3]">Version reformulée</p>
+                <button type="button" className="text-xs text-[#C9C2FF]" onClick={() => setRewrite("")}>Texte d&apos;origine</button>
+              </div>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{rewrite}</p>
+            </div>
+          </aside>
+        ) : null}
+        {children}
+      </div>
+      </div>
+      <div className={`${notesOpen ? "max-h-[40vh]" : ""} overflow-y-auto border-t border-[#1E2130] bg-[#15171E] lg:hidden`}>
+        <PassageNotes open={notesOpen} onOpenChange={setNotesOpen} placement="dock" />
+      </div>
+      </div>
+      <aside className={`${notesOpen ? "w-80" : "w-14"} hidden min-h-0 shrink-0 overflow-y-auto border-l border-[#1E2130] bg-[#15171E] lg:block`}>
+        <PassageNotes open={notesOpen} onOpenChange={setNotesOpen} placement="rail" />
+      </aside>
+      <PassageMarks />
       {confirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
           <div className="max-w-md rounded-3xl bg-[#15171E] p-6">
@@ -282,8 +414,9 @@ export function PassageDone({
   onLeave: () => void;
   preview: boolean;
 }) {
+  const [theme] = usePassageTheme();
   return (
-    <div className="min-h-screen bg-[#0B0C10] px-6 py-16 text-center text-[#F2F2F5]">
+    <div className="passage-root min-h-screen bg-[#0B0C10] px-6 py-16 text-center text-[#F2F2F5]" data-theme={theme}>
       <div className="mx-auto max-w-lg">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#2FD08A]/20 text-2xl text-[#2FD08A]">
         ✓

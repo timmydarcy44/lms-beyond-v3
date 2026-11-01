@@ -201,28 +201,17 @@ export function PassageVideo({
   const live = phase !== "review";
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[280px_1fr] sm:px-6">
-      <aside className="space-y-4">
-        <section className="rounded-3xl bg-[#15171E] p-5">
-          <p className="text-xs text-[#8A8FA3]">Votre consigne</p>
-          <p className="mt-3 text-lg font-semibold">{prompt || "Présentez votre démarche face caméra."}</p>
-        </section>
-        <section className="space-y-2 rounded-3xl bg-[#15171E] p-5 text-sm">
-          <p className="flex justify-between"><span className="text-[#8A8FA3]">Durée</span><span>30 s à 3 min</span></p>
-          <p className="flex justify-between"><span className="text-[#8A8FA3]">Préparation</span><span>1 minute avant de filmer</span></p>
-          <p className="flex justify-between"><span className="text-[#8A8FA3]">Prises</span><span>2 maximum</span></p>
-        </section>
-        <p className="text-xs text-[#8A8FA3]">
-          Votre vidéo n&apos;est vue que par l&apos;expert Byound qui corrige votre badge. Elle n&apos;est jamais publiée.
-        </p>
-      </aside>
-      <section>
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
+      <p className="text-sm text-[#8A8FA3]">Question</p>
+      <h2 className="mt-2 text-2xl font-semibold" data-passage-prompt>{prompt || "La question n'est pas encore rédigée."}</h2>
+      <p className="mt-3 text-sm text-[#8A8FA3]">30 secondes à 3 minutes · 2 prises · vue seulement par l&apos;expert</p>
+      <section className="mt-6">
         {live ? (
           <div className="relative overflow-hidden rounded-3xl bg-[#15171E]">
-            <video ref={videoRef} muted playsInline autoPlay className="aspect-video w-full object-cover [transform:scaleX(-1)]" />
+            <video ref={videoRef} muted playsInline autoPlay disablePictureInPicture className="aspect-video w-full bg-black object-cover [transform:scaleX(-1)]" />
             {phase === "ask" || phase === "denied" ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#0B0C10]/80 px-6 text-center">
-                <p className="text-sm">{help || "Activez la caméra et le micro pour voir l'aperçu."}</p>
+                <p className="text-sm text-white">{help || "Activez la caméra et le micro pour voir l'aperçu."}</p>
                 <PassageButton onClick={() => void attach()}>{phase === "denied" ? "Réessayer" : "Activer la caméra et le micro"}</PassageButton>
               </div>
             ) : null}
@@ -232,11 +221,11 @@ export function PassageVideo({
               </div>
             ) : null}
             {phase === "record" ? (
-              <span className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs">Prise {take} sur 2</span>
+              <span className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs text-white">Prise {take} sur 2</span>
             ) : null}
             {phase === "prep" ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45">
-                <p className="text-6xl font-semibold">{prep}</p>
+                <p className="text-6xl font-semibold text-white">{prep}</p>
                 <PassageButton onClick={() => setPhase("record")} className="mt-4">Commencer maintenant</PassageButton>
               </div>
             ) : null}
@@ -417,8 +406,8 @@ export function PassageOral({
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 text-center sm:px-6">
-      <p className="text-xs text-[#8A8FA3]">Question 1 sur 1 · tirée au hasard</p>
-      <h2 className="mt-4 text-2xl font-semibold">{prompt || "Décrivez la situation et le geste que vous feriez."}</h2>
+      <p className="text-sm text-[#8A8FA3]">Question</p>
+      <h2 className="mt-2 text-2xl font-semibold" data-passage-prompt>{prompt || "La question n'est pas encore rédigée."}</h2>
       {phase === "prep" ? (
         <div className="mt-8">
           <p className="text-sm text-[#B4B8C8]">Préparation · {prep} s</p>

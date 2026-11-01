@@ -171,7 +171,7 @@ export function BadgeCard3D({
               }}
             />
           ))}
-          <div className={styles.face}>
+          <div className={`${styles.face} ${photoOk && imageUrl ? styles.facePhoto : ""}`}>
             <div className={styles.brush} />
             <div className={styles.light} />
             <div className={styles.shine} />
@@ -184,7 +184,7 @@ export function BadgeCard3D({
                 </span>
               </div>
               <div className={styles.middle}>
-                <div className={styles.holo}>
+                <div className={`${styles.holo} ${photoOk && imageUrl ? styles.holoPhoto : ""}`}>
                   <div className={styles.stripes} />
                   {photoOk && imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element

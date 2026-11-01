@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { FileText, FileUp, ListChecks, Mic, Plus, Sparkles, Video, X } from "lucide-react";
 import { resolveValidatorPhotoUrl } from "@/lib/validators/photo-url";
 import {
@@ -17,12 +18,17 @@ import {
   createEmptyQcmQuestion,
   defaultMethodConfig,
   ensureUniqueQcmIds,
+  quizAskedCount,
   type BadgeMethodConfig,
+  type CaseMaterial,
   type QcmQuestion,
 } from "@/lib/openbadges/badge-method-config";
 import { type BadgeEvaluationMethodId } from "@/lib/openbadges/badge-evaluation";
 import { activityExamKey, listPlaygroundActivities, playgroundCardStatus, playgroundSubtitle, type PlaygroundActivity } from "@/lib/openbadges/playground-activity";
 import { PlaygroundActivityFields } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-playground-fields";
+import { PassageFrame } from "@/components/open-badges/passage/passage-chrome";
+import { examMinutes, PassageExamHost } from "@/components/open-badges/passage/passage-host";
+import type { PassageMeta } from "@/components/open-badges/passage/passage-meta";
 
 const METHODS: Array<{ id: BadgeEvaluationMethodId; title: string; phrase: string; icon: typeof FileText }> = [
   { id: "case_study", title: "Étude de cas", phrase: "Un cas à traiter par écrit.", icon: FileText },
@@ -44,7 +50,7 @@ type Criterion = { id: string; label: string; expectedOutcome?: string | null };
 type Validator = { id: string; first_name?: string | null; last_name?: string | null; full_name?: string | null; description?: string | null; photo_url?: string | null };
 
 function fieldClass() {
-  return "w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm";
+  return "w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm text-[#EEF0F7] placeholder:text-[#8C94B2]";
 }
 
 function instructionOf(config: BadgeMethodConfig | undefined): string {
@@ -105,7 +111,13 @@ export function BadgeBuilderStepExam({
   const [adding, setAdding] = useState(false);
   const [pickingActivity, setPickingActivity] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState<string | null>(null);
+  const [modalityError, setModalityError] = useState("");
   const [quizError, setQuizError] = useState("");
+  const [anthropicPrompt, setAnthropicPrompt] = useState("");
+  const [briefing, setBriefing] = useState(false);
+  const [asLearner, setAsLearner] = useState(false);
+  const [learnerSeconds, setLearnerSeconds] = useState<number | null>(null);
   const [deduced, setDeduced] = useState<Array<{ label: string; description: string; expectedOutcome: string }>>([]);
   const [deducing, setDeducing] = useState(false);
 
@@ -122,7 +134,7 @@ export function BadgeBuilderStepExam({
   const setInstruction = (id: BadgeEvaluationMethodId, value: string) => {
     const current = configOf(id) ?? defaultMethodConfig(id);
     if (id === "case_study") {
-      writeConfig(id, { caseStudy: { context: current.caseStudy?.context ?? "", learnerPrompt: value } });
+      writeConfig(id, { caseStudy: { context: current.caseStudy?.context ?? "", learnerPrompt: value, materials: current.caseStudy?.materials, characterName: current.caseStudy?.characterName } });
       return;
     }
     if (id === "playground") {
@@ -176,6 +188,19 @@ export function BadgeBuilderStepExam({
     const weights = resolvedWeights(ids, Object.fromEntries(practice.criteria.map((link) => [link.criterionId, link.weight])));
     setPractice(methodId, { ...practice, criteria: ids.map((item) => ({ criterionId: item, weight: weights[item] ?? 0 })) });
   };
+
+  useEffect(() => {
+    setAsLearner(false);
+  }, [openId]);
+
+  useEffect(() => {
+    if (variant !== "cards" || !openId) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onOpen(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [variant, openId, onOpen]);
 
   useEffect(() => {
     const next = configs.map((item) => {
@@ -274,6 +299,7 @@ export function BadgeBuilderStepExam({
         criterionId: linked[index % Math.max(1, linked.length)] || undefined,
       }));
       const previous = extra ? quiz.quiz?.questions ?? [] : [];
+      const questions = [...previous, ...incoming];
       writeConfig("qcm", {
         evaluationPrompt: builder.exam.promptCustom.qcm ? quiz.evaluationPrompt : promptFor("qcm"),
         quiz: {
@@ -281,15 +307,96 @@ export function BadgeBuilderStepExam({
           generationMode: "ai",
           title: name,
           level: level ? Number(level) : undefined,
-          randomDraw: true,
+          randomDraw: false,
+          limitDraw: false,
+          questionCount: questions.length,
           passingScorePercent: quiz.quiz?.passingScorePercent ?? 80,
-          questions: [...previous, ...incoming],
+          questions,
         },
       });
     } catch {
       setQuizError("Génération impossible");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const createWithAi = async (key: string, methodId: BadgeEvaluationMethodId, activity?: PlaygroundActivity) => {
+    if (methodId === "qcm") {
+      await generateQuestions(false);
+      return;
+    }
+    if (methodId === "case_study" && !configOf("case_study")?.caseStudy?.characterName?.trim()) {
+      setModalityError("Indiquez d'abord le prénom du personnage.");
+      return;
+    }
+    if (activity?.type === "module") return;
+    const selected = titled.filter((item) => checkedIds(key).includes(item.id));
+    if (selected.length === 0) return;
+    setGeneratingKey(key);
+    setModalityError("");
+    try {
+      const response = await fetch("/api/super-admin/open-badges/generate-modality", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          methodId,
+          activityType: activity?.type,
+          badgeName: name,
+          level,
+          characterName: methodId === "case_study" ? configOf("case_study")?.caseStudy?.characterName?.trim() ?? "" : "",
+          criteria: selected.map((item) => ({ label: item.label, expectedOutcome: item.expectedOutcome ?? "" })),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.modality?.learnerPrompt) {
+        setModalityError(payload.error ?? "Création impossible");
+        return;
+      }
+      const modality = payload.modality as {
+        context?: string;
+        learnerPrompt: string;
+        deliverable?: { title?: string; description?: string };
+        situation?: { character?: string; objective?: string; moments?: Array<{ prompt?: string; choices?: string[]; requiresJustification?: boolean }> };
+      };
+      if (activity) {
+        const situation = activity.type === "situation" ? {
+          character: modality.situation?.character ?? "",
+          objective: modality.situation?.objective ?? "",
+          moments: (modality.situation?.moments ?? []).map((moment) => ({
+            id: crypto.randomUUID(),
+            prompt: moment.prompt ?? "",
+            choices: moment.choices ?? [],
+            freeTalk: (moment.choices ?? []).length === 0,
+            requiresJustification: moment.requiresJustification !== false,
+          })),
+          variants: activity.situation?.variants ?? [],
+          mode: activity.situation?.mode ?? activity.mode,
+        } : activity.situation;
+        updateActivity(key, { ...activity, learnerPrompt: modality.learnerPrompt, situation });
+      } else if (methodId === "case_study") {
+        const current = configOf("case_study");
+        writeConfig(methodId, { caseStudy: { context: modality.context ?? "", learnerPrompt: modality.learnerPrompt, materials: current?.caseStudy?.materials, characterName: current?.caseStudy?.characterName } });
+      } else if (methodId === "video" || methodId === "dictation") {
+        setInstruction(methodId, modality.learnerPrompt.trim());
+      } else {
+        const frame = modality.context?.trim();
+        setInstruction(methodId, frame ? `${frame}\n\n${modality.learnerPrompt}` : modality.learnerPrompt);
+      }
+      const title = modality.deliverable?.title?.trim() ?? "";
+      if (title && methodId !== "qcm") {
+        const practice = practiceOf(key);
+        const format: DeliverableFormat = methodId === "video" ? "video" : methodId === "pdf_upload" ? "file" : "text";
+        const current = practice.deliverables[0];
+        const deliverables = current
+          ? [{ ...current, title, description: modality.deliverable?.description?.trim() || current.description, format }, ...practice.deliverables.slice(1)]
+          : [{ id: crypto.randomUUID(), title, description: modality.deliverable?.description?.trim() ?? "", format }];
+        setPractice(key, { ...practice, deliverables });
+      }
+    } catch {
+      setModalityError("Création impossible");
+    } finally {
+      setGeneratingKey(null);
     }
   };
 
@@ -420,12 +527,70 @@ export function BadgeBuilderStepExam({
             </button>
           );
         }
-        return (
-          <section key={key} className={variant === "cards" ? "fixed inset-y-0 right-0 z-50 w-full space-y-4 overflow-y-auto bg-[#0A0F1E] p-5 lg:w-[560px] lg:border-l lg:border-[#1A2340]" : "space-y-4 rounded-[28px] border border-[#6E5BFF]/50 bg-[#111831] p-5"}>
-            <div className="flex items-center justify-between gap-3">
+        const editor = (
+          <section key={key} className={variant === "cards" ? "space-y-4 p-5" : "space-y-4 rounded-[28px] border border-[#6E5BFF]/50 bg-[#111831] p-5"}>
+            <div className={`flex items-center justify-between gap-3 ${variant === "cards" ? "sticky top-0 z-10 -mx-5 mb-1 bg-[#0A0F1E] px-5 py-3" : ""}`}>
               <h2 className="text-lg font-semibold">{method.title}</h2>
-              <button type="button" className="text-sm text-[#A9B0CC]" onClick={() => onOpen(null)}>{variant === "cards" ? "Fermer" : "Replier"}</button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-full px-3 py-1 text-sm font-semibold"
+                  style={{ background: "#EEF0F7", color: "#0A0F1E" }}
+                  onClick={() => { setLearnerSeconds(null); setAsLearner(true); }}
+                >
+                  Voir comme l&apos;apprenant
+                </button>
+                <button type="button" className="rounded-full border border-[#26304F] px-3 py-1 text-sm text-[#EEF0F7]" onClick={() => onOpen(null)}>{variant === "cards" ? "Fermer" : "Replier"}</button>
+              </div>
             </div>
+            {asLearner && typeof document !== "undefined" ? createPortal((() => {
+              const learnerMethod: BadgeMethodConfig = activity
+                ? {
+                    ...(config ?? defaultMethodConfig("playground")),
+                    methodId: "playground",
+                    evaluationPrompt: config?.evaluationPrompt ?? "",
+                    playground: { learnerPrompt: activity.learnerPrompt, maxAttempts: activity.maxAttempts, activities: [activity] },
+                  }
+                : { ...(config ?? defaultMethodConfig(method.id)), methodId: method.id };
+              const learnerMeta: PassageMeta = {
+                level: Number(level) || 1,
+                competencies: [],
+                criteria: titled.map((item) => ({ label: item.label, outcome: item.expectedOutcome ?? "" })),
+                attempts: builder.exam.attempts,
+                retryDelayDays: builder.exam.retryDelayDays,
+                reviewSlaDays: builder.exam.reviewSlaDays,
+                accommodations: builder.exam.accommodations,
+                integrityCheck: false,
+                integrityToleranceSec: builder.exam.integrityToleranceSec,
+                integrityToleratedLeaves: builder.exam.integrityToleratedLeaves,
+                integrityConsequence: "note",
+              };
+              return (
+                <PassageFrame
+                  badgeName={name || "Open Badge"}
+                  level={learnerMeta.level}
+                  steps={[{ id: key, label: method.title, blurb: "", minutes: examMinutes(method.id), done: false, current: true }]}
+                  secondsLeft={learnerSeconds}
+                  savedLabel="Aperçu"
+                  preview
+                  onQuit={() => setAsLearner(false)}
+                  integrityQuit={false}
+                >
+                  <PassageExamHost
+                    badgeClassId="preview"
+                    userId="preview"
+                    method={learnerMethod}
+                    meta={learnerMeta}
+                    preview
+                    accommodation={false}
+                    seed="apercu"
+                    onTick={setLearnerSeconds}
+                    onSubmit={() => setAsLearner(false)}
+                    onLeave={() => setAsLearner(false)}
+                  />
+                </PassageFrame>
+              );
+            })(), document.body) : null}
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <p className="text-sm text-[#A9B0CC]">Critères évalués par cette épreuve</p>
@@ -460,16 +625,79 @@ export function BadgeBuilderStepExam({
                 </div>
               ) : null}
             </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[#8C94B2]">{linked.length === 0 ? "Choisissez les critères, puis créez le contenu." : "Le contenu généré reste modifiable."}</p>
+              <button
+                type="button"
+                disabled={generating || generatingKey === key || linked.length === 0 || activity?.type === "module"}
+                onClick={() => void createWithAi(key, method.id, activity)}
+                className="bb-white rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                style={{ background: "#EEF0F7", color: "#0A0F1E" }}
+              >
+                {generatingKey === key || (method.id === "qcm" && generating) ? "Création…" : instruction.trim() ? "Recréer avec l'IA" : "Créer avec l'IA"}
+              </button>
+            </div>
+            {activity?.type === "module" ? <p className="text-xs text-[#8C94B2]">Le module interactif s&apos;importe. L&apos;IA ne le rédige pas.</p> : null}
+            {modalityError ? <p className="text-sm text-[#F2C15A]">{modalityError}</p> : null}
             <div>
-              <p className="mb-2 text-sm text-[#A9B0CC]">1. Ce que voit le candidat</p>
+              <p className="mb-2 text-sm text-[#A9B0CC]">{method.id === "video" || method.id === "dictation" ? "La question" : "1. Ce que voit le candidat"}</p>
               {method.id === "case_study" ? (
-                <textarea
-                  value={config?.caseStudy?.context ?? ""}
-                  onChange={(event) => writeConfig(method.id, { caseStudy: { context: event.target.value, learnerPrompt: config?.caseStudy?.learnerPrompt ?? "" } })}
-                  placeholder="Contexte, facultatif"
-                  rows={2}
-                  className={`${fieldClass()} mb-2`}
-                />
+                <>
+                  <input
+                    value={config?.caseStudy?.characterName ?? ""}
+                    onChange={(event) => writeConfig(method.id, { caseStudy: { context: config?.caseStudy?.context ?? "", learnerPrompt: config?.caseStudy?.learnerPrompt ?? "", materials: config?.caseStudy?.materials, characterName: event.target.value } })}
+                    placeholder="Prénom du personnage, un seul"
+                    className={`${fieldClass()} mb-2`}
+                  />
+                  <textarea
+                    value={config?.caseStudy?.context ?? ""}
+                    onChange={(event) => writeConfig(method.id, { caseStudy: { context: event.target.value, learnerPrompt: config?.caseStudy?.learnerPrompt ?? "", materials: config?.caseStudy?.materials, characterName: config?.caseStudy?.characterName } })}
+                    placeholder="Contexte, facultatif"
+                    rows={2}
+                    className={`${fieldClass()} mb-2`}
+                  />
+                  <CaseDossier
+                    materials={config?.caseStudy?.materials ?? []}
+                    prompt={anthropicPrompt}
+                    briefing={briefing}
+                    onMaterials={(materials) => writeConfig("case_study", { caseStudy: { context: config?.caseStudy?.context ?? "", learnerPrompt: config?.caseStudy?.learnerPrompt ?? "", materials, characterName: config?.caseStudy?.characterName } })}
+                    onPrompt={() => {
+                      const characterName = config?.caseStudy?.characterName?.trim() ?? "";
+                      if (!characterName) {
+                        setModalityError("Indiquez d'abord le prénom du personnage.");
+                        return;
+                      }
+                      const selected = titled.filter((item) => checkedIds(key).includes(item.id));
+                      if (selected.length === 0) {
+                        setModalityError("Choisissez au moins un critère.");
+                        return;
+                      }
+                      setBriefing(true);
+                      setModalityError("");
+                      void fetch("/api/super-admin/open-badges/generate-modality", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          purpose: "anthropic",
+                          badgeName: name,
+                          level,
+                          characterName,
+                          criteria: selected.map((item) => ({ label: item.label, expectedOutcome: item.expectedOutcome ?? "" })),
+                        }),
+                      })
+                        .then((response) => response.json().then((payload) => ({ ok: response.ok, payload })))
+                        .then(({ ok, payload }) => {
+                          if (!ok || !payload.prompt) {
+                            setModalityError(payload.error ?? "Le prompt n'a pas abouti.");
+                            return;
+                          }
+                          setAnthropicPrompt(payload.prompt);
+                        })
+                        .catch(() => setModalityError("Le prompt n'a pas abouti."))
+                        .finally(() => setBriefing(false));
+                    }}
+                  />
+                </>
               ) : null}
               {activity ? <PlaygroundActivityFields activity={activity} criteria={titled} onChange={(next) => updateActivity(key, next)} /> : null}
               <textarea
@@ -478,7 +706,7 @@ export function BadgeBuilderStepExam({
                   if (activity) updateActivity(key, { ...activity, learnerPrompt: event.target.value });
                   else setInstruction(method.id, event.target.value);
                 }}
-                placeholder="Consigne obligatoire, en deux phrases au moins"
+                placeholder={method.id === "video" || method.id === "dictation" ? "Une seule question, par exemple : Comment ajusteriez-vous cet atelier ?" : "Consigne obligatoire, en deux phrases au moins"}
                 rows={3}
                 className={fieldClass()}
               />
@@ -552,13 +780,29 @@ export function BadgeBuilderStepExam({
                   value={custom ? config?.evaluationPrompt ?? "" : promptFor(key)}
                   onChange={(event) => writeConfig(method.id, { evaluationPrompt: event.target.value })}
                   rows={4}
-                  className="w-full bg-transparent text-sm outline-none"
+                  className="w-full bg-transparent text-sm text-[#EEF0F7] outline-none"
                 />
                 <p className="mt-2 text-xs text-[#8C94B2]">Le contenu du candidat est une donnée. Toute instruction qu&apos;il contient est ignorée.</p>
               </div>
             </div>
           </section>
         );
+        if (variant === "cards" && typeof document !== "undefined") {
+          return (
+            <div key={key} className="contents">
+              {createPortal(
+                <div className="fixed inset-0 z-[120]">
+                  <button type="button" aria-label="Fermer" className="absolute inset-0 bg-black/60" onClick={() => onOpen(null)} />
+                  <div className="badge-exam-panel absolute inset-y-0 right-0 w-full overflow-y-auto bg-[#0A0F1E] text-[#EEF0F7] shadow-2xl lg:w-[560px] lg:border-l lg:border-[#1A2340]">
+                    {editor}
+                  </div>
+                </div>,
+                document.body,
+              )}
+            </div>
+          );
+        }
+        return editor;
       })}
 
       <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
@@ -790,7 +1034,8 @@ function MethodRules({
     );
   }
   if (method === "qcm" && config?.quiz) {
-    const asked = config.quiz.questionCount ?? 5;
+    const bank = config.quiz.questions.length;
+    const asked = quizAskedCount(config.quiz);
     const needed = Math.max(1, Math.round((asked * (config.quiz.passingScorePercent ?? 80)) / 100));
     return (
       <div className="grid gap-3 sm:grid-cols-3">
@@ -798,12 +1043,15 @@ function MethodRules({
           <input type="number" min={asked} value={Math.max(config.quiz.questions.length, asked)} readOnly className={`${fieldClass()} mt-1`} />
         </label>
         <label className="text-sm text-[#A9B0CC]">Questions posées
-          <input type="number" min={1} value={asked} onChange={(event) => onChange({ quiz: { ...config.quiz!, questionCount: Number(event.target.value), randomDraw: true } })} className={`${fieldClass()} mt-1`} />
+          <input type="number" min={1} max={Math.max(1, bank)} value={asked} onChange={(event) => {
+            const next = Number(event.target.value);
+            onChange({ quiz: { ...config.quiz!, questionCount: next, limitDraw: bank > 0 && next < bank, randomDraw: bank > 0 && next < bank } });
+          }} className={`${fieldClass()} mt-1`} />
         </label>
         <label className="text-sm text-[#A9B0CC]">Seuil
           <input type="number" min={1} max={100} value={config.quiz.passingScorePercent ?? 80} onChange={(event) => onChange({ quiz: { ...config.quiz!, passingScorePercent: Number(event.target.value) } })} className={`${fieldClass()} mt-1`} />
         </label>
-        <p className="sm:col-span-3 text-xs text-[#8C94B2]">{needed} bonnes réponses sur {asked}. Les réponses sont mélangées.</p>
+        <p className="sm:col-span-3 text-xs text-[#8C94B2]">{bank > asked ? `${asked} questions tirées parmi ${bank}` : `Les ${asked || bank} questions préparées sont posées.`} {needed} bonnes réponses pour atteindre le seuil.</p>
       </div>
     );
   }
@@ -886,6 +1134,95 @@ function QuizBank({
           ))}
         </article>
       ))}
+    </div>
+  );
+}
+
+function CaseDossier({
+  materials,
+  prompt,
+  briefing,
+  onMaterials,
+  onPrompt,
+}: {
+  materials: CaseMaterial[];
+  prompt: string;
+  briefing: boolean;
+  onMaterials: (next: CaseMaterial[]) => void;
+  onPrompt: () => void;
+}) {
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [note, setNote] = useState(false);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      const response = await fetch("/api/super-admin/open-badges/case-material", { method: "POST", body });
+      const payload = await response.json();
+      if (!response.ok || !payload.url) {
+        setError(payload.error ?? "Envoi impossible");
+        return;
+      }
+      onMaterials([...materials, { id: crypto.randomUUID(), name: payload.name, kind: payload.kind === "pdf" ? "pdf" : "file", url: payload.url }]);
+    } catch {
+      setError("Envoi impossible");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="mb-3 space-y-3 rounded-2xl border border-[#1A2340] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-[#A9B0CC]">Dossier de l&apos;apprenant</p>
+        <button type="button" disabled={briefing} onClick={onPrompt} className="text-sm text-[#B9B2FF] disabled:opacity-50">
+          {briefing ? "Rédaction…" : "Prompt pour Anthropic"}
+        </button>
+      </div>
+      <p className="text-xs text-[#8C94B2]">Un seul prénom, celui du champ au-dessus. Le prompt et Claude s&apos;y tiennent. Vous déposez ensuite les PDF, un ZIP ou une note.</p>
+      {prompt ? (
+        <div>
+          <textarea readOnly value={prompt} rows={8} className={fieldClass()} />
+          <button type="button" className="mt-2 text-sm text-[#B9B2FF]" onClick={() => void navigator.clipboard.writeText(prompt)}>Copier le prompt</button>
+        </div>
+      ) : null}
+      {materials.map((item) => (
+        <div key={item.id} className="flex items-start justify-between gap-3 rounded-xl bg-[#0B1122] px-3 py-2 text-sm">
+          <span>
+            <span className="block text-[#EEF0F7]">{item.name}</span>
+            {item.kind === "note" && item.text ? <span className="mt-1 block whitespace-pre-wrap text-xs text-[#A9B0CC]">{item.text}</span> : null}
+            {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-[#B9B2FF]">Ouvrir</a> : null}
+          </span>
+          <button type="button" aria-label="Retirer la pièce" onClick={() => onMaterials(materials.filter((row) => row.id !== item.id))}><X className="h-4 w-4" /></button>
+        </div>
+      ))}
+      <div className="flex flex-wrap gap-2">
+        <label className="cursor-pointer rounded-full border border-[#26304F] px-3 py-1 text-sm">
+          {uploading ? "Envoi…" : "Ajouter un PDF ou un ZIP"}
+          <input type="file" accept=".pdf,.zip,.txt,.csv,.png,.jpg,.jpeg,.webp,.docx,application/pdf,application/zip" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = ""; }} />
+        </label>
+        <button type="button" className="rounded-full border border-[#26304F] px-3 py-1 text-sm" onClick={() => setNote((open) => !open)}>Ajouter une note</button>
+      </div>
+      {note ? (
+        <div className="space-y-2">
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Titre de la note" className={fieldClass()} />
+          <textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Le texte que l'apprenant lira" rows={4} className={fieldClass()} />
+          <button type="button" className="text-sm text-[#B9B2FF]" onClick={() => {
+            if (!title.trim() || !text.trim()) return;
+            onMaterials([...materials, { id: crypto.randomUUID(), name: title.trim(), kind: "note", text: text.trim() }]);
+            setTitle("");
+            setText("");
+            setNote(false);
+          }}>Enregistrer la note</button>
+        </div>
+      ) : null}
+      {error ? <p className="text-sm text-[#F2C15A]">{error}</p> : null}
     </div>
   );
 }

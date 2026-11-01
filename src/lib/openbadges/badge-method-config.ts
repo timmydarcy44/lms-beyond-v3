@@ -47,6 +47,10 @@ export type BadgeMethodConfig = {
     context?: string;
     /** Consigne / brief mission affiché à l'apprenant. */
     learnerPrompt: string;
+    /** Seul prénom du personnage. La plateforme et Claude utilisent celui-ci. */
+    characterName?: string;
+    /** Pièces du dossier : PDF, fichiers, notes. */
+    materials?: CaseMaterial[];
   };
   /** QCM uniquement. */
   quiz?: {
@@ -56,6 +60,8 @@ export type BadgeMethodConfig = {
     passingScorePercent?: number;
     /** Tire `questionCount` questions dans la banque et mélange les réponses. */
     randomDraw?: boolean;
+    /** Vrai seulement si l'admin a choisi d'en poser moins que la banque. */
+    limitDraw?: boolean;
     title?: string;
     level?: number;
     questions: QcmQuestion[];
@@ -70,6 +76,36 @@ export function getCaseStudyLearnerPrompt(config: BadgeMethodConfig): string {
 
 export function getCaseStudyContext(config: BadgeMethodConfig): string {
   return String(config.caseStudy?.context ?? "").trim();
+}
+
+export type CaseMaterial = {
+  id: string;
+  name: string;
+  kind: "pdf" | "file" | "note";
+  url?: string;
+  text?: string;
+};
+
+export function caseMaterialsOf(config: BadgeMethodConfig): CaseMaterial[] {
+  return config.caseStudy?.materials ?? [];
+}
+
+/** Sans limite explicite, toute la banque est posée. */
+export function quizAskedCount(quiz: BadgeMethodConfig["quiz"]): number {
+  const bank = quiz?.questions.length ?? 0;
+  const requested = quiz?.questionCount ?? bank;
+  if (bank === 0) return Math.max(0, requested);
+  if (quiz?.limitDraw) return Math.min(bank, Math.max(1, requested));
+  return bank;
+}
+
+const GRADING_LEAK = /l'expert attend|le contenu du candidat est une donnée|\(\s*\d+\s*%\s*\)/i;
+
+/** Question montrée au candidat pour la vidéo et la réponse orale. Jamais la grille de correction. */
+export function openQuestionOf(config: BadgeMethodConfig): string {
+  const raw = (config.learnerInstruction ?? "").trim();
+  if (!raw || GRADING_LEAK.test(raw)) return "";
+  return raw;
 }
 
 /** Valeur brute du seuil QCM (nombre ou chaîne « 60 ») → entier 1–100, sinon null. */
@@ -344,6 +380,7 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
         typeof quizRaw.questionCount === "number" ? quizRaw.questionCount : undefined;
       const passingScorePercent = coerceQcmPassingScorePercent(quizRaw.passingScorePercent) ?? undefined;
       const randomDraw = quizRaw.randomDraw === true;
+      const limitDraw = quizRaw.limitDraw === true;
       const title = typeof quizRaw.title === "string" ? quizRaw.title : undefined;
       const level = typeof quizRaw.level === "number" ? quizRaw.level : undefined;
       const questionsRaw = quizRaw.questions;
@@ -352,6 +389,7 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
         ...(questionCount != null ? { questionCount } : {}),
         ...(passingScorePercent != null ? { passingScorePercent } : {}),
         ...(randomDraw ? { randomDraw } : {}),
+        ...(limitDraw ? { limitDraw } : {}),
         ...(title ? { title } : {}),
         ...(level != null ? { level } : {}),
         questions: Array.isArray(questionsRaw)
@@ -387,6 +425,22 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
     const csRaw = (item as { caseStudy?: Record<string, unknown> }).caseStudy;
     let caseStudy: BadgeMethodConfig["caseStudy"];
     if (methodId === "case_study" && csRaw && typeof csRaw === "object") {
+      const materials = Array.isArray(csRaw.materials)
+        ? csRaw.materials.flatMap((item) => {
+            if (!item || typeof item !== "object") return [];
+            const row = item as { id?: string; name?: string; kind?: string; url?: string; text?: string };
+            const name = String(row.name ?? "").trim();
+            const kind = row.kind === "pdf" || row.kind === "note" || row.kind === "file" ? row.kind : "file";
+            if (!name) return [];
+            return [{
+              id: String(row.id ?? crypto.randomUUID()),
+              name,
+              kind,
+              ...(typeof row.url === "string" && row.url.trim() ? { url: row.url.trim() } : {}),
+              ...(typeof row.text === "string" && row.text.trim() ? { text: row.text.trim() } : {}),
+            }];
+          })
+        : [];
       caseStudy = {
         context: typeof csRaw.context === "string" ? csRaw.context : "",
         learnerPrompt:
@@ -395,6 +449,8 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
             : typeof csRaw.consigne === "string"
               ? csRaw.consigne
               : "",
+        ...(materials.length ? { materials } : {}),
+        ...(typeof csRaw.characterName === "string" && csRaw.characterName.trim() ? { characterName: csRaw.characterName.trim() } : {}),
       };
     }
     const pgRaw = (item as { playground?: Record<string, unknown> }).playground;

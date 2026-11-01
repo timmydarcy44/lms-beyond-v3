@@ -1,7 +1,6 @@
 import type { EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import { MISSING_ROUTE } from "@/lib/edge-site/neo-mega-menus";
-import { EDGE_PREMIUM_OPEN_BADGES_VIDEO } from "@/lib/edge-site/premium-constants";
 
 export const HOME_LOGOS: { name: string; src: string }[] = [];
 
@@ -12,7 +11,7 @@ export const HOME_STATS: { value: string; label: string; source?: string }[] = [
 ];
 
 export const HOME_VIDEO = {
-  src: EDGE_PREMIUM_OPEN_BADGES_VIDEO,
+  src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound_OpenBadges_v16.mp4",
   title: "Identifier. Former. Valoriser.",
 } as const;
 

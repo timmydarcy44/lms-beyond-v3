@@ -77,15 +77,6 @@
   color: #556070;
 }
 
-::highlight(passage-mark) {
-  background-color: #f6d56a;
-  color: #1c1e26;
-}
-
-::highlight(passage-mark-pdf) {
-  background-color: rgb(246 213 106 / 0.55);
-}
-
 .passage-pdf-page {
   position: relative;
   width: fit-content;

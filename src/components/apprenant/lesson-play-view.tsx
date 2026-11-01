@@ -372,6 +372,14 @@ export function LessonPlayView({
   }, []);
   const [focusMode, setFocusMode] = useState(false);
   useEffect(() => {
+    const id = "lesson-note-highlight-style";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = "::highlight(lesson-note){background-color:#f6d56a;color:#1c1e26}";
+    document.head.appendChild(style);
+  }, []);
+  useEffect(() => {
     const openNotes = () => setNotesOpen(true);
     window.addEventListener("open-reading-notes", openNotes);
     return () => window.removeEventListener("open-reading-notes", openNotes);

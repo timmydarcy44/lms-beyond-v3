@@ -1,8 +1,3 @@
-::highlight(lesson-note) {
-  background-color: #f6d56a;
-  color: #1c1e26;
-}
-
 .lesson-note-flash {
   animation: lesson-note-flash 2s ease;
 }

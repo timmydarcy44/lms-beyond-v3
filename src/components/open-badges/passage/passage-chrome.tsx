@@ -10,6 +10,13 @@ const PILL = { background: "var(--passage-action)", color: "var(--passage-action
 function usePassageTheme() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   useEffect(() => {
+    const id = "passage-mark-highlight-style";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.textContent = "::highlight(passage-mark){background-color:#f6d56a;color:#1c1e26}::highlight(passage-mark-pdf){background-color:rgb(246 213 106 / 0.55)}";
+      document.head.appendChild(style);
+    }
     const stored = window.localStorage.getItem("badge-passage-theme");
     if (stored === "light" || stored === "dark") setTheme(stored);
   }, []);

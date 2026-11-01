@@ -57,7 +57,8 @@ function criteriaNarrative(row: Record<string, unknown>): string {
       const record = item as Record<string, unknown>;
       const label = String(record.label ?? "").trim();
       const description = String(record.description ?? "").trim();
-      return [label, description].filter(Boolean).join(" — ");
+      const publicDescription = /^Source\s*:/i.test(description) ? "" : description;
+      return [label, publicDescription].filter(Boolean).join(" — ");
     })
     .filter(Boolean)
     .join("\n");
@@ -74,8 +75,10 @@ function alignmentsFrom(raw: unknown): BadgeAlignment[] {
       {
         targetName,
         targetUrl: typeof row.targetUrl === "string" ? row.targetUrl : undefined,
+        targetDescription: typeof row.targetDescription === "string" ? row.targetDescription : undefined,
         targetFramework: typeof row.targetFramework === "string" ? row.targetFramework : undefined,
         targetCode: typeof row.targetCode === "string" ? row.targetCode : undefined,
+        targetType: typeof row.targetType === "string" ? row.targetType : undefined,
       },
     ];
   });

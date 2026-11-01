@@ -5,7 +5,7 @@ export const BADGE_EVALUATION_METHODS = [
   { id: "dictation", label: "Réponse orale" },
   { id: "video", label: "Vidéo" },
   { id: "pdf_upload", label: "Document" },
-  { id: "playground", label: "Playground IA" },
+  { id: "playground", label: "Playground" },
 ] as const;
 
 export const PLAYGROUND_DEFAULT_MAX_ATTEMPTS = 2;

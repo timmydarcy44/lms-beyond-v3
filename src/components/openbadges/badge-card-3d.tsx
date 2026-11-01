@@ -9,6 +9,7 @@ type Props = {
   recipientName: string;
   issuedLabel: string;
   level: number | null;
+  levelLabel?: string | null;
   imageUrl?: string | null;
   state?: BadgeVerificationState;
   compact?: boolean;
@@ -42,6 +43,7 @@ export function BadgeCard3D({
   recipientName,
   issuedLabel,
   level,
+  levelLabel,
   imageUrl,
   state = "verified",
   compact = false,
@@ -193,7 +195,7 @@ export function BadgeCard3D({
                 </div>
                 <div className="min-w-0">
                   <p className={styles.name}>{name}</p>
-                  {level != null ? <p className={styles.level}>Niveau {level}</p> : null}
+                  {level != null ? <p className={styles.level}>{levelLabel?.trim() ? `Niveau ${level} · ${levelLabel.trim()}` : `Niveau ${level}`}</p> : null}
                 </div>
               </div>
               <div className={styles.footer}>

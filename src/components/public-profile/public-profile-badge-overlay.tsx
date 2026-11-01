@@ -97,7 +97,7 @@ export function PublicProfileBadgeOverlay({
 
           <div>
             <h3 className="text-[10px] font-semibold uppercase tracking-[0.25em] text-black/45">
-              Critères d&apos;obtention
+              Critères d&apos;évaluation
             </h3>
             {badge.criteria.length > 0 ? (
               <ol className="mt-3 space-y-3">

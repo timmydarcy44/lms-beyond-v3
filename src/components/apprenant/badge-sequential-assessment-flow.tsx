@@ -1,14 +1,57 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Manrope } from "next/font/google";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
-import { BadgeMethodResponsePanel } from "@/components/open-badges/badge-method-response-panel";
 import { BadgeEpreuveCompletion } from "@/components/apprenant/badge-epreuve-completion";
+import {
+  PassageBriefing,
+  PassageDone,
+  PassageFrame,
+  type PassageStep,
+} from "@/components/open-badges/passage/passage-chrome";
+import { examMinutes, PassageExamHost } from "@/components/open-badges/passage/passage-host";
+import {
+  addBusinessDays,
+  formatFrenchDate,
+  type PassageMeta,
+} from "@/components/open-badges/passage/passage-meta";
 import type { BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
 import { getPlaygroundMaxAttempts, methodConfigLabel } from "@/lib/openbadges/badge-method-config";
+import { listPlaygroundActivities } from "@/lib/openbadges/playground-activity";
 import type { BadgeEvaluationMethodId } from "@/lib/openbadges/badge-evaluation";
+
+const manrope = Manrope({ subsets: ["latin"], display: "swap" });
+
+function shortExamBlurb(method: BadgeMethodConfig, fallback: string) {
+  const learner = method.learnerInstruction?.trim() ?? "";
+  if (learner && learner.length < 90 && !/expert|au moins/i.test(learner)) return learner;
+  if (method.methodId === "qcm") {
+    const count = method.quiz?.questionCount || method.quiz?.questions.length || 0;
+    const score = method.quiz?.passingScorePercent ?? 80;
+    return count ? `${count} questions · seuil ${score} %` : "Questions à choix.";
+  }
+  if (method.methodId === "case_study") return "Un dossier à lire, une réponse rédigée.";
+  if (method.methodId === "video") return "Une prise de parole filmée · 2 prises";
+  if (method.methodId === "dictation") return "Une question tirée au hasard, une réponse audio.";
+  if (method.methodId === "playground") return "Un échange en situation.";
+  return fallback;
+}
+
+const DEFAULT_META: PassageMeta = {
+  level: 1,
+  competencies: [],
+  criteria: [],
+  attempts: 3,
+  retryDelayDays: 7,
+  reviewSlaDays: 5,
+  accommodations: true,
+  integrityCheck: true,
+  integrityToleranceSec: 2,
+  integrityToleratedLeaves: 1,
+  integrityConsequence: "attempt",
+};
 
 type EarnerAuth = {
   userId: string;
@@ -68,6 +111,7 @@ export function BadgeSequentialAssessmentFlow({
   initialAuth,
   initialConfig,
   preview = false,
+  passage,
 }: {
   badgeClassId: string;
   presentationHref: string;
@@ -75,11 +119,15 @@ export function BadgeSequentialAssessmentFlow({
   initialConfig?: InitialConfig | null;
   /** Essai super admin : aucune réponse n'est enregistrée, aucun badge n'est délivré. */
   preview?: boolean;
+  passage?: PassageMeta;
 }) {
   const [auth, setAuth] = useState<EarnerAuth | null>(initialAuth ?? null);
   const [config, setConfig] = useState<InitialConfig | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [accommodation, setAccommodation] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const restartHandledRef = useRef(false);
@@ -204,30 +252,6 @@ export function BadgeSequentialAssessmentFlow({
     [config],
   );
 
-  const handlePlaygroundAttemptRecorded = useCallback((nextUsed: number) => {
-    setConfig((c) => (c ? { ...c, playgroundAttemptsUsed: nextUsed } : c));
-  }, []);
-
-  const completePlayground = useCallback(() => {
-    if (!config) return;
-    setCompletedIds((prev) => {
-      const nextCompleted = Array.from(new Set([...prev, "playground"]));
-      const nextIndex = config.methodConfigs.findIndex((m) => !nextCompleted.includes(m.methodId));
-      setActiveIndex(nextIndex >= 0 ? nextIndex : config.methodConfigs.length);
-      setConfig((c) => {
-        if (!c) return c;
-        const nextSubmitted = Array.from(new Set([...(c.submittedMethodIds ?? []), "playground"]));
-        const ready = c.methodConfigs.every((m) => nextSubmitted.includes(m.methodId));
-        return {
-          ...c,
-          submittedMethodIds: nextSubmitted,
-          readyForFinalEvaluation: ready,
-        };
-      });
-      return nextCompleted;
-    });
-  }, [config]);
-
   const submitMethod = async (payload: {
     methodId: string;
     responseText: string;
@@ -239,6 +263,7 @@ export function BadgeSequentialAssessmentFlow({
     if (!auth || !config) return;
     if (preview) {
       toast.success(`${methodConfigLabel(payload.methodId as BadgeEvaluationMethodId)} — essai, non enregistré`);
+      setStarted(false);
       markMethodComplete(payload.methodId);
       setConfig((c) => {
         if (!c) return c;
@@ -292,16 +317,13 @@ export function BadgeSequentialAssessmentFlow({
       return;
     }
 
-    if (payload.methodId === "playground") {
-      return;
-    }
-
     if (payload.integrityMetrics.integrityFailed) {
       toast.warning("Réponse enregistrée — session signalée (onglet).");
     } else {
       toast.success(`${methodConfigLabel(payload.methodId as BadgeEvaluationMethodId)} terminé`);
     }
 
+    setStarted(false);
     markMethodComplete(payload.methodId);
     setConfig((c) => {
       if (!c) return c;
@@ -318,21 +340,36 @@ export function BadgeSequentialAssessmentFlow({
   };
 
   const activeMethod = config?.methodConfigs[activeIndex] ?? null;
-  const total = config?.methodConfigs.length ?? 0;
-
-  const pendingMethods = useMemo(
-    () => config?.methodConfigs.filter((m) => !completedIds.includes(m.methodId)) ?? [],
-    [config, completedIds],
-  );
 
   const readyForFinalEvaluation = Boolean(config?.readyForFinalEvaluation);
+  const meta = passage ?? DEFAULT_META;
+
+  const steps: PassageStep[] = (config?.methodConfigs ?? []).map((method, index) => {
+    const activity = method.methodId === "playground" ? listPlaygroundActivities(method.playground)[0] : null;
+    const label =
+      activity?.type === "situation"
+        ? "Mise en situation"
+        : activity?.type === "sandbox"
+          ? "Bac à sable"
+          : activity?.type === "module"
+            ? "Module"
+            : methodConfigLabel(method.methodId);
+    return {
+      id: method.methodId,
+      label,
+      blurb: shortExamBlurb(method, label),
+      minutes: examMinutes(method.methodId),
+      done: completedIds.includes(method.methodId),
+      current: started && index === activeIndex,
+    };
+  });
 
   if (loadError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#030303] px-6 text-center text-white">
+      <div className={`${manrope.className} flex min-h-screen flex-col items-center justify-center bg-[#0B0C10] px-6 text-center text-[#F2F2F5]`}>
         <p className="text-lg">{loadError}</p>
-        <Link href={presentationHref} className="mt-6 text-[#FF3B30] hover:underline">
-          Retour à la présentation
+        <Link href={presentationHref} className="mt-6 text-sm text-[#C9C2FF]">
+          Retour
         </Link>
       </div>
     );
@@ -340,7 +377,7 @@ export function BadgeSequentialAssessmentFlow({
 
   if (!auth || !config) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#030303] text-sm text-white/50">
+      <div className={`${manrope.className} flex min-h-screen items-center justify-center bg-[#0B0C10] text-sm text-[#8A8FA3]`}>
         Chargement de l&apos;épreuve…
       </div>
     );
@@ -348,9 +385,9 @@ export function BadgeSequentialAssessmentFlow({
 
   if (config.methodConfigs.length === 0) {
     return (
-      <div className="mx-auto max-w-lg px-6 py-16 text-center text-white">
+      <div className={`${manrope.className} mx-auto max-w-lg bg-[#0B0C10] px-6 py-16 text-center text-[#F2F2F5]`}>
         <p>Aucune épreuve configurée pour ce badge.</p>
-        <Link href={presentationHref} className="mt-4 inline-block text-[#FF3B30] hover:underline">
+        <Link href={presentationHref} className="mt-4 inline-block text-sm text-[#C9C2FF]">
           Retour
         </Link>
       </div>
@@ -360,101 +397,90 @@ export function BadgeSequentialAssessmentFlow({
   if (readyForFinalEvaluation) {
     if (preview) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-[#030303] px-6 text-center text-white">
-          <p className="text-2xl font-bold">Essai terminé</p>
-          <p className="mt-3 max-w-md text-white/70">
-            Aucun Open Badge n&apos;a été délivré. Les réponses n&apos;ont pas été enregistrées.
-          </p>
-          <Link href={presentationHref} className="mt-6 text-[#FF3B30] hover:underline">
-            Retour à l&apos;édition
-          </Link>
+        <div className={manrope.className}>
+          <PassageDone
+            preview
+            expertName="notre équipe"
+            resultDate={formatFrenchDate(addBusinessDays(new Date(), meta.reviewSlaDays))}
+            steps={steps.map((step) => ({ ...step, done: true }))}
+            onLeave={() => {
+              window.location.href = presentationHref;
+            }}
+          />
         </div>
       );
     }
-    return (
-      <BadgeEpreuveCompletion badgeClassId={badgeClassId} badgeName={config.name} auth={auth} />
-    );
+    return <BadgeEpreuveCompletion badgeClassId={badgeClassId} badgeName={config.name} auth={auth} />;
   }
 
+  const watched = activeMethod?.methodId === "qcm" || activeMethod?.methodId === "case_study";
+  const lockRaw =
+    typeof window !== "undefined" && activeMethod
+      ? window.localStorage.getItem(`badge-passage-lock:${auth.userId}:${badgeClassId}:${activeMethod.methodId}`)
+      : null;
+  const lockedUntil = lockRaw ? new Date(lockRaw) : null;
+  const locked = Boolean(lockedUntil && lockedUntil.getTime() > Date.now());
+
   return (
-    <div className="min-h-screen bg-[#030303] pb-20 text-white">
-      <div
-        className={`mx-auto px-5 pt-8 sm:px-8 ${
-          activeMethod?.methodId === "case_study" ? "max-w-6xl" : "max-w-3xl"
-        }`}
+    <div className={manrope.className}>
+      <PassageFrame
+        badgeName={config.name}
+        level={meta.level}
+        steps={steps}
+        secondsLeft={started ? secondsLeft : null}
+        savedLabel="● Enregistré"
+        preview={preview}
+        integrityQuit={started && watched && meta.integrityConsequence === "attempt"}
+        onQuit={() => {
+          window.location.href = presentationHref;
+        }}
       >
-        <Link
-          href={presentationHref}
-          className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {preview ? "Retour à l'édition" : "Présentation du badge"}
-        </Link>
-
-        {preview ? (
-          <p className="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-            Essai privé. Rien n&apos;est enregistré et aucun badge n&apos;est délivré. Publiez le badge pour le mettre en ligne.
-          </p>
-        ) : null}
-
-        <header className="mt-8 space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[#FF3B30]/90">
-            Épreuve {completedIds.length + 1} sur {total}
-          </p>
-          <h1 className="text-2xl font-bold sm:text-3xl">{config.name}</h1>
-          <p className="text-sm text-white/60">
-            Mode en cours : {methodConfigLabel(activeMethod!.methodId)}
-            {pendingMethods.length > 1
-              ? ` — encore ${pendingMethods.length - 1} épreuve(s) après celle-ci`
-              : null}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-2">
-            {config.methodConfigs.map((method) => {
-              const done = completedIds.includes(method.methodId);
-              const isCurrent = method.methodId === activeMethod?.methodId;
-              return (
-                <span
-                  key={method.methodId}
-                  className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                    done
-                      ? "bg-emerald-500/20 text-emerald-300"
-                      : isCurrent
-                        ? "bg-[#FF3B30]/20 text-[#FF3B30]"
-                        : "bg-white/8 text-white/40"
-                  }`}
-                >
-                  {methodConfigLabel(method.methodId)}
-                  {done ? " ✓" : ""}
-                </span>
-              );
-            })}
+        {!started || !activeMethod ? (
+          <PassageBriefing
+            steps={steps}
+            resume={completedIds.length > 0}
+            attempts={meta.attempts}
+            retryDelayDays={meta.retryDelayDays}
+            reviewMonths={12}
+            competencies={meta.competencies}
+            criteria={meta.criteria}
+            accommodationsOffered={meta.accommodations}
+            onStart={(next) => {
+              setAccommodation(next);
+              setStarted(true);
+            }}
+          />
+        ) : locked && lockedUntil ? (
+          <div className="mx-auto max-w-lg px-6 py-20 text-center">
+            <h1 className="text-2xl font-semibold">L&apos;épreuve s&apos;est arrêtée</h1>
+            <p className="mt-3 text-sm text-[#B4B8C8]">
+              Il vous reste {Math.max(0, meta.attempts - 1)} tentative, disponible le {formatFrenchDate(lockedUntil)}.
+            </p>
           </div>
-        </header>
-
-        <div className="mt-10">
-          {activeMethod ? (
-            <BadgeMethodResponsePanel
-              key={activeMethod.methodId}
-              badgeClassId={badgeClassId}
-              method={activeMethod}
-              userId={auth.userId}
-              earnerAuth={auth}
-              preview={preview}
-              playgroundAttemptsUsed={
-                activeMethod.methodId === "playground" ? config.playgroundAttemptsUsed ?? 0 : 0
-              }
-              onPlaygroundAttemptRecorded={
-                activeMethod.methodId === "playground" ? handlePlaygroundAttemptRecorded : undefined
-              }
-              onPlaygroundComplete={
-                activeMethod.methodId === "playground" ? completePlayground : undefined
-              }
-              loading={loading}
-              onSubmit={submitMethod}
-            />
-          ) : null}
-        </div>
-      </div>
+        ) : (
+          <PassageExamHost
+            key={activeMethod.methodId}
+            badgeClassId={badgeClassId}
+            userId={auth.userId}
+            method={activeMethod}
+            meta={meta}
+            preview={preview}
+            accommodation={accommodation}
+            seed={`${auth.userId}:${badgeClassId}`}
+            onTick={setSecondsLeft}
+            onLeave={() => {
+              window.location.href = presentationHref;
+            }}
+            onSubmit={(text, metrics) => {
+              void submitMethod({
+                methodId: activeMethod.methodId,
+                responseText: text,
+                integrityMetrics: metrics,
+              });
+            }}
+          />
+        )}
+      </PassageFrame>
     </div>
   );
 }

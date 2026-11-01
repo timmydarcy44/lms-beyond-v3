@@ -279,6 +279,7 @@ export function ExpertShell({
           { label: "Mes formations", href: "/dashboard/expert/formations" },
           { label: "Proposer une formation", href: "/dashboard/expert/formations/proposer" },
           { label: "Mes résultats", href: "/dashboard/expert/resultats" },
+          { label: "Compétences à valider", href: "/dashboard/expert/competences" },
         ],
       },
       { label: "Byound Certified", href: "/dashboard/expert/certification", icon: Award },

@@ -377,6 +377,7 @@ export function LessonPlayView({
   const [progressMap, setProgressMap] = useState<Record<string, { state: string; percent: number | null }>>({});
   const [showCertificationOverlay, setShowCertificationOverlay] = useState(false);
   const [badgeConfig, setBadgeConfig] = useState<any>(null);
+  const [linkedOpenBadges, setLinkedOpenBadges] = useState<Array<{ id: string; name: string; level: number | null }>>([]);
   const [caseAiAnalysis, setCaseAiAnalysis] = useState<string | null>(null);
   const [caseAiLoading, setCaseAiLoading] = useState(false);
   const [badgeDraft, setBadgeDraft] = useState({
@@ -664,12 +665,15 @@ export function LessonPlayView({
     setShowCertificationOverlay(true);
     setBadgeSubmitted(false);
     setBadgeConfig(null);
+    setLinkedOpenBadges([]);
     try {
       const res = await fetch(`/api/earner/certification/badge?courseId=${encodeURIComponent(courseId)}`);
       const json = await res.json();
       setBadgeConfig(json?.badge ?? null);
+      setLinkedOpenBadges(Array.isArray(json?.linkedOpenBadges) ? json.linkedOpenBadges : []);
     } catch {
       setBadgeConfig(null);
+      setLinkedOpenBadges([]);
     }
   };
 
@@ -2342,6 +2346,20 @@ export function LessonPlayView({
                   Déposez votre preuve. Notre équipe (et Byound AI) la vérifie avant attribution.
                 </p>
               </div>
+              {linkedOpenBadges.length > 0 ? (
+                <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-sm text-white/80">Ce badge vous est proposé à la fin de la formation.</p>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {linkedOpenBadges.map((badge) => (
+                      <li key={badge.id}>
+                        <Link href={`/dashboard/apprenant/open-badges/${badge.id}`} className="text-[#C4B5FD] underline">
+                          {badge.name}{badge.level ? ` · Niveau ${badge.level}` : ""}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               {badgeSubmitted ? (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">

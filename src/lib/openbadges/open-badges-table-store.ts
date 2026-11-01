@@ -1,5 +1,7 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { getBadgeCriteriaUrl } from "@/lib/openbadges/urls";
+import { readCompetencies } from "@/lib/openbadges/badge-builder";
+import { competencyAlignments } from "@/lib/openbadges/badge-catalog";
 import type { CreateBadgeClassRpcPayload } from "@/lib/openbadges/badge-repository";
 
 type OpenBadgeRow = Record<string, unknown>;
@@ -60,7 +62,46 @@ export function openBadgeRowToBadgeClass(row: OpenBadgeRow): Record<string, unkn
     achievementType: row.achievement_type ?? null,
     expiresAfterDays: row.expires_after_days ?? null,
     builder: config.builder ?? null,
+    alignments: row.alignments ?? null,
   };
+}
+
+function publicCriteriaItems(raw: unknown) {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item, index) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as { label?: string; description?: string | null; sortOrder?: number };
+    const label = String(row.label ?? "").trim();
+    if (!label) return [];
+    return [{
+      label,
+      description: row.description ? String(row.description) : null,
+      sortOrder: Number(row.sortOrder ?? index),
+    }];
+  });
+}
+
+function accessColumns(builder: unknown, status: unknown, existingPublished: unknown): Record<string, unknown> {
+  if (!builder || typeof builder !== "object" || Array.isArray(builder)) return {};
+  const exam = (builder as { exam?: Record<string, unknown> }).exam;
+  if (!exam || typeof exam !== "object") return {};
+  const access = String(exam.accessMode ?? "");
+  const patch: Record<string, unknown> = {
+    prerequisites: {
+      badgeIds: Array.isArray(exam.prerequisiteBadgeIds) ? exam.prerequisiteBadgeIds : [],
+      courseIds: Array.isArray(exam.prerequisiteCourseIds) ? exam.prerequisiteCourseIds : [],
+    },
+  };
+  if (access === "all" || access === "org" || access === "invite") patch.access_mode = access;
+  if (String(status ?? "").toUpperCase() === "ACTIVE" && !existingPublished) {
+    patch.published_at = new Date().toISOString();
+  }
+  return patch;
+}
+
+function alignmentsFromBuilder(builder: unknown) {
+  if (!builder || typeof builder !== "object" || Array.isArray(builder)) return null;
+  return competencyAlignments(readCompetencies(builder as { competencies?: unknown; skills?: unknown }));
 }
 
 function buildEvaluationConfig(payload: CreateBadgeClassRpcPayload, criteriaUrl: string | null) {
@@ -107,6 +148,9 @@ function buildInsertRow(payload: CreateBadgeClassRpcPayload, criteriaUrl: string
     achievement_type: payload.achievementType ?? "Competency",
     expires_after_days: payload.expiresAfterDays ?? null,
     level: payload.level ?? null,
+    criteria_items: publicCriteriaItems(payload.criteria),
+    alignments: alignmentsFromBuilder(payload.builder) ?? [],
+    ...accessColumns(payload.builder, payload.status, null),
     updated_at: new Date().toISOString(),
   };
 }
@@ -285,6 +329,9 @@ export async function updateOpenBadgeClassRow(
     ...(payload.achievementType !== undefined ? { achievement_type: payload.achievementType } : {}),
     ...(payload.expiresAfterDays !== undefined ? { expires_after_days: payload.expiresAfterDays } : {}),
     ...(payload.level !== undefined ? { level: payload.level } : {}),
+    ...(payload.criteria !== undefined ? { criteria_items: publicCriteriaItems(payload.criteria) } : {}),
+    ...(payload.builder !== undefined ? { alignments: alignmentsFromBuilder(payload.builder) ?? [] } : {}),
+    ...accessColumns(payload.builder, payload.status, raw.published_at),
     evaluation_config: nextConfig,
   };
 

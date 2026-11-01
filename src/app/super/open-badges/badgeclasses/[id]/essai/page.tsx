@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { BadgeSequentialAssessmentFlow } from "@/components/apprenant/badge-sequential-assessment-flow";
+import { passageMetaFromBadge } from "@/components/open-badges/passage/passage-meta";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getPlaygroundMaxAttempts, resolveMethodConfigsForBadge } from "@/lib/openbadges/badge-method-config";
 import { getOpenBadgeClassByIdOnly } from "@/lib/openbadges/open-badges-table-store";
@@ -55,6 +56,11 @@ export default async function SuperBadgeTrialPage({ params }: RouteParams) {
         playgroundAttemptsUsed: 0,
         playgroundMaxAttempts: playgroundConfig ? getPlaygroundMaxAttempts(playgroundConfig) : null,
       }}
+      passage={passageMetaFromBadge({
+        level: typeof badge.level === "number" ? badge.level : null,
+        criteria: badge.criteria,
+        builder: badge.builder,
+      })}
     />
   );
 }

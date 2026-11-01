@@ -153,9 +153,7 @@ describe("POST /api/admin/badgeclasses validation", () => {
       from: () => ({
         select: () => ({
           eq: () => ({
-            eq: () => ({
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-            }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           }),
         }),
       }),

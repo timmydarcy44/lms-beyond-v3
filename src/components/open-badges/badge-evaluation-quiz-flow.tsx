@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { BadgeMethodConfig, QcmQuestion } from "@/lib/openbadges/badge-method-config";
+import { drawQuizQuestions, type BadgeMethodConfig, type QcmQuestion } from "@/lib/openbadges/badge-method-config";
 
 type AnswerValue = string | string[];
 
@@ -39,7 +39,29 @@ export function BadgeEvaluationQuizFlow({
     qcmAnswers: Record<string, string | string[]>;
   }) => void;
 }) {
-  const questions = method.quiz?.questions ?? [];
+  const bank = method.quiz?.questions ?? [];
+  const bankKey = bank.map((question) => question.id).join(",");
+  const [seed, setSeed] = useState("badge-quiz");
+  useEffect(() => {
+    if (!method.quiz?.randomDraw) return;
+    const key = `badge-quiz:${bankKey}`;
+    try {
+      const existing = window.sessionStorage.getItem(key);
+      if (existing) {
+        setSeed(existing);
+        return;
+      }
+      const next = crypto.randomUUID();
+      window.sessionStorage.setItem(key, next);
+      setSeed(next);
+    } catch {
+      setSeed(key);
+    }
+  }, [bankKey, method.quiz?.randomDraw]);
+  const questions = useMemo(() => {
+    if (!method.quiz?.randomDraw) return bank;
+    return drawQuizQuestions(bank, method.quiz.questionCount ?? bank.length, seed);
+  }, [bank, bankKey, method.quiz?.questionCount, method.quiz?.randomDraw, seed]);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
 

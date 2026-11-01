@@ -95,9 +95,15 @@ function scoreQcmMethod(
     }
   }
 
+  const answeredIds = new Set(Object.keys(answers));
+  const pool = method.quiz?.randomDraw ? questions.filter((question) => answeredIds.has(question.id)) : questions;
+  if (method.quiz?.randomDraw && pool.length === 0) {
+    return { correct: 0, total: 0, passed: false, submitted: true };
+  }
+
   let correct = 0;
   let total = 0;
-  for (const q of questions) {
+  for (const q of pool) {
     const result = isQuestionCorrect(q, answers);
     if (result === null) continue;
     total += 1;
@@ -135,13 +141,18 @@ export function computeBadgeEarnerOutcome(params: {
   badgeName: string;
   methodConfigs: BadgeMethodConfig[];
   submissions: Record<string, unknown>[];
+  enforceIntegrity?: boolean;
+  /** Critère seulement couvert par le QCM alors qu'une mise en pratique est exigée. */
+  practiceBlocked?: boolean;
 }): BadgeEarnerOutcome {
   const { badgeClassId, badgeName, methodConfigs, submissions } = params;
   const shareUrl = getBadgeCriteriaUrl(badgeClassId);
   const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
 
   const responses = collectMethodResponses(submissions);
-  const integrityFailed = submissions.some((entry) =>
+  const integrityFailed = params.enforceIntegrity === false
+    ? false
+    : submissions.some((entry) =>
     evaluateIntegrityMetrics(
       entry.integrityMetrics as Parameters<typeof evaluateIntegrityMetrics>[0],
     ).integrityFailed,
@@ -164,7 +175,7 @@ export function computeBadgeEarnerOutcome(params: {
     }
   }
 
-  const awarded = !integrityFailed && allMethodsSubmitted && qcmPassed;
+  const awarded = !integrityFailed && allMethodsSubmitted && qcmPassed && !params.practiceBlocked;
 
   if (awarded) {
     return {
@@ -202,6 +213,18 @@ export function computeBadgeEarnerOutcome(params: {
       linkedInShareUrl,
       headline: "Badge non obtenu",
       message: `Score insuffisant à l’évaluation : ${qcmScore.correct}/${qcmScore.total} bonnes réponses (${percent} %, seuil ${threshold} %). Vous pouvez reprendre le parcours si une nouvelle tentative est autorisée.`,
+    };
+  }
+
+  if (params.practiceBlocked && allMethodsSubmitted && qcmPassed) {
+    return {
+      awarded: false,
+      integrityFailed: false,
+      qcmScore,
+      shareUrl,
+      linkedInShareUrl,
+      headline: "Badge non obtenu",
+      message: "Un critère n'est évalué que par le questionnaire. Une mise en pratique est exigée pour obtenir le badge.",
     };
   }
 

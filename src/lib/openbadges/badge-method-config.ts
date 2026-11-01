@@ -4,6 +4,11 @@ import {
   type BadgeEvaluationMethodId,
   isBadgeEvaluationMethodId,
 } from "@/lib/openbadges/badge-evaluation";
+import {
+  listPlaygroundActivities,
+  type PlaygroundActivity,
+  type PlaygroundConfig,
+} from "@/lib/openbadges/playground-activity";
 import { validateQcmQuestions } from "@/lib/openbadges/qcm-question-validation";
 
 export type QcmChoice = {
@@ -20,6 +25,9 @@ export type QcmQuestion = {
   choices: QcmChoice[];
   /** single = choix unique, multiple = cases à cocher, text = réponse libre */
   questionType?: EvaluationQuestionType;
+  reviewStatus?: "to_review" | "reviewed";
+  criterionId?: string;
+  explanation?: string;
 };
 
 export type QcmGenerationMode = "scratch" | "ai";
@@ -28,12 +36,11 @@ export type BadgeMethodConfig = {
   methodId: BadgeEvaluationMethodId;
   /** Consigne d'évaluation IA / critères (hors QCM structuré). */
   evaluationPrompt: string;
-  /** Playground Byound : consigne affichée + nombre d'essais. */
-  playground?: {
-    /** Consigne visible par l'apprenant en haut du chat. */
-    learnerPrompt: string;
-    maxAttempts: number;
-  };
+  /** Consigne visible par le candidat pour la vidéo, la réponse orale et le document. */
+  learnerInstruction?: string;
+  /** Playground : une ou plusieurs activités interactives. */
+  playground?: PlaygroundConfig;
+  examKey?: string;
   /** Étude de cas : contexte + consigne apprenant (interface type Drive). */
   caseStudy?: {
     /** Mise en situation affichée à l'apprenant (optionnel). */
@@ -47,6 +54,8 @@ export type BadgeMethodConfig = {
     questionCount?: number;
     /** Pourcentage minimum de bonnes réponses (1–100). Défaut : 100. */
     passingScorePercent?: number;
+    /** Tire `questionCount` questions dans la banque et mélange les réponses. */
+    randomDraw?: boolean;
     title?: string;
     level?: number;
     questions: QcmQuestion[];
@@ -141,6 +150,7 @@ export function createEmptyQcmQuestion(): QcmQuestion {
     id: crypto.randomUUID(),
     prompt: "",
     questionType: "single",
+    reviewStatus: "to_review",
     choices: [
       { id: crypto.randomUUID(), label: "", isCorrect: true },
       { id: crypto.randomUUID(), label: "", isCorrect: false },
@@ -221,13 +231,13 @@ export function validateMethodConfig(config: BadgeMethodConfig): string | null {
   }
 
   if (config.methodId === "playground") {
-    const pg = config.playground;
-    if (!pg?.learnerPrompt?.trim()) {
-      return "Rédigez la consigne affichée à l'apprenant dans le Playground.";
-    }
-    const max = pg.maxAttempts ?? PLAYGROUND_DEFAULT_MAX_ATTEMPTS;
-    if (!Number.isInteger(max) || max < 1 || max > 5) {
-      return "Nombre d'essais : entre 1 et 5.";
+    const activities = listPlaygroundActivities(config.playground);
+    for (const activity of activities) {
+      const max = activity.maxAttempts;
+      if (!Number.isInteger(max) || max < 1 || max > 5) return "Nombre d'essais : entre 1 et 5.";
+      if (activity.type === "sandbox" && !activity.learnerPrompt.trim()) return "Rédigez la consigne du bac à sable IA.";
+      if (activity.type === "situation" && !activity.situation?.character.trim()) return "Décrivez le personnage de la mise en situation.";
+      if (activity.type === "module" && !activity.module) return "Importez le module interactif.";
     }
     if (!config.evaluationPrompt.trim()) {
       return "Rédigez le prompt d'évaluation IA (analyse des réponses Playground).";
@@ -318,7 +328,7 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
     const methodId = (item as { methodId?: string }).methodId;
-    if (!isBadgeEvaluationMethodId(methodId)) continue;
+    if (!methodId || !isBadgeEvaluationMethodId(methodId)) continue;
     const evaluationPrompt =
       typeof (item as { evaluationPrompt?: string }).evaluationPrompt === "string"
         ? (item as { evaluationPrompt: string }).evaluationPrompt
@@ -333,6 +343,7 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
       const questionCount =
         typeof quizRaw.questionCount === "number" ? quizRaw.questionCount : undefined;
       const passingScorePercent = coerceQcmPassingScorePercent(quizRaw.passingScorePercent) ?? undefined;
+      const randomDraw = quizRaw.randomDraw === true;
       const title = typeof quizRaw.title === "string" ? quizRaw.title : undefined;
       const level = typeof quizRaw.level === "number" ? quizRaw.level : undefined;
       const questionsRaw = quizRaw.questions;
@@ -340,6 +351,7 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
         ...(generationMode ? { generationMode } : {}),
         ...(questionCount != null ? { questionCount } : {}),
         ...(passingScorePercent != null ? { passingScorePercent } : {}),
+        ...(randomDraw ? { randomDraw } : {}),
         ...(title ? { title } : {}),
         ...(level != null ? { level } : {}),
         questions: Array.isArray(questionsRaw)
@@ -356,6 +368,9 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
                     id: String((q as QcmQuestion).id ?? crypto.randomUUID()),
                     prompt: String((q as QcmQuestion).prompt ?? ""),
                     questionType,
+                    reviewStatus: (q as QcmQuestion).reviewStatus === "reviewed" ? "reviewed" : "to_review",
+                    ...((q as QcmQuestion).criterionId ? { criterionId: (q as QcmQuestion).criterionId } : {}),
+                    ...((q as QcmQuestion).explanation ? { explanation: String((q as QcmQuestion).explanation) } : {}),
                     choices: Array.isArray((q as QcmQuestion).choices)
                       ? (q as QcmQuestion).choices.map((c) => ({
                           id: String(c.id ?? crypto.randomUUID()),
@@ -385,6 +400,9 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
     const pgRaw = (item as { playground?: Record<string, unknown> }).playground;
     let playground: BadgeMethodConfig["playground"];
     if (methodId === "playground" && pgRaw && typeof pgRaw === "object") {
+      const activities = Array.isArray(pgRaw.activities)
+        ? pgRaw.activities.filter((item): item is PlaygroundActivity => Boolean(item && typeof item === "object" && typeof (item as PlaygroundActivity).id === "string"))
+        : undefined;
       playground = {
         learnerPrompt:
           typeof pgRaw.learnerPrompt === "string"
@@ -396,17 +414,46 @@ export function parseMethodConfigs(raw: unknown): BadgeMethodConfig[] {
           typeof pgRaw.maxAttempts === "number"
             ? pgRaw.maxAttempts
             : PLAYGROUND_DEFAULT_MAX_ATTEMPTS,
+        ...(pgRaw.activityType === "sandbox" || pgRaw.activityType === "situation" || pgRaw.activityType === "module" ? { activityType: pgRaw.activityType } : {}),
+        ...(activities ? { activities } : {}),
       };
     }
+    const learnerInstruction = typeof (item as { learnerInstruction?: string }).learnerInstruction === "string"
+      ? (item as { learnerInstruction: string }).learnerInstruction
+      : "";
     out.push({
       methodId,
       evaluationPrompt,
+      ...(learnerInstruction ? { learnerInstruction } : {}),
       ...(quiz ? { quiz } : {}),
       ...(playground ? { playground } : {}),
       ...(caseStudy ? { caseStudy } : {}),
     });
   }
   return out;
+}
+
+function quizHash(text: string): number {
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+/** Tire un sous-ensemble stable et mélange l'ordre des réponses, sans changer les identifiants. */
+export function drawQuizQuestions(questions: QcmQuestion[], count: number, seed: string): QcmQuestion[] {
+  if (questions.length === 0) return [];
+  const asked = Math.min(questions.length, Math.max(1, count));
+  const ordered = [...questions].sort(
+    (a, b) => quizHash(`${seed}:${a.id}`) - quizHash(`${seed}:${b.id}`) || a.id.localeCompare(b.id),
+  );
+  return ordered.slice(0, asked).map((question) => ({
+    ...question,
+    choices: [...question.choices].sort(
+      (a, b) => quizHash(`${seed}:${question.id}:${a.id}`) - quizHash(`${seed}:${question.id}:${b.id}`) || a.id.localeCompare(b.id),
+    ),
+  }));
 }
 
 export function getPlaygroundMaxAttempts(config: BadgeMethodConfig): number {

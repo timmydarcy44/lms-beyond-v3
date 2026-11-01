@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bot, Check, Loader2, Send, Sparkles, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import type { BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
 import { getPlaygroundMaxAttempts } from "@/lib/openbadges/badge-method-config";
+import { listPlaygroundActivities, playgroundSubtitle } from "@/lib/openbadges/playground-activity";
 import { serializePlaygroundAttempt } from "@/lib/openbadges/badge-playground-session";
 import type { BadgeIntegrityMetrics } from "@/lib/openbadges/badge-assessment-integrity";
 
@@ -28,6 +29,9 @@ type Props = {
   onAllAttemptsDone: () => void;
   getIntegritySnapshot: () => BadgeIntegrityMetrics;
   preview?: boolean;
+  accommodations?: boolean;
+  durationMin?: number | null;
+  title?: string;
   integrityProps: {
     startWriting: () => void;
     stopWriting: () => void;
@@ -44,6 +48,9 @@ export function BadgePlaygroundPanel({
   onAllAttemptsDone,
   getIntegritySnapshot,
   preview = false,
+  accommodations = false,
+  durationMin = null,
+  title,
   integrityProps,
 }: Props) {
   const [phase, setPhase] = useState<Phase>("compose");
@@ -51,7 +58,17 @@ export function BadgePlaygroundPanel({
   const [loading, setLoading] = useState(false);
   const [lastAiResponse, setLastAiResponse] = useState("");
   const [lastAttemptNumber, setLastAttemptNumber] = useState(0);
+  const activity = listPlaygroundActivities(method.playground)[0];
+  const [elapsed, setElapsed] = useState(0);
+  const [fullscreen, setFullscreen] = useState(true);
+  const [oral, setOral] = useState(false);
+  useEffect(() => {
+    const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const maxAttempts = getPlaygroundMaxAttempts(method);
+  const budget = durationMin ? Math.round(durationMin * 60 * (accommodations ? 4 / 3 : 1)) : null;
+  const clock = budget != null ? `${Math.max(0, Math.floor((budget - elapsed) / 60))}:${String(Math.max(0, (budget - elapsed) % 60)).padStart(2, "0")}` : `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`;
   const consigne = method.playground?.learnerPrompt?.trim() ?? method.evaluationPrompt;
   const currentAttempt = attemptsUsed + (phase === "reading" ? 0 : 1);
   const remaining = Math.max(0, maxAttempts - attemptsUsed);
@@ -101,7 +118,7 @@ export function BadgePlaygroundPanel({
 
         const respondJson = await respondRes.json();
         const aiResponse = String(respondJson.aiResponse ?? "");
-        const promptQuality =
+        const promptQuality: "valid" | "insufficient" =
           respondJson.promptQuality === "insufficient" ? "insufficient" : "valid";
 
         const attempt = {
@@ -281,8 +298,22 @@ export function BadgePlaygroundPanel({
     );
   }
 
+  const shell = fullscreen ? "fixed inset-0 z-50 overflow-y-auto bg-[#0A0F1E]" : "overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-xl";
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-zinc-900 to-zinc-950 shadow-xl">
+    <div className={shell}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-[#111831] px-4 py-3">
+        <p className="font-semibold text-white">{title || playgroundSubtitle(activity?.type ?? "sandbox")}</p>
+        <p className="text-sm text-[#A9B0CC]">{clock}{accommodations ? " · temps majoré" : ""}</p>
+        <p className="text-sm text-[#A9B0CC]">{remaining} essai{remaining > 1 ? "s" : ""} restant{remaining > 1 ? "s" : ""}</p>
+        <div className="flex gap-2">
+          {activity?.type === "situation" && accommodations ? (
+            <button type="button" className="rounded-full border border-[#26304F] px-3 py-1 text-sm text-white" onClick={() => setOral((value) => !value)}>{oral ? "Oral en cours" : "Réponse orale"}</button>
+          ) : null}
+          <button type="button" className="rounded-full bg-[#6E5BFF] px-3 py-1 text-sm text-white" onClick={() => void finishWithCurrentAttempt()}>Terminer</button>
+          <button type="button" className="text-sm text-[#A9B0CC]" onClick={() => setFullscreen((value) => !value)}>{fullscreen ? "Réduire" : "Plein écran"}</button>
+        </div>
+      </div>
       <div className="flex items-center justify-between border-b border-white/10 bg-zinc-900/90 px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/20">

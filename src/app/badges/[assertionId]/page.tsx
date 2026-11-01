@@ -144,7 +144,7 @@ export default async function PublicBadgePage({ params }: RouteParams) {
   const sharedValidation = criteriaShareOneDate(badge.criteria.map((item) => item.validatedAt));
   const subtitle = [
     `Délivré à ${holder} par Byound, le ${issued}`,
-    badge.level != null ? `Niveau ${badge.level}` : null,
+    badge.level != null ? (badge.levelLabel?.trim() ? `Niveau ${badge.level} · ${badge.levelLabel.trim()}` : `Niveau ${badge.level}`) : null,
     total > 0 ? `${filled} / ${total} critères` : null,
   ].filter(Boolean).join(" · ");
 
@@ -161,6 +161,7 @@ export default async function PublicBadgePage({ params }: RouteParams) {
             recipientName={holder}
             issuedLabel={cardDate}
             level={badge.level}
+            levelLabel={badge.levelLabel}
             imageUrl={badge.imageUrl}
             state={badge.state}
           />
@@ -182,9 +183,28 @@ export default async function PublicBadgePage({ params }: RouteParams) {
               </p>
             </section>
 
+            {badge.competencies.length > 0 ? (
+              <section className="space-y-4">
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Compétences</h2>
+                <div className="flex flex-wrap gap-2">
+                  {badge.competencies.map((skill) => (
+                    skill.href ? (
+                      <a key={skill.href} href={skill.href} className="rounded-full border border-white/15 px-3 py-1 text-sm text-[#A99BFF]">
+                        {skill.name}
+                      </a>
+                    ) : (
+                      <span key={skill.name} className="rounded-full border border-white/15 px-3 py-1 text-sm">
+                        {skill.name}
+                      </span>
+                    )
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
             <section className="space-y-6">
               <div className="flex items-end justify-between gap-4">
-                <h2 className="text-2xl font-bold tracking-[-0.04em]">Critères d&apos;obtention</h2>
+                <h2 className="text-2xl font-bold tracking-[-0.04em]">Critères d&apos;évaluation</h2>
                 <p className="text-sm text-[rgba(242,242,244,0.55)]">{filled} / {total} remplis</p>
               </div>
               {sharedValidation ? (
@@ -231,31 +251,6 @@ export default async function PublicBadgePage({ params }: RouteParams) {
               </section>
             ) : null}
 
-            {badge.alignments.length > 0 ? (
-              <section className="space-y-4">
-                <h2 className="text-2xl font-bold tracking-[-0.04em]">Compétences visées</h2>
-                <div className="flex flex-wrap gap-2">
-                  {badge.alignments.map((item) => (
-                    <span key={item.targetName} className="rounded-full border border-white/15 px-3 py-1 text-sm">
-                      {item.targetName}
-                    </span>
-                  ))}
-                </div>
-                <ul className="space-y-3">
-                  {badge.alignments.map((item) => (
-                    <li key={`${item.targetFramework}-${item.targetName}`} className="text-[rgba(242,242,244,0.75)]">
-                      {[item.targetFramework, item.targetCode].filter(Boolean).join(" · ")}
-                      {item.targetFramework || item.targetCode ? " — " : ""}
-                      {item.targetUrl ? (
-                        <a href={item.targetUrl} className="text-[#A99BFF]">{item.targetName}</a>
-                      ) : (
-                        item.targetName
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
           </div>
 
           <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">

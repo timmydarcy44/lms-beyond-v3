@@ -7,9 +7,10 @@ type Props = {
   recipientName: string;
   issuedLabel: string;
   level: number | null;
+  levelLabel?: string | null;
 };
 
-export function MetalBadgeCard({ name, recipientName, issuedLabel, level }: Props) {
+export function MetalBadgeCard({ name, recipientName, issuedLabel, level, levelLabel }: Props) {
   const [spot, setSpot] = useState({ x: 70, y: 20 });
   const [motion, setMotion] = useState(false);
 
@@ -50,7 +51,7 @@ export function MetalBadgeCard({ name, recipientName, issuedLabel, level }: Prop
           <div className="flex items-start justify-between gap-4 text-sm">
             <span className="font-bold tracking-[-0.04em]">Byound</span>
             <span className="text-right text-[rgba(242,242,244,0.6)]">
-              Open Badge{level != null ? ` · Niveau ${level}` : ""}
+              Open Badge{level != null ? ` · ${levelLabel?.trim() ? `Niveau ${level} · ${levelLabel.trim()}` : `Niveau ${level}`}` : ""}
             </span>
           </div>
           <div className="flex items-center gap-4">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function GET(req: NextRequest) {
   const supabase = await getServerClient();
@@ -36,6 +36,21 @@ export async function GET(req: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  return NextResponse.json({ success: true, badge: data ?? null, submission: submission ?? null });
+  const admin = getServiceRoleClient();
+  let linkedOpenBadges: Array<{ id: string; name: string; level: number | null }> = [];
+  if (admin) {
+    const listed = await admin.from("open_badges").select("id, name, title, status, required_course_id, evaluation_config").limit(400);
+    linkedOpenBadges = (listed.data ?? []).flatMap((row) => {
+      if (String(row.status ?? "").toLowerCase() !== "active") return [];
+      const config = row.evaluation_config && typeof row.evaluation_config === "object" ? row.evaluation_config as Record<string, unknown> : {};
+      const builder = config.builder && typeof config.builder === "object" ? config.builder as Record<string, unknown> : {};
+      const linked = String(builder.linkedCourseId ?? builder.associatedCourseId ?? row.required_course_id ?? "");
+      if (linked !== courseId) return [];
+      const level = typeof config.level === "number" ? config.level : null;
+      return [{ id: String(row.id), name: String(row.name ?? row.title ?? "Badge"), level }];
+    });
+  }
+
+  return NextResponse.json({ success: true, badge: data ?? null, submission: submission ?? null, linkedOpenBadges });
 }
 

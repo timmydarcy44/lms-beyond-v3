@@ -20,7 +20,25 @@ type BadgeClass = {
   status: "DRAFT" | "ACTIVE" | "ARCHIVED";
   issuer?: { name: string };
   createdAt: string;
+  level?: number | null;
+  builder?: {
+    seriesName?: string | null;
+    levelLabel?: string | null;
+    linkedCourseId?: string | null;
+    linkedCourseUpdatedAt?: string | null;
+  } | null;
 };
+
+function groupedBadges(badges: BadgeClass[]) {
+  const groups = new Map<string, BadgeClass[]>();
+  for (const badge of badges) {
+    const key = badge.builder?.seriesName?.trim() || "Sans série";
+    groups.set(key, [...(groups.get(key) ?? []), badge]);
+  }
+  return [...groups.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0], "fr"))
+    .map(([name, rows]) => [name, [...rows].sort((left, right) => (left.level ?? 0) - (right.level ?? 0))] as const);
+}
 
 const createHeaders = (auth: AuthHeaders, orgId: string) => ({
   "x-user-id": auth.userId,
@@ -32,6 +50,7 @@ export function BadgeClassList({ auth }: { auth: AuthHeaders }) {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState("");
   const [badgeClasses, setBadgeClasses] = useState<BadgeClass[]>([]);
+  const [courseUpdatedAt, setCourseUpdatedAt] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -46,6 +65,19 @@ export function BadgeClassList({ auth }: { auth: AuthHeaders }) {
     };
     loadOrganizations();
   }, [organizationId]);
+
+  useEffect(() => {
+    void fetch("/api/super-admin/open-badges/generate-from-course")
+      .then((response) => response.json())
+      .then((payload: { courses?: Array<{ id: string; updatedAt?: string | null }> }) => {
+        const next: Record<string, string> = {};
+        for (const course of payload.courses ?? []) {
+          if (course.updatedAt) next[course.id] = course.updatedAt;
+        }
+        setCourseUpdatedAt(next);
+      })
+      .catch(() => setCourseUpdatedAt({}));
+  }, []);
 
   useEffect(() => {
     if (!organizationId) return;
@@ -74,9 +106,17 @@ export function BadgeClassList({ auth }: { auth: AuthHeaders }) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Badge Classes</CardTitle>
-          <Button asChild>
-            <Link href="/super/open-badges/badgeclasses/new">Créer un badge</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/super/open-badges/domaines">Domaines</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/super/open-badges/competences">Compétences</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/super/open-badges/badgeclasses/new">Créer un badge</Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="max-w-sm">
@@ -97,23 +137,43 @@ export function BadgeClassList({ auth }: { auth: AuthHeaders }) {
           {loading ? (
             <div className="text-sm text-slate-500">Chargement...</div>
           ) : badgeClasses.length ? (
-            <div className="divide-y divide-slate-200 rounded-lg border border-slate-200">
-              {badgeClasses.map((badgeClass) => (
-                <div key={badgeClass.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <div className="font-medium text-slate-900">{badgeClass.name}</div>
-                    <div className="text-xs text-slate-500">
-                      {badgeClass.issuer?.name ?? "Issuer"} · {new Date(badgeClass.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge>{badgeClass.status}</Badge>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/super/open-badges/badgeclasses/${badgeClass.id}/essai`}>Tester</Link>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/super/open-badges/badgeclasses/${badgeClass.id}/edit`}>Éditer</Link>
-                    </Button>
+            <div className="space-y-6">
+              {groupedBadges(badgeClasses).map(([series, rows]) => (
+                <div key={series}>
+                  <p className="mb-2 text-sm font-semibold text-slate-700">{series}</p>
+                  <div className="divide-y divide-slate-200 rounded-lg border border-slate-200">
+                    {rows.map((badgeClass) => {
+                      const linkedId = badgeClass.builder?.linkedCourseId;
+                      const baseline = badgeClass.builder?.linkedCourseUpdatedAt;
+                      const updated = linkedId ? courseUpdatedAt[linkedId] : undefined;
+                      const changed = badgeClass.status === "ACTIVE" && baseline && updated && new Date(updated).getTime() > new Date(baseline).getTime();
+                      const levelText = badgeClass.level ? `Niveau ${badgeClass.level}${badgeClass.builder?.levelLabel ? ` · ${badgeClass.builder.levelLabel}` : ""}` : null;
+                      return (
+                        <div key={badgeClass.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                          <div>
+                            <div className="font-medium text-slate-900">{badgeClass.name}</div>
+                            <div className="text-xs text-slate-500">
+                              {levelText ? `${levelText} · ` : ""}{badgeClass.issuer?.name ?? "Issuer"} · {new Date(badgeClass.createdAt).toLocaleDateString()}
+                            </div>
+                            {changed && linkedId ? (
+                              <p className="mt-1 text-xs text-amber-700">
+                                La formation liée a changé depuis la publication : vérifiez les critères.{" "}
+                                <Link href={`/super/lms/formations/${linkedId}`} className="underline">Voir la formation</Link>
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge>{badgeClass.status}</Badge>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/super/open-badges/badgeclasses/${badgeClass.id}/essai`}>Tester</Link>
+                            </Button>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/super/open-badges/badgeclasses/${badgeClass.id}/edit`}>Éditer</Link>
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

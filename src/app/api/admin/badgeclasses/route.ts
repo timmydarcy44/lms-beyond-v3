@@ -178,7 +178,6 @@ export async function POST(request: Request) {
         .from("courses")
         .select("id")
         .eq("id", requiredCourseId)
-        .eq("org_id", auth.user.orgId)
         .maybeSingle();
       if (error) {
         return NextResponse.json({ ok: false, error: "COURSE_LOOKUP_FAILED" }, { status: 500 });
@@ -242,9 +241,11 @@ export async function POST(request: Request) {
               ? payload.expiresAfterDays
               : null,
           criteria: Array.isArray(payload.criteria)
-            ? payload.criteria.map((criterion: { label: string; description?: string; sortOrder?: number }, index: number) => ({
+            ? payload.criteria.map((criterion: { id?: string; label: string; description?: string; expectedOutcome?: string; sortOrder?: number }, index: number) => ({
+                ...(typeof criterion.id === "string" ? { id: criterion.id } : {}),
                 label: criterion.label,
                 description: criterion.description ?? null,
+                expectedOutcome: criterion.expectedOutcome ?? null,
                 sortOrder: Number(criterion.sortOrder ?? index),
               }))
             : [],

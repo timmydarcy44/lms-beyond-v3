@@ -1,53 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { getOpenAIClient } from "@/lib/ai/openai-client";
+import { generateBadgeFromBrief, type DemandLevel } from "@/lib/openbadges/badge-course-generation";
+import { getServiceRoleClient } from "@/lib/supabase/server";
+
+function demandOf(value: unknown): DemandLevel {
+  if (value === "decouverte" || value === "expertise") return value;
+  return "maitrise";
+}
 
 export async function POST(req: NextRequest) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const body = (await req.json().catch(() => null)) as { prompt?: string } | null;
+  const body = (await req.json().catch(() => null)) as {
+    prompt?: string;
+    library?: string[];
+    domains?: string[];
+    demand?: DemandLevel;
+  } | null;
   const prompt = body?.prompt?.trim();
   if (!prompt) {
-    return NextResponse.json({ error: "Prompt requis" }, { status: 400 });
+    return NextResponse.json({ error: "Décrivez la thématique du badge." }, { status: 400 });
   }
-
-  const openai = getOpenAIClient();
-  if (!openai) {
-    return NextResponse.json({ error: "OpenAI non configuré" }, { status: 500 });
-  }
-
-  const system = `Tu proposes un Open Badge. L'humain décide. JSON strict :
-{
-  "name": "titre court",
-  "description": "une ou deux phrases, 300 caractères maximum, écrites pour un recruteur",
-  "level": 1,
-  "domain": "Intelligence artificielle" | "Management" | "Commercial" | "Sport" | "Care" | "Communication" | "Industrie",
-  "achievementType": "Competency" | "Certification" | "Achievement",
-  "skills": ["compétence courte"],
-  "criteria": [{"label": "titre", "description": "précision", "expectedOutcome": "ce que l'expert doit constater"}],
-  "evaluationMethods": ["qcm"|"case_study"|"video"|"pdf_upload"|"dictation"|"playground"],
-  "suggestedEvaluationPrompt": "consigne confidentielle pour la correction"
-}
-level vaut 1, 2 ou 3. Réponds uniquement avec le JSON.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 1200,
-      response_format: { type: "json_object" },
+    const result = await generateBadgeFromBrief({
+      text: prompt,
+      demand: demandOf(body?.demand),
+      library: body?.library ?? [],
+      domains: body?.domains ?? [],
     });
-
-    const raw = completion.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return NextResponse.json({ badge: parsed });
+    const supabase = getServiceRoleClient();
+    if (supabase && result.logs.length) {
+      await supabase.from("ai_generation_logs").insert(result.logs.map((log) => ({
+        context: "badge-from-prompt",
+        prompt: log.pass,
+        payload_in: { model: log.model, pass: log.pass },
+        payload_out: {
+          inputTokens: log.inputTokens,
+          outputTokens: log.outputTokens,
+          durationMs: log.durationMs,
+          estimatedCostUsd: log.estimatedCostUsd,
+          regenerations: log.regenerations,
+          notes: log.notes,
+        },
+        status: result.badge ? "success" : "error",
+      }))).then(() => undefined, () => undefined);
+    }
+    if (!result.badge) {
+      return NextResponse.json({
+        error: "La génération n'a pas abouti",
+        detail: result.issues.join(" ") || "Le modèle n'a pas renvoyé de badge exploitable.",
+        issues: result.issues,
+      }, { status: 422 });
+    }
+    return NextResponse.json({ badge: result.badge, issues: result.issues });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erreur génération";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "La génération a échoué", detail: message }, { status: 502 });
   }
 }

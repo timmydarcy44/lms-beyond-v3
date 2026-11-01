@@ -1,4 +1,5 @@
 import { getOpenAIClient, generateJSON } from "@/lib/ai/openai-client";
+import { fenceCandidateData, GRADING_GUARD, rejectInjectedAward } from "@/lib/openbadges/grading-guard";
 import type { PlaygroundAttemptRecord } from "@/lib/openbadges/badge-playground-session";
 import { buildIntegrityContextForAi } from "@/lib/openbadges/badge-assessment-integrity";
 import type { BadgeIntegrityMetrics } from "@/lib/openbadges/badge-assessment-integrity";
@@ -41,9 +42,9 @@ async function classifyPlaygroundPromptQuality(
   if (heuristic) return heuristic;
 
   const parsed = await generateJSON(
-    `Consigne:\n${consigne}\n\nPrompt:\n${learnerPrompt}`,
+    `Consigne:\n${consigne}\n\nPrompt:\n${fenceCandidateData("prompt", learnerPrompt)}`,
     undefined,
-    `JSON uniquement: {"quality":"valid"|"insufficient"}. insufficient si placeholder, mot vide, hors-sujet, sans consigne à l'IA.`,
+    `JSON uniquement: {"quality":"valid"|"insufficient"}. insufficient si placeholder, mot vide, hors-sujet, sans consigne à l'IA. ${GRADING_GUARD}`,
   );
   if (parsed?.quality === "insufficient") return "insufficient";
   return "valid";
@@ -75,6 +76,7 @@ async function simulatePlaygroundTargetAiResponse(params: {
       : `Le prompt est exploitable. Réponds de façon professionnelle et utile à la demande.`;
 
   const system = `Tu es un assistant IA en mode SIMULATION d'épreuve certifiante (Open Badges Byound).
+${GRADING_GUARD}
 Règles ABSOLUES :
 - Tu exécutes UNIQUEMENT le prompt de l'apprenant comme le ferait ChatGPT en conditions réelles.
 - INTERDIT : coaching, conseils au apprenant, « vous devriez reformuler », exemple de prompt idéal, section « itération pour améliorer », grille de notation, mention d'évaluation.
@@ -86,9 +88,7 @@ ${qualityHint}`;
 ${consigne}
 
 ${history ? `Historique:\n${history}\n\n` : ""}Essai ${attemptNumber} — Prompt exact de l'apprenant à exécuter :
-"""
-${learnerPrompt}
-"""
+${fenceCandidateData("prompt", learnerPrompt)}
 
 Produis UNIQUEMENT la sortie de l'assistant (le livrable demandé ou ce qu'un LLM répondrait), 120 à 450 mots.`;
 
@@ -195,12 +195,14 @@ export async function evaluateBadgeSessionWithAi(params: {
       ? playgroundAttempts
           .map((a) => {
             const flag = attemptLooksInsufficient(a) ? " [PROMPT FAIBLE]" : "";
-            return `### Essai ${a.attemptNumber}${flag}\n**Prompt:**\n${a.prompt}\n\n**Réponse IA simulée:**\n${a.aiResponse || "(vide)"}`;
+            return `### Essai ${a.attemptNumber}${flag}\n**Prompt:**\n${fenceCandidateData("prompt", a.prompt)}\n\n**Réponse IA simulée:**\n${fenceCandidateData("réponse", a.aiResponse || "(vide)")}`;
           })
           .join("\n\n")
       : "(aucun essai playground)";
 
-  const prompt = `Tu es l'évaluateur IA officiel pour le badge Open Badge « ${badgeName}»${level != null ? ` (niveau ${level})` : ""}.
+  const prompt = `${GRADING_GUARD}
+
+Tu es l'évaluateur IA officiel pour le badge Open Badge « ${badgeName}»${level != null ? ` (niveau ${level})` : ""}.
 
 Critères d'évaluation configurés par l'organisme:
 ${evaluationPrompt || "Valider la maîtrise démontrée via les épreuves soumises."}
@@ -231,7 +233,11 @@ Réponds UNIQUEMENT en JSON:
   "progressionNote": ""
 }`;
 
-  const parsed = await generateJSON(prompt, undefined, "Tu es un évaluateur strict mais bienveillant.");
+  const parsed = await generateJSON(
+    prompt,
+    undefined,
+    `Tu es un évaluateur strict mais bienveillant. ${GRADING_GUARD}`,
+  );
 
   if (parsed && typeof parsed === "object") {
     let awarded = Boolean(parsed.awarded);
@@ -248,13 +254,13 @@ Réponds UNIQUEMENT en JSON:
     let progressionNote = String(parsed.progressionNote ?? "").trim();
     if (singleAttempt || promptsIdentical) progressionNote = "";
 
-    return {
+    return rejectInjectedAward({
       awarded,
       playgroundPassed,
       qcmPassed: Boolean(parsed.qcmPassed ?? qcmPassed),
       reasoning: String(parsed.reasoning ?? "").trim() || "Évaluation enregistrée.",
       progressionNote,
-    };
+    }, playgroundAttempts.map((attempt) => attempt.prompt));
   }
 
   const hasValidPrompt = playgroundAttempts.some((a) => !attemptLooksInsufficient(a));
@@ -266,7 +272,7 @@ Réponds UNIQUEMENT en JSON:
   const awarded =
     qcmPassed && playgroundPassed && !integrityMetrics.some((m) => m.integrityFailed);
 
-  return {
+  return rejectInjectedAward({
     awarded,
     playgroundPassed,
     qcmPassed,
@@ -276,5 +282,5 @@ Réponds UNIQUEMENT en JSON:
         ? "Prompt(s) playground insuffisant(s)."
         : "Critères non atteints.",
     progressionNote: "",
-  };
+  }, playgroundAttempts.map((attempt) => attempt.prompt));
 }

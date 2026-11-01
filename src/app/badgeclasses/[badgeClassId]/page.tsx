@@ -55,7 +55,7 @@ export default async function BadgeClassPage({ params }: RouteParams) {
 
         <div className="mt-16 grid gap-16 lg:grid-cols-[minmax(0,1fr)_400px]">
           <section className="space-y-6">
-            <h2 className="text-2xl font-bold tracking-[-0.04em]">Critères d'obtention</h2>
+            <h2 className="text-2xl font-bold tracking-[-0.04em]">Critères d&apos;évaluation</h2>
             {badge.structuredCriteria.length > 0 ? (
               <ol className="space-y-5">
                 {badge.structuredCriteria.map((criterion, index) => (

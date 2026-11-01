@@ -12,10 +12,29 @@ export type BadgeIntegrityMetrics = {
   events: BadgeIntegrityEvent[];
   /** true si l'apprenant a quitté l'onglet au moins une fois */
   hadTabHidden: boolean;
+  /** Sorties qui arrêtent l'épreuve. Une sortie courte tolérée n'entre pas ici. */
+  disqualifyingLeaves?: number;
   /** Blocage automatique de validation badge */
   integrityFailed: boolean;
   integrityFailureReasons: string[];
 };
+
+export type LeaveJudgement = "ok" | "warn" | "stop";
+
+/** Une sortie plus courte que la tolérance est notée. La suivante, ou une sortie plus longue, arrête l'épreuve. */
+export function judgeLeave(input: {
+  durationMs: number;
+  shortLeavesUsed: number;
+  toleranceMs?: number;
+  toleratedLeaves?: number;
+  enforce?: boolean;
+}): LeaveJudgement {
+  if (input.enforce === false) return "ok";
+  const toleranceMs = input.toleranceMs ?? 2000;
+  const toleratedLeaves = input.toleratedLeaves ?? 1;
+  if (input.durationMs < toleranceMs && input.shortLeavesUsed < toleratedLeaves) return "warn";
+  return "stop";
+}
 
 export function createEmptyIntegrityMetrics(): BadgeIntegrityMetrics {
   return {
@@ -25,6 +44,7 @@ export function createEmptyIntegrityMetrics(): BadgeIntegrityMetrics {
     tabHiddenCount: 0,
     events: [],
     hadTabHidden: false,
+    disqualifyingLeaves: 0,
     integrityFailed: false,
     integrityFailureReasons: [],
   };
@@ -44,15 +64,11 @@ export function evaluateIntegrityMetrics(
   const hadTabHidden =
     Boolean(metrics.hadTabHidden) || tabHiddenCount > 0 || events.some((e) => e.type === "tab_hidden");
 
+  const disqualifyingLeaves = Math.max(0, Number(metrics.disqualifyingLeaves) || 0);
   const integrityFailureReasons: string[] = [];
-  if (hadTabHidden) {
+  if (disqualifyingLeaves > 0) {
     integrityFailureReasons.push(
-      "L’apprenant a quitté l’onglet du navigateur pendant la rédaction (risque de consultation externe ou IA).",
-    );
-  }
-  if (leaveCount > 0) {
-    integrityFailureReasons.push(
-      `L’apprenant est sorti de la page ${leaveCount} fois avant de soumettre.`,
+      `L’apprenant a quitté la page au-delà de la tolérance (${disqualifyingLeaves} sortie${disqualifyingLeaves > 1 ? "s" : ""}).`,
     );
   }
 
@@ -63,6 +79,7 @@ export function evaluateIntegrityMetrics(
     tabHiddenCount,
     events,
     hadTabHidden,
+    disqualifyingLeaves,
     integrityFailed: integrityFailureReasons.length > 0,
     integrityFailureReasons,
   };

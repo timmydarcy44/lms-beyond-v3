@@ -99,4 +99,21 @@ describe("computeBadgeEarnerOutcome", () => {
     expect(outcome.awarded).toBe(true);
     expect(outcome.qcmScore).toEqual({ correct: 4, total: 5 });
   });
+
+  it("withholds the badge when a practical exam is required for a QCM-only criterion", () => {
+    const outcome = computeBadgeEarnerOutcome({
+      badgeClassId: "badge-1",
+      badgeName: "Test Badge",
+      methodConfigs: [qcmConfig],
+      practiceBlocked: true,
+      submissions: [
+        {
+          methodResponses: [{ methodId: "qcm", qcmAnswers: { q1: "a" } }],
+          integrityMetrics: { integrityFailed: false },
+        },
+      ],
+    });
+    expect(outcome.awarded).toBe(false);
+    expect(outcome.message).toContain("mise en pratique");
+  });
 });

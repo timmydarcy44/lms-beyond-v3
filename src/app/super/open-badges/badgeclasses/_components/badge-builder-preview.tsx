@@ -6,6 +6,7 @@ type Props = {
   name: string;
   description: string;
   level: number | null;
+  levelLabel?: string | null;
   imageUrl: string;
   typeLabel: string;
   validityLabel: string;
@@ -31,6 +32,7 @@ export function BadgeBuilderPreview({
   name,
   description,
   level,
+  levelLabel,
   imageUrl,
   typeLabel,
   validityLabel,
@@ -70,6 +72,7 @@ export function BadgeBuilderPreview({
             recipientName="Prénom Nom"
             issuedLabel="JJ.MM.AAAA"
             level={level}
+            levelLabel={levelLabel}
             imageUrl={imageUrl || null}
           />
         ) : (
@@ -80,8 +83,15 @@ export function BadgeBuilderPreview({
               {description.trim() || "Ce que le badge atteste apparaîtra ici."}
             </p>
             <p className="text-sm text-[#8C94B2]">
-              {level ? `Niveau ${level}` : "Niveau"} · {criteriaCount} critère{criteriaCount > 1 ? "s" : ""}
+              {level ? (levelLabel?.trim() ? `Niveau ${level} · ${levelLabel.trim()}` : `Niveau ${level}`) : "Niveau"} · {criteriaCount} critère{criteriaCount > 1 ? "s" : ""}
             </p>
+            {skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
+                  <span key={skill} className="rounded-full border border-[#26304F] px-2 py-1 text-xs text-[#EEF0F7]">{skill}</span>
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
       </div>

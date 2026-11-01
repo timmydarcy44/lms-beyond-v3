@@ -9,6 +9,7 @@ import {
 import { evaluateBadgeSessionWithAi } from "@/lib/openbadges/badge-playground-ai";
 import { collectPlaygroundAttempts } from "@/lib/openbadges/badge-playground-session";
 import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
+import { criterionCoverage, qcmOnlyBlocksAward } from "@/lib/openbadges/criterion-coverage";
 import { resolveMethodConfigsForBadge, type BadgeMethodConfig } from "@/lib/openbadges/badge-method-config";
 import { getBadgeCriteriaUrl } from "@/lib/openbadges/urls";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -165,6 +166,32 @@ function outcomeFromStored(
   };
 }
 
+function practiceRequiredUnmet(badgeRow: Record<string, unknown>): boolean {
+  const config = cfg(badgeRow);
+  const builder = config.builder;
+  if (!builder || typeof builder !== "object" || Array.isArray(builder)) return false;
+  const exam = (builder as { exam?: { requirePractice?: boolean; practices?: unknown } }).exam;
+  if (exam?.requirePractice !== true) return false;
+  const criteria = Array.isArray(config.criteria)
+    ? config.criteria.flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const id = String((item as { id?: string }).id ?? "");
+        return id ? [{ id }] : [];
+      })
+    : [];
+  const methods = Array.isArray(config.evaluationMethods) ? config.evaluationMethods.map(String) : [];
+  const practices = exam.practices && typeof exam.practices === "object" && !Array.isArray(exam.practices)
+    ? exam.practices as Record<string, { criteria?: Array<{ criterionId?: string }> }>
+    : {};
+  const rows = criterionCoverage(criteria, methods.map((id) => ({
+    id,
+    criterionIds: Array.isArray(practices[id]?.criteria)
+      ? practices[id].criteria.flatMap((link) => (link?.criterionId ? [String(link.criterionId)] : []))
+      : [],
+  })));
+  return qcmOnlyBlocksAward(true, rows);
+}
+
 function getEvaluationPrompt(badgeRow: Record<string, unknown>, methodConfigs: BadgeMethodConfig[]): string {
   const receivability = badgeRow.receivability as Record<string, unknown> | undefined;
   const fromReceivability = String(receivability?.aiEvaluationPrompt ?? "").trim();
@@ -215,11 +242,17 @@ export async function runFullBadgeEarnerEvaluation(params: {
 
   const methodConfigs = resolveMethodConfigsForBadge(badgeRow);
   const submissions = getLearnerSubmissionsFromBadgeRow(badgeRow, earnerId);
+  const exam = cfg(badgeRow).builder && typeof cfg(badgeRow).builder === "object"
+    ? (cfg(badgeRow).builder as { exam?: { integrityCheck?: boolean } }).exam
+    : undefined;
+  const practiceBlocked = practiceRequiredUnmet(badgeRow);
   const baseOutcome = computeBadgeEarnerOutcome({
     badgeClassId,
     badgeName,
     methodConfigs,
     submissions,
+    enforceIntegrity: exam?.integrityCheck !== false,
+    practiceBlocked,
   });
 
   const integrityMetrics: BadgeIntegrityMetrics[] = submissions.map((entry) =>
@@ -269,6 +302,11 @@ export async function runFullBadgeEarnerEvaluation(params: {
     awarded = false;
   } else {
     awarded = baseOutcome.awarded;
+  }
+
+  if (practiceBlocked) {
+    awarded = false;
+    if (!integrityFailed) reasoning = baseOutcome.message;
   }
 
   const stored: StoredLearnerEvaluation = {

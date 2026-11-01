@@ -54,6 +54,8 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Référentiel métier", href: "/super/metiers" },
       { label: "Experts / Formateurs", href: "/super/experts" },
       { label: "Open badge", href: "/super/open-badges/badgeclasses" },
+      { label: "Domaines", href: "/super/open-badges/domaines" },
+      { label: "Compétences", href: "/super/open-badges/competences" },
     ],
   },
   {

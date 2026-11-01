@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BadgeSequentialAssessmentFlow } from "@/components/apprenant/badge-sequential-assessment-flow";
+import { passageMetaFromBadge } from "@/components/open-badges/passage/passage-meta";
 import { resolveEarnerContextFromSession } from "@/lib/auth/earner-session";
 import {
   learnerMustRestartBadgeAssessment,
@@ -101,6 +102,11 @@ export default async function ApprenantOpenBadgeEpreuvePage({ params }: PageProp
           ? getPlaygroundMaxAttempts(playgroundConfig)
           : null,
       }}
+      passage={passageMetaFromBadge({
+        level: rawRow && typeof rawRow.level === "number" ? rawRow.level : null,
+        criteria: rawRow?.criteria,
+        builder: rawRow?.builder,
+      })}
     />
   );
 }

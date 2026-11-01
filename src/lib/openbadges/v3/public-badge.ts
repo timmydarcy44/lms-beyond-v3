@@ -43,6 +43,7 @@ export type PublicBadgeDocument = {
   description: string;
   imageUrl: string | null;
   level: number | null;
+  levelLabel: string | null;
   recipientName: string;
   issuedAt: string;
   validUntil: string | null;
@@ -51,6 +52,8 @@ export type PublicBadgeDocument = {
   credentialJwt: string;
   kid: string | null;
   criteria: PublicBadgeCriterion[];
+  skills: string[];
+  competencies: Array<{ name: string; href: string | null }>;
   evidence: PublicBadgeEvidence[];
   alignments: PublicBadgeAlignment[];
   indexable: boolean;
@@ -62,14 +65,18 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 function criteriaOf(row: Record<string, unknown>, validatedAt: string): PublicBadgeCriterion[] {
-  const items = Array.isArray(row.criteria_items) ? row.criteria_items : [];
+  const config = asRecord(row.evaluation_config);
+  const fromConfig = Array.isArray(config.criteria) ? config.criteria : [];
+  const fromColumn = Array.isArray(row.criteria_items) ? row.criteria_items : [];
+  const columnHasLabels = fromColumn.some((item) => String(asRecord(item).label ?? "").trim());
+  const items = columnHasLabels ? fromColumn : fromConfig;
   return items.flatMap((item) => {
     const record = asRecord(item);
     const label = String(record.label ?? "").trim();
     if (!label) return [];
     return [{
       label,
-      description: typeof record.description === "string" ? record.description : null,
+      description: typeof record.description === "string" && !/^Source\s*:/i.test(record.description.trim()) ? record.description : null,
       validatedAt,
     }];
   });
@@ -102,9 +109,32 @@ function alignmentsOf(raw: unknown): PublicBadgeAlignment[] {
     return [{
       targetName,
       targetUrl: typeof record.targetUrl === "string" && record.targetUrl.trim() ? record.targetUrl.trim() : null,
-      targetFramework: typeof record.targetFramework === "string" ? record.targetFramework : null,
+      targetFramework: typeof record.targetFramework === "string"
+        ? record.targetFramework
+        : typeof record.framework === "string"
+          ? record.framework
+          : null,
       targetCode: typeof record.targetCode === "string" ? record.targetCode : null,
     }];
+  });
+}
+
+function competenciesOf(row: Record<string, unknown>): Array<{ name: string; href: string | null }> {
+  const builder = asRecord(asRecord(row.evaluation_config).builder);
+  const items = Array.isArray(builder.competencies) ? builder.competencies : [];
+  if (items.length > 0) {
+    return items.flatMap((item) => {
+      const record = asRecord(item);
+      const name = String(record.name ?? "").trim();
+      if (!name || record.archivedAt) return [];
+      const slug = String(record.slug ?? "").trim();
+      return [{ name, href: slug ? `https://www.byound.fr/competences/${slug}` : null }];
+    });
+  }
+  if (!Array.isArray(builder.skills)) return [];
+  return builder.skills.flatMap((item) => {
+    const name = String(item ?? "").trim();
+    return name ? [{ name, href: null }] : [];
   });
 }
 
@@ -199,6 +229,11 @@ export async function loadPublicBadgeDocument(
     description: String(badge.description ?? ""),
     imageUrl: typeof badge.image_url === "string" ? badge.image_url : null,
     level: levelOf(badge),
+    levelLabel: typeof asRecord(asRecord(badge.evaluation_config).builder).levelLabel === "string"
+      ? String(asRecord(asRecord(badge.evaluation_config).builder).levelLabel)
+      : null,
+    competencies: competenciesOf(badge),
+    skills: competenciesOf(badge).map((item) => item.name),
     recipientName: assertion.recipient_name,
     issuedAt: assertion.issued_at,
     validUntil: assertion.valid_until,
@@ -208,7 +243,9 @@ export async function loadPublicBadgeDocument(
     kid: assertion.kid,
     criteria: criteriaOf(badge, assertion.issued_at),
     evidence: publicEvidenceItems(assertion.evidence),
-    alignments: alignmentsOf(badge.alignments),
+    alignments: alignmentsOf(badge.alignments).length
+      ? alignmentsOf(badge.alignments)
+      : alignmentsOf(asRecord(asRecord(badge.evaluation_config).builder).alignments),
     indexable: assertion.indexable !== false,
     state,
   };

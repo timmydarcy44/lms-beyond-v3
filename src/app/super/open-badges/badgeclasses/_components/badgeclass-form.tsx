@@ -29,21 +29,32 @@ import {
   buildAggregatedEvaluationPrompt,
   getQcmPassingScorePercent,
   hasExplicitQcmPassingScore,
+  defaultMethodConfig,
   parseMethodConfigs,
   validateMethodConfigsForMethods,
   type BadgeMethodConfig,
 } from "@/lib/openbadges/badge-method-config";
-import { EvaluationMethodConfigDialog } from "@/app/super/open-badges/badgeclasses/_components/evaluation-method-config-dialog";
 import { BadgeLearnerAttemptsPanel } from "@/app/super/open-badges/badgeclasses/_components/badge-learner-attempts-panel";
-import { Check, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { BadgeBuilderPreview } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-preview";
 import { BadgeBuilderStepIdentity } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-step-identity";
+import { BadgeBuilderStepCriteria } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-step-criteria";
+import { BadgeBuilderStepExam } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-step-exam";
+import { BadgeBuilderStepPublish } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-step-publish";
+import { BadgeBuilderStart } from "@/app/super/open-badges/badgeclasses/_components/badge-builder-start";
+import type { DemandLevel, PlannedBadge, SectionSummary } from "@/lib/openbadges/badge-course-generation";
+import { buildCriteriaNarrative, criterionCoverage, prunePractices } from "@/lib/openbadges/criterion-coverage";
+import { coverageExamKeys, listPlaygroundActivities, scoreOnlyReviewIssue } from "@/lib/openbadges/playground-activity";
+import { materializeGeneratedBadge, seriesPrerequisite, type BadgeDomainRecord, type BadgeSeriesRecord, type GeneratedBadge } from "@/lib/openbadges/badge-catalog";
+import type { ByoundCompetencyDraft } from "@/lib/openbadges/badge-builder";
 import {
   ACHIEVEMENT_TYPES,
   achievementLabel,
   cropSquareBadgeImage,
   emptyBuilderState,
   expiresAfterDays,
+  publishChecklist,
+  resolvedWeights,
   readBuilderState,
   validityLabel,
   type BadgeBuilderState,
@@ -86,6 +97,8 @@ type BadgeCriteriaInput = {
   id: string;
   label: string;
   description?: string | null;
+  expectedOutcome?: string | null;
+  competencyId?: string | null;
   sortOrder: number;
 };
 
@@ -158,6 +171,7 @@ const emptyCriteria = (): BadgeCriteriaInput => ({
   id: crypto.randomUUID(),
   label: "",
   description: "",
+  expectedOutcome: "",
   sortOrder: 0,
 });
 
@@ -174,17 +188,31 @@ const statusLabel = (value: BadgeClassRecord["status"]) => {
 };
 
 function badgeStepForError(key: string) {
-  if (key === "criteria") return 2;
   if (
-    key === "level" ||
+    key === "criteria" ||
+    key === "skills" ||
+    key === "competency-validation" ||
+    key === "coverage" ||
+    key === "exam" ||
     key === "evaluationMethods" ||
     key === "validatorExpertId" ||
     key === "methodConfigs" ||
-    key === "requiredCourseId"
-  ) {
-    return 3;
-  }
+    key === "expert"
+  ) return 2;
   return 1;
+}
+
+function frenchSaveError(payload: Record<string, unknown> | null): { message: string; field: string | null } {
+  const code = String(payload?.error ?? "");
+  const message = String(payload?.message ?? "");
+  if (code === "AI_PROMPT_REQUIRED") return { message: "Une consigne d'épreuve est incomplète.", field: "methodConfigs" };
+  if (code === "REQUIRED_COURSE_ID" || code === "REQUIRED_COURSE_MISSING") return { message: "La formation obligatoire n'est pas choisie.", field: "requiredCourseId" };
+  if (code === "COURSE_NOT_FOUND") return { message: "La formation liée est introuvable.", field: "requiredCourseId" };
+  if (code === "CONFLICT") return { message: "Un badge avec ce nom existe déjà.", field: "name" };
+  if (code === "ORG_MISMATCH") return { message: "L'émetteur choisi n'est pas valide.", field: "organizationId" };
+  const readable = message && message !== code ? message : code;
+  if (readable && readable.length < 180) return { message: readable, field: null };
+  return { message: "Le serveur n'a pas pu enregistrer le badge.", field: null };
 }
 
 function CourseSelectItems({ courses }: { courses: CourseOption[] }) {
@@ -252,105 +280,307 @@ export function BadgeClassForm({
   const [requiredCourseId, setRequiredCourseId] = useState<string | null>(null);
   const [failureRemediationCourseId, setFailureRemediationCourseId] = useState<string | null>(null);
   const [visibleInLearnerDashboard, setVisibleInLearnerDashboard] = useState(false);
-  const [receivabilityReviewMode, setReceivabilityReviewMode] = useState<"HUMAN" | "AI" | "MIXED">("HUMAN");
+  const [receivabilityReviewMode, setReceivabilityReviewMode] = useState<"HUMAN" | "AI" | "MIXED">(badgeClassId ? "HUMAN" : "MIXED");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const [builder, setBuilder] = useState<BadgeBuilderState>(emptyBuilderState());
   const [previewMode, setPreviewMode] = useState<"card" | "page">("card");
   const [visitedStep, setVisitedStep] = useState(1);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [clock, setClock] = useState(() => Date.now());
   const [menuOpen, setMenuOpen] = useState(false);
   const [localId, setLocalId] = useState(badgeClassId ?? "");
   const idRef = useRef(badgeClassId ?? "");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveField, setSaveField] = useState<string | null>(null);
   const [customMonths, setCustomMonths] = useState("");
   const skipSaveRef = useRef(true);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(badgeClassId ? 1 : 0);
+  const [catalog, setCatalog] = useState<{ domains: BadgeDomainRecord[]; series: BadgeSeriesRecord[]; competencies: ByoundCompetencyDraft[] }>({ domains: [], series: [], competencies: [] });
+  const [siblings, setSiblings] = useState<Array<{ id: string; name: string; seriesName?: string | null; level?: number | null }>>([]);
+  const [preparedFrom, setPreparedFrom] = useState<string | null>(null);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [courseChanged, setCourseChanged] = useState(false);
+  const [openMethod, setOpenMethod] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [aiPrompt, setAiPrompt] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [demand, setDemand] = useState<DemandLevel>("maitrise");
+  const [waitLabel, setWaitLabel] = useState("");
+  const [genError, setGenError] = useState("");
+  const [sectionSummaries, setSectionSummaries] = useState<SectionSummary[]>([]);
+  const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
+  const [createdDrafts, setCreatedDrafts] = useState<Array<{ id: string; name: string }>>([]);
   const previousOrgId = useRef<string | null>(null);
   const hydratingBadgeRef = useRef(false);
 
-  const generateFromAiPrompt = async () => {
-    const prompt = aiPrompt.trim();
-    if (!prompt) {
-      toast.error("Décrivez le badge à générer");
-      return;
-    }
+  const applyGenerated = (badge: GeneratedBadge, extra?: Partial<BadgeBuilderState>) => {
+    const made = materializeGeneratedBadge(badge, catalog.competencies);
+    setName(badge.name);
+    setDescription(badge.description);
+    setLevel(String(badge.level));
+    setCriteria(made.criteria);
+    setEvaluationMethods(made.methodIds);
+    setMethodConfigs(made.configs);
+    setReviewCount(made.reviewCount);
+    setBuilder((current) => ({
+      ...current,
+      ...extra,
+      domain: badge.domain ?? current.domain,
+      seriesName: badge.seriesName ?? current.seriesName,
+      levelLabel: badge.levelLabel ?? current.levelLabel,
+      competencies: made.competencies,
+      skills: made.competencies.map((item) => item.name),
+      generated: true,
+      reviewedCriterionIds: [],
+      exam: {
+        ...current.exam,
+        practices: made.practices,
+        durationMin: badge.durationMin ?? current.exam.durationMin,
+        attempts: 3,
+        retryDelayDays: 7,
+        reviewSlaDays: 5,
+        accommodations: true,
+        integrityCheck: true,
+        deliverablesVisible: true,
+      },
+    }));
+    setReceivabilityReviewMode("MIXED");
+    setVisitedStep(3);
+    setStep(1);
+  };
+
+  const refreshCatalog = async () => {
+    const response = await fetch("/api/super-admin/open-badges/catalog");
+    if (!response.ok) return;
+    const payload = await response.json();
+    setCatalog({
+      domains: Array.isArray(payload.domains) ? payload.domains : [],
+      series: Array.isArray(payload.series) ? payload.series : [],
+      competencies: Array.isArray(payload.competencies) ? payload.competencies : [],
+    });
+  };
+
+  const prepareFromText = async (text: string, file: File | null, sourceBadgeId: string) => {
     setAiGenerating(true);
     try {
-      const res = await fetch("/api/super-admin/open-badges/generate-from-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        toast.error(json.error ?? "Génération impossible");
+      if (sourceBadgeId) {
+        const response = await fetch(`/api/admin/badgeclasses/${sourceBadgeId}`, { headers: createHeaders(auth, organizationId) });
+        const payload = await response.json();
+        const source = payload.badgeClass ?? payload.badge ?? payload;
+        if (!response.ok || !source?.name) {
+          toast.error("Badge introuvable");
+          return;
+        }
+        setName(`${source.name} (copie)`);
+        setDescription(source.description ?? "");
+        setLevel(source.level != null ? String(source.level) : "1");
+        if (Array.isArray(source.criteria)) setCriteria(ensureCriteriaIds(source.criteria));
+        if (Array.isArray(source.evaluationMethods)) setEvaluationMethods(source.evaluationMethods);
+        setMethodConfigs(parseMethodConfigs(source.receivability?.methodConfigs ?? source.methodConfigs));
+        setBuilder(readBuilderState(source.builder, source.expiresAfterDays));
+        setPreparedFrom(source.name);
+        setStep(1);
         return;
       }
-      const badge = json.badge as Record<string, unknown> | undefined;
-      if (!badge) return;
-      if (typeof badge.name === "string" && badge.name.trim()) setName(badge.name.trim());
-      if (typeof badge.description === "string") setDescription(badge.description.trim());
-      if (typeof badge.criteriaMarkdown === "string") setCriteriaMarkdown(badge.criteriaMarkdown.trim());
-      if (typeof badge.level === "number") setLevel(String(Math.min(3, Math.max(1, badge.level))));
-      if (typeof badge.domain === "string" && badge.domain.trim()) {
-        setBuilder((current) => ({ ...current, domain: badge.domain as string }));
+      let prompt = text.trim();
+      if (file) {
+        const body = new FormData();
+        body.set("file", file);
+        const extracted = await fetch("/api/super-admin/open-badges/extract-pdf", { method: "POST", body });
+        const payload = await extracted.json();
+        if (!extracted.ok) {
+          toast.error(payload.error ?? "PDF illisible");
+          return;
+        }
+        prompt = `${prompt}\n${payload.text ?? ""}`.trim();
       }
-      if (typeof badge.achievementType === "string" && ACHIEVEMENT_TYPES.some((item) => item.id === badge.achievementType)) {
-        setBuilder((current) => ({ ...current, achievementType: badge.achievementType as BadgeBuilderState["achievementType"] }));
+      if (!prompt) return;
+      setWaitLabel("Rédaction des critères, puis création des questions…");
+      setGenError("");
+      const response = await fetch("/api/super-admin/open-badges/generate-from-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          demand,
+          library: catalog.competencies.map((item) => item.name),
+          domains: catalog.domains.map((item) => item.name),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.badge) {
+        const detail = [payload.error, payload.detail].filter(Boolean).join(" — ");
+        setGenError(detail || "La génération a échoué");
+        toast.error(detail || "La génération a échoué");
+        return;
       }
-      if (Array.isArray(badge.skills)) {
-        const skills = badge.skills.map((item) => String(item)).filter(Boolean);
-        setBuilder((current) => ({ ...current, skills }));
-      }
-      if (Array.isArray(badge.criteria) && badge.criteria.length > 0) {
-        setCriteria(
-          badge.criteria.map((c: { label?: string; description?: string; expectedOutcome?: string }, i: number) => ({
-            id: crypto.randomUUID(),
-            label: String(c.label ?? ""),
-            description: [c.description, c.expectedOutcome].filter(Boolean).join(" — "),
-            sortOrder: i,
-          })),
-        );
-      }
-      const methods = Array.isArray(badge.evaluationMethods)
-        ? badge.evaluationMethods.filter((m): m is BadgeEvaluationMethodId =>
-            typeof m === "string" && isBadgeEvaluationMethodId(m),
-          )
-        : [];
-      if (methods.length > 0) {
-        setEvaluationMethods(methods);
-        const promptText =
-          typeof badge.suggestedEvaluationPrompt === "string"
-            ? badge.suggestedEvaluationPrompt
-            : "";
-        setMethodConfigs(
-          methods.map((methodId) => ({
-            methodId,
-            evaluationPrompt: promptText,
-            ...(methodId === "qcm"
-              ? {
-                  quiz: {
-                    generationMode: "ai" as const,
-                    questionCount: 5,
-                    title: typeof badge.name === "string" ? badge.name : "",
-                    level: typeof badge.level === "number" ? badge.level : undefined,
-                    questions: [],
-                  },
-                }
-              : {}),
-          })),
-        );
-      }
-      toast.success("Badge pré-rempli par l’IA — vérifiez et complétez");
+      applyGenerated(payload.badge as GeneratedBadge);
+      setPreparedFrom(null);
+      const issues = Array.isArray(payload.issues) ? payload.issues.filter((item: unknown) => typeof item === "string") as string[] : [];
+      if (issues.length) toast.error(issues[0]);
+      else toast.success("Badge préparé — relisez les champs");
     } catch {
       toast.error("Erreur réseau");
     } finally {
       setAiGenerating(false);
+    }
+  };
+
+  const postCourse = async (body: Record<string, unknown>) => {
+    const response = await fetch("/api/super-admin/open-badges/generate-from-course", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = [payload.error, payload.detail].filter(Boolean).join(" — ");
+      throw new Error(detail || "La génération a échoué");
+    }
+    return payload as Record<string, unknown>;
+  };
+
+  const prepareFromCourse = async (courseId: string) => {
+    setPendingCourseId(courseId);
+    setGenError("");
+    setCreatedDrafts([]);
+    setAiGenerating(true);
+    try {
+      setWaitLabel("Lecture des sections…");
+      const summarized = await postCourse({
+        phase: "summaries",
+        courseId,
+        demand,
+      });
+      const summaries = Array.isArray(summarized.summaries) ? summarized.summaries as SectionSummary[] : [];
+      setSectionSummaries(summaries);
+      const courseTitle = String((summarized.course as { title?: string } | undefined)?.title ?? "");
+      const hours = summaries.reduce((sum, item) => sum + (item.hours ?? 0), 0);
+      setPreparedFrom(courseTitle);
+      setWaitLabel("Rédaction des critères, puis création des questions…");
+      await generateChosenBadges(courseId, summaries, [{
+        key: "single",
+        title: courseTitle || "Badge",
+        kind: "single",
+        sectionTitle: null,
+        hours: hours || null,
+        summary: "Un seul badge pour toute la formation. Les critères suivent la démarche du métier.",
+      }], courseTitle, "");
+    } catch (failure) {
+      setGenError(failure instanceof Error ? failure.message : "La génération a échoué");
+    } finally {
+      setAiGenerating(false);
+      setWaitLabel("");
+    }
+  };
+
+  const generateChosenBadges = async (courseId: string, summaries: SectionSummary[], badges: PlannedBadge[], seriesName: string, domain: string) => {
+    if (!courseId || badges.length === 0) return;
+    setGenError("");
+    setAiGenerating(true);
+    setWaitLabel("Rédaction des critères, puis création des questions…");
+    try {
+      const payload = await postCourse({
+        phase: "badges",
+        courseId,
+        demand,
+        summaries,
+        badges,
+        seriesName,
+        domain,
+        library: catalog.competencies.map((item) => item.name),
+      });
+      const rows = (Array.isArray(payload.badges) ? payload.badges as Array<{ badge: GeneratedBadge; issues?: string[]; planned?: PlannedBadge }> : [])
+        .sort((left, right) => (left.planned?.kind === "synthesis" ? 1 : 0) - (right.planned?.kind === "synthesis" ? 1 : 0));
+      const course = payload.course as { id: string; title: string; updatedAt?: string | null; fingerprint?: string };
+      const expertId = String((payload.expert as { id?: string } | null)?.id ?? "");
+      const failures = Array.isArray(payload.failures) ? payload.failures as Array<{ title: string; issues: string[] }> : [];
+      if (failures.length) setGenError(failures.map((item) => `${item.title} : ${item.issues.join(" ")}`).join(" · "));
+      if (rows.length === 1 && rows[0].issues?.length) {
+        setGenError(rows[0].issues.join(" "));
+      }
+      if (rows.length === 1) {
+        applyGenerated(rows[0].badge, {
+          linkedCourseId: course.id,
+          associatedCourseId: course.id,
+          fallbackCourseId: course.id,
+          courseRequiredBeforeExam: true,
+          linkedCourseUpdatedAt: course.updatedAt ?? null,
+          linkedCourseFingerprint: course.fingerprint ?? null,
+          seriesName,
+          domain: rows[0].badge.domain || domain,
+        });
+        if (expertId) setValidatorExpertId(expertId);
+        setRequiresEnrollment(true);
+        setRequiredCourseId(course.id);
+        setFailureRemediationCourseId(course.id);
+        setPreparedFrom(course.title);
+        return;
+      }
+      const saved: Array<{ id: string; name: string }> = [];
+      const sectionIds: string[] = [];
+      for (const row of rows) {
+        const made = materializeGeneratedBadge(row.badge, catalog.competencies);
+        const nextBuilder = emptyBuilderState();
+        const isSynthesis = row.planned?.kind === "synthesis";
+        const response = await fetch("/api/admin/badgeclasses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...createHeaders(auth, organizationId) },
+          body: JSON.stringify({
+            organizationId,
+            name: row.badge.name,
+            description: row.badge.description.slice(0, 300),
+            imageUrl: "",
+            status: "DRAFT",
+            level: row.badge.level,
+            evaluationMethods: made.methodIds,
+            validatorExpertId: expertId || null,
+            methodConfigs: made.configs,
+            receivabilityReviewMode: "MIXED",
+            criteria: made.criteria,
+            receivability: {
+              expectedModalities: made.methodIds.join(", "),
+              aiEvaluationPrompt: made.configs.map((item) => item.evaluationPrompt).filter(Boolean).join("\n\n"),
+              methodConfigs: made.configs,
+            },
+            builder: {
+              ...nextBuilder,
+              domain: row.badge.domain || domain,
+              seriesName,
+              levelLabel: row.badge.levelLabel,
+              competencies: made.competencies,
+              skills: made.competencies.map((item) => item.name),
+              generated: true,
+              reviewedCriterionIds: [],
+              linkedCourseId: course.id,
+              associatedCourseId: course.id,
+              fallbackCourseId: course.id,
+              courseRequiredBeforeExam: true,
+              linkedCourseUpdatedAt: course.updatedAt ?? null,
+              linkedCourseFingerprint: course.fingerprint ?? null,
+              exam: {
+                ...nextBuilder.exam,
+                practices: made.practices,
+                durationMin: row.badge.durationMin ?? null,
+                prerequisiteBadgeIds: isSynthesis ? sectionIds : [],
+              },
+            },
+          }),
+        });
+        const created = await response.json().catch(() => ({}));
+        const id = String(created.badgeClass?.id ?? "");
+        if (id) {
+          saved.push({ id, name: row.badge.name });
+          if (!isSynthesis) sectionIds.push(id);
+        }
+      }
+      setCreatedDrafts(saved);
+      if (saved.length === 0) setGenError("Les brouillons n'ont pas pu être enregistrés. Vérifiez l'émetteur, puis réessayez.");
+    } catch (failure) {
+      setGenError(failure instanceof Error ? failure.message : "La génération a échoué");
+    } finally {
+      setAiGenerating(false);
+      setWaitLabel("");
     }
   };
 
@@ -368,15 +598,24 @@ export function BadgeClassForm({
         });
       }
     };
-    const loadValidators = async () => {
-      const res = await fetch("/api/super-admin/validators");
-      if (!res.ok) return;
-      const json = await res.json();
-      setValidators(json.validators ?? []);
-    };
     loadOrganizations();
-    loadValidators();
   }, []);
+
+  useEffect(() => {
+    const domain = builder.domain?.trim() ?? "";
+    if (!domain) {
+      setValidators([]);
+      return;
+    }
+    void fetch(`/api/super-admin/open-badges/experts?domain=${encodeURIComponent(domain)}`)
+      .then((response) => response.json())
+      .then((payload: { experts?: ValidatorOption[] }) => {
+        const experts = Array.isArray(payload.experts) ? payload.experts : [];
+        setValidators(experts);
+        setValidatorExpertId((current) => current || experts[0]?.id || "");
+      })
+      .catch(() => setValidators([]));
+  }, [builder.domain]);
 
   const validatorLabel = (validator: ValidatorOption) => {
     const fromParts = [validator.first_name, validator.last_name].filter(Boolean).join(" ").trim();
@@ -561,26 +800,6 @@ export function BadgeClassForm({
     });
   };
 
-  const updateCriteria = (index: number, patch: Partial<BadgeCriteriaInput>) => {
-    setCriteria((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], ...patch };
-      return next;
-    });
-    clearFieldError("criteria");
-  };
-
-  const moveCriterion = (index: number, direction: -1 | 1) => {
-    setCriteria((prev) => {
-      const next = [...prev];
-      const newIndex = index + direction;
-      if (newIndex < 0 || newIndex >= next.length) return prev;
-      const [item] = next.splice(index, 1);
-      next.splice(newIndex, 0, item);
-      return next;
-    });
-  };
-
   const handleImageUpload = async (file: File) => {
     setImageUploading(true);
     try {
@@ -713,10 +932,22 @@ export function BadgeClassForm({
     }
   };
 
-  const narrativeFromCriteria = criteria
-    .map((item) => [item.label.trim(), (item.description ?? "").trim()].filter(Boolean).join(" — "))
-    .filter(Boolean)
-    .join("\n");
+  const passRule = builder.exam.passMode === "threshold"
+    ? `Règle de réussite : chaque épreuve est réussie lorsqu'au moins ${builder.exam.passCount} critère${builder.exam.passCount > 1 ? "s sont validés" : " est validé"}.`
+    : "Règle de réussite : chaque épreuve doit être réussie.";
+  const narrativeFromCriteria = buildCriteriaNarrative({
+    criteria: criteria.map((item) => ({ label: item.label, expectedOutcome: item.expectedOutcome })),
+    methods: evaluationMethods.map((id) => {
+      const links = builder.exam.practices[id]?.criteria ?? [];
+      const labels = links.map((link) => criteria.find((item) => item.id === link.criterionId)?.label ?? "").filter(Boolean);
+      const quiz = methodConfigs.find((item) => item.methodId === id)?.quiz;
+      const detail = id === "qcm" && quiz ? `seuil ${quiz.passingScorePercent ?? 80} %` : "";
+      return { id, criterionLabels: labels, detail };
+    }),
+    passRule: builder.exam.requirePractice
+      ? `${passRule} Une mise en pratique est exigée pour un critère seulement couvert par le questionnaire.`
+      : passRule,
+  });
 
   const serializePayload = (nextStatus?: BadgeClassRecord["status"]): BadgeClassPayload => ({
     organizationId,
@@ -746,7 +977,10 @@ export function BadgeClassForm({
     methodConfigs,
     builder: {
       ...builder,
+      skills: builder.competencies.map((item) => item.name),
+      catalog,
       validityMonths: builder.validityMode === "custom" ? Number(customMonths) || null : builder.validityMode === "12" ? 12 : builder.validityMode === "24" ? 24 : null,
+      ...(nextStatus === "ACTIVE" && builder.linkedCourseId ? { linkedCourseUpdatedAt: new Date().toISOString() } : {}),
     },
     achievementType: builder.achievementType,
     expiresAfterDays: expiresAfterDays(
@@ -754,6 +988,49 @@ export function BadgeClassForm({
       builder.validityMode === "custom" ? Number(customMonths) || null : null,
     ),
   });
+
+  const checklist = () => {
+    const qcm = methodConfigs.filter((item) => item.methodId === "qcm");
+    const playground = methodConfigs.find((item) => item.methodId === "playground")?.playground;
+    const examKeys = coverageExamKeys(evaluationMethods, playground);
+    const coverage = criterionCoverage(
+      criteria.filter((item) => item.label.trim()),
+      examKeys.map((id) => ({
+        id,
+        criterionIds: (builder.exam.practices[id]?.criteria ?? []).map((link) => link.criterionId),
+      })),
+    );
+    const instructionsComplete = examKeys.every((id) => {
+      const config = methodConfigs.find((item) => item.methodId === id || (id.startsWith("playground") && item.methodId === "playground"));
+      if (!config) return false;
+      if (id !== "qcm" && !config.evaluationPrompt.trim()) return false;
+      if (id === "qcm") return (config.quiz?.questions.length ?? 0) > 0;
+      if (id === "case_study") return Boolean(config.caseStudy?.learnerPrompt.trim());
+      if (id === "playground" || id.startsWith("playground:")) {
+        const activity = listPlaygroundActivities(config.playground).find((item) => id === "playground" || id.endsWith(`:${item.id}`));
+        if (activity?.type === "situation") return Boolean(activity.situation?.character.trim());
+        if (activity?.type === "module") return Boolean(activity.module);
+        return Boolean(activity?.learnerPrompt.trim() || config.playground?.learnerPrompt.trim());
+      }
+      return Boolean(config.learnerInstruction?.trim());
+    });
+    return publishChecklist({
+      name,
+      level,
+      description,
+      criteria,
+      competencies: builder.competencies,
+      methods: evaluationMethods,
+      instructionsComplete,
+      questionsReviewed: qcm.every((item) => (item.quiz?.questions ?? []).every((question) => question.reviewStatus === "reviewed")),
+      deliverableCount: Object.values(builder.exam.practices).reduce((total, practice) => total + practice.deliverables.filter((item) => item.title.trim()).length, 0),
+      uncoveredCount: coverage.filter((row) => row.tone === "missing").length,
+      qcmOnlyCount: coverage.filter((row) => row.tone === "qcm").length,
+      hasExpert: Boolean(validatorExpertId),
+      hasDelay: builder.exam.reviewSlaDays > 0,
+      hasImage: Boolean(imageUrl.trim()),
+    });
+  };
 
   const validateForm = () => {
     const nextErrors: Record<string, string> = {};
@@ -772,9 +1049,13 @@ export function BadgeClassForm({
     if (!level) nextErrors.level = "Niveau requis.";
     if (evaluationMethods.length === 0) nextErrors.evaluationMethods = "Choisissez au moins une méthode.";
     if (!validatorExpertId) nextErrors.validatorExpertId = "Validateur requis.";
-    if (configError) nextErrors.methodConfigs = configError;
+    const reviewIssue = scoreOnlyReviewIssue(listPlaygroundActivities(methodConfigs.find((item) => item.methodId === "playground")?.playground), receivabilityReviewMode);
+    if (configError || reviewIssue) nextErrors.methodConfigs = reviewIssue || configError || "";
     if (requiresEnrollment && !requiredCourseId) {
       nextErrors.requiredCourseId = "Formation requise.";
+    }
+    for (const item of checklist()) {
+      if (item.required && !item.ok) nextErrors[item.id] = item.label;
     }
 
     setErrors(nextErrors);
@@ -823,7 +1104,7 @@ export function BadgeClassForm({
     return true;
   };
 
-  const saveBadge = async (nextStatus?: BadgeClassRecord["status"]) => {
+  const saveBadge = async (nextStatus?: BadgeClassRecord["status"], options?: { openTrial?: boolean }) => {
     if (nextStatus !== "ARCHIVED" && !validateForm()) return;
     setLoading(true);
     try {
@@ -861,19 +1142,19 @@ export function BadgeClassForm({
         const errorCode = (json?.error as string | undefined) ?? undefined;
         if (errorCode === "AI_PROMPT_REQUIRED") {
           setErrors((prev) => ({ ...prev, methodConfigs: "Configurez chaque méthode d’évaluation." }));
-          setStep(3);
-          toast.error("Configurez chaque méthode d’évaluation.");
+          setStep(2);
+          toast.error("Une consigne d'épreuve est incomplète.");
           return;
         }
         if (errorCode === "REQUIRED_COURSE_ID" || errorCode === "REQUIRED_COURSE_MISSING") {
           setErrors((prev) => ({ ...prev, requiredCourseId: "Formation requise." }));
-          setStep(3);
+          setStep(1);
           toast.error("Formation requise.");
           return;
         }
         if (errorCode === "COURSE_NOT_FOUND") {
           setErrors((prev) => ({ ...prev, requiredCourseId: "Formation introuvable." }));
-          setStep(3);
+          setStep(1);
           toast.error("Formation introuvable.");
           return;
         }
@@ -904,8 +1185,14 @@ export function BadgeClassForm({
       }
       const jsonOk = json as { badgeClass?: { id?: string } } | null;
       if (!badgeClassId && jsonOk?.badgeClass?.id) {
-        window.location.href = `/super/open-badges/badgeclasses/${jsonOk.badgeClass.id}/edit`;
+        const nextId = jsonOk.badgeClass.id;
+        window.location.href = options?.openTrial
+          ? `/super/open-badges/badgeclasses/${nextId}/essai`
+          : `/super/open-badges/badgeclasses/${nextId}/edit`;
         return;
+      }
+      if (options?.openTrial && (badgeClassId || localId)) {
+        window.open(`/super/open-badges/badgeclasses/${badgeClassId || localId}/essai`, "_blank", "noopener");
       }
       setErrors({});
       const savedStatus = (json?.badgeClass as { status?: unknown } | undefined)?.status;
@@ -954,7 +1241,13 @@ export function BadgeClassForm({
   idRef.current = activeId;
 
   const persistDraft = async () => {
-    if (locked || !organizationId || !name.trim()) return;
+    if (locked) return;
+    if (!organizationId || !name.trim()) {
+      setSaveState("error");
+      setSaveError(!name.trim() ? "Indiquez le nom du badge pour enregistrer." : "Choisissez l'émetteur pour enregistrer.");
+      setSaveField(!name.trim() ? "name" : "organizationId");
+      return;
+    }
     setSaveState("saving");
     try {
       const payload = { ...serializePayload("DRAFT"), organizationId };
@@ -964,12 +1257,17 @@ export function BadgeClassForm({
         headers: { "Content-Type": "application/json", ...createHeaders(auth, organizationId) },
         body: JSON.stringify(payload),
       });
-      const json = await res.json().catch(() => null);
+      const json = await res.json().catch(() => null) as Record<string, unknown> | null;
       if (!res.ok) {
+        const reason = frenchSaveError(json);
+        setSaveError(reason.message);
+        setSaveField(reason.field);
         setSaveState("error");
         return;
       }
-      const createdId = String(json?.badgeClass?.id ?? "");
+      setSaveError(null);
+      setSaveField(null);
+      const createdId = String((json?.badgeClass as { id?: string } | undefined)?.id ?? "");
       if (!currentId && createdId) {
         idRef.current = createdId;
         setLocalId(createdId);
@@ -977,7 +1275,9 @@ export function BadgeClassForm({
       }
       setSavedAt(Date.now());
       setSaveState("saved");
-    } catch {
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Le serveur n'a pas répondu.");
+      setSaveField(null);
       setSaveState("error");
     }
   };
@@ -1014,10 +1314,164 @@ export function BadgeClassForm({
     }
   };
 
+  const criterionKey = criteria.map((item) => item.id).join("|");
   useEffect(() => {
-    const timer = window.setInterval(() => setClock(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    const result = prunePractices(builder.exam.practices, criteria.map((item) => item.id));
+    if (result.warnings.length === 0) return;
+    setBuilder((current) => ({ ...current, exam: { ...current.exam, practices: result.practices } }));
+    toast.message(result.warnings.join(" "));
+    // Le recalcul suit uniquement la liste des critères.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [criterionKey]);
+
+  const coverCriterion = (criterionId: string, methodId: string, open = true) => {
+    if (!isBadgeEvaluationMethodId(methodId)) return;
+    setEvaluationMethods((current) => (current.includes(methodId) ? current : [...current, methodId]));
+    setMethodConfigs((current) => {
+      if (current.some((item) => item.methodId === methodId)) return current;
+      const created = defaultMethodConfig(methodId);
+      if (methodId === "qcm" && created.quiz) {
+        created.quiz = { ...created.quiz, passingScorePercent: 80, randomDraw: true };
+      }
+      return [...current, created];
+    });
+    setBuilder((current) => {
+      const practice = current.exam.practices[methodId] ?? { criteria: [], deliverables: [] };
+      const ids = practice.criteria.some((link) => link.criterionId === criterionId)
+        ? practice.criteria.map((link) => link.criterionId)
+        : [...practice.criteria.map((link) => link.criterionId), criterionId];
+      const weights = resolvedWeights(ids, Object.fromEntries(practice.criteria.map((link) => [link.criterionId, link.weight])));
+      return {
+        ...current,
+        exam: {
+          ...current.exam,
+          practices: {
+            ...current.exam.practices,
+            [methodId]: { ...practice, criteria: ids.map((id) => ({ criterionId: id, weight: weights[id] ?? 0 })) },
+          },
+        },
+      };
+    });
+    if (open) setOpenMethod(methodId);
+  };
+
+  const autoCover = () => {
+    const titled = criteria.filter((item) => item.label.trim());
+    const host = evaluationMethods.find((id) => id !== "qcm") ?? evaluationMethods[0] ?? "case_study";
+    if (!isBadgeEvaluationMethodId(host)) return;
+    setEvaluationMethods((current) => (current.includes(host) ? current : [...current, host]));
+    setMethodConfigs((current) => {
+      if (current.some((item) => item.methodId === host)) return current;
+      const created = defaultMethodConfig(host);
+      if (host === "qcm" && created.quiz) created.quiz = { ...created.quiz, passingScorePercent: 80, randomDraw: true };
+      return [...current, created];
+    });
+    setBuilder((current) => {
+      const practice = current.exam.practices[host] ?? { criteria: [], deliverables: [] };
+      const covered = new Set(Object.values(current.exam.practices).flatMap((item) => (item?.criteria ?? []).map((link) => link.criterionId)));
+      const missing = titled.map((item) => item.id).filter((id) => !covered.has(id));
+      const ids = [...practice.criteria.map((link) => link.criterionId), ...missing];
+      const weights = resolvedWeights(ids, Object.fromEntries(practice.criteria.map((link) => [link.criterionId, link.weight])));
+      return {
+        ...current,
+        exam: {
+          ...current.exam,
+          practices: {
+            ...current.exam.practices,
+            [host]: {
+              ...practice,
+              deliverables: host === "qcm" ? [] : practice.deliverables,
+              criteria: ids.map((id) => ({ criterionId: id, weight: weights[id] ?? 0 })),
+            },
+          },
+        },
+      };
+    });
+  };
+
+  const toggleCriterionExam = (criterionId: string, methodId: string) => {
+    if (!isBadgeEvaluationMethodId(methodId)) return;
+    const linked = (builder.exam.practices[methodId]?.criteria ?? []).some((link) => link.criterionId === criterionId);
+    if (!linked) {
+      coverCriterion(criterionId, methodId, false);
+      return;
+    }
+    setBuilder((current) => {
+      const practice = current.exam.practices[methodId];
+      if (!practice) return current;
+      const ids = practice.criteria.map((link) => link.criterionId).filter((id) => id !== criterionId);
+      const weights = resolvedWeights(ids, {});
+      return {
+        ...current,
+        exam: {
+          ...current.exam,
+          practices: {
+            ...current.exam.practices,
+            [methodId]: { ...practice, criteria: ids.map((id) => ({ criterionId: id, weight: weights[id] ?? 0 })) },
+          },
+        },
+      };
+    });
+  };
+
+  useEffect(() => {
+    void refreshCatalog();
   }, []);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    void fetch(`/api/admin/badgeclasses?organizationId=${encodeURIComponent(organizationId)}`, {
+      headers: createHeaders(auth, organizationId),
+    })
+      .then((response) => response.json())
+      .then((payload: { badgeClasses?: Array<{ id?: string; name?: string; level?: number | null; builder?: { seriesName?: string | null } | null }> }) => {
+        const rows = Array.isArray(payload.badgeClasses) ? payload.badgeClasses : [];
+        setSiblings(rows.flatMap((item) => item.id && item.name ? [{
+          id: item.id,
+          name: item.name,
+          seriesName: item.builder?.seriesName ?? null,
+          level: item.level ?? null,
+        }] : []));
+      })
+      .catch(() => setSiblings([]));
+  }, [organizationId, auth]);
+
+  useEffect(() => {
+    const levelNumber = Number(level);
+    const previous = seriesPrerequisite(builder.seriesName ?? "", levelNumber, siblings, localId || badgeClassId);
+    const lockedIds = previous ? [previous.id] : [];
+    const same = lockedIds.join() === builder.lockedPrerequisiteBadgeIds.join();
+    const present = !previous || builder.exam.prerequisiteBadgeIds.includes(previous.id);
+    if (same && present) return;
+    setBuilder((current) => {
+      const ids = new Set(current.exam.prerequisiteBadgeIds);
+      for (const id of current.lockedPrerequisiteBadgeIds) {
+        if (!lockedIds.includes(id)) ids.delete(id);
+      }
+      if (previous) ids.add(previous.id);
+      return {
+        ...current,
+        lockedPrerequisiteBadgeIds: lockedIds,
+        exam: { ...current.exam, prerequisiteBadgeIds: [...ids] },
+      };
+    });
+  }, [builder.seriesName, builder.lockedPrerequisiteBadgeIds, builder.exam.prerequisiteBadgeIds, level, siblings, localId, badgeClassId]);
+
+  useEffect(() => {
+    if (status !== "ACTIVE" || !builder.linkedCourseId || !builder.linkedCourseUpdatedAt) {
+      setCourseChanged(false);
+      return;
+    }
+    const courseId = builder.linkedCourseId;
+    const baseline = builder.linkedCourseUpdatedAt;
+    void fetch(`/api/super-admin/open-badges/generate-from-course?id=${encodeURIComponent(courseId)}`)
+      .then((response) => response.json())
+      .then((payload: { courses?: Array<{ updatedAt?: string | null }> }) => {
+        const updatedAt = payload.courses?.[0]?.updatedAt;
+        setCourseChanged(Boolean(updatedAt && new Date(updatedAt).getTime() > new Date(baseline).getTime()));
+      })
+      .catch(() => setCourseChanged(false));
+  }, [status, builder.linkedCourseId, builder.linkedCourseUpdatedAt]);
 
   useEffect(() => {
     if (locked || hydratingBadgeRef.current || !organizationId || !name.trim()) return;
@@ -1051,19 +1505,12 @@ export function BadgeClassForm({
     locked,
   ]);
 
-  const savedLabel = (() => {
-    if (saveState === "saving") return "Enregistrement…";
-    if (saveState === "error") return "Enregistrement impossible";
-    if (!savedAt) return "";
-    const seconds = Math.max(0, Math.round((clock - savedAt) / 1000));
-    return `Brouillon enregistré il y a ${seconds} s`;
-  })();
+  const savedLabel = saveState === "saving" ? "Enregistrement…" : saveState === "error" ? (saveError || "Le serveur n'a pas pu enregistrer le badge.") : savedAt ? "Enregistré" : "";
 
   const badgeSteps = [
     { id: 1, label: "Le badge" },
-    { id: 2, label: "Critères" },
-    { id: 3, label: "Épreuve" },
-    { id: 4, label: "Publication" },
+    { id: 2, label: "Évaluation" },
+    { id: 3, label: "Publication" },
   ] as const;
 
   const issuerName = formatOrganizationDisplayName(
@@ -1072,9 +1519,13 @@ export function BadgeClassForm({
   const expertName = validators.find((item) => item.id === validatorExpertId)
     ? validatorLabel(validators.find((item) => item.id === validatorExpertId)!)
     : "";
+  const pendingReview = builder.generated
+    ? criteria.filter((item) => item.label.trim() && !builder.reviewedCriterionIds.includes(item.id)).length
+      + methodConfigs.reduce((count, config) => count + (config.quiz?.questions ?? []).filter((question) => question.reviewStatus !== "reviewed").length, 0)
+    : reviewCount;
   const pageTitle = builder.version > 1 && name.trim() ? `${name.trim()} · v${builder.version}` : "Nouveau badge";
   const goToStep = (next: number) => {
-    const target = Math.min(4, Math.max(1, next));
+    const target = Math.min(3, Math.max(1, next));
     setStep(target);
     setVisitedStep((current) => Math.max(current, target));
   };
@@ -1090,14 +1541,29 @@ export function BadgeClassForm({
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <h1 className="text-3xl font-semibold">{pageTitle}</h1>
           <div className="flex items-center gap-3">
-            {savedLabel ? <p className="text-sm text-[#3DDCAB]">{saveState === "saved" ? <Check className="mr-1 inline h-4 w-4" /> : null}{savedLabel}</p> : null}
-            {activeId ? (
-              <a href={`/super/open-badges/badgeclasses/${activeId}/essai`} target="_blank" rel="noreferrer" className="rounded-full border border-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#B9B2FF]">
-                Tester l&apos;épreuve
-              </a>
-            ) : (
-              <span className="rounded-full border border-[#26304F] px-4 py-2 text-sm text-[#5F688A]">Tester l&apos;épreuve</span>
-            )}
+            {savedLabel ? (
+              <p className={`text-sm ${saveState === "error" ? "text-[#F2C15A]" : "text-[#3DDCAB]"}`}>
+                {saveState === "error" ? savedLabel : `✓ ${savedLabel}`}
+                {saveState === "error" && saveField ? (
+                  <button type="button" className="ml-2 underline" onClick={() => { goToStep(badgeStepForError(saveField)); window.setTimeout(() => document.getElementById(`field-${saveField}`)?.focus(), 50); }}>
+                    Voir le champ
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                if (activeId) {
+                  window.open(`/super/open-badges/badgeclasses/${activeId}/essai`, "_blank", "noopener");
+                  return;
+                }
+                void saveBadge(undefined, { openTrial: true });
+              }}
+              className="relative z-20 rounded-full border border-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#B9B2FF]"
+            >
+              Tester l&apos;épreuve
+            </button>
             {activeId ? (
               <div className="relative">
                 <button type="button" aria-label="Autres actions" onClick={() => setMenuOpen((open) => !open)} className="rounded-full border border-[#26304F] p-2">
@@ -1119,7 +1585,45 @@ export function BadgeClassForm({
             Ce badge est publié. Les badges déjà délivrés gardent cette version. Créez une nouvelle version pour le modifier.
           </p>
         ) : null}
-        <div className="mt-6 grid grid-cols-4 gap-3" role="tablist" aria-label="Étapes du badge">
+        {courseChanged && builder.linkedCourseId ? (
+          <p className="mt-4 rounded-2xl border border-[#F2C15A]/40 bg-[#F2C15A]/10 px-4 py-3 text-sm text-[#F2C15A]">
+            La formation liée a changé depuis la publication : vérifiez les critères.{" "}
+            <Link href={`/super/lms/formations/${builder.linkedCourseId}`} className="underline">Voir la formation</Link>
+          </p>
+        ) : null}
+        {step === 0 ? (
+          <div className="mt-8">
+            {createdDrafts.length > 0 ? (
+              <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+                <h2 className="text-lg font-semibold">Brouillons à relire</h2>
+                <p className="mt-2 text-sm text-[#8C94B2]">Même série. Ouvrez chaque badge pour relire les critères, les questions et l&apos;expert.</p>
+                <ul className="mt-4 space-y-2">
+                  {createdDrafts.map((draft) => (
+                    <li key={draft.id}>
+                      <Link href={`/super/open-badges/badgeclasses/${draft.id}/edit`} className="text-[#B9B2FF]">{draft.name}</Link>
+                      <span className="ml-2 text-xs text-[#F2C15A]">À relire</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : (
+            <BadgeBuilderStart
+              describing={aiGenerating}
+              courseTitle={preparedFrom}
+              demand={demand}
+              onDemand={setDemand}
+              waitLabel={waitLabel}
+              error={genError}
+              onRetry={() => { if (pendingCourseId) void prepareFromCourse(pendingCourseId); }}
+              onBlank={() => setStep(1)}
+              onDescribe={(text, file, badgeId) => void prepareFromText(text, file, badgeId)}
+              onCourse={(courseId) => void prepareFromCourse(courseId)}
+            />
+            )}
+          </div>
+        ) : null}
+        {step > 0 ? (
+        <div className="mt-6 grid grid-cols-3 gap-3" role="tablist" aria-label="Étapes du badge">
           {badgeSteps.map((item) => {
             const done = item.id < step;
             const enabled = item.id <= Math.max(visitedStep, step);
@@ -1134,14 +1638,13 @@ export function BadgeClassForm({
             );
           })}
         </div>
-        <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_470px]">
+        ) : null}
+        {step > 0 ? (
+        <div className="mt-8 grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_470px]">
           <div className={locked ? "pointer-events-none opacity-70" : ""}>
       {step === 1 ? (
+        <>
         <BadgeBuilderStepIdentity
-          aiPrompt={aiPrompt}
-          aiGenerating={aiGenerating}
-          onAiPrompt={setAiPrompt}
-          onGenerate={() => void generateFromAiPrompt()}
           name={name}
           onName={(value) => { setName(value); clearFieldError("name"); }}
           level={level}
@@ -1175,411 +1678,194 @@ export function BadgeClassForm({
           failureCourseId={failureRemediationCourseId}
           onFailureCourse={setFailureRemediationCourseId}
           errors={errors}
+          domains={catalog.domains}
+          series={catalog.series}
+          siblingBadges={siblings}
+          selfId={localId || badgeClassId}
+          onCreateDomain={(domain) => {
+            void fetch("/api/super-admin/open-badges/catalog", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "upsert-domain", ...domain }),
+            }).then((response) => response.json()).then((payload) => {
+              if (payload.catalog) setCatalog(payload.catalog);
+              if (payload.domain) setBuilder((current) => ({ ...current, domain: payload.domain.name, domainId: payload.domain.id, domainColor: payload.domain.color, domainIcon: payload.domain.icon }));
+            });
+          }}
+          onCreateSeries={(seriesName) => {
+            void fetch("/api/super-admin/open-badges/catalog", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "upsert-series", name: seriesName, domainId: builder.domainId }),
+            }).then((response) => response.json()).then((payload) => {
+              if (payload.catalog) setCatalog(payload.catalog);
+              if (payload.series) setBuilder((current) => ({ ...current, seriesName: payload.series.name, seriesId: payload.series.id }));
+            });
+          }}
+          compact
         />
+        <div className="mt-5">
+          <BadgeBuilderStepCriteria
+            criteria={criteria}
+            onCriteria={setCriteria}
+            builder={builder}
+            onBuilder={(patch) => setBuilder((current) => ({ ...current, ...patch }))}
+            name={name}
+            description={description}
+            level={level}
+            library={catalog.competencies}
+            hideCriteria
+          />
+        </div>
+        </>
       ) : null}
 
       {step === 2 ? (
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-slate-900">Critères détaillés</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Ajoutez des critères un par un pour une lecture plus claire.
-          </p>
-          {criteria.map((criterion, index) => (
-            <div key={`criterion-${criterion.id}-${index}`} className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-medium text-slate-900">Critère {index + 1}</div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => moveCriterion(index, -1)}>
-                    ↑
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => moveCriterion(index, 1)}>
-                    ↓
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setCriteria((prev) => prev.filter((item) => item.id !== criterion.id))}
-                    disabled={criteria.length === 1}
-                  >
-                    Supprimer
-                  </Button>
-                </div>
-              </div>
-              <Label className="text-slate-900">Titre du critère</Label>
-              <Input
-                className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400"
-                placeholder="Titre du critère"
-                value={criterion.label}
-                onChange={(event) => updateCriteria(index, { label: event.target.value })}
-              />
-              <p className="text-sm text-muted-foreground">
-                Un intitulé court (ex : “Fournir un rapport d’analyse”).
-              </p>
-              <Label className="text-slate-900">Détails (optionnel)</Label>
-              <Textarea
-                className="border-slate-300 bg-white text-slate-900 placeholder:text-slate-400"
-                placeholder="Détails (optionnel)"
-                value={criterion.description ?? ""}
-                onChange={(event) => updateCriteria(index, { description: event.target.value })}
-                rows={2}
-              />
-              <p className="text-sm text-muted-foreground">
-                Précisions ou exemples attendus.
-              </p>
-            </div>
-          ))}
-          <Button
-            variant="outline"
-            onClick={() =>
-              setCriteria((prev) => [
-                ...prev,
-                { ...emptyCriteria(), description: null, sortOrder: prev.length },
-              ])
-            }
-          >
-            + Ajouter un critère
-          </Button>
-        </CardContent>
-      </Card>
+        <>
+          {builder.generated && preparedFrom ? (
+            <p className="mb-4 rounded-2xl border border-[#6E5BFF]/40 bg-[#241C4A] px-4 py-3 text-sm">
+              ✦ Préparé à partir de « {preparedFrom} ». Relisez ce qui est signalé, le reste est prêt.
+              {pendingReview > 0 ? <span className="ml-2 rounded-full bg-[#F2C15A]/20 px-2 py-0.5 text-[#F2C15A]">{pendingReview} à relire</span> : null}
+            </p>
+          ) : null}
+          <BadgeBuilderStepCriteria
+            criteria={criteria}
+            onCriteria={(next) => { setCriteria(next); clearFieldError("criteria"); }}
+            builder={builder}
+            onBuilder={(patch) => setBuilder((current) => ({ ...current, ...patch }))}
+            name={name}
+            description={description}
+            level={level}
+            library={catalog.competencies}
+            courseId={builder.linkedCourseId || pendingCourseId}
+            onRemove={(id) => {
+              setCriteria((current) => current.filter((item) => item.id !== id));
+              setBuilder((current) => {
+                const practices = { ...current.exam.practices };
+                for (const key of Object.keys(practices)) {
+                  const practice = practices[key];
+                  if (!practice) continue;
+                  const ids = practice.criteria.filter((link) => link.criterionId !== id).map((link) => link.criterionId);
+                  const weights = resolvedWeights(ids, {});
+                  practices[key] = { ...practice, criteria: ids.map((criterionId) => ({ criterionId, weight: weights[criterionId] ?? 0 })) };
+                }
+                return {
+                  ...current,
+                  exam: { ...current.exam, practices },
+                  reviewedCriterionIds: current.reviewedCriterionIds.filter((item) => item !== id),
+                };
+              });
+            }}
+            variant="lines"
+            hideSkills
+            methods={coverageExamKeys(evaluationMethods, methodConfigs.find((item) => item.methodId === "playground")?.playground)}
+            links={Object.fromEntries(coverageExamKeys(evaluationMethods, methodConfigs.find((item) => item.methodId === "playground")?.playground).map((id) => [id, (builder.exam.practices[id]?.criteria ?? []).map((link) => link.criterionId)]))}
+            onAutoCover={autoCover}
+            onKept={(id) => {
+              setBuilder((current) => current.reviewedCriterionIds.includes(id) ? current : { ...current, reviewedCriterionIds: [...current.reviewedCriterionIds, id] });
+              const host = evaluationMethods.find((methodId) => methodId !== "qcm") ?? "case_study";
+              coverCriterion(id, host, false);
+            }}
+            onToggleExam={toggleCriterionExam}
+            onReviewed={(id) => setBuilder((current) => current.reviewedCriterionIds.includes(id) ? current : { ...current, reviewedCriterionIds: [...current.reviewedCriterionIds, id] })}
+          />
+          <div className="mt-5">
+        <BadgeBuilderStepExam
+          name={name}
+          level={level}
+          criteria={criteria}
+          methods={evaluationMethods}
+          onMethods={setEvaluationMethods}
+          configs={methodConfigs}
+          onConfigs={setMethodConfigs}
+          builder={builder}
+          onBuilder={(patch) => setBuilder((current) => ({ ...current, ...patch }))}
+          validators={validators}
+          expertId={validatorExpertId}
+          onExpert={(id) => { setValidatorExpertId(id); clearFieldError("validatorExpertId"); }}
+          aiPrecheck={receivabilityReviewMode !== "HUMAN"}
+          onAiPrecheck={(value) => setReceivabilityReviewMode(value ? "MIXED" : "HUMAN")}
+          openId={openMethod}
+          onOpen={setOpenMethod}
+          onAddCriteria={(items) => setCriteria((current) => [
+            ...current,
+            ...items.map((item, index) => ({
+              id: crypto.randomUUID(),
+              label: item.label,
+              description: item.description,
+              expectedOutcome: item.expectedOutcome,
+              sortOrder: current.length + index,
+            })),
+          ])}
+          variant="cards"
+          domainLabel={builder.domain}
+        />
+          </div>
+        </>
       ) : null}
 
       {step === 3 ? (
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
-          <CardTitle className="text-slate-900">Évaluation & validation</CardTitle>
-          <Button type="button" variant="outline" asChild disabled={!organizationId}>
-            <Link href={formationBuilderHref}>Créer la formation</Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label className="text-slate-900">Niveau du badge</Label>
-              <Select
-                value={level}
-                onValueChange={(value) => {
-                  setLevel(value);
-                  clearFieldError("level");
-                }}
-              >
-                <SelectTrigger
-                  id="field-level"
-                  className={`border-slate-300 bg-white text-slate-900 ${
-                    errors.level ? "border-destructive" : ""
-                  }`}
-                  aria-invalid={Boolean(errors.level)}
-                >
-                  <SelectValue placeholder="Choisir un niveau" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BADGE_LEVEL_OPTIONS.map((n) => (
-                    <SelectItem key={`badge-level-${n}`} value={String(n)}>
-                      Niveau {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.level ? (
-                <p id="error-level" className="text-sm text-destructive">
-                  {errors.level}
-                </p>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-slate-900">Validateur</Label>
-              <Select
-                value={validatorExpertId}
-                onValueChange={(value) => {
-                  setValidatorExpertId(value);
-                  clearFieldError("validatorExpertId");
-                }}
-              >
-                <SelectTrigger
-                  id="field-validatorExpertId"
-                  className={`border-slate-300 bg-white text-slate-900 ${
-                    errors.validatorExpertId ? "border-destructive" : ""
-                  }`}
-                  aria-invalid={Boolean(errors.validatorExpertId)}
-                >
-                  <SelectValue placeholder="Sélectionner un validateur" />
-                </SelectTrigger>
-                <SelectContent>
-                  {validators.map((validator) => {
-                    const photo = resolveValidatorPhotoUrl(
-                      validator as Record<string, unknown>,
-                    );
-                    return (
-                      <SelectItem key={validator.id} value={validator.id}>
-                        <span className="flex items-center gap-2">
-                          {photo ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={photo}
-                              alt=""
-                              className="h-6 w-6 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-[10px] text-slate-600">
-                              ?
-                            </span>
-                          )}
-                          {validatorLabel(validator)}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                Personne qui valide les preuves.
-              </p>
-              {errors.validatorExpertId ? (
-                <p id="error-validatorExpertId" className="text-sm text-destructive">
-                  {errors.validatorExpertId}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="space-y-3" id="field-evaluationMethods">
-            <Label className="text-slate-900">Méthodes d’évaluation</Label>
-            <p className="text-sm text-muted-foreground">
-              Cochez une méthode pour ouvrir sa configuration (prompt ou QCM). Une consigne par
-              méthode remplace l’ancienne consigne IA globale.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {BADGE_EVALUATION_METHODS.map((method) => {
-                const checked = evaluationMethods.includes(method.id);
-                const configured = methodConfigs.some((c) => c.methodId === method.id);
-                return (
-                  <div
-                    key={method.id}
-                    className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 transition ${
-                      checked
-                        ? "border-sky-500/50 bg-sky-50/80"
-                        : "border-slate-200 bg-white"
-                    } ${errors.evaluationMethods || errors.methodConfigs ? "border-destructive/60" : ""}`}
-                  >
-                    <label className="flex flex-1 cursor-pointer items-center gap-3">
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(value) =>
-                          toggleEvaluationMethod(method.id, value === true)
-                        }
-                      />
-                      <span className="text-sm font-medium text-slate-900">{method.label}</span>
-                    </label>
-                    {checked ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0 text-xs"
-                        onClick={() => openMethodConfig(method.id)}
-                      >
-                        {configured ? "Modifier" : "Configurer"}
-                      </Button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-            {evaluationMethods.length > 0 ? (
-              <p className="text-xs text-slate-500">
-                Résumé : {formatEvaluationMethodsSummary(evaluationMethods)}
-                {qcmConfig && !qcmThresholdMissing
-                  ? ` — QCM : seuil ${getQcmPassingScorePercent(qcmConfig)} %`
-                  : null}
-              </p>
-            ) : null}
-            {qcmThresholdMissing ? (
-              <p className="rounded-md border border-amber-500/40 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-                Le seuil d&apos;acceptation du QCM n&apos;est pas enregistré (100 % appliqué par
-                défaut). Ouvrez la configuration QCM, définissez le pourcentage souhaité, validez
-                puis enregistrez le badge.
-              </p>
-            ) : null}
-            {errors.evaluationMethods ? (
-              <p id="error-evaluationMethods" className="text-sm text-destructive">
-                {errors.evaluationMethods}
-              </p>
-            ) : null}
-            {errors.methodConfigs ? (
-              <p id="error-methodConfigs" className="text-sm text-destructive">
-                {errors.methodConfigs}
-              </p>
-            ) : null}
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label className="text-slate-900">Qui corrige l&apos;épreuve ?</Label>
-            <Select
-              value={receivabilityReviewMode}
-              onValueChange={(value) => setReceivabilityReviewMode(value as "HUMAN" | "AI" | "MIXED")}
-            >
-              <SelectTrigger className="border-slate-300 bg-white text-slate-900">
-                <SelectValue placeholder="Choisir un mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="HUMAN">Évaluateur (humain)</SelectItem>
-                <SelectItem value="AI">IA (prompts par méthode)</SelectItem>
-                <SelectItem value="MIXED">IA + humain</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Les consignes IA sont définies dans chaque méthode. L’intégrité (onglets, temps de
-              rédaction) est transmise automatiquement à l’évaluateur et bloque la validation si
-              l’apprenant a quitté l’onglet.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-      ) : null}
-
-      <EvaluationMethodConfigDialog
-        open={configDialogOpen}
-        methodId={configDialogMethod}
-        initial={methodConfigs.find((c) => c.methodId === configDialogMethod) ?? null}
-        badgeTitle={name.trim()}
-        badgeLevel={level ? Number.parseInt(level, 10) : null}
-        onClose={() => {
-          setConfigDialogOpen(false);
-          setConfigDialogMethod(null);
-        }}
-        onSave={saveMethodConfig}
-      />
-
-      {step === 4 ? (
-      <>
-      <Card className="border border-[#E3E0D8] bg-white text-[#07080B] shadow-sm">
-        <CardHeader className="border-b border-[#E3E0D8] pb-4">
-          <CardTitle className="text-lg font-semibold text-[#07080B]">
-            Aperçu
-          </CardTitle>
-          <p className="text-sm text-[#6B6F7A]">
-            Résumé avant publication.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-5 pt-6 text-sm">
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Nom du badge</p>
-            <p className="text-base font-semibold text-[#07080B]">{name.trim() || "—"}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Niveau</p>
-            <p className="text-[#07080B]">{level ? `Niveau ${level}` : "—"}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Description</p>
-            <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">
-              {description.trim() || "—"}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Critères</p>
-            {criteria.some((c) => c.label.trim()) ? (
-              <ol className="list-decimal space-y-2 pl-5 text-zinc-200">
-                {criteria
-                  .filter((c) => c.label.trim())
-                  .map((criterion, index) => (
-                    <li key={`preview-${criterion.id}-${index}`} className="leading-relaxed">
-                      <span className="font-medium">{criterion.label}</span>
-                      {criterion.description?.trim() ? (
-                        <span className="mt-0.5 block text-zinc-400 text-xs">
-                          {criterion.description}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-              </ol>
-            ) : criteriaMarkdown.trim() ? (
-              <p className="text-zinc-300 whitespace-pre-wrap">{criteriaMarkdown}</p>
-            ) : (
-              <p className="text-zinc-500">—</p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Date de création
-            </p>
-            <p className="text-zinc-300">
-              {createdAt
-                ? new Date(createdAt).toLocaleDateString("fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "Disponible après enregistrement"}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Épreuve
-            </p>
-            <p className="text-zinc-200">
-              {evaluationMethods.length > 0
-                ? formatEvaluationMethodsSummary(evaluationMethods)
-                : "—"}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-700 pt-4 text-xs text-zinc-500">
-            <span>Statut</span>
-            <Badge
-              variant="outline"
-              className={
-                status === "ACTIVE"
-                  ? "border-emerald-600/60 bg-emerald-950/40 text-emerald-200"
-                  : status === "ARCHIVED"
-                    ? "border-zinc-600 text-zinc-400"
-                    : "border-amber-600/60 bg-amber-950/40 text-amber-200"
-              }
-            >
-              {statusLabel(status)}
-            </Badge>
-            <span className="mx-1">·</span>
-            <span>
-              Émetteur :{" "}
-              {formatOrganizationDisplayName(
-                organizations.find((org) => org.id === organizationId)?.name ?? "—",
-              )}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {badgeClassId && organizationId ? (
-        <BadgeLearnerAttemptsPanel
-          badgeClassId={badgeClassId}
-          auth={auth}
+        <>
+        <BadgeBuilderStepPublish
+          builder={builder}
+          onBuilder={(patch) => setBuilder((current) => ({ ...current, ...patch }))}
+          checks={checklist()}
           organizationId={organizationId}
+          authHeaders={createHeaders(auth, organizationId)}
+          currentBadgeId={badgeClassId}
+          locked={locked}
+          onCreateVersion={() => void forkBadge("version")}
+          onComplete={goToStep}
+          courseRequired={requiresEnrollment}
+          onCourseRequired={(value) => {
+            setRequiresEnrollment(value);
+            if (value) setVisibleInLearnerDashboard(false);
+            else setRequiredCourseId(null);
+          }}
+          essaiHref={activeId ? `/super/open-badges/badgeclasses/${activeId}/essai` : null}
         />
-      ) : null}
-      </>
+        {badgeClassId && organizationId ? (
+          <BadgeLearnerAttemptsPanel
+            badgeClassId={badgeClassId}
+            auth={auth}
+            organizationId={organizationId}
+          />
+        ) : null}
+        </>
       ) : null}
 
+
           </div>
+          <div className="space-y-4 lg:sticky lg:top-6">
+          {step === 2 ? (
+            <div className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-4 text-sm text-[#A9B0CC]">
+              <p>{preparedFrom ? `Formation · ${preparedFrom}` : "Sans formation liée"}</p>
+              <p className="mt-1">{builder.domain || "Domaine à choisir"} · {builder.seriesName ? `Série ${builder.seriesName}` : "Sans série"}</p>
+              <p className="mt-1">{builder.competencies.map((item) => item.name).filter(Boolean).join(", ") || "Compétences à choisir"}</p>
+              <p className="mt-1">{validityLabel(builder.validityMode, builder.validityMode === "custom" ? Number(customMonths) || null : builder.validityMonths)}</p>
+            </div>
+          ) : null}
           <BadgeBuilderPreview
             name={name}
             description={description}
             level={level ? Number.parseInt(level, 10) : null}
+            levelLabel={builder.levelLabel}
             imageUrl={imageUrl}
             typeLabel={achievementLabel(builder.achievementType)}
             validityLabel={validityLabel(builder.validityMode, builder.validityMode === "custom" ? Number(customMonths) || null : builder.validityMonths)}
             criteriaCount={criteria.filter((item) => item.label.trim()).length}
-            skills={builder.skills}
+            skills={builder.competencies.map((item) => item.name)}
             methodsLabel={formatEvaluationMethodsSummary(evaluationMethods)}
             expertName={expertName}
             issuerName={issuerName}
             mode={previewMode}
             onMode={setPreviewMode}
           />
+          </div>
         </div>
+        ) : null}
       </div>
+      {step > 0 ? (
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#1A2340] bg-[#0A0F1E]/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-3">
           <button
@@ -1590,8 +1876,8 @@ export function BadgeClassForm({
           >
             ← Précédent
           </button>
-          <p className="text-sm text-[#8C94B2]">Étape {step} sur 4 · {badgeSteps[step - 1]?.label}</p>
-          {step < 4 ? (
+          <p className="text-sm text-[#8C94B2]">Étape {step} sur 3{pendingReview > 0 ? ` · ${pendingReview} éléments à relire` : ` · ${badgeSteps[step - 1]?.label}`}</p>
+          {step < 3 ? (
             <button
               type="button"
               onClick={() => goToStep(step + 1)}
@@ -1603,7 +1889,7 @@ export function BadgeClassForm({
             <button
               type="button"
               onClick={() => void saveBadge("ACTIVE")}
-              disabled={loading || locked}
+              disabled={loading || locked || checklist().some((item) => item.required && !item.ok)}
               className="bb-white rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-40"
             >
               {locked ? "Publié" : "Publier le badge"}
@@ -1611,6 +1897,7 @@ export function BadgeClassForm({
           )}
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

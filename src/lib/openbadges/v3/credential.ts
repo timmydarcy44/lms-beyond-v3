@@ -9,8 +9,11 @@ export const REVOCATION_STATUS_URL = `${BADGE_PUBLIC_ORIGIN}/api/public/status/r
 export type BadgeAlignment = {
   targetName: string;
   targetUrl?: string;
+  targetDescription?: string;
   targetFramework?: string;
   targetCode?: string;
+  /** CFItem : nœud de référentiel, valeur utilisée par les exemples Open Badges 3.0. */
+  targetType?: string;
 };
 
 export type BadgeEvidenceItem = {
@@ -75,8 +78,10 @@ export function buildOpenBadgeCredential(
       type: ["Alignment"],
       targetName: item.targetName,
       ...(item.targetUrl ? { targetUrl: item.targetUrl } : {}),
+      ...(item.targetDescription ? { targetDescription: item.targetDescription } : {}),
       ...(item.targetFramework ? { targetFramework: item.targetFramework } : {}),
       ...(item.targetCode ? { targetCode: item.targetCode } : {}),
+      ...(item.targetType ? { targetType: item.targetType } : {}),
     }));
   }
 

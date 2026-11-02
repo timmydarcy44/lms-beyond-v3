@@ -114,6 +114,7 @@ export function getHomeContent(routes: EdgeMarketingRoutes, host?: string | null
           { label: "Formations courtes", href: routes.onlineFormations },
           { label: "Reconversion professionnelle", href: routes.particulierReconversion },
           { label: "Trouver ma formation", href: routes.onlineFormations },
+          { label: "Financer ma formation", href: routes.financerMaFormation },
         ],
       },
       {

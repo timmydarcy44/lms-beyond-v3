@@ -149,8 +149,8 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
       {
         title: "Financement",
         links: [
-          { title: "Financer ma formation", subtitle: "Alternance et prise en charge", href: routes.financement },
-          { title: "Découvrir les aides", subtitle: "Les dispositifs possibles", href: routes.financement },
+          { title: "Financer ma formation", subtitle: "Alternance et prise en charge", href: routes.financerMaFormation },
+          { title: "Découvrir les aides", subtitle: "Les dispositifs possibles", href: `${routes.financerMaFormation}#solutions` },
         ],
       },
     ],
@@ -158,7 +158,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
       textLink: { label: "Découvrir Byound School →", href: routes.alternance },
       actions: [
         { label: "Accéder à mon espace", href: "/particuliers/login", variant: "secondary" },
-        { label: "Créer un compte", href: "/particuliers", variant: "primary" },
+        { label: "Créer un compte", href: routes.ecoleCandidater, variant: "primary" },
       ],
     },
   };

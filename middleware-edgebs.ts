@@ -24,6 +24,7 @@ const EDGE_BS_PUBLIC_PREFIXES: readonly string[] = [
   "/alternance",
   "/admissions",
   "/financement",
+  "/financer-ma-formation",
   "/vie-etudiante",
   "/certifications",
   "/business",

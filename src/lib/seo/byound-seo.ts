@@ -89,6 +89,7 @@ export function byoundSeoCatalog(): SeoCatalogItem[] {
     { path: "/", label: "Accueil", group: seoGroupForPath("/") },
     { path: "/entreprises", label: "Entreprises", group: seoGroupForPath("/entreprises") },
     { path: "/votre-orientation", label: "Orientation", group: seoGroupForPath("/votre-orientation") },
+    { path: "/financer-ma-formation", label: "Financer ma formation", group: seoGroupForPath("/financer-ma-formation") },
   ];
   const fromMarketing = (Object.keys(MARKETING_PAGES) as MarketingPageKey[]).map((key) => {
     const path = marketingPathForKey(key);

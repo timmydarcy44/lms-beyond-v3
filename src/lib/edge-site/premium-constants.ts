@@ -149,7 +149,7 @@ export function getEdgePremiumConfig(host?: string | null) {
       headerTitle: "Byound School",
       headerHref: R.alternance,
       actions: [
-        { label: "Créer un compte", href: "/particuliers#signup", primary: true },
+        { label: "Créer un compte", href: R.ecoleCandidater, primary: true },
         { label: "Accéder à mon espace", href: "/particuliers/login", primary: false },
       ],
       columns: [
@@ -213,8 +213,8 @@ export function getEdgePremiumConfig(host?: string | null) {
             {
               title: "Financement",
               links: [
-                { label: "Financer ma formation", href: R.financement },
-                { label: "Découvrir les aides", href: R.financement },
+                { label: "Financer ma formation", href: R.financerMaFormation },
+                { label: "Découvrir les aides", href: `${R.financerMaFormation}#solutions` },
               ],
             },
           ],

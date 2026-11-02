@@ -22,6 +22,7 @@ export function EdgePremiumFooter() {
         { label: "Formations courtes", href: R.onlineFormations },
         { label: "Reconversion professionnelle", href: R.particulierReconversion },
         { label: "Trouver ma formation", href: R.onlineFormations },
+        { label: "Financer ma formation", href: R.financerMaFormation },
       ],
     },
     {

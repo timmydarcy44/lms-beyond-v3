@@ -16,6 +16,7 @@ export const EDGE_MARKETING_PATHS = {
   alternance: "/alternance",
   admissions: "/admissions",
   financement: "/financement",
+  financerMaFormation: "/financer-ma-formation",
   vieEtudiante: "/vie-etudiante",
   certifications: "/certifications",
   business: "/business",

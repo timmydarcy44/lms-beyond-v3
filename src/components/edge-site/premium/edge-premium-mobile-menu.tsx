@@ -19,7 +19,6 @@ type Props = {
   config: EdgePremiumConfig;
   loginHref: string;
   discoverHref: string;
-  discoverLabel?: string;
   light?: boolean;
 };
 
@@ -29,7 +28,6 @@ export function EdgePremiumMobileMenu({
   config,
   loginHref,
   discoverHref,
-  discoverLabel = "Créer un compte",
   light = false,
 }: Props) {
   const tabs = getMobileRevolutTabs(config).filter(
@@ -181,7 +179,7 @@ export function EdgePremiumMobileMenu({
             className="w-full"
             onClick={onClose}
           >
-            {discoverLabel}
+            Créer un compte
           </EdgePremiumButton>
         </div>
       </div>

@@ -21,6 +21,7 @@ describe("classifyOrganization", () => {
     });
     expect(classifyOrganization("test03-xapi").kind).toBe("demo");
     expect(classifyOrganization("byound-care-sekx").kind).toBe("internal");
+    expect(classifyOrganization("edge-lab")).toMatchObject({ kind: "demo", status: "demo" });
     expect(classifyOrganization("nutriset-dp9n")).toEqual({
       kind: "client",
       status: "onboarding",

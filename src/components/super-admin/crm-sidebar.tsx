@@ -131,7 +131,7 @@ const CRM_LINKS: CrmNavLink[] = [
   },
   { href: "/super/crm/pipeline?type=btoc", label: "Pipeline B2C", icon: ShoppingBag, section: "clients" },
   { href: "/super/crm/onboarding", label: "Onboarding clients", icon: Rocket, section: "commercial" },
-  { href: "/super/organisations", label: "Organisations", icon: Building2, section: "clients" },
+  { href: "/super/organisations", label: "Comptes clients", icon: Building2, section: "clients" },
   { href: "/super/utilisateurs?role=btoc", label: "Clients particuliers", icon: ShoppingBag, section: "clients" },
   { href: "/super/crm/formations", label: "Formations", icon: ClipboardList, section: "formation" },
   { href: "/super/utilisateurs?role=learner", label: "Apprenants", icon: UserCircle, section: "formation" },
@@ -216,6 +216,7 @@ export function CrmSidebar() {
   const roleParam = searchParams.get("role");
   const supabase = useSupabase();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [accountCount, setAccountCount] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Partial<Record<SectionKey, boolean>>>({});
 
   useEffect(() => {
@@ -237,6 +238,15 @@ export function CrmSidebar() {
       cancelled = true;
     };
   }, [supabase]);
+
+  useEffect(() => {
+    void fetch("/api/super/comptes-clients/count")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((json: { count?: number } | null) => {
+        if (typeof json?.count === "number") setAccountCount(json.count);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const isJerome = userEmail === "jerome.picot@edgebs.fr";
 
@@ -341,7 +351,10 @@ export function CrmSidebar() {
                             isActive && item.featured ? "opacity-100" : "opacity-70",
                           )}
                         />
-                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {item.label}
+                          {item.href === "/super/organisations" && accountCount != null ? ` · ${accountCount}` : ""}
+                        </span>
                         {item.featured ? (
                           <span
                             className={cn(

@@ -45,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    label: "Organisations",
+    label: "Comptes clients",
     icon: Building2,
     href: "/super/organisations",
     children: [
@@ -115,7 +115,7 @@ export function SuperAdminSidebarApple({ open: controlledOpen, onToggle }: Super
             "Dashboard", // Remplacé par le dashboard Jessica
             "No School",
             "Voir mon catalogue",
-            "Organisations",
+            "Comptes clients",
             "Utilisateurs", // Utilisateurs généraux (remplacé par Gestion client)
           ];
           return !hiddenLabels.includes(item.label);

@@ -18,6 +18,7 @@ set
     when slug in (
       'edge-business-demo',
       'edge-demo-rh-aw78',
+      'edge-lab',
       'entreprise-de-test-yw9p',
       'lalaland-s3eb',
       'test03-xapi',
@@ -25,7 +26,6 @@ set
     ) then 'demo'
     when slug in (
       'byound-5gfu',
-      'edge-lab',
       'jessicacontentin',
       'playmakers',
       'byound-care-sekx',
@@ -38,6 +38,7 @@ set
     when slug in (
       'edge-business-demo',
       'edge-demo-rh-aw78',
+      'edge-lab',
       'entreprise-de-test-yw9p',
       'lalaland-s3eb',
       'test03-xapi',

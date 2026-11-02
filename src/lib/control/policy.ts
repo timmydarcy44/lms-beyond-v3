@@ -1,6 +1,7 @@
 export const DEMO_SLUGS = [
   "edge-business-demo",
   "edge-demo-rh-aw78",
+  "edge-lab",
   "entreprise-de-test-yw9p",
   "lalaland-s3eb",
   "test03-xapi",
@@ -9,7 +10,6 @@ export const DEMO_SLUGS = [
 
 export const INTERNAL_SLUGS = [
   "byound-5gfu",
-  "edge-lab",
   "jessicacontentin",
   "playmakers",
   "byound-care-sekx",

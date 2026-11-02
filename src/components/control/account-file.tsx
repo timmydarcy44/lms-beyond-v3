@@ -1,468 +1,825 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
 import { REASON_CODES } from "@/lib/control/constants";
-import { formatEuroDelta, formatEurosHt } from "@/lib/control/policy";
+import { formatEuroDelta, formatEurosHt, summarizeRevenue, type BillingDoc } from "@/lib/control/policy";
 import type { loadAccountDetail } from "@/lib/control/load";
+import { roleLabel, roleTone } from "@/lib/roles";
+import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
-type Tab = "overview" | "members" | "courses" | "badges" | "tests" | "revenue" | "funding" | "documents" | "modules" | "journal" | "notes";
+type Tab = "overview" | "members" | "courses" | "badges" | "tests" | "revenue" | "funding" | "documents" | "modules" | "journal";
 
-const MODULES = [
-  { key: "beyond_lms", label: "LMS et parcours" },
-  { key: "open_badges", label: "Open Badges" },
-  { key: "tests", label: "Tests" },
-  { key: "beyond_care", label: "Byound Care" },
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: "overview", label: "Vue d'ensemble" },
+  { id: "members", label: "Membres" },
+  { id: "courses", label: "Formations" },
+  { id: "badges", label: "Open Badges" },
+  { id: "tests", label: "Tests" },
+  { id: "revenue", label: "Chiffre d'affaires" },
+  { id: "funding", label: "Financement" },
+  { id: "documents", label: "Documents" },
+  { id: "modules", label: "Modules" },
+  { id: "journal", label: "Journal" },
 ];
 
-function moduleState(keys: string[], key: string) {
-  if (key === "beyond_care") {
-    return keys.includes("beyond_care") || keys.includes("mental_health_tracking") ? "Option active" : "Non activé";
-  }
-  return keys.includes(key) ? "Option active" : "Non activé";
-}
+const ROLE_COLORS = {
+  admin: { bg: "#241C3E", fg: "#C4B8FF" },
+  tutor: { bg: "#1A2744", fg: "#8DB8FF" },
+  invited: { bg: "#3A3118", fg: "#F2CF6B" },
+  member: { bg: "#163228", fg: "#6BE39B" },
+};
 
-export function AccountFile({ detail }: { detail: Detail }) {
+export function AccountFile({ detail, initialTab }: { detail: Detail; initialTab?: string }) {
   const account = detail.account;
-  const [tab, setTab] = useState<Tab>("overview");
-  const [panel, setPanel] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [writeOpen, setWriteOpen] = useState(false);
-  if (!account) return <p className="p-8">Compte introuvable.</p>;
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "overview");
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | "space" | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  if (!account) return null;
 
-  const delta = account.revenue12HtCents - account.revenuePrev12HtCents;
-  const actions = [
-    ["Inviter des collaborateurs", "invite"],
-    ["Assigner une formation", "course"],
-    ["Envoyer les tests", "tests"],
-    ["Dossier OPCO", "opco"],
-    ["Délivrer un badge", "badge"],
-    ["Ajouter un document", "document"],
-  ] as const;
+  const hasAdmin = detail.members.some((member) => member.role === "admin" && member.email.includes("@"));
+  const spaceReason = !detail.schemaReady
+    ? "L'ouverture d'espace n'est pas encore disponible."
+    : !hasAdmin
+      ? "Aucun administrateur actif sur ce compte"
+      : null;
+
+  function openTab(next: Tab) {
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === "overview") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", next);
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }
 
   return (
     <div className="mx-auto max-w-[1240px] px-6 py-8">
-      <p className="mb-3 text-sm text-[#9AA6C2]">
+      <p className="mb-3 text-sm text-[#8A93AE]">
         <Link href="/super/organisations">Comptes clients</Link> · {account.name}
       </p>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[36px] font-extrabold tracking-[-1.2px]">{account.name}</h1>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <Pill>{account.status === "active" ? "Actif" : account.status === "demo" ? "Démo" : account.status === "onboarding" ? "À configurer" : account.status}</Pill>
-            <Pill>{account.kind === "internal" ? "Interne" : "Entreprise"}</Pill>
-            {account.clientSince ? <Pill>Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</Pill> : null}
-            <Pill>{account.accountManagerName ?? "Chargé de compte non assigné"}</Pill>
-            <Pill>CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT</Pill>
+            <span className="rounded-full px-2 py-1" style={{ background: account.status === "active" ? "#163228" : "#3A3118", color: account.status === "active" ? "#6BE39B" : "#F2CF6B" }}>{account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer"}</span>
+            <span className="rounded-full bg-[#1A2340] px-2 py-1">{account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}</span>
+            {account.clientSince ? <span className="rounded-full bg-[#1A2340] px-2 py-1">Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</span> : null}
+            <span className="rounded-full bg-[#1A2340] px-2 py-1">{account.accountManagerName ?? "Chargé de compte non assigné"}</span>
+            <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#0A0F1E]">CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT</span>
           </div>
         </div>
-        <div className="flex gap-2">
-          {detail.members[0]?.email ? (
-            <a href={`mailto:${detail.members[0].email}`} className="rounded-full border border-[#26304F] px-4 py-2 text-sm">Contacter l'admin</a>
-          ) : null}
-          <button type="button" onClick={() => setPanel("invite")} className="rounded-full border border-[#26304F] px-4 py-2 text-sm">Faire une action</button>
-          <button type="button" onClick={() => setWriteOpen(true)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Ouvrir son espace</button>
+        <div className="flex flex-wrap gap-2">
+          {detail.members.find((member) => member.role === "admin" && member.email)?.email ? (
+            <a className="rounded-full border border-[#26304F] px-4 py-2 text-sm" href={`mailto:${detail.members.find((member) => member.role === "admin")?.email}`}>Contacter l'admin</a>
+          ) : (
+            <DisabledTip label="Contacter l'admin" reason="Aucun administrateur actif sur ce compte" />
+          )}
+          <span className="relative">
+            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold">Faire une action</button>
+            {actionsOpen ? (
+              <span className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-[#26304F] bg-[#111831] p-2 text-sm">
+                <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("invite"); }}>Inviter</button>
+                {detail.catalogue.length && detail.people.some((person) => !person.invited) ? (
+                  <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); }}>Assigner une formation</button>
+                ) : (
+                  <span className="block px-2 py-1.5 text-[#8A93AE]" title={detail.catalogue.length ? "Aucun participant avec un compte actif" : "Aucune formation disponible pour ce compte"}>Assigner une formation</span>
+                )}
+                <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>
+              </span>
+            ) : null}
+          </span>
+          {spaceReason ? (
+            <DisabledTip label="Ouvrir son espace" reason={spaceReason} />
+          ) : (
+            <button type="button" onClick={() => setPanel("space")} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Ouvrir son espace</button>
+          )}
         </div>
-      </div>
+      </header>
 
-      <div className="mt-5 flex gap-2 overflow-x-auto text-sm">
-        {(
-          [
-            ["overview", "Vue d'ensemble"],
-            ["members", "Membres"],
-            ["courses", "Formations"],
-            ["badges", "Open Badges"],
-            ["tests", "Tests"],
-            ["revenue", "Chiffre d'affaires"],
-            ["funding", "Financement"],
-            ["documents", "Documents"],
-            ["modules", "Modules"],
-            ["journal", "Journal"],
-            ["notes", "Notes"],
-          ] as Array<[Tab, string]>
-        ).map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setTab(key)} className="rounded-full px-3 py-1.5" style={{ background: tab === key ? "#6E5BFF" : "transparent" }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <TabBar tab={tab} counts={tabCounts(detail)} onChange={openTab} />
+      {notice ? <p className="mt-4 text-sm text-[#6BE39B]">{notice}</p> : null}
 
-      {message ? <p className="mt-4 text-sm text-[#6BE39B]">{message}</p> : null}
+      {tab === "overview" ? <Overview detail={detail} onOpen={setPanel} /> : null}
+      {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
+      {tab === "courses" ? <CoursesTab detail={detail} onAssign={() => setPanel("course")} /> : null}
+      {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
+      {tab === "tests" ? <EmptyState title="Aucun test envoyé pour ce compte." /> : null}
+      {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
+      {tab === "funding" ? <EmptyState title="Aucun dossier de financement pour ce compte." /> : null}
+      {tab === "documents" ? <EmptyState title="Aucun document pour ce compte." /> : null}
+      {tab === "modules" ? <ModulesTab modules={account.modules} /> : null}
+      {tab === "journal" ? <JournalTab detail={detail} name={account.name} /> : null}
 
-      {tab === "overview" ? (
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.6fr_.8fr]">
-          <div className="space-y-4">
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-              <h2 className="text-lg font-bold">Agir pour {account.name}</h2>
-              <div className="mt-4 flex flex-wrap gap-4">
-                {actions.map(([label, key]) => (
-                  <button key={key} type="button" onClick={() => setPanel(key)} className="w-28 text-center text-xs">
-                    <span className="mx-auto mb-2 grid h-14 w-14 place-items-center rounded-full bg-[#6E5BFF] text-lg">+</span>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </section>
-            <div className="grid gap-3 md:grid-cols-4">
-              <Mini label="Utilisateurs actifs" value={`${account.activeUsers} / ${account.totalUsers}`} />
-              <Mini label="Formations en cours" value={String(detail.courses.length)} />
-              <Mini label="Open Badges délivrés" value="0" />
-              <Mini label="Prochaine session" value="—" />
-            </div>
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-[#9AA6C2]">Chiffre d'affaires HT</p>
-                  <p className="text-3xl font-extrabold">{formatEurosHt(account.revenue12HtCents)}</p>
-                  <p className="text-sm" style={{ color: delta < 0 ? "#FF8A9B" : "#6BE39B" }}>{formatEuroDelta(delta)} vs 12 mois précédents</p>
-                </div>
-                <p className="text-xs text-[#9AA6C2]">12 mois</p>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-4">
-                <Mini label="Encaissé" value={formatEurosHt(account.revenue12HtCents - account.outstandingHtCents)} />
-                <Mini label="À encaisser" value={formatEurosHt(account.outstandingHtCents)} />
-                <Mini label="Devis en cours" value={formatEurosHt(account.openQuoteHtCents)} />
-                <Mini label="Financé par l'OPCO" value={formatEurosHt(0)} />
-              </div>
-              <p className="mt-4 text-xs text-[#9AA6C2]">Aucune facture client n'est encore rattachée. Les devis ne sont pas dans le CA.</p>
-            </section>
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-              <h2 className="font-bold">À faire</h2>
-              <ul className="mt-3 space-y-2 text-sm">
-                {account.signal ? <li className="flex items-center justify-between gap-3"><span>{account.signal.label}</span><button type="button" className="rounded-full border border-[#26304F] px-3 py-1" onClick={() => setPanel("invite")}>Agir</button></li> : <li className="text-[#9AA6C2]">Rien d'automatique pour le moment.</li>}
-              </ul>
-            </section>
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-              <h2 className="font-bold">Journal du compte</h2>
-              <Activity items={detail.activity.slice(0, 5)} name={account.name} />
-            </section>
-          </div>
-          <aside className="space-y-4">
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5 text-sm">
-              <h2 className="font-bold">Démarrage</h2>
-              <ul className="mt-3 space-y-2 text-[#C9D2E8]">
-                <li>{account.logoUrl ? "Logo déposé" : "Logo à déposer"}</li>
-                <li>{detail.members.length ? "Admin invité" : "Admin à inviter"}</li>
-                <li>{detail.employees.length ? "Collaborateurs importés" : "Collaborateurs à importer"}</li>
-                <li>{detail.courses.length ? "Première formation assignée" : "Première formation à assigner"}</li>
-                <li>Tests à envoyer</li>
-              </ul>
-            </section>
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5 text-sm">
-              <h2 className="font-bold">Contacts</h2>
-              <ul className="mt-3 space-y-2">
-                {detail.members.map((member) => (
-                  <li key={member.userId}>{member.name}<span className="block text-xs text-[#9AA6C2]">{member.email}</span></li>
-                ))}
-              </ul>
-            </section>
-            <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5 text-sm">
-              <h2 className="font-bold">Offre et modules</h2>
-              <ul className="mt-3 space-y-2">{MODULES.map((module) => <li key={module.key} className="flex justify-between"><span>{module.label}</span><span className="text-[#9AA6C2]">{moduleState(account.modules, module.key)}</span></li>)}</ul>
-            </section>
-            <NoteForm orgId={account.id} initial={detail.note?.body ?? ""} onSaved={setMessage} />
-          </aside>
-        </div>
-      ) : null}
-
-      {tab === "members" ? <MembersTab detail={detail} onMessage={setMessage} /> : null}
-      {tab === "courses" ? <SimpleList title="Formations de l'organisation" rows={detail.courses.map((course) => course.title || "Formation")} /> : null}
-      {tab === "badges" ? <SimpleList title="Open Badges" rows={["Les badges délivrés se lisent via les assertions du profil. Aucune assertion n'est agrégée sur ce compte."]} /> : null}
-      {tab === "tests" ? <SimpleList title="Tests" rows={["Les résultats individuels restent masqués en accompagnement. L'envoi se fait depuis l'action « Envoyer les tests »."]} /> : null}
-      {tab === "revenue" ? <RevenueTab documents={detail.documents} /> : null}
-      {tab === "funding" ? <SimpleList title="Financement" rows={["Aucun dossier OPCO n'est rattaché à ce compte. La table leads_opco n'est pas encore appliquée."]} /> : null}
-      {tab === "documents" ? <SimpleList title="Documents" rows={detail.documents.length ? detail.documents.map((doc) => doc.number || doc.doc_type) : ["Aucun document de facturation."]} /> : null}
-      {tab === "modules" ? (
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {MODULES.map((module) => (
-            <article key={module.key} className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-4">
-              <h3 className="font-semibold">{module.label}</h3>
-              <p className="mt-2 text-sm text-[#9AA6C2]">{moduleState(account.modules, module.key)}</p>
-              <p className="mt-1 text-xs text-[#9AA6C2]">Date et auteur d'activation : non renseignés. Byound Care reprend l'ancien suivi de bien-être.</p>
-            </article>
-          ))}
-        </div>
-      ) : null}
-      {tab === "journal" ? <div className="mt-5 rounded-[28px] border border-[#1A2340] bg-[#111831] p-5"><Activity items={detail.activity} name={account.name} /></div> : null}
-      {tab === "notes" ? <div className="mt-5 max-w-xl"><NoteForm orgId={account.id} initial={detail.note?.body ?? ""} onSaved={setMessage} /></div> : null}
-
-      {panel ? (
-        <ActionPanel
-          orgId={account.id}
-          kind={panel}
-          onClose={() => setPanel(null)}
-          onDone={(text) => {
-            setMessage(text);
-            setPanel(null);
-          }}
-        />
-      ) : null}
-      {writeOpen ? <OpenSpaceDialog orgId={account.id} orgName={account.name} onClose={() => setWriteOpen(false)} /> : null}
+      {panel === "invite" ? <InvitePanel orgId={account.id} courses={detail.catalogue} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "course" ? <AssignPanel orgId={account.id} courses={detail.catalogue} people={detail.people} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "badge" ? <BadgePanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "import" ? <ImportPanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "space" ? <SpaceDialog orgId={account.id} orgName={account.name} onClose={() => setPanel(null)} /> : null}
     </div>
   );
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full bg-[#1A2340] px-2 py-1">{children}</span>;
+function isTab(value: string | undefined): value is Tab {
+  return TABS.some((item) => item.id === value);
 }
 
-function Mini({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-[22px] border border-[#1A2340] bg-[#0B1122] p-3"><p className="text-xs text-[#9AA6C2]">{label}</p><p className="mt-1 font-semibold">{value}</p></div>;
+function tabCounts(detail: Detail): Partial<Record<Tab, number>> {
+  return {
+    members: detail.people.length,
+    courses: detail.courses.length,
+    badges: detail.badges.length || detail.assertions.length,
+  };
 }
 
-function Activity({ items, name }: { items: Detail["activity"]; name: string }) {
-  if (!items.length) return <p className="mt-3 text-sm text-[#9AA6C2]">Aucune action enregistrée.</p>;
+function TabBar({ tab, counts, onChange }: { tab: Tab; counts: Partial<Record<Tab, number>>; onChange: (tab: Tab) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [limit, setLimit] = useState(TABS.length);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    const measureNode = measureRef.current;
+    if (!node || !measureNode) return;
+    const measure = () => {
+      const buttons = [...measureNode.querySelectorAll("button")];
+      const available = node.clientWidth;
+      let used = 0;
+      let next = buttons.length;
+      for (let index = 0; index < buttons.length; index += 1) {
+        const size = buttons[index]?.getBoundingClientRect().width ?? 0;
+        const reserve = index < buttons.length - 1 ? 72 : 0;
+        if (used + size + reserve > available) {
+          next = Math.max(1, index);
+          break;
+        }
+        used += size;
+      }
+      setLimit(next);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [counts]);
+
+  const activeIndex = TABS.findIndex((item) => item.id === tab);
+  const visible = TABS.slice(0, limit);
+  if (activeIndex >= limit) {
+    visible[visible.length - 1] = TABS[activeIndex];
+  }
+  const hidden = TABS.filter((item) => !visible.some((shown) => shown.id === item.id));
+
+  return (
+    <div className="relative mt-6">
+      <div ref={measureRef} aria-hidden className="invisible absolute flex">
+        {TABS.map((item) => (
+          <button key={item.id} type="button" className="px-3 py-2 text-[13px] font-extrabold">
+            {item.label}
+            {counts[item.id] != null ? <span className="ml-1.5 rounded-full px-1.5 text-[11px]">{counts[item.id]}</span> : null}
+          </button>
+        ))}
+      </div>
+      <div ref={ref} className="flex min-w-0 items-end gap-1 border-b border-[#1A2340]">
+      {visible.map((item) => (
+        <button key={item.id} type="button" onClick={() => onChange(item.id)} className="px-3 py-2 text-[13px] font-extrabold" style={{ color: tab === item.id ? "#fff" : "#8A93AE", boxShadow: tab === item.id ? "inset 0 -2px 0 #8B7BFF" : undefined }}>
+          {item.label}
+          {counts[item.id] != null ? (
+            <span className="ml-1.5 rounded-full px-1.5 text-[11px]" style={{ background: tab === item.id ? "#6E5BFF" : "#1A2340" }}>{counts[item.id]}</span>
+          ) : null}
+        </button>
+      ))}
+      {hidden.length ? (
+        <span className="relative">
+          <button type="button" className="px-3 py-2 text-[13px] font-extrabold text-[#8A93AE]" onClick={() => setMore((value) => !value)}>Plus</button>
+          {more ? (
+            <span className="absolute left-0 z-20 mt-1 min-w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2">
+              {hidden.map((item) => (
+                <button key={item.id} type="button" className="block w-full rounded-xl px-2 py-1.5 text-left text-sm" onClick={() => { onChange(item.id); setMore(false); }}>{item.label}</button>
+              ))}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
+      </div>
+    </div>
+  );
+}
+
+function Overview({ detail, onOpen }: { detail: Detail; onOpen: (panel: "invite" | "course" | "badge") => void }) {
+  const account = detail.account;
+  if (!account) return null;
+  const actions = [
+    { id: "invite" as const, label: "Inviter des collaborateurs", icon: "+", primary: true, enabled: true, reason: "" },
+    { id: "course" as const, label: "Assigner une formation", icon: "▤", primary: false, enabled: detail.catalogue.length > 0 && detail.people.some((person) => !person.invited), reason: detail.catalogue.length ? "Aucun participant avec un compte actif" : "Aucune formation disponible pour ce compte" },
+    { id: "tests" as const, label: "Envoyer les tests", icon: "✎", primary: false, enabled: false, reason: "Aucun test à envoyer pour ce compte" },
+    { id: "opco" as const, label: "Dossier OPCO", icon: "€", primary: false, enabled: false, reason: "Aucun dossier OPCO pour ce compte" },
+    { id: "badge" as const, label: "Créer un Open Badge", icon: "◎", primary: false, enabled: true, reason: "" },
+    { id: "doc" as const, label: "Ajouter un document", icon: "⇪", primary: false, enabled: false, reason: "Aucun espace document pour ce compte" },
+  ];
+  return (
+    <div className="mt-5 grid gap-4 lg:grid-cols-[1.6fr_.8fr]">
+      <div className="space-y-4">
+        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+          <h2 className="text-lg font-extrabold">Agir pour {account.name}</h2>
+          <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {actions.map((action) => {
+              const circle = (
+                <span className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full text-lg" style={{ background: action.primary ? "#6E5BFF" : "#1A2340" }}>{action.icon}</span>
+              );
+              if (!action.enabled || (action.id !== "invite" && action.id !== "course" && action.id !== "badge")) {
+                return (
+                  <span key={action.label} className="group relative text-center text-xs text-[#8A93AE]">
+                    <button type="button" disabled title={action.reason} className="cursor-not-allowed opacity-70">{circle}{action.label}</button>
+                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-48 -translate-x-1/2 rounded-2xl bg-[#0B1122] px-3 py-2 group-hover:block">{action.reason}</span>
+                  </span>
+                );
+              }
+              return (
+                <button key={action.label} type="button" className="text-center text-xs" onClick={() => onOpen(action.id)}>
+                  {circle}{action.label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+        <div className="grid gap-3 md:grid-cols-4">
+          <KpiCard label="Utilisateurs actifs" value={`${account.activeUsers} / ${account.totalUsers}`} />
+          <KpiCard label="Formations en cours" value={String(detail.courses.length)} />
+          <KpiCard label="Open Badges délivrés" value={String(detail.assertions.length)} />
+          <KpiCard label="Prochaine session" value="—" />
+        </div>
+        <RevenueBlock documents={detail.documents} fallbackCents={account.revenue12HtCents} />
+        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+          <h2 className="font-extrabold">Journal du compte</h2>
+          <JournalList items={detail.activity.slice(0, 5)} name={account.name} />
+        </section>
+      </div>
+      <aside className="space-y-4">
+        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5 text-sm">
+          <h2 className="font-extrabold">Démarrage</h2>
+          <ul className="mt-3 space-y-2 text-[#C9D2E8]">
+            <li>{account.logoUrl ? "Logo déposé" : "Logo à déposer"}</li>
+            <li>{hasAdmin(detail) ? "Admin invité" : "Admin à inviter"}</li>
+            <li>{detail.employees.length ? "Collaborateurs importés" : "Collaborateurs à importer"}</li>
+            <li>{detail.courses.length ? "Première formation assignée" : "Première formation à assigner"}</li>
+            <li>Tests à envoyer</li>
+          </ul>
+        </section>
+        <NoteForm orgId={account.id} initial={detail.note?.body ?? ""} />
+      </aside>
+    </div>
+  );
+}
+
+function hasAdmin(detail: Detail) {
+  return detail.members.some((member) => member.role === "admin");
+}
+
+function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; onInvite: () => void; onImport: () => void; onNotice: (message: string) => void }) {
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [menu, setMenu] = useState<string | null>(null);
+  const people = detail.people.filter((person) => {
+    if (filter === "admins" && roleTone(person.role) !== "admin") return false;
+    if (filter === "tutors" && roleTone(person.role) !== "tutor") return false;
+    if (filter === "invites" && !person.invited) return false;
+    if (filter === "staff" && (person.invited || roleTone(person.role) === "admin" || roleTone(person.role) === "tutor")) return false;
+    return `${person.name} ${person.email}`.toLowerCase().includes(query.toLowerCase());
+  });
+  const shown = expanded ? people : people.slice(0, 8);
+  const pending = detail.people.filter((person) => person.invited).length;
+  const inTraining = detail.people.filter((person) => person.formationsTotal > 0).length;
+  const withBadge = detail.people.filter((person) => person.badges > 0).length;
+  const activeKnown = detail.people.some((person) => person.lastSeenAt);
+  const active = detail.people.filter((person) => person.lastSeenAt && !person.invited).length;
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SegmentedFilter
+          value={filter}
+          onChange={setFilter}
+          items={[
+            { id: "all", label: "Tous", count: detail.people.length },
+            { id: "staff", label: "Collaborateurs", count: detail.people.filter((person) => !person.invited && roleTone(person.role) === "member").length },
+            { id: "admins", label: "Administrateurs", count: detail.people.filter((person) => roleTone(person.role) === "admin").length },
+            { id: "tutors", label: "Tuteurs", count: detail.people.filter((person) => roleTone(person.role) === "tutor").length },
+            { id: "invites", label: "Invitations", count: pending },
+          ]}
+        />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un membre" className="ml-auto rounded-full border border-[#26304F] bg-[#0B1122] px-4 py-2 text-sm" />
+        <button type="button" onClick={onImport} className="rounded-full border border-[#26304F] px-4 py-2 text-sm">Importer</button>
+        <button type="button" onClick={onInvite} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Inviter</button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-4">
+        <KpiCard label="Actifs ce mois" value={activeKnown ? `${active} / ${detail.people.length || 0}` : "—"} />
+        <KpiCard label="Invitations en attente" value={String(pending)} />
+        <KpiCard label="En formation" value={String(inTraining)} />
+        <KpiCard label="Avec au moins un badge" value={String(withBadge)} />
+      </div>
+      {people.length === 0 ? <EmptyState title="Aucun membre pour ce filtre." action={<button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onInvite}>Inviter un membre</button>} /> : (
+        <div className="overflow-hidden rounded-[28px] border border-[#1A2340] bg-[#111831]">
+          <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.9fr)_auto] px-4 py-3 text-[13px] text-[#6C7593]">
+            <span>Membre</span><span>Rôle</span><span>Formations</span><span>Open Badges</span><span>Dernière connexion</span><span />
+          </div>
+          {shown.map((person) => {
+            const tone = person.invited ? ROLE_COLORS.invited : ROLE_COLORS[roleTone(person.role)];
+            const ratio = person.formationsTotal ? Math.round((person.formationsDone / person.formationsTotal) * 100) : 0;
+            return (
+              <div key={person.userId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.9fr)_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm">
+                <span className="min-w-0">
+                  <span className="mr-2 inline-grid h-9 w-9 place-items-center rounded-full bg-[#6E5BFF] text-xs font-bold">{initials(person.name)}</span>
+                  <span className="font-semibold">{person.name}</span>
+                  <span className="block truncate pl-11 text-xs text-[#8A93AE]">{person.email}</span>
+                </span>
+                <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: tone.bg, color: tone.fg }}>{person.invited ? "Invité" : roleLabel(person.role)}</span>
+                <span>{person.formationsTotal ? <>{person.formationsDone} / {person.formationsTotal} terminées<span className="mt-1 block h-1.5 rounded-full bg-[#1A2340]"><span className="block h-1.5 rounded-full bg-[#6E5BFF]" style={{ width: `${ratio}%` }} /></span></> : "Aucune"}</span>
+                <span>{person.badges ? `${person.badges} badge${person.badges > 1 ? "s" : ""}` : "—"}</span>
+                <span className="text-xs" style={{ color: person.invited ? "#F2CF6B" : "#C9D2E8" }}>{person.invited && person.createdAt ? `Invité le ${new Date(person.createdAt).toLocaleDateString("fr-FR")}` : "—"}</span>
+                <span className="relative flex gap-2">
+                  {person.invited ? <button type="button" className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0A0F1E]" onClick={() => void memberAction(detail.account?.id, { action: "remind", email: person.email, employeeId: person.employeeId }, onNotice)}>Relancer</button> : <span className="rounded-full border border-[#26304F] px-3 py-1 text-xs">Voir</span>}
+                  <button type="button" aria-label="Actions" onClick={() => setMenu(menu === person.userId ? null : person.userId)}>⋯</button>
+                  {menu === person.userId ? (
+                    <span className="absolute right-0 top-8 z-10 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
+                      {person.userId.startsWith("employee:") ? null : (["admin", "learner", "tutor"] as const).map((role) => (
+                        <button key={role} type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "role", userId: person.userId, role }, onNotice)}>{roleLabel(role)}</button>
+                      ))}
+                      <button type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "deactivate", employeeId: person.employeeId }, onNotice)}>Désactiver</button>
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            );
+          })}
+          <div className="flex justify-between border-t border-[#1A2340] px-4 py-3 text-xs text-[#8A93AE]">
+            <span>{shown.length} sur {people.length} membres</span>
+            {people.length > 8 && !expanded ? <button type="button" onClick={() => setExpanded(true)}>Voir tout</button> : null}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function memberAction(orgId: string | undefined, body: Record<string, string | null>, onNotice: (message: string) => void) {
+  if (!orgId) return;
+  const response = await fetch(`/api/super/comptes-clients/${orgId}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const json = (await response.json()) as { error?: string };
+  onNotice(response.ok ? "Membre mis à jour." : json.error || "Action impossible");
+}
+
+function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void }) {
+  const [filter, setFilter] = useState("running");
+  const assigned = detail.courses;
+  const rows = filter === "catalog" ? detail.catalogue : assigned.filter((course) => {
+    if (filter === "upcoming") return course.status === "draft";
+    if (filter === "done") return course.status === "archived" || course.status === "completed";
+    return course.status !== "draft" && course.status !== "archived" && course.status !== "completed";
+  });
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SegmentedFilter value={filter} onChange={setFilter} items={[
+          { id: "running", label: "En cours", count: assigned.filter((course) => course.status !== "draft").length },
+          { id: "upcoming", label: "À venir", count: assigned.filter((course) => course.status === "draft").length },
+          { id: "done", label: "Terminées", count: assigned.filter((course) => course.status === "archived" || course.status === "completed").length },
+          { id: "catalog", label: "Catalogue disponible", count: detail.catalogue.length },
+        ]} />
+        {detail.catalogue.length === 0 ? (
+          <span className="ml-auto"><DisabledTip label="Assigner une formation" reason="Aucune formation disponible pour ce compte" /></span>
+        ) : (
+          <button type="button" className="ml-auto rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={() => onAssign()}>Assigner une formation</button>
+        )}
+      </div>
+      {rows.length === 0 ? <EmptyState title={filter === "catalog" ? "Aucune formation disponible à assigner." : "Aucune formation assignée à ce compte."} action={detail.catalogue.length ? <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onAssign}>Assigner une formation</button> : undefined} /> : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {rows.map((course) => {
+            const enrolled = "enrolled" in course ? course.enrolled : 0;
+            const badges = "badges" in course ? course.badges : 0;
+            return (
+              <article key={course.id} className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-4">
+                <div className="mb-3 grid h-28 place-items-center rounded-3xl text-2xl font-extrabold" style={{ background: course.cover ? `center/cover url(${course.cover})` : "linear-gradient(135deg,#241C3E,#6E5BFF)" }}>{course.cover ? "" : initials(course.title)}</div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex gap-2 text-xs">
+                    <span className="rounded-full bg-[#1A2340] px-2 py-1">{course.status === "draft" ? "À venir" : course.status === "archived" || course.status === "completed" ? "Terminée" : "En cours"}</span>
+                    {course.format ? <span className="rounded-full bg-[#1A2340] px-2 py-1">{course.format}</span> : null}
+                  </div>
+                  {filter !== "catalog" ? (
+                    <CourseMenu orgId={detail.account?.id} courseId={course.id} onAssign={onAssign} />
+                  ) : null}
+                </div>
+                <h3 className="mt-2 font-extrabold">{course.title}</h3>
+                <p className="text-xs text-[#8A93AE]">{[course.format, course.duration].filter(Boolean).join(" · ") || "Formation Byound"}</p>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                  <span className="rounded-2xl bg-[#0B1122] p-2">{enrolled}<br />Inscrits</span>
+                  <span className="rounded-2xl bg-[#0B1122] p-2">0 / {enrolled || 0}<br />Terminé</span>
+                  <span className="rounded-2xl bg-[#0B1122] p-2">{badges}<br />Badges</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BadgesTab({ detail, onCreate }: { detail: Detail; onCreate: () => void }) {
+  const [filter, setFilter] = useState("delivered");
+  const cards = detail.badges.filter((badge) => {
+    if (filter === "revoked") return badge.revoked > 0;
+    if (filter === "fix") return badge.toFix > 0;
+    if (filter === "progress") return badge.inProgress > 0;
+    return true;
+  });
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SegmentedFilter value={filter} onChange={setFilter} items={[
+          { id: "delivered", label: "Délivrés", count: detail.assertions.length },
+          { id: "progress", label: "En évaluation", count: detail.badges.reduce((sum, badge) => sum + badge.inProgress, 0) },
+          { id: "fix", label: "À corriger", count: detail.badges.reduce((sum, badge) => sum + badge.toFix, 0) },
+          { id: "revoked", label: "Révoqués", count: detail.badges.reduce((sum, badge) => sum + badge.revoked, 0) },
+        ]} />
+        <button type="button" onClick={onCreate} className="ml-auto rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Créer un Open Badge</button>
+      </div>
+      {cards.length === 0 && detail.assertions.length === 0 ? <EmptyState title="Aucun badge délivré pour l'instant." action={<button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onCreate}>Délivrer un premier badge</button>} /> : cards.length === 0 ? null : (
+        <div className="grid gap-4 lg:grid-cols-3">
+          {cards.map((badge) => (
+            <article key={badge.id} className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-4">
+              <div className="mx-auto max-w-[240px]"><MetalBadgeCard titre={badge.title} titulaire={detail.account?.name ?? "Byound"} date="" /></div>
+              <p className="mt-3 text-sm">{badge.competencies} compétences</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                <span className="rounded-2xl bg-[#163228] p-2 text-[#6BE39B]">{badge.delivered}<br />Délivrés</span>
+                <span className="rounded-2xl bg-[#1A2340] p-2">{badge.inProgress}<br />En cours</span>
+                <span className="rounded-2xl bg-[#3A3118] p-2 text-[#F2CF6B]">{badge.toFix}<br />À corriger</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      {detail.assertions.length > 0 ? (
+        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+          <h2 className="font-extrabold">Derniers badges délivrés</h2>
+          <ul className="mt-3 space-y-3 text-sm">
+            {detail.assertions.slice(0, 8).map((item) => (
+              <li key={item.id} className="flex items-center justify-between gap-3 border-t border-[#1A2340] pt-3">
+                <span>
+                  {item.holder} · {item.badge}
+                  <span className="block text-xs text-[#8A93AE]">{new Date(item.issuedAt).toLocaleDateString("fr-FR")}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full bg-[#1A2340] px-2 py-1 text-xs">{item.isPublic ? "Public" : "Privé"}</span>
+                  <a className="text-xs text-[#8DB8FF]" href={`/badges/${item.id}`}>Vérifier</a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function RevenueTab({ detail }: { detail: Detail }) {
+  const [filter, setFilter] = useState("invoice");
+  const docs = detail.documents.filter((doc) => doc.doc_type === (filter === "invoice" ? "invoice" : filter === "quote" ? "quote" : "credit_note"));
+  const csv = ["type,numero,date,ht,statut", ...detail.documents.map((doc) => [doc.doc_type, doc.number ?? "", doc.issued_at, (Number(doc.amount_ht_cents) / 100).toFixed(2), doc.status].join(","))].join("\n");
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <SegmentedFilter value={filter} onChange={setFilter} items={[
+          { id: "invoice", label: "Factures", count: detail.documents.filter((doc) => doc.doc_type === "invoice").length },
+          { id: "quote", label: "Devis", count: detail.documents.filter((doc) => doc.doc_type === "quote").length },
+          { id: "credit", label: "Avoirs", count: detail.documents.filter((doc) => doc.doc_type === "credit_note").length },
+        ]} />
+        <a className="ml-auto rounded-full border border-[#26304F] px-4 py-2 text-sm" href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`} download="chiffre-affaires.csv">Exporter CSV</a>
+      </div>
+      <RevenueBlock documents={detail.documents} fallbackCents={detail.account?.revenue12HtCents ?? 0} />
+      {docs.length === 0 ? <EmptyState title="Aucune facture pour ce compte." /> : (
+        <div className="overflow-hidden rounded-[28px] border border-[#1A2340] bg-[#111831]">
+          <div className="grid grid-cols-[.6fr_1.4fr_.7fr_.7fr_.7fr_auto] px-4 py-3 text-[13px] text-[#6C7593]">
+            <span>N°</span><span>Objet</span><span>Émise le</span><span className="text-right">Montant HT</span><span>Statut</span><span />
+          </div>
+          {docs.map((doc) => (
+            <div key={doc.id} className="grid grid-cols-[.6fr_1.4fr_.7fr_.7fr_.7fr_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm">
+              <span>{doc.number || "—"}</span>
+              <span>{doc.sale_type || doc.doc_type}</span>
+              <span>{new Date(doc.issued_at).toLocaleDateString("fr-FR")}</span>
+              <span className="text-right">{formatEurosHt(Number(doc.amount_ht_cents))}</span>
+              <InvoiceStatus status={doc.status} paidByOpco={Number(doc.opco_ht_cents ?? 0) > 0 && Boolean(doc.paid_at)} />
+              <span>{doc.doc_type === "invoice" && !doc.paid_at ? <Remind id={String(doc.id)} /> : null}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RevenueBlock({ documents, fallbackCents }: { documents: Detail["documents"]; fallbackCents: number }) {
+  const [range, setRange] = useState<"3" | "12" | "all">("12");
+  const summary = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now);
+    if (range === "3") from.setUTCMonth(from.getUTCMonth() - 3);
+    else if (range === "12") from.setUTCMonth(from.getUTCMonth() - 12);
+    else from.setUTCFullYear(from.getUTCFullYear() - 20);
+    const docs: BillingDoc[] = documents.map((doc) => ({
+      orgId: "current",
+      docType: doc.doc_type as BillingDoc["docType"],
+      status: doc.status as BillingDoc["status"],
+      issuedAt: doc.issued_at,
+      dueAt: doc.due_at,
+      paidAt: doc.paid_at,
+      amountHtCents: Number(doc.amount_ht_cents ?? 0),
+      saleType: (doc.sale_type as BillingDoc["saleType"]) ?? null,
+      opcoHtCents: Number(doc.opco_ht_cents ?? 0),
+    }));
+    return summarizeRevenue(docs, [{ id: "current", kind: "client", status: "active" }], from.toISOString(), now.toISOString(), "current", now.toISOString());
+  }, [documents, range]);
+  const hasInvoices = documents.some((doc) => doc.doc_type === "invoice");
+  const amount = hasInvoices ? summary.periodHtCents : range === "12" ? fallbackCents : 0;
+  return (
+    <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs text-[#8A93AE]">Chiffre d'affaires HT</p>
+          <p className="text-3xl font-extrabold">{formatEurosHt(amount)}</p>
+          {hasInvoices ? <p className="text-sm text-[#6BE39B]">{formatEuroDelta(summary.deltaHtCents)}</p> : null}
+        </div>
+        <SegmentedFilter value={range} onChange={(id) => setRange(id as "3" | "12" | "all")} items={[{ id: "3", label: "3 mois" }, { id: "12", label: "12 mois" }, { id: "all", label: "Total" }]} />
+      </div>
+      {hasInvoices ? (
+        <>
+          <div className="mt-4 flex h-24 items-end gap-2">
+            {summary.byMonth.map((month) => {
+              const max = Math.max(...summary.byMonth.map((item) => item.htCents), 1);
+              const current = month.month === new Date().toISOString().slice(0, 7);
+              return <span key={month.month} className="flex-1 rounded-t-lg" style={{ height: `${Math.max(8, (month.htCents / max) * 100)}%`, background: current ? "repeating-linear-gradient(135deg,#6E5BFF,#6E5BFF 4px,#241C3E 4px,#241C3E 8px)" : "#6E5BFF" }} title={month.month} />;
+            })}
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <KpiCard label="Encaissé" value={formatEurosHt(summary.collectedHtCents)} />
+            <KpiCard label="À encaisser" value={formatEurosHt(summary.outstandingHtCents)} />
+            <KpiCard label="Devis en cours" value={formatEurosHt(summary.quotesHtCents)} />
+            <KpiCard label="Financé par l'OPCO" value={formatEurosHt(summary.opcoHtCents)} />
+          </div>
+        </>
+      ) : <p className="mt-4 text-sm text-[#8A93AE]">0 € HT. Aucune facture n'est rattachée à ce compte.</p>}
+    </section>
+  );
+}
+
+function ModulesTab({ modules }: { modules: string[] }) {
+  const items = [
+    { key: "beyond_lms", label: "LMS et parcours" },
+    { key: "open_badges", label: "Open Badges" },
+    { key: "tests", label: "Tests" },
+    { key: "beyond_care", label: "Byound Care" },
+  ];
+  return (
+    <div className="mt-5 grid gap-3 md:grid-cols-2">
+      {items.map((item) => {
+        const active = item.key === "beyond_care" ? modules.includes("beyond_care") || modules.includes("mental_health_tracking") : modules.includes(item.key);
+        return (
+          <article key={item.key} className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-4">
+            <h3 className="font-extrabold">{item.label}</h3>
+            <p className="mt-2 text-sm text-[#8A93AE]">{active ? "Option active" : "Non activé"}</p>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function JournalTab({ detail, name }: { detail: Detail; name: string }) {
+  if (!detail.activity.length) return <div className="mt-5"><EmptyState title="Aucune action enregistrée pour ce compte." /></div>;
+  return <section className="mt-5 rounded-[28px] border border-[#1A2340] bg-[#111831] p-5"><JournalList items={detail.activity} name={name} /></section>;
+}
+
+function JournalList({ items, name }: { items: Detail["activity"]; name: string }) {
+  if (!items.length) return <p className="mt-3 text-sm text-[#8A93AE]">Aucune action enregistrée.</p>;
   return (
     <ul className="mt-3 space-y-2 text-sm">
       {items.map((item) => (
-        <li key={item.id}>
-          <span className="text-[#C4B8FF]">{item.actor_type === "byound_on_behalf" ? `Byound pour ${name}` : "Client"}</span>
-          {" · "}{item.action}{" · "}{new Date(item.created_at).toLocaleString("fr-FR")}
-        </li>
+        <li key={item.id}><span className="text-[#C4B8FF]">{item.actor_type === "byound_on_behalf" ? `Byound pour ${name}` : "Client"}</span> · {item.action} · {new Date(item.created_at).toLocaleString("fr-FR")}</li>
       ))}
     </ul>
   );
 }
 
-function SimpleList({ title, rows }: { title: string; rows: string[] }) {
+function CourseMenu({ orgId, courseId, onAssign }: { orgId: string | undefined; courseId: string; onAssign: () => void }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
   return (
-    <section className="mt-5 rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-      <h2 className="font-bold">{title}</h2>
-      <ul className="mt-3 space-y-2 text-sm">{rows.map((row) => <li key={row}>{row}</li>)}</ul>
-    </section>
+    <span className="relative">
+      <button type="button" aria-label="Actions de la formation" onClick={() => setOpen((value) => !value)}>⋯</button>
+      {open ? (
+        <span className="absolute right-0 z-10 mt-1 w-48 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
+          <button type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={onAssign}>Ajouter des participants</button>
+          <span className="block px-2 py-1 text-[#8A93AE]" title="Aucune session planifiée pour cette formation">Émargements</span>
+          <button type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => {
+            if (!orgId) return;
+            void fetch(`/api/super/comptes-clients/${orgId}/assign-course`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "remove", courseId }) }).then(() => router.refresh());
+            setOpen(false);
+          }}>Retirer du compte</button>
+        </span>
+      ) : null}
+    </span>
   );
 }
 
-function NoteForm({ orgId, initial, onSaved }: { orgId: string; initial: string; onSaved: (message: string) => void }) {
+function initials(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "B";
+}
+
+function NoteForm({ orgId, initial }: { orgId: string; initial: string }) {
   const [body, setBody] = useState(initial);
+  const [saved, setSaved] = useState<string | null>(null);
   return (
-    <form
-      className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        const response = await fetch(`/api/super/comptes-clients/${orgId}/note`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ body }),
-        });
-        const json = (await response.json()) as { error?: string };
-        onSaved(response.ok ? "Note interne enregistrée." : json.error || "Note impossible");
-      }}
-    >
-      <h2 className="font-bold">Note interne</h2>
-      <p className="mt-1 text-xs text-[#9AA6C2]">Visible uniquement par le staff Byound.</p>
-      <textarea value={body} onChange={(event) => setBody(event.target.value)} className="mt-3 min-h-28 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] p-3 text-sm" />
+    <form className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5" onSubmit={async (event) => {
+      event.preventDefault();
+      const response = await fetch(`/api/super/comptes-clients/${orgId}/note`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }) });
+      const json = (await response.json()) as { error?: string };
+      setSaved(response.ok ? "Note enregistrée." : json.error || "Note impossible");
+    }}>
+      <h2 className="font-extrabold">Note interne</h2>
+      <textarea value={body} onChange={(event) => setBody(event.target.value)} className={`${fieldClass} mt-3 min-h-28`} />
       <button type="submit" className="mt-3 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Enregistrer</button>
+      {saved ? <p className="mt-2 text-xs text-[#8A93AE]">{saved}</p> : null}
     </form>
   );
 }
 
-function MembersTab({ detail, onMessage }: { detail: Detail; onMessage: (message: string) => void }) {
-  const [preview, setPreview] = useState<Array<Record<string, string>>>([]);
-  const [errors, setErrors] = useState<Array<{ line: number; message: string }>>([]);
-  const account = detail.account;
-  if (!account) return null;
+function InvoiceStatus({ status, paidByOpco }: { status: string; paidByOpco: boolean }) {
+  const label = paidByOpco ? "Payée par l'OPCO" : status === "paid" ? "Payée" : status === "overdue" ? "En retard" : status === "issued" ? "À échéance" : status;
+  const color = paidByOpco ? "#C4B8FF" : status === "paid" ? "#6BE39B" : status === "overdue" ? "#FF8A9B" : "#F2CF6B";
+  return <span style={{ color }}>{label}</span>;
+}
 
+function Remind({ id }: { id: string }) {
+  const [label, setLabel] = useState("Envoyer un rappel");
+  return <button type="button" className="rounded-full border border-[#26304F] px-3 py-1 text-xs" onClick={async () => {
+    const response = await fetch(`/api/super/comptes-clients/remind/${id}`, { method: "POST" });
+    setLabel(response.ok ? "Rappel envoyé" : "Rappel impossible");
+  }}>{label}</button>;
+}
+
+function InvitePanel({ orgId, courses, onClose, onDone }: { orgId: string; courses: Detail["catalogue"]; onClose: () => void; onDone: (message: string) => void }) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("learner");
+  const [courseId, setCourseId] = useState("");
   return (
-    <section className="mt-5 rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-      <h2 className="font-bold">Membres</h2>
-      <ul className="mt-3 space-y-2 text-sm">
-        {detail.members.map((member) => <li key={member.userId}>{member.name} · {member.role} · {member.email}</li>)}
-        {detail.employees.map((employee) => <li key={employee.id}>{employee.first_name} {employee.last_name} · {employee.email} · {employee.status ?? "actif"}</li>)}
-      </ul>
-      <label className="mt-4 block text-sm">
-        Importer un fichier .csv ou .xlsx
-        <input
-          type="file"
-          accept=".csv,.xlsx"
-          className="mt-2 block text-xs"
-          onChange={async (event) => {
+    <SidePanel title="Inviter" onClose={onClose}>
+      <form onSubmit={async (event) => {
+        event.preventDefault();
+        const response = await fetch(`/api/super/comptes-clients/${orgId}/invite`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ firstName, lastName, email, role, courseId: courseId || undefined }) });
+        const json = (await response.json()) as { error?: string };
+        if (!response.ok) return onDone(json.error || "Invitation impossible");
+        onDone(courseId ? "Invitation envoyée. La formation est assignée si la personne a déjà un compte." : "Invitation envoyée.");
+        onClose();
+      }}>
+        <Field label="E-mail"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={fieldClass} /></Field>
+        <Field label="Prénom"><input required value={firstName} onChange={(event) => setFirstName(event.target.value)} className={fieldClass} /></Field>
+        <Field label="Nom"><input required value={lastName} onChange={(event) => setLastName(event.target.value)} className={fieldClass} /></Field>
+        <Field label="Rôle"><select value={role} onChange={(event) => setRole(event.target.value)} className={fieldClass}><option value="learner">Collaborateur</option><option value="admin">Administrateur</option><option value="tutor">Tuteur</option></select></Field>
+        <Field label="Formation à assigner"><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}><option value="">Aucune</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></Field>
+        <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Envoyer l'invitation</button>
+      </form>
+    </SidePanel>
+  );
+}
+
+function AssignPanel({ orgId, courses, people, onClose, onDone }: { orgId: string; courses: Detail["catalogue"]; people: Detail["people"]; onClose: () => void; onDone: (message: string) => void }) {
+  const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
+  const [selected, setSelected] = useState<string[]>([]);
+  const participants = people.filter((person) => !person.invited && !person.userId.startsWith("employee:"));
+  return (
+    <SidePanel title="Assigner une formation" onClose={onClose}>
+      <form onSubmit={async (event) => {
+        event.preventDefault();
+        const response = await fetch(`/api/super/comptes-clients/${orgId}/assign-course`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId, userIds: selected }) });
+        const json = (await response.json()) as { error?: string; created?: number };
+        onDone(response.ok ? `${json.created ?? 0} inscription(s) créée(s).` : json.error || "Assignation impossible");
+        if (response.ok) onClose();
+      }}>
+        <Field label="Formation"><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></Field>
+        <p className="mb-2 text-sm text-[#8A93AE]">Participants</p>
+        <div className="mb-4 max-h-48 space-y-1 overflow-auto">
+          {participants.map((person) => (
+            <label key={person.userId} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={selected.includes(person.userId)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, person.userId] : current.filter((id) => id !== person.userId))} />
+              {person.name}
+            </label>
+          ))}
+        </div>
+        <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Assigner</button>
+      </form>
+    </SidePanel>
+  );
+}
+
+function BadgePanel({ orgId, onClose, onDone }: { orgId: string; onClose: () => void; onDone: (message: string) => void }) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  return (
+    <SidePanel title="Créer un Open Badge" onClose={onClose}>
+      <form onSubmit={async (event) => {
+        event.preventDefault();
+        const response = await fetch(`/api/super/comptes-clients/${orgId}/badge`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, description }) });
+        const json = (await response.json()) as { error?: string };
+        onDone(response.ok ? "Badge créé pour ce compte." : json.error || "Création impossible");
+        if (response.ok) onClose();
+      }}>
+        <Field label="Nom"><input required value={name} onChange={(event) => setName(event.target.value)} className={fieldClass} /></Field>
+        <Field label="Description"><textarea value={description} onChange={(event) => setDescription(event.target.value)} className={`${fieldClass} min-h-24`} /></Field>
+        <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Créer le badge</button>
+      </form>
+    </SidePanel>
+  );
+}
+
+function ImportPanel({ orgId, onClose, onDone }: { orgId: string; onClose: () => void; onDone: (message: string) => void }) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [rows, setRows] = useState<Array<Record<string, string>>>([]);
+  const [mapping, setMapping] = useState({ firstName: "", lastName: "", email: "" });
+  const [errors, setErrors] = useState<Array<{ line: number; message: string }>>([]);
+  const headers = Object.keys(rows[0] ?? {});
+  return (
+    <SidePanel title="Importer des membres" onClose={onClose}>
+      {step === 1 ? (
+        <label className="grid h-40 cursor-pointer place-items-center rounded-[28px] border border-dashed border-[#26304F] text-sm text-[#8A93AE]">
+          Déposer un fichier .csv ou .xlsx
+          <input type="file" accept=".csv,.xlsx" className="hidden" onChange={async (event) => {
             const file = event.target.files?.[0];
             if (!file) return;
             const book = XLSX.read(await file.arrayBuffer(), { type: "array" });
             const sheet = book.Sheets[book.SheetNames[0] ?? ""];
-            const raw = XLSX.utils.sheet_to_json<Record<string, string>>(sheet ?? {}, { defval: "" });
-            setPreview(raw.slice(0, 8));
-            const rows = raw.map((row) => mapColumns(row));
-            const response = await fetch(`/api/super/comptes-clients/${account.id}/import`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ rows }),
+            const parsed = XLSX.utils.sheet_to_json<Record<string, string>>(sheet ?? {}, { defval: "" });
+            setRows(parsed);
+            const keys = Object.keys(parsed[0] ?? {});
+            setMapping({
+              firstName: keys.find((key) => /pr[eé]nom|first/i.test(key)) ?? keys[0] ?? "",
+              lastName: keys.find((key) => /nom|last/i.test(key) && !/pr[eé]nom/i.test(key)) ?? "",
+              email: keys.find((key) => /mail/i.test(key)) ?? "",
             });
-            const json = (await response.json()) as { created?: number; errors?: Array<{ line: number; message: string }>; error?: string };
-            setErrors(json.errors ?? []);
-            onMessage(response.ok ? `${json.created ?? 0} collaborateurs importés.` : json.error || "Import impossible");
-          }}
-        />
-      </label>
-      {preview.length ? (
-        <div className="mt-3 overflow-auto text-xs text-[#C9D2E8]">
-          Aperçu : {preview.map((row) => Object.values(row).join(" · ")).join(" | ")}
-        </div>
+            setStep(2);
+          }} />
+        </label>
       ) : null}
-      {errors.length ? <ul className="mt-3 text-sm text-[#FF8A9B]">{errors.map((error) => <li key={`${error.line}-${error.message}`}>Ligne {error.line} : {error.message}</li>)}</ul> : null}
-    </section>
-  );
-}
-
-function mapColumns(row: Record<string, string>) {
-  const entries = Object.entries(row).map(([key, value]) => [key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(), String(value)] as const);
-  const find = (...names: string[]) => entries.find(([key]) => names.some((name) => key.includes(name)))?.[1] ?? "";
-  return {
-    firstName: find("prenom", "first"),
-    lastName: find("nom", "last"),
-    email: find("email", "mail"),
-    jobTitle: find("poste", "job", "titre"),
-    department: find("service", "departement", "department"),
-  };
-}
-
-function RevenueTab({ documents }: { documents: Detail["documents"] }) {
-  const csv = useMemo(() => {
-    const header = "type,numero,date,ht,statut,echeance";
-    const lines = documents.map((doc) => [doc.doc_type, doc.number ?? "", doc.issued_at, (doc.amount_ht_cents / 100).toFixed(2), doc.status, doc.due_at ?? ""].join(","));
-    return [header, ...lines].join("\n");
-  }, [documents]);
-  return (
-    <section className="mt-5 rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-bold">Factures, devis, avoirs</h2>
-        <a className="rounded-full border border-[#26304F] px-3 py-1 text-sm" href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`} download="chiffre-affaires.csv">Export CSV</a>
-      </div>
-      {documents.length === 0 ? <p className="mt-3 text-sm text-[#9AA6C2]">Aucune pièce. Le CA reste à 0 € HT.</p> : (
-        <ul className="mt-3 space-y-2 text-sm">
-          {documents.map((doc) => (
-            <li key={doc.id} className="flex justify-between gap-3">
-              <span>{doc.number || doc.doc_type} · {new Date(doc.issued_at).toLocaleDateString("fr-FR")} · {formatEurosHt(doc.amount_ht_cents)} · {doc.status}</span>
-              {doc.doc_type === "invoice" && !doc.paid_at ? <RemindButton id={doc.id} /> : null}
-            </li>
+      {step === 2 ? (
+        <form onSubmit={(event) => { event.preventDefault(); setStep(3); }}>
+          {(["firstName", "lastName", "email"] as const).map((key) => (
+            <Field key={key} label={key === "email" ? "E-mail" : key === "firstName" ? "Prénom" : "Nom"}>
+              <select value={mapping[key]} onChange={(event) => setMapping((current) => ({ ...current, [key]: event.target.value }))} className={fieldClass}>{headers.map((header) => <option key={header}>{header}</option>)}</select>
+            </Field>
           ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function RemindButton({ id }: { id: string }) {
-  const [text, setText] = useState("Envoyer un rappel");
-  return (
-    <button
-      type="button"
-      className="rounded-full border border-[#26304F] px-3 py-1"
-      onClick={async () => {
-        const response = await fetch(`/api/super/comptes-clients/remind/${id}`, { method: "POST" });
-        setText(response.ok ? "Rappel envoyé" : "Rappel impossible");
-      }}
-    >
-      {text}
-    </button>
-  );
-}
-
-function ActionPanel({ orgId, kind, onClose, onDone }: { orgId: string; kind: string; onClose: () => void; onDone: (message: string) => void }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40">
-      <form
-        className="h-full w-full max-w-md overflow-auto bg-[#111831] p-6"
-        onSubmit={async (event) => {
+          <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Voir l'aperçu</button>
+        </form>
+      ) : null}
+      {step === 3 ? (
+        <form onSubmit={async (event) => {
           event.preventDefault();
-          if (kind !== "invite") {
-            onDone("Cette action réutilise les services du compte dès que la donnée source existe. Rien n'a été inventé.");
-            return;
-          }
-          const response = await fetch(`/api/super/comptes-clients/${orgId}/invite`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ firstName, lastName, email }),
-          });
-          const json = (await response.json()) as { error?: string };
-          onDone(response.ok ? "Invitation envoyée pour le compte." : json.error || "Invitation impossible");
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">{kind === "invite" ? "Inviter un collaborateur" : "Action"}</h2>
-          <button type="button" onClick={onClose}>Fermer</button>
-        </div>
-        {kind === "invite" ? (
-          <div className="mt-4 space-y-3">
-            <input required value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Prénom" className="w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2" />
-            <input required value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Nom" className="w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2" />
-            <input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="E-mail" className="w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2" />
-            <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Envoyer l'invitation</button>
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-[#C9D2E8]">Le panneau est prêt. La source (session, badge, dossier OPCO, document) n'est pas encore reliée à l'organisation, donc aucune écriture n'est faite.</p>
-        )}
-        {kind !== "invite" ? <button type="submit" className="mt-4 rounded-full border border-[#26304F] px-4 py-2 text-sm">Fermer le panneau</button> : null}
-      </form>
-    </div>
+          const payload = rows.map((row) => ({ firstName: row[mapping.firstName], lastName: row[mapping.lastName], email: row[mapping.email] }));
+          const response = await fetch(`/api/super/comptes-clients/${orgId}/import`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: payload }) });
+          const json = (await response.json()) as { created?: number; errors?: Array<{ line: number; message: string }>; error?: string };
+          setErrors(json.errors ?? []);
+          onDone(response.ok ? `${json.created ?? 0} membres importés.` : json.error || "Import impossible");
+          if (response.ok && !(json.errors ?? []).length) onClose();
+        }}>
+          <ul className="mb-3 max-h-40 overflow-auto text-xs text-[#C9D2E8]">{rows.slice(0, 8).map((row, index) => <li key={index}>{row[mapping.firstName]} {row[mapping.lastName]} · {row[mapping.email]}</li>)}</ul>
+          {errors.map((error) => <p key={`${error.line}-${error.message}`} className="text-sm text-[#FF8A9B]">Ligne {error.line} : {error.message}</p>)}
+          <button type="submit" className="mt-3 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Confirmer l'import</button>
+        </form>
+      ) : null}
+    </SidePanel>
   );
 }
 
-function OpenSpaceDialog({ orgId, orgName, onClose }: { orgId: string; orgName: string; onClose: () => void }) {
-  const [mode, setMode] = useState<"choose" | "write">("choose");
+function SpaceDialog({ orgId, orgName, onClose }: { orgId: string; orgName: string; onClose: () => void }) {
   const [reasonCode, setReasonCode] = useState("client_request");
-  const [reasonText, setReasonText] = useState("");
-  const [notifyAdmin, setNotifyAdmin] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  async function start(nextMode: "read" | "write") {
-    const response = await fetch("/api/super/impersonation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orgId, mode: nextMode, reasonCode, reasonText, notifyAdmin }),
-    });
-    const json = (await response.json()) as { error?: string };
-    if (!response.ok) {
-      setError(json.error || "Ouverture impossible");
-      return;
-    }
-    window.location.href = "/dashboard/entreprise";
-  }
-
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-[28px] border border-[#1A2340] bg-[#111831] p-6">
-        {mode === "choose" ? (
-          <>
-            <h2 className="text-xl font-bold">Ouvrir l'espace de {orgName}</h2>
-            <p className="mt-2 text-sm text-[#C9D2E8]">La session Byound reste la vôtre. L'espace s'ouvre en lecture.</p>
-            {error ? <p className="mt-3 text-sm text-[#FF8A9B]">{error}</p> : null}
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm">Annuler</button>
-              <button type="button" onClick={() => void start("read")} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Ouvrir en lecture</button>
-              <button type="button" onClick={() => setMode("write")} className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm">Passer en modification</button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-xl font-bold">Passer en modification</h2>
-            <p className="mt-2 text-sm text-[#C9D2E8]">Vos actions seront enregistrées dans le journal de {orgName}. Le mode écriture dure 30 minutes.</p>
-            <label className="mt-4 block text-sm">Motif
-              <select value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} className="mt-1 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2">
-                {REASON_CODES.map((reason) => <option key={reason.code} value={reason.code}>{reason.label}</option>)}
-              </select>
-            </label>
-            <label className="mt-3 block text-sm">Précision
-              <textarea value={reasonText} onChange={(event) => setReasonText(event.target.value)} className="mt-1 min-h-20 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] p-3" />
-            </label>
-            <label className="mt-3 flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={notifyAdmin} onChange={(event) => setNotifyAdmin(event.target.checked)} />
-              Prévenir l'administrateur du compte par e-mail
-            </label>
-            {error ? <p className="mt-3 text-sm text-[#FF8A9B]">{error}</p> : null}
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm">Annuler</button>
-              <button type="button" onClick={() => void start("write")} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Activer pour 30 min</button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+    <SidePanel title={`Ouvrir l'espace de ${orgName}`} onClose={onClose}>
+      <p className="mb-3 text-sm text-[#C9D2E8]">L'espace s'ouvre en lecture. Votre session Byound ne change pas.</p>
+      <Field label="Motif, si vous passez ensuite en modification"><select value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} className={fieldClass}>{REASON_CODES.map((reason) => <option key={reason.code} value={reason.code}>{reason.label}</option>)}</select></Field>
+      {error ? <p className="mb-3 text-sm text-[#FF8A9B]">{error}</p> : null}
+      <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={async () => {
+        const response = await fetch("/api/super/impersonation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgId, mode: "read", reasonCode }) });
+        const json = (await response.json()) as { error?: string };
+        if (!response.ok) { setError(json.error || "Ouverture impossible"); return; }
+        window.location.href = "/dashboard/entreprise";
+      }}>Ouvrir en lecture</button>
+    </SidePanel>
   );
 }

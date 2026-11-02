@@ -17,7 +17,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-  const body = (await request.json().catch(() => ({}))) as { firstName?: string; lastName?: string; email?: string; jobTitle?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    jobTitle?: string;
+    role?: string;
+    courseId?: string;
+  };
   const firstName = String(body.firstName ?? "").trim();
   const lastName = String(body.lastName ?? "").trim();
   const email = String(body.email ?? "").trim().toLowerCase();
@@ -42,6 +49,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     organizationId: id,
     employeeId: inserted.data.id as string,
   });
+  const role = ["admin", "learner", "tutor", "instructor"].includes(String(body.role)) ? String(body.role) : "learner";
+  const profile = await service.from("profiles").select("id").ilike("email", email).maybeSingle();
+  if (profile.data?.id) {
+    await service.from("org_memberships").upsert(
+      { org_id: id, user_id: profile.data.id, role },
+      { onConflict: "org_id,user_id" },
+    );
+    if (body.courseId) {
+      await service.from("enrollments").insert({ user_id: profile.data.id, course_id: body.courseId, role: "learner" });
+    }
+  }
   const session = await readImpersonationContext();
   await service.from("org_activity").insert(buildActivityRow({
     orgId: id,

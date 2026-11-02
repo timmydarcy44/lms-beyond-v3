@@ -195,16 +195,30 @@ export async function loadAccountDetail(orgId: string) {
   const account = cockpit.accounts.find((item) => item.id === orgId) ?? null;
   const db = getServiceRoleClient();
   if (!account || !db) {
-    return { account, schemaReady: cockpit.schemaReady, members: [], employees: [], activity: [], note: null, documents: [], courses: [] };
+    return {
+      account,
+      schemaReady: cockpit.schemaReady,
+      members: [],
+      people: [],
+      employees: [],
+      activity: [],
+      note: null,
+      documents: [],
+      courses: [],
+      catalogue: [],
+      badges: [],
+      assertions: [],
+    };
   }
 
-  const [memberships, employees, activity, notes, documents, courses] = await Promise.all([
+  const [memberships, employees, activity, notes, documents, orgCourses, catalog] = await Promise.all([
     db.from("org_memberships").select("user_id, role, created_at").eq("org_id", orgId),
     db.from("employees").select("id, first_name, last_name, email, job_title, status, created_at").eq("company_id", orgId),
     db.from("org_activity").select("id, actor_type, action, payload, created_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(20),
     db.from("org_notes").select("id, body, updated_at").eq("org_id", orgId).order("updated_at", { ascending: false }).limit(1),
-    db.from("org_billing_documents").select("id, doc_type, number, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type").eq("org_id", orgId).order("issued_at", { ascending: false }),
-    db.from("courses").select("id, title, status").eq("org_id", orgId).limit(20),
+    db.from("org_billing_documents").select("id, doc_type, number, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type, opco_ht_cents").eq("org_id", orgId).order("issued_at", { ascending: false }),
+    db.from("courses").select("id, title, status, cover_image, delivery_format").eq("org_id", orgId).limit(40),
+    db.from("courses").select("id, title, status, cover_image, delivery_format").in("status", ["published", "active"]).limit(40),
   ]);
 
   const userIds = ((memberships.data ?? []) as Array<{ user_id: string }>).map((item) => item.user_id);
@@ -212,25 +226,148 @@ export async function loadAccountDetail(orgId: string) {
     ? await db.from("profiles").select("id, full_name, email, role, role_type").in("id", userIds)
     : { data: [] };
   const profileMap = new Map(((profiles.data ?? []) as Array<{ id: string }>).map((profile) => [profile.id, profile]));
+  const enrollments = userIds.length
+    ? await db.from("enrollments").select("user_id, course_id").in("user_id", userIds)
+    : { data: [] as Array<{ user_id: string; course_id: string }> };
+  const enrollmentRows = (enrollments.error ? [] : enrollments.data ?? []) as Array<{ user_id: string; course_id: string }>;
+  const assertions = userIds.length
+    ? await db.from("badge_assertions").select("id, recipient_profile_id, recipient_name, badge_class_id, issued_at, is_public, revoked_at").in("recipient_profile_id", userIds)
+    : { data: [] as Array<Record<string, unknown>> };
+  const assertionRows = (assertions.error ? [] : assertions.data ?? []) as Array<{
+    id: string;
+    recipient_profile_id: string;
+    recipient_name: string | null;
+    badge_class_id: string;
+    issued_at: string;
+    is_public: boolean;
+    revoked_at: string | null;
+  }>;
+  const badgeIds = [...new Set(assertionRows.map((row) => row.badge_class_id).filter(Boolean))];
+  const orgBadgeQuery = await db.from("open_badges").select("id, title, name, status, criteria_items, image_url").eq("org_id", orgId).limit(40);
+  const assertionBadges = badgeIds.length
+    ? await db.from("open_badges").select("id, title, name").in("id", badgeIds)
+    : { data: [] as Array<{ id: string; title?: string | null; name?: string | null }> };
+  const badgeTitle = new Map(
+    ((assertionBadges.data ?? []) as Array<{ id: string; title?: string | null; name?: string | null }>).map((badge) => [
+      badge.id,
+      badge.title || badge.name || "Open Badge",
+    ]),
+  );
+
+  const members = ((memberships.data ?? []) as Array<{ user_id: string; role: string; created_at: string }>).map((member) => {
+    const profile = profileMap.get(member.user_id) as { full_name?: string; email?: string; role?: string; role_type?: string } | undefined;
+    const mine = enrollmentRows.filter((row) => row.user_id === member.user_id);
+    const delivered = assertionRows.filter((row) => row.recipient_profile_id === member.user_id && !row.revoked_at);
+    return {
+      userId: member.user_id,
+      employeeId: null as string | null,
+      role: member.role,
+      name: profile?.full_name || "Sans nom",
+      email: profile?.email || "",
+      profileRole: profile?.role_type || profile?.role || member.role,
+      createdAt: member.created_at,
+      invited: false,
+      formationsTotal: mine.length,
+      formationsDone: 0,
+      badges: delivered.length,
+      lastSeenAt: null as string | null,
+    };
+  });
+
+  const knownEmails = new Set(members.map((member) => member.email.toLowerCase()).filter(Boolean));
+  const invited = ((employees.error ? [] : employees.data) ?? [])
+    .filter((employee) => !knownEmails.has(String(employee.email ?? "").toLowerCase()))
+    .map((employee) => ({
+      userId: `employee:${employee.id}`,
+      employeeId: String(employee.id),
+      role: employee.status === "inactive" ? "inactive" : "invited",
+      name: [employee.first_name, employee.last_name].filter(Boolean).join(" ") || "Invitation",
+      email: String(employee.email ?? ""),
+      profileRole: "invited",
+      createdAt: String(employee.created_at ?? ""),
+      invited: employee.status !== "inactive",
+      formationsTotal: 0,
+      formationsDone: 0,
+      badges: 0,
+      lastSeenAt: null as string | null,
+    }));
+
+  const courseById = new Map<string, FormationRow>();
+  for (const course of (orgCourses.error ? [] : orgCourses.data ?? []) as FormationRow[]) courseById.set(course.id, course);
+  const missingIds = [...new Set(enrollmentRows.map((row) => row.course_id))].filter((id) => !courseById.has(id));
+  if (missingIds.length) {
+    const extra = await db.from("courses").select("id, title, status, cover_image, delivery_format").in("id", missingIds);
+    for (const course of (extra.data ?? []) as FormationRow[]) courseById.set(course.id, course);
+  }
+  const enrolledByCourse = new Map<string, number>();
+  for (const row of enrollmentRows) enrolledByCourse.set(row.course_id, (enrolledByCourse.get(row.course_id) ?? 0) + 1);
+  const formations = [...courseById.values()].map((course) => ({
+    id: course.id,
+    title: course.title || "Formation",
+    status: course.status || "draft",
+    cover: course.cover_image || null,
+    format: course.delivery_format || null,
+    duration: null,
+    enrolled: enrolledByCourse.get(course.id) ?? 0,
+    badges: 0,
+    owned: ((orgCourses.data ?? []) as FormationRow[]).some((item) => item.id === course.id),
+  }));
+  const assignedIds = new Set(formations.map((course) => course.id));
+  const catalogue = ((catalog.error ? [] : catalog.data) ?? [])
+    .filter((course) => !assignedIds.has(course.id))
+    .map((course) => ({
+      id: course.id as string,
+      title: (course.title as string) || "Formation",
+      status: (course.status as string) || "published",
+      cover: (course.cover_image as string | null) || null,
+      format: (course.delivery_format as string | null) || null,
+      duration: null,
+    }));
+
+  const badgeCards = ((orgBadgeQuery.error ? [] : orgBadgeQuery.data) ?? []).map((badge) => {
+    const criteria = Array.isArray(badge.criteria_items) ? badge.criteria_items.length : 0;
+    const related = assertionRows.filter((row) => row.badge_class_id === badge.id);
+    return {
+      id: String(badge.id),
+      title: String(badge.title || badge.name || "Open Badge"),
+      status: String(badge.status || "draft"),
+      competencies: criteria,
+      imageUrl: (badge.image_url as string | null) ?? null,
+      delivered: related.filter((row) => !row.revoked_at).length,
+      inProgress: 0,
+      toFix: 0,
+      revoked: related.filter((row) => row.revoked_at).length,
+    };
+  });
 
   return {
     account,
     schemaReady: cockpit.schemaReady,
-    members: ((memberships.data ?? []) as Array<{ user_id: string; role: string; created_at: string }>).map((member) => {
-      const profile = profileMap.get(member.user_id) as { full_name?: string; email?: string; role?: string; role_type?: string } | undefined;
-      return {
-        userId: member.user_id,
-        role: member.role,
-        name: profile?.full_name || "Sans nom",
-        email: profile?.email || "",
-        profileRole: profile?.role_type || profile?.role || "",
-        createdAt: member.created_at,
-      };
-    }),
+    members,
+    people: [...members, ...invited],
     employees: employees.error ? [] : employees.data ?? [],
     activity: activity.error ? [] : activity.data ?? [],
     note: notes.error ? null : (notes.data?.[0] ?? null),
     documents: documents.error ? [] : documents.data ?? [],
-    courses: courses.error ? [] : courses.data ?? [],
+    courses: formations,
+    catalogue,
+    badges: badgeCards,
+    assertions: assertionRows
+      .filter((row) => !row.revoked_at)
+      .map((row) => ({
+        id: row.id,
+        holder: row.recipient_name || members.find((member) => member.userId === row.recipient_profile_id)?.name || "Titulaire",
+        badge: badgeTitle.get(row.badge_class_id) || "Open Badge",
+        issuedAt: row.issued_at,
+        isPublic: Boolean(row.is_public),
+      })),
   };
 }
+
+type FormationRow = {
+  id: string;
+  title: string | null;
+  status: string | null;
+  cover_image: string | null;
+  delivery_format: string | null;
+};

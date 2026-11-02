@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -33,6 +34,7 @@ export function EdgePremiumMobileMenu({
   const tabs = getMobileRevolutTabs(config).filter(
     (tab) => tab.id === "a-propos",
   );
+  const pathname = usePathname() ?? "";
   const neoMenus = getNeoMegaMenus(config.routes);
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -89,11 +91,13 @@ export function EdgePremiumMobileMenu({
       <div className="relative flex-1 overflow-y-auto overscroll-contain px-5" style={{ paddingBottom: "150px" }}>
         {neoMenus.map((menu) => {
           const open = openPanel === menu.id;
+          const current = menu.id === "entreprises" && pathname.includes("/business/open-badges");
           return (
             <div key={menu.id} className="border-b border-white/10">
               <button
                 type="button"
-                className="flex min-h-14 w-full items-center justify-between py-4 text-left text-[17px] font-bold text-white"
+                className={cn("flex min-h-14 w-full items-center justify-between py-4 text-left text-[17px] font-bold", current ? "text-[#A99BFF]" : "text-white")}
+                aria-current={current ? "page" : undefined}
                 aria-expanded={open}
                 aria-controls={`mobile-mega-${menu.id}`}
                 onClick={() => setOpenPanel((current) => (current === menu.id ? null : menu.id))}

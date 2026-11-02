@@ -1,77 +1,61 @@
-"use client";
+import { cn } from "@/lib/utils";
 
-import { useEffect, useState } from "react";
-
-type Props = {
-  name: string;
-  recipientName: string;
-  issuedLabel: string;
-  level: number | null;
-  levelLabel?: string | null;
-};
-
-export function MetalBadgeCard({ name, recipientName, issuedLabel, level, levelLabel }: Props) {
-  const [spot, setSpot] = useState({ x: 70, y: 20 });
-  const [motion, setMotion] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setMotion(!query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
+export function MetalBadgeCard({
+  titre,
+  sousTitre = "Open Badge",
+  titulaire,
+  date,
+  teinte = "#C9C2FF",
+  className,
+}: {
+  titre: string;
+  sousTitre?: string;
+  titulaire: string;
+  date: string;
+  teinte?: string;
+  className?: string;
+}) {
   return (
-    <div className="mx-auto w-full max-w-[560px] py-4 [perspective:900px]">
-      <div
-        className="relative aspect-[560/353] overflow-hidden rounded-[30px] text-[#F2F2F4] shadow-[0_30px_80px_rgba(0,0,0,0.45)] [transform:rotateX(10deg)]"
-        style={{
-          background: "linear-gradient(125deg, #1A1B22, #2C2D36 28%, #15161C 52%, #33343F 74%, #17181E)",
-        }}
-        onMouseMove={motion ? (event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          setSpot({
-            x: ((event.clientX - rect.left) / rect.width) * 100,
-            y: ((event.clientY - rect.top) / rect.height) * 100,
-          });
-        } : undefined}
+    <div className={cn("w-full [perspective:1400px]", className)}>
+      <article
+        className="relative aspect-[560/340] overflow-hidden rounded-[28px] text-[#F2F2F4] shadow-[0_60px_120px_#000000B3,inset_0_1px_0_#FFFFFF38] [transform:rotateX(12deg)]"
+        style={{ background: "linear-gradient(125deg, #1A1B22, #2C2D36 28%, #15161C 52%, #33343F 74%, #17181E)" }}
       >
         <div
+          aria-hidden
           className="pointer-events-none absolute inset-0"
-          style={{
-            background: motion
-              ? `radial-gradient(280px circle at ${spot.x}% ${spot.y}%, rgba(169,155,255,0.34), transparent 46%)`
-              : "linear-gradient(118deg, transparent 32%, rgba(169,155,255,0.18) 50%, transparent 66%)",
-          }}
+          style={{ background: "linear-gradient(105deg, transparent 28%, rgba(201,194,255,0.28) 46%, rgba(143,242,196,0.18) 58%, transparent 74%)" }}
         />
-        <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full border border-white/15" />
-        <div className="pointer-events-none absolute -bottom-20 -right-6 h-44 w-44 rounded-full border border-white/10" />
-        <div className="relative flex h-full flex-col justify-between p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-4 text-sm">
-            <span className="font-bold tracking-[-0.04em]">Byound</span>
-            <span className="text-right text-[rgba(242,242,244,0.6)]">
-              Open Badge{level != null ? ` · ${levelLabel?.trim() ? `Niveau ${level} · ${levelLabel.trim()}` : `Niveau ${level}`}` : ""}
-            </span>
+        <div aria-hidden className="pointer-events-none absolute -right-6 -top-8 h-36 w-36 rounded-full border border-white/25" />
+        <div aria-hidden className="pointer-events-none absolute right-4 top-8 h-24 w-24 rounded-full border border-white/15" />
+        <div className="relative flex h-full flex-col justify-between p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3 text-[13px]">
+            <span className="font-extrabold tracking-[-0.04em]">Byound</span>
+            <span className="font-extrabold text-[#2FD08A]">✓ Vérifié</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#A99BFF] to-[#6E5BFF] text-lg font-bold text-[#050608]">
-              B
-            </div>
-            <p className="line-clamp-2 text-xl font-bold tracking-[-0.04em] sm:text-2xl" style={{ textWrap: "balance" }}>{name}</p>
-          </div>
-          <div className="flex items-end justify-between gap-4 text-sm">
+          <div className="flex items-center gap-3">
+            <div
+              aria-hidden
+              className="h-12 w-12 shrink-0 rounded-2xl"
+              style={{ background: `conic-gradient(from 20deg, ${teinte}, #7E6CFF, #8FF2C4, #F5C85C, ${teinte})` }}
+            />
             <div>
-              <p className="text-[rgba(242,242,244,0.5)]">Titulaire</p>
-              <p className="font-semibold">{recipientName}</p>
+              <p className="text-[12px] text-white/60">{sousTitre}</p>
+              <p className="line-clamp-2 text-[18px] font-extrabold leading-tight tracking-[-0.04em] sm:text-[22px]">{titre}</p>
+            </div>
+          </div>
+          <div className="flex items-end justify-between gap-3 text-[13px]">
+            <div>
+              <p className="text-white/50">Titulaire</p>
+              <p className="font-extrabold">{titulaire}</p>
             </div>
             <div className="text-right">
-              <p className="text-[rgba(242,242,244,0.5)]">Obtenu le</p>
-              <p className="font-semibold">{issuedLabel}</p>
+              <p className="text-white/50">Date</p>
+              <p className="font-extrabold">{date}</p>
             </div>
           </div>
         </div>
-      </div>
+      </article>
     </div>
   );
 }

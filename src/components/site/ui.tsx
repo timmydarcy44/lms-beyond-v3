@@ -5,15 +5,17 @@ export function Band({
   dark = false,
   children,
   className,
+  innerClassName,
 }: {
   id?: string;
   dark?: boolean;
   children: React.ReactNode;
   className?: string;
+  innerClassName?: string;
 }) {
   return (
     <section id={id} className={cn(dark ? "bg-[#070C1C] text-white" : "bg-[#F4F4F1] text-[#0B0D14]", className)}>
-      <div className="mx-auto w-full max-w-[1240px] px-6 py-16 md:py-[104px]">{children}</div>
+      <div className={cn("mx-auto w-full max-w-[1240px] px-6 py-16 md:py-[104px]", innerClassName)}>{children}</div>
     </section>
   );
 }

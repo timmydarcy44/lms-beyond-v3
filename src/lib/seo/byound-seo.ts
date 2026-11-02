@@ -88,6 +88,7 @@ export function byoundSeoCatalog(): SeoCatalogItem[] {
   const extra: SeoCatalogItem[] = [
     { path: "/", label: "Accueil", group: seoGroupForPath("/") },
     { path: "/entreprises", label: "Entreprises", group: seoGroupForPath("/entreprises") },
+    { path: "/entreprises/financement-opco", label: "Financement OPCO", group: seoGroupForPath("/entreprises/financement-opco") },
     { path: "/votre-orientation", label: "Orientation", group: seoGroupForPath("/votre-orientation") },
     { path: "/financer-ma-formation", label: "Financer ma formation", group: seoGroupForPath("/financer-ma-formation") },
   ];

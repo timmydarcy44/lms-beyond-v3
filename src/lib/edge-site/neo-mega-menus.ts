@@ -200,7 +200,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
       {
         title: "Ressources",
         links: [
-          { title: "Financement OPCO", subtitle: "Faire financer vos formations", href: routes.financement },
+          { title: "Financement OPCO", subtitle: "Faire financer vos formations", href: routes.financementOpco },
           { title: "Open Badges", subtitle: "Certifier les compétences acquises", href: routes.businessOpenBadges },
           { title: "Cas clients", subtitle: "Ils ont formé leurs équipes", href: routes.businessCasClients },
           { title: "Test", subtitle: "Mesurer le niveau de départ", href: routes.businessDiagnostics },

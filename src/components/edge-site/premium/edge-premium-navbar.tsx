@@ -105,6 +105,7 @@ export function EdgePremiumNavbar({
 
   const isSolid = pageScrolled || openMega !== null || mobileOpen;
   const neoMenu = neoMenus.find((menu) => menu.id === openMega) ?? null;
+  const onOpcoPage = pathname.includes("/entreprises/financement-opco");
 
   return (
     <header
@@ -134,6 +135,8 @@ export function EdgePremiumNavbar({
           {neoMenus.map((menu) => {
             const key = menu.id;
             const open = openMega === key;
+            const current = onOpcoPage && key === "entreprises";
+            const highlighted = open || current;
             return (
               <button
                 key={key}
@@ -143,7 +146,7 @@ export function EdgePremiumNavbar({
                 type="button"
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full text-sm transition-colors",
-                  open
+                  highlighted
                     ? light
                       ? "bg-black/5 px-3 py-2 font-bold text-neutral-950"
                       : "bg-white/10 px-3 py-2 font-bold text-white"
@@ -151,6 +154,7 @@ export function EdgePremiumNavbar({
                       ? "px-2.5 py-2 font-medium text-neutral-700 hover:text-neutral-950 xl:px-3"
                       : "px-2.5 py-2 font-medium text-white/60 hover:text-white xl:px-3",
                 )}
+                aria-current={current ? "page" : undefined}
                 aria-expanded={open}
                 aria-controls={`mega-${key}`}
                 onMouseEnter={() => intentOpen(key)}
@@ -219,12 +223,12 @@ export function EdgePremiumNavbar({
             Connexion
           </Link>
           <EdgePremiumButton
-            href={routes.entrepriseSignup}
+            href={onOpcoPage ? routes.contact : routes.entrepriseSignup}
             variant={light ? "primary" : "white"}
             shape="revolut"
             className="!px-5 !py-2.5 !text-sm"
           >
-            Créer un compte
+            {onOpcoPage ? "Parlons de vos besoins" : "Créer un compte"}
           </EdgePremiumButton>
         </div>
 
@@ -275,7 +279,8 @@ export function EdgePremiumNavbar({
         onClose={closeAll}
         config={config}
         loginHref={links.login}
-        discoverHref={routes.entrepriseSignup}
+        discoverHref={onOpcoPage ? routes.contact : routes.entrepriseSignup}
+        discoverLabel={onOpcoPage ? "Parlons de vos besoins" : "Créer un compte"}
         light={light}
       />
     </header>

@@ -30,6 +30,7 @@ export function EdgePremiumFooter() {
       links: [
         { label: "Former vos équipes", href: R.businessFormerEquipes },
         { label: "Plateforme de compétences", href: R.businessPlateformeCompetences },
+        { label: "Financement OPCO", href: R.financementOpco },
         { label: "Parlons de vos besoins", href: R.contact },
       ],
     },

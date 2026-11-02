@@ -65,6 +65,7 @@ export const EDGE_MARKETING_PATHS = {
   login: "/login",
   parcours: "/parcours",
   entreprises: "/entreprises",
+  financementOpco: "/entreprises/financement-opco",
   particulier: "/particuliers",
   particulierCertifications: "/certifications",
   particulierIA: "/online/formations",

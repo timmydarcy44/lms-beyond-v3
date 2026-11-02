@@ -134,7 +134,9 @@ export function EdgePremiumNavbar({
           {neoMenus.map((menu) => {
             const key = menu.id;
             const open = openMega === key;
-            const current = key === "entreprises" && pathname.includes("/business/open-badges");
+            const current =
+              (key === "entreprises" && pathname.includes("/business/open-badges")) ||
+              (key === "plateforme" && pathname.includes("/business/diagnostics"));
             return (
               <button
                 key={key}

@@ -91,7 +91,9 @@ export function EdgePremiumMobileMenu({
       <div className="relative flex-1 overflow-y-auto overscroll-contain px-5" style={{ paddingBottom: "150px" }}>
         {neoMenus.map((menu) => {
           const open = openPanel === menu.id;
-          const current = menu.id === "entreprises" && pathname.includes("/business/open-badges");
+          const current =
+            (menu.id === "entreprises" && pathname.includes("/business/open-badges")) ||
+            (menu.id === "plateforme" && pathname.includes("/business/diagnostics"));
           return (
             <div key={menu.id} className="border-b border-white/10">
               <button

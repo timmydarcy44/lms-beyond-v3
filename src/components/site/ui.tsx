@@ -20,9 +20,9 @@ export function Band({
   );
 }
 
-export function H2({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
+export function H2({ children, light = false, className }: { children: React.ReactNode; light?: boolean; className?: string }) {
   return (
-    <h2 className={cn("text-[36px] font-extrabold leading-[1.05] tracking-[-2px] md:text-[52px]", light ? "text-white" : "text-[#0B0D14]")}>
+    <h2 className={cn("text-[36px] font-extrabold leading-[1.05] tracking-[-2px] md:text-[52px]", light ? "text-white" : "text-[#0B0D14]", className)}>
       {children}
     </h2>
   );

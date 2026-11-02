@@ -26,7 +26,15 @@ const LEGACY_SHELL_PATH_PREFIXES = [
   "/edge-online",
 ];
 
+const PREMIUM_SHELL_PATHS = [
+  "/entreprises/financement-opco",
+  "/edge-lab/entreprises/financement-opco",
+];
+
 function usesLegacyShell(pathname: string): boolean {
+  if (PREMIUM_SHELL_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return false;
+  }
   return LEGACY_SHELL_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

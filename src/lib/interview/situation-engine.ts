@@ -67,7 +67,7 @@ export async function canPlayCourse(userId: string, courseId: string) {
 
   const { data: enrolled } = await db
     .from("enrollments")
-    .select("id")
+    .select("user_id")
     .eq("user_id", userId)
     .eq("course_id", courseId)
     .limit(1);

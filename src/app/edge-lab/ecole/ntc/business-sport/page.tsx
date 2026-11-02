@@ -17,7 +17,7 @@ import { ProgramFactsCard } from "@/components/edge-site/cfa/program-facts-card"
 import { AlternantsRecruitingSection } from "@/components/offres/public-offer";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
-import { getContributorByLastName, getProgramContributors, type ProgramContributor } from "@/lib/expert/program-contributors";
+import { getNtcBusinessSportContributors } from "@/lib/expert/program-contributors";
 
 export const metadata: Metadata = {
   title: "NTC · Business Sport — Byound School",
@@ -110,33 +110,15 @@ const ecosystem = [
 
 const projectSteps = ["Analyser", "Cartographier", "Cibler", "Construire l’offre", "Prospecter", "Négocier", "Activer et mesurer"] as const;
 
-const YANNICK_GRELIN: ProgramContributor = {
-  id: "yannick-grelin",
-  name: "Yannick GRELIN",
-  jobTitle: "Responsable commercial hospitalité, Racing 92",
-  photoUrl: null,
-  companyLogoUrl: null,
-  roles: ["expert"],
-};
-
 function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#5146e5]">{children}</p>;
 }
 
 export default async function NtcBusinessSportPage() {
-  const [facts, contributors, yannick] = await Promise.all([
+  const [facts, coBuilders] = await Promise.all([
     getByoundProgramFacts("sport_business"),
-    getProgramContributors("Business Sport"),
-    getContributorByLastName("grelin"),
+    getNtcBusinessSportContributors(),
   ]);
-  const referenced = yannick
-    ? {
-        ...yannick,
-        jobTitle: yannick.jobTitle && yannick.jobTitle !== "Formateur CFA" ? yannick.jobTitle : YANNICK_GRELIN.jobTitle,
-        photoUrl: yannick.photoUrl || YANNICK_GRELIN.photoUrl,
-      }
-    : YANNICK_GRELIN;
-  const coBuilders = [referenced, ...contributors.filter((person) => person.id !== referenced.id && !person.name.toLowerCase().includes("grelin"))];
 
   return (
     <EdgePremiumShell overlayNav showTopBar={false}>

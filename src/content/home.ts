@@ -1,6 +1,21 @@
+import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 import type { EdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import { MISSING_ROUTE } from "@/lib/edge-site/neo-mega-menus";
+
+/** Photos déjà présentes sur le site, distinctes du héro et de la couverture vidéo. */
+export const HOME_UNIVERSE_PHOTOS = {
+  school: {
+    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/Public/covers/1791969178086-jbup5doapn.jpg",
+    alt: "Alternante Byound, carnet à la main, en discussion à l'extérieur.",
+  },
+  business: {
+    src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/commercial%20ia%20edge%20(2).jpeg",
+    alt: "Équipe au travail autour d'ordinateurs, dans une salle éclairée par la lumière du jour.",
+  },
+} as const;
+
+const SCHOOL_PILL_LABELS = ["AI Business", "Business Sport", "Real Estate"] as const;
 
 export const HOME_LOGOS: { name: string; src: string }[] = [];
 
@@ -52,7 +67,10 @@ export function getHomeContent(routes: EdgeMarketingRoutes, host?: string | null
   const testPage = (slug: string) => edgeMarketingHref(`/business/diagnostics/${slug}`, host);
   const formations = getHomeFormations(routes);
   const visible = formations.slice(0, 5);
-  const more = Math.max(formations.length - visible.length, 0);
+  const more = Math.max(
+    CFA_SPECIALIZATIONS.filter((item) => !SCHOOL_PILL_LABELS.includes(item.label as (typeof SCHOOL_PILL_LABELS)[number])).length,
+    0,
+  );
   return {
     hero: {
       school: routes.alternance,

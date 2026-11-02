@@ -111,6 +111,34 @@ export async function getHomepageExperts(): Promise<HomepageExpert[]> {
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name, "fr"));
 }
 
+const YANNICK_GRELIN: ProgramContributor = {
+  id: "yannick-grelin",
+  name: "Yannick GRELIN",
+  jobTitle: "Responsable commercial hospitalité, Racing 92",
+  photoUrl: null,
+  companyLogoUrl: null,
+  roles: ["expert"],
+};
+
+/** Même liste que la page NTC Business Sport, dans le même ordre. */
+export async function getNtcBusinessSportContributors(): Promise<ProgramContributor[]> {
+  const [contributors, yannick] = await Promise.all([
+    getProgramContributors("Business Sport"),
+    getContributorByLastName("grelin"),
+  ]);
+  const referenced = yannick
+    ? {
+        ...yannick,
+        jobTitle: yannick.jobTitle && yannick.jobTitle !== "Formateur CFA" ? yannick.jobTitle : YANNICK_GRELIN.jobTitle,
+        photoUrl: yannick.photoUrl || YANNICK_GRELIN.photoUrl,
+      }
+    : YANNICK_GRELIN;
+  return [
+    referenced,
+    ...contributors.filter((person) => person.id !== referenced.id && !person.name.toLowerCase().includes("grelin")),
+  ];
+}
+
 export async function getContributorByLastName(lastName: string): Promise<ProgramContributor | null> {
   const db = getServiceRoleClient();
   const needle = lastName.trim();

@@ -13,7 +13,7 @@ import { HomeSocialProof } from "@/components/home/social-proof";
 import { HomeTests } from "@/components/home/tests";
 import { HomeTrainers } from "@/components/home/trainers";
 import { HomeUniverses } from "@/components/home/universes";
-import { getHomepageExperts } from "@/lib/expert/program-contributors";
+import { getNtcBusinessSportContributors, type HomepageExpert } from "@/lib/expert/program-contributors";
 import { getEdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { getHomeContent } from "@/content/home";
 import "./home.css";
@@ -25,10 +25,21 @@ const manrope = Manrope({
 export async function HomePage() {
   const host = (await headers()).get("host");
   const routes = getEdgeMarketingRoutes(host);
-  const [content, experts] = await Promise.all([
+  const [content, contributors] = await Promise.all([
     Promise.resolve(getHomeContent(routes, host)),
-    getHomepageExperts(),
+    getNtcBusinessSportContributors(),
   ]);
+  const experts: HomepageExpert[] = contributors.flatMap((person) => {
+    if (!person.photoUrl) return [];
+    return [{
+      id: person.id,
+      name: person.name,
+      jobTitle: person.jobTitle.replace(" at ", " · "),
+      photoUrl: person.photoUrl,
+      filiere: "Sport Business",
+      order: null,
+    }];
+  });
   const localHero = path.join(process.cwd(), "public", "images", "hero-byound.jpg");
   const heroSrc = fs.existsSync(localHero) ? "/images/hero-byound.jpg" : EDGE_HERO_IMAGE_URL;
 
@@ -37,7 +48,6 @@ export async function HomePage() {
       <HomeHero schoolHref={content.hero.school} businessHref={content.hero.business} imageSrc={heroSrc} />
       <HomeSocialProof />
       <HomeUniverses
-        formations={content.formations}
         more={content.moreFormations}
         schoolHref={content.schoolHref}
         businessHref={content.businessHref}

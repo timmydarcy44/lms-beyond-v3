@@ -1,6 +1,8 @@
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
+import { readImpersonationContext } from "@/lib/control/session";
 import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 import { resolveEnterpriseViewerDisplay } from "@/lib/entreprise/resolve-viewer-display";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -17,6 +19,8 @@ export type EntrepriseOverviewAccess =
         prenom: string | null;
         nom: string | null;
       };
+      impersonationMode?: "read" | "write";
+      impersonationSessionId?: string;
     }
   | {
       ok: true;
@@ -103,6 +107,25 @@ export async function resolveEntrepriseOverviewAccess(): Promise<EntrepriseOverv
   }
 
   const jadeEmail = user.email ?? profile.email ?? null;
+  const impersonation = await readImpersonationContext();
+  if (impersonation) {
+    if (isJadeDemoEmail(jadeEmail) || impersonation.staffId !== user.id || impersonation.expired || !(await isSuperAdmin())) {
+      return { ok: false, error: "Session d'accompagnement refusée", status: 403 };
+    }
+    const viewerResolved = resolveEnterpriseViewerDisplay(
+      profile,
+      user.email,
+      user.user_metadata as Record<string, unknown>,
+    );
+    return {
+      ok: true,
+      userId: user.id,
+      organizationId: impersonation.orgId,
+      viewer: { email: viewerResolved.email, prenom: viewerResolved.prenom, nom: viewerResolved.nom },
+      impersonationMode: impersonation.mode,
+      impersonationSessionId: impersonation.sid,
+    };
+  }
   if (isJadeDemoEmail(jadeEmail)) {
     return {
       ok: true,

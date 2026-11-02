@@ -5,6 +5,8 @@ import { EntrepriseFloatingAssistant } from "@/components/enterprise/entreprise-
 import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { EnterpriseConnectShell } from "@/components/enterprise/enterprise-connect-shell";
 import { EnterpriseSignupProfileGate } from "@/components/enterprise/enterprise-signup-profile-overlay";
+import { ImpersonationBanner } from "@/components/control/impersonation-banner";
+import { readImpersonationContext } from "@/lib/control/session";
 
 async function isSuperAdminPreviewMode() {
   try {
@@ -32,10 +34,20 @@ async function isSuperAdminPreviewMode() {
 
 export default async function EntrepriseDashboardLayout({ children }: { children: ReactNode }) {
   const previewMode = await isSuperAdminPreviewMode();
+  const impersonation = await readImpersonationContext();
+  const framed = impersonation && !impersonation.expired;
 
   return (
-    <>
-      {previewMode ? (
+    <div style={framed ? { boxShadow: "inset 0 0 0 3px #6E5BFF", minHeight: "100vh" } : undefined}>
+      {framed ? (
+        <ImpersonationBanner
+          orgName={impersonation.orgName}
+          mode={impersonation.mode}
+          expiresAt={impersonation.mode === "write" && impersonation.writeExp ? impersonation.writeExp : impersonation.exp}
+          orgId={impersonation.orgId}
+        />
+      ) : null}
+      {previewMode && !framed ? (
         <div className="sticky top-0 z-[60] border-b border-violet-200 bg-violet-50/95 px-4 py-2 text-center text-xs font-medium text-violet-800 backdrop-blur-sm">
           Mode aperçu — Vous êtes connecté en tant que super admin
         </div>
@@ -46,6 +58,6 @@ export default async function EntrepriseDashboardLayout({ children }: { children
         </EnterpriseSignupProfileGate>
       </EnterpriseConnectShell>
       <EntrepriseFloatingAssistant />
-    </>
+    </div>
   );
 }

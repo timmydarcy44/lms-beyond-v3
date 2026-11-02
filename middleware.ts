@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth/school-role-type-guards";
 import { createServerClient } from "@supabase/ssr";
 import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
+import { impersonationBlock } from "@/lib/control/guard";
 import { handleByoundCareHost, redirectByoundCareOffload } from "./middleware-byoundcare";
 import { handleEdgeBsRouting, isEdgeBsHostname } from "./middleware-edgebs";
 
@@ -183,6 +184,9 @@ function negotiateOpenBadgeDocument(request: NextRequest) {
 }
 
 async function runMiddleware(request: NextRequest) {
+  const impersonation = await impersonationBlock(request);
+  if (impersonation) return impersonation;
+  if (request.nextUrl.pathname.startsWith("/api")) return NextResponse.next();
   const badgeDocument = negotiateOpenBadgeDocument(request);
   if (badgeDocument) return badgeDocument;
   const hostname = request.headers.get("host") || "";
@@ -644,6 +648,7 @@ async function runMiddleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    "/api/:path*",
     "/((?!api|_next|_vercel|[\\w-]+\\.\\w+).*)",
   ],
 };

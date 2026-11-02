@@ -11,6 +11,9 @@ export async function POST(request: NextRequest) {
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
+  if ("impersonationMode" in access && access.impersonationMode === "read") {
+    return NextResponse.json({ error: "Lecture seule" }, { status: 403 });
+  }
   if ("superAdminPreview" in access && access.superAdminPreview) {
     return NextResponse.json(
       { error: "Mode aperçu super admin — aucune organisation liée pour créer un collaborateur" },

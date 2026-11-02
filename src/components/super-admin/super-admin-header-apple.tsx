@@ -100,7 +100,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Pipeline", href: "/super/crm/pipeline" },
       { label: "Signaux formation", href: "/super/crm/pipeline/signaux" },
       { label: "Contacts", href: "/super/utilisateurs", exact: true },
-      { label: "Organisations", href: "/super/organisations" },
+      { label: "Comptes clients", href: "/super/organisations" },
       { label: "Emails", href: "/super/crm/emails" },
     ],
   },
@@ -115,6 +115,7 @@ export function SuperAdminHeaderApple() {
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [accountCount, setAccountCount] = useState<number | null>(null);
   const closeTimer = useRef<number | null>(null);
 
   const openMenu = (label: string) => {
@@ -142,6 +143,12 @@ export function SuperAdminHeaderApple() {
       }
     };
     fetchUserEmail();
+    void fetch("/api/super/comptes-clients/count")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((json: { count?: number } | null) => {
+        if (typeof json?.count === "number") setAccountCount(json.count);
+      })
+      .catch(() => undefined);
   }, []);
 
   const isContentin = userEmail === "contentin.cabinet@gmail.com";
@@ -280,7 +287,7 @@ export function SuperAdminHeaderApple() {
                                           : "text-gray-900",
                                     )}
                                   >
-                                    {child.label}
+                                    {child.label === "Comptes clients" && accountCount != null ? `Comptes clients · ${accountCount}` : child.label}
                                   </p>
                                   <p className={cn("mt-1 text-[12px]", isContentin ? "text-[#2F2A25]/70" : "text-gray-600")}>
                                     Accès rapide
@@ -311,7 +318,7 @@ export function SuperAdminHeaderApple() {
                                         )}
                                         onClick={() => setHoveredItem(null)}
                                       >
-                                        {child.label}
+                                        {child.label === "Comptes clients" && accountCount != null ? `Comptes clients · ${accountCount}` : child.label}
                                       </Link>
                                     );
                                   })}
@@ -338,7 +345,7 @@ export function SuperAdminHeaderApple() {
                                 )}
                                 onClick={() => setHoveredItem(null)}
                               >
-                                {child.label}
+                                {child.label === "Comptes clients" && accountCount != null ? `Comptes clients · ${accountCount}` : child.label}
                               </Link>
                             );
                           })

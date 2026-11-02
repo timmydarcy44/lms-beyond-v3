@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/super" },
-  { label: "Organisations", icon: Building2, href: "/super/organisations" },
+  { label: "Comptes clients", icon: Building2, href: "/super/organisations" },
   { label: "Créer Organisation", icon: Building2, href: "/super/organisations/new" },
   { label: "Utilisateurs", icon: Users, href: "/super/utilisateurs" },
   { label: "Créer Utilisateur", icon: UserPlus, href: "/super/utilisateurs/new" },

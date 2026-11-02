@@ -6,11 +6,11 @@ import type { EdgeDiagnostic } from "@/lib/edge-site/diagnostics-catalog";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  diagnostics: EdgeDiagnostic[];
+  tests: EdgeDiagnostic[];
   hrefFor: (slug: string) => string;
 };
 
-export function EdgeDiagnosticsFlagship({ diagnostics, hrefFor }: Props) {
+export function EdgeDiagnosticsFlagship({ tests, hrefFor }: Props) {
   return (
     <section id="produits" className="scroll-mt-24 bg-neutral-950 px-5 py-20 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-6xl">
@@ -22,13 +22,13 @@ export function EdgeDiagnosticsFlagship({ diagnostics, hrefFor }: Props) {
             Évaluez les soft skills dès le recrutement, et tout au long de la carrière
           </h2>
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-neutral-400 sm:text-lg">
-            Soft Skills, IDMC et test comportemental — trois diagnostics scientifiques pour
+            Soft Skills, IDMC et test comportemental — trois tests scientifiques pour
             objectiver le potentiel avant de former, certifier et suivre la progression.
           </p>
         </div>
 
         <div className="mt-12 grid gap-4 md:grid-cols-3">
-          {diagnostics.map((item) => {
+          {tests.map((item) => {
             const href = hrefFor(item.slug);
             return (
               <article

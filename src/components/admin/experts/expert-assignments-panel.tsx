@@ -45,6 +45,10 @@ export function ExpertAssignmentsPanel({
   const initialProfile = parseContributorProfile(references, headline);
   const [roles, setRoles] = useState<ContributorRole[]>(initialProfile.roles);
   const [jobTitle, setJobTitle] = useState(initialProfile.jobTitle);
+  const [showOnHomepage, setShowOnHomepage] = useState(initialProfile.showOnHomepage);
+  const [homepageOrder, setHomepageOrder] = useState(
+    initialProfile.homepageOrder == null ? "" : String(initialProfile.homepageOrder),
+  );
   const [logoUrl, setLogoUrl] = useState(initialProfile.companyLogoUrl);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -61,7 +65,12 @@ export function ExpertAssignmentsPanel({
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
   }
 
-  async function save(nextRoles: ContributorRole[] = roles, nextCursus: string[] = cursus) {
+  async function save(
+    nextRoles: ContributorRole[] = roles,
+    nextCursus: string[] = cursus,
+    nextVisible: boolean = showOnHomepage,
+    nextOrder: string = homepageOrder,
+  ) {
     setSaving(true);
     setMessage("");
     try {
@@ -74,6 +83,8 @@ export function ExpertAssignmentsPanel({
           openBadges: badges.filter((badge) => selectedBadges.includes(badge.id)),
           roles: nextRoles,
           jobTitle,
+          showOnHomepage: nextVisible,
+          homepageOrder: nextOrder.trim() === "" ? null : Number(nextOrder),
         }),
       });
       const result = await response.json();
@@ -180,6 +191,34 @@ export function ExpertAssignmentsPanel({
             </button>
           ) : null}
         </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px]">
+        <label className="flex items-start gap-2 rounded-xl border border-white/10 bg-[#071225] px-3 py-3 text-sm text-[#f8fbff]">
+          <input
+            type="checkbox"
+            checked={showOnHomepage}
+            onChange={() => {
+              const next = !showOnHomepage;
+              setShowOnHomepage(next);
+              void save(roles, cursus, next, homepageOrder);
+            }}
+            className="mt-0.5 h-4 w-4 accent-[#635BFF]"
+          />
+          <span>
+            <span className="block font-semibold">Visible en page d&apos;accueil</span>
+            <span className="mt-1 block text-xs text-[#9eb0cc]">Après accord de l&apos;expert, et seulement s&apos;il a une photo.</span>
+          </span>
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">
+          Ordre
+          <input
+            inputMode="numeric"
+            value={homepageOrder}
+            onChange={(event) => setHomepageOrder(event.target.value.replace(/[^\d]/g, ""))}
+            placeholder="1"
+            className="mt-1 h-10 w-full rounded-lg border border-white/15 bg-[#071225] px-3 text-sm font-normal normal-case tracking-normal text-[#f8fbff] outline-none focus:border-[#635BFF]"
+          />
+        </label>
       </div>
       <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[#9eb0cc]">
         Poste sous la photo

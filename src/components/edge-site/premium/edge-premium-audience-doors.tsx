@@ -21,7 +21,7 @@ export function EdgePremiumAudienceDoors() {
     {
       eyebrow: "Byound Business",
       title: "Faites progresser vos équipes.",
-      description: "Formations, diagnostics et suivi des compétences.",
+      description: "Formations, tests et suivi des compétences.",
       cta: "Explorer Business",
       href: links.business,
       image: EDGE_PREMIUM_IMAGES.business,

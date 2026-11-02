@@ -47,15 +47,14 @@ export function HomeHero({
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1240px] items-end px-6 pb-8 pt-24 lg:min-h-[720px] lg:items-center lg:py-28">
-        <div className="flex max-w-[600px] flex-col gap-6 lg:gap-7">
+        <div className="flex max-w-[860px] flex-col gap-6 lg:gap-7">
         <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold">
           <span className="text-[#6BE39B]" aria-hidden>●</span>
           École et entreprises · Caen
         </p>
-        <h1 className="text-[36px] font-extrabold leading-[1.02] tracking-[-1.2px] sm:text-[52px] sm:tracking-[-2px] lg:text-[clamp(52px,6.6vw,92px)] lg:leading-[0.98] lg:tracking-[-3px]">
-          Vos compétences.
-          <br />
-          <span className="text-[#A99BFF]">Votre prochaine étape.</span>
+        <h1 className="max-w-[860px] text-[44px] font-extrabold leading-[1.02] tracking-[-2.2px] sm:text-[clamp(48px,5.6vw,82px)] sm:tracking-[-2.6px]">
+          <span className="block whitespace-nowrap sm:whitespace-normal lg:whitespace-nowrap">Vos compétences.</span>
+          <span className="block text-[#A99BFF] lg:whitespace-nowrap">Votre prochaine étape.</span>
         </h1>
         <p className="max-w-[480px] text-[19px] leading-relaxed text-[#DADDE4]">
           Une école pour construire votre avenir. Des solutions pour développer vos équipes.
@@ -71,18 +70,20 @@ export function HomeHero({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-[clamp(16px,4vw,64px)] top-[120px] hidden w-[230px] rounded-[22px] bg-white p-4 text-[#07080B] shadow-[0_24px_60px_rgba(0,0,0,0.35)] lg:block" aria-hidden>
+      <div className="pointer-events-none absolute right-4 top-[108px] hidden w-[210px] rounded-[22px] bg-white p-4 text-[#07080B] shadow-[0_24px_60px_rgba(0,0,0,0.35)] min-[1180px]:block xl:right-10 xl:w-[230px]" aria-hidden>
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2A2312]">
           <Award className="text-[#F2CF6B]" strokeWidth={2} />
         </div>
         <p className="mt-4 text-[11px] font-bold text-[#6B6F7A]">Open Badge obtenu</p>
         <p className="text-[15px] font-extrabold">Négociation</p>
       </div>
-      <div className="pointer-events-none absolute bottom-[110px] right-[clamp(40px,6vw,96px)] hidden w-[220px] rounded-[24px] border border-white/12 bg-[rgba(12,13,18,0.9)] p-4 text-white shadow-[0_24px_60px_rgba(0,0,0,0.35)] lg:block" aria-hidden>
-        <p className="text-[11px] font-bold text-[#B5BAC6]">Progression · CCP1</p>
-        <p className="mt-2 text-[44px] font-extrabold leading-none">72 %</p>
-        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-white/15">
-          <div className="h-full w-[72%] rounded-full bg-[#8B7BFF]" />
+      <div className="pointer-events-none absolute bottom-[88px] right-8 hidden w-[230px] rounded-[24px] border border-white/12 bg-[rgba(12,13,18,0.9)] p-4 text-white shadow-[0_24px_60px_rgba(0,0,0,0.35)] min-[1180px]:block xl:right-16" aria-hidden>
+        <p className="text-[11px] font-bold text-[#B5BAC6]">Compétences validées · CCP1</p>
+        <p className="mt-2 text-[44px] font-extrabold leading-none">4 / 6</p>
+        <div className="mt-4 flex gap-1">
+          {Array.from({ length: 6 }, (_, index) => (
+            <span key={index} className={index < 4 ? "h-1.5 flex-1 rounded-full bg-[#8B7BFF]" : "h-1.5 flex-1 rounded-full bg-[#262A36]"} />
+          ))}
         </div>
       </div>
     </section>

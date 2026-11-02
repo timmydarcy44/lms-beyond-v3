@@ -43,7 +43,7 @@ export const EDGE_PLANS: readonly EdgePlan[] = [
     tagline: "Pour cartographier, suivre et piloter les compétences.",
     promise: "Comprendre les compétences de l’entreprise et piloter leur évolution.",
     includes: [
-      "3 diagnostics collaborateurs",
+      "3 tests collaborateurs",
       "Cartographie automatisée des compétences",
       "Bilans et recommandations automatisés",
       "Dashboard collaborateur",
@@ -87,7 +87,7 @@ export const EDGE_PLANS: readonly EdgePlan[] = [
       "Bibliothèque Byound de microlearning",
       "Accès illimité aux micro-formations incluses",
       "Contenus courts et opérationnels",
-      "Recommandations de modules selon les diagnostics",
+      "Recommandations de modules selon les tests",
       "Parcours thématiques prêts à l’emploi",
       "Mélange contenus entreprise + Byound",
       "Nouveaux contenus ajoutés régulièrement",

@@ -11,7 +11,7 @@ const ENGAGEMENTS = [
     step: "01",
     title: "Identifications",
     description:
-      "Diagnostics et analyses pour cartographier les compétences, les écarts et les priorités de développement.",
+      "Tests et analyses pour cartographier les compétences, les écarts et les priorités de développement.",
     image: EDGE_PREMIUM_IMAGES.developper,
     icon: ClipboardList,
     href: "/edge-lab/business/diagnostics",

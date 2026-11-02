@@ -28,6 +28,8 @@ export function parseContributorProfile(references: unknown, headline?: string |
   roles: ContributorRole[];
   jobTitle: string;
   companyLogoUrl: string | null;
+  showOnHomepage: boolean;
+  homepageOrder: number | null;
 } {
   const entry = Array.isArray(references)
     ? references.find(
@@ -36,23 +38,38 @@ export function parseContributorProfile(references: unknown, headline?: string |
     : null;
   const record =
     entry && typeof entry === "object"
-      ? (entry as { roles?: unknown; job_title?: unknown; company_logo_url?: unknown })
+      ? (entry as {
+          roles?: unknown;
+          job_title?: unknown;
+          company_logo_url?: unknown;
+          show_on_homepage?: unknown;
+          homepage_order?: unknown;
+        })
       : null;
   const roles = Array.isArray(record?.roles)
     ? record.roles.map((role) => String(role)).filter(isContributorRole)
     : [];
   const storedTitle = String(record?.job_title ?? "").trim();
   const companyLogoUrl = String(record?.company_logo_url ?? "").trim() || null;
+  const order = Number(record?.homepage_order);
   return {
     roles,
     jobTitle: storedTitle || String(headline ?? "").trim(),
     companyLogoUrl,
+    showOnHomepage: record?.show_on_homepage === true,
+    homepageOrder: Number.isFinite(order) ? order : null,
   };
 }
 
 export function withContributorProfile(
   references: unknown,
-  profile: { roles: ContributorRole[]; jobTitle: string; companyLogoUrl?: string | null },
+  profile: {
+    roles: ContributorRole[];
+    jobTitle: string;
+    companyLogoUrl?: string | null;
+    showOnHomepage?: boolean;
+    homepageOrder?: number | null;
+  },
 ): unknown[] {
   const kept = Array.isArray(references)
     ? references.filter(
@@ -64,6 +81,8 @@ export function withContributorProfile(
     roles: profile.roles,
     job_title: profile.jobTitle,
     company_logo_url: profile.companyLogoUrl || null,
+    show_on_homepage: profile.showOnHomepage === true,
+    homepage_order: Number.isFinite(Number(profile.homepageOrder)) ? Number(profile.homepageOrder) : null,
   });
   return kept;
 }

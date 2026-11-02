@@ -13,13 +13,13 @@ const inter = Inter({
 });
 
 type Props = {
-  diagnostic: EdgeDiagnostic;
+  test: EdgeDiagnostic;
   catalogueHref: string;
   demoHref: string;
 };
 
-export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref }: Props) {
-  const Icon = diagnostic.icon;
+export function EdgeDiagnosticsDetailPage({ test, catalogueHref, demoHref }: Props) {
+  const Icon = test.icon;
 
   return (
     <EdgePremiumShell overlayNav={false} navChrome="light">
@@ -31,7 +31,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
               className="inline-flex items-center gap-2 text-sm font-medium text-neutral-500 transition hover:text-neutral-950"
             >
               <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
-              Tous les diagnostics
+              Tous les tests
             </Link>
 
             <div className="mt-10 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
@@ -40,13 +40,13 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
                   <Icon className="h-5 w-5 text-neutral-800" strokeWidth={1.5} />
                 </div>
                 <p className="mt-6 text-[12px] font-medium uppercase tracking-[0.22em] text-neutral-400">
-                  Diagnostic
+                  Test
                 </p>
                 <h1 className="font-edge-display mt-4 text-[clamp(2.5rem,6vw,4.5rem)] leading-[1.02] text-neutral-950">
-                  {diagnostic.title}
+                  {test.title}
                 </h1>
                 <p className="mt-5 max-w-xl text-base leading-relaxed text-neutral-500 sm:text-lg">
-                  {diagnostic.longDescription}
+                  {test.longDescription}
                 </p>
                 <div className="mt-8">
                   <EdgePremiumButton href={demoHref} showArrow shape="revolut">
@@ -63,7 +63,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
                       <p className="text-[11px] font-medium uppercase tracking-[0.16em]">Durée</p>
                     </div>
                     <p className="mt-3 text-2xl font-semibold tracking-tight text-neutral-950">
-                      {diagnostic.durationMinutes} min
+                      {test.durationMinutes} min
                     </p>
                   </div>
                   <div className="rounded-2xl border border-neutral-200 bg-white p-4">
@@ -72,7 +72,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
                       <p className="text-[11px] font-medium uppercase tracking-[0.16em]">Public</p>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {diagnostic.audiences.map((audience) => (
+                      {test.audiences.map((audience) => (
                         <span
                           key={audience}
                           className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-700"
@@ -94,7 +94,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
               Compétences évaluées
             </h2>
             <div className="mt-8 flex flex-wrap gap-2.5">
-              {diagnostic.skills.map((skill) => (
+              {test.skills.map((skill) => (
                 <span
                   key={skill}
                   className="rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-800 transition duration-300 hover:border-neutral-300 hover:bg-white"
@@ -112,7 +112,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
               Le rapport comprend
             </h2>
             <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {diagnostic.reportItems.map((item, index) => (
+              {test.reportItems.map((item, index) => (
                 <article
                   key={item}
                   className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
@@ -133,7 +133,7 @@ export function EdgeDiagnosticsDetailPage({ diagnostic, catalogueHref, demoHref 
           <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[1.75rem] border border-neutral-200 bg-neutral-50 px-6 py-10 sm:flex-row sm:items-center sm:px-10">
             <div>
               <h2 className="text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
-                Prêt à déployer ce diagnostic ?
+                Prêt à déployer ce test ?
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-500">
                 Intégrez-le dans votre écosystème Byound : Open Badges, Skills Wallet, parcours IA et

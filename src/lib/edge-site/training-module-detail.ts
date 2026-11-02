@@ -86,7 +86,7 @@ export function buildTrainingModuleDetail(module: TrainingModule): TrainingModul
       "Coaching individuel et plan d'action à 30 jours",
     ],
     exercises: [
-      "Diagnostic individuel et analyse de cas réels",
+      "Test individuel et analyse de cas réels",
       "Jeux de rôle et simulations filmées",
       "Travaux en binôme avec feedback formateur",
       "Quiz de validation des acquis en fin de module",

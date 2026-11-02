@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { EdgeButton } from "@/components/edge-site/edge-button";
 
 const BESOIN_OPTIONS = [
-  { value: "diagnostic", label: "Diagnostic" },
+  { value: "test", label: "Test" },
   { value: "formation-collective", label: "Formation collective" },
   { value: "coaching-individuel", label: "Coaching individuel" },
   { value: "programme-complet", label: "Programme complet" },

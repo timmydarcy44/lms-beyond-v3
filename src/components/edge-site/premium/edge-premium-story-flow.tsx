@@ -10,7 +10,7 @@ const STEPS = [
     label: "Identifications",
     tagline: "Cartographier les compétences réelles",
     description:
-      "Diagnostics et analyses pour identifier les forces, les écarts et les priorités de développement — avant toute formation.",
+      "Tests et analyses pour identifier les forces, les écarts et les priorités de développement — avant toute formation.",
     icon: ClipboardList,
   },
   {

@@ -6,7 +6,7 @@ import { EntrepriseConnexionPage } from "@/components/edge-site/entreprise-conne
 export const metadata: Metadata = {
   title: "Connexion entreprise — Essai 30 jours | Byound",
   description:
-    "Créez votre espace RH Byound : essai gratuit 30 jours, diagnostics équipe et dashboard entreprise.",
+    "Créez votre espace RH Byound : essai gratuit 30 jours, tests équipe et dashboard entreprise.",
 };
 
 export default function EntrepriseConnexionRoutePage() {

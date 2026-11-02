@@ -354,7 +354,7 @@ export const MARKETING_PAGES = {
     sections: [
       {
         title: "Évaluation des compétences",
-        body: "Les diagnostics situent le niveau de chaque collaborateur et mettent en évidence les écarts à combler.",
+        body: "Les tests situent le niveau de chaque collaborateur et mettent en évidence les écarts à combler.",
       },
       {
         title: "Suivi des progrès",

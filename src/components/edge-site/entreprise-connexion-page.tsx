@@ -205,7 +205,7 @@ export function EntrepriseConnexionPage() {
             Pilotez la montée en compétences de vos équipes.
           </h1>
           <p className="mt-5 max-w-[460px] text-[16px] leading-relaxed text-[#B5BAC6]">
-            Diagnostics, formations et invitations de vos collaborateurs, dans un seul espace. Sans carte bancaire.
+            Tests, formations et invitations de vos collaborateurs, dans un seul espace. Sans carte bancaire.
           </p>
         </div>
         <div className="flex items-end gap-8 pb-4">

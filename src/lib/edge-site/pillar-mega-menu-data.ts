@@ -69,7 +69,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
       editorial: {
         title: "Une formation, bien plus qu'une journée.",
         description:
-          "Diagnostic des besoins, formation et pilotage des compétences dans un même environnement.",
+          "Test des besoins, formation et pilotage des compétences dans un même environnement.",
         ctaLabel: "Découvrir l'approche Byound",
         ctaHref: R.businessFormerEquipes,
       },
@@ -175,7 +175,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
           icon: "briefcase",
         },
         {
-          label: "Diagnostics",
+          label: "Tests",
           href: R.businessDiagnostics,
           description: "Évaluez les profils et identifiez les écarts.",
           icon: "bar-chart-3",

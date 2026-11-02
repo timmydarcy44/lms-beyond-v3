@@ -48,7 +48,7 @@ import {
 import type { TrainingCoursePublic } from "@/lib/training-courses/types";
 
 const NAV_SECTIONS = [
-  { id: "diagnostic", label: "Diagnostic" },
+  { id: "test", label: "Test" },
   { id: "presentation", label: "Présentation" },
   { id: "programme", label: "Programme" },
   { id: "competences", label: "Compétences" },
@@ -143,7 +143,7 @@ function PricingCards({
       {!compact ? (
         <div className="flex flex-col gap-2.5">
           <EdgePremiumButton href={demoHref} shape="revolut" className="w-full">
-            Commencer par un diagnostic Byound
+            Commencer par un test Byound
           </EdgePremiumButton>
           <EdgePremiumButton href={conseillerHref} variant="secondary-light" shape="revolut" className="w-full">
             Réserver cette formation
@@ -189,7 +189,7 @@ function PricingSidebar({
   );
 }
 
-/** Frise verticale premium (diagnostic / après-formation). */
+/** Frise verticale premium (test / après-formation). */
 function VerticalTimeline({
   steps,
   accent = true,
@@ -296,7 +296,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
               ) : null}
 
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/55">
-                Avant toute formation, nous réalisons un diagnostic complet des compétences afin de
+                Avant toute formation, nous réalisons un test complet des compétences afin de
                 construire un parcours réellement adapté à vos collaborateurs.
               </p>
 
@@ -306,7 +306,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <EdgePremiumButton href={links.demo} variant="white" shape="revolut">
-                  Commencer par un diagnostic Byound
+                  Commencer par un test Byound
                 </EdgePremiumButton>
                 <EdgePremiumButton href={links.conseiller} variant="outline-white" shape="revolut">
                   Réserver cette formation
@@ -353,21 +353,21 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
           <section className="scroll-mt-40">
             <h2 className="text-2xl font-semibold tracking-[-0.03em]">Pourquoi cette formation ?</h2>
             <p className="mt-4 max-w-3xl text-base leading-relaxed text-[#050505]/65">
-              Cette formation répond à des besoins opérationnels identifiés grâce au diagnostic Byound.
+              Cette formation répond à des besoins opérationnels identifiés grâce au test Byound.
               Elle vise à développer les compétences réellement nécessaires à la performance du
               collaborateur et de l&apos;entreprise.
             </p>
           </section>
 
-          {/* 3. DIAGNOSTIC Byound — pièce maîtresse */}
-          <section id="diagnostic" className="scroll-mt-40">
+          {/* 3. Test Byound — pièce maîtresse */}
+          <section id="test" className="scroll-mt-40">
             <div className="overflow-hidden rounded-[28px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.07] via-white to-white p-7 shadow-[0_12px_48px_rgba(99,91,255,0.10)] sm:p-9">
               <div className="flex items-center gap-2 text-edge-accent">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-xs font-semibold uppercase tracking-[0.18em]">Diagnostic Byound</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.18em]">Test Byound</span>
               </div>
               <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] sm:text-[1.75rem]">
-                Chaque parcours débute par un diagnostic
+                Chaque parcours débute par un test
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#050505]/60">
                 Contrairement aux catalogues traditionnels, Byound identifie précisément les compétences à
@@ -379,7 +379,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
               </div>
               <div className="mt-8">
                 <EdgePremiumButton href={links.demo} shape="revolut">
-                  Commencer par un diagnostic Byound
+                  Commencer par un test Byound
                 </EdgePremiumButton>
               </div>
             </div>
@@ -566,7 +566,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
                   <Target className="h-5 w-5" />
                 </span>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-[#050505]/40">Avant</p>
-                <p className="mt-1 font-medium">Diagnostic</p>
+                <p className="mt-1 font-medium">Test</p>
                 <p className="mt-1 text-sm text-[#050505]/55">Identification précise des besoins.</p>
               </div>
               <div className="rounded-[24px] border border-[#050505]/8 bg-white p-6">
@@ -862,11 +862,11 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
             Prêt à développer les compétences de vos équipes ?
           </h2>
           <p className="mt-3 max-w-xl text-sm text-white/55">
-            Tout commence par un diagnostic Byound — réponse sous 24 h.
+            Tout commence par un test Byound — réponse sous 24 h.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <EdgePremiumButton href={links.demo} variant="white" shape="revolut">
-              Commencer par un diagnostic Byound
+              Commencer par un test Byound
             </EdgePremiumButton>
             <EdgePremiumButton href={links.conseiller} variant="outline-white" shape="revolut">
               Réserver cette formation

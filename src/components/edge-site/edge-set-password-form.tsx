@@ -77,7 +77,7 @@ export function EdgeSetPasswordForm({
         <h1 className="text-[30px] font-bold leading-[1.15] tracking-[-0.01em]">Dernière étape</h1>
         <p className="mb-9 mt-2 max-w-[320px] text-[14.5px] leading-relaxed text-white/55">
           {variant === "entreprise"
-            ? "Votre dashboard RH Beyond et vos diagnostics équipe vous attendent."
+            ? "Votre dashboard RH Beyond et vos tests équipe vous attendent."
             : variant === "salarie"
               ? "Votre espace salarié, vos tests IDMC et soft skills vous attendent."
               : "Votre cockpit DISC, IDMC et soft skills vous attend."}

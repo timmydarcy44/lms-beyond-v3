@@ -29,7 +29,7 @@ const ENTREPRISE_PLANS = [
     unit: 12,
     features: [
       "Onboarding digital des collaborateurs",
-      "Diagnostic comportemental DISC",
+      "Test comportemental DISC",
       "Cartographie des compétences",
       "Dashboard RH temps réel",
       "Plan d'action IA personnalisé",
@@ -127,7 +127,7 @@ const ADDONS = [
     id: "flash",
     name: "Intervention Flash",
     icon: Zap,
-    description: "1 journée en présentiel. Diagnostic live + atelier + restitution.",
+    description: "1 journée en présentiel. Test live + atelier + restitution.",
     price: 1500,
     priceLabel: "+ 1 500€ HT / intervention",
   },
@@ -148,8 +148,8 @@ const ADDONS = [
     priceLabel: "+ 150€ HT / session",
   },
   {
-    id: "diagnostic",
-    name: "Diagnostic Équipe Flash",
+    id: "test",
+    name: "Test Équipe Flash",
     icon: Search,
     description: "Audit express de votre équipe en 48h. Restitution et recommandations.",
     price: 490,
@@ -168,7 +168,7 @@ const FAQ = [
   },
   {
     q: "Comment fonctionne l'onboarding ?",
-    a: "Vous intégrez les emails de vos collaborateurs. Ils reçoivent une invitation, passent le diagnostic en 12 minutes. Les résultats arrivent sur votre dashboard RH automatiquement.",
+    a: "Vous intégrez les emails de vos collaborateurs. Ils reçoivent une invitation, passent le test en 12 minutes. Les résultats arrivent sur votre dashboard RH automatiquement.",
   },
   {
     q: "Les add-ons sont-ils cumulables ?",

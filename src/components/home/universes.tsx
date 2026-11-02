@@ -54,21 +54,26 @@ export function HomeUniverses({
             <p className="mt-6 text-[32px] font-extrabold leading-[1.05] tracking-[-1px] sm:text-[clamp(36px,4vw,52px)] sm:tracking-[-1.5px]">
               Faites progresser vos équipes.
             </p>
-            <p className="mt-4 max-w-md text-lg text-white">Formations, diagnostics et suivi des compétences.</p>
+            <p className="mt-4 max-w-md text-lg text-white">Formations, tests et suivi des compétences.</p>
             <div className="mt-6 rounded-[24px] bg-white/15 p-5" aria-hidden>
               <p className="text-sm font-bold">Équipe commerciale</p>
               {[
-                ["Écoute", "78%"],
-                ["Négociation", "56%"],
-                ["Leadership", "40%"],
-              ].map(([label, width]) => (
+                ["Écoute", 5],
+                ["Négociation", 4],
+                ["Leadership", 3],
+              ].map(([label, filled]) => (
                 <div key={label} className="mt-3">
                   <div className="mb-1 flex justify-between text-[13px] font-bold">
                     <span>{label}</span>
-                    <span>{width}</span>
+                    <span>{filled}/6</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/20">
-                    <div className="h-full rounded-full bg-white" style={{ width }} />
+                  <div className="flex gap-1">
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <span
+                        key={index}
+                        className={index < Number(filled) ? "h-2 flex-1 rounded-full bg-white" : "h-2 flex-1 rounded-full bg-white/20"}
+                      />
+                    ))}
                   </div>
                 </div>
               ))}

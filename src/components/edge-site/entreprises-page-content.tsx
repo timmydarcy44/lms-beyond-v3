@@ -42,7 +42,7 @@ const STEPS = [
     step: "ÉTAPE 1",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80",
     title: "On audite vos compétences",
-    text: "Chaque collaborateur reçoit un accès Beyond. En 12 minutes, il passe le diagnostic comportemental et compétences. Les résultats arrivent directement sur votre dashboard RH.",
+    text: "Chaque collaborateur reçoit un accès Beyond. En 12 minutes, il passe le test comportemental et compétences. Les résultats arrivent directement sur votre dashboard RH.",
   },
   {
     step: "ÉTAPE 2",
@@ -59,7 +59,7 @@ const STEPS = [
 ] as const;
 
 const BASE_INCLUDES = [
-  "Diagnostic comportemental DISC + compétences",
+  "Test comportemental DISC + compétences",
   "Dashboard RH temps réel",
   "Plan d'action IA personnalisé",
   "Accès Byound Online (80+ micro-formations)",
@@ -69,7 +69,7 @@ const ADDONS = [
   {
     icon: Zap,
     name: "Intervention Flash",
-    text: "1 journée en présentiel avec votre équipe commerciale. Diagnostic live + atelier + restitution.",
+    text: "1 journée en présentiel avec votre équipe commerciale. Test live + atelier + restitution.",
     price: "À partir de 1 500€ HT",
     cta: "Demander un devis",
     popular: false,
@@ -103,7 +103,7 @@ const ADDONS = [
 const PIPELINE = [
   {
     num: "01",
-    title: "Diagnostic",
+    title: "Test",
     text: "Chaque collaborateur passe le test Beyond en 12 minutes. Profil comportemental DISC, compétences, axes de progression.",
   },
   {
@@ -191,7 +191,7 @@ export function EntreprisesPageContent() {
               Donnez-leur la méthode.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
-              On diagnostique avant de former. On mesure après.
+              On évalue avant de former. On mesure après.
               <br />
               Pas de formation générique. Un système.
             </p>

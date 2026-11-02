@@ -91,7 +91,7 @@ export function getEdgePremiumConfig(host?: string | null) {
           label: "Développer",
           href: R.businessDiagnostics,
           items: [
-            { label: "Diagnostics de compétences", href: R.businessDiagnostics },
+            { label: "Tests de compétences", href: R.businessDiagnostics },
             { label: "Cartographier les compétences", href: R.businessCompetences },
             { label: "Plans de progression", href: R.businessPlansProgression },
             { label: "Certifications", href: R.businessCertificationsBiz },
@@ -125,7 +125,7 @@ export function getEdgePremiumConfig(host?: string | null) {
       plateforme: [
         { label: "Profil & progression", href: R.particulier },
         { label: "Open Badges", href: R.businessOpenBadges },
-        { label: "Diagnostics de compétences", href: R.businessDiagnostics },
+        { label: "Tests de compétences", href: R.businessDiagnostics },
         { label: "Certifications", href: R.certifications },
         { label: "Tarifs", href: R.tarifs },
       ],
@@ -134,7 +134,7 @@ export function getEdgePremiumConfig(host?: string | null) {
         { label: "Profil & progression", href: R.particulier },
         { label: "Certifications", href: R.certifications },
         { label: "Open Badges", href: R.businessOpenBadges },
-        { label: "Diagnostics", href: R.businessDiagnostics },
+        { label: "Tests", href: R.businessDiagnostics },
       ],
       ressources: [
         { label: "Blog", href: R.blog },

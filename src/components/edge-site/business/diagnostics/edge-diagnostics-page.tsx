@@ -71,7 +71,7 @@ const USE_CASES = [
 const OTHER_PLATFORM = ["Simple questionnaire", "Rapport PDF", "Résultat statique"] as const;
 
 const EDGE_PLATFORM = [
-  "Diagnostic scientifique",
+  "Test scientifique",
   "Analyse IA",
   "Open Badges",
   "Skills Wallet",
@@ -93,7 +93,7 @@ export async function EdgeDiagnosticsPage() {
       <div className={cn(inter.className, "font-edge-sf bg-white text-neutral-950 antialiased")}>
         <EdgeDiagnosticsHero productsHref={productsHref} demoHref={routes.businessDemo} />
 
-        <EdgeDiagnosticsFlagship diagnostics={flagship} hrefFor={hrefFor} />
+        <EdgeDiagnosticsFlagship tests={flagship} hrefFor={hrefFor} />
 
         <section className="border-b border-neutral-200 bg-white px-5 py-20 sm:px-8 lg:px-10">
           <div className="mx-auto max-w-6xl">
@@ -270,7 +270,7 @@ export async function EdgeDiagnosticsPage() {
                 Transformez vos évaluations en véritables leviers de développement.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-neutral-500">
-                Diagnostic → IA → Open Badges → Skills Wallet → Parcours → Progression → Analytics.
+                Test → IA → Open Badges → Skills Wallet → Parcours → Progression → Analytics.
               </p>
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <EdgePremiumButton href={routes.business} showArrow shape="revolut">

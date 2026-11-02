@@ -13,14 +13,14 @@ import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 export async function EdgePremiumDiagnosticsSection() {
   const host = (await headers()).get("host");
   const routes = getEdgeMarketingRoutes(host);
-  const diagnostics = getFlagshipDiagnostics();
+  const tests = getFlagshipDiagnostics();
 
   return (
     <section className="bg-white py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-3xl text-center">
           <p className="font-edge-sf text-[12px] font-medium uppercase tracking-[0.24em] text-black/40">
-            Diagnostics
+            Tests
           </p>
           <h2 className="font-edge-display mt-5 text-[clamp(2.25rem,5.5vw,4rem)] leading-[1.05] text-edge-black-deep">
             Mesurez les compétences.
@@ -28,13 +28,13 @@ export async function EdgePremiumDiagnosticsSection() {
             Développez les talents.
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-black/50 sm:text-lg">
-            Soft Skills, IDMC et test comportemental — trois diagnostics scientifiques pour
+            Soft Skills, IDMC et test comportemental — trois tests scientifiques pour
             objectiver le potentiel avant de former, certifier et suivre la progression.
           </p>
         </div>
 
         <div className="mt-14 grid gap-4 md:grid-cols-3">
-          {diagnostics.map((item) => {
+          {tests.map((item) => {
             const href = edgeMarketingHref(`/business/diagnostics/${item.slug}`, host);
             const isComportemental = item.slug === "test-comportemental";
             return (
@@ -82,7 +82,7 @@ export async function EdgePremiumDiagnosticsSection() {
 
         <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <EdgePremiumButton href={routes.businessDiagnostics} showArrow shape="revolut">
-            Voir tous les diagnostics
+            Voir tous les tests
           </EdgePremiumButton>
           <Link
             href={routes.businessDemo}

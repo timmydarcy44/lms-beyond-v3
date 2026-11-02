@@ -3,15 +3,17 @@ import path from "node:path";
 import { Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
-import { HomeDiagnostics } from "@/components/home/diagnostics";
+import { HomeExperts } from "@/components/home/experts";
 import { HomeFigures } from "@/components/home/figures";
 import { HomeFinalCta } from "@/components/home/final-cta";
 import { HomeFooter } from "@/components/home/site-footer";
 import { HomeHero } from "@/components/home/hero";
 import { HomeMethod } from "@/components/home/method";
 import { HomeSocialProof } from "@/components/home/social-proof";
+import { HomeTests } from "@/components/home/tests";
 import { HomeTrainers } from "@/components/home/trainers";
 import { HomeUniverses } from "@/components/home/universes";
+import { getHomepageExperts } from "@/lib/expert/program-contributors";
 import { getEdgeMarketingRoutes } from "@/lib/edge-site/marketing-routes";
 import { getHomeContent } from "@/content/home";
 import "./home.css";
@@ -22,7 +24,11 @@ const manrope = Manrope({
 
 export async function HomePage() {
   const host = (await headers()).get("host");
-  const content = getHomeContent(getEdgeMarketingRoutes(host), host);
+  const routes = getEdgeMarketingRoutes(host);
+  const [content, experts] = await Promise.all([
+    Promise.resolve(getHomeContent(routes, host)),
+    getHomepageExperts(),
+  ]);
   const localHero = path.join(process.cwd(), "public", "images", "hero-byound.jpg");
   const heroSrc = fs.existsSync(localHero) ? "/images/hero-byound.jpg" : EDGE_HERO_IMAGE_URL;
 
@@ -36,12 +42,9 @@ export async function HomePage() {
         schoolHref={content.schoolHref}
         businessHref={content.businessHref}
       />
-      <HomeDiagnostics
-        items={content.diagnostics}
-        diagnosticsHref={content.diagnosticsHref}
-        demoHref={content.demoHref}
-      />
+      <HomeTests items={content.tests} testsHref={content.testsHref} demoHref={content.demoHref} />
       <HomeMethod />
+      <HomeExperts people={experts} sportHref={content.sportExpertsHref} allHref={content.allExpertsHref} />
       <HomeFigures />
       <HomeTrainers href={content.trainerHref} />
       <HomeFinalCta contactHref={content.contactHref} demoHref={content.demoHref} />

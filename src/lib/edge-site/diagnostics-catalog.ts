@@ -76,7 +76,7 @@ export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
     shortDescription:
       "Évaluez les compétences comportementales qui font la différence au quotidien : coopération, communication, adaptabilité et leadership.",
     longDescription:
-      "Le diagnostic Soft Skills Byound cartographie les compétences comportementales critiques pour la performance collective. Chaque résultat alimente un rapport détaillé, des Open Badges et des recommandations IA pour personnaliser les parcours de développement.",
+      "Le test Soft Skills Byound cartographie les compétences comportementales critiques pour la performance collective. Chaque résultat alimente un rapport détaillé, des Open Badges et des recommandations IA pour personnaliser les parcours de développement.",
     skills: ["Communication", "Collaboration", "Autonomie", "Créativité", "Résilience", "Leadership"],
   }),
   d({
@@ -111,7 +111,7 @@ export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
     icon: Brain,
     shortDescription: "Mesurez attention, mémoire de travail et vitesse de traitement.",
     longDescription:
-      "Évaluez les capacités cognitives fondamentales pour anticiper la performance en situations complexes. Le diagnostic produit un profil objectif pour personnaliser les parcours de montée en compétences.",
+      "Évaluez les capacités cognitives fondamentales pour anticiper la performance en situations complexes. Le test produit un profil objectif pour personnaliser les parcours de montée en compétences.",
     skills: ["Attention", "Mémoire de travail", "Raisonnement", "Vitesse de traitement", "Flexibilité"],
   }),
   d({
@@ -183,7 +183,7 @@ export const EDGE_DIAGNOSTICS: EdgeDiagnostic[] = [
     icon: Compass,
     shortDescription: "Clarifiez motivations, préférences et pistes d'orientation.",
     longDescription:
-      "Accompagnez les choix de parcours via un diagnostic d'orientation structuré, actionnable pour CFA, écoles et services RH.",
+      "Accompagnez les choix de parcours via un test d'orientation structuré, actionnable pour CFA, écoles et services RH.",
     skills: ["Motivations", "Intérêts", "Valeurs", "Projection", "Décision"],
   }),
   d({

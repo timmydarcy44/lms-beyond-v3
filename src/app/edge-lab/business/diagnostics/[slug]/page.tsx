@@ -21,13 +21,13 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const diagnostic = getDiagnosticBySlug(slug);
-  if (!diagnostic) {
-    return { title: "Diagnostic introuvable — Byound Business" };
+  const test = getDiagnosticBySlug(slug);
+  if (!test) {
+    return { title: "Test introuvable — Byound Business" };
   }
   return {
-    title: `${diagnostic.title} — Diagnostics Byound`,
-    description: diagnostic.shortDescription,
+    title: `${test.title} — Tests Byound`,
+    description: test.shortDescription,
   };
 }
 
@@ -38,15 +38,15 @@ export default async function Page({ params }: { params: Promise<Params> }) {
     const routes = getEdgeMarketingRoutes(host);
     permanentRedirect(`${routes.businessDiagnostics}/test-comportemental`);
   }
-  const diagnostic = getDiagnosticBySlug(slug);
-  if (!diagnostic) notFound();
+  const test = getDiagnosticBySlug(slug);
+  if (!test) notFound();
 
   const host = (await headers()).get("host");
   const routes = getEdgeMarketingRoutes(host);
 
   return (
     <EdgeDiagnosticsDetailPage
-      diagnostic={diagnostic}
+      test={test}
       catalogueHref={routes.businessDiagnostics}
       demoHref={routes.businessDemo}
     />

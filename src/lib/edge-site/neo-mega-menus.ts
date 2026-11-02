@@ -203,7 +203,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
           { title: "Financement OPCO", subtitle: "Faire financer vos formations", href: routes.financement },
           { title: "Open Badges", subtitle: "Certifier les compétences acquises", href: routes.businessOpenBadges },
           { title: "Cas clients", subtitle: "Ils ont formé leurs équipes", href: routes.businessCasClients },
-          { title: "Diagnostic", subtitle: "Mesurer le niveau de départ", href: routes.businessDiagnostics },
+          { title: "Test", subtitle: "Mesurer le niveau de départ", href: routes.businessDiagnostics },
         ],
       },
     ],
@@ -295,7 +295,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
       {
         title: "Aussi sur la plateforme",
         links: [
-          { title: "Diagnostics de compétences", subtitle: "Soft Skills, IDMC, test comportemental", href: routes.businessDiagnostics },
+          { title: "Tests de compétences", subtitle: "Soft Skills, IDMC, test comportemental", href: routes.businessDiagnostics },
           { title: "Certifications", subtitle: "Valider officiellement vos acquis", href: routes.certifications },
           { title: "Tarifs", subtitle: "Les offres et abonnements", href: routes.tarifs },
         ],

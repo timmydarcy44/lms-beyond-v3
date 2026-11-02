@@ -191,7 +191,7 @@ export const EDGE_TRAINING_MODULES: TrainingModule[] = [
   m("COMM-08", "communication-storytelling", "Communication stratégique et influence organisationnelle", 5, ["Influencer les décisions", "Aligner les parties prenantes"], ["Stratégie d'influence"], "communication-strategist", ["presentiel", "blended"]),
 
   // Leadership & Management (7)
-  m("LEAD-01", "leadership-management", "C'est quoi un leader ? Mythes et réalités", 1, ["Définir le leadership", "Identifier ses leviers"], ["Auto-diagnostic leadership"], "leader-expert"),
+  m("LEAD-01", "leadership-management", "C'est quoi un leader ? Mythes et réalités", 1, ["Définir le leadership", "Identifier ses leviers"], ["Auto-évaluation leadership"], "leader-expert"),
   m("LEAD-02", "leadership-management", "Identifier et affirmer son style de leadership", 2, ["Connaître son style", "L'affirmer avec authenticité"], ["Profil de leadership"], "leader-expert"),
   m("LEAD-03", "leadership-management", "Fixer des objectifs et déléguer efficacement", 2, ["Fixer des objectifs clairs", "Déléguer avec confiance"], ["Cahier des charges délégation"], "leader-expert"),
   m("LEAD-04", "leadership-management", "Manager des profils différents", 3, ["Adapter son management", "Pratiquer le situationnel"], ["Grille management situationnel"], "leader-expert"),

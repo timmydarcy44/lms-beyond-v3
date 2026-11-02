@@ -4,7 +4,7 @@ const PILLARS = [
   {
     icon: Brain,
     title: "IA intégrée",
-    description: "Parcours personnalisés, diagnostics intelligents et recommandations formation en temps réel.",
+    description: "Parcours personnalisés, tests intelligents et recommandations formation en temps réel.",
   },
   {
     icon: BadgeCheck,

@@ -229,7 +229,7 @@ export function EdgeBusinessFormerEquipesPage({ initialCourses, audience = "busi
           <p className="mt-2 text-sm text-[#050505]/55">
             {life
               ? "Chaque fiche détaille le programme. Les Open Badges attestent la compétence une fois la formation validée."
-              : "Les diagnostics et les Open Badges s'intègrent aux formations : ils situent le niveau de départ et attestent les compétences acquises."}
+              : "Les tests et les Open Badges s'intègrent aux formations : ils situent le niveau de départ et attestent les compétences acquises."}
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <EdgePremiumButton href={links.contact} shape="revolut">

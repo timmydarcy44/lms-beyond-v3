@@ -12,7 +12,8 @@ export const HOME_STATS: { value: string; label: string; source?: string }[] = [
 
 export const HOME_VIDEO = {
   src: "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound_OpenBadges_v16.mp4",
-  title: "Identifier. Former. Valoriser.",
+  poster: "/images/home/byound-en-1-minute.webp",
+  title: "Byound en 1 minute",
 } as const;
 
 export type HomeFormation = { label: string; href: string; featured?: boolean };
@@ -48,7 +49,7 @@ export function getHomeFormations(routes: EdgeMarketingRoutes): HomeFormation[] 
 }
 
 export function getHomeContent(routes: EdgeMarketingRoutes, host?: string | null) {
-  const diagnostic = (slug: string) => edgeMarketingHref(`/business/diagnostics/${slug}`, host);
+  const testPage = (slug: string) => edgeMarketingHref(`/business/diagnostics/${slug}`, host);
   const formations = getHomeFormations(routes);
   const visible = formations.slice(0, 5);
   const more = Math.max(formations.length - visible.length, 0);
@@ -62,27 +63,29 @@ export function getHomeContent(routes: EdgeMarketingRoutes, host?: string | null
     moreHref: routes.formations,
     schoolHref: routes.alternance,
     businessHref: routes.business,
-    diagnostics: [
+    tests: [
       {
         slug: "soft-skills",
         title: "Soft Skills",
         text: "Les compétences comportementales qui font la différence au quotidien.",
-        href: diagnostic("soft-skills"),
+        href: testPage("soft-skills"),
       },
       {
         slug: "idmc",
         title: "IDMC",
         text: "Attention, raisonnement, flexibilité et stratégies d'apprentissage.",
-        href: diagnostic("idmc"),
+        href: testPage("idmc"),
       },
       {
         slug: "test-comportemental",
         title: "Test comportemental",
         text: "Identifier son style de communication pour mieux vendre, manager et collaborer.",
-        href: diagnostic("test-comportemental"),
+        href: testPage("test-comportemental"),
       },
     ],
-    diagnosticsHref: routes.businessDiagnostics,
+    testsHref: routes.businessDiagnostics,
+    sportExpertsHref: routes.ecoleNtcBusinessSport,
+    allExpertsHref: routes.formateursExperts,
     demoHref: routes.businessDemo,
     trainerHref: routes.expertSignup,
     contactHref: routes.contact,

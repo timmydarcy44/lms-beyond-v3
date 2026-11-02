@@ -80,11 +80,17 @@ export async function POST(
         : [];
       const jobTitle = typeof body.jobTitle === "string" ? body.jobTitle.trim() : "";
       const currentProfile = parseContributorProfile(references, null);
+      const showOnHomepage = body.showOnHomepage === true;
+      const homepageOrder = Number(body.homepageOrder);
       patch.headline = jobTitle || null;
+      patch.show_on_homepage = showOnHomepage;
+      patch.homepage_order = Number.isFinite(homepageOrder) ? homepageOrder : null;
       patch.references = withContributorProfile(references, {
         roles: roles as ContributorRole[],
         jobTitle,
         companyLogoUrl: currentProfile.companyLogoUrl,
+        showOnHomepage,
+        homepageOrder: Number.isFinite(homepageOrder) ? homepageOrder : null,
       });
     } else if (action === "add_note") {
       const note = typeof body.note === "string" ? body.note.trim() : "";
@@ -100,7 +106,13 @@ export async function POST(
       return NextResponse.json({ error: "Action invalide" }, { status: 400 });
     }
 
-    const { error: updateError } = await supabase.from("experts").update(patch).eq("id", id);
+    let { error: updateError } = await supabase.from("experts").update(patch).eq("id", id);
+    if (updateError && /show_on_homepage|homepage_order|schema cache|PGRST204/i.test(updateError.message)) {
+      const withoutColumns = { ...patch };
+      delete withoutColumns.show_on_homepage;
+      delete withoutColumns.homepage_order;
+      ({ error: updateError } = await supabase.from("experts").update(withoutColumns).eq("id", id));
+    }
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
@@ -116,6 +128,8 @@ export async function POST(
       revalidatePath("/edge-lab/ecole/ntc/ai-business");
       revalidatePath("/edge-lab/ecole/ntc/business-sport");
       revalidatePath("/edge-lab/ecole/ntc/real-estate");
+      revalidatePath("/");
+      revalidatePath("/edge-lab");
     }
 
     return NextResponse.json({ success: true });

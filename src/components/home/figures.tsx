@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Play } from "lucide-react";
 import { HOME_STATS, HOME_VIDEO } from "@/content/home";
 import { Section, StatTile } from "@/components/home/ui";
@@ -33,22 +34,40 @@ export function HomeFigures() {
         ) : null}
         <div className="relative mt-8 aspect-[4/5] min-h-[420px] overflow-hidden rounded-[28px] bg-[#0B1124] sm:aspect-video sm:min-h-0 sm:rounded-[36px] lg:aspect-[16/7]">
           {playing ? (
-            <video className="absolute inset-0 h-full w-full object-cover" controls autoPlay playsInline src={HOME_VIDEO.src}>
+            <video
+              className="absolute inset-0 h-full w-full object-cover"
+              controls
+              autoPlay
+              playsInline
+              preload="none"
+              poster={HOME_VIDEO.poster}
+              src={HOME_VIDEO.src}
+            >
               <track kind="captions" />
             </video>
           ) : (
-            <button
-              type="button"
-              className="absolute left-1/2 top-1/2 flex h-[88px] w-[88px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#07080B]"
-              aria-label="Lire la vidéo"
-              onClick={() => setPlaying(true)}
-            >
-              <Play className="ml-1" fill="currentColor" strokeWidth={2} aria-hidden />
-            </button>
+            <>
+              <Image
+                src={HOME_VIDEO.poster}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 1100px, 100vw"
+                className="object-cover"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#070C1C] to-transparent" aria-hidden />
+              <button
+                type="button"
+                className="absolute left-1/2 top-1/2 flex h-[88px] w-[88px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#07080B]"
+                aria-label="Lire la vidéo, Byound en 1 minute"
+                onClick={() => setPlaying(true)}
+              >
+                <Play className="ml-1" fill="currentColor" strokeWidth={2} aria-hidden />
+              </button>
+              <p className="pointer-events-none absolute bottom-6 left-6 right-6 max-w-xl text-[28px] font-extrabold leading-[1.05] text-white sm:bottom-8 sm:left-8 sm:right-auto sm:text-[clamp(28px,3.4vw,44px)] sm:leading-none">
+                {HOME_VIDEO.title}
+              </p>
+            </>
           )}
-          <p className="pointer-events-none absolute bottom-6 left-6 right-6 max-w-xl text-[28px] font-extrabold leading-[1.05] text-white sm:bottom-8 sm:left-8 sm:right-auto sm:text-[clamp(28px,3.4vw,44px)] sm:leading-none">
-            {HOME_VIDEO.title}
-          </p>
         </div>
       </Reveal>
     </Section>

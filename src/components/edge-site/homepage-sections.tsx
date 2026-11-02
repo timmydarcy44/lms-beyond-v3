@@ -132,13 +132,13 @@ export function EdgeBeyondPartnershipSection() {
               <span className="text-black/25">Mesurée.</span>
             </p>
             <p className="mt-4 max-w-md text-[16px] leading-[1.75] text-black/40">
-              Byound forme sur le terrain. Beyond diagnostique, mesure et prouve la montée en compétences — de
+              Byound forme sur le terrain. Beyond évalue, mesure et prouve la montée en compétences — de
               l&apos;orientation à la certification vérifiable.
             </p>
 
             <div className="mt-14 space-y-10 border-t border-black/[0.08] pt-12">
               <div>
-                <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-edge-black">Diagnostic Beyond</p>
+                <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-edge-black">Test Beyond</p>
                 <p className="mt-3 max-w-md text-[16px] leading-relaxed text-black/45">
                   DISC, IDMC et soft skills en 12 minutes. Vos résultats alimentent un profil complet — visible par vous
                   et par vos RH.
@@ -197,13 +197,13 @@ export function EntreprisesHomeSection() {
           Vos équipes ont le potentiel. Donnez-leur la méthode.
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-[15px] leading-[1.7] text-black/40">
-          On diagnostique avant de former. On mesure après. Pas de formation générique — un système piloté par la
+          On évalue avant de former. On mesure après. Pas de formation générique — un système piloté par la
           donnée.
         </p>
 
         <div className="mx-auto mt-14 grid max-w-5xl gap-8 text-left md:grid-cols-3 md:gap-6">
           <div className="rounded-2xl border border-black/[0.06] bg-white p-6">
-            <p className="text-[13px] font-medium text-edge-black">Diagnostic</p>
+            <p className="text-[13px] font-medium text-edge-black">Test</p>
             <p className="mt-3 text-[14px] leading-relaxed text-black/45">
               Chaque collaborateur passe le test Beyond en 12 minutes. Profil comportemental, compétences, axes de
               progression.
@@ -326,7 +326,7 @@ export function EmployabilitySection() {
         "Créez votre profil professionnel : compétences, expériences, réalisations — un espace dédié pour valoriser ce que vous savez faire.",
     },
     {
-      title: "Tests & diagnostics inclus",
+      title: "Tests inclus",
       description:
         "DISC, bilan IDMC, tests de soft skills : comprenez votre profil comportemental et vos forces en quelques minutes, sans payer.",
     },

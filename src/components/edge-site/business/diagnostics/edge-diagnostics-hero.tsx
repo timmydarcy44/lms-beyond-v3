@@ -11,7 +11,7 @@ export function EdgeDiagnosticsHero({ productsHref, demoHref }: Props) {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,0,0,0.035),transparent_55%)]" />
       <div className="relative mx-auto max-w-4xl px-5 py-24 text-center sm:px-8 sm:py-28 lg:px-10 lg:py-32">
         <p className="font-edge-sf text-[12px] font-medium uppercase tracking-[0.24em] text-neutral-400">
-          Diagnostics de compétences
+          Tests de compétences
         </p>
         <h1 className="font-edge-display mt-6 text-[clamp(2.75rem,8vw,5.5rem)] leading-[1.02] text-neutral-950">
           Évaluez les soft skills

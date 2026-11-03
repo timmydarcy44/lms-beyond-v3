@@ -18,7 +18,8 @@ import { ByoundCardsPrompt, type ByoundCardsReview } from "@/components/apprenan
 import { ReadingContent } from "@/components/lms/ReadingContent";
 import { splitSectionTitle } from "@/lib/lms/reading-transform";
 import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
-import { gatingQuizzes, moduleGateMessage, quizScoreStorageKey, unmetGateForLesson, type ModuleGate } from "@/lib/lms/module-gate";
+import { gatingQuizzes, moduleGateMessage, quizScoreStorageKey, unmetGateForLesson } from "@/lib/lms/module-gate";
+import { readModuleOpenRule, scheduleLockForLesson } from "@/lib/lms/module-open";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { LessonReaderShell, type ReaderPart } from "@/components/apprenant/lesson-reader-shell";
@@ -413,6 +414,9 @@ export function LessonPlayView({
   });
   const [showMobileOutline, setShowMobileOutline] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, { state: string; percent: number | null }>>({});
+  const [leafCompletedAt, setLeafCompletedAt] = useState<Record<string, string>>({});
+  const [enrolledAt, setEnrolledAt] = useState<string | null | undefined>(undefined);
+  const [scheduleReady, setScheduleReady] = useState(false);
   const [showCertificationOverlay, setShowCertificationOverlay] = useState(false);
   const [badgeConfig, setBadgeConfig] = useState<any>(null);
   const [linkedOpenBadges, setLinkedOpenBadges] = useState<Array<{ id: string; name: string; level: number | null }>>([]);
@@ -846,7 +850,11 @@ export function LessonPlayView({
     fetch(`/api/courses/${courseId}/structure`, { credentials: "include" })
       .then((response) => (response.ok ? response.json() : null))
       .then((json) => {
-        if (ignore || !json) return;
+        if (ignore) return;
+        if (!json) {
+          setScheduleReady(true);
+          return;
+        }
         const next: Record<string, { state: string; percent: number | null }> = {};
         const readProgress = (row: { state?: string; percent?: number | null } | null | undefined) => ({
           state: String(row?.state ?? "none"),
@@ -864,8 +872,14 @@ export function LessonPlayView({
           next[leafId] = { state: "completed", percent: 100 };
         }
         setProgressMap(next);
+        const completed = json.leafCompletedAt && typeof json.leafCompletedAt === "object" ? json.leafCompletedAt : {};
+        setLeafCompletedAt(completed as Record<string, string>);
+        setEnrolledAt(json.enrollmentKnown ? (typeof json.enrolledAt === "string" ? json.enrolledAt : null) : undefined);
+        setScheduleReady(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!ignore) setScheduleReady(true);
+      });
     return () => {
       ignore = true;
     };
@@ -1057,15 +1071,33 @@ export function LessonPlayView({
     };
   }, [gateTestKey]);
 
-  const lessonLock = (lessonId: string): ModuleGate | null =>
-    unmetGateForLesson(modules, lessonId, quizScores, quizScoresReady || !gateTestKey);
+  const lessonLock = (lessonId: string): { message: string; quizLessonId?: string } | null => {
+    const completedAt: Record<string, number> = {};
+    for (const [id, value] of Object.entries(leafCompletedAt)) {
+      const ms = Date.parse(value);
+      if (Number.isFinite(ms)) completedAt[id] = ms;
+    }
+    const enrolledMs = typeof enrolledAt === "string" ? Date.parse(enrolledAt) : Number.NaN;
+    const schedule = scheduleLockForLesson(modules, lessonId, {
+      now: Date.now(),
+      ready: scheduleReady,
+      enrolledAt: enrolledAt === undefined ? undefined : Number.isFinite(enrolledMs) ? enrolledMs : null,
+      completedAt,
+      isDone: (id) => progressMap[id]?.state === "completed",
+    });
+    if (schedule) return { message: schedule };
+    const gate = unmetGateForLesson(modules, lessonId, quizScores, quizScoresReady || !gateTestKey);
+    return gate ? { message: moduleGateMessage(gate), quizLessonId: gate.lessonId } : null;
+  };
   const nextGate = nextLesson ? lessonLock(nextLesson.id) : nextFlatLesson ? lessonLock(nextFlatLesson.id) : null;
   const showChapterNextButton = chapterNextAllowed && !nextGate;
   const openContinueHref = nextFlatLesson && !lessonLock(nextFlatLesson.id) ? lessonHref(nextFlatLesson.id) : undefined;
   const openedModuleName = (() => {
     if (!activeLesson.gateNextModule) return "";
     const index = modules.findIndex((module) => (module.lessons ?? []).some((lesson) => lesson.id === activeLesson.id));
-    return index >= 0 ? modules[index + 1]?.title?.trim() || "" : "";
+    const nextModule = index >= 0 ? modules[index + 1] : undefined;
+    if (!nextModule || readModuleOpenRule(nextModule.openRule).mode !== "immediate") return "";
+    return nextModule.title?.trim() || "";
   })();
 
   const handleQuizCompletedForNav = (testId: string, score?: number) => {
@@ -1282,7 +1314,7 @@ export function LessonPlayView({
           href={outlineLock ? lessonHref(activeLesson.id) : lessonHrefForItem}
           prefetch={!outlineLock}
           aria-disabled={outlineLock || undefined}
-          title={outlineLock ? moduleGateMessage(outlineLock) : undefined}
+          title={outlineLock ? outlineLock.message : undefined}
           onClick={(event) => {
             if (outlineLock) event.preventDefault();
           }}
@@ -1686,6 +1718,7 @@ export function LessonPlayView({
     if (courseId && currentId) {
       markLeafDone(courseId, currentId);
       setProgressMap((prev) => ({ ...prev, [currentId]: { state: "completed", percent: 100 } }));
+      setLeafCompletedAt((prev) => (prev[currentId] ? prev : { ...prev, [currentId]: new Date().toISOString() }));
       void fetch("/api/learning/leaf-completion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1708,9 +1741,9 @@ export function LessonPlayView({
       return (
         <div className="mx-auto flex min-h-[70vh] w-full max-w-lg flex-col items-start justify-center gap-4 px-6 text-slate-900">
           <p className="text-sm font-semibold text-slate-500">Module fermé</p>
-          <p className="text-2xl font-black tracking-tight">{moduleGateMessage(activeLock)}</p>
-          {activeLock.lessonId ? (
-            <Link href={lessonHref(activeLock.lessonId)} className="rounded-full bg-[#2A1F6E] px-5 py-3 text-sm font-semibold text-white">
+          <p className="text-2xl font-black tracking-tight">{activeLock.message}</p>
+          {activeLock.quizLessonId ? (
+            <Link href={lessonHref(activeLock.quizLessonId)} className="rounded-full bg-[#2A1F6E] px-5 py-3 text-sm font-semibold text-white">
               Revenir au quiz
             </Link>
           ) : null}
@@ -2003,7 +2036,7 @@ export function LessonPlayView({
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </Link>
             ) : null}
-            {nextGate ? <p className="w-full text-sm font-medium text-slate-600">{moduleGateMessage(nextGate)}</p> : null}
+            {nextGate ? <p className="w-full text-sm font-medium text-slate-600">{nextGate.message}</p> : null}
             {showChapterNextButton && nextLesson ? (
               <Link
                 href={lessonHref(nextLesson.id)}
@@ -2167,7 +2200,7 @@ export function LessonPlayView({
                         <Link href={lessonHref(nextLesson.id)}>Chapitre suivant</Link>
                       </Button>
                     ) : null}
-                    {nextGate ? <p className="w-full text-sm font-medium text-slate-700">{moduleGateMessage(nextGate)}</p> : null}
+                    {nextGate ? <p className="w-full text-sm font-medium text-slate-700">{nextGate.message}</p> : null}
                     <Button asChild variant="outline" className="rounded-full border-slate-300 text-slate-800">
                       <Link href={entretienHref}>Revoir le bilan</Link>
                     </Button>
@@ -2428,7 +2461,7 @@ export function LessonPlayView({
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </Link>
             ) : null}
-            {nextGate ? <p className="w-full text-sm font-medium text-slate-600">{moduleGateMessage(nextGate)}</p> : null}
+            {nextGate ? <p className="w-full text-sm font-medium text-slate-600">{nextGate.message}</p> : null}
             {showChapterNextButton && nextLesson ? (
               <Link
                 href={lessonHref(nextLesson.id)}

@@ -57,12 +57,20 @@ import { cn } from "@/lib/utils";
 
 import { useCourseBuilder, BuilderSelection } from "@/hooks/use-course-builder";
 import {
+  moduleOpenChip,
+  moduleOpenPreview,
+  readModuleOpenRule,
+  type ModuleOpenMode,
+  type ModuleOpenRule,
+} from "@/lib/lms/module-open";
+import {
   BuilderContentType,
   CourseBuilderChapter,
   CourseBuilderSection,
   CourseBuilderSubchapter,
 } from "@/types/course-builder";
 
+import { requestQuizBuilder } from "./quiz-builder-bus";
 import { ChapterGenerationModal } from "@/components/formateur/ai/chapter-generation-modal";
 import { SubchapterGenerationModal } from "@/components/formateur/ai/subchapter-generation-modal";
 import { toast } from "sonner";
@@ -332,7 +340,7 @@ export function CourseStructureBuilder({
               Structure, chapitres & contenus
             </CardTitle>
             <p className={isLight ? "text-sm leading-relaxed text-slate-600" : "text-sm leading-relaxed text-white/60"}>
-              Construisez une progression claire : chaque section introduit un chapitre, chaque chapitre peut se décliner en sous-chapitres pour rythmer l’apprentissage.
+              Construisez une progression claire : chaque module introduit un chapitre, chaque chapitre peut se décliner en sous-chapitres pour rythmer l’apprentissage.
             </p>
           </div>
           {/* Actions rapides pour créer sections, chapitres, sous-chapitres */}
@@ -346,7 +354,7 @@ export function CourseStructureBuilder({
                   : "inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white hover:bg-white/20"
               }
             >
-              <Plus className="h-3.5 w-3.5" /> Nouvelle section
+              <Plus className="h-3.5 w-3.5" /> Nouveau module
             </Button>
             {sections.length > 0 && (
               <>
@@ -400,7 +408,7 @@ export function CourseStructureBuilder({
             onClick={addSection}
             className={isLight ? `rounded-full px-5 py-2 text-sm ${primaryGradient}` : "rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"}
           >
-            <Plus className="mr-2 h-4 w-4" /> Ajouter une section
+            <Plus className="mr-2 h-4 w-4" /> Ajouter un module
           </Button>
         </div>
       </CardHeader>
@@ -410,18 +418,19 @@ export function CourseStructureBuilder({
             <SortableContext items={sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-4">
                 {sections.length ? (
-                  sections.map((section) => (
+                  sections.map((section, sectionIndex) => (
                     <SectionCard
                       key={section.id}
                       section={section}
                       selection={selection}
                       isLight={isLight}
                       courseId={courseId}
+                      isFirst={sectionIndex === 0}
                     />
                   ))
                 ) : (
                   <div className={isLight ? "rounded-2xl bg-slate-50 px-6 py-10 text-center text-sm text-slate-600 shadow-sm" : "rounded-2xl border border-dashed border-white/10 bg-[#1a1a1a] px-6 py-10 text-center text-sm text-white/60"}>
-                    Commencez par ajouter une section pour structurer votre formation.
+                    Commencez par ajouter un module pour structurer votre formation.
                   </div>
                 )}
               </div>
@@ -434,21 +443,34 @@ export function CourseStructureBuilder({
   );
 }
 
+const MODULE_OPEN_MODES: { id: ModuleOpenMode; label: string }[] = [
+  { id: "immediate", label: "Ouvrir ce module immédiatement" },
+  { id: "date", label: "À une date précise" },
+  { id: "enrollment", label: "Basé sur l’inscription" },
+  { id: "previous", label: "Basé sur la fin du module précédent" },
+];
+
 function SectionCard({
   section,
   selection,
   isLight,
   courseId,
+  isFirst,
 }: {
   section: CourseBuilderSection;
   selection: BuilderSelection;
   isLight: boolean;
   courseId?: string;
+  isFirst: boolean;
 }) {
   const updateSection = useCourseBuilder((state) => state.updateSection);
   const removeSection = useCourseBuilder((state) => state.removeSection);
   const addChapter = useCourseBuilder((state) => state.addChapter);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isOpenSettings, setIsOpenSettings] = useState(false);
+  const openRule = readModuleOpenRule(section.open_rule);
+  const openChip = moduleOpenChip(openRule);
+  const setOpenRule = (next: ModuleOpenRule) => updateSection(section.id, { open_rule: next });
 
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition } = useSortable({
     id: section.id,
@@ -493,37 +515,141 @@ function SectionCard({
               ? "mt-2 rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:text-slate-900"
               : "mt-2 rounded-full border border-white/10 bg-white/5 p-2 text-white/60 transition hover:text-white"
           }
-          aria-label="Réordonner la section"
+          aria-label="Réordonner le module"
         >
           <GripVertical className="h-4 w-4" />
         </button>
         <div className="flex-1 space-y-4">
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className={cn(
-              "flex w-full items-center gap-3 text-left text-xs font-medium",
-              isLight ? "text-slate-600" : "text-white/60",
-            )}
-            aria-expanded={!isCollapsed}
-          >
-            <span
-              className={
-                isLight
-                  ? "inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-700"
-                  : "inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-1 text-[11px] uppercase tracking-[0.25em] text-blue-300"
-              }
-            >
-              Section
-            </span>
-            <span className={cn("h-[1px] flex-1 rounded", isLight ? "bg-slate-200" : "bg-white/10")} />
-            <ChevronDown
+          <div className="flex w-full items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsCollapsed((prev) => !prev)}
               className={cn(
-                "h-4 w-4 transition-transform",
-                isCollapsed ? "rotate-180" : "rotate-0",
+                "flex min-w-0 flex-1 items-center gap-3 text-left text-xs font-medium",
+                isLight ? "text-slate-600" : "text-white/60",
               )}
-            />
-          </button>
+              aria-expanded={!isCollapsed}
+            >
+              <span
+                className={
+                  isLight
+                    ? "inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.25em] text-slate-700"
+                    : "inline-flex items-center rounded-full bg-blue-500/20 px-2.5 py-1 text-[11px] uppercase tracking-[0.25em] text-blue-300"
+                }
+              >
+                Module
+              </span>
+              {openChip ? (
+                <span className={cn("truncate normal-case tracking-normal", isLight ? "text-slate-500" : "text-white/50")}>
+                  {openChip}
+                </span>
+              ) : null}
+              <span className={cn("h-[1px] flex-1 rounded", isLight ? "bg-slate-200" : "bg-white/10")} />
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  isCollapsed ? "rotate-180" : "rotate-0",
+                )}
+              />
+            </button>
+            <Sheet open={isOpenSettings} onOpenChange={setIsOpenSettings}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(event) => event.stopPropagation()}
+                  className={cn(
+                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition",
+                    isLight
+                      ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white",
+                  )}
+                  aria-label="Ouverture du module"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[420px] max-w-[92vw] bg-white text-slate-950">
+                <SheetHeader className="px-6 pt-6">
+                  <SheetTitle className="text-lg font-extrabold tracking-tight text-slate-950">
+                    Ouverture du module
+                  </SheetTitle>
+                  <SheetDescription className="text-slate-600">
+                    {section.title?.trim() || "Ce module"}
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="space-y-3 px-6 pb-8">
+                  {MODULE_OPEN_MODES.map((mode) => {
+                    const disabled = mode.id === "previous" && isFirst;
+                    const selected = openRule.mode === mode.id;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        disabled={disabled}
+                        aria-pressed={selected}
+                        onClick={() => setOpenRule({ ...openRule, mode: mode.id })}
+                        className={cn(
+                          "block w-full rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
+                          selected
+                            ? "border-[#6633CC] bg-[#6633CC]/10 text-slate-950"
+                            : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50",
+                          disabled && "cursor-not-allowed opacity-40",
+                        )}
+                      >
+                        {mode.label}
+                      </button>
+                    );
+                  })}
+                  {openRule.mode === "date" ? (
+                    <Input
+                      type="date"
+                      value={openRule.date ?? ""}
+                      onChange={(event) => setOpenRule({ ...openRule, date: event.target.value || null })}
+                      className="rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-sm"
+                    />
+                  ) : null}
+                  {openRule.mode === "enrollment" || openRule.mode === "previous" ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={104}
+                        value={openRule.amount}
+                        onChange={(event) => {
+                          const next = Number(event.target.value);
+                          setOpenRule({
+                            ...openRule,
+                            amount: Number.isFinite(next) ? Math.min(104, Math.max(0, Math.round(next))) : 0,
+                          });
+                        }}
+                        className="w-24 rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-sm"
+                        aria-label="Délai"
+                      />
+                      <Select
+                        value={openRule.unit}
+                        onValueChange={(unit) =>
+                          setOpenRule({ ...openRule, unit: unit === "days" ? "days" : "weeks" })
+                        }
+                      >
+                        <SelectTrigger className="rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="days">jours</SelectItem>
+                          <SelectItem value="weeks">semaines</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                  <p className="text-sm text-slate-600">
+                    {isFirst && openRule.mode === "previous"
+                      ? "Le premier module n’a pas de module précédent. Il s’ouvre immédiatement."
+                      : moduleOpenPreview(openRule)}
+                  </p>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
           <Input
             value={section.title}
             onChange={(event) => updateSection(section.id, { title: event.target.value })}
@@ -532,7 +658,7 @@ function SectionCard({
                 ? "rounded-xl border border-slate-200 bg-white text-base font-semibold text-slate-950 placeholder:text-slate-400 shadow-sm"
                 : "rounded-xl border border-white/10 bg-white/5 text-base font-medium text-white placeholder:text-white/30"
             }
-            placeholder="Titre de la section"
+            placeholder="Titre du module"
           />
           {!isCollapsed ? (
             <div className="flex flex-wrap items-center gap-3">
@@ -557,7 +683,7 @@ function SectionCard({
                     : "rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-white/5"
                 }
               >
-                <Trash2 className="mr-2 h-4 w-4" /> Supprimer la section
+                <Trash2 className="mr-2 h-4 w-4" /> Supprimer le module
               </Button>
             </div>
           ) : null}
@@ -592,7 +718,7 @@ function SectionCard({
                     : "rounded-2xl border border-dashed border-white/10 bg-[#1a1a1a] px-4 py-3 text-sm text-white/60"
                 }
               >
-                Ajoutez un chapitre pour démarrer la séquence de cette section.
+                Ajoutez un chapitre pour démarrer la séquence de ce module.
               </p>
             )}
           </div>
@@ -1011,6 +1137,25 @@ function SubchapterRow({
 
   const typeMeta = CONTENT_TYPE_MAP[subchapter.type];
   const isQuizBlock = (subchapter as any).kind === "quiz" || Boolean((subchapter as any).quiz_id);
+  const quizTestId = (() => {
+    const direct = String((subchapter as { quiz_id?: string }).quiz_id ?? "").trim();
+    if (direct) return direct;
+    const match = String(subchapter.content ?? "").match(/testId=([0-9a-f-]{36})/i);
+    return match?.[1] ?? "";
+  })();
+  const openQuizEditor = () => {
+    if (!quizTestId) {
+      toast.error("Ce quiz n’a pas de questions à modifier.");
+      return;
+    }
+    requestQuizBuilder({
+      testId: quizTestId,
+      title: subchapter.title,
+      sectionId,
+      chapterId,
+      blockId: subchapter.id,
+    });
+  };
   const isInterviewBlock = (subchapter as any).kind === "experiential_interview";
   const isResourceBlock =
     (subchapter as any).kind === "resource" || Boolean((subchapter as any).resource_id);
@@ -1042,6 +1187,7 @@ function SubchapterRow({
           ? "flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 shadow-sm transition"
           : "flex items-start gap-3 rounded-2xl border border-white/10 bg-[#222222] px-4 py-3 text-sm text-white shadow-none transition",
         isSelected && (isLight ? "border-[#6633CC]/40 shadow-md" : "border-white/20 bg-[#262626]"),
+        isQuizBlock && "cursor-pointer",
         (isQuizBlock || isInterviewBlock || isResourceBlock) &&
           (isLight
             ? isInterviewBlock
@@ -1058,6 +1204,7 @@ function SubchapterRow({
       onClick={(event) => {
         event.stopPropagation();
         onSelect();
+        if (isQuizBlock) openQuizEditor();
       }}
     >
       <button
@@ -1115,6 +1262,11 @@ function SubchapterRow({
                 {subchapter.title?.toLowerCase().startsWith("quiz") ? <ListChecks className="h-3.5 w-3.5" /> : "Sub"}
               </span>
             )}
+            {isQuizBlock ? (
+              <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", isLight ? "text-slate-950" : "text-white")}>
+                {subchapter.title || "Quiz"}
+              </span>
+            ) : (
             <Input
               value={subchapter.title || ""}
               onChange={(event) => updateSubchapter(sectionId, chapterId, subchapter.id, { title: event.target.value })}
@@ -1130,6 +1282,7 @@ function SubchapterRow({
                   : "rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white placeholder:text-white/30 focus-visible:ring-white/20"
               }
             />
+            )}
           </div>
           <div className={isLight ? "flex items-center gap-2 text-xs text-slate-600" : "flex items-center gap-2 text-xs text-white/60"}>
             <span className={isLight ? "rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-700" : "rounded-md border border-white/10 bg-white/10 px-2.5 py-1 font-medium text-white/70"}>
@@ -1190,6 +1343,20 @@ function SubchapterRow({
               }
             />
             <span>% de bonnes réponses</span>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                openQuizEditor();
+              }}
+              className={
+                isLight
+                  ? "rounded-full border border-slate-300 bg-white px-3 py-1 font-semibold text-slate-800 hover:bg-slate-50"
+                  : "rounded-full border border-white/15 bg-white/10 px-3 py-1 font-semibold text-white hover:bg-white/15"
+              }
+            >
+              Modifier
+            </button>
           </div>
         ) : null}
       </div>
@@ -1553,7 +1720,43 @@ function EditorPanel({
     (nodes.subchapter as { interview_objectives?: string }).interview_objectives ?? "",
   ).trim();
 
-    if (isInterviewEditor) {
+    const isQuizEditor =
+      (nodes.subchapter as { kind?: string }).kind === "quiz" || Boolean((nodes.subchapter as { quiz_id?: string }).quiz_id);
+    const quizTestId = (() => {
+      const direct = String((nodes.subchapter as { quiz_id?: string }).quiz_id ?? "").trim();
+      if (direct) return direct;
+      const match = String(nodes.subchapter.content ?? "").match(/testId=([0-9a-f-]{36})/i);
+      return match?.[1] ?? "";
+    })();
+
+    if (isQuizEditor) {
+      content = (
+        <EditorLayout title="Quiz" badge="Questions" isLight={isLight}>
+          <p className={cn("text-sm leading-relaxed", isLight ? "text-slate-600" : "text-white/65")}>
+            Cliquez le quiz dans le module, ou le bouton ci-dessous, pour modifier les questions.
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (!quizTestId) {
+                toast.error("Ce quiz n’a pas de questions à modifier.");
+                return;
+              }
+              requestQuizBuilder({
+                testId: quizTestId,
+                title: nodes.subchapter?.title,
+                sectionId: selection.sectionId,
+                chapterId: selection.chapterId,
+                blockId: selection.subchapterId,
+              });
+            }}
+            className={cn("rounded-full px-4 py-2 text-sm", primaryGradient)}
+          >
+            Modifier les questions
+          </Button>
+        </EditorLayout>
+      );
+    } else if (isInterviewEditor) {
       content = (
         <EditorLayout title="Entretien expérientiel" badge="Conversation IA" isLight={isLight}>
           <p className={cn("text-sm leading-relaxed", isLight ? "text-slate-600" : "text-white/65")}>

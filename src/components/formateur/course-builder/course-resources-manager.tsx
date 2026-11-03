@@ -46,6 +46,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const tests = useCourseBuilder((state) => state.snapshot.tests);
   const removeResource = useCourseBuilder((state) => state.removeResource);
   const updateTest = useCourseBuilder((state) => state.updateTest);
+  const updateSubchapter = useCourseBuilder((state) => state.updateSubchapter);
   const removeTest = useCourseBuilder((state) => state.removeTest);
   const hydrateFromSnapshot = useCourseBuilder((state) => state.hydrateFromSnapshot);
 
@@ -69,9 +70,49 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const [moduleQuizId, setModuleQuizId] = useState("none");
   const [gateNextModule, setGateNextModule] = useState(false);
   const [gateMinPercent, setGateMinPercent] = useState(80);
+  const [editingQuiz, setEditingQuiz] = useState<{
+    testId: string;
+    sectionId?: string;
+    chapterId?: string;
+    blockId?: string;
+    scoring?: unknown;
+  } | null>(null);
+  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
 
   useEffect(() => {
     return subscribeQuizBuilder((detail) => {
+      if (detail.testId) {
+        const testId = detail.testId;
+        setEditingQuiz({
+          testId,
+          sectionId: detail.sectionId,
+          chapterId: detail.chapterId,
+          blockId: detail.blockId,
+        });
+        setQuizTitle(detail.title?.trim() || "");
+        setGeneratedQuestions([]);
+        setIsQuizModalOpen(true);
+        setIsLoadingQuiz(true);
+        void fetch(`/api/formateur/quiz/${encodeURIComponent(testId)}`, { credentials: "include" })
+          .then(async (response) => {
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(String(payload?.error || "Impossible d’ouvrir le quiz"));
+            const nextQuestions = Array.isArray(payload?.questions) ? payload.questions : [];
+            setGeneratedQuestions(nextQuestions);
+            if (typeof payload?.title === "string" && payload.title.trim()) setQuizTitle(payload.title);
+            setEditingQuiz((current) =>
+              current?.testId === testId ? { ...current, scoring: payload?.scoring ?? null } : current,
+            );
+          })
+          .catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Impossible d’ouvrir le quiz");
+            setIsQuizModalOpen(false);
+            setEditingQuiz(null);
+          })
+          .finally(() => setIsLoadingQuiz(false));
+        return;
+      }
+      setEditingQuiz(null);
       setSelectedSectionIds({});
       if (detail.chapterId) {
         const section = snapshot.sections.find((item) =>
@@ -325,8 +366,33 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
       return;
     }
     setIsSaving(true);
-    const loadingId = toast.loading("Sauvegarde du quiz…");
+    const loadingId = toast.loading(editingQuiz ? "Enregistrement des modifications…" : "Sauvegarde du quiz…");
     try {
+      if (editingQuiz) {
+        const response = await fetch(`/api/formateur/quiz/${encodeURIComponent(editingQuiz.testId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            title: trimmedQuizTitle,
+            questions: generatedQuestions,
+            scoring: editingQuiz.scoring ?? null,
+          }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(String(payload?.error || "Enregistrement impossible"));
+        if (editingQuiz.sectionId && editingQuiz.chapterId && editingQuiz.blockId) {
+          updateSubchapter(editingQuiz.sectionId, editingQuiz.chapterId, editingQuiz.blockId, {
+            title: trimmedQuizTitle,
+          });
+        }
+        const linked = tests.find((test) => String(test.url || "").includes(editingQuiz.testId));
+        if (linked) updateTest(linked.id, { title: trimmedQuizTitle });
+        toast.success("Quiz mis à jour", { id: loadingId });
+        setIsQuizModalOpen(false);
+        setEditingQuiz(null);
+        return;
+      }
       const response = await fetch("/api/formateur/quiz/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -657,14 +723,24 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
         </section>
       </CardContent>
 
-      <Dialog open={isQuizModalOpen} onOpenChange={setIsQuizModalOpen}>
+      <Dialog
+        open={isQuizModalOpen}
+        onOpenChange={(open) => {
+          setIsQuizModalOpen(open);
+          if (!open) setEditingQuiz(null);
+        }}
+      >
         <DialogContent className="max-w-4xl overflow-hidden border border-white/10 bg-slate-950 bg-gradient-to-br from-blue-900/20 via-purple-900/20 to-fuchsia-900/20 p-0 text-white shadow-[0_40px_120px_-60px_rgba(15,23,42,0.9)] backdrop-blur-xl">
           <div className="flex max-h-[85vh] flex-col">
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <DialogHeader>
-                <DialogTitle className="text-white">Générer un quiz avec l&apos;IA</DialogTitle>
+                <DialogTitle className="text-white">
+                  {editingQuiz ? "Modifier le quiz" : "Générer un quiz avec l’IA"}
+                </DialogTitle>
                 <DialogDescription className="text-slate-300">
-                  Choisissez les chapitres sources, positionnez le quiz, puis générez et ajustez vos questions.
+                  {editingQuiz
+                    ? "Change le titre, les questions et les bonnes réponses. L’enregistrement met à jour ce quiz."
+                    : "Choisissez les chapitres sources, positionnez le quiz, puis générez et ajustez vos questions."}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
@@ -681,6 +757,10 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                 />
                 <p className="text-xs text-slate-300/80">Ce titre apparaîtra dans le sommaire côté apprenant.</p>
               </div>
+              {editingQuiz ? (
+                isLoadingQuiz ? <p className="text-sm text-white/70">Chargement des questions…</p> : null
+              ) : (
+              <div className="space-y-6">
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-white">Quiz sur l’ensemble d’un module</p>
                 <Select value={moduleQuizId} onValueChange={applyWholeModule}>
@@ -878,9 +958,11 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
               {isGenerating ? (
                 <p className="text-xs text-white/60">L&apos;IA génère votre quiz...</p>
               ) : null}
+              </div>
+              )}
               {generatedQuestions.length > 0 ? (
                 <div className="space-y-4">
-                  <p className="text-sm font-semibold text-white">Questions générées</p>
+                  <p className="text-sm font-semibold text-white">{editingQuiz ? "Questions" : "Questions générées"}</p>
                   <div className="space-y-4">
                     {generatedQuestions.map((question, index) => {
                       const questionTypeValue = question.type || "qcm";
@@ -1086,7 +1168,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   disabled={isSaving}
                   className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-white/90"
                 >
-                  Sauvegarder
+                  {editingQuiz ? "Enregistrer les modifications" : "Sauvegarder"}
                 </Button>
               </div>
             </div>

@@ -1,5 +1,9 @@
 type QuizBuilderRequest = {
   chapterId?: string;
+  testId?: string;
+  title?: string;
+  sectionId?: string;
+  blockId?: string;
 };
 
 type Listener = (detail: QuizBuilderRequest) => void;

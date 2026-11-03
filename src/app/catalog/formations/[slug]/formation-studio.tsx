@@ -14,6 +14,7 @@ import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import { htmlToPlain } from "@/lib/lms/html-plain";
 import { gatingQuizzes, moduleGateMessage, quizScoreStorageKey, unmetGateForModule } from "@/lib/lms/module-gate";
+import { scheduleLockForModule } from "@/lib/lms/module-open";
 import { ReadingNotesPanel } from "@/components/apprenant/reading-notes-panel";
 import type { NoteChapter } from "@/lib/lms/reading-notes";
 import "./formation-studio.css";
@@ -174,6 +175,9 @@ export function FormationStudio({
   const [userInitials, setUserInitials] = useState("BY");
   const [outline, setOutline] = useState<ItemProgress>(EMPTY_PROGRESS);
   const [progressById, setProgressById] = useState<Map<string, ItemProgress>>(new Map());
+  const [leafCompletedAt, setLeafCompletedAt] = useState<Record<string, string>>({});
+  const [enrolledAtMs, setEnrolledAtMs] = useState<number | null | undefined>(undefined);
+  const [scheduleReady, setScheduleReady] = useState(false);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [certification, setCertification] = useState<Certification | null>(null);
   const [tab, setTab] = useState<"completion" | "time" | "streak">("completion");
@@ -241,22 +245,52 @@ export function FormationStudio({
         .filter((chapter) => isCourseNodeVisible(chapter))
         .flatMap((chapter) => (chapter.subchapters ?? []).filter((sub) => isCourseNodeVisible(sub))),
     }));
+    const openModules = visibleSections.map((section) => ({
+      openRule: section.open_rule,
+      lessons: (section.chapters ?? [])
+        .filter((chapter) => isCourseNodeVisible(chapter))
+        .flatMap((chapter) => [
+          { id: String(chapter.id) },
+          ...(chapter.subchapters ?? [])
+            .filter((sub) => isCourseNodeVisible(sub))
+            .map((sub) => ({ id: String(sub.id) })),
+        ]),
+    }));
+    const completedAt: Record<string, number> = {};
+    for (const [id, value] of Object.entries(leafCompletedAt)) {
+      const ms = Date.parse(value);
+      if (Number.isFinite(ms)) completedAt[id] = ms;
+    }
     (snapshot?.sections ?? []).forEach((section) => {
       if (!isCourseNodeVisible(section)) return;
+      const sectionIndex = visibleSections.indexOf(section);
       const sectionGate = unmetGateForModule(gateModules, visibleSection, quizScores, quizScoresReady || !gateKey);
+      const schedule =
+        sectionIndex >= 0
+          ? scheduleLockForModule(openModules, sectionIndex, {
+              now: Date.now(),
+              ready: scheduleReady,
+              enrolledAt: enrolledAtMs,
+              completedAt,
+              isDone: (id) => isDone(progressById.get(id) ?? EMPTY_PROGRESS),
+            })
+          : null;
       const nodes: Node[] = [];
       let visibleChapter = 0;
       (section.chapters ?? []).forEach((chapter) => {
         if (!isCourseNodeVisible(chapter)) return;
         const lockedByQuiz = Boolean(sectionGate);
         const locked =
+          Boolean(schedule) ||
           lockedByQuiz ||
           ((linear || Boolean(chapter.unlock_condition)) && !(visibleSection === 0 && visibleChapter === 0) && !previousDone);
-        const lockReason = lockedByQuiz && sectionGate
-          ? moduleGateMessage(sectionGate)
-          : locked
-            ? lockExplanation(previousTitle, chapter.unlock_condition)
-            : undefined;
+        const lockReason = schedule
+          ? schedule
+          : lockedByQuiz && sectionGate
+            ? moduleGateMessage(sectionGate)
+            : locked
+              ? lockExplanation(previousTitle, chapter.unlock_condition)
+              : undefined;
         const leaves: Leaf[] = (chapter.subchapters ?? []).filter((sub) => isCourseNodeVisible(sub)).map((sub) => ({
           id: String(sub.id),
           title: sub.title?.trim() || "Sans titre",
@@ -307,7 +341,7 @@ export function FormationStudio({
       visibleSection += 1;
     });
     return built;
-  }, [gateKey, playBase, progressById, quizScores, quizScoresReady, snapshot]);
+  }, [enrolledAtMs, gateKey, leafCompletedAt, playBase, progressById, quizScores, quizScoresReady, scheduleReady, snapshot]);
 
   const noteChapters: NoteChapter[] = useMemo(
     () =>
@@ -425,7 +459,10 @@ export function FormationStudio({
       void fetch(`/api/courses/${encodeURIComponent(courseId)}/structure`, { credentials: "include", cache: "no-store" })
         .then((response) => (response.ok ? response.json() : null))
         .then((payload) => {
-          if (!payload || cancel) return;
+          if (!payload || cancel) {
+            if (!cancel) setScheduleReady(true);
+            return;
+          }
           const next = new Map<string, ItemProgress>();
           for (const section of payload.sections ?? []) {
             for (const chapter of section.chapters ?? []) {
@@ -439,11 +476,23 @@ export function FormationStudio({
             next.set(leafId, { state: "completed", percent: 100 });
           }
           setProgressById(next);
+          const completed =
+            payload.leafCompletedAt && typeof payload.leafCompletedAt === "object" ? payload.leafCompletedAt : {};
+          setLeafCompletedAt(completed as Record<string, string>);
+          if (payload.enrollmentKnown) {
+            const ms = Date.parse(String(payload.enrolledAt ?? ""));
+            setEnrolledAtMs(Number.isFinite(ms) ? ms : null);
+          } else {
+            setEnrolledAtMs(undefined);
+          }
+          setScheduleReady(true);
           if (payload.learnerProgress) setOutline(payload.learnerProgress);
           if (payload.activity) setActivity(payload.activity);
           if (payload.certification) setCertification(payload.certification);
         })
-        .catch(() => undefined);
+        .catch(() => {
+          if (!cancel) setScheduleReady(true);
+        });
     };
     load();
     const onVisible = () => {

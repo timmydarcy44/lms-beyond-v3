@@ -46,14 +46,46 @@ function withNextClick(id: string, base: ItemLearnerProgress, clicked: Set<strin
   return base;
 }
 
-async function fetchClickedLeafIds(client: SupabaseClient, userId: string, courseId: string): Promise<Set<string>> {
+async function fetchLeafCompletions(
+  client: SupabaseClient,
+  userId: string,
+  courseId: string,
+): Promise<Map<string, string>> {
   const { data, error } = await client
     .from("learner_leaf_completions")
-    .select("leaf_id")
+    .select("leaf_id, completed_at")
     .eq("user_id", userId)
     .eq("course_id", courseId);
-  if (error || !data) return new Set();
-  return new Set(data.map((row) => String((row as { leaf_id?: string }).leaf_id ?? "")).filter(Boolean));
+  const completedAt = new Map<string, string>();
+  if (error || !data) return completedAt;
+  for (const row of data) {
+    const id = String((row as { leaf_id?: string }).leaf_id ?? "");
+    const at = String((row as { completed_at?: string }).completed_at ?? "");
+    if (id && at) completedAt.set(id, at);
+  }
+  return completedAt;
+}
+
+async function fetchEnrolledAt(
+  client: SupabaseClient,
+  userId: string,
+  courseId: string,
+): Promise<string | null | undefined> {
+  let sawRow = false;
+  for (const column of ["user_id", "learner_id"] as const) {
+    const { data, error } = await client
+      .from("enrollments")
+      .select("created_at")
+      .eq("course_id", courseId)
+      .eq(column, userId)
+      .maybeSingle();
+    if (error) continue;
+    sawRow = true;
+    const value = (data as { created_at?: string | null } | null)?.created_at;
+    if (typeof value === "string" && value.trim()) return value;
+    if (data) return null;
+  }
+  return sawRow ? null : undefined;
 }
 
 async function fetchEnrollmentProgress(
@@ -260,7 +292,9 @@ export async function GET(_req: Request, { params }: RouteParams) {
     });
 
     const courseCover = pickCourseCover((snapshot as any)?.general);
-    const clickedLeaves = await fetchClickedLeafIds(client, user.id, id);
+    const leafCompletedAt = await fetchLeafCompletions(client, user.id, id);
+    const clickedLeaves = new Set(leafCompletedAt.keys());
+    const enrolledAt = await fetchEnrolledAt(client, user.id, id);
 
     const sectionsOut = sections.map((s) => ({
       id: s.id,
@@ -292,7 +326,16 @@ export async function GET(_req: Request, { params }: RouteParams) {
 
     const activity = await fetchCourseActivity(client, user.id, [id, ...leafIds]);
     const certification = await getCertificationStatus(user.id, id);
-    const res = NextResponse.json({ sections: sectionsOut, learnerProgress, courseCover, activity, certification });
+    const res = NextResponse.json({
+      sections: sectionsOut,
+      learnerProgress,
+      courseCover,
+      activity,
+      certification,
+      enrolledAt: enrolledAt ?? null,
+      enrollmentKnown: enrolledAt !== undefined,
+      leafCompletedAt: Object.fromEntries(leafCompletedAt),
+    });
     res.headers.set("Cache-Control", "private, no-store");
     return res;
   } catch (error) {

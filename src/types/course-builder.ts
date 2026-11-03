@@ -1,3 +1,5 @@
+import type { ModuleOpenMode, ModuleOpenUnit } from "@/lib/lms/module-open";
+
 export type BuilderContentType = "video" | "audio" | "document" | "text" | "interactive_game";
 
 export type CourseBuilderSubchapterKind = "quiz" | "experiential_interview" | "resource";
@@ -81,6 +83,13 @@ export type CourseBuilderSection = {
   description?: string;
   chapters: CourseBuilderChapter[];
   deleted_at?: string | null;
+  /** Quand l’apprenant peut entrer dans ce module. Absent = immédiatement. */
+  open_rule?: {
+    mode: ModuleOpenMode;
+    date?: string | null;
+    amount?: number | null;
+    unit?: ModuleOpenUnit | null;
+  };
 };
 
 export type CourseBuilderResource = {

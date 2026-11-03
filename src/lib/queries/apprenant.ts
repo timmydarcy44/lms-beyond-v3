@@ -1,4 +1,5 @@
 import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
+import { readModuleOpenRule, type ModuleOpenRule } from "@/lib/lms/module-open";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import type { CourseBuilderChapter } from "@/types/course-builder";
 import { EDGE_LAB_COURSE_CATEGORY_LABELS } from "@/lib/edge-lab-course-categories";
@@ -208,6 +209,7 @@ export type LearnerModule = {
   lessons?: LearnerLesson[];
   description?: string;
   length?: string;
+  openRule?: ModuleOpenRule;
 };
 
 export type LearnerLesson = {
@@ -1299,6 +1301,7 @@ export async function getLearnerContentDetail(
               id: section.id || `section-${section.title || Date.now()}`,
               title: section.title || "Section",
               lessons: lessons.length > 0 ? lessons : undefined,
+              openRule: readModuleOpenRule(section.open_rule),
             });
           }
         });

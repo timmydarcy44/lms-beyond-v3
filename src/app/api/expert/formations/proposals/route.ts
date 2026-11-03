@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     : [];
 
   if (title.length < 3) return NextResponse.json({ error: "Indiquez le nom de la formation." }, { status: 400 });
-  if (presentation.length < 40) return NextResponse.json({ error: "Décrivez la formation." }, { status: 400 });
+  if (presentation.length < 8) return NextResponse.json({ error: "Décrivez la formation." }, { status: 400 });
   if (!objectives.length) return NextResponse.json({ error: "Ajoutez au moins un objectif pédagogique." }, { status: 400 });
   if (!prerequisites.length) return NextResponse.json({ error: "Ajoutez au moins un prérequis." }, { status: 400 });
   if (!audiences.length) return NextResponse.json({ error: "Choisissez au moins un public." }, { status: 400 });
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Indiquez le tarif souhaité." }, { status: 400 });
   }
   if (!formats.length) return NextResponse.json({ error: "Choisissez au moins un format." }, { status: 400 });
-  if (content.length < 20) return NextResponse.json({ error: "Décrivez le contenu de la formation." }, { status: 400 });
+  if (content.length < 8) return NextResponse.json({ error: "Décrivez le contenu de la formation." }, { status: 400 });
 
   const { error } = await gate.db.from("expert_formation_proposals").insert({
     expert_id: gate.expertId,

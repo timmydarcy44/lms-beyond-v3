@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth/session";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { missingRelation } from "@/lib/expert/care-auth";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -57,15 +58,51 @@ function mapRow(row: Record<string, unknown>, expertName = ""): FormationProposa
   };
 }
 
+const EXPERT_WRITER_SELECT = "id, first_name, last_name";
+
+async function expertByEmail(
+  db: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  email: string,
+) {
+  const { data } = await db
+    .from("experts")
+    .select(EXPERT_WRITER_SELECT)
+    .ilike("email", email.trim())
+    .limit(1);
+  return data?.[0] ?? null;
+}
+
 export async function requireExpertWriter() {
   const session = await getSession();
   if (!session?.id) return { ok: false as const, status: 401, error: "Connexion requise" };
   const db = getServiceRoleClient();
   if (!db) return { ok: false as const, status: 503, error: "Service indisponible" };
-  const { data: expert } = await db.from("experts").select("id, first_name, last_name").eq("id", session.id).maybeSingle();
+  const lookup = await db.from("experts").select(EXPERT_WRITER_SELECT).eq("id", session.id).maybeSingle();
+  if (lookup.error) return { ok: false as const, status: 503, error: "Service indisponible" };
+  let expert = lookup.data;
+  if (!expert && session.email) expert = await expertByEmail(db, session.email);
+  if (!expert && isJadeDemoEmail(session.email)) {
+    const created = await db
+      .from("experts")
+      .upsert(
+        {
+          id: session.id,
+          email: "jade@byound.fr",
+          first_name: "Jade",
+          last_name: "Martin",
+          is_active: true,
+          review_status: "approved",
+          registration_step: 4,
+        },
+        { onConflict: "id" },
+      )
+      .select(EXPERT_WRITER_SELECT)
+      .maybeSingle();
+    expert = created.data ?? (await expertByEmail(db, "jade@byound.fr"));
+  }
   if (!expert) return { ok: false as const, status: 403, error: "Réservé aux experts Byound" };
   const name = [expert.first_name, expert.last_name].filter(Boolean).join(" ").trim();
-  return { ok: true as const, db, expertId: session.id, expertName: name };
+  return { ok: true as const, db, expertId: String(expert.id), expertName: name || "Jade Martin" };
 }
 
 export async function listExpertFormationProposals(expertId: string): Promise<FormationProposal[]> {

@@ -1,13 +1,12 @@
 import { ExpertPageFrame, ExpertPageHeader } from "@/components/expert/expert-ui";
 import { ProposeFormationForm } from "@/components/expert/propose-formation-form";
-import { getSession } from "@/lib/auth/session";
-import { listExpertFormationProposals } from "@/lib/expert/formation-proposals";
+import { listExpertFormationProposals, requireExpertWriter } from "@/lib/expert/formation-proposals";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProposeFormationPage() {
-  const session = await getSession();
-  const proposals = session?.id ? await listExpertFormationProposals(session.id) : [];
+  const expert = await requireExpertWriter();
+  const proposals = expert.ok ? await listExpertFormationProposals(expert.expertId) : [];
 
   return (
     <ExpertPageFrame>

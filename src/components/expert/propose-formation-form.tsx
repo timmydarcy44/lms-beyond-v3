@@ -25,6 +25,14 @@ function toggle(list: string[], value: string) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
+function priceAmount(value: string) {
+  const normalized = value.replace(/\s/g, "").replace(",", ".");
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0 || amount > 100000) return null;
+  return Math.round(amount);
+}
+
 function RevolutLines({
   value,
   onChange,
@@ -152,8 +160,27 @@ export function ProposeFormationForm({ proposals }: { proposals: FormationPropos
   const submit = async () => {
     const objectiveText = objectives.map((line) => line.trim()).filter(Boolean).join("\n");
     const prerequisiteText = prerequisites.map((line) => line.trim()).filter(Boolean).join("\n");
-    if (!title.trim() || presentation.trim().length < 40 || !objectiveText || !prerequisiteText || !audiences.length || !formats.length || content.trim().length < 20 || price.trim() === "") {
-      toast.error("Complétez le nom, la description, les objectifs, les prérequis, les publics, le tarif, les formats et le contenu.");
+    const amount = priceAmount(price);
+    const missing =
+      title.trim().length < 3
+        ? "Indiquez le nom de la formation."
+        : presentation.trim().length < 8
+          ? "Décrivez la formation."
+          : !objectiveText
+            ? "Ajoutez au moins un objectif pédagogique."
+            : !prerequisiteText
+              ? "Ajoutez au moins un prérequis."
+              : !audiences.length
+                ? "Choisissez au moins un public."
+                : amount == null
+                  ? "Indiquez le tarif souhaité."
+                  : !formats.length
+                    ? "Choisissez au moins un format."
+                    : content.trim().length < 8
+                      ? "Décrivez le contenu de la formation."
+                      : null;
+    if (missing || amount == null) {
+      toast.error(missing ?? "Indiquez le tarif souhaité.");
       return;
     }
     setBusy(true);
@@ -167,7 +194,7 @@ export function ProposeFormationForm({ proposals }: { proposals: FormationPropos
           objectives: objectiveText,
           prerequisites: prerequisiteText,
           audiences,
-          priceEur: Number(price),
+          priceEur: amount,
           formats,
           content,
         }),
@@ -255,13 +282,12 @@ export function ProposeFormationForm({ proposals }: { proposals: FormationPropos
           <span className="text-sm font-semibold text-white">Tarif souhaité (€)</span>
           <input
             className={field}
-            type="number"
-            min={0}
-            max={100000}
-            inputMode="numeric"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="1500"
             value={price}
-            onChange={(event) => setPrice(event.target.value)}
-            required
+            onChange={(event) => setPrice(event.target.value.replace(/[^\d\s.,]/g, ""))}
           />
         </label>
 

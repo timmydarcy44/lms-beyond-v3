@@ -33,6 +33,8 @@ export type TestFlowProps = {
   continueHref?: string;
   /** Le module suivant reste fermé sous le score minimum. */
   blocksNextModule?: boolean;
+  /** Nom du module qui s’ouvre quand le seuil est atteint. */
+  openedModuleName?: string;
 };
 
 type SavedSpot = {
@@ -75,6 +77,7 @@ export default function TestFlow({
   lessonId,
   continueHref,
   blocksNextModule = false,
+  openedModuleName = "",
 }: TestFlowProps) {
   const router = useRouter();
   const startSession = useTestSessions((state) => state.startSession);
@@ -198,6 +201,8 @@ export default function TestFlow({
             score: result.score,
             answers: result.answers,
             review: reviewPayload,
+            openedModule: blocksNextModule && result.score >= minScorePercent ? openedModuleName : "",
+            minPercent: minScorePercent,
           }),
         });
       } catch (error) {
@@ -279,6 +284,7 @@ export default function TestFlow({
         courseId={courseId}
         lessonId={lessonId}
         continueHref={holdsNext ? undefined : continueHref}
+        unlockedModuleName={holdsNext ? undefined : openedModuleName.trim() || undefined}
         nextLockedMessage={
           holdsNext
             ? `Il te faut ${goalCount(minScorePercent, questions.length)} / ${questions.length} pour ouvrir le module suivant.`

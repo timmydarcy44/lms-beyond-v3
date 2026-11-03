@@ -30,6 +30,7 @@ export type QuizResultsProps = {
   lessonId?: string;
   continueHref?: string;
   nextLockedMessage?: string;
+  unlockedModuleName?: string;
   previewCards?: number;
 };
 
@@ -52,6 +53,7 @@ export function QuizResults({
   lessonId,
   continueHref,
   nextLockedMessage,
+  unlockedModuleName,
   previewCards = 0,
 }: QuizResultsProps) {
   const [analysisLoading, setAnalysisLoading] = useState(true);
@@ -192,6 +194,20 @@ export function QuizResults({
     <LmsScreen className="quiz-results-screen" >
       <div className="quiz-results" style={{ background: "transparent" }}>
         <section className="result-hero">
+          {unlockedModuleName && score >= minScorePercent ? (
+            <div className="quiz-unlock" role="status">
+              <svg className="quiz-unlock__svg" viewBox="0 0 72 72" aria-hidden="true">
+                <g className="quiz-unlock__shackle">
+                  <path d="M24 34 V24 a12 12 0 0 1 24 0 V34" fill="none" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" />
+                </g>
+                <rect className="quiz-unlock__body" x="16" y="32" width="40" height="28" rx="8" fill="#2FD08A" />
+                <circle cx="36" cy="44" r="3.2" fill="#0C5C3B" />
+                <path d="M36 46.5 v6" stroke="#0C5C3B" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <p className="quiz-unlock__title">Accès ouvert</p>
+              <p className="quiz-unlock__module">{unlockedModuleName}</p>
+            </div>
+          ) : null}
           <span className="result-hero__kicker">Quiz terminé</span>
           <ResultRing correct={correctCount} total={reviewItems.length} />
           <h2>{resultHeadline(correctCount, reviewItems.length)}</h2>

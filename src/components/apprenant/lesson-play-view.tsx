@@ -1062,6 +1062,11 @@ export function LessonPlayView({
   const nextGate = nextLesson ? lessonLock(nextLesson.id) : nextFlatLesson ? lessonLock(nextFlatLesson.id) : null;
   const showChapterNextButton = chapterNextAllowed && !nextGate;
   const openContinueHref = nextFlatLesson && !lessonLock(nextFlatLesson.id) ? lessonHref(nextFlatLesson.id) : undefined;
+  const openedModuleName = (() => {
+    if (!activeLesson.gateNextModule) return "";
+    const index = modules.findIndex((module) => (module.lessons ?? []).some((lesson) => lesson.id === activeLesson.id));
+    return index >= 0 ? modules[index + 1]?.title?.trim() || "" : "";
+  })();
 
   const handleQuizCompletedForNav = (testId: string, score?: number) => {
     try {
@@ -2243,6 +2248,7 @@ export function LessonPlayView({
                   lessonId={String(activeLesson.id)}
                   continueHref={openContinueHref}
                   blocksNextModule={Boolean(activeLesson.gateNextModule)}
+                  openedModuleName={openedModuleName}
                   onClose={() => setTestStarted(false)}
                   onQuizCompleted={handleQuizCompletedForNav}
                 />
@@ -3015,6 +3021,7 @@ function TestFlowInline({
   lessonId,
   continueHref,
   blocksNextModule,
+  openedModuleName,
 }: {
   testId: string;
   title: string;
@@ -3027,6 +3034,7 @@ function TestFlowInline({
   lessonId?: string;
   continueHref?: string;
   blocksNextModule?: boolean;
+  openedModuleName?: string;
 }) {
   const [isFullscreen, setIsFullscreen] = useState(() => questions.length > 0);
 
@@ -3128,6 +3136,7 @@ function TestFlowInline({
             lessonId={lessonId}
             continueHref={continueHref}
             blocksNextModule={blocksNextModule}
+            openedModuleName={openedModuleName}
             onQuizCompleted={(id, score) => {
               onQuizCompleted?.(id, score);
             }}

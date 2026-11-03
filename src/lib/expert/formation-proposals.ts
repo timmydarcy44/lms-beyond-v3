@@ -3,7 +3,7 @@ import { missingRelation } from "@/lib/expert/care-auth";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const FORMATION_PROPOSAL_SQL_HINT =
-  "Collez supabase/migrations/20261030123000_expert_formation_proposals.sql dans le SQL Editor Supabase.";
+  "Collez supabase/migrations/20261030123000_expert_formation_proposals.sql puis 20261103180000_expert_formation_proposal_details.sql dans le SQL Editor Supabase.";
 
 export type FormationProposalStatus = "pending" | "approved" | "rejected";
 
@@ -12,9 +12,13 @@ export type FormationProposal = {
   expertId: string;
   expertName: string;
   title: string;
+  presentation: string;
   objectives: string;
   prerequisites: string;
   audience: string;
+  content: string;
+  priceEur: number | null;
+  formats: string[];
   status: FormationProposalStatus;
   reviewNote: string | null;
   createdAt: string;
@@ -34,9 +38,18 @@ function mapRow(row: Record<string, unknown>, expertName = ""): FormationProposa
     expertId: String(row.expert_id),
     expertName,
     title: String(row.title ?? ""),
+    presentation: String(row.presentation ?? ""),
     objectives: String(row.objectives ?? ""),
     prerequisites: String(row.prerequisites ?? ""),
     audience: String(row.audience ?? ""),
+    content: String(row.content ?? ""),
+    priceEur:
+      row.price_eur == null || row.price_eur === ""
+        ? null
+        : Number.isFinite(Number(row.price_eur))
+          ? Number(row.price_eur)
+          : null,
+    formats: Array.isArray(row.formats) ? row.formats.map((item) => String(item)) : [],
     status: asStatus(row.status),
     reviewNote: row.review_note ? String(row.review_note) : null,
     createdAt: String(row.created_at ?? ""),

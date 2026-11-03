@@ -22,12 +22,18 @@ export function LineList({
   placeholder,
   kind,
   title,
+  context,
+  aiLabel = "Avec l'IA",
+  hideAi = false,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
   placeholder: string;
   kind: "objectifs" | "prerequis";
   title: string;
+  context?: string;
+  aiLabel?: string;
+  hideAi?: boolean;
 }) {
   const rows = value.length ? value : [""];
   const [mode, setMode] = useState<"lines" | "paste" | "ai">("lines");
@@ -45,9 +51,11 @@ export function LineList({
         <Button type="button" variant={mode === "paste" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "paste" ? "lines" : "paste")}>
           Faire un copier/coller
         </Button>
-        <Button type="button" variant={mode === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "ai" ? "lines" : "ai")}>
-          Avec l&apos;IA
-        </Button>
+        {hideAi ? null : (
+          <Button type="button" variant={mode === "ai" ? "default" : "ghost"} className="rounded-full" onClick={() => setMode(mode === "ai" ? "lines" : "ai")}>
+            {aiLabel}
+          </Button>
+        )}
       </div>
       {mode === "paste" ? (
         <div className="space-y-2">
@@ -59,7 +67,7 @@ export function LineList({
       ) : null}
       {mode === "ai" ? (
         <div className="space-y-2">
-          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Décrivez le public et le sujet" className="min-h-[96px] rounded-2xl border-0 bg-slate-50 text-slate-950" />
+          <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={context ? "Précision optionnelle. La description déjà saisie est lue." : "Décrivez le public et le sujet"} className="min-h-[96px] rounded-2xl border-0 bg-slate-50 text-slate-950" />
           <Button
             type="button"
             disabled={busy}
@@ -69,7 +77,7 @@ export function LineList({
               void fetch("/api/course-builder/lines", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ kind, title, prompt: draft }),
+                body: JSON.stringify({ kind, title, prompt: draft, context }),
               })
                 .then(async (response) => {
                   const json = (await response.json()) as { lines?: string[]; error?: string };

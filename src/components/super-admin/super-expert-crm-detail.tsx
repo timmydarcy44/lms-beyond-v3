@@ -39,6 +39,8 @@ import {
 } from "@/lib/expert/expert-crm-utils";
 import { EDGE_CHIP_CLASSES, EDGE_STATUS_CLASSES } from "@/lib/edge-site/design-system";
 import { ExpertAssignmentsPanel } from "@/components/admin/experts/expert-assignments-panel";
+import { ExpertFormationProposals } from "@/components/super-admin/expert-formation-proposals";
+import type { FormationProposal } from "@/lib/expert/formation-proposals";
 import { CONTRIBUTOR_ROLE_LABELS, contributorDisplayName, parseContributorProfile } from "@/lib/expert/contributor-profile";
 
 function statusStyles(status: string | null | undefined) {
@@ -99,9 +101,10 @@ function CrmCard({
 type Props = {
   expert: AdminExpertRow;
   basePath?: string;
+  proposals?: FormationProposal[];
 };
 
-export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Props) {
+export function SuperExpertCrmDetail({ expert, basePath = "/super/experts", proposals = [] }: Props) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [internalNote, setInternalNote] = useState("");
@@ -389,6 +392,8 @@ export function SuperExpertCrmDetail({ expert, basePath = "/super/experts" }: Pr
           </div>
         </div>
       </div>
+
+      <ExpertFormationProposals proposals={proposals} />
 
       <div className="mt-6">
         <ExpertAssignmentsPanel

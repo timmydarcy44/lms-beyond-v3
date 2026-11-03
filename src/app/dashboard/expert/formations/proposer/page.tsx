@@ -13,7 +13,7 @@ export default async function ProposeFormationPage() {
     <ExpertPageFrame>
       <ExpertPageHeader
         title="Proposer une formation"
-        subtitle="Décrivez la formation à intégrer au catalogue Byound. Une personne de l'équipe la relit dans l'espace super admin."
+        subtitle="Décrivez la formation à intégrer au catalogue Byound. L'envoi prévient l'équipe."
       />
       <ProposeFormationForm proposals={proposals} />
     </ExpertPageFrame>

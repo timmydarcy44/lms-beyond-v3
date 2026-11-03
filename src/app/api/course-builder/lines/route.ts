@@ -8,15 +8,21 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session?.id) return NextResponse.json({ error: "Connexion requise" }, { status: 401 });
-  const body = (await request.json().catch(() => null)) as { kind?: string; title?: string; prompt?: string } | null;
+  const body = (await request.json().catch(() => null)) as {
+    kind?: string;
+    title?: string;
+    prompt?: string;
+    context?: string;
+  } | null;
   const kind = body?.kind === "prerequis" ? "prérequis" : "objectifs pédagogiques";
   const title = String(body?.title ?? "").trim();
   const prompt = String(body?.prompt ?? "").trim();
-  if (prompt.length < 8 && title.length < 3) {
+  const context = String(body?.context ?? "").trim().slice(0, 4000);
+  if (prompt.length < 8 && title.length < 3 && context.length < 40) {
     return NextResponse.json({ error: "Décrivez le sujet, ou donnez d'abord un titre à la formation." }, { status: 400 });
   }
   const result = await generateJSON(
-    `Formation : ${title || "sans titre"}. Consigne : ${prompt || title}. Propose 5 ${kind}, une idée par ligne, concrets et en français.`,
+    `Formation : ${title || "sans titre"}. Présentation déjà rédigée : ${context || "non précisée"}. Consigne : ${prompt || "Appuie-toi sur la présentation."}. Propose 5 ${kind}, une idée par ligne, concrets et en français. N'invente aucun chiffre.`,
     { type: "object", properties: { lines: { type: "array", items: { type: "string" } } }, required: ["lines"] },
     "Tu réponds uniquement avec un JSON {\"lines\": string[]}.",
   );

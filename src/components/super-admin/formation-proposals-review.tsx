@@ -51,8 +51,23 @@ export function FormationProposalsReview({ proposals }: { proposals: FormationPr
           </div>
           <dl className="mt-4 space-y-3 text-sm text-slate-700">
             <div>
+              <dt className="font-semibold text-slate-900">Description</dt>
+              <dd className="mt-1 whitespace-pre-wrap">{item.presentation || "—"}</dd>
+            </div>
+            <div>
               <dt className="font-semibold text-slate-900">Objectifs pédagogiques</dt>
               <dd className="mt-1 whitespace-pre-wrap">{item.objectives}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">Contenu</dt>
+              <dd className="mt-1 whitespace-pre-wrap">{item.content || "—"}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-slate-900">Tarif et formats</dt>
+              <dd className="mt-1 whitespace-pre-wrap">
+                {item.priceEur != null ? `${item.priceEur.toLocaleString("fr-FR")} €` : "—"}
+                {item.formats.length ? ` · ${item.formats.join(", ")}` : ""}
+              </dd>
             </div>
             <div>
               <dt className="font-semibold text-slate-900">Prérequis</dt>

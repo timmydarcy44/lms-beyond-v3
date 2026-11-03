@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sendAccessCode } from "@/lib/cfa/access-code";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
   if (!db) return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
 
   const email = parsed.data.email.toLowerCase();
+  const existingProfile = parsed.data.login
+    ? null
+    : await db.from("profiles").select("id").ilike("email", email).maybeSingle();
   if (parsed.data.login) {
     const profile = await db.from("profiles").select("id").ilike("email", email).maybeSingle();
     if (!profile.data) {
@@ -45,6 +49,15 @@ export async function POST(request: Request) {
   });
   if (!sent.ok) {
     return NextResponse.json({ error: sent.error, retryAfter: sent.retryAfter }, { status: sent.retryAfter ? 429 : 502 });
+  }
+  if (!parsed.data.login && !existingProfile?.data) {
+    await notifyOwnerOfSignup({
+      kind: "etudiant",
+      email,
+      firstName: parsed.data.firstName,
+      lastName: parsed.data.lastName,
+      detail: `Offre ${parsed.data.slug}`,
+    });
   }
   return NextResponse.json({ ok: true, digits: sent.digits ?? 8 });
 }

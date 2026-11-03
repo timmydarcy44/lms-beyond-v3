@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/emails/brevo";
 import { getSignupConfirmationEmail } from "@/lib/emails/templates";
@@ -78,6 +79,13 @@ export async function POST(request: NextRequest) {
     if (!authData.user) {
       return NextResponse.json({ error: "Erreur lors de la création du compte" }, { status: 500 });
     }
+
+    await notifyOwnerOfSignup({
+      kind: "jessica",
+      email,
+      firstName,
+      lastName,
+    });
 
     // Créer le profil
     const { error: profileError } = await supabaseService

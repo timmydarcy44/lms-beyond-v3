@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { sendPurchaseConfirmationEmail } from "@/lib/emails/send";
 import Stripe from "stripe";
 
@@ -161,6 +162,14 @@ export async function POST(request: NextRequest) {
             profile = newProfile;
             console.log("[stripe/webhook] ✅ User and profile created automatically:", profile.id);
           }
+          const buyerName = String(session.customer_details?.name ?? "").trim();
+          const [buyerFirst, ...buyerRest] = buyerName.split(/\s+/);
+          await notifyOwnerOfSignup({
+            kind: "achat",
+            email: customerEmail,
+            firstName: buyerFirst || null,
+            lastName: buyerRest.join(" ") || null,
+          });
         } catch (createError: any) {
           console.error("[stripe/webhook] ❌ Error in user creation process:", createError);
           // Ne pas bloquer le webhook, on essaiera de créer l'accès plus tard

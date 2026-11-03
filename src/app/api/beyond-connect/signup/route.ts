@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/emails/brevo";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { getSignupConfirmationEmail } from "@/lib/emails/templates/signup-confirmation";
 import { getBeyondConnectBaseUrl } from "@/lib/beyond-connect/utils";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
@@ -75,6 +76,13 @@ export async function POST(request: NextRequest) {
     if (!authData.user) {
       return NextResponse.json({ error: "Erreur lors de la création du compte" }, { status: 500 });
     }
+
+    await notifyOwnerOfSignup({
+      kind: "beyond-connect",
+      email,
+      firstName: typeof firstName === "string" ? firstName : "",
+      lastName: typeof lastName === "string" ? lastName : "",
+    });
 
     // Créer le profil avec le rôle learner (seulement si le profil n'existe pas déjà)
     const { error: profileError } = await supabaseService

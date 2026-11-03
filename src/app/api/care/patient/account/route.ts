@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isRecentAccount, notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { z } from "zod";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -98,6 +99,15 @@ export async function POST(request: NextRequest) {
     );
   }
   const userId = data.user?.id;
+  const identities = data.user?.identities;
+  if (userId && isRecentAccount(data.user?.created_at) && (!identities || identities.length > 0)) {
+    await notifyOwnerOfSignup({
+      kind: "patient",
+      email,
+      firstName,
+      lastName,
+    });
+  }
   const admin = getServiceRoleClient();
   if (userId && admin) {
     await upsertPatientProfile(admin, userId, email, firstName, lastName);

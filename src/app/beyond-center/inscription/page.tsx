@@ -45,6 +45,12 @@ export default function BeyondCenterSignupPage() {
 
       if (error) throw error;
 
+      void fetch("/api/auth/signup-notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, kind: "etudiant", firstName, lastName }),
+      });
+
       const firstNameDisplay = firstName || email.split("@")[0];
       toast.success(`${firstNameDisplay}, lien envoyé ! Vérifiez votre boîte mail.`);
 

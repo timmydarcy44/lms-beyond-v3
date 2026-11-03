@@ -56,6 +56,17 @@ export default function RegisterPage() {
       }
 
       const user = data.user;
+      if (user?.email) {
+        void fetch("/api/auth/signup-notice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.email,
+            kind: "etudiant",
+            firstName: name,
+          }),
+        });
+      }
       if (!user) {
         setInfo("Compte créé. Vérifiez votre boîte mail si une confirmation est requise.");
         return;

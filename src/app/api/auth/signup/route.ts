@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isRecentAccount, notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { getServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
@@ -43,6 +44,15 @@ export async function POST(request: NextRequest) {
         { user: null, session: null, error: otpResult.error.message },
         { status: 400 },
       );
+    }
+
+    if (otpResult.data?.user && isRecentAccount(otpResult.data.user.created_at)) {
+      await notifyOwnerOfSignup({
+        kind: "nevo",
+        email,
+        firstName: first_name,
+        lastName: last_name,
+      });
     }
 
     if (otpResult.data?.user) {

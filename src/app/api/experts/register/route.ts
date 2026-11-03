@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { getExpertRegistrationConfirmationEmail } from "@/lib/emails/templates/expert-registration-confirmation";
 import { sendEmail } from "@/lib/email/resend-client";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
@@ -188,6 +189,14 @@ export async function POST(request: NextRequest) {
     revalidatePath("/admin/experts");
 
     logExpertRegisterInfo("profile_created", { userId, isNewAuthUser, inviteSent });
+
+    await notifyOwnerOfSignup({
+      kind: "expert",
+      email,
+      firstName,
+      lastName,
+      detail: primaryDomain || headline || null,
+    });
 
     const passwordSetupLink = await generatePasswordSetupLink(supabase, email, redirectTo, !isNewAuthUser);
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { ensureEntrepriseUser, issueEntrepriseCode } from "@/lib/entreprise/signup-code";
 import { resolveEntrepriseAppOrigin } from "@/lib/entreprise/signup-redirect";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -44,6 +45,15 @@ export async function POST(request: NextRequest) {
     });
     if (!prepared.ok) {
       return NextResponse.json({ error: prepared.error }, { status: prepared.status });
+    }
+    if (prepared.hint === "unknown") {
+      await notifyOwnerOfSignup({
+        kind: "entreprise",
+        email,
+        firstName,
+        lastName,
+        detail: companyName,
+      });
     }
     if (prepared.hint === "password") {
       return NextResponse.json({ step: "password" });

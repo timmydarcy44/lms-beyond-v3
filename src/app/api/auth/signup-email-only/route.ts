@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isRecentAccount, notifyOwnerOfSignup, type SignupKind } from '@/lib/email/signup-notice';
 import { getServerClient } from '@/lib/supabase/server';
 import { getTenantFromHostname } from '@/lib/tenant/config';
+
+function kindForTenant(tenantId: string): SignupKind {
+  if (tenantId.startsWith('jessica')) return 'jessica';
+  if (tenantId === 'beyond-connect') return 'beyond-connect';
+  if (tenantId === 'beyond-care') return 'patient';
+  return 'etudiant';
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +68,14 @@ export async function POST(request: NextRequest) {
         { error: error.message || 'Erreur lors de la création du compte' },
         { status: 400 }
       );
+    }
+
+    if (data.user && isRecentAccount(data.user.created_at)) {
+      await notifyOwnerOfSignup({
+        kind: kindForTenant(tenant.id),
+        email,
+        detail: tenant.name,
+      });
     }
 
     if (data.user) {

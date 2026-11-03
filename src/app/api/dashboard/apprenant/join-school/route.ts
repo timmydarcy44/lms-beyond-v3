@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth/session";
+import { notifyOwnerOfSignup } from "@/lib/email/signup-notice";
 import { fetchSchoolGateProfile, profileRolesIndicateSchoolDashboard } from "@/lib/auth/school-access";
 import { normalizeStudentJoinCode } from "@/lib/school/student-join-code";
 import { getServerClient } from "@/lib/supabase/server";
@@ -143,6 +144,17 @@ export async function POST(request: Request) {
   const mem = await upsertLearnerMembership(svc, orgId, session.id);
   if (mem.error) {
     return NextResponse.json({ error: mem.error }, { status: 500 });
+  }
+
+  const [studentFirst, ...studentRest] = String(session.fullName ?? "").trim().split(/\s+/);
+  if (session.email) {
+    await notifyOwnerOfSignup({
+      kind: "etudiant",
+      email: session.email,
+      firstName: studentFirst || null,
+      lastName: studentRest.join(" ") || null,
+      detail: orgName ? `Établissement : ${orgName}` : null,
+    });
   }
 
   return NextResponse.json({ ok: true, schoolId: orgId, schoolName: orgName });

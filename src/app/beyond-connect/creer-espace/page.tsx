@@ -109,7 +109,17 @@ export default function CreerEspacePage() {
       });
       if (signupError) {
         throw signupError;
-      } else if (signupData?.user) {
+      }
+      void fetch("/api/auth/signup-notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          kind: "entreprise",
+          detail: companyName,
+        }),
+      });
+      if (signupData?.user) {
         const userId = signupData.user.id;
 
         // Onboarding Entreprise (profiles + companies)

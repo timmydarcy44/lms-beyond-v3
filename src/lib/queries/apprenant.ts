@@ -237,6 +237,17 @@ export type LearnerLesson = {
   interview_audience?: "professional" | "parent";
   /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
   dbChapterId?: string | null;
+  game?: {
+    title?: string;
+    hook?: string;
+    duration_min?: number | null;
+    steps_count?: number | null;
+    skills?: string[];
+    character?: { name?: string; role?: string; intro_line?: string; avatar?: string } | null;
+    cover_url?: string | null;
+    max_attempts?: number | null;
+    opening?: string | null;
+  };
 };
 
 export type LearnerFlashcard = {
@@ -1198,6 +1209,7 @@ export async function getLearnerContentDetail(
                   duration: chapter.duration || "5 min",
                   kind: "chapter",
                   dbChapterId: chapter.dbId ? String(chapter.dbId) : null,
+                  game: chapter.game && typeof chapter.game === "object" ? chapter.game : undefined,
                 });
               }
               
@@ -1266,6 +1278,7 @@ export async function getLearnerContentDetail(
                         subchapter.interview_audience === "professional"
                           ? subchapter.interview_audience
                           : undefined,
+                      game: subchapter.game && typeof subchapter.game === "object" ? subchapter.game : undefined,
                     });
                   }
                 });

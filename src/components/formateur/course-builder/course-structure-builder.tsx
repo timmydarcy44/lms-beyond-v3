@@ -1491,6 +1491,12 @@ function EditorPanel({
             light={isLight}
             value={nodes.chapter.mediaUrl ?? ""}
             onChange={(url) => updateChapter(selection.sectionId, selection.chapterId, { mediaUrl: url })}
+            onMeta={(game) =>
+              updateChapter(selection.sectionId, selection.chapterId, {
+                game,
+                ...(game.title && /^jeu interactif$/i.test(nodes.chapter.title) ? { title: game.title } : {}),
+              })
+            }
           />
         ) : null}
 
@@ -1706,6 +1712,12 @@ function EditorPanel({
             value={nodes.subchapter.mediaUrl ?? ""}
             onChange={(url) =>
               updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, { mediaUrl: url })
+            }
+            onMeta={(game) =>
+              updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, {
+                game,
+                ...(game.title && /^jeu interactif$/i.test(nodes.subchapter.title) ? { title: game.title } : {}),
+              })
             }
           />
         ) : null}

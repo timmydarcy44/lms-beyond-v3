@@ -6,6 +6,13 @@ export type GameManifest = {
   id: string;
   version: number;
   title: string;
+  hook?: string;
+  duration_min?: number;
+  steps_count?: number;
+  skills?: string[];
+  character?: { name?: string; role?: string; intro_line?: string; avatar?: string };
+  cover_url?: string;
+  max_attempts?: number;
   endings?: { id: string; title: string; tone: Tone }[];
   scoring?: { max?: number; passingScore?: number; weights?: Record<string, number> };
   deliverable?: { name: string; format: string };

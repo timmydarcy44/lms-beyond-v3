@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const mistakes = Array.isArray(body.mistakes) ? body.mistakes : [];
-    const score = typeof body.score === "number" ? body.score : null;
 
     const lines = mistakes
       .slice(0, 30)
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
       )
       .join("\n");
 
-    const prompt = `Tu es un formateur bienveillant. L'apprenant a obtenu un score de ${score ?? "?"}% à un quiz.\nVoici ses erreurs :\n${lines || "(aucune erreur détaillée)"}\n\nRédige un court paragraphe en français : forces, axes d'amélioration prioritaires, et une action concrète pour la semaine. Ton bienveillant, sans jargon inutile.`;
+    const prompt = `Tu es un formateur bienveillant. Voici les erreurs d’un quiz.\n${lines || "(aucune erreur détaillée)"}\n\nRédige un court paragraphe en français, au tutoiement : ce qui est déjà solide, les notions à revoir, et une action concrète pour la semaine. N’affiche aucun pourcentage. N’emploie pas le mot diagnostic.`;
 
     const summary = await generateText(prompt, { maxTokens: 800 });
     if (!summary) {

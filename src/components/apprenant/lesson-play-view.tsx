@@ -42,6 +42,7 @@ import {
   outlineKeysContainingLesson,
 } from "@/lib/apprenant/lesson-outline-groups";
 import { GameBlockPlayer } from "@/components/serious-games/GameBlockPlayer";
+import { GameIntroCard } from "@/components/lms/game-intro-card";
 import { setDashboardSpace, type DashboardSpace } from "@/lib/dashboard/space";
 import { extractStandaloneHtmlDocument, isHtmlGameUrl, toInteractiveGameFrameSrc } from "@/lib/course-builder/html-game";
 import { cn } from "@/lib/utils";
@@ -51,7 +52,6 @@ import {
   Cone,
   CircleCheck,
   FileText,
-  Gamepad2,
   Headphones,
   PlayCircle,
   X,
@@ -1930,29 +1930,15 @@ export function LessonPlayView({
           </div>}
 
           {isInteractiveGame ? (
-            <div className={neo ? "lesson-reader__game" : "relative mb-6 overflow-hidden rounded-[32px] bg-[#0B1020] px-8 py-12 text-white sm:px-12"}>
-              <div className={neo ? "lesson-reader__game-art" : "pointer-events-none absolute -right-8 -top-10 h-56 w-56 rounded-full bg-violet-500/20 blur-3xl"} aria-hidden />
-              <p className={neo ? "lesson-reader__game-tag" : "inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70"}>
-                <Gamepad2 className="h-3.5 w-3.5" aria-hidden />
-                Jeu interactif
-              </p>
-              <div className={neo ? "lesson-reader__game-copy" : "relative mt-5 max-w-xl space-y-3"}>
-                <h3 className={neo ? undefined : "text-3xl font-black tracking-tight sm:text-4xl"}>{activeLesson.title || "Jeu"}</h3>
-                <p className={neo ? undefined : "text-sm leading-relaxed text-white/70"}>
-                  {neo
-                    ? "Mets en pratique ce que tu viens d’apprendre. Tu peux quitter le jeu à tout moment pour revenir au chapitre."
-                    : "Le jeu s'ouvre en plein écran. Vous pouvez le quitter à tout moment pour revenir au chapitre."}
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => setGameOpen(true)}
-                className={neo ? "lesson-reader__play" : "relative mt-8 h-12 rounded-full bg-[#F5C542] px-6 text-sm font-bold text-[#1A1403] hover:bg-[#E2B42E]"}
-              >
-                <PlayCircle className="mr-2 h-4 w-4" aria-hidden />
-                {neo ? "Lancer le jeu" : "Commencer le jeu"}
-              </Button>
-            </div>
+            <GameIntroCard
+              lessonTitle={activeLesson.title}
+              chapterTitle={activeModule?.title}
+              durationLabel={activeLesson.duration}
+              meta={activeLesson.game}
+              blockId={String(activeLesson.id)}
+              laterHref={nextFlatLesson ? lessonHref(nextFlatLesson.id) : null}
+              onStart={() => setGameOpen(true)}
+            />
           ) : null}
 
           {isInteractiveGame && gameOpen && mounted
@@ -2162,6 +2148,10 @@ export function LessonPlayView({
                   title={testFlowMeta.title || activeLesson.title}
                   minScorePercent={testFlowMeta.minScore}
                   questions={testQuestions}
+                  chapterLabel={activeModule?.title || ""}
+                  courseId={courseId}
+                  lessonId={String(activeLesson.id)}
+                  continueHref={nextFlatLesson ? lessonHref(nextFlatLesson.id) : undefined}
                   onClose={() => setTestStarted(false)}
                   onQuizCompleted={handleQuizCompletedForNav}
                 />
@@ -2928,6 +2918,10 @@ function TestFlowInline({
   questions,
   onClose,
   onQuizCompleted,
+  chapterLabel,
+  courseId,
+  lessonId,
+  continueHref,
 }: {
   testId: string;
   title: string;
@@ -2935,6 +2929,10 @@ function TestFlowInline({
   questions: any[];
   onClose: () => void;
   onQuizCompleted?: (testId: string) => void;
+  chapterLabel?: string;
+  courseId?: string;
+  lessonId?: string;
+  continueHref?: string;
 }) {
   const [isFullscreen, setIsFullscreen] = useState(() => questions.length > 0);
 
@@ -3031,6 +3029,10 @@ function TestFlowInline({
             minScorePercent={minScorePercent ?? 70}
             immersive
             className="flex-1 w-full h-full"
+            chapterLabel={chapterLabel}
+            courseId={courseId}
+            lessonId={lessonId}
+            continueHref={continueHref}
             onQuizCompleted={(id) => {
               onQuizCompleted?.(id);
             }}

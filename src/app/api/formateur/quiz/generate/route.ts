@@ -135,15 +135,16 @@ export async function POST(request: NextRequest) {
 génère exactement ${body.nb_questions} questions de quiz
 de type ${body.type} avec un niveau ${body.niveau}.
 
+Chaque question est une mise en situation concrète (un prénom, un geste, un moment de classe), jamais une question du type « selon la formation » ou « mentionné dans le cours ».
 Retourne UNIQUEMENT un objet JSON valide avec cette structure :
 {
   "questions": [
     {
       "question": "string",
-      "image_keyword": "minimalist, editorial photography, high-end, theme en anglais",
       "options": ["option A", "option B", "option C", "option D"],
       "correct": 0,
-      "explication": "string"
+      "explication": "2 ou 3 phrases, tutoiement",
+      "concept_ref": { "label": "nom court de la notion" }
     }
   ]
 }`,

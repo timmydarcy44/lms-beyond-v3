@@ -78,6 +78,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ flashcards: [] });
     }
 
+    const learnerColumn = await supabase.from("flashcards").select("learner_id").limit(1);
+    if (!learnerColumn.error) {
+      query = query.or(`learner_id.is.null,learner_id.eq.${user.id}`);
+    }
+
     const { data: flashcards, error } = await query.order("created_at", { ascending: true });
 
     if (error) {

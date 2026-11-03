@@ -11,6 +11,8 @@ export type QuizReviewItem = {
   expectedDisplay: string;
   explanation?: string;
   feedback?: string;
+  conceptLabel?: string;
+  passage?: string;
 };
 
 function optionLabel(question: TestQuestion, value: string): string {
@@ -65,7 +67,9 @@ export function buildQuizReviewItems(
       correct,
       userAnswerDisplay: getUserAnswerDisplay(q, raw),
       expectedDisplay: getExpectedAnswerDisplay(q),
-      explanation: !correct ? q.explanation_wrong : undefined,
+      explanation: q.explanation || q.explanation_wrong,
+      conceptLabel: q.concept_ref?.label || q.category,
+      passage: q.concept_ref?.passage,
       feedback: q.feedback,
     };
   });

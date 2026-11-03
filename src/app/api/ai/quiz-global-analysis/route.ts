@@ -17,11 +17,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const score = typeof body.score === "number" ? body.score : Number(body.score);
     const radar = Array.isArray(body.radar) ? body.radar : [];
     const radarText = radar
       .map((r: { category?: string; correct?: number; total?: number; percent?: number }) =>
-        `${r.category ?? "?"} : ${r.correct ?? 0}/${r.total ?? 0} (${r.percent ?? 0}%)`,
+        `${r.category ?? "?"} : ${r.correct ?? 0}/${r.total ?? 0}`,
       )
       .join("\n");
 
@@ -61,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const prompt = `Tu es un conseiller pédagogique expert pour un LMS. Tu analyses le résultat RÉEL d’un quiz.
 
-Score global : ${score}/100.
+Résultat : ${totals?.correct ?? 0} / ${totals?.answered ?? 0} bonnes réponses.
 ${statsLine}
 
 Synthèse par thème (radar) :
@@ -76,11 +75,11 @@ ${wrongLines}
 Réponds STRICTEMENT au format JSON suivant, sans markdown ni texte hors JSON :
 {"strengths":["…"],"improvements":["…"],"comment":"…"}
 
-Règles (français) :
+Règles (français, tutoiement, aucun pourcentage, n’emploie pas le mot diagnostic) :
 - strengths : 2 à 4 puces courtes, précises, basées sur les thèmes ou questions réellement réussies ci-dessus (nomme les thèmes ou notions quand c’est possible). Évite les compliments vagues.
 - improvements : 2 à 5 puces courtes ; chaque puce doit correspondre à une erreur listée ou à un thème faible du radar (cite le concept ou le type de question). Interdit les formulations génériques sans lien (ex. « améliorer la compréhension globale » sans préciser quoi).
-- comment : une phrase de synthèse bienveillante et factuelle par rapport au score.
-Si aucune erreur listée mais score < 100, tu peux proposer une consolidation sur les thèmes du radar les moins maîtrisés.`;
+- comment : une phrase de synthèse bienveillante, au tutoiement, sans pourcentage.
+Si aucune erreur n’est listée mais qu’il reste des réponses fausses, propose une consolidation sur les thèmes les moins maîtrisés.`;
 
     const raw = await generateText(prompt, { maxTokens: 900 });
     if (!raw) {

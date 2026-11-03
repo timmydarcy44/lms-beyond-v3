@@ -12,6 +12,15 @@ export type TestQuestion = {
   category?: string;
   /** Explication affichée si la réponse est incorrecte (« Pourquoi ») */
   explanation_wrong?: string;
+  /** Explication affichée après validation, juste ou fausse. */
+  explanation?: string;
+  /** Notion du chapitre à revoir. */
+  concept_ref?: {
+    label: string;
+    subchapterId?: string;
+    anchor?: string;
+    passage?: string;
+  };
   /** Feedback court (optionnel) */
   feedback?: string;
   /** URL absolue d’illustration si déjà connue */

@@ -33,6 +33,7 @@ type GeneratedQuestion = {
   options: string[];
   correct: number;
   explication?: string;
+  concept_ref?: { label?: string };
   points?: number;
   type?: string;
   image_keyword?: string;
@@ -247,6 +248,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
           options: normalizeOptions(questionType, question.options || []),
           correct: typeof question.correct === "number" ? question.correct : 0,
           explication: question.explication || "",
+          concept_ref: question.concept_ref?.label ? { label: question.concept_ref.label } : undefined,
           points: pointsPerQuestion,
           type: questionType === "mixed" ? "qcm" : questionType,
           image_keyword:
@@ -260,6 +262,27 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
       toast.error("Erreur lors de la génération du quiz.", {
         description: error instanceof Error ? error.message : undefined,
       });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleEnrich = async () => {
+    if (!generatedQuestions.length) return;
+    setIsGenerating(true);
+    try {
+      const response = await fetch("/api/formateur/quiz/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions: generatedQuestions }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || "Complétion impossible");
+      const next = Array.isArray(payload?.questions) ? payload.questions : [];
+      setGeneratedQuestions(next);
+      toast.success("Les champs vides sont proposés. Relisez-les avant d’enregistrer.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Complétion impossible");
     } finally {
       setIsGenerating(false);
     }
@@ -940,17 +963,41 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                             placeholder="Explication"
                             className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
                           />
+                          <Input
+                            value={question.concept_ref?.label || ""}
+                            onChange={(event) =>
+                              setGeneratedQuestions((prev) =>
+                                prev.map((row, idx) =>
+                                  idx === index
+                                    ? { ...row, concept_ref: { label: event.target.value } }
+                                    : row,
+                                ),
+                              )
+                            }
+                            placeholder="Notion liée"
+                            className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
+                          />
                         </div>
                       );
                     })}
                   </div>
-                  <Button
-                    type="button"
-                    onClick={addManualQuestion}
-                    className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
-                  >
-                    + Ajouter une question
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      onClick={addManualQuestion}
+                      className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+                    >
+                      + Ajouter une question
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void handleEnrich()}
+                      disabled={isGenerating}
+                      className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white"
+                    >
+                      Compléter les explications vides
+                    </Button>
+                  </div>
                 </div>
               ) : null}
             </div>

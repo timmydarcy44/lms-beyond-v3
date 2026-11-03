@@ -17,7 +17,7 @@ export function AppleActionConfirmHost() {
       const subtitle = typeof data?.description === "string" ? data.description : undefined;
       setPayload({ title, subtitle });
       return { unwrap: async () => true };
-    }) as typeof toast.success;
+    }) as unknown as typeof toast.success;
     const onEvent = (event: Event) => {
       const detail = (event as CustomEvent<Payload>).detail;
       if (detail?.title) setPayload(detail);

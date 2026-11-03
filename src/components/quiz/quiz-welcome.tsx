@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { goalCount } from "@/lib/lms/presentation";
 
 type Particle = { x: number; y: number; vx: number; vy: number; r: number };
 
@@ -116,10 +117,10 @@ export function QuizWelcome({ title, questionCount, minScorePercent, onStart, on
             <Trophy className="h-8 w-8 text-violet-300" strokeWidth={1.35} />
           </div>
           <div className="space-y-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-violet-200/90">Quiz</p>
+            <p className="text-xs font-bold text-violet-200/90">Quiz</p>
             <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">{title}</h1>
             <p className="text-sm font-medium text-slate-300/95">
-              {questionCount} question{questionCount > 1 ? "s" : ""} · Objectif suggéré {minScorePercent}%
+              {questionCount} question{questionCount > 1 ? "s" : ""} · Objectif {goalCount(minScorePercent, questionCount)} / {questionCount}
             </p>
           </div>
           <Button

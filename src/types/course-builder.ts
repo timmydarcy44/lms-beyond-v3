@@ -38,6 +38,18 @@ export type CourseBuilderSubchapter = {
   };
   /** Thématique de l'entretien expérientiel uniquement. */
   interview_audience?: "professional" | "parent";
+  /** Annonce affichée à l'apprenant avant un jeu interactif. */
+  game?: {
+    title?: string;
+    hook?: string;
+    duration_min?: number | null;
+    steps_count?: number | null;
+    skills?: string[];
+    character?: { name?: string; role?: string; intro_line?: string; avatar?: string } | null;
+    cover_url?: string | null;
+    max_attempts?: number | null;
+    opening?: string | null;
+  };
 };
 
 export type ChapterUnlockCondition = "previous_chapter_completed" | "previous_quiz_score";
@@ -56,6 +68,7 @@ export type CourseBuilderChapter = {
   access_start_date?: string | null;
   access_end_date?: string | null;
   unlock_condition?: ChapterUnlockCondition;
+  game?: CourseBuilderSubchapter["game"];
   subchapters: CourseBuilderSubchapter[];
 };
 

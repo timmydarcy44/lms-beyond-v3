@@ -1,55 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { Check, Eye, Loader2, Sparkles, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   buildQuizReviewBriefForAi,
   type CategoryRadarRow,
   type QuizReviewItem,
 } from "@/lib/quiz/build-question-review";
-import { toast } from "sonner";
-
-function CircularScore({ score, max = 100 }: { score: number; max?: number }) {
-  const pct = Math.min(100, Math.max(0, (score / max) * 100));
-  const r = 52;
-  const c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
-
-  return (
-    <div className="relative mx-auto flex h-44 w-44 items-center justify-center">
-      <svg className="-rotate-90" width="180" height="180" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="10" />
-        <motion.circle
-          cx="60"
-          cy="60"
-          r={r}
-          fill="none"
-          stroke="url(#scoreGradDark)"
-          strokeWidth="10"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-        />
-        <defs>
-          <linearGradient id="scoreGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#e879f9" />
-            <stop offset="100%" stopColor="#818cf8" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-4xl font-black tabular-nums !text-white">{score}</span>
-        <span className="text-sm font-semibold !text-white/80">/ {max}</span>
-      </div>
-    </div>
-  );
-}
+import { goalCount, resultHeadline, synthesisLine } from "@/lib/lms/presentation";
+import { ConceptBreakdown, type ConceptRow } from "@/components/lms/concept-breakdown";
+import { LmsScreen } from "@/components/lms/lms-screen";
+import { ResultRing } from "@/components/lms/result-ring";
+import { ReviewList } from "@/components/lms/review-list";
 
 export type QuizResultsProps = {
   score: number;
@@ -62,7 +26,17 @@ export type QuizResultsProps = {
   onReviewAgain: () => void;
   fullscreen?: boolean;
   className?: string;
+  courseId?: string;
+  lessonId?: string;
+  continueHref?: string;
+  previewCards?: number;
 };
+
+function legacyObjective(score: number, minScorePercent: number, goal: number, total: number) {
+  if (score >= 85) return "Excellent travail.";
+  if (score >= minScorePercent) return "Objectif atteint ou dépassé.";
+  return `Objectif : ${goal} / ${total}. Il te manque encore quelques réponses.`;
+}
 
 export function QuizResults({
   score,
@@ -73,8 +47,10 @@ export function QuizResults({
   radarRows,
   onClose,
   onReviewAgain,
-  fullscreen,
-  className,
+  courseId,
+  lessonId,
+  continueHref,
+  previewCards = 0,
 }: QuizResultsProps) {
   const [analysisLoading, setAnalysisLoading] = useState(true);
   const [strengths, setStrengths] = useState<string[]>([]);
@@ -82,8 +58,38 @@ export function QuizResults({
   const [analysisComment, setAnalysisComment] = useState("");
   const [remediationLoading, setRemediationLoading] = useState(false);
   const [remediationText, setRemediationText] = useState<string | null>(null);
+  const [cardsAdded, setCardsAdded] = useState(previewCards);
+  const [passage, setPassage] = useState<QuizReviewItem | null>(null);
 
   const reviewBrief = useMemo(() => buildQuizReviewBriefForAi(reviewItems), [reviewItems]);
+  const correctCount = reviewItems.filter((item) => item.correct).length;
+  const total = reviewItems.length || 1;
+  const wrongItems = reviewItems.filter((item) => !item.correct);
+  const goal = goalCount(minScorePercent, reviewItems.length || 0);
+
+  const conceptRows = useMemo<ConceptRow[]>(() => {
+    const groups = new Map<string, boolean[]>();
+    for (const item of reviewItems) {
+      const label = (item.conceptLabel || item.category || "Général").trim() || "Général";
+      const bits = groups.get(label) ?? [];
+      bits.push(item.correct);
+      groups.set(label, bits);
+    }
+    if (groups.size === 0 && radarRows.length) {
+      return radarRows.map((row) => ({
+        label: row.category,
+        correct: row.correct,
+        total: row.total,
+        bits: Array.from({ length: row.total }, (_, index) => index < row.correct),
+      }));
+    }
+    return [...groups.entries()].map(([label, bits]) => ({
+      label,
+      correct: bits.filter(Boolean).length,
+      total: bits.length,
+      bits,
+    }));
+  }, [radarRows, reviewItems]);
 
   useEffect(() => {
     let ignore = false;
@@ -105,7 +111,7 @@ export function QuizResults({
       } catch {
         if (!ignore) {
           setStrengths(["Tu as terminé l’ensemble du quiz.", "Tes réponses sont enregistrées pour le suivi pédagogique."]);
-          setImprovements(["Relire les questions avec erreur et leurs explications.", "Cibler les thèmes les moins maîtrisés dans le radar."]);
+          setImprovements(["Relire les questions avec erreur et leurs explications.", "Cibler les thèmes les moins maîtrisés."]);
           setAnalysisComment("Analyse Byound momentanément indisponible — voici une synthèse par défaut.");
         }
       } finally {
@@ -117,232 +123,214 @@ export function QuizResults({
     };
   }, [score, radarRows, reviewBrief]);
 
-  const wrongItems = reviewItems.filter((r) => !r.correct);
+  const cardPayload = useMemo(
+    () =>
+      wrongItems.slice(0, 12).map((item) => ({
+        front: item.conceptLabel || item.title,
+        back: item.explanation || `Bonne réponse : ${item.expectedDisplay}`,
+      })),
+    [reviewItems],
+  );
 
-  const glassCard = "border border-white/10 !bg-[#171a22] !text-white shadow-xl backdrop-blur-md";
+  useEffect(() => {
+    if (!courseId || cardPayload.length === 0) return;
+    let ignore = false;
+    const cards = cardPayload;
+    fetch("/api/apprenant/quiz-cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, lessonId, cards }),
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { active?: boolean; added?: number; cards?: Array<{ front: string; back: string }> } | null) => {
+        if (ignore || !payload?.active) return;
+        const added = Number(payload.added ?? payload.cards?.length ?? 0);
+        setCardsAdded(added);
+        if (!lessonId || typeof window === "undefined" || !payload.cards?.length) return;
+        const key = `flashcards-${courseId}-${lessonId}`;
+        try {
+          const current = JSON.parse(window.localStorage.getItem(key) || "[]") as Array<{ front?: string; back?: string }>;
+          const seen = new Set(current.map((card) => `${card.front}||${card.back}`));
+          const next = [...current];
+          for (const card of payload.cards) {
+            const id = `${card.front}||${card.back}`;
+            if (seen.has(id)) continue;
+            seen.add(id);
+            next.push({ front: card.front, back: card.back, id: `quiz-${id.slice(0, 40)}` } as { front: string; back: string });
+          }
+          window.localStorage.setItem(key, JSON.stringify(next));
+          window.dispatchEvent(new CustomEvent("flashcards-storage-updated", { detail: { key } }));
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      ignore = true;
+    };
+  }, [cardPayload, courseId, lessonId]);
+
+  const openReview = (id: string) => {
+    setPassage(reviewItems.find((item) => item.questionId === id) ?? null);
+  };
+
+  const continueControl = continueHref ? (
+    <Link className="result-primary" href={continueHref} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
+      Continuer le parcours ›
+    </Link>
+  ) : (
+    <button type="button" className="result-primary" onClick={onClose}>
+      Continuer le parcours ›
+    </button>
+  );
 
   return (
-    <div
-      data-quiz-results=""
-      className={cn(
-        "relative min-h-screen w-full overflow-y-auto overflow-x-hidden",
-        "bg-[#0B0E14] !text-white",
-        fullscreen && "min-h-[70vh]",
-        className,
-      )}
-    >
-      <div
-        className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(236,72,153,0.12),transparent_55%)]"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(99,102,241,0.06),transparent_50%)]"
-        aria-hidden
-      />
-
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={cn("relative z-10 mx-auto w-full max-w-5xl space-y-6 px-4 py-8")}
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Card className={cn(glassCard, "md:col-span-1")}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-bold !text-white">Ton score</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-3 pb-6">
-              <CircularScore score={score} />
-              <p className="text-center text-sm !text-white/80">
-                {score >= 85
-                  ? "Excellent travail."
-                  : score >= minScorePercent
-                    ? "Objectif atteint ou dépassé."
-                    : `Objectif suggéré : ${minScorePercent}%.`}
-              </p>
-              <p className="text-xs font-medium uppercase tracking-wider !text-white/80">{completionLabel}</p>
-            </CardContent>
-          </Card>
-
-          <Card className={cn(glassCard, "border-fuchsia-500/20 md:col-span-2")}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg font-bold text-[#ff00ff] drop-shadow-[0_0_12px_rgba(255,0,255,0.35)]">
-                <Eye className="h-5 w-5 text-[#ff00ff]" aria-hidden />
-                L&apos;œil d&apos;Byound AI
-              </CardTitle>
-              <p className="text-sm font-normal !text-white">
-                Synthèse basée sur ton score, tes thèmes et le détail de tes réponses (erreurs et réussites).
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm !text-white/90">
-              {analysisLoading ? (
-                <div className="flex items-center gap-2 !text-white/80">
-                  <Loader2 className="h-4 w-4 animate-spin text-fuchsia-400" /> Génération de l’analyse…
-                </div>
-              ) : (
-                <>
-                  {analysisComment ? <p className="leading-relaxed !text-white/80">{analysisComment}</p> : null}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <p className="mb-2 font-semibold !text-white">Points forts</p>
-                      <ul className="list-inside list-disc space-y-1 !text-white/80">
-                        {(strengths.length ? strengths : ["—"]).slice(0, 4).map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="mb-2 font-semibold !text-white">Axes d’amélioration</p>
-                      <ul className="list-inside list-disc space-y-1 !text-white/80">
-                        {(improvements.length ? improvements : ["—"]).slice(0, 4).map((s, i) => (
-                          <li key={i}>{s}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {radarRows.length > 0 ? (
-          <Card className={glassCard}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold !text-white">Synthèse par thème</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="flex flex-wrap gap-3">
-                {radarRows.map((row) => (
-                  <li
-                    key={row.category}
-                    className="flex min-w-[140px] flex-1 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm"
-                  >
-                    <span className="font-medium !text-white">{row.category}</span>
-                    <span className="ml-auto tabular-nums !text-white/80">
-                      {row.correct}/{row.total}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card className={glassCard}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold !text-white">Détail des réponses</CardTitle>
-            {summary ? <p className="text-sm font-normal !text-white/80">{summary}</p> : null}
-          </CardHeader>
-          <CardContent className="space-y-3 overflow-visible pr-1">
-            {reviewItems.map((row) => (
-              <div
-                key={row.questionId}
-                className={cn(
-                  "rounded-xl border p-4",
-                  row.correct
-                    ? "border-emerald-500/30 bg-emerald-500/10"
-                    : "border-rose-500/35 bg-rose-500/10",
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  {row.correct ? (
-                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
-                  ) : (
-                    <X className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" aria-hidden />
-                  )}
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <p className="text-sm font-bold !text-white">
-                      Question {row.index} : {row.title}
-                    </p>
-                    {!row.correct ? (
-                      <>
-                        <p className="text-sm !text-white/80">
-                          <span className="font-semibold !text-white">Ta réponse :</span>{" "}
-                          <span className="line-through decoration-rose-400/90 decoration-2">{row.userAnswerDisplay}</span>
-                        </p>
-                        <p className="text-sm !text-white/90">
-                          <span className="font-semibold !text-white">Bonne réponse :</span>{" "}
-                          <span className="!text-white/80">{row.expectedDisplay}</span>
-                        </p>
-                        {row.explanation ? (
-                          <div className="rounded-lg border border-fuchsia-500/25 bg-fuchsia-500/10 px-3 py-2 text-sm">
-                            <p className="font-semibold !text-white">Pourquoi est-ce faux ?</p>
-                            <p className="mt-1 leading-relaxed !text-white/80">{row.explanation}</p>
-                          </div>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="text-sm !text-white/80">
-                        <span className="font-semibold !text-white">Ta réponse :</span> {row.userAnswerDisplay}
-                      </p>
-                    )}
-                    {row.feedback ? (
-                      <p className="text-sm italic !text-white/70">Feedback : {row.feedback}</p>
-                    ) : null}
-                  </div>
-                </div>
+    <LmsScreen className="quiz-results-screen" >
+      <div className="quiz-results" style={{ background: "transparent" }}>
+        <section className="result-hero">
+          <span className="result-hero__kicker">Quiz terminé</span>
+          <ResultRing correct={correctCount} total={reviewItems.length} />
+          <h2>{resultHeadline(correctCount, reviewItems.length)}</h2>
+          <p className="synthesis">{synthesisLine(conceptRows)}</p>
+          {summary ? <p className="synthesis">{summary}</p> : null}
+          <div className="result-actions">
+            {continueControl}
+            <button type="button" className="result-secondary" onClick={onReviewAgain}>
+              Refaire le quiz
+            </button>
+          </div>
+          <p className="result-meta">{completionLabel}</p>
+        </section>
+        <div className="result-stack">
+          <ConceptBreakdown rows={conceptRows} />
+          <ReviewList
+            items={wrongItems.map((item) => ({
+              id: item.questionId,
+              title: item.title,
+              expected: item.expectedDisplay,
+              conceptLabel: item.conceptLabel,
+            }))}
+            onReview={openReview}
+          />
+          {cardsAdded > 0 ? (
+            <div className="cards-added">
+              <i>+</i>
+              <div>
+                <strong>
+                  {cardsAdded} carte{cardsAdded > 1 ? "s" : ""} ajoutée{cardsAdded > 1 ? "s" : ""} à tes Byound Cards
+                </strong>
+                <small>Pour réviser {wrongItems[0]?.conceptLabel || "ce qui a coincé"}.</small>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col gap-3 rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-4 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            className="border-fuchsia-400/40 bg-white/5 !text-white hover:bg-white/10"
-            disabled={remediationLoading || wrongItems.length === 0}
-            onClick={async () => {
-              setRemediationLoading(true);
-              try {
-                const res = await fetch("/api/ai/quiz-remediation", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    score,
-                    mistakes: wrongItems.map((w) => ({
-                      title: w.title,
-                      userAnswer: w.userAnswerDisplay,
-                      explanation: w.explanation,
-                    })),
-                  }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Erreur");
-                if (data.summary) setRemediationText(data.summary);
-                else toast.error("Réponse vide");
-              } catch (e) {
-                console.error(e);
-                toast.error("Impossible de générer le résumé");
-              } finally {
-                setRemediationLoading(false);
-              }
-            }}
-          >
-            {remediationLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            Générer un résumé de mes points d’amélioration
-          </Button>
-          {remediationText ? (
-            <p className="max-w-prose whitespace-pre-wrap text-sm !text-white/80 sm:flex-1">{remediationText}</p>
+            </div>
           ) : null}
+          <section className="result-card">
+            <h3>L’œil d’Byound AI</h3>
+            {analysisLoading ? (
+              <p>
+                <Loader2 className="mr-2 inline h-4 w-4 animate-spin" /> Génération de l’analyse…
+              </p>
+            ) : (
+              <>
+                {analysisComment ? <p>{analysisComment}</p> : null}
+                <p>
+                  <strong>Points forts.</strong> {(strengths.length ? strengths : ["—"]).slice(0, 4).join(" ")}
+                </p>
+                <p>
+                  <strong>Axes d’amélioration.</strong> {(improvements.length ? improvements : ["—"]).slice(0, 4).join(" ")}
+                </p>
+              </>
+            )}
+          </section>
+          <section className="result-card">
+            <h3>Objectif</h3>
+            <p>{legacyObjective(score, minScorePercent, goal, total)}</p>
+          </section>
+          <section className="result-card">
+            <h3>Détail des réponses</h3>
+            {reviewItems.map((row) => (
+              <article key={row.questionId} className="detail-block" data-ok={row.correct ? "true" : "false"} id={`reponse-${row.questionId}`}>
+                <p>
+                  <strong>
+                    Question {row.index} : {row.title}
+                  </strong>
+                </p>
+                {row.correct ? (
+                  <p>Ta réponse : {row.userAnswerDisplay}</p>
+                ) : (
+                  <>
+                    <p>
+                      Ta réponse : <s>{row.userAnswerDisplay}</s>
+                    </p>
+                    <p>Bonne réponse : {row.expectedDisplay}</p>
+                    {row.explanation ? (
+                      <p>
+                        <strong>Pourquoi est-ce faux ?</strong> {row.explanation}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+                {row.feedback ? <p>Feedback : {row.feedback}</p> : null}
+              </article>
+            ))}
+          </section>
+          <section className="result-card">
+            <h3>Résumé des points d’amélioration</h3>
+            <button
+              type="button"
+              className="result-secondary"
+              style={{ background: "#6e5bff" }}
+              disabled={remediationLoading || wrongItems.length === 0}
+              onClick={async () => {
+                setRemediationLoading(true);
+                try {
+                  const res = await fetch("/api/ai/quiz-remediation", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      score,
+                      mistakes: wrongItems.map((item) => ({
+                        title: item.title,
+                        userAnswer: item.userAnswerDisplay,
+                        explanation: item.explanation,
+                      })),
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "Erreur");
+                  if (data.summary) setRemediationText(data.summary);
+                  else toast.error("Réponse vide");
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Impossible de générer le résumé");
+                } finally {
+                  setRemediationLoading(false);
+                }
+              }}
+            >
+              {remediationLoading ? "Génération…" : "Générer un résumé de mes points d’amélioration"}
+            </button>
+            {remediationText ? <p>{remediationText}</p> : null}
+            <button type="button" className="result-secondary" style={{ marginTop: 8, background: "#0b0d14" }} onClick={onClose}>
+              Fermer
+            </button>
+          </section>
+          <div className="mobile-actions">
+            {continueControl}
+            <button type="button" className="result-secondary" onClick={onReviewAgain}>
+              Refaire le quiz
+            </button>
+          </div>
         </div>
-
-        <div className="flex flex-wrap justify-center gap-2 pb-8">
-          <Button
-            onClick={onClose}
-            className="rounded-full bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-8 font-semibold !text-white hover:opacity-95"
-          >
+      </div>
+      {passage ? (
+        <div className="concept-panel" role="dialog" aria-label={passage.conceptLabel || "Passage"}>
+          <button type="button" onClick={() => setPassage(null)}>
             Fermer
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onReviewAgain}
-            className="rounded-full border-white/20 bg-white/5 !text-white hover:bg-white/10"
-          >
-            Revoir
-          </Button>
+          </button>
+          <h3>{passage.conceptLabel || "À revoir"}</h3>
+          <p>{passage.passage || passage.explanation || `Bonne réponse : ${passage.expectedDisplay}`}</p>
         </div>
-      </motion.div>
-    </div>
+      ) : null}
+    </LmsScreen>
   );
 }

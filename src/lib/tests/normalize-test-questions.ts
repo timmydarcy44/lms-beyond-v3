@@ -82,9 +82,27 @@ export function normalizeTestQuestions(raw: unknown): NormalizedTestQuestion[] {
       q.explanationWrong ??
       q.wrong_explanation ??
       q.feedback_wrong ??
+      q.explication ??
+      q.explanation ??
       q.pourquoi;
     const explanation_wrong =
       typeof expl === "string" && expl.trim() ? expl.trim() : undefined;
+    const conceptRaw = q.concept_ref ?? q.conceptRef ?? q.concept ?? q.notion;
+    let concept_ref: TestQuestion["concept_ref"];
+    if (typeof conceptRaw === "string" && conceptRaw.trim()) {
+      concept_ref = { label: conceptRaw.trim() };
+    } else if (conceptRaw && typeof conceptRaw === "object") {
+      const concept = conceptRaw as Record<string, unknown>;
+      const label = String(concept.label ?? concept.nom ?? concept.name ?? "").trim();
+      if (label) {
+        concept_ref = {
+          label,
+          subchapterId: concept.subchapterId ? String(concept.subchapterId) : concept.subchapter_id ? String(concept.subchapter_id) : undefined,
+          anchor: concept.anchor ? String(concept.anchor) : undefined,
+          passage: concept.passage ? String(concept.passage) : undefined,
+        };
+      }
+    }
     const fb = q.feedback ?? q.note;
     const feedback = typeof fb === "string" && fb.trim() ? fb.trim() : undefined;
 
@@ -101,6 +119,8 @@ export function normalizeTestQuestions(raw: unknown): NormalizedTestQuestion[] {
       correct_answer: correct === undefined ? undefined : correct,
       category,
       explanation_wrong,
+      explanation: explanation_wrong,
+      concept_ref,
       feedback,
     };
   });

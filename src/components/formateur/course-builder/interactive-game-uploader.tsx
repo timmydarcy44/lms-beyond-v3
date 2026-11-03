@@ -7,15 +7,70 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { readInteractiveGameZip } from "@/lib/course-builder/interactive-game";
 
+type GameDraft = {
+  title: string;
+  hook: string;
+  duration_min: string;
+  steps_count: string;
+  skills: string;
+  characterName: string;
+  characterRole: string;
+  introLine: string;
+  cover_url: string;
+  opening: string;
+};
+
 type Props = {
   value: string;
   onChange: (url: string) => void;
+  onMeta?: (meta: {
+    title?: string;
+    hook?: string;
+    duration_min?: number | null;
+    steps_count?: number | null;
+    skills?: string[];
+    character?: { name?: string; role?: string; intro_line?: string } | null;
+    cover_url?: string | null;
+    opening?: string | null;
+  }) => void;
   light?: boolean;
 };
 
-export function InteractiveGameUploader({ value, onChange, light = false }: Props) {
+const emptyDraft = (): GameDraft => ({
+  title: "",
+  hook: "",
+  duration_min: "",
+  steps_count: "",
+  skills: "",
+  characterName: "",
+  characterRole: "",
+  introLine: "",
+  cover_url: "",
+  opening: "",
+});
+
+function publishMeta(draft: GameDraft, onMeta?: Props["onMeta"]) {
+  const skills = draft.skills.split(",").map((item) => item.trim()).filter(Boolean);
+  const duration = Number(draft.duration_min);
+  const steps = Number(draft.steps_count);
+  onMeta?.({
+    title: draft.title.trim(),
+    hook: draft.hook.trim(),
+    duration_min: Number.isFinite(duration) && duration > 0 ? duration : null,
+    steps_count: Number.isFinite(steps) && steps > 0 ? steps : null,
+    skills,
+    character: draft.characterName.trim()
+      ? { name: draft.characterName.trim(), role: draft.characterRole.trim(), intro_line: draft.introLine.trim() }
+      : null,
+    cover_url: draft.cover_url.trim() || null,
+    opening: draft.opening.trim() || null,
+  });
+}
+
+export function InteractiveGameUploader({ value, onChange, onMeta, light = false }: Props) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
+  const [draft, setDraft] = useState<GameDraft | null>(null);
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
@@ -36,7 +91,9 @@ export function InteractiveGameUploader({ value, onChange, light = false }: Prop
         const form = new FormData();
         form.set("packageId", packageId);
         form.set("path", item.path);
-        form.set("file", new Blob([item.data]), item.path.split("/").pop() ?? "file");
+        const bytes = item.data;
+        const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+        form.set("file", new Blob([copy]), item.path.split("/").pop() ?? "file");
         const response = await fetch("/api/course-builder/interactive-game", { method: "POST", body: form });
         const payload = (await response.json().catch(() => null)) as { url?: string; error?: string } | null;
         if (!response.ok || !payload?.url) {
@@ -54,6 +111,52 @@ export function InteractiveGameUploader({ value, onChange, light = false }: Prop
       });
       const registration = (await registered.json().catch(() => null)) as { ok?: boolean; reason?: string } | null;
       onChange(entryUrl);
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = manifest ? (JSON.parse(manifest) as Record<string, unknown>) : {};
+      } catch {
+        parsed = {};
+      }
+      const character = parsed.character && typeof parsed.character === "object" ? (parsed.character as Record<string, unknown>) : {};
+      const indexFile = files.find((item) => /(^|\/)index\.html$/i.test(item.path));
+      const excerpt = indexFile
+        ? new TextDecoder().decode(indexFile.data).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 4000)
+        : "";
+      const current = {
+        title: typeof parsed.title === "string" ? parsed.title : file.name.replace(/\.zip$/i, ""),
+        hook: typeof parsed.hook === "string" ? parsed.hook : "",
+        duration_min: parsed.duration_min,
+        steps_count: parsed.steps_count,
+        skills: Array.isArray(parsed.skills) ? parsed.skills : [],
+        character,
+        opening: typeof parsed.opening === "string" ? parsed.opening : "",
+      };
+      let proposal = current;
+      try {
+        const proposed = await fetch("/api/course-builder/interactive-game/propose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ excerpt, current }),
+        });
+        const body = (await proposed.json().catch(() => null)) as { proposal?: typeof current } | null;
+        if (body?.proposal) proposal = { ...current, ...body.proposal };
+      } catch {
+        /* la fiche reste modifiable sans proposition */
+      }
+      const nextDraft: GameDraft = {
+        title: String(proposal.title ?? ""),
+        hook: String(proposal.hook ?? ""),
+        duration_min: proposal.duration_min ? String(proposal.duration_min) : "",
+        steps_count: proposal.steps_count ? String(proposal.steps_count) : "",
+        skills: Array.isArray(proposal.skills) ? proposal.skills.map(String).join(", ") : "",
+        characterName: String((proposal.character as Record<string, unknown>)?.name ?? ""),
+        characterRole: String((proposal.character as Record<string, unknown>)?.role ?? ""),
+        introLine: String((proposal.character as Record<string, unknown>)?.intro_line ?? ""),
+        cover_url: "",
+        opening: String(proposal.opening ?? ""),
+      };
+      setDraft(nextDraft);
+      publishMeta(nextDraft, onMeta);
       if (registration?.ok) {
         toast.success("Jeu interactif importé.");
       } else {
@@ -105,6 +208,40 @@ export function InteractiveGameUploader({ value, onChange, light = false }: Prop
           }}
         />
       </label>
+      {draft ? (
+        <div className="grid gap-2">
+          {(
+            [
+              ["title", "Titre du jeu"],
+              ["hook", "Accroche"],
+              ["duration_min", "Durée en minutes"],
+              ["steps_count", "Nombre de situations"],
+              ["skills", "Notions, séparées par des virgules"],
+              ["characterName", "Personnage"],
+              ["characterRole", "Rôle"],
+              ["introLine", "Phrase d’introduction"],
+              ["opening", "Début de la première situation"],
+              ["cover_url", "Image de couverture"],
+            ] as Array<[keyof GameDraft, string]>
+          ).map(([key, label]) => (
+            <label key={key} className={cn("block text-xs", light ? "text-slate-600" : "text-white/70")}>
+              {label}
+              <input
+                value={draft[key]}
+                onChange={(event) => {
+                  const next = { ...draft, [key]: event.target.value };
+                  setDraft(next);
+                  publishMeta(next, onMeta);
+                }}
+                className={cn(
+                  "mt-1 w-full rounded-xl border px-3 py-2 text-sm",
+                  light ? "border-slate-200 bg-white text-slate-900" : "border-white/10 bg-transparent text-white",
+                )}
+              />
+            </label>
+          ))}
+        </div>
+      ) : null}
       {value ? (
         <div className={cn("flex items-center justify-between gap-3 rounded-xl border px-3 py-2", light ? "border-slate-200 bg-white" : "border-white/10")}>
           <p className={cn("truncate text-xs", light ? "text-slate-600" : "text-white/70")}>{value}</p>

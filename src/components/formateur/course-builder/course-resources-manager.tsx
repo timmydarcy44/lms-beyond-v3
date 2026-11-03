@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { AddCourseResourceModal } from "./add-course-resource-modal";
+import { toEditableQuizQuestions } from "@/lib/formateur/quiz-questions";
 import { subscribeQuizBuilder } from "./quiz-builder-bus";
 
 type GeneratedQuestion = {
@@ -93,15 +94,17 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
         setGeneratedQuestions([]);
         setIsQuizModalOpen(true);
         setIsLoadingQuiz(true);
-        void fetch(`/api/formateur/quiz/${encodeURIComponent(testId)}`, { credentials: "include" })
+        void fetch(`/api/tests/${encodeURIComponent(testId)}`, { credentials: "include" })
           .then(async (response) => {
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(String(payload?.error || "Impossible d’ouvrir le quiz"));
-            const nextQuestions = Array.isArray(payload?.questions) ? payload.questions : [];
+            const test = payload?.test ?? {};
+            const nextQuestions = toEditableQuizQuestions(test.questions);
+            if (!nextQuestions.length) throw new Error("Ce quiz ne contient pas encore de questions.");
             setGeneratedQuestions(nextQuestions);
-            if (typeof payload?.title === "string" && payload.title.trim()) setQuizTitle(payload.title);
+            if (typeof test.title === "string" && test.title.trim()) setQuizTitle(test.title);
             setEditingQuiz((current) =>
-              current?.testId === testId ? { ...current, scoring: payload?.scoring ?? null } : current,
+              current?.testId === testId ? { ...current, scoring: test.scoring ?? null } : current,
             );
           })
           .catch((error) => {
@@ -369,14 +372,13 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
     const loadingId = toast.loading(editingQuiz ? "Enregistrement des modifications…" : "Sauvegarde du quiz…");
     try {
       if (editingQuiz) {
-        const response = await fetch(`/api/formateur/quiz/${encodeURIComponent(editingQuiz.testId)}`, {
+        const response = await fetch(`/api/tests/${encodeURIComponent(editingQuiz.testId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
             title: trimmedQuizTitle,
             questions: generatedQuestions,
-            scoring: editingQuiz.scoring ?? null,
           }),
         });
         const payload = await response.json().catch(() => ({}));

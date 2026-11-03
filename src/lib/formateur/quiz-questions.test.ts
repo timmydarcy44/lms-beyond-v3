@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sanitizeEditableQuizQuestions, toEditableQuizQuestions } from "./quiz-questions";
+import { quizDatabaseId, sanitizeEditableQuizQuestions, toEditableQuizQuestions } from "./quiz-questions";
 
 describe("questions de quiz éditables", () => {
   it("relit une question enregistrée par le générateur", () => {
@@ -34,6 +34,14 @@ describe("questions de quiz éditables", () => {
     expect(question?.options[1]).toBe("Le cervelet");
     expect(question?.correct).toBe(1);
     expect(question?.explication).toBe("Il trie ce qui mérite d’être gardé.");
+  });
+
+  it("retrouve l’identifiant dans le lien du quiz", () => {
+    expect(
+      quizDatabaseId({
+        content: '<p><a href="/quiz?testId=123e4567-e89b-12d3-a456-426614174000">Ouvrir</a></p>',
+      }),
+    ).toBe("123e4567-e89b-12d3-a456-426614174000");
   });
 
   it("refuse une liste vide", () => {

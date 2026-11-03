@@ -1,3 +1,11 @@
+const QUIZ_UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+export function quizDatabaseId(block: { quiz_id?: string | null; content?: string | null }): string {
+  const fromId = String(block.quiz_id ?? "").match(QUIZ_UUID)?.[0];
+  if (fromId) return fromId;
+  return String(block.content ?? "").match(QUIZ_UUID)?.[0] ?? "";
+}
+
 export type EditableQuizQuestion = {
   question: string;
   options: string[];
@@ -21,8 +29,16 @@ function optionLabel(option: unknown, index: number): string {
 }
 
 export function toEditableQuizQuestions(raw: unknown): EditableQuizQuestion[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((item, index) => {
+  let source = raw;
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(source)) return [];
+  return source.map((item, index) => {
     const row = asRecord(item);
     const options = Array.isArray(row.options) ? row.options.map(optionLabel) : ["Option 1", "Option 2"];
     const correctRaw = row.correct ?? row.correct_answer ?? row.correctAnswer ?? 0;

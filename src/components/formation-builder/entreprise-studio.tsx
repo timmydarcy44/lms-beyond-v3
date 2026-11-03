@@ -1,13 +1,16 @@
 "use client";
 
+import { toast } from "sonner";
 import { Manrope } from "next/font/google";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 import { AddCourseResourceModal } from "@/components/formateur/course-builder/add-course-resource-modal";
+import { ModuleOpenButton } from "@/components/formateur/course-builder/module-open-button";
 import { CourseResourcesManager } from "@/components/formateur/course-builder/course-resources-manager";
 import { CourseStructureBuilder } from "@/components/formateur/course-builder/course-structure-builder";
 import { CreateInterviewModal } from "@/components/formateur/course-builder/create-interview-modal";
 import { requestQuizBuilder } from "@/components/formateur/course-builder/quiz-builder-bus";
+import { quizDatabaseId } from "@/lib/formateur/quiz-questions";
 import { LineList } from "@/components/formation-builder/line-list";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
@@ -795,6 +798,7 @@ export function EntrepriseFormationStudio({
                           {ready ? "Prêt" : leaves.length ? "À compléter" : "Brouillon"}
                         </span>
                       </button>
+                      <ModuleOpenButton sectionId={section.id} isFirst={index === 0} className="h-[52px] w-[52px]" />
                       <button type="button" className={roundBtn} aria-label="Monter le module" onClick={() => move(sections.map((row) => row.id), section.id, -1, reorderSections)}>↑</button>
                       <button type="button" className={roundBtn} aria-label="Descendre le module" onClick={() => move(sections.map((row) => row.id), section.id, 1, reorderSections)}>↓</button>
                       <button
@@ -864,7 +868,27 @@ export function EntrepriseFormationStudio({
                               .map((sub) => (
                                 <div key={sub.id} className="mt-2 flex items-center gap-2 pl-4">
                                   <ContentDot filled={hasContent(sub)} />
-                                  <button type="button" className="min-w-0 flex-1 truncate text-left text-sm" onClick={() => selectSubchapter(section.id, chapter.id, sub.id)}>
+                                  <button
+                                    type="button"
+                                    className="min-w-0 flex-1 truncate text-left text-sm"
+                                    onClick={() => {
+                                      selectSubchapter(section.id, chapter.id, sub.id);
+                                      const testId = quizDatabaseId(sub);
+                                      const isQuiz = sub.kind === "quiz" || Boolean(sub.quiz_id);
+                                      if (!isQuiz) return;
+                                      if (!testId) {
+                                        toast.error("Ce quiz n’a pas de questions enregistrées.");
+                                        return;
+                                      }
+                                      requestQuizBuilder({
+                                        testId,
+                                        title: sub.title,
+                                        sectionId: section.id,
+                                        chapterId: chapter.id,
+                                        blockId: sub.id,
+                                      });
+                                    }}
+                                  >
                                     {sub.title || "Sans titre"}
                                   </button>
                                   <span className="rounded-full bg-[#F7F6F2] px-2 py-0.5 text-xs font-semibold text-[#3A3D45]">{blockLabel(sub)}</span>

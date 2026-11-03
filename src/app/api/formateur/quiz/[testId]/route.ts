@@ -4,7 +4,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sanitizeEditableQuizQuestions, toEditableQuizQuestions } from "@/lib/formateur/quiz-questions";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
-const TEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type RouteParams = { params: Promise<{ testId: string }> };
 
@@ -18,15 +18,12 @@ async function loadOwnedQuiz(testId: string) {
   if (!TEST_ID.test(testId)) return { error: NextResponse.json({ error: "Quiz introuvable" }, { status: 404 }) };
 
   const db = getServiceRoleClient() ?? supabase;
-  let { data, error } = await db
-    .from("tests")
-    .select("id, title, questions, scoring, creator_id, owner_id")
-    .eq("id", testId)
-    .maybeSingle();
-  if (error && (error.code === "42703" || error.code === "PGRST204")) {
-    ({ data, error } = await db.from("tests").select("id, title, questions, creator_id, owner_id").eq("id", testId).maybeSingle());
+  const { data, error } = await db.from("tests").select("*").eq("id", testId).maybeSingle();
+  if (error) {
+    console.error("[formateur/quiz] lecture", error.message);
+    return { error: NextResponse.json({ error: "Impossible de lire ce quiz" }, { status: 500 }) };
   }
-  if (error || !data) return { error: NextResponse.json({ error: "Quiz introuvable" }, { status: 404 }) };
+  if (!data) return { error: NextResponse.json({ error: "Quiz introuvable" }, { status: 404 }) };
 
   const row = data as { creator_id?: string; owner_id?: string };
   const owner = String(row.creator_id ?? row.owner_id ?? "");

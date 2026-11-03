@@ -56,13 +56,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useCourseBuilder, BuilderSelection } from "@/hooks/use-course-builder";
-import {
-  moduleOpenChip,
-  moduleOpenPreview,
-  readModuleOpenRule,
-  type ModuleOpenMode,
-  type ModuleOpenRule,
-} from "@/lib/lms/module-open";
+import { moduleOpenChip, readModuleOpenRule } from "@/lib/lms/module-open";
 import {
   BuilderContentType,
   CourseBuilderChapter,
@@ -70,6 +64,8 @@ import {
   CourseBuilderSubchapter,
 } from "@/types/course-builder";
 
+import { quizDatabaseId } from "@/lib/formateur/quiz-questions";
+import { ModuleOpenButton } from "./module-open-button";
 import { requestQuizBuilder } from "./quiz-builder-bus";
 import { ChapterGenerationModal } from "@/components/formateur/ai/chapter-generation-modal";
 import { SubchapterGenerationModal } from "@/components/formateur/ai/subchapter-generation-modal";
@@ -443,13 +439,6 @@ export function CourseStructureBuilder({
   );
 }
 
-const MODULE_OPEN_MODES: { id: ModuleOpenMode; label: string }[] = [
-  { id: "immediate", label: "Ouvrir ce module immédiatement" },
-  { id: "date", label: "À une date précise" },
-  { id: "enrollment", label: "Basé sur l’inscription" },
-  { id: "previous", label: "Basé sur la fin du module précédent" },
-];
-
 function SectionCard({
   section,
   selection,
@@ -467,10 +456,7 @@ function SectionCard({
   const removeSection = useCourseBuilder((state) => state.removeSection);
   const addChapter = useCourseBuilder((state) => state.addChapter);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isOpenSettings, setIsOpenSettings] = useState(false);
-  const openRule = readModuleOpenRule(section.open_rule);
-  const openChip = moduleOpenChip(openRule);
-  const setOpenRule = (next: ModuleOpenRule) => updateSection(section.id, { open_rule: next });
+  const openChip = moduleOpenChip(readModuleOpenRule(section.open_rule));
 
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition } = useSortable({
     id: section.id,
@@ -552,103 +538,15 @@ function SectionCard({
                 )}
               />
             </button>
-            <Sheet open={isOpenSettings} onOpenChange={setIsOpenSettings}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(event) => event.stopPropagation()}
-                  className={cn(
-                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition",
-                    isLight
-                      ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white",
-                  )}
-                  aria-label="Ouverture du module"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[420px] max-w-[92vw] bg-white text-slate-950">
-                <SheetHeader className="px-6 pt-6">
-                  <SheetTitle className="text-lg font-extrabold tracking-tight text-slate-950">
-                    Ouverture du module
-                  </SheetTitle>
-                  <SheetDescription className="text-slate-600">
-                    {section.title?.trim() || "Ce module"}
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="space-y-3 px-6 pb-8">
-                  {MODULE_OPEN_MODES.map((mode) => {
-                    const disabled = mode.id === "previous" && isFirst;
-                    const selected = openRule.mode === mode.id;
-                    return (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        disabled={disabled}
-                        aria-pressed={selected}
-                        onClick={() => setOpenRule({ ...openRule, mode: mode.id })}
-                        className={cn(
-                          "block w-full rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
-                          selected
-                            ? "border-[#6633CC] bg-[#6633CC]/10 text-slate-950"
-                            : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50",
-                          disabled && "cursor-not-allowed opacity-40",
-                        )}
-                      >
-                        {mode.label}
-                      </button>
-                    );
-                  })}
-                  {openRule.mode === "date" ? (
-                    <Input
-                      type="date"
-                      value={openRule.date ?? ""}
-                      onChange={(event) => setOpenRule({ ...openRule, date: event.target.value || null })}
-                      className="rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-sm"
-                    />
-                  ) : null}
-                  {openRule.mode === "enrollment" || openRule.mode === "previous" ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={104}
-                        value={openRule.amount}
-                        onChange={(event) => {
-                          const next = Number(event.target.value);
-                          setOpenRule({
-                            ...openRule,
-                            amount: Number.isFinite(next) ? Math.min(104, Math.max(0, Math.round(next))) : 0,
-                          });
-                        }}
-                        className="w-24 rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-sm"
-                        aria-label="Délai"
-                      />
-                      <Select
-                        value={openRule.unit}
-                        onValueChange={(unit) =>
-                          setOpenRule({ ...openRule, unit: unit === "days" ? "days" : "weeks" })
-                        }
-                      >
-                        <SelectTrigger className="rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="days">jours</SelectItem>
-                          <SelectItem value="weeks">semaines</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : null}
-                  <p className="text-sm text-slate-600">
-                    {isFirst && openRule.mode === "previous"
-                      ? "Le premier module n’a pas de module précédent. Il s’ouvre immédiatement."
-                      : moduleOpenPreview(openRule)}
-                  </p>
-                </div>
-              </SheetContent>
-            </Sheet>
+            <ModuleOpenButton
+              sectionId={section.id}
+              isFirst={isFirst}
+              className={
+                isLight
+                  ? "border-slate-200 text-slate-700"
+                  : "border-white/15 bg-white/5 text-white hover:bg-white/10"
+              }
+            />
           </div>
           <Input
             value={section.title}
@@ -1137,12 +1035,7 @@ function SubchapterRow({
 
   const typeMeta = CONTENT_TYPE_MAP[subchapter.type];
   const isQuizBlock = (subchapter as any).kind === "quiz" || Boolean((subchapter as any).quiz_id);
-  const quizTestId = (() => {
-    const direct = String((subchapter as { quiz_id?: string }).quiz_id ?? "").trim();
-    if (direct) return direct;
-    const match = String(subchapter.content ?? "").match(/testId=([0-9a-f-]{36})/i);
-    return match?.[1] ?? "";
-  })();
+  const quizTestId = quizDatabaseId(subchapter);
   const openQuizEditor = () => {
     if (!quizTestId) {
       toast.error("Ce quiz n’a pas de questions à modifier.");
@@ -1722,12 +1615,7 @@ function EditorPanel({
 
     const isQuizEditor =
       (nodes.subchapter as { kind?: string }).kind === "quiz" || Boolean((nodes.subchapter as { quiz_id?: string }).quiz_id);
-    const quizTestId = (() => {
-      const direct = String((nodes.subchapter as { quiz_id?: string }).quiz_id ?? "").trim();
-      if (direct) return direct;
-      const match = String(nodes.subchapter.content ?? "").match(/testId=([0-9a-f-]{36})/i);
-      return match?.[1] ?? "";
-    })();
+    const quizTestId = quizDatabaseId(nodes.subchapter);
 
     if (isQuizEditor) {
       content = (

@@ -64,9 +64,12 @@ export function LmsQuizByTestId({ testId }: { testId: string }) {
     );
   }
 
-  const markQuizDone = () => {
+  const markQuizDone = (_id?: string, score?: number) => {
     try {
       sessionStorage.setItem(`lms:quiz-done:${testId}`, "1");
+      if (typeof score === "number" && !Number.isNaN(score)) {
+        sessionStorage.setItem(`lms:quiz-score:${testId}`, String(Math.round(score)));
+      }
     } catch {
       /* ignore */
     }

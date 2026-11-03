@@ -18,6 +18,7 @@ import { ByoundCardsPrompt, type ByoundCardsReview } from "@/components/apprenan
 import { ReadingContent } from "@/components/lms/ReadingContent";
 import { splitSectionTitle } from "@/lib/lms/reading-transform";
 import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
+import { gatingQuizzes, moduleGateMessage, quizScoreStorageKey, unmetGateForLesson, type ModuleGate } from "@/lib/lms/module-gate";
 import { InterviewLessonCard } from "@/components/apprenant/interview-lesson-card";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
 import { LessonReaderShell, type ReaderPart } from "@/components/apprenant/lesson-reader-shell";
@@ -438,6 +439,8 @@ export function LessonPlayView({
   const [testFlowMeta, setTestFlowMeta] = useState<{ title: string; minScore: number }>({ title: "", minScore: 70 });
   const [isLoadingTest, setIsLoadingTest] = useState(false);
   const [quizNavTick, setQuizNavTick] = useState(0);
+  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
+  const [quizScoresReady, setQuizScoresReady] = useState(false);
   const [gameOpen, setGameOpen] = useState(false);
   const gameFrameRef = useRef<HTMLDivElement | null>(null);
   const [isBeyondFlashOpen, setIsBeyondFlashOpen] = useState(false);
@@ -990,7 +993,7 @@ export function LessonPlayView({
   const showAccessInterviewButton = Boolean(
     accessInterviewHref && nextLessonIsInterview && !isInterviewLikeLesson(activeLesson),
   );
-  const showChapterNextButton = Boolean(
+  const chapterNextAllowed = Boolean(
     nextLesson &&
       !showAccessQuizButton &&
       !showAccessInterviewButton &&
@@ -1008,11 +1011,70 @@ export function LessonPlayView({
     };
   }, []);
 
-  const handleQuizCompletedForNav = (testId: string) => {
+  const gateTestKey = useMemo(() => {
+    const ids = new Set<string>();
+    for (const module of modules) {
+      for (const gate of gatingQuizzes(module.lessons)) ids.add(gate.testId);
+    }
+    return [...ids].join(",");
+  }, [modules]);
+
+  useEffect(() => {
+    const ids = gateTestKey ? gateTestKey.split(",") : [];
+    const local: Record<string, number> = {};
+    if (typeof window !== "undefined") {
+      for (const id of ids) {
+        const score = Number(sessionStorage.getItem(quizScoreStorageKey(id)));
+        if (Number.isFinite(score)) local[id] = score;
+      }
+    }
+    setQuizScores(local);
+    if (!ids.length) {
+      setQuizScoresReady(true);
+      return;
+    }
+    let ignore = false;
+    setQuizScoresReady(false);
+    fetch(`/api/quiz/best?testIds=${ids.join(",")}`, { credentials: "include" })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (ignore || !response.ok || !payload?.scores || typeof payload.scores !== "object") return;
+        setQuizScores((prev) => {
+          const next = { ...prev };
+          for (const [id, score] of Object.entries(payload.scores as Record<string, number>)) {
+            const value = Number(score);
+            if (Number.isFinite(value)) next[id] = Math.max(next[id] ?? 0, Math.round(value));
+          }
+          return next;
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!ignore) setQuizScoresReady(true);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [gateTestKey]);
+
+  const lessonLock = (lessonId: string): ModuleGate | null =>
+    unmetGateForLesson(modules, lessonId, quizScores, quizScoresReady || !gateTestKey);
+  const nextGate = nextLesson ? lessonLock(nextLesson.id) : nextFlatLesson ? lessonLock(nextFlatLesson.id) : null;
+  const showChapterNextButton = chapterNextAllowed && !nextGate;
+  const openContinueHref = nextFlatLesson && !lessonLock(nextFlatLesson.id) ? lessonHref(nextFlatLesson.id) : undefined;
+
+  const handleQuizCompletedForNav = (testId: string, score?: number) => {
     try {
       sessionStorage.setItem(`lms:quiz-done:${testId}`, "1");
+      if (typeof score === "number" && !Number.isNaN(score)) {
+        sessionStorage.setItem(quizScoreStorageKey(testId), String(Math.round(score)));
+      }
     } catch {
       /* ignore */
+    }
+    if (typeof score === "number" && !Number.isNaN(score)) {
+      setQuizScores((prev) => ({ ...prev, [testId]: Math.max(prev[testId] ?? 0, Math.round(score)) }));
+      setQuizScoresReady(true);
     }
     setQuizNavTick((n) => n + 1);
   };
@@ -1208,11 +1270,17 @@ export function LessonPlayView({
               : FileText;
     const isTestLesson = (moduleLesson as any).kind === "test" || moduleLesson.type === "test";
 
+    const outlineLock = lessonLock(moduleLesson.id);
     return (
       <li key={moduleLesson.id}>
         <Link
-          href={lessonHrefForItem}
-          prefetch={true}
+          href={outlineLock ? lessonHref(activeLesson.id) : lessonHrefForItem}
+          prefetch={!outlineLock}
+          aria-disabled={outlineLock || undefined}
+          title={outlineLock ? moduleGateMessage(outlineLock) : undefined}
+          onClick={(event) => {
+            if (outlineLock) event.preventDefault();
+          }}
           className={cn(
             "relative block rounded-2xl border border-transparent py-3 text-sm transition-colors",
             isJessica ? "text-slate-600 hover:text-slate-900" : "text-white/75 hover:text-white",
@@ -1630,6 +1698,23 @@ export function LessonPlayView({
   const readingDuration = String(activeLesson.duration || "3 min").replace(/\s+/g, " ").trim();
 
   const renderLayout = (isFocus: boolean) => {
+    const activeLock = lessonLock(String(activeLesson.id));
+    if (activeLock) {
+      return (
+        <div className="mx-auto flex min-h-[70vh] w-full max-w-lg flex-col items-start justify-center gap-4 px-6 text-slate-900">
+          <p className="text-sm font-semibold text-slate-500">Module fermé</p>
+          <p className="text-2xl font-black tracking-tight">{moduleGateMessage(activeLock)}</p>
+          {activeLock.lessonId ? (
+            <Link href={lessonHref(activeLock.lessonId)} className="rounded-full bg-[#2A1F6E] px-5 py-3 text-sm font-semibold text-white">
+              Revenir au quiz
+            </Link>
+          ) : null}
+          <Link href={cardHref} className="text-sm font-semibold text-slate-600">
+            Retour au parcours
+          </Link>
+        </div>
+      );
+    }
     const neo = !isJessica;
     const showDesktopOutline = !isFocus && !outlineCollapsed && !neo;
 
@@ -1913,6 +1998,7 @@ export function LessonPlayView({
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </Link>
             ) : null}
+            {nextGate ? <p className="w-full text-sm font-medium text-slate-600">{moduleGateMessage(nextGate)}</p> : null}
             {showChapterNextButton && nextLesson ? (
               <Link
                 href={lessonHref(nextLesson.id)}
@@ -1936,7 +2022,7 @@ export function LessonPlayView({
               durationLabel={activeLesson.duration}
               meta={activeLesson.game}
               blockId={String(activeLesson.id)}
-              laterHref={nextFlatLesson ? lessonHref(nextFlatLesson.id) : null}
+              laterHref={openContinueHref ?? null}
               onStart={() => setGameOpen(true)}
             />
           ) : null}
@@ -2071,11 +2157,12 @@ export function LessonPlayView({
                     parcours.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    {nextLesson ? (
+                    {nextLesson && !nextGate ? (
                       <Button asChild className="rounded-full bg-slate-900 text-white hover:bg-slate-800">
                         <Link href={lessonHref(nextLesson.id)}>Chapitre suivant</Link>
                       </Button>
                     ) : null}
+                    {nextGate ? <p className="w-full text-sm font-medium text-slate-700">{moduleGateMessage(nextGate)}</p> : null}
                     <Button asChild variant="outline" className="rounded-full border-slate-300 text-slate-800">
                       <Link href={entretienHref}>Revoir le bilan</Link>
                     </Button>
@@ -2120,9 +2207,12 @@ export function LessonPlayView({
                     if (test && test.questions && Array.isArray(test.questions)) {
                       setTestQuestions(test.questions);
                       const sm = test?.scoring?.score_minimum ?? test?.scoring?.scoreMinimum;
+                      const gateFloor = activeLesson.gateNextModule ? activeLesson.gateMinPercent ?? 80 : null;
                       setTestFlowMeta({
                         title: String(test.title ?? activeLesson.title ?? "Quiz"),
-                        minScore: typeof sm === "number" && !Number.isNaN(sm) ? Math.min(100, Math.max(0, sm)) : 70,
+                        minScore:
+                          gateFloor ??
+                          (typeof sm === "number" && !Number.isNaN(sm) ? Math.min(100, Math.max(0, sm)) : 70),
                       });
                       setTestStarted(true);
                     } else {
@@ -2151,7 +2241,8 @@ export function LessonPlayView({
                   chapterLabel={activeModule?.title || ""}
                   courseId={courseId}
                   lessonId={String(activeLesson.id)}
-                  continueHref={nextFlatLesson ? lessonHref(nextFlatLesson.id) : undefined}
+                  continueHref={openContinueHref}
+                  blocksNextModule={Boolean(activeLesson.gateNextModule)}
                   onClose={() => setTestStarted(false)}
                   onQuizCompleted={handleQuizCompletedForNav}
                 />
@@ -2331,6 +2422,7 @@ export function LessonPlayView({
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
               </Link>
             ) : null}
+            {nextGate ? <p className="w-full text-sm font-medium text-slate-600">{moduleGateMessage(nextGate)}</p> : null}
             {showChapterNextButton && nextLesson ? (
               <Link
                 href={lessonHref(nextLesson.id)}
@@ -2922,17 +3014,19 @@ function TestFlowInline({
   courseId,
   lessonId,
   continueHref,
+  blocksNextModule,
 }: {
   testId: string;
   title: string;
   minScorePercent?: number;
   questions: any[];
   onClose: () => void;
-  onQuizCompleted?: (testId: string) => void;
+  onQuizCompleted?: (testId: string, score?: number) => void;
   chapterLabel?: string;
   courseId?: string;
   lessonId?: string;
   continueHref?: string;
+  blocksNextModule?: boolean;
 }) {
   const [isFullscreen, setIsFullscreen] = useState(() => questions.length > 0);
 
@@ -3033,8 +3127,9 @@ function TestFlowInline({
             courseId={courseId}
             lessonId={lessonId}
             continueHref={continueHref}
-            onQuizCompleted={(id) => {
-              onQuizCompleted?.(id);
+            blocksNextModule={blocksNextModule}
+            onQuizCompleted={(id, score) => {
+              onQuizCompleted?.(id, score);
             }}
           />
         </div>

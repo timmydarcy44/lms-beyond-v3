@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
           type?: string;
           niveau?: string;
           formation_titre?: string;
+          portee?: string;
         }
       | null;
 
@@ -136,6 +137,7 @@ génère exactement ${body.nb_questions} questions de quiz
 de type ${body.type} avec un niveau ${body.niveau}.
 
 Chaque question est une mise en situation concrète (un prénom, un geste, un moment de classe), jamais une question du type « selon la formation » ou « mentionné dans le cours ».
+${body.portee === "module" ? "Le quiz porte sur l’ensemble du module : répartis les questions sur tous les chapitres fournis, sans te concentrer sur un seul." : ""}
 Retourne UNIQUEMENT un objet JSON valide avec cette structure :
 {
   "questions": [

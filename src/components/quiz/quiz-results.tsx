@@ -29,6 +29,7 @@ export type QuizResultsProps = {
   courseId?: string;
   lessonId?: string;
   continueHref?: string;
+  nextLockedMessage?: string;
   previewCards?: number;
 };
 
@@ -50,6 +51,7 @@ export function QuizResults({
   courseId,
   lessonId,
   continueHref,
+  nextLockedMessage,
   previewCards = 0,
 }: QuizResultsProps) {
   const [analysisLoading, setAnalysisLoading] = useState(true);
@@ -174,7 +176,9 @@ export function QuizResults({
     setPassage(reviewItems.find((item) => item.questionId === id) ?? null);
   };
 
-  const continueControl = continueHref ? (
+  const continueControl = nextLockedMessage ? (
+    <p className="synthesis">{nextLockedMessage}</p>
+  ) : continueHref ? (
     <Link className="result-primary" href={continueHref} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
       Continuer le parcours ›
     </Link>

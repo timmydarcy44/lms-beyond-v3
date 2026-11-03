@@ -13,6 +13,7 @@ import { useSupabase } from "@/components/providers/supabase-provider";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 import { htmlToPlain } from "@/lib/lms/html-plain";
+import { gatingQuizzes, moduleGateMessage, quizScoreStorageKey, unmetGateForModule } from "@/lib/lms/module-gate";
 import { ReadingNotesPanel } from "@/components/apprenant/reading-notes-panel";
 import type { NoteChapter } from "@/lib/lms/reading-notes";
 import "./formation-studio.css";
@@ -178,6 +179,53 @@ export function FormationStudio({
   const [tab, setTab] = useState<"completion" | "time" | "streak">("completion");
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [treeReady, setTreeReady] = useState(false);
+  const [quizScores, setQuizScores] = useState<Record<string, number>>({});
+  const [quizScoresReady, setQuizScoresReady] = useState(false);
+  const gateKey = useMemo(() => {
+    const ids = new Set<string>();
+    for (const section of snapshot?.sections ?? []) {
+      for (const chapter of section.chapters ?? []) {
+        for (const gate of gatingQuizzes(chapter.subchapters)) ids.add(gate.testId);
+      }
+    }
+    return [...ids].join(",");
+  }, [snapshot]);
+
+  useEffect(() => {
+    const ids = gateKey ? gateKey.split(",") : [];
+    const local: Record<string, number> = {};
+    for (const id of ids) {
+      const score = Number(sessionStorage.getItem(quizScoreStorageKey(id)));
+      if (Number.isFinite(score)) local[id] = score;
+    }
+    setQuizScores(local);
+    if (!ids.length) {
+      setQuizScoresReady(true);
+      return;
+    }
+    let ignore = false;
+    setQuizScoresReady(false);
+    fetch(`/api/quiz/best?testIds=${ids.join(",")}`, { credentials: "include" })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (ignore || !response.ok || !payload?.scores || typeof payload.scores !== "object") return;
+        setQuizScores((prev) => {
+          const next = { ...prev };
+          for (const [id, score] of Object.entries(payload.scores as Record<string, number>)) {
+            const value = Number(score);
+            if (Number.isFinite(value)) next[id] = Math.max(next[id] ?? 0, Math.round(value));
+          }
+          return next;
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!ignore) setQuizScoresReady(true);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [gateKey]);
 
   const chapters = useMemo(() => {
     const linear = Boolean(snapshot?.general?.linear_progression);
@@ -185,14 +233,30 @@ export function FormationStudio({
     let previousDone = true;
     let previousTitle = "";
     let visibleSection = 0;
+    const visibleSections = (snapshot?.sections ?? []).filter(
+      (section) => isCourseNodeVisible(section) && (section.chapters ?? []).some((chapter) => isCourseNodeVisible(chapter)),
+    );
+    const gateModules = visibleSections.map((section) => ({
+      lessons: (section.chapters ?? [])
+        .filter((chapter) => isCourseNodeVisible(chapter))
+        .flatMap((chapter) => (chapter.subchapters ?? []).filter((sub) => isCourseNodeVisible(sub))),
+    }));
     (snapshot?.sections ?? []).forEach((section) => {
       if (!isCourseNodeVisible(section)) return;
+      const sectionGate = unmetGateForModule(gateModules, visibleSection, quizScores, quizScoresReady || !gateKey);
       const nodes: Node[] = [];
       let visibleChapter = 0;
       (section.chapters ?? []).forEach((chapter) => {
         if (!isCourseNodeVisible(chapter)) return;
-        const locked = (linear || Boolean(chapter.unlock_condition)) && !(visibleSection === 0 && visibleChapter === 0) && !previousDone;
-        const lockReason = locked ? lockExplanation(previousTitle, chapter.unlock_condition) : undefined;
+        const lockedByQuiz = Boolean(sectionGate);
+        const locked =
+          lockedByQuiz ||
+          ((linear || Boolean(chapter.unlock_condition)) && !(visibleSection === 0 && visibleChapter === 0) && !previousDone);
+        const lockReason = lockedByQuiz && sectionGate
+          ? moduleGateMessage(sectionGate)
+          : locked
+            ? lockExplanation(previousTitle, chapter.unlock_condition)
+            : undefined;
         const leaves: Leaf[] = (chapter.subchapters ?? []).filter((sub) => isCourseNodeVisible(sub)).map((sub) => ({
           id: String(sub.id),
           title: sub.title?.trim() || "Sans titre",
@@ -243,7 +307,7 @@ export function FormationStudio({
       visibleSection += 1;
     });
     return built;
-  }, [playBase, progressById, snapshot]);
+  }, [gateKey, playBase, progressById, quizScores, quizScoresReady, snapshot]);
 
   const noteChapters: NoteChapter[] = useMemo(
     () =>

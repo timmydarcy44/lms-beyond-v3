@@ -12,7 +12,8 @@ import { buildCategoryRadar, buildQuizReviewItems } from "@/lib/quiz/build-quest
 import { QuizWelcome } from "@/components/quiz/quiz-welcome";
 import { QuizResults } from "@/components/quiz/quiz-results";
 import { QuizQuestionView } from "@/components/lms/quiz-question-view";
-import { explicitQuestionImage, questionConcept, questionExplanation } from "@/lib/lms/presentation";
+import { explicitQuestionImage, goalCount, questionConcept, questionExplanation } from "@/lib/lms/presentation";
+import { quizScoreStorageKey } from "@/lib/lms/module-gate";
 import type { QuizSegment } from "@/components/lms/quiz-progress-bar";
 
 export type TestFlowProps = {
@@ -25,11 +26,13 @@ export type TestFlowProps = {
   className?: string;
   minScorePercent?: number;
   immersive?: boolean;
-  onQuizCompleted?: (testId: string) => void;
+  onQuizCompleted?: (testId: string, score?: number) => void;
   chapterLabel?: string;
   courseId?: string;
   lessonId?: string;
   continueHref?: string;
+  /** Le module suivant reste fermé sous le score minimum. */
+  blocksNextModule?: boolean;
 };
 
 type SavedSpot = {
@@ -71,6 +74,7 @@ export default function TestFlow({
   courseId,
   lessonId,
   continueHref,
+  blocksNextModule = false,
 }: TestFlowProps) {
   const router = useRouter();
   const startSession = useTestSessions((state) => state.startSession);
@@ -204,9 +208,14 @@ export default function TestFlow({
       } catch {
         /* ignore */
       }
+      try {
+        sessionStorage.setItem(quizScoreStorageKey(slug), String(Math.round(result.score)));
+      } catch {
+        /* ignore */
+      }
       toast.success("Quiz complété !");
       setShowSummary(true);
-      onQuizCompleted?.(slug);
+      onQuizCompleted?.(slug, result.score);
     } catch (error) {
       console.error(error);
       toast.error("Un souci est survenu, réessayez");
@@ -258,6 +267,7 @@ export default function TestFlow({
       month: "short",
     });
 
+    const holdsNext = blocksNextModule && session.score < minScorePercent;
     return (
       <QuizResults
         score={session.score}
@@ -268,7 +278,12 @@ export default function TestFlow({
         radarRows={radarRows}
         courseId={courseId}
         lessonId={lessonId}
-        continueHref={continueHref}
+        continueHref={holdsNext ? undefined : continueHref}
+        nextLockedMessage={
+          holdsNext
+            ? `Il te faut ${goalCount(minScorePercent, questions.length)} / ${questions.length} pour ouvrir le module suivant.`
+            : undefined
+        }
         onClose={() => {
           if (onClose) onClose();
           else router.push("/dashboard/student/learning/tests");

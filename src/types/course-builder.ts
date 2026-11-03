@@ -17,6 +17,9 @@ export type CourseBuilderSubchapter = {
   /** Bloc pédagogique spécial (quiz, entretien expérientiel, …) */
   kind?: CourseBuilderSubchapterKind | string;
   quiz_id?: string;
+  /** Ferme le module suivant tant que ce pourcentage de bonnes réponses n’est pas atteint. */
+  gate_next_module?: boolean;
+  gate_min_percent?: number;
   /** Lien vers une ressource du studio (table resources). */
   resource_id?: string;
   /** Contexte texte pour l’entretien IA (contenu du chapitre au moment de la création). */

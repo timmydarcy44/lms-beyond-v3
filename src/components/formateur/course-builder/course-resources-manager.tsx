@@ -66,6 +66,9 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
   const [placementType, setPlacementType] = useState("end");
   const [placementId, setPlacementId] = useState("");
   const [quizTitle, setQuizTitle] = useState("");
+  const [moduleQuizId, setModuleQuizId] = useState("none");
+  const [gateNextModule, setGateNextModule] = useState(false);
+  const [gateMinPercent, setGateMinPercent] = useState(80);
 
   useEffect(() => {
     return subscribeQuizBuilder((detail) => {
@@ -210,6 +213,23 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
     setSelectedSubchapterIds((prev) => ({ ...prev, [subchapterId]: checked }));
   };
 
+  const applyWholeModule = (sectionId: string) => {
+    setModuleQuizId(sectionId);
+    if (sectionId === "none") return;
+    const section = snapshot.sections.find((item) => item.id === sectionId);
+    if (!section) return;
+    setSelectedSectionIds({ [sectionId]: true });
+    setSelectedChapterIds({});
+    setSelectedSubchapterIds({});
+    setPlacementType("after_section");
+    setPlacementId(sectionId);
+    setGateNextModule(true);
+    setGateMinPercent(80);
+    setScoreMinimum(80);
+    const label = section.title?.trim() || "Module";
+    setQuizTitle((current) => (current.trim() ? current : `Quiz · ${label}`));
+  };
+
   const normalizeOptions = (type: string, options: string[]) => {
     if (type === "vrai_faux") {
       return ["Vrai", "Faux"];
@@ -235,6 +255,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
           type: questionType,
           niveau: difficulty,
           formation_titre: snapshot.general.title || "Formation",
+          portee: moduleQuizId !== "none" && selectedSectionIds[moduleQuizId] ? "module" : undefined,
         }),
       });
       const payload = await response.json();
@@ -318,7 +339,7 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
           scoring: {
             points_par_question: pointsPerQuestion,
             penalite: penalty,
-            score_minimum: scoreMinimum,
+            score_minimum: gateNextModule ? Math.min(100, Math.max(1, Math.round(gateMinPercent) || 80)) : scoreMinimum,
           },
           type: questionType,
           placement: placementType === "end" ? { type: "end" } : { type: placementType, id: placementId },
@@ -363,6 +384,10 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
             : "<p>Ouvrir le quiz</p>",
           quiz_id: testId,
           kind: "quiz",
+          gate_next_module: gateNextModule || undefined,
+          gate_min_percent: gateNextModule
+            ? Math.min(100, Math.max(1, Math.round(gateMinPercent) || 80))
+            : undefined,
         };
 
         const appendQuizToChapter = (ch: any) => {
@@ -537,6 +562,9 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
           <Button
             onClick={() => {
               setQuizTitle("");
+              setModuleQuizId("none");
+              setGateNextModule(false);
+              setGateMinPercent(80);
               setIsQuizModalOpen(true);
             }}
             className="rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-xs font-semibold text-white"
@@ -652,6 +680,25 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/35"
                 />
                 <p className="text-xs text-slate-300/80">Ce titre apparaîtra dans le sommaire côté apprenant.</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-white">Quiz sur l’ensemble d’un module</p>
+                <Select value={moduleQuizId} onValueChange={applyWholeModule}>
+                  <SelectTrigger className="rounded-xl border border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder="Choisir un module" />
+                  </SelectTrigger>
+                  <SelectContent className="border border-white/10 bg-slate-950/95 text-white backdrop-blur-xl">
+                    <SelectItem value="none" className="text-white">Choisir un module</SelectItem>
+                    {snapshot.sections.map((section, index) => (
+                      <SelectItem key={section.id} value={section.id} className="text-white">
+                        Module {index + 1} · {section.title || "Sans titre"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-300/80">
+                  Tout le contenu du module est pris comme source, et le quiz est placé à la fin de ce module.
+                </p>
               </div>
               <div className="space-y-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-slate-100 backdrop-blur-md">
                 {snapshot.sections.map((section) => (
@@ -786,18 +833,40 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
                   />
                 </label>
                 <label className="text-xs text-white/60">
-                  <div className="mb-1">Score minimum pour valider (%)</div>
+                  <div className="mb-1">{gateNextModule ? "Seuil pour ouvrir le module suivant (%)" : "Score minimum pour valider (%)"}</div>
                   <Input
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
-                    value={scoreMinimum}
-                    onChange={(event) => setScoreMinimum(Number(event.target.value))}
-                    placeholder="Score minimum (%)"
+                    value={gateNextModule ? gateMinPercent : scoreMinimum}
+                    onChange={(event) => {
+                      const next = Number(event.target.value);
+                      if (gateNextModule) setGateMinPercent(next);
+                      else setScoreMinimum(next);
+                    }}
+                    placeholder="80"
                     className="rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30"
                   />
                 </label>
               </div>
+              <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-white">
+                <input
+                  type="checkbox"
+                  checked={gateNextModule}
+                  onChange={(event) => {
+                    const on = event.target.checked;
+                    setGateNextModule(on);
+                    if (on) setGateMinPercent((current) => (current > 0 ? current : 80));
+                  }}
+                  className="mt-1 accent-indigo-400"
+                />
+                <span>
+                  <span className="font-semibold">Le module suivant reste fermé sous ce seuil</span>
+                  <span className="mt-1 block text-xs text-slate-300">
+                    L’apprenant ne peut pas ouvrir le module d’après tant qu’il n’a pas atteint ce pourcentage de bonnes réponses. Par défaut, 80 %.
+                  </span>
+                </span>
+              </label>
               <Button
                 type="button"
                 onClick={handleGenerateQuiz}

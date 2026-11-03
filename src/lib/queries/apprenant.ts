@@ -220,6 +220,8 @@ export type LearnerLesson = {
   kind?: "chapter" | "subchapter" | "test" | "quiz" | "experiential_interview" | "resource";
   parentChapterId?: string;
   quiz_id?: string;
+  gateNextModule?: boolean;
+  gateMinPercent?: number;
   resource_id?: string;
   interview_context?: string;
   interview_objectives?: string;
@@ -1260,6 +1262,11 @@ export async function getLearnerContentDetail(
                             : "subchapter",
                       parentChapterId: chapter.id || undefined,
                       quiz_id: subchapter.quiz_id ? String(subchapter.quiz_id) : undefined,
+                      gateNextModule: subchapter.gate_next_module === true,
+                      gateMinPercent:
+                        typeof subchapter.gate_min_percent === "number" && !Number.isNaN(subchapter.gate_min_percent)
+                          ? Math.min(100, Math.max(1, Math.round(subchapter.gate_min_percent)))
+                          : undefined,
                       resource_id: resourceId,
                       interview_context: hasInterviewContext ? interviewContext : undefined,
                       interview_objectives: interviewObjectives || undefined,

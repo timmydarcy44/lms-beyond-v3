@@ -1157,6 +1157,41 @@ function SubchapterRow({
         <p className={isLight ? "text-xs leading-relaxed text-slate-600" : "text-xs leading-relaxed text-white/60"}>
           {subchapter.summary || "Définissez la promesse et les livrables."}
         </p>
+        {isQuizBlock ? (
+          <div
+            className={isLight ? "mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-700" : "mt-3 flex flex-wrap items-center gap-2 text-xs text-white/70"}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Switch
+              checked={Boolean(subchapter.gate_next_module)}
+              onCheckedChange={(checked) =>
+                updateSubchapter(sectionId, chapterId, subchapter.id, {
+                  gate_next_module: checked,
+                  gate_min_percent: checked ? subchapter.gate_min_percent || 80 : subchapter.gate_min_percent,
+                })
+              }
+            />
+            <span>Module suivant fermé sous</span>
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={subchapter.gate_min_percent ?? 80}
+              disabled={!subchapter.gate_next_module}
+              onChange={(event) =>
+                updateSubchapter(sectionId, chapterId, subchapter.id, {
+                  gate_min_percent: Math.min(100, Math.max(1, Number(event.target.value) || 80)),
+                })
+              }
+              className={
+                isLight
+                  ? "h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-950"
+                  : "h-8 w-16 rounded-lg border border-white/10 bg-white/5 px-2 text-xs text-white"
+              }
+            />
+            <span>% de bonnes réponses</span>
+          </div>
+        ) : null}
       </div>
       {!isQuizBlock && !isInterviewBlock && !isResourceBlock ? (
         <button

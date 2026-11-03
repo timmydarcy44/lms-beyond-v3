@@ -1053,7 +1053,15 @@ export function EntrepriseFormationStudio({
                         />
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <button
+                      type="button"
+                      className="mx-3 rounded-[24px] border border-dashed border-[#C9C4FF] bg-[#F6F4FF] px-4 py-4 text-left text-sm font-semibold text-[#4B3BD1] sm:mx-8"
+                      onClick={() => requestQuizBuilder({ sectionId: section.id })}
+                    >
+                      Créer un quiz de fin de module
+                    </button>
+                  )}
                   </Fragment>
                 );
               })}

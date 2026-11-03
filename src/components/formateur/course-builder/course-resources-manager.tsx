@@ -116,6 +116,28 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
         return;
       }
       setEditingQuiz(null);
+      setGeneratedQuestions([]);
+      setIsLoadingQuiz(false);
+      if (detail.sectionId && !detail.chapterId) {
+        const section = snapshot.sections.find((item) => item.id === detail.sectionId);
+        if (section) {
+          const label = section.title?.trim() || "Module";
+          setModuleQuizId(section.id);
+          setSelectedSectionIds({ [section.id]: true });
+          setSelectedChapterIds({});
+          setSelectedSubchapterIds({});
+          setPlacementType("after_section");
+          setPlacementId(section.id);
+          setGateNextModule(true);
+          setGateMinPercent(80);
+          setScoreMinimum(80);
+          setQuizTitle(`Quiz · ${label}`);
+          setIsQuizModalOpen(true);
+          return;
+        }
+      }
+      setModuleQuizId("none");
+      setGateNextModule(false);
       setSelectedSectionIds({});
       if (detail.chapterId) {
         const section = snapshot.sections.find((item) =>
@@ -130,7 +152,6 @@ export function CourseResourcesManager({ courseId }: { courseId?: string }) {
         setPlacementId(detail.chapterId);
       }
       setQuizTitle("");
-      setGeneratedQuestions([]);
       setIsQuizModalOpen(true);
     });
   }, [snapshot.sections]);

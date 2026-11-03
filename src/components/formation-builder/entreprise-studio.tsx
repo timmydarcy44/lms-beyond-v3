@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 import { Manrope } from "next/font/google";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 import { AddCourseResourceModal } from "@/components/formateur/course-builder/add-course-resource-modal";
 import { ModuleOpenButton } from "@/components/formateur/course-builder/module-open-button";
@@ -17,7 +17,7 @@ import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
 import { ficheScore } from "@/lib/courses/fiche-checklist";
 import { formatEvaluationMethodsSummary } from "@/lib/openbadges/badge-evaluation";
-import type { CourseBuilderChapter } from "@/types/course-builder";
+import type { CourseBuilderChapter, CourseBuilderSubchapter } from "@/types/course-builder";
 
 const ACCESSIBILITY_TEXT = "Formation accessible aux personnes en situation de handicap. Notre LMS est neuroadapté.";
 
@@ -117,6 +117,71 @@ function blockLabel(item: { type?: string; kind?: string }) {
   if (item.type === "interactive_game") return "Jeu";
   if (item.type === "video") return "Vidéo";
   return "Leçon";
+}
+
+function isQuizBlock(item: { kind?: string; quiz_id?: string }) {
+  return item.kind === "quiz" || Boolean(item.quiz_id);
+}
+
+function moduleEndQuiz(chapters: CourseBuilderChapter[]) {
+  const last = chapters[chapters.length - 1];
+  if (!last) return null;
+  const subs = (last.subchapters ?? []).filter((sub) => !sub.deleted_at);
+  const sub = subs[subs.length - 1];
+  if (!sub || !isQuizBlock(sub)) return null;
+  return {
+    chapter: last,
+    sub,
+    hideChapter: subs.length === 1 && !hasContent(last),
+  };
+}
+
+function QuizSuccessFields({
+  gated,
+  percent,
+  onGate,
+  onPercent,
+}: {
+  gated: boolean;
+  percent: number;
+  onGate: (checked: boolean) => void;
+  onPercent: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(percent));
+  useEffect(() => setDraft(String(percent)), [percent]);
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-[#3A3D45]">
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          className="h-4 w-4 accent-[#6E5BFF]"
+          checked={gated}
+          onChange={(event) => onGate(event.target.checked)}
+        />
+        <span>Le module suivant reste fermé sous</span>
+      </label>
+      <input
+        type="number"
+        min={1}
+        max={100}
+        inputMode="numeric"
+        aria-label="Pourcentage de bonnes réponses"
+        value={draft}
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft(raw);
+          const next = Number(raw);
+          if (!raw.trim() || !Number.isFinite(next)) return;
+          onPercent(Math.min(100, Math.max(1, Math.round(next))));
+        }}
+        onBlur={() => {
+          if (!draft.trim() || !Number.isFinite(Number(draft))) setDraft(String(percent));
+        }}
+        className="w-16 rounded-xl border border-[#E3E0D8] bg-white px-2 py-1 text-sm text-[#0B0D14] outline-none focus:border-[#6E5BFF]"
+      />
+      <span>% de bonnes réponses</span>
+    </div>
+  );
 }
 
 const FORMATS = ["Présentiel", "Distanciel", "Mixte", "E-learning"] as const;
@@ -294,6 +359,33 @@ export function EntrepriseFormationStudio({
       summary: "",
       content: "",
     });
+  };
+
+  const openQuiz = (sectionId: string, chapterId: string, sub: CourseBuilderSubchapter) => {
+    selectSubchapter(sectionId, chapterId, sub.id);
+    const testId = quizDatabaseId(sub);
+    if (!testId) {
+      toast.error("Ce quiz n’a pas de questions enregistrées.");
+      return;
+    }
+    requestQuizBuilder({
+      testId,
+      title: sub.title,
+      sectionId,
+      chapterId,
+      blockId: sub.id,
+    });
+  };
+
+  const setQuizGate = (sectionId: string, chapterId: string, sub: CourseBuilderSubchapter, checked: boolean) => {
+    updateSubchapter(sectionId, chapterId, sub.id, {
+      gate_next_module: checked,
+      gate_min_percent: checked ? sub.gate_min_percent || 80 : sub.gate_min_percent,
+    });
+  };
+
+  const setQuizPercent = (sectionId: string, chapterId: string, sub: CourseBuilderSubchapter, value: number) => {
+    updateSubchapter(sectionId, chapterId, sub.id, { gate_min_percent: value });
   };
 
   const addSkill = (name: string) => {
@@ -789,8 +881,13 @@ export function EntrepriseFormationStudio({
                 });
                 const ready = leaves.length > 0 && leaves.every(hasContent);
                 const open = openModules[section.id] ?? true;
+                const endQuiz = moduleEndQuiz(chapters);
+                const shownChapters = endQuiz?.hideChapter
+                  ? chapters.filter((chapter) => chapter.id !== endQuiz.chapter.id)
+                  : chapters;
                 return (
-                  <article key={section.id} className="rounded-[28px] bg-white">
+                  <Fragment key={section.id}>
+                  <article className="rounded-[28px] bg-white">
                     <div className="flex items-center gap-3 p-4">
                       <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpenModules((prev) => ({ ...prev, [section.id]: !open }))}>
                         <span className="block font-semibold">{section.title || `Module ${index + 1}`}</span>
@@ -817,7 +914,7 @@ export function EntrepriseFormationStudio({
                     {open ? (
                       <div className="space-y-3 border-t border-[#F1EFE9] p-4">
                         <input className={fieldClass} value={section.title} aria-label="Titre du module" onChange={(e) => updateSection(section.id, { title: e.target.value })} />
-                        {chapters.map((chapter) => (
+                        {shownChapters.map((chapter) => (
                           <div key={chapter.id} className="rounded-[24px] border border-[#F1EFE9] p-3">
                             <div className="flex flex-wrap items-center gap-2">
                               <ContentDot filled={hasContent(chapter)} />
@@ -864,29 +961,19 @@ export function EntrepriseFormationStudio({
                               </button>
                             </div>
                             {(chapter.subchapters ?? [])
-                              .filter((sub) => !sub.deleted_at)
-                              .map((sub) => (
-                                <div key={sub.id} className="mt-2 flex items-center gap-2 pl-4">
+                              .filter((sub) => !sub.deleted_at && sub.id !== endQuiz?.sub.id)
+                              .map((sub) => {
+                                const quiz = isQuizBlock(sub);
+                                return (
+                                <div key={sub.id} className="mt-2 pl-4">
+                                  <div className="flex items-center gap-2">
                                   <ContentDot filled={hasContent(sub)} />
                                   <button
                                     type="button"
                                     className="min-w-0 flex-1 truncate text-left text-sm"
                                     onClick={() => {
                                       selectSubchapter(section.id, chapter.id, sub.id);
-                                      const testId = quizDatabaseId(sub);
-                                      const isQuiz = sub.kind === "quiz" || Boolean(sub.quiz_id);
-                                      if (!isQuiz) return;
-                                      if (!testId) {
-                                        toast.error("Ce quiz n’a pas de questions enregistrées.");
-                                        return;
-                                      }
-                                      requestQuizBuilder({
-                                        testId,
-                                        title: sub.title,
-                                        sectionId: section.id,
-                                        chapterId: chapter.id,
-                                        blockId: sub.id,
-                                      });
+                                      if (quiz) openQuiz(section.id, chapter.id, sub);
                                     }}
                                   >
                                     {sub.title || "Sans titre"}
@@ -907,8 +994,20 @@ export function EntrepriseFormationStudio({
                                   >
                                     Supprimer
                                   </button>
+                                  </div>
+                                  {quiz ? (
+                                    <div className="mt-2">
+                                      <QuizSuccessFields
+                                        gated={Boolean(sub.gate_next_module)}
+                                        percent={sub.gate_min_percent ?? 80}
+                                        onGate={(checked) => setQuizGate(section.id, chapter.id, sub, checked)}
+                                        onPercent={(value) => setQuizPercent(section.id, chapter.id, sub, value)}
+                                      />
+                                    </div>
+                                  ) : null}
                                 </div>
-                              ))}
+                                );
+                              })}
                           </div>
                         ))}
                         <button type="button" className={chip} onClick={() => addChapter(section.id)}>
@@ -917,6 +1016,45 @@ export function EntrepriseFormationStudio({
                       </div>
                     ) : null}
                   </article>
+                  {endQuiz ? (
+                    <div className="mx-3 rounded-[24px] border border-dashed border-[#C9C4FF] bg-[#F6F4FF] px-4 py-4 sm:mx-8">
+                      <p className="text-xs font-semibold text-[#4B3BD1]">Quiz de fin de module</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate text-left text-sm font-semibold"
+                          onClick={() => openQuiz(section.id, endQuiz.chapter.id, endQuiz.sub)}
+                        >
+                          {endQuiz.sub.title || "Quiz"}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-sm font-semibold text-[#B42318]"
+                          onClick={() =>
+                            askDelete(`Supprimer « ${endQuiz.sub.title || "quiz"} » ?`, () => {
+                              updateSubchapter(section.id, endQuiz.chapter.id, endQuiz.sub.id, {
+                                deleted_at: new Date().toISOString(),
+                              });
+                              scheduleUndo("Quiz supprimé", () =>
+                                updateSubchapter(section.id, endQuiz.chapter.id, endQuiz.sub.id, { deleted_at: null }),
+                              );
+                            })
+                          }
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                      <div className="mt-3">
+                        <QuizSuccessFields
+                          gated={Boolean(endQuiz.sub.gate_next_module)}
+                          percent={endQuiz.sub.gate_min_percent ?? 80}
+                          onGate={(checked) => setQuizGate(section.id, endQuiz.chapter.id, endQuiz.sub, checked)}
+                          onPercent={(value) => setQuizPercent(section.id, endQuiz.chapter.id, endQuiz.sub, value)}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  </Fragment>
                 );
               })}
               <button type="button" onClick={() => addSection()} className="rounded-full bg-[#07080B] px-4 py-3 text-sm font-semibold text-white">

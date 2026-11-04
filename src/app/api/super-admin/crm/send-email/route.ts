@@ -4,7 +4,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendEmail } from "@/lib/email/resend-client";
 import { getCrmUsers } from "@/lib/queries/super-admin";
 import { formatCrmRoleLabel } from "@/lib/crm/crm-shared";
-import { edgeEmailBrand } from "@/lib/emails/edge-email-shell";
+import { edgeEmailBrand, edgeEmailButton } from "@/lib/emails/edge-email-shell";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 type InlineImage = {
@@ -25,6 +25,8 @@ type Body = {
   expertId?: string;
   test?: boolean;
   templateLabel?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
 };
 
 function escapeHtml(value: string): string {
@@ -35,7 +37,7 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-function buildCampaignEmail(title: string, bodyHtml: string): string {
+function buildCampaignEmail(title: string, bodyHtml: string, ctaHtml = ""): string {
   const heading = title
     ? `<h1 style="margin:0 0 28px;font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;color:#0b0b0c;">${escapeHtml(title)}</h1>`
     : "";
@@ -55,6 +57,7 @@ function buildCampaignEmail(title: string, bodyHtml: string): string {
           ${edgeEmailBrand("light")}
           ${heading}
           ${bodyHtml}
+          ${ctaHtml}
           <p style="margin:40px 0 0;padding-top:24px;border-top:1px solid #ececec;font-size:13px;line-height:1.5;color:#6b6f7a;">
             Byound · <a href="https://www.byound.fr" style="color:#0b0b0c;text-decoration:none;">www.byound.fr</a>
           </p>
@@ -115,13 +118,17 @@ export async function POST(req: NextRequest) {
     })
     .join("");
   const unusedImages = [...imageBlocks.entries()].filter(([id]) => !html.includes(`{{image:${id}}}`));
-  const htmlDocument = buildCampaignEmail(title, `${bodyHtml}${unusedImages.map(([, block]) => block).join("")}`);
+  const ctaLabel = body?.ctaLabel?.trim() ?? "";
+  const ctaHref = body?.ctaHref?.trim() ?? "";
+  const ctaHtml = ctaLabel && ctaHref ? edgeEmailButton(ctaLabel, safeHref(ctaHref)) : "";
+  const htmlDocument = buildCampaignEmail(title, `${bodyHtml}${unusedImages.map(([, block]) => block).join("")}`, ctaHtml);
   const text = [
     "Byound",
     title,
     html.replace(/\{\{image:([^}]+)\}\}/g, (_, id: string) => imageLinks.get(id) ?? ""),
+    ctaLabel && ctaHref ? `${ctaLabel} : ${safeHref(ctaHref)}` : "",
     "https://www.byound.fr",
-  ].join("\n\n");
+  ].filter(Boolean).join("\n\n");
 
   const expertId = body?.expertId?.trim() ?? "";
   const testSend = body?.test === true;

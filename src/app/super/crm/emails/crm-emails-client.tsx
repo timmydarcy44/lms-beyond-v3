@@ -55,6 +55,8 @@ export function CrmEmailsClient({
   const [imageHref, setImageHref] = useState("https://www.byound.fr");
   const [templateId, setTemplateId] = useState<string | null>(initialTemplateId ?? null);
   const [templateLabel, setTemplateLabel] = useState("");
+  const [ctaLabel, setCtaLabel] = useState("");
+  const [ctaHref, setCtaHref] = useState("");
 
   const applyTemplate = (template: ExpertMailTemplate) => {
     const vars = variables ?? {};
@@ -82,6 +84,14 @@ export function CrmEmailsClient({
       toast.error("Indiquez l'email du destinataire");
       return;
     }
+    if ((ctaLabel.trim() && !ctaHref.trim()) || (!ctaLabel.trim() && ctaHref.trim())) {
+      toast.error("Le bouton a besoin d'un libellé et d'un lien.");
+      return;
+    }
+    if (ctaHref.trim() && !/^https?:\/\//i.test(ctaHref.trim())) {
+      toast.error("Le lien du bouton doit commencer par https://");
+      return;
+    }
 
     setSending(test ? "test" : "live");
     try {
@@ -99,6 +109,8 @@ export function CrmEmailsClient({
           expertId,
           test,
           templateLabel,
+          ctaLabel: ctaLabel.trim(),
+          ctaHref: ctaHref.trim(),
         }),
       });
       const json = await res.json();
@@ -237,6 +249,17 @@ export function CrmEmailsClient({
         </p>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label className={lockedRecipient ? "text-[#9AA3BD]" : undefined}>Bouton</Label>
+          <Input className={fieldClass} value={ctaLabel} onChange={(event) => setCtaLabel(event.target.value)} placeholder="Ouvrir mon espace" />
+        </div>
+        <div className="space-y-2">
+          <Label className={lockedRecipient ? "text-[#9AA3BD]" : undefined}>Lien du bouton</Label>
+          <Input className={fieldClass} value={ctaHref} onChange={(event) => setCtaHref(event.target.value)} placeholder="https://www.byound.fr" />
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label className={lockedRecipient ? "text-[#9AA3BD]" : undefined}>Message</Label>
         <Textarea
@@ -247,18 +270,6 @@ export function CrmEmailsClient({
           placeholder="Bonjour,&#10;&#10;Votre message…"
         />
       </div>
-
-      {lockedRecipient && (title.trim() || html.trim()) ? (
-        <div className="rounded-2xl bg-white p-5 text-[#1a1a1a]">
-          <p className="text-xs font-semibold text-[#6b6f7a]">Aperçu</p>
-          {title.trim() ? <p className="mt-3 text-[28px] font-bold leading-tight">{title}</p> : null}
-          <div className="mt-4 space-y-3 text-[16px] leading-relaxed">
-            {html.split("\n\n").filter((part) => part.trim()).map((part) => (
-              <p key={part}>{part}</p>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap gap-2">
         {lockedRecipient ? (
@@ -284,7 +295,20 @@ export function CrmEmailsClient({
   );
 
   if (lockedRecipient) {
-    return <div className="space-y-5">{composer}</div>;
+    return (
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="space-y-5">{composer}</div>
+        <InboxPreview
+          subject={subject}
+          title={title}
+          message={html}
+          toName={lockedRecipient.name}
+          toEmail={lockedRecipient.email}
+          ctaLabel={ctaLabel}
+          ctaHref={ctaHref}
+        />
+      </div>
+    );
   }
 
   return (
@@ -304,5 +328,64 @@ export function CrmEmailsClient({
       </CardHeader>
       <CardContent className="space-y-5">{composer}</CardContent>
     </Card>
+  );
+}
+
+function InboxPreview({
+  subject,
+  title,
+  message,
+  toName,
+  toEmail,
+  ctaLabel,
+  ctaHref,
+}: {
+  subject: string;
+  title: string;
+  message: string;
+  toName: string;
+  toEmail: string;
+  ctaLabel: string;
+  ctaHref: string;
+}) {
+  const paragraphs = message
+    .split(/\n\s*\n/)
+    .map((part) => part.replace(/\{\{image:[^}]+\}\}/g, "").trim())
+    .filter(Boolean);
+  const showButton = ctaLabel.trim() && /^https?:\/\//i.test(ctaHref.trim());
+  return (
+    <aside className="xl:sticky xl:top-24">
+      <p className="mb-3 text-[13px] font-extrabold text-[#9AA3BD]">Aperçu dans la boîte mail</p>
+      <div className="overflow-hidden rounded-[24px] border border-[#D9DDE8] bg-[#F3F4F8] text-[#12141C] shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+        <div className="flex items-center gap-2 border-b border-[#E4E7F0] bg-white px-4 py-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
+          <span className="ml-2 text-xs font-semibold text-[#6B7285]">Boîte de réception</span>
+        </div>
+        <div className="border-b border-[#E4E7F0] bg-white px-4 py-4">
+          <p className="text-[18px] font-extrabold leading-tight text-[#12141C]">{subject.trim() || "Objet du message"}</p>
+          <div className="mt-3 flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#12141C] text-xs font-extrabold text-white">B</span>
+            <div className="min-w-0 text-sm">
+              <p className="font-extrabold text-[#12141C]">Byound <span className="font-medium text-[#5C6578]">&lt;noreply@byound.fr&gt;</span></p>
+              <p className="mt-0.5 text-[#5C6578]">À {toName} · {toEmail}</p>
+              <p className="text-[#5C6578]">Répondre à contact@byound.fr</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white px-5 py-6">
+          <p className="text-sm font-extrabold tracking-tight">Byound</p>
+          {title.trim() ? <p className="mt-5 text-[28px] font-extrabold leading-[1.1] tracking-tight text-[#111111]">{title}</p> : null}
+          <div className="mt-4 space-y-3 text-[15px] leading-relaxed text-[#3A3D45]">
+            {paragraphs.length ? paragraphs.map((part) => <p key={part} className="whitespace-pre-wrap">{part}</p>) : <p className="text-[#8A8F98]">Le message apparaîtra ici.</p>}
+          </div>
+          {showButton ? (
+            <span className="mt-6 inline-flex rounded-lg bg-[#111111] px-5 py-3 text-sm font-extrabold text-white">{ctaLabel.trim()}</span>
+          ) : null}
+          <p className="mt-8 border-t border-[#ECECEC] pt-4 text-xs text-[#8A8F98]">Byound · byound.fr</p>
+        </div>
+      </div>
+    </aside>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { AlertsBadge } from "./alerts-badge";
+import { SurfaceToggle } from "@/components/theme/surface-toggle";
 
 type NavItem = {
   label: string;
@@ -421,6 +422,7 @@ export function SuperAdminHeaderApple() {
 
           {/* Right side - Gestion client (pour Jessica) et autres */}
           <div className="flex items-center gap-3">
+            {!isContentin ? <SurfaceToggle storageKey="byound-super-surface" selector=".super-theme" className="super-light" /> : null}
             {/* CTA Gestion client - uniquement pour Jessica */}
             {isContentin && (
               <Link

@@ -759,7 +759,7 @@ export function SuperExpertCrmDetail({
         ) : null}
 
         {tab === "mail" ? (
-          <SectionCard color="#8DB8FF">
+          <SectionCard color="#8DB8FF" className="overflow-visible">
             <SectionHeader icon={Mail} color="#8DB8FF" title="Mail" subtitle="Écrire à cet expert" />
             <div className="px-6 pb-6 pt-4">
               <CrmEmailsClient

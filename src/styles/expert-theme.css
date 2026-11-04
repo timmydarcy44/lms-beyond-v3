@@ -27,6 +27,77 @@
   color: rgba(244, 245, 247, 0.35);
 }
 
+.expert-theme.expert-light {
+  background: #ffffff;
+  color: #12141c;
+  color-scheme: light;
+}
+
+.expert-theme.expert-light .expert-canvas {
+  background-color: #ffffff !important;
+  color: #12141c !important;
+  border-color: #e6e4de !important;
+}
+
+.expert-theme.expert-light .bg-\[\#12141A\],
+.expert-theme.expert-light .bg-\[\#12141a\] {
+  background-color: #ffffff !important;
+  box-shadow: inset 0 0 0 1px #e6e4de;
+}
+
+.expert-theme.expert-light .bg-\[\#1E2130\],
+.expert-theme.expert-light .bg-\[\#1e2130\] {
+  background-color: #f4f2ee !important;
+}
+
+.expert-theme.expert-light .text-\[\#F4F5F7\]:not(.bg-\[\#07080B\]):not(.bg-\[\#07080b\]):not(.bg-\[\#132A4D\]):not(.bg-\[\#FF4B4B\]) {
+  color: #12141c !important;
+}
+
+.expert-theme.expert-light :is(.text-\[\#DADDE4\], .text-\[\#B5BAC6\], .text-\[\#9096A3\]) {
+  color: #3e4654 !important;
+}
+
+.expert-theme.expert-light .text-\[\#F2CF6B\] {
+  color: #8a6410 !important;
+}
+
+.expert-theme.expert-light .border-\[\#1E2130\],
+.expert-theme.expert-light .divide-\[\#1E2130\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e6e4de !important;
+}
+
+.expert-theme.expert-light .hover\:bg-\[\#12141A\]:hover,
+.expert-theme.expert-light .hover\:bg-\[\#1E2130\]:hover {
+  background-color: #f4f2ee !important;
+}
+
+.expert-theme.expert-light input,
+.expert-theme.expert-light textarea {
+  background-color: #ffffff;
+  color: #12141c;
+  border-color: #d9d6cf;
+}
+
+.expert-theme.expert-light input::placeholder,
+.expert-theme.expert-light textarea::placeholder {
+  color: #6b7280;
+}
+
+.expert-theme.expert-light .expert-revolut {
+  --expert-bg: #ffffff;
+  --expert-halo-top: none;
+  --expert-halo-bottom: none;
+  --expert-glass: #ffffff;
+  --expert-glass-border: #e6e4de;
+  --expert-text: #12141c;
+  --expert-muted: #3e4654;
+  --expert-label: #3e4654;
+  --expert-ink: #ffffff;
+  --expert-chip: #eeebff;
+  --expert-chip-text: #3d3480;
+}
+
 .expert-apple-banner {
   position: fixed;
   top: 16px;

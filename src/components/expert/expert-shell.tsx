@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { ExpertAppleInbox } from "@/components/expert/expert-apple-inbox";
+import { SurfaceButton, useSurface } from "@/components/theme/surface-toggle";
 
 import type { ExpertMembership, ExpertPole } from "@/lib/expert/pole-model";
 import { setDashboardSpace } from "@/lib/dashboard/space";
@@ -193,6 +194,7 @@ export function ExpertShell({
   managerPoles?: ExpertPole[];
 }) {
   const pathname = usePathname();
+  const surface = useSurface("byound-expert-surface", ".expert-theme", "expert-light");
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState({ missions: 0, documents: 0 });
 
@@ -337,11 +339,14 @@ export function ExpertShell({
   );
 
   return (
-    <div className={cn(manrope.className, "min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
+    <div className={cn(manrope.className, "expert-canvas min-h-screen bg-[#07080B] text-[#F4F5F7]")}>
       <ExpertAppleInbox />
       <div className="flex min-h-screen">
-        <aside className="hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
+        <aside className="expert-canvas hidden w-[248px] shrink-0 flex-col border-r border-[#1E2130] bg-[#07080B] px-3 py-6 md:flex">
           {brand}
+          <div className="mb-4 px-2">
+            <SurfaceButton light={surface.light} onClick={surface.toggle} />
+          </div>
           {identity}
           {managerPoles.length > 0 ? (
             <Link href="/dashboard/expert/appartenances" className={cn("mb-3 block rounded-full px-4 py-2 text-sm font-semibold text-[#FFB4B8]", focusRing)}>
@@ -354,13 +359,15 @@ export function ExpertShell({
           {help}
         </aside>
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#1E2130] bg-[#07080B] px-4 py-3 md:hidden">
+          <header className="expert-canvas sticky top-0 z-30 flex items-center justify-between border-b border-[#1E2130] bg-[#07080B] px-4 py-3 md:hidden">
             <Link href="/dashboard/expert" className="flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F5F7] text-xs font-extrabold text-[#07080B]">
                 BY
               </span>
               <span className="text-sm font-extrabold">Espace expert</span>
             </Link>
+            <div className="flex items-center gap-2">
+              <SurfaceButton light={surface.light} onClick={surface.toggle} />
             <button
               type="button"
               className={cn("rounded-full bg-[#12141A] p-2 text-[#F4F5F7]", focusRing)}
@@ -370,6 +377,7 @@ export function ExpertShell({
             >
               <Menu className="h-5 w-5" />
             </button>
+            </div>
           </header>
           <div className="min-w-0">{children}</div>
         </div>
@@ -377,7 +385,7 @@ export function ExpertShell({
       {open ? (
         <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={() => setOpen(false)}>
           <aside
-            className="flex h-full w-[min(88vw,320px)] flex-col bg-[#07080B] px-3 py-5"
+            className="expert-canvas flex h-full w-[min(88vw,320px)] flex-col bg-[#07080B] px-3 py-5"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between px-2">

@@ -104,6 +104,7 @@ function ControlFrame({
   }, [query]);
 
   const homeActive = pathname === "/super";
+  const formationBuilder = /^\/super\/lms\/formations\/.+/.test(pathname);
 
   const toggleSection = (id: string) => {
     setOpenSections((current) => {
@@ -205,6 +206,14 @@ function ControlFrame({
       </div>
     </div>
   );
+
+  if (formationBuilder) {
+    return (
+      <div className={`${manrope.className} min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className={`${manrope.className} control-shell min-h-screen bg-[#0A0F1E] text-white`}>

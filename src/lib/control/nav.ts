@@ -132,6 +132,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         match: (pathname) => pathname === "/super/formations" || pathname.startsWith("/super/formations/"),
       },
       {
+        id: "lms",
+        label: "LMS",
+        href: "/super/lms/formations",
+        match: (pathname) => pathname === "/super/lms/formations" || pathname.startsWith("/super/lms/formations/"),
+      },
+      {
         id: "cursus",
         label: "Cursus",
         href: "/super/crm/cfa/cursus",

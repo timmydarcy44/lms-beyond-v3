@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { importFormationStructure } from "@/lib/course-builder/import-structure";
+import { importFormationStructure, parseAtelierDraftText } from "@/lib/course-builder/import-structure";
 
 const sample = {
   sections: [
@@ -53,6 +53,15 @@ describe("import formation", () => {
     expect(result.warnings).toEqual([]);
     expect(result.sections[0].chapters[0].subchapters.map((item) => item.title)).toEqual(["Une leçon", "Une autre"]);
     expect(result.sections[0].chapters[0].subchapters.every((item) => item.kind == null)).toBe(true);
+  });
+
+  it("remplit un atelier depuis le JSON collé dans le formulaire", () => {
+    const result = parseAtelierDraftText(JSON.stringify(sample.sections[0].chapters[0].subchapters[1]));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.title).toBe("Rédiger 3 objectifs de son métier");
+    expect(result.workshop.mode).toBe("atelier");
+    expect(result.workshop.fields).toHaveLength(2);
   });
 
   it("signale un atelier incomplet sans retirer la leçon", () => {

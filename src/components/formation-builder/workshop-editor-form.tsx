@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { nanoid } from "nanoid";
 import { NotebookPen } from "lucide-react";
 
 import type { WorkshopConfig, WorkshopCriterion, WorkshopField, WorkshopMode } from "@/types/course-builder";
+import { parseAtelierDraftText } from "@/lib/course-builder/import-structure";
 import { emptyWorkshop, workshopMaxImprovements, workshopMode } from "@/lib/workshops/workshop-block";
 
 type WorkshopEditorFormProps = {
@@ -34,6 +36,22 @@ export function WorkshopEditorForm({
   const criteria = value.criteria?.length ? value.criteria : emptyWorkshop(mode).criteria ?? [];
 
   const patch = (next: Partial<WorkshopConfig>) => onWorkshop({ ...value, ...next });
+  const [jsonText, setJsonText] = useState("");
+  const [jsonNotice, setJsonNotice] = useState("");
+  const [jsonOk, setJsonOk] = useState(false);
+
+  const applyJson = () => {
+    const parsed = parseAtelierDraftText(jsonText);
+    if (!parsed.ok) {
+      setJsonOk(false);
+      setJsonNotice(parsed.message);
+      return;
+    }
+    onTitle(parsed.title);
+    onWorkshop(parsed.workshop);
+    setJsonOk(true);
+    setJsonNotice("Formulaire rempli. Vous pouvez encore modifier les champs à la main.");
+  };
 
   const setField = (id: string, next: Partial<WorkshopField>) => {
     patch({ fields: fields.map((item) => (item.id === id ? { ...item, ...next } : item)) });
@@ -71,6 +89,32 @@ export function WorkshopEditorForm({
           ? "Entraînement. Le retour ne compte ni pour un Open Badge ni pour une note."
           : "Épreuve. Le comportement de certification reste celui d'aujourd'hui."}
       </p>
+
+      {mode === "atelier" ? (
+        <div className={`space-y-3 rounded-[24px] border p-4 ${light ? "border-[#E3E0D8] bg-[#F7F6F2]" : "border-white/10 bg-white/5"}`}>
+            <p className={label}>Créer depuis un JSON</p>
+            <p className={hint}>Collez l'objet atelier. Les champs ci-dessous se remplissent, et restent modifiables à la main.</p>
+            <textarea
+              className={`${field} min-h-36 font-mono text-xs`}
+              aria-label="JSON de l'atelier"
+              placeholder={'{\n  "type": "atelier",\n  "title": "Rédiger 3 objectifs",\n  "instructions": "…",\n  "scenario": "…",\n  "example": "…",\n  "fields": [{ "label": "Votre métier", "type": "short" }],\n  "criteria": ["Verbe d'action", "Situation précise"],\n  "max_improvements": 2\n}'}
+              value={jsonText}
+              onChange={(event) => {
+                setJsonText(event.target.value);
+                setJsonNotice("");
+                setJsonOk(false);
+              }}
+            />
+            <button
+              type="button"
+              onClick={applyJson}
+              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Remplir le formulaire
+            </button>
+            {jsonNotice ? <p className={`text-sm ${jsonOk ? (light ? "text-[#0E7A4B]" : "text-[#2FD08A]") : "text-[#B42318]"}`}>{jsonNotice}</p> : null}
+        </div>
+      ) : null}
 
       <label className="block space-y-2">
         <span className={label}>{mode === "atelier" ? "Titre de l'atelier" : "Titre"}</span>

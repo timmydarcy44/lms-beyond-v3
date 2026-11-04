@@ -38,11 +38,34 @@ function lessonFrom(raw: unknown, index: number): CourseBuilderSubchapter {
 }
 
 function atelierError(chapter: string, title: string, message: string): ImportWarning {
+  const where = chapter ? `Chapitre « ${chapter} », atelier « ${title} »` : `Atelier « ${title} »`;
   return {
     chapter,
     title,
-    message: `Chapitre « ${chapter} », atelier « ${title} » : ${message}`,
+    message: `${where} : ${message}`,
   };
+}
+
+export function parseAtelierDraftText(text: string):
+  | { ok: true; title: string; workshop: NonNullable<CourseBuilderSubchapter["workshop"]> }
+  | { ok: false; message: string } {
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: false, message: "Collez le JSON de l'atelier." };
+  let raw: unknown;
+  try {
+    raw = JSON.parse(trimmed);
+  } catch {
+    return { ok: false, message: "Ce JSON n'est pas valide." };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, message: "Le JSON doit être un objet atelier." };
+  }
+  if (Array.isArray((raw as { sections?: unknown }).sections)) {
+    return { ok: false, message: "Collez l'objet de l'atelier, pas la structure de la formation." };
+  }
+  const parsed = readAtelier(raw as Record<string, unknown>, "");
+  if ("warning" in parsed) return { ok: false, message: parsed.warning.message };
+  return { ok: true, title: parsed.block.title, workshop: parsed.block.workshop ?? { mode: "atelier" } };
 }
 
 function readAtelier(

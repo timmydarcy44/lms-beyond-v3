@@ -140,8 +140,7 @@ export function AdmisBoard() {
     <div className="super-lms-light min-h-[calc(100vh-5rem)] bg-[#F5F5F7] text-slate-900">
       <div className="mx-auto grid max-w-6xl gap-6 px-6 py-10 lg:grid-cols-[320px_minmax(0,1fr)]">
         <section>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CRM CFA</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Étudiants admis</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Apprentis</h1>
           <div className="mt-4 space-y-2">
             {loading ? <p className="text-sm text-slate-400">Chargement…</p> : null}
             {!loading && students.length === 0 ? <p className="rounded-2xl bg-white px-4 py-8 text-center text-sm text-slate-400">Aucun étudiant admis.</p> : null}
@@ -171,7 +170,7 @@ export function AdmisBoard() {
             </div>
 
             <div className="rounded-2xl bg-white p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Cursus</h3>
+              <h3 className="text-sm font-semibold text-slate-400">Cursus</h3>
               <select
                 value={cursusId}
                 onChange={(event) => void saveStaff({ curriculumId: event.target.value })}
@@ -188,7 +187,7 @@ export function AdmisBoard() {
 
             {alternance ? (
               <div className="rounded-2xl bg-white p-5">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Alternance d’accueil</h3>
+                <h3 className="text-sm font-semibold text-slate-400">Alternance d’accueil</h3>
                 <select
                   value={hostId}
                   onChange={(event) => void saveStaff({ companyId: event.target.value })}
@@ -208,7 +207,7 @@ export function AdmisBoard() {
             ) : null}
 
             <div className="rounded-2xl bg-white p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Éléments administratifs</h3>
+              <h3 className="text-sm font-semibold text-slate-400">Éléments administratifs</h3>
               <dl className="mt-3 grid gap-2 sm:grid-cols-2">
                 {CERFA_FIELDS.map(([key, name]) => (
                   <div key={key}>
@@ -220,7 +219,7 @@ export function AdmisBoard() {
             </div>
 
             <div className="rounded-2xl bg-white p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Documents</h3>
+              <h3 className="text-sm font-semibold text-slate-400">Documents</h3>
               <ul className="mt-3 space-y-2">
                 {documents.length === 0 ? <li className="text-sm text-slate-400">Aucun document.</li> : null}
                 {documents.map((document) => (
@@ -259,7 +258,7 @@ export function AdmisBoard() {
       {companyOpen ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={() => setCompanyOpen(null)}>
           <div className="w-full max-w-md rounded-3xl bg-white p-6" onClick={(event) => event.stopPropagation()}>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Entreprise d’accueil</p>
+            <p className="text-xs font-semibold text-slate-400">Entreprise d’accueil</p>
             <h2 className="mt-1 text-2xl font-bold">{companyOpen.company_name}</h2>
             <dl className="mt-4 space-y-2 text-sm">
               <div><dt className="text-slate-400">SIRET</dt><dd>{companyOpen.siret || "—"}</dd></div>

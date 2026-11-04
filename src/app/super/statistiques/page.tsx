@@ -22,7 +22,7 @@ export default async function StatisticsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-gray-200 bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+            <CardTitle className="text-sm font-medium text-[#9AA3BD]">
               Organisations
             </CardTitle>
           </CardHeader>
@@ -34,7 +34,7 @@ export default async function StatisticsPage() {
 
         <Card className="border-gray-200 bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+            <CardTitle className="text-sm font-medium text-[#9AA3BD]">
               Utilisateurs
             </CardTitle>
           </CardHeader>
@@ -49,7 +49,7 @@ export default async function StatisticsPage() {
 
         <Card className="border-gray-200 bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+            <CardTitle className="text-sm font-medium text-[#9AA3BD]">
               Contenus
             </CardTitle>
           </CardHeader>
@@ -64,7 +64,7 @@ export default async function StatisticsPage() {
 
         <Card className="border-gray-200 bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+            <CardTitle className="text-sm font-medium text-[#9AA3BD]">
               Activité (24h)
             </CardTitle>
           </CardHeader>

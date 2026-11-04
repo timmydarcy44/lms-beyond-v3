@@ -81,19 +81,19 @@ export default async function UserDetailsPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Email</p>
+              <p className="text-xs text-[#9AA3BD] mb-1">Email</p>
               <p className="text-gray-900 flex items-center gap-2">
                 <Mail className="h-4 w-4 text-gray-500" />
                 {userDetails.email}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Nom complet</p>
+              <p className="text-xs text-[#9AA3BD] mb-1">Nom complet</p>
               <p className="text-gray-900">{userDetails.fullName || "Non renseigné"}</p>
             </div>
             {userDetails.phone && (
               <div>
-                <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Téléphone</p>
+                <p className="text-xs text-[#9AA3BD] mb-1">Téléphone</p>
                 <p className="text-gray-900 flex items-center gap-2">
                   <Phone className="h-4 w-4 text-gray-500" />
                   {userDetails.phone}
@@ -101,27 +101,27 @@ export default async function UserDetailsPage({
               </div>
             )}
             <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Rôle</p>
+              <p className="text-xs text-[#9AA3BD] mb-1">Rôle</p>
               <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 capitalize">
                 {userDetails.role === "instructor" ? "Formateur" : userDetails.role === "learner" ? "Apprenant" : userDetails.role === "admin" ? "Administrateur" : userDetails.role === "tutor" ? "Tuteur" : userDetails.role}
               </span>
             </div>
             <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Création du compte</p>
+              <p className="text-xs text-[#9AA3BD] mb-1">Création du compte</p>
               <p className="text-gray-900 flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-500" />
                 {userDetails.createdAt ? formatTrackingDate(userDetails.createdAt) : "—"}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Dernière connexion</p>
+              <p className="text-xs text-[#9AA3BD] mb-1">Dernière connexion</p>
               <p className="text-gray-900 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-gray-500" />
                 {userDetails.lastSignInAt ? formatTrackingDate(userDetails.lastSignInAt) : "Jamais connecté"}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-600 uppercase tracking-wide mb-1">Quiz / tests réalisés</p>
+              <p className="text-xs text-[#9AA3BD] mb-1">Quiz / tests réalisés</p>
               <p className="text-gray-900 flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 text-gray-500" />
                 {userDetails.testCount}

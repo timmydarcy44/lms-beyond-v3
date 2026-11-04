@@ -26,11 +26,13 @@ export function PipelineDealSheet({
   onOpenChange,
   children,
   title,
+  menu,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
   title: string;
+  menu?: React.ReactNode;
 }) {
   return (
     <SheetPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -49,10 +51,13 @@ export function PipelineDealSheet({
             <SheetPrimitive.Title className="text-lg font-semibold text-white">
               {title}
             </SheetPrimitive.Title>
+            <div className="flex items-center gap-1">
+              {menu}
             <SheetPrimitive.Close className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-white">
               <XIcon className="h-4 w-4" />
               <span className="sr-only">Fermer</span>
             </SheetPrimitive.Close>
+            </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">{children}</div>
         </SheetPrimitive.Content>

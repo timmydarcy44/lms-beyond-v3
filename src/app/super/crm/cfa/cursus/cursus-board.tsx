@@ -83,7 +83,6 @@ export function CfaCursusBoard() {
       <div className="mx-auto grid max-w-6xl gap-6 px-6 py-10 lg:grid-cols-[320px_minmax(0,1fr)]">
         <section className="space-y-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CRM CFA</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Cursus</h1>
             <p className="mt-2 text-sm text-slate-500">
               Même logique que l’école : un cursus regroupe des formations, puis vous y associez un apprenant.
@@ -144,7 +143,7 @@ export function CfaCursusBoard() {
                 {selected.code ? <p className="mt-1 text-sm text-slate-500">{selected.code}</p> : null}
               </div>
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Formations du cursus</h3>
+                <h3 className="text-xs font-semibold text-slate-400">Formations du cursus</h3>
                 <ul className="mt-3 space-y-2">
                   {selected.modules.map((module) => (
                     <li key={module.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900">
@@ -200,7 +199,7 @@ export function CfaCursusBoard() {
                 </div>
               </div>
               <div>
-                <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Apprenants</h3>
+                <h3 className="text-xs font-semibold text-slate-400">Apprenants</h3>
                 <ul className="mt-3 space-y-2">
                   {selected.learners.map((learner) => (
                     <li key={learner.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900">

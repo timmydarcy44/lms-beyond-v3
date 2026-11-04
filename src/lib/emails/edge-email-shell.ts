@@ -2,7 +2,6 @@
 
 export const EDGE_EMAIL_LOGO_URL = "https://www.byound.fr/brand/logo-byound-noir.png";
 export const EDGE_EMAIL_LOGO_ON_DARK_URL = "https://www.byound.fr/brand/logo-byound-blanc.png";
-export const EDGE_EMAIL_MARK_URL = "https://www.byound.fr/brand/logo-b.png";
 
 export type EdgeEmailTone = "light" | "dark";
 
@@ -30,16 +29,7 @@ export type EdgeEmailShellParams = {
 
 export function edgeEmailBrand(tone: EdgeEmailTone = "light"): string {
   const logo = tone === "dark" ? EDGE_EMAIL_LOGO_ON_DARK_URL : EDGE_EMAIL_LOGO_URL;
-  const ink = tone === "dark" ? "#FFFFFF" : "#111111";
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0">
-    <tr>
-      <td style="width:40px;vertical-align:middle;">
-        <img src="${EDGE_EMAIL_MARK_URL}" alt="" width="40" height="40" style="display:block;width:40px;height:40px;border:0;" />
-      </td>
-      <td style="padding-left:12px;vertical-align:middle;font-size:15px;font-weight:700;letter-spacing:-0.02em;color:${ink};">Byound</td>
-    </tr>
-  </table>
-  <img src="${logo}" alt="Byound" width="112" style="display:block;width:112px;height:auto;margin:28px 0 0;border:0;" />`;
+  return `<img src="${logo}" alt="Byound" width="112" style="display:block;width:112px;height:auto;border:0;" />`;
 }
 
 export function edgeEmailButton(label: string, href: string, tone: EdgeEmailTone = "light"): string {

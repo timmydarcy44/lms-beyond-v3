@@ -1,220 +1,144 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import {
-  CRM_ROLE_LABELS,
-  formatCrmRoleLabel,
-  type CrmUserListItem,
-} from "@/lib/crm/crm-shared";
+import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { EmptyState, SegmentedFilter } from "@/components/control/chrome";
+import { DataTable, PageHeader, StatusPill } from "@/components/control/ui";
+import { looksLikeTestAccount } from "@/lib/control/test-account";
+import { formatCrmRoleLabel, type CrmUserListItem } from "@/lib/crm/crm-shared";
 
-type UsersPageClientProps = {
-  initialUsers: CrmUserListItem[];
-  initialRole?: string;
-};
+const COLORS = ["#6E5BFF", "#8DB8FF", "#5EDCC3", "#F2CF6B", "#FF8A9B"];
 
-const ROLE_FILTER_OPTIONS = [
-  { value: "all", label: "Tous les labels" },
-  ...Object.entries(CRM_ROLE_LABELS).map(([value, label]) => ({ value, label })),
-];
+const GROUPS = [
+  { id: "all", label: "Tous", roles: null },
+  { id: "learner", label: "Apprenants", roles: ["learner", "student", "apprenant"] },
+  { id: "btoc", label: "Particuliers", roles: ["btoc", "particulier", "PARTICULIER"] },
+  { id: "instructor", label: "Formateurs", roles: ["instructor", "formateur"] },
+  { id: "tutor", label: "Tuteurs", roles: ["tutor"] },
+  { id: "expert", label: "Experts", roles: ["expert"] },
+] as const;
 
-const ROLE_BADGE_STYLES: Record<string, string> = {
-  admin: "bg-violet-100 text-violet-800 border-violet-200",
-  instructor: "bg-sky-100 text-sky-800 border-sky-200",
-  learner: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  student: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  tutor: "bg-amber-100 text-amber-800 border-amber-200",
-  btoc: "bg-rose-100 text-rose-800 border-rose-200",
-  demo: "bg-slate-100 text-slate-700 border-slate-200",
-};
+function modeOf(role: string) {
+  if (["btoc", "particulier", "PARTICULIER"].includes(role)) return "particuliers";
+  if (["learner", "student", "apprenant"].includes(role)) return "apprenants";
+  if (role === "tutor") return "tuteurs";
+  return "contacts";
+}
 
-function formatDate(value: string | null): string {
+function personName(user: CrmUserListItem) {
+  const name = [user.firstName, user.lastName].filter((part) => part && part !== "—").join(" ").trim();
+  return name || user.fullName || user.email;
+}
+
+function initials(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "B";
+}
+
+function colorFor(name: string) {
+  let hash = 0;
+  for (const char of name) hash = (hash + char.charCodeAt(0)) % COLORS.length;
+  return COLORS[hash] ?? COLORS[0];
+}
+
+function formatDate(value: string | null) {
   if (!value) return "—";
-  try {
-    return new Date(value).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("fr-FR");
 }
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  });
-}
-
-export function UsersPageClient({ initialUsers, initialRole = "all" }: UsersPageClientProps) {
-  const [selectedRole, setSelectedRole] = useState<string>(initialRole);
+export function UsersPageClient({ initialUsers, initialRole = "all" }: { initialUsers: CrmUserListItem[]; initialRole?: string }) {
+  const router = useRouter();
+  const mode = modeOf(initialRole);
+  const locked = mode !== "contacts";
+  const [group, setGroup] = useState(locked ? initialRole : "all");
   const [search, setSearch] = useState("");
-
-  const filteredUsers = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return initialUsers.filter((user) => {
-      const roleOk = selectedRole === "all" || user.role === selectedRole;
-      if (!roleOk) return false;
-      if (!q) return true;
-      const orgNames = (user.organizations ?? []).map((o) => o.name).join(" ");
-      const haystack = [
-        user.firstName,
-        user.lastName,
-        user.email,
-        orgNames,
-        formatCrmRoleLabel(user.role),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
+  const [showTests, setShowTests] = useState(false);
+  const [page, setPage] = useState(1);
+  const tests = initialUsers.filter((user) => looksLikeTestAccount({ email: user.email, name: personName(user), role: user.role }));
+  const pool = showTests ? initialUsers : initialUsers.filter((user) => !tests.some((item) => item.id === user.id));
+  const query = search.trim().toLowerCase();
+  const rows = useMemo(() => {
+    const roles = GROUPS.find((item) => item.id === group)?.roles ?? (group === "all" ? null : [group]);
+    return pool.filter((user) => {
+      if (roles && !(roles as readonly string[]).includes(user.role)) return false;
+      if (!query) return true;
+      return [personName(user), user.email, ...(user.organizations ?? []).map((org) => org.name)].join(" ").toLowerCase().includes(query);
     });
-  }, [initialUsers, selectedRole, search]);
-
-  const roleCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: initialUsers.length };
-    for (const user of initialUsers) {
-      counts[user.role] = (counts[user.role] ?? 0) + 1;
-    }
-    return counts;
-  }, [initialUsers]);
+  }, [pool, group, query]);
+  const pageCount = Math.max(1, Math.ceil(rows.length / 40));
+  const visible = rows.slice((page - 1) * 40, page * 40);
+  const title = mode === "particuliers" ? "Particuliers" : mode === "apprenants" ? "Apprenants" : mode === "tuteurs" ? "Tuteurs" : "Contacts";
+  const noun = mode === "particuliers" ? "particulier" : mode === "apprenants" ? "apprenant" : mode === "tuteurs" ? "tuteur" : "contact";
+  const counts = Object.fromEntries(GROUPS.map((item) => [item.id, item.roles ? pool.filter((user) => (item.roles as readonly string[]).includes(user.role)).length : pool.length]));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Rechercher un contact…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 border-gray-300"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={selectedRole} onValueChange={setSelectedRole}>
-            <SelectTrigger className="w-[200px] border-gray-300">
-              <SelectValue placeholder="Filtrer par label" />
-            </SelectTrigger>
-            <SelectContent>
-              {ROLE_FILTER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                  {opt.value !== "all" && roleCounts[opt.value] != null
-                    ? ` (${roleCounts[opt.value]})`
-                    : opt.value === "all"
-                      ? ` (${roleCounts.all})`
-                      : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Link href="/super/utilisateurs/new">
-            <Button className="bg-emerald-600 text-white hover:bg-emerald-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Nouveau contact
-            </Button>
-          </Link>
-        </div>
+    <div className="mx-auto max-w-[1240px] space-y-5 px-6 py-8">
+      <PageHeader
+        title={title}
+        subtitle={`${rows.length} ${noun}${rows.length > 1 ? "s" : ""}`}
+        actions={
+          <a href="/super/utilisateurs/new" className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">
+            + Nouveau contact
+          </a>
+        }
+      />
+      {locked ? null : (
+        <SegmentedFilter
+          value={GROUPS.some((item) => item.id === group) ? group : "all"}
+          onChange={(id) => { setGroup(id); setPage(1); }}
+          items={GROUPS.map((item) => ({ id: item.id, label: item.label, count: counts[item.id] ?? 0 }))}
+        />
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          value={search}
+          onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+          placeholder="Rechercher"
+          className="h-10 min-w-[240px] flex-1 rounded-full border border-[#26304F] bg-[#0B1122] px-4 text-sm text-white outline-none"
+        />
+        <label className="flex items-center gap-2 text-sm text-[#C9D2E8]">
+          <input type="checkbox" checked={showTests} onChange={(event) => { setShowTests(event.target.checked); setPage(1); }} />
+          Afficher les comptes de test ({tests.length})
+        </label>
       </div>
-
-      <p className="text-sm text-gray-500">
-        {filteredUsers.length} contact{filteredUsers.length > 1 ? "s" : ""}
-        {selectedRole !== "all" ? ` · label ${formatCrmRoleLabel(selectedRole)}` : ""}
-      </p>
-
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
-              <TableHead className="font-semibold text-gray-700">Nom</TableHead>
-              <TableHead className="font-semibold text-gray-700">Prénom</TableHead>
-              <TableHead className="font-semibold text-gray-700">Email</TableHead>
-              <TableHead className="font-semibold text-gray-700">Organization</TableHead>
-              <TableHead className="font-semibold text-gray-700">Label</TableHead>
-              <TableHead className="font-semibold text-gray-700">Dernière connexion</TableHead>
-              <TableHead className="font-semibold text-gray-700">Création compte</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-center">Quiz / tests</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-right">Chiffre d&apos;affaires</TableHead>
-              <TableHead className="w-[120px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="py-12 text-center text-gray-500">
-                  Aucun contact trouvé
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredUsers.map((user) => {
-                const roleStyle =
-                  ROLE_BADGE_STYLES[user.role] ?? "bg-gray-100 text-gray-700 border-gray-200";
-                const orgLabel =
-                  (user.organizations ?? []).length > 0
-                    ? user.organizations!.map((o) => o.name).join(", ")
-                    : "—";
-
-                return (
-                  <TableRow key={user.id} className="hover:bg-gray-50/50">
-                    <TableCell className="font-medium text-gray-900">{user.lastName}</TableCell>
-                    <TableCell className="text-gray-800">{user.firstName}</TableCell>
-                    <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
-                      {user.email}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 max-w-[160px] truncate" title={orgLabel}>
-                      {orgLabel}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-xs font-medium border ${roleStyle}`}>
-                        {formatCrmRoleLabel(user.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
-                      {formatDate(user.lastSignInAt)}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 whitespace-nowrap">
-                      {formatDate(user.createdAt)}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 text-center tabular-nums">
-                      {user.testCount}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-900 text-right font-medium tabular-nums">
-                      {formatCurrency(user.totalRevenue)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild className="text-xs">
-                        <Link href={`/super/utilisateurs/${user.id}`}>Voir le profil</Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={[
+          {
+            id: "person",
+            header: "Profil",
+            cell: (user) => {
+              const name = personName(user);
+              return (
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#0A0F1E]" style={{ background: colorFor(name) }}>{initials(name)}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold">{name}</span>
+                    <span className="block max-w-[260px] truncate text-[12px] text-[#9AA3BD]">{user.email}</span>
+                  </span>
+                </span>
+              );
+            },
+          },
+          { id: "role", header: "Rôle", cell: (user) => <StatusPill label={formatCrmRoleLabel(user.role)} tone="info" /> },
+          {
+            id: "org",
+            header: "Organisation",
+            cell: (user) => <span className="block max-w-[200px] truncate">{(user.organizations ?? []).map((org) => org.name).join(", ") || "—"}</span>,
+          },
+          { id: "created", header: "Inscrit le", cell: (user) => formatDate(user.createdAt) },
+          { id: "seen", header: "Dernière connexion", cell: (user) => formatDate(user.lastSignInAt) },
+          { id: "open", header: "", cell: () => <ChevronRight className="h-4 w-4 text-[#6C7593]" /> },
+        ]}
+        rows={visible}
+        rowKey={(user) => user.id}
+        onRow={(user) => router.push(`/super/utilisateurs/${user.id}`)}
+        empty={<EmptyState title="Aucun contact pour ce filtre." />}
+        page={page}
+        pageCount={pageCount}
+        onPage={setPage}
+      />
     </div>
   );
 }

@@ -355,16 +355,6 @@ export function CrmSidebar() {
                           {item.label}
                           {item.href === "/super/organisations" && accountCount != null ? ` · ${accountCount}` : ""}
                         </span>
-                        {item.featured ? (
-                          <span
-                            className={cn(
-                              "ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                              isActive ? "bg-white/15 text-white" : "bg-indigo-100 text-indigo-800",
-                            )}
-                          >
-                            Focus
-                          </span>
-                        ) : null}
                       </Link>
                     );
                   })}

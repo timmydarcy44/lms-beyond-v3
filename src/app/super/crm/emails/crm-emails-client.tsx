@@ -245,7 +245,7 @@ export function CrmEmailsClient({
           }}
         />
         <p className={`text-xs ${lockedRecipient ? "text-[#9AA3BD]" : "text-gray-500"}`}>
-          L’image est intégrée dans l’e-mail Resend et ouvre le lien au clic. Le marqueur {"{{image:…}}"} indique sa place dans le message.
+          L’image est intégrée dans l’e-mail et ouvre le lien au clic.
         </p>
       </div>
 
@@ -288,7 +288,7 @@ export function CrmEmailsClient({
           className={lockedRecipient ? "rounded-full bg-[#6E5BFF] text-white hover:bg-[#6E5BFF]" : "bg-emerald-600 text-white hover:bg-emerald-700 w-full sm:w-auto"}
         >
           <Send className="mr-2 h-4 w-4" />
-          {sending === "live" ? "Envoi…" : "Envoyer via Resend"}
+          {sending === "live" ? "Envoi…" : "Envoyer"}
         </Button>
       </div>
     </>
@@ -316,14 +316,10 @@ export function CrmEmailsClient({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-gray-900">
           <Mail className="h-5 w-5 text-emerald-600" />
-          Campagne email (Resend)
+          Campagne e-mail
         </CardTitle>
         <CardDescription>
-          Envoyez un email à tous les contacts, à un segment (label / rôle) ou à une personne.
-          Nécessite <code className="text-xs">RESEND_API_KEY</code>.
-          En test, utilisez <code className="text-xs">RESEND_USE_SANDBOX=1</code> ou retirez{" "}
-          <code className="text-xs">RESEND_FROM_EMAIL</code> pour expédier via{" "}
-          <code className="text-xs">onboarding@resend.dev</code> (domaine non vérifié requis sur resend.com).
+          Envoyez un e-mail à tous les contacts, à un groupe ou à une personne.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">{composer}</CardContent>

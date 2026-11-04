@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PipelineBtobSubnav } from "@/components/super-admin/pipeline-btob-subnav";
 import { PipelineQualiopiScheduleOverlay } from "@/components/crm/pipeline-qualiopi-schedule-overlay";
 import { PipelineQualiopiStartOverlay } from "@/components/crm/pipeline-qualiopi-start-overlay";
 import { parseFetchJson } from "@/lib/api/parse-fetch-json";
@@ -125,13 +124,11 @@ export default function CrmFormationsPage() {
   return (
     <div className="space-y-6 px-3 py-6 sm:px-6 sm:py-8">
       <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Formations</p>
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Formations</h1>
         <p className="max-w-3xl text-sm text-gray-600">
           Dès qu’une proposition est signée dans le pipe, le client arrive ici. Chaque formation a son propre
           dossier Qualiopi (convention, règlement, livret, émargement, satisfaction).
         </p>
-        <PipelineBtobSubnav />
       </div>
 
       {loading ? (

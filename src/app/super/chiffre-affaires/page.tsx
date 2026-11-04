@@ -115,7 +115,7 @@ export default async function ChiffreAffairesPage() {
           <div className="grid gap-6 md:grid-cols-4">
             <Card className="border-gray-200 bg-gradient-to-br from-white to-green-50/30 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   CA Total
                 </CardTitle>
               </CardHeader>
@@ -131,7 +131,7 @@ export default async function ChiffreAffairesPage() {
 
             <Card className="border-gray-200 bg-gradient-to-br from-white to-blue-50/30 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   CA Mensuel
                 </CardTitle>
               </CardHeader>
@@ -147,7 +147,7 @@ export default async function ChiffreAffairesPage() {
 
             <Card className="border-gray-200 bg-gradient-to-br from-white to-purple-50/30 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   CA Journalier
                 </CardTitle>
               </CardHeader>
@@ -163,7 +163,7 @@ export default async function ChiffreAffairesPage() {
 
             <Card className="border-gray-200 bg-gradient-to-br from-white to-orange-50/30 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   Tendance
                 </CardTitle>
               </CardHeader>
@@ -228,7 +228,7 @@ export default async function ChiffreAffairesPage() {
           <div className="grid gap-6 md:grid-cols-4">
             <Card className="border-gray-200 bg-gradient-to-br from-white to-zinc-50 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   Dépenses IA (Total)
                 </CardTitle>
               </CardHeader>
@@ -245,7 +245,7 @@ export default async function ChiffreAffairesPage() {
 
             <Card className="border-gray-200 bg-gradient-to-br from-white to-blue-50/40 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   30 Derniers jours
                 </CardTitle>
               </CardHeader>
@@ -262,7 +262,7 @@ export default async function ChiffreAffairesPage() {
 
             <Card className="border-gray-200 bg-gradient-to-br from-white to-purple-50/40 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   7 Derniers jours
                 </CardTitle>
               </CardHeader>
@@ -279,7 +279,7 @@ export default async function ChiffreAffairesPage() {
 
             <Card className="border-gray-200 bg-gradient-to-br from-white to-amber-50/40 shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600 uppercase tracking-wide">
+                <CardTitle className="text-sm font-medium text-[#9AA3BD]">
                   Appels IA Enregistrés
                 </CardTitle>
               </CardHeader>
@@ -351,7 +351,7 @@ export default async function ChiffreAffairesPage() {
                     className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/60 px-4 py-3 text-sm"
                   >
                     <div className="flex items-center gap-2 font-medium text-gray-800">
-                      <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                      <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[#9AA3BD]">
                         {event.route ? `${event.route}` : event.action || "inconnue"}
                       </span>
                       {event.route && event.action ? (

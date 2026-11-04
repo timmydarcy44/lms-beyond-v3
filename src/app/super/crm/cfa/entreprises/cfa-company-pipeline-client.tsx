@@ -306,8 +306,7 @@ export function CfaCompanyPipelineClient({
     <div className="space-y-6 px-3 py-6 text-white sm:px-6 sm:py-8">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500">CRM Entreprise · CFA</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-950">Entreprises partenaires</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-950">Entreprises partenaires</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-500">
             Du premier contact au recrutement des alternants.
           </p>
@@ -342,8 +341,7 @@ export function CfaCompanyPipelineClient({
           <form onSubmit={(event) => void createCompany(event)} className="super-nav-dropdown my-8 w-full max-w-lg rounded-2xl p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">CRM Entreprise</p>
-                <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">Nouvelle entreprise</h2>
+                <h2 className="text-xl font-bold text-[#f8fbff]">Nouvelle entreprise</h2>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
                 <X className="h-4 w-4" />
@@ -446,7 +444,7 @@ export function CfaCompanyPipelineClient({
           <form onSubmit={(event) => void saveCompany(event)} className="super-nav-dropdown my-8 w-full max-w-2xl rounded-2xl p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-300">Fiche entreprise</p>
+                <p className="text-xs font-semibold text-indigo-300">Fiche entreprise</p>
                 <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">Modifier {selected.company_name}</h2>
               </div>
               <button type="button" onClick={() => setSelected(null)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
@@ -619,7 +617,7 @@ export function CfaCompanyPipelineClient({
                           ) : null}
                         </div>
                         <div className="mt-4 border-t border-gray-100 pt-3" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                          <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Statut</label>
+                          <label className="text-[10px] font-semibold text-gray-400">Statut</label>
                           {readOnly ? (
                             <p className="mt-1 text-xs font-medium text-gray-700">{CFA_COMPANY_STATUS_LABELS[company.status]}</p>
                           ) : (

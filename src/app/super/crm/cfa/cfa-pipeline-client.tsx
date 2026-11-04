@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Clock3, GraduationCap, Loader2, Mail, RefreshCw } from "lucide-react";
+import { ChevronRight, Clock3, GraduationCap, Loader2, Mail, RefreshCw } from "lucide-react";
+import { EmptyState, SegmentedFilter } from "@/components/control/chrome";
+import { DataTable, PageHeader, StatusPill } from "@/components/control/ui";
+import { looksLikeTestAccount } from "@/lib/control/test-account";
 
 import {
   CFA_APPLICATION_STATUSES,
@@ -32,14 +35,14 @@ const columns: {
     accent: "bg-slate-400",
   },
   { id: "interview", label: "Interview", statuses: ["interview"], accent: "bg-sky-500" },
-  { id: "review", label: "Review", statuses: ["review"], accent: "bg-amber-500" },
+  { id: "review", label: "À relire", statuses: ["review"], accent: "bg-amber-500" },
   {
     id: "administrative",
     label: "Éléments administratifs",
     statuses: ["administrative"],
     accent: "bg-violet-500",
   },
-  { id: "admitted", label: "Admitted", statuses: ["admitted"], accent: "bg-emerald-500" },
+  { id: "admitted", label: "Admis", statuses: ["admitted", "contract"], accent: "bg-emerald-500" },
   { id: "rejected", label: "Non retenu", statuses: ["rejected"], accent: "bg-rose-400" },
 ];
 
@@ -55,6 +58,11 @@ export function CfaPipelineClient({
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [migrationRequired, setMigrationRequired] = useState(false);
+  const [view, setView] = useState("liste");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [showTests, setShowTests] = useState(false);
+  const [page, setPage] = useState(1);
   const router = useRouter();
 
   async function load() {
@@ -113,35 +121,39 @@ export function CfaPipelineClient({
     }
   }
 
+  const tests = applications.filter((item) => looksLikeTestAccount({ email: item.email, name: `${item.first_name} ${item.last_name}` }));
+  const pool = showTests ? applications : applications.filter((item) => !tests.some((test) => test.id === item.id));
+  const query = search.trim().toLowerCase();
+  const listRows = pool.filter((item) => {
+    const column = columns.find((entry) => entry.id === statusFilter);
+    if (column && !column.statuses.includes(item.status)) return false;
+    if (!query) return true;
+    return `${item.first_name} ${item.last_name} ${item.email}`.toLowerCase().includes(query);
+  });
+  const pageCount = Math.max(1, Math.ceil(listRows.length / 40));
+  const visibleRows = listRows.slice((page - 1) * 40, page * 40);
+
   return (
-    <div className="space-y-6 px-3 py-6 text-white sm:px-6 sm:py-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500">
-            CRM Apprenant · CFA
-          </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-950">
-            Admissions Byound School
-          </h1>
-          <p className="mt-2 text-sm text-gray-500">
-            Du premier profil à l’admission, sans conditionner l’accès à une entreprise.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          Actualiser
-        </button>
-      </div>
+    <div className="mx-auto max-w-[1240px] space-y-5 px-6 py-8 text-white">
+      <PageHeader
+        title="Admissions"
+        subtitle={`${pool.length} candidature${pool.length > 1 ? "s" : ""} · ${counts.review} à relire`}
+        actions={
+          <>
+            <SegmentedFilter value={view} onChange={setView} items={[{ id: "liste", label: "Liste" }, { id: "tableau", label: "Tableau" }]} />
+            <button type="button" onClick={() => void load()} className="inline-flex h-10 items-center gap-2 rounded-full border border-[#26304F] px-4 text-sm font-semibold text-[#C9D2E8]">
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              Actualiser
+            </button>
+          </>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           ["Candidatures CFA", counts.total],
           ["À compléter", counts.new],
-          ["En review", counts.review],
+          ["À relire", counts.review],
           ["Admis", counts.admitted],
         ].map(([label, value]) => (
           <div key={label} className="super-glass-panel rounded-2xl border border-white/10 p-4 shadow-sm">
@@ -153,7 +165,7 @@ export function CfaPipelineClient({
 
       {migrationRequired ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Applique la migration CFA pour activer le pipeline des candidatures.
+          Les candidatures ne sont pas encore activées.
         </div>
       ) : null}
       {error ? (
@@ -162,11 +174,44 @@ export function CfaPipelineClient({
         </div>
       ) : null}
 
+      {view === "liste" && !loading ? (
+        <div className="space-y-3">
+          <SegmentedFilter
+            value={statusFilter}
+            onChange={(id) => { setStatusFilter(id); setPage(1); }}
+            items={[{ id: "all", label: "Tous", count: pool.length }, ...columns.map((column) => ({ id: column.id, label: column.label, count: pool.filter((item) => column.statuses.includes(item.status)).length }))]}
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Rechercher un candidat" className="h-10 min-w-[240px] flex-1 rounded-full border border-[#26304F] bg-[#0B1122] px-4 text-sm outline-none" />
+            <label className="flex items-center gap-2 text-sm text-[#C9D2E8]">
+              <input type="checkbox" checked={showTests} onChange={(event) => { setShowTests(event.target.checked); setPage(1); }} />
+              Afficher les comptes de test ({tests.length})
+            </label>
+          </div>
+          <DataTable
+            columns={[
+              { id: "name", header: "Candidat", cell: (item) => <span><span className="block font-semibold">{item.first_name} {item.last_name}</span><span className="block truncate text-[12px] text-[#9AA3BD]">{item.email}</span></span> },
+              { id: "track", header: "Spécialité", cell: (item) => getCfaSpecializationLabel(item.specialization) },
+              { id: "status", header: "Statut", cell: (item) => <StatusPill label={item.status === "review" ? "À relire" : CFA_STATUS_LABELS[item.status]} tone={item.status === "admitted" || item.status === "contract" ? "success" : item.status === "rejected" ? "danger" : item.status === "review" ? "warning" : "neutral"} /> },
+              { id: "date", header: "Inscrit le", cell: (item) => new Date(item.created_at).toLocaleDateString("fr-FR") },
+              { id: "open", header: "", cell: () => <ChevronRight className="h-4 w-4 text-[#6C7593]" /> },
+            ]}
+            rows={visibleRows}
+            rowKey={(item) => item.id}
+            onRow={(item) => router.push(`/super/crm/cfa/apprenants/${item.id}`)}
+            empty={<EmptyState title="Aucune candidature pour ce filtre." />}
+            page={page}
+            pageCount={pageCount}
+            onPage={setPage}
+          />
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="flex min-h-72 items-center justify-center">
           <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
         </div>
-      ) : (
+      ) : view === "tableau" ? (
         <div className="-mx-3 min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-2 sm:-mx-6">
           <div className="flex w-max min-w-full flex-nowrap gap-4 px-3 pb-5 sm:px-6">
           {columns.map((column) => {
@@ -223,7 +268,7 @@ export function CfaPipelineClient({
                         Ouvrir la fiche complète
                       </p>
                       <div className="mt-4 border-t border-gray-100 pt-3">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                        <label className="text-[10px] font-semibold text-gray-400">
                           Statut
                         </label>
                         {readOnly ? (
@@ -262,7 +307,7 @@ export function CfaPipelineClient({
           })}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

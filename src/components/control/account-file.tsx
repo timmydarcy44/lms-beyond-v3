@@ -34,7 +34,7 @@ const ROLE_COLORS = {
   member: { bg: "#163228", fg: "#6BE39B" },
 };
 
-export function AccountFile({ detail, initialTab }: { detail: Detail; initialTab?: string }) {
+export function AccountFile({ detail, initialTab, embedded = false }: { detail: Detail; initialTab?: string; embedded?: boolean }) {
   const account = detail.account;
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "overview");
@@ -60,10 +60,13 @@ export function AccountFile({ detail, initialTab }: { detail: Detail; initialTab
 
   return (
     <div className="mx-auto max-w-[1240px] px-6 py-8">
+      {embedded ? null : (
       <p className="mb-3 text-sm text-[#8A93AE]">
         <Link href="/super/organisations">Comptes clients</Link> · {account.name}
       </p>
+      )}
       <header className="flex flex-wrap items-start justify-between gap-4">
+        {embedded ? <div /> : (
         <div>
           <h1 className="text-[36px] font-extrabold tracking-[-1.2px]">{account.name}</h1>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -74,6 +77,7 @@ export function AccountFile({ detail, initialTab }: { detail: Detail; initialTab
             <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#0A0F1E]">CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT</span>
           </div>
         </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {detail.members.find((member) => member.role === "admin" && member.email)?.email ? (
             <a className="rounded-full border border-[#26304F] px-4 py-2 text-sm" href={`mailto:${detail.members.find((member) => member.role === "admin")?.email}`}>Contacter l'admin</a>

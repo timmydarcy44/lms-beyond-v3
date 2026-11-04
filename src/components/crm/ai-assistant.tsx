@@ -41,7 +41,7 @@ function TypingIndicator() {
   );
 }
 
-export function AiAssistant() {
+export function AiAssistant({ hideLauncher = false }: { hideLauncher?: boolean }) {
   const { isOpen, setIsOpen, toggle } = useAiAssistant();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -252,6 +252,7 @@ export function AiAssistant() {
 
   return (
     <>
+      {hideLauncher ? null : (
       <button
         type="button"
         onClick={toggle}
@@ -265,6 +266,7 @@ export function AiAssistant() {
       >
         <Mic className="h-6 w-6" />
       </button>
+      )}
 
       <div
         className={cn(

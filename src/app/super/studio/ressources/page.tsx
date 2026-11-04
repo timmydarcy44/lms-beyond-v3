@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { SuperAdminHeaderApple } from "@/components/super-admin/super-admin-header-apple";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClientOrFallback, getServiceRoleClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -19,8 +18,7 @@ export default async function SuperAdminRessourcesPage() {
   
   if (!supabase) {
     return (
-      <div className="min-h-screen bg-white">
-        <SuperAdminHeaderApple />
+      <div className="min-h-screen">
         <main className="mx-auto max-w-7xl px-6 py-8">
           <div className="text-center py-12">
             <p className="text-gray-600">Erreur de connexion à la base de données</p>

@@ -1,6 +1,7 @@
 import { Manrope } from "next/font/google";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AccountFile } from "@/components/control/account-file";
+import { findCompanyBySource } from "@/lib/control/companies";
 import { loadAccountDetail } from "@/lib/control/load";
 
 const manrope = Manrope({ subsets: ["latin"] });
@@ -16,6 +17,8 @@ export default async function CompteClientPage({
 }) {
   const { id } = await params;
   const { tab } = await searchParams;
+  const companyId = await findCompanyBySource("organization", id);
+  if (companyId) redirect(`/super/entreprises/${companyId}?partie=business${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`);
   const detail = await loadAccountDetail(id);
   if (!detail.account) notFound();
   return (

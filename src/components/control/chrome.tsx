@@ -32,12 +32,33 @@ export function SegmentedFilter({
   );
 }
 
-export function KpiCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+export function KpiCard({
+  label,
+  value,
+  hint,
+  icon,
+  tone = "#8B7BFF",
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  icon?: ReactNode;
+  tone?: string;
+  valueColor?: string;
+}) {
   return (
     <div className="rounded-[22px] border border-[#1A2340] bg-[#111831] p-4">
-      <p className="text-[28px] font-extrabold tracking-[-0.6px]">{value}</p>
-      <p className="text-[13px] text-[#8A93AE]">{label}</p>
-      {hint ? <p className="mt-1 text-xs text-[#6BE39B]">{hint}</p> : null}
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[28px] font-extrabold tracking-[-0.6px]" style={{ color: valueColor ?? "#ffffff" }}>{value}</p>
+        {icon ? (
+          <span className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: `${tone}22`, color: tone }}>
+            {icon}
+          </span>
+        ) : null}
+      </div>
+      <p className="text-[13px] text-[#9AA3BD]">{label}</p>
+      {hint ? <p className="mt-1 text-xs text-[#9AA3BD]">{hint}</p> : null}
     </div>
   );
 }

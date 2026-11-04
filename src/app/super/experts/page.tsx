@@ -1,28 +1,23 @@
 import type { Metadata } from "next";
-import { AdminExpertsView } from "@/components/admin/experts/admin-experts-view";
 import { getAdminExperts } from "@/lib/queries/admin-experts";
+import { ExpertsDirectory } from "./experts-directory";
 
 export const metadata: Metadata = {
-  title: "Experts / Formateurs | Super Admin",
+  title: "Formateurs et experts | Byound Control",
 };
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ status?: string }>;
+type SearchParams = Promise<{ status?: string; ajouter?: string }>;
 
 export default async function SuperExpertsPage({ searchParams }: { searchParams?: SearchParams }) {
   const params = await searchParams;
-  const status = params?.status ?? "all";
   const experts = await getAdminExperts(null);
-
   return (
-    <div>
-      <p className="px-6 pt-6 text-sm">
-        <a href="/super/experts/appartenances" className="font-semibold underline">
-          Appartenances par pôle
-        </a>
-      </p>
-      <AdminExpertsView experts={experts} activeFilter={status} basePath="/super/experts" />
-    </div>
+    <ExpertsDirectory
+      experts={experts}
+      activeFilter={params?.status ?? "all"}
+      startAdd={params?.ajouter === "1"}
+    />
   );
 }

@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { EmptyState } from "@/components/control/chrome";
+import { DataTable, StatusPill } from "@/components/control/ui";
 import { formatEuroDelta, formatEurosHt } from "@/lib/control/policy";
 import type { ControlAccount, ControlCockpit } from "@/lib/control/load";
 
@@ -64,7 +68,9 @@ const pill: Record<string, { bg: string; fg: string; label: string }> = {
 };
 
 export function AccountsCockpit({ data }: { data: ControlCockpit }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("clients");
+  const [showTests, setShowTests] = useState(false);
   const [query, setQuery] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [managerFilter, setManagerFilter] = useState("all");
@@ -82,6 +88,9 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
 
   const rows = useMemo(() => {
     const filtered = data.accounts.filter((account) => {
+      const demo = account.kind === "demo" || account.status === "demo";
+      if (demo && !showTests) return false;
+      if (tab === "demo") return demo;
       if (!inTab(account, tab)) return false;
       if (query && !`${account.name} ${account.slug}`.toLowerCase().includes(query.toLowerCase())) return false;
       if (moduleFilter !== "all" && !moduleLabels(account.modules).includes(moduleFilter)) return false;
@@ -94,7 +103,7 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
       if (sort === "signal") return (a.signal?.rank ?? 9) - (b.signal?.rank ?? 9);
       return b.revenue12HtCents - a.revenue12HtCents;
     });
-  }, [data.accounts, tab, query, moduleFilter, managerFilter, sort]);
+  }, [data.accounts, tab, query, moduleFilter, managerFilter, sort, showTests]);
 
   const counts = {
     clients: data.accounts.filter((account) => inTab(account, "clients")).length,
@@ -116,7 +125,7 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/super/organisations/new" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">
+          <Link href="/super/organisations/new" className="rounded-full px-4 py-2 text-sm font-semibold" style={{ background: "#ffffff", color: "#12141C" }}>
             + Nouveau compte
           </Link>
         </div>
@@ -157,7 +166,10 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
           <button
             key={key}
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => {
+              setTab(key);
+              if (key === "demo") setShowTests(true);
+            }}
             className="rounded-full px-3 py-1.5 text-sm"
             style={{ background: tab === key ? "#6E5BFF" : "#111831", color: "white" }}
           >
@@ -188,81 +200,90 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
           <option value="activity">Dernière activité</option>
           <option value="signal">Signal</option>
         </select>
+        <label className="flex items-center gap-2 text-sm text-[#C9D2E8]">
+          <input type="checkbox" checked={showTests} onChange={(event) => setShowTests(event.target.checked)} />
+          Afficher les comptes de test ({counts.demo})
+        </label>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-[28px] border border-[#1A2340] bg-[#111831]">
-        <div className="grid grid-cols-[1.4fr_.7fr_.8fr_.8fr_.9fr_.7fr_auto] gap-3 px-4 py-3 text-xs text-[#9AA6C2]">
-          <span>Compte</span><span>Statut</span><span>Modules</span><span>Utilisateurs actifs</span><span>CA 12 mois</span><span>Signal</span><span />
-        </div>
-        {rows.map((account) => {
-          const status = account.kind === "internal" ? pill.internal : pill[account.status] ?? pill.onboarding;
-          const ratio = account.totalUsers ? Math.min(100, Math.round((account.activeUsers / account.totalUsers) * 100)) : 0;
-          const delta = account.revenue12HtCents - account.revenuePrev12HtCents;
-          return (
-            <div key={account.id} className="grid grid-cols-[1.4fr_.7fr_.8fr_.8fr_.9fr_.7fr_auto] items-center gap-3 border-t border-[#1A2340] px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-2xl text-xs font-bold text-[#0A0F1E]" style={{ background: colorFor(account.name) }}>
-                  {account.logoUrl ? <img src={account.logoUrl} alt="" className="h-10 w-10 rounded-2xl object-cover" /> : initials(account.name)}
+      <DataTable
+        columns={[
+          {
+            id: "account",
+            header: "Compte",
+            cell: (account) => (
+              <span className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#0A0F1E]" style={{ background: colorFor(account.name) }}>
+                  {account.logoUrl ? <img src={account.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : initials(account.name)}
                 </span>
                 <span>
                   <span className="block font-semibold">{account.name}</span>
-                  <span className="block text-xs text-[#9AA6C2]">{account.kind === "internal" ? "Interne" : "Entreprise"} · {relative(account.lastActivityAt)}</span>
-                </span>
-              </div>
-              <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: status.bg, color: status.fg }}>{status.label}</span>
-              <span className="flex flex-wrap gap-1">
-                {moduleLabels(account.modules).length === 0 ? <span className="text-xs text-[#9AA6C2]">—</span> : moduleLabels(account.modules).map((label) => (
-                  <span key={label} className="rounded-full bg-[#1A2340] px-2 py-1 text-[11px]">{label}</span>
-                ))}
-              </span>
-              <span>
-                <span className="text-sm">{account.activeUsers} / {account.totalUsers}</span>
-                <span className="mt-1 block h-1.5 rounded-full bg-[#1A2340]">
-                  <span className="block h-1.5 rounded-full bg-[#6E5BFF]" style={{ width: `${ratio}%` }} />
+                  <span className="block text-[12px] text-[#9AA3BD]">{account.kind === "internal" ? "Interne" : "Entreprise"} · {relative(account.lastActivityAt)}</span>
                 </span>
               </span>
-              <span>
-                {account.status === "trial" ? (
-                  <span className="text-sm">{account.openQuoteHtCents ? formatEurosHt(account.openQuoteHtCents) : "Devis en cours"}</span>
-                ) : (
-                  <>
-                    <span className="block text-sm">{formatEurosHt(account.revenue12HtCents)}</span>
-                    <span className="text-xs" style={{ color: delta < 0 ? "#FF8A9B" : "#6BE39B" }}>{formatEuroDelta(delta)}</span>
-                  </>
-                )}
+            ),
+          },
+          {
+            id: "status",
+            header: "Statut",
+            cell: (account) => {
+              const status = account.kind === "internal" ? pill.internal : pill[account.status] ?? pill.onboarding;
+              const tone = account.status === "active" ? "success" : account.status === "archived" ? "danger" : account.status === "trial" ? "info" : "warning";
+              return <StatusPill label={status.label} tone={account.kind === "internal" ? "info" : tone} />;
+            },
+          },
+          {
+            id: "modules",
+            header: "Modules",
+            cell: (account) => moduleLabels(account.modules).join(", ") || "—",
+          },
+          { id: "users", header: "Utilisateurs actifs", cell: (account) => `${account.activeUsers} / ${account.totalUsers}` },
+          {
+            id: "revenue",
+            header: "CA 12 mois",
+            cell: (account) => account.status === "trial"
+              ? (account.openQuoteHtCents ? formatEurosHt(account.openQuoteHtCents) : "Devis en cours")
+              : formatEurosHt(account.revenue12HtCents),
+          },
+          { id: "signal", header: "Signal", cell: (account) => account.signal?.label ?? "—" },
+          {
+            id: "open",
+            header: "",
+            cell: (account) => (
+              <span className="relative flex items-center justify-end gap-1">
+                <button
+                  type="button"
+                  className="rounded-full px-2 py-1"
+                  aria-label="Actions"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenMenu(openMenu === account.id ? null : account.id);
+                  }}
+                >
+                  ⋯
+                </button>
+                {openMenu === account.id ? (
+                  <span className="absolute right-0 top-8 z-10 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-sm" onClick={(event) => event.stopPropagation()}>
+                    <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { void navigator.clipboard.writeText(account.id); setCopied(account.id); }}>
+                      {copied === account.id ? "Identifiant copié" : "Copier l'identifiant"}
+                    </button>
+                    {duplicateIds.includes(account.id) ? (
+                      <Link className="block rounded-xl px-2 py-1.5" href={`/super/organisations/comparer?ids=${data.duplicates.find((group) => group.ids.includes(account.id))?.ids.join(",") ?? ""}`}>
+                        Comparer
+                      </Link>
+                    ) : null}
+                  </span>
+                ) : null}
+                <ChevronRight className="h-4 w-4 text-[#6C7593]" />
               </span>
-              <span className="text-xs" style={{ color: account.signal?.key === "overdue_invoice" ? "#FF8A9B" : "#F2CF6B" }}>
-                {account.signal?.label ?? "—"}
-              </span>
-              <span className="flex items-center gap-2">
-                <Link href={`/super/organisations/${account.id}`} className="rounded-full border border-[#26304F] px-3 py-1.5 text-sm">Ouvrir</Link>
-                <span className="relative">
-                  <button type="button" className="rounded-full px-2 py-1" onClick={() => setOpenMenu(openMenu === account.id ? null : account.id)} aria-label="Actions">⋯</button>
-                  {openMenu === account.id ? (
-                    <span className="absolute right-0 z-10 mt-1 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-sm shadow-none">
-                      <button
-                        type="button"
-                        className="block w-full rounded-xl px-2 py-1.5 text-left"
-                        onClick={() => {
-                          void navigator.clipboard.writeText(account.id);
-                          setCopied(account.id);
-                        }}
-                      >
-                        {copied === account.id ? "Identifiant copié" : "Copier l'identifiant"}
-                      </button>
-                      {duplicateIds.includes(account.id) ? (
-                        <Link className="block rounded-xl px-2 py-1.5" href={`/super/organisations/comparer?ids=${data.duplicates.find((group) => group.ids.includes(account.id))?.ids.join(",") ?? ""}`}>
-                          Comparer
-                        </Link>
-                      ) : null}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
+            ),
+          },
+        ]}
+        rows={rows}
+        rowKey={(account) => account.id}
+        onRow={(account) => router.push(`/super/organisations/${account.id}`)}
+        empty={<EmptyState title="Aucun compte pour ce filtre." />}
+      />
     </div>
   );
 }

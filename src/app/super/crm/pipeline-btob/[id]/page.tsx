@@ -64,12 +64,11 @@ export default function PipelineBtobDealPage() {
         className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
       >
         <ArrowLeft className="h-4 w-4" />
-        Pipeline BTOB
+        Pipeline
       </Link>
 
       <header className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Prospect</p>
-        <h1 className="mt-1 text-2xl font-bold text-gray-900">{deal.company_name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{deal.company_name}</h1>
         <p className="mt-2 text-sm text-gray-600">
           {deal.contact_first_name}
           {deal.email ? ` · ${deal.email}` : ""}

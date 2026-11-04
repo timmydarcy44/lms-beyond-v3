@@ -1,11 +1,9 @@
 "use client";
 
-import { Suspense, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { PipelineBtobSubnav } from "@/components/super-admin/pipeline-btob-subnav";
-import { isPipelinePrescripteurUser } from "@/lib/crm/pipeline-prescripteur-access";
 import type { PipelineType } from "@/lib/crm/pipeline-shared";
 
 import { JarvisTodoCta } from "./jarvis-todo-cta";
@@ -14,21 +12,38 @@ import { PipelineBoardClient, type PipelineBoardHandle } from "./pipeline-board-
 type PipelinePageClientProps = {
   pipelineType: PipelineType;
   currentUserEmail: string | null;
+  createOnLoad?: boolean;
 };
 
-export function PipelinePageClient({ pipelineType, currentUserEmail }: PipelinePageClientProps) {
+export function PipelinePageClient({ pipelineType, currentUserEmail, createOnLoad = false }: PipelinePageClientProps) {
   const boardRef = useRef<PipelineBoardHandle>(null);
   const isBtoc = pipelineType === "btoc";
+
+  useEffect(() => {
+    if (!createOnLoad || isBtoc) return;
+    boardRef.current?.openCreateProspect();
+  }, [createOnLoad, isBtoc]);
+
+  if (!isBtoc) {
+    return (
+      <div className="h-[calc(100dvh-68px)] min-h-0 overflow-hidden">
+        <PipelineBoardClient
+          ref={boardRef}
+          pipelineType={pipelineType}
+          currentUserEmail={currentUserEmail}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 px-3 py-6 sm:px-6 sm:py-8">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">CRM / Pipeline</p>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                {isBtoc ? "Pipeline BTOC" : "Pipeline BTOB"}
+                {isBtoc ? "Pipeline particuliers" : "Pipeline B2B"}
               </h1>
               <Button
                 type="button"
@@ -52,11 +67,6 @@ export function PipelinePageClient({ pipelineType, currentUserEmail }: PipelineP
             <JarvisTodoCta />
           </div>
         </div>
-        {!isBtoc && isPipelinePrescripteurUser(currentUserEmail) ? (
-          <Suspense fallback={null}>
-            <PipelineBtobSubnav />
-          </Suspense>
-        ) : null}
       </div>
       <PipelineBoardClient
         ref={boardRef}

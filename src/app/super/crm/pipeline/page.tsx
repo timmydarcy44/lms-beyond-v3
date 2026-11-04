@@ -24,5 +24,13 @@ export default async function CrmPipelinePage({
     redirect("/super/crm/pipeline");
   }
 
-  return <PipelinePageClient pipelineType={pipelineType} currentUserEmail={userEmail} />;
+  const creerRaw = params?.creer;
+  const createOnLoad = (Array.isArray(creerRaw) ? creerRaw[0] : creerRaw) === "1";
+  return (
+    <PipelinePageClient
+      pipelineType={pipelineType}
+      currentUserEmail={userEmail}
+      createOnLoad={createOnLoad === true}
+    />
+  );
 }

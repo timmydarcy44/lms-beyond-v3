@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PipelineBtobSubnav } from "@/components/super-admin/pipeline-btob-subnav";
 import { QualiopiRnqPanel } from "@/components/super-admin/qualiopi-rnq-panel";
 import {
   QUALIOPI_CORE_DOCS,
@@ -33,11 +32,11 @@ import { cn } from "@/lib/utils";
 
 function sessionDateBadge(scheduledAt: string | null) {
   if (!scheduledAt) {
-    return { line1: "—", line2: "À FIXER", subtitle: "Date non renseignée" };
+    return { line1: "—", line2: "À fixer", subtitle: "Date non renseignée" };
   }
   const d = new Date(scheduledAt);
   if (Number.isNaN(d.getTime())) {
-    return { line1: "—", line2: "À FIXER", subtitle: "Date non renseignée" };
+    return { line1: "—", line2: "À fixer", subtitle: "Date non renseignée" };
   }
   const line1 = String(d.getDate());
   const line2 = d
@@ -145,7 +144,6 @@ export default function CrmQualiopiPage() {
   return (
     <div className={cn(QUALIOPI_PAGE_BG, "space-y-8 px-3 py-6 sm:px-6 sm:py-8")}>
       <div className="space-y-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-white/35">CRM / Qualiopi</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">Qualiopi</h1>
@@ -161,7 +159,6 @@ export default function CrmQualiopiPage() {
             Ajouter un document
           </Button>
         </div>
-        <PipelineBtobSubnav variant="dark" />
       </div>
 
       <QualiopiRnqPanel refreshKey={complianceRefreshKey} />

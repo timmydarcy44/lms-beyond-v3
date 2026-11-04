@@ -58,6 +58,7 @@ import { PipelineCatalogueEmailOverlay } from "@/components/crm/pipeline-catalog
 import { PipelineDealCockpit, sanitizeHumanNotes } from "@/components/crm/pipeline-deal-cockpit";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
+import { PipelineB2bLayout } from "./pipeline-b2b-layout";
 import { PipelineNafAnalytics } from "@/components/crm/pipeline-naf-analytics";
 import { centroidFromZip, parseZipFromText, resolveAllDealGeoPoints } from "@/lib/crm/french-geo";
 import { parseFetchJson } from "@/lib/api/parse-fetch-json";
@@ -124,8 +125,9 @@ export const PipelineBoardClient = forwardRef<
   {
     pipelineType: PipelineType;
     currentUserEmail: string | null;
+    stageList?: PipelineStage[];
   }
->(function PipelineBoardClient({ pipelineType, currentUserEmail }, ref) {
+>(function PipelineBoardClient({ pipelineType, currentUserEmail, stageList }, ref) {
   const isBtoc = pipelineType === "btoc";
   const defaultStage = isBtoc ? "inscription" : "a_appeler";
   const normUserEmail = currentUserEmail?.trim().toLowerCase() ?? null;
@@ -153,6 +155,8 @@ export const PipelineBoardClient = forwardRef<
   const [aiProspectSummaryAt, setAiProspectSummaryAt] = useState<string | null>(null);
   const [generatingAiSummary, setGeneratingAiSummary] = useState(false);
   const [originalStageSlug, setOriginalStageSlug] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [trashConfirm, setTrashConfirm] = useState(false);
   const [catalogueOverlayOpen, setCatalogueOverlayOpen] = useState(false);
   const [catalogueOverlayDeal, setCatalogueOverlayDeal] = useState<PipelineDeal | null>(null);
   const [pendingStageSlug, setPendingStageSlug] = useState<string | null>(null);
@@ -222,7 +226,7 @@ export const PipelineBoardClient = forwardRef<
       const res = await fetch("/api/super-admin/crm/pipeline/sync-btoc", { method: "POST" });
       const json = await parseFetchJson<{ error?: string; synced?: number }>(res);
       if (!res.ok) throw new Error(json.error);
-      toast.success(`Synchronisation BTOC : ${json.synced ?? 0} contact(s)`);
+      toast.success(`Synchronisation particuliers : ${json.synced ?? 0} contact(s)`);
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sync impossible");
@@ -232,13 +236,15 @@ export const PipelineBoardClient = forwardRef<
   };
 
   const visibleStages = useMemo(
-    () =>
-      stages.filter(
+    () => {
+      const source = stageList?.length ? stageList : stages;
+      return source.filter(
         (s) => !DEPRECATED_PIPELINE_STAGE_SLUGS.includes(
           s.slug as (typeof DEPRECATED_PIPELINE_STAGE_SLUGS)[number],
         ),
-      ),
-    [stages],
+      );
+    },
+    [stageList, stages],
   );
 
   const dealsByStage = useMemo(() => {
@@ -383,6 +389,8 @@ export const PipelineBoardClient = forwardRef<
     setOriginalStageSlug(stageSlug);
     setAiProspectSummary(null);
     setAiProspectSummaryAt(null);
+    setMenuOpen(false);
+    setTrashConfirm(false);
     setDialogOpen(true);
   };
 
@@ -425,6 +433,8 @@ export const PipelineBoardClient = forwardRef<
     setOriginalStageSlug(deal.stage_slug);
     setAiProspectSummary(deal.ai_prospect_summary ?? null);
     setAiProspectSummaryAt(deal.ai_prospect_summary_at ?? null);
+    setMenuOpen(false);
+    setTrashConfirm(false);
     setDialogOpen(true);
   };
 
@@ -606,13 +616,16 @@ export const PipelineBoardClient = forwardRef<
     }
   };
 
-  const deleteDeal = async (id: string) => {
-    if (!confirm("Supprimer cette carte ?")) return;
+  const deleteDeal = async (id: string, opts?: { confirmed?: boolean }) => {
+    if (!opts?.confirmed && !confirm("Supprimer cette carte ?")) return;
     const res = await fetch(`/api/super-admin/crm/pipeline/deals/${id}`, { method: "DELETE" });
     if (!res.ok) {
       toast.error("Suppression impossible");
       return;
     }
+    setDialogOpen(false);
+    setMenuOpen(false);
+    setTrashConfirm(false);
     await load();
   };
 
@@ -730,8 +743,27 @@ export const PipelineBoardClient = forwardRef<
     return <p className="text-sm text-gray-500 py-12 text-center">Chargement du pipeline…</p>;
   }
 
+  const businessDeals = deals.filter((deal) => deal.offers_business !== false);
+
   return (
-    <div className="space-y-4">
+    <div className={isBtoc ? "space-y-4" : "flex h-full min-h-0 flex-col"}>
+      {!isBtoc ? (
+        <PipelineB2bLayout
+          stages={visibleStages}
+          deals={businessDeals}
+          currentUserEmail={normUserEmail}
+          onCreate={() => openCreate(defaultStage)}
+          onCreateInStage={openCreate}
+          onOpen={openEdit}
+          onMove={(dealId, stageSlug) => void moveDeal(dealId, stageSlug)}
+          onRename={(stage) => {
+            setEditingStage(stage);
+            setStageLabelDraft(stage.label);
+          }}
+        />
+      ) : null}
+      {isBtoc ? (
+      <>
       {!isBtoc ? (
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-2">
@@ -935,7 +967,7 @@ export const PipelineBoardClient = forwardRef<
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-sky-700">Proposition</p>
-                <p className="text-2xl font-bold text-gray-900">{formatDealAmount(propositionCa.cents)}</p>
+                <p className="text-2xl font-bold" style={{ color: "#0A0F1E" }}>{formatDealAmount(propositionCa.cents)}</p>
                 <p className="text-xs text-gray-500">
                   {propositionCa.count} prospect{propositionCa.count > 1 ? "s" : ""} avec montant
                 </p>
@@ -949,7 +981,7 @@ export const PipelineBoardClient = forwardRef<
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">CA réalisé</p>
-                <p className="text-2xl font-bold text-gray-900">{formatDealAmount(caTotal)}</p>
+                <p className="text-2xl font-bold" style={{ color: "#0A0F1E" }}>{formatDealAmount(caTotal)}</p>
                 <p className="text-xs text-gray-500">Proposition signée + Réussi</p>
               </div>
             </div>
@@ -1181,10 +1213,37 @@ export const PipelineBoardClient = forwardRef<
         })}
       </div>
 
+      </>) : null}
       <PipelineDealSheet
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setMenuOpen(false);
+            setTrashConfirm(false);
+          }
+        }}
         title={form.id ? form.company_name || "Fiche prospect" : "Nouvelle opportunité"}
+        menu={form.id && !isBtoc ? (
+          <div className="relative">
+            <button type="button" className="rounded-full px-2 py-1 text-lg leading-none text-[#C9D2E8]" aria-label="Actions de la fiche" onClick={() => setMenuOpen((value) => !value)}>
+              ⋯
+            </button>
+            {menuOpen ? (
+              <div className="absolute right-0 top-9 z-10 w-56 rounded-xl border border-[#26304F] bg-[#111831] p-1 shadow-xl">
+                {trashConfirm ? (
+                  <button type="button" className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#FF8A9A]" onClick={() => form.id && void deleteDeal(form.id, { confirmed: true })}>
+                    Confirmer la suppression
+                  </button>
+                ) : (
+                  <button type="button" className="w-full rounded-lg px-3 py-2 text-left text-sm text-[#FF8A9A]" onClick={() => setTrashConfirm(true)}>
+                    Retirer du pipeline
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : undefined}
       >
         {!isBtoc ? (
           <PipelineDealCockpit

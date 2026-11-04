@@ -34,9 +34,10 @@ type Props = {
   experts: AdminExpertRow[];
   activeFilter: string;
   basePath?: string;
+  startAdd?: boolean;
 };
 
-export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/experts" }: Props) {
+export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/experts", startAdd = false }: Props) {
   const [search, setSearch] = useState("");
 
   const counts = useMemo(() => {
@@ -76,7 +77,7 @@ export function AdminExpertsView({ experts, activeFilter, basePath = "/admin/exp
         </div>
         {basePath.startsWith("/super") ? (
           <div className="flex flex-wrap gap-2">
-            <AddExpertDialog />
+            <AddExpertDialog initialOpen={startAdd} />
             <Link
               href="/super/open-badges/badgeclasses/new"
               className="inline-flex h-10 items-center rounded-full border border-[#635BFF] px-4 text-sm font-semibold text-[#635BFF] hover:bg-[#635BFF]/10"

@@ -24,6 +24,7 @@ const BASE_COLUMNS =
   "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,siret";
 
 function asKind(value: string | null | undefined, slug: string | null): OrgKind {
+  if (classifyOrganization(slug).kind === "demo") return "demo";
   if (value === "client" || value === "internal" || value === "demo") return value;
   return classifyOrganization(slug).kind;
 }

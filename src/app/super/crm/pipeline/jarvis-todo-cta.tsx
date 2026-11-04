@@ -11,7 +11,7 @@ export function JarvisTodoCta() {
         window.dispatchEvent(new CustomEvent("jarvis-open-briefing"));
       }}
     >
-      TODO
+      À faire
     </Button>
   );
 }

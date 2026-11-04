@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { BYOUND_CARE_TESTS } from "@/lib/expert/care-tests";
 import { type CarePrestation } from "@/lib/expert/care-prestations";
 import { CARE_FOLLOW_UPS, followUpLabel, parseFollowUp, type CareFollowUp, validateCareClient } from "@/lib/expert/care-client-fields";
+import { CARE_CLIENT_CSV_TEMPLATE } from "@/lib/expert/care-client-csv";
 import { centsToInput } from "@/lib/entreprise/offer-conditions";
 import { EmptyState, ExpertPageFrame, ExpertPageHeader, ExpertPrimaryButton } from "@/components/expert/expert-ui";
 import { AppleSuccessOverlay } from "@/components/expert/apple-success-overlay";
@@ -76,6 +77,7 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
   const [invoiceLines, setInvoiceLines] = useState<Array<{ key: string; id: string; label: string; price: string }>>([]);
   const [addPrestationId, setAddPrestationId] = useState("");
   const [busy, setBusy] = useState(false);
+  const csvInput = useRef<HTMLInputElement>(null);
   const [success, setSuccess] = useState<{ title: string; subtitle?: string } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -107,6 +109,46 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const downloadCsvTemplate = () => {
+    const blob = new Blob([CARE_CLIENT_CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "clients-byound-care.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importCsv = async (file: File) => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/expert/care/clients/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csv: await file.text() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Import impossible");
+      const imported = Number(json.imported ?? 0);
+      const skipped = Array.isArray(json.skipped) ? json.skipped : [];
+      if (imported > 0) {
+        setSuccess({
+          title: imported > 1 ? `${imported} clients importés` : "Client importé",
+          subtitle: skipped.length ? `${skipped.length} ligne${skipped.length > 1 ? "s" : ""} ignorée${skipped.length > 1 ? "s" : ""}.` : "Les clients sont dans le CRM.",
+        });
+      } else {
+        const first = skipped[0];
+        toast.error(first ? `Ligne ${first.line} : ${first.reason}` : "Aucun client importé.");
+      }
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Import impossible");
+    } finally {
+      setBusy(false);
+      if (csvInput.current) csvInput.current.value = "";
+    }
+  };
 
   const addClient = async () => {
     const invalid = validateCareClient({
@@ -252,7 +294,29 @@ export function CareCrmBoard({ mode }: { mode: "crm" | "tests" | "factures" }) {
         subtitle={titles[mode].subtitle}
         action={
           mode === "crm" ? (
-            <ExpertPrimaryButton onClick={() => setAddOpen(true)}>Ajouter un client</ExpertPrimaryButton>
+            <>
+              <button
+                type="button"
+                onClick={downloadCsvTemplate}
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#1E2130] px-5 text-sm font-extrabold text-[#F4F5F7]"
+              >
+                Modèle CSV
+              </button>
+              <label className="inline-flex h-11 cursor-pointer items-center justify-center rounded-full bg-[#1E2130] px-5 text-sm font-extrabold text-[#F4F5F7]">
+                {busy ? "Import…" : "Importer un CSV"}
+                <input
+                  ref={csvInput}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void importCsv(file);
+                  }}
+                />
+              </label>
+              <ExpertPrimaryButton onClick={() => setAddOpen(true)}>Ajouter un client</ExpertPrimaryButton>
+            </>
           ) : undefined
         }
       />

@@ -811,11 +811,14 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
         </Button>
       </div>
 
-      <div className="relative rounded-lg border border-slate-200 bg-white">
+      <div className="relative min-w-0 max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-white">
         {placeholder && !editor.getText() && (
           <div className="pointer-events-none absolute left-4 top-4 text-sm text-slate-400">{placeholder}</div>
         )}
-        <EditorContent editor={editor} className="text-slate-900" />
+        <EditorContent
+          editor={editor}
+          className="max-w-full text-slate-900 [&_.ProseMirror]:max-w-full [&_.ProseMirror]:break-words"
+        />
       </div>
 
       <TemplatePickerModal

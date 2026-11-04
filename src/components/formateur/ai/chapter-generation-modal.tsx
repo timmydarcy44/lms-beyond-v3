@@ -146,8 +146,8 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-0 bg-white text-slate-900 shadow-xl sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85dvh] min-w-0 flex-col overflow-hidden border-0 bg-white p-0 text-slate-900 shadow-xl sm:max-w-[600px]">
+        <DialogHeader className="shrink-0 px-6 pt-6 pr-12">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Sparkles className="h-5 w-5 text-[#6633CC]" />
             Créer un chapitre avec Beyond AI
@@ -157,7 +157,7 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
             <Label htmlFor="prompt" className="font-bold text-slate-900">
               Description du chapitre
@@ -188,14 +188,14 @@ export function ChapterGenerationModal({ open, onOpenChange, sectionId, chapterI
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Ex: Chapitre sur la gestion du stress en entreprise, avec techniques de respiration et cas pratiques..."
-              className="min-h-[120px] rounded-2xl border-0 bg-slate-50 text-slate-900 placeholder:text-slate-400 shadow-sm"
+              className="field-sizing-fixed max-h-[36dvh] min-h-[120px] overflow-y-auto rounded-2xl border-0 bg-slate-50 text-slate-900 placeholder:text-slate-400 shadow-sm"
               disabled={isPending}
             />
             <p className="text-xs text-slate-600">Minimum 10 caractères. Plus vous êtes précis, meilleur sera le résultat.</p>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-wrap gap-2">
+        <DialogFooter className="flex shrink-0 flex-wrap gap-2 border-t border-slate-100 bg-white px-6 py-4">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}

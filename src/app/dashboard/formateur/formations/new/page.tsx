@@ -1958,14 +1958,15 @@ export function FormateurFormationBuilderWhite({
         </div>
       ) : null}
         <Dialog open={isBeyondIAOpen} onOpenChange={setIsBeyondIAOpen}>
-          <DialogContent className="max-h-[85dvh] overflow-y-auto border-0 bg-white text-slate-950 shadow-xl">
-            <DialogHeader>
+          <DialogContent className="flex max-h-[85dvh] min-w-0 flex-col overflow-hidden border-0 bg-white p-0 text-slate-950 shadow-xl">
+            <DialogHeader className="shrink-0 px-6 pt-6 pr-12">
               <DialogTitle className="text-slate-950 font-extrabold tracking-tight">Byound AI</DialogTitle>
               <DialogDescription className="text-slate-600">
                 Décrivez la formation à créer, ou collez un contenu déjà écrit pour le découper en sections et chapitres.
               </DialogDescription>
             </DialogHeader>
 
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
             <div className="flex gap-2">
               <Button type="button" variant={iaMode === "prompt" ? "default" : "ghost"} className="rounded-full" onClick={() => setIaMode("prompt")}>
                 Prompt
@@ -1981,14 +1982,15 @@ export function FormateurFormationBuilderWhite({
                 value={iaPrompt}
                 onChange={(e) => setIaPrompt(e.target.value)}
                 placeholder={iaMode === "paste" ? "Collez ici le texte, le plan ou le cours déjà rédigé..." : "Ex : Construis une formation de 3 sections sur la négociation..."}
-                className="max-h-[28dvh] min-h-[96px] rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
+                className="field-sizing-fixed max-h-[36dvh] min-h-[96px] overflow-y-auto rounded-2xl border-0 bg-slate-50 text-slate-950 placeholder:text-slate-400 shadow-sm"
               />
             </div>
 
             <p className="text-xs font-semibold text-orange-600">
               Avant de valider, donnez un titre à la formation pour guider l&apos;IA.
             </p>
-            <DialogFooter className="sticky bottom-0 bg-white pt-2">
+            </div>
+            <DialogFooter className="shrink-0 border-t border-slate-100 bg-white px-6 py-4">
               <Button
                 type="button"
                 variant="ghost"

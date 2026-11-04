@@ -71,7 +71,16 @@ export async function generateJSON(
       let exampleJson: any = {};
       for (const [key, value] of Object.entries(properties)) {
         const prop = value as any;
-        if (prop.type === "array" && prop.items) {
+        if (prop.type === "array" && prop.items?.type === "object" && prop.items.properties) {
+          const sample: Record<string, unknown> = {};
+          for (const [childKey, childValue] of Object.entries(prop.items.properties as Record<string, { type?: string; enum?: unknown[] }>)) {
+            if (Array.isArray(childValue.enum) && childValue.enum.length > 0) sample[childKey] = childValue.enum[0];
+            else if (childValue.type === "number") sample[childKey] = 0;
+            else if (childValue.type === "boolean") sample[childKey] = false;
+            else sample[childKey] = `exemple_${childKey}`;
+          }
+          exampleJson[key] = [sample];
+        } else if (prop.type === "array" && prop.items) {
           exampleJson[key] = [];
         } else if (prop.type === "object") {
           exampleJson[key] = {};
@@ -130,6 +139,9 @@ ${exampleStr}
     });
 
     const content = response.choices[0]?.message?.content;
+    if (response.choices[0]?.finish_reason === "length") {
+      console.error("[ai] JSON truncated", { max_tokens: 4000, chars: content?.length ?? 0 });
+    }
     if (!content) return null;
 
     try {

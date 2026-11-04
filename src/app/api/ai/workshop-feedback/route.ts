@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { generateJSON } from "@/lib/ai/openai-client";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { normalizeWorkshopFeedback } from "@/lib/workshops/normalize-feedback";
 import { findWorkshopBlock, workshopMaxImprovements, workshopMode } from "@/lib/workshops/workshop-block";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
+
+const PREVIEW_ROLES = ["instructor", "formateur", "admin", "tutor", "super_admin", "owner"];
 
 const BodySchema = z.object({
   courseId: z.string().uuid(),
   blockId: z.string().min(1).max(200),
+  preview: z.boolean().optional(),
   answers: z.record(z.string(), z.string()).refine((value) => Object.values(value).some((item) => item.trim().length > 0), {
     message: "Réponse vide",
   }),
@@ -43,13 +48,25 @@ export async function POST(request: NextRequest) {
   const parsed = BodySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "La réponse est incomplète." }, { status: 400 });
 
-  const { courseId, blockId, answers } = parsed.data;
+  const { courseId, blockId, answers, preview } = parsed.data;
   const { data: course, error: courseError } = await service
     .from("courses")
-    .select("id, title, builder_snapshot")
+    .select("id, title, builder_snapshot, creator_id, owner_id, org_id")
     .eq("id", courseId)
     .maybeSingle();
   if (courseError || !course) return NextResponse.json({ error: "Formation introuvable." }, { status: 404 });
+
+  const staffPreview = preview === true && (await canPreviewCourse(user.id, course));
+  if (!staffPreview) {
+    const { data: enrollment, error: enrollmentError } = await service
+      .from("enrollments")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .maybeSingle();
+    if (enrollmentError) return NextResponse.json({ error: "Impossible de vérifier l'inscription." }, { status: 500 });
+    if (!enrollment) return NextResponse.json({ error: "Vous n'êtes pas inscrit à cette formation." }, { status: 403 });
+  }
 
   const snapshot = (course.builder_snapshot ?? null) as CourseBuilderSnapshot | null;
   const block = findWorkshopBlock(snapshot, blockId);
@@ -58,16 +75,18 @@ export async function POST(request: NextRequest) {
   }
 
   const max = workshopMaxImprovements(block.workshop);
-  const { count, error: countError } = await service
-    .from("learner_workshop_outputs")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .eq("course_id", courseId)
-    .eq("block_id", blockId)
-    .not("ai_feedback", "is", null);
-  if (countError) return NextResponse.json({ error: "Impossible de vérifier les améliorations." }, { status: 500 });
-  if ((count ?? 0) >= 1 + max) {
-    return NextResponse.json({ error: "Nombre d'améliorations atteint." }, { status: 409 });
+  if (!staffPreview) {
+    const { count, error: countError } = await service
+      .from("learner_workshop_outputs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .eq("block_id", blockId)
+      .not("ai_feedback", "is", null);
+    if (countError) return NextResponse.json({ error: "Impossible de vérifier les améliorations." }, { status: 500 });
+    if ((count ?? 0) >= 1 + max) {
+      return NextResponse.json({ error: "Nombre d'améliorations atteint." }, { status: 409 });
+    }
   }
 
   const criteria = (block.workshop?.criteria ?? []).map((item) => item.label.trim()).filter(Boolean);
@@ -92,7 +111,19 @@ export async function POST(request: NextRequest) {
       {
         type: "object",
         properties: {
-          criteres: { type: "array" },
+          criteres: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                critere: { type: "string" },
+                statut: { type: "string", enum: ["reussi", "a_ameliorer"] },
+                commentaire: { type: "string" },
+                suggestion: { type: "string" },
+              },
+              required: ["critere", "statut", "commentaire", "suggestion"],
+            },
+          },
           commentaire_global: { type: "string" },
         },
         required: ["criteres", "commentaire_global"],
@@ -100,20 +131,30 @@ export async function POST(request: NextRequest) {
       [
         "Vous évaluez un atelier d'entraînement, en français, avec le vouvoiement.",
         "Ton bienveillant, précis, orienté action.",
-        "Pour chaque critère : statut reussi ou a_ameliorer, un commentaire court, une suggestion concrète.",
+        "Utilisez exactement ces clés : criteres, critere, statut, commentaire, suggestion, commentaire_global.",
+        "statut vaut uniquement reussi ou a_ameliorer, sans accent.",
         "Ne réécrivez jamais toute la réponse à la place de l'apprenant.",
         "commentaire_global tient en deux phrases maximum.",
         "Répondez uniquement avec le JSON demandé.",
       ].join(" "),
     );
-  } catch {
-    return NextResponse.json({ error: "Le retour n'a pas pu être préparé. Relancez." }, { status: 502 });
+  } catch (error) {
+    console.error("[workshop-feedback] model call failed", error);
+    return NextResponse.json({ error: "Le service IA ne répond pas." }, { status: 502 });
   }
 
-  const feedback = FeedbackSchema.safeParse(raw);
-  if (!feedback.success) {
-    return NextResponse.json({ error: "Le retour n'a pas pu être lu. Relancez." }, { status: 502 });
+  if (raw == null) {
+    console.error("[workshop-feedback] empty model response");
+    return NextResponse.json({ error: "Le service IA ne répond pas." }, { status: 502 });
   }
+
+  const feedback = FeedbackSchema.safeParse(normalizeWorkshopFeedback(raw));
+  if (!feedback.success) {
+    console.error("[workshop-feedback] invalid model JSON", JSON.stringify(raw).slice(0, 8000), feedback.error.issues);
+    return NextResponse.json({ error: "Réponse IA invalide." }, { status: 502 });
+  }
+
+  if (staffPreview) return NextResponse.json({ feedback: feedback.data, preview: true });
 
   const { data: rows, error: rowsError } = await service
     .from("learner_workshop_outputs")
@@ -147,4 +188,23 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ feedback: feedback.data });
+}
+
+async function canPreviewCourse(
+  userId: string,
+  course: { creator_id?: string | null; owner_id?: string | null; org_id?: string | null },
+) {
+  if (await isSuperAdmin()) return true;
+  if (course.creator_id === userId || course.owner_id === userId) return true;
+  if (!course.org_id) return false;
+  const service = getServiceRoleClient();
+  if (!service) return false;
+  const { data } = await service
+    .from("org_memberships")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("org_id", course.org_id)
+    .in("role", PREVIEW_ROLES)
+    .limit(1);
+  return Boolean(data?.length);
 }

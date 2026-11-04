@@ -57,6 +57,7 @@ export function WorkshopLearnerView({
   title,
   duration,
   continueHref,
+  preview = false,
 }: {
   courseId: string;
   blockId: string;
@@ -64,6 +65,7 @@ export function WorkshopLearnerView({
   title?: string;
   duration?: string;
   continueHref?: string | null;
+  preview?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   const fields = useMemo(
@@ -102,6 +104,10 @@ export function WorkshopLearnerView({
   lockedRef.current = locked;
 
   useEffect(() => {
+    if (preview) {
+      setHydrated(true);
+      return;
+    }
     let ignore = false;
     const params = new URLSearchParams({ courseId, blockId });
     fetch(`/api/workshops/output?${params.toString()}`, { credentials: "include" })
@@ -129,7 +135,7 @@ export function WorkshopLearnerView({
     return () => {
       ignore = true;
     };
-  }, [blockId, courseId]);
+  }, [blockId, courseId, preview]);
 
   useEffect(() => {
     if (!hydrated || landedRef.current) return;
@@ -138,7 +144,7 @@ export function WorkshopLearnerView({
   }, [hydrated, locked]);
 
   useEffect(() => {
-    if (!hydrated || locked) return;
+    if (!hydrated || locked || preview) return;
     const serialized = JSON.stringify(answers);
     if (serialized === savedRef.current || holdRef.current) return;
     timerRef.current = window.setTimeout(() => {
@@ -147,9 +153,10 @@ export function WorkshopLearnerView({
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
-  }, [answers, hydrated, locked]);
+  }, [answers, hydrated, locked, preview]);
 
   useEffect(() => {
+    if (preview) return;
     return () => {
       if (lockedRef.current || holdRef.current) return;
       const current = answersRef.current;
@@ -163,7 +170,7 @@ export function WorkshopLearnerView({
         body: JSON.stringify({ courseId, blockId, answers: current }),
       });
     };
-  }, [blockId, courseId]);
+  }, [blockId, courseId, preview]);
 
   useEffect(() => {
     if (busy !== "feedback") return;
@@ -173,7 +180,7 @@ export function WorkshopLearnerView({
   }, [busy, reduceMotion]);
 
   async function persist(next: Record<string, string>, silent: boolean) {
-    if (lockedRef.current) return;
+    if (lockedRef.current || preview) return;
     const serialized = JSON.stringify(next);
     if (serialized === savedRef.current) return;
     if (!silent) setSaveState("saving");
@@ -214,16 +221,16 @@ export function WorkshopLearnerView({
     setNotice("");
     setStep(3);
     try {
-      await persist(answers, true);
+      if (!preview) await persist(answers, true);
       const response = await fetch("/api/ai/workshop-feedback", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId, blockId, answers }),
+        body: JSON.stringify({ courseId, blockId, answers, preview }),
       });
       const payload = (await response.json().catch(() => null)) as { feedback?: Feedback; error?: string } | null;
       if (!response.ok || !isFeedback(payload?.feedback)) {
-        setNotice(payload?.error || "Le retour n'a pas pu être préparé. Relancez.");
+        setNotice(feedbackNotice(response.status, payload?.error));
         setStep(2);
         return;
       }
@@ -241,6 +248,11 @@ export function WorkshopLearnerView({
 
   async function validateAnswer() {
     if (locked || busy) return;
+    if (preview) {
+      setLocked(true);
+      setStep("done");
+      return;
+    }
     if (!Object.values(answers).some((item) => item.trim())) {
       setNotice("Écrivez une réponse avant de la valider.");
       return;
@@ -374,7 +386,7 @@ export function WorkshopLearnerView({
           </div>
         ) : null}
 
-        {step === "done" ? <Confirmed continueHref={continueHref} reduceMotion={Boolean(reduceMotion)} /> : null}
+        {step === "done" ? <Confirmed continueHref={continueHref} preview={preview} reduceMotion={Boolean(reduceMotion)} /> : null}
       </div>
 
       <Sheet open={exampleOpen} onOpenChange={setExampleOpen}>
@@ -759,7 +771,18 @@ function FeedbackView(props: {
   );
 }
 
-function Confirmed({ continueHref, reduceMotion }: { continueHref?: string | null; reduceMotion: boolean }) {
+function feedbackNotice(status: number, error?: string) {
+  if (error === "Vous n'êtes pas inscrit à cette formation.") return error;
+  if (error === "Nombre d'améliorations atteint.") return error;
+  if (error === "Réponse IA invalide.") return error;
+  if (error === "Le service IA ne répond pas.") return error;
+  if (status === 403) return "Vous n'êtes pas inscrit à cette formation.";
+  if (status === 409) return "Nombre d'améliorations atteint.";
+  if (status === 502) return "Réponse IA invalide.";
+  return "Le service IA ne répond pas.";
+}
+
+function Confirmed({ continueHref, preview, reduceMotion }: { continueHref?: string | null; preview?: boolean; reduceMotion: boolean }) {
   return (
     <div className="mx-auto flex min-h-[360px] max-w-lg flex-col items-center justify-center gap-5 text-center">
       <AnimatePresence>
@@ -770,7 +793,7 @@ function Confirmed({ continueHref, reduceMotion }: { continueHref?: string | nul
           className="w-full rounded-[28px] border border-[#2FD08A]/40 bg-[#111831] px-6 py-8"
         >
           <p className="text-sm font-semibold text-[#2FD08A]">Mon projet expert</p>
-          <p className="mt-3 text-2xl font-semibold">Ajouté à votre projet expert</p>
+          <p className="mt-3 text-2xl font-semibold">{preview ? "Aperçu : rien n'est ajouté à votre projet expert" : "Ajouté à votre projet expert"}</p>
         </motion.div>
       </AnimatePresence>
       <div className="flex w-full flex-col gap-3 sm:flex-row">

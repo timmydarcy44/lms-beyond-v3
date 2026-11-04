@@ -2203,6 +2203,7 @@ export function LessonPlayView({
               title={activeLesson.title}
               duration={activeLesson.duration}
               continueHref={nextLesson && !nextGate ? lessonHref(nextLesson.id) : null}
+              preview={preview}
             />
           ) : isExperientialInterviewLesson ? (
             <div className="apprenant-studio-light">

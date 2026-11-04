@@ -981,7 +981,7 @@ export function FormateurFormationBuilderWhite({
             description: data?.message || "Le cours a été sauvegardé.",
           });
         }
-        return true;
+        return id;
       }
       if (!silent) {
         toast.success("Formation enregistrée");

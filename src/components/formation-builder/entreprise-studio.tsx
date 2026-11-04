@@ -221,7 +221,7 @@ export function EntrepriseFormationStudio({
   saving: boolean;
   publishing: boolean;
   backHref: string;
-  onSave: (silent?: boolean) => Promise<boolean | void>;
+  onSave: (silent?: boolean) => Promise<boolean | string | void>;
   onPublish: () => void;
   onOpenAi: () => void;
   onCreateValidator: () => void;
@@ -418,6 +418,25 @@ export function EntrepriseFormationStudio({
                 <Sparkles className="mr-2 h-4 w-4" />
                 Byound AI
               </button>
+              {byoundOwned ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-[#E3E0D8] bg-white px-4 py-2 text-sm font-semibold"
+                  onClick={() => {
+                    void (async () => {
+                      const saved = await onSave(true);
+                      const id = typeof saved === "string" ? saved : courseId;
+                      if (!id) {
+                        toast.message("Enregistrez la formation pour la tester.");
+                        return;
+                      }
+                      window.open(`/super/lms/formations/${id}/tester`, "_blank", "noopener,noreferrer");
+                    })();
+                  }}
+                >
+                  Tester la formation
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={saving}

@@ -426,6 +426,53 @@
   color: #12141c !important;
 }
 
+.super-theme:has(.learner-preview) {
+  background: #000;
+  color: #fff;
+}
+
+.super-theme:has(.learner-preview)::before {
+  display: none;
+}
+
+.super-theme .learner-preview :is(.bg-white, .bg-gray-50, .bg-gray-100) {
+  background-color: #fff !important;
+}
+
+.super-theme .learner-preview :is(.bg-slate-50, .bg-slate-100, .bg-slate-200) {
+  background-color: #f8fafc !important;
+}
+
+.super-theme .learner-preview :is(.text-gray-950, .text-gray-900, .text-gray-800, .text-slate-950, .text-slate-900, .text-slate-800) {
+  color: #0f172a !important;
+}
+
+.super-theme .learner-preview :is(.text-gray-700, .text-gray-600, .text-slate-700, .text-slate-600) {
+  color: #334155 !important;
+}
+
+.super-theme .learner-preview :is(.text-gray-500, .text-gray-400, .text-slate-500, .text-slate-400) {
+  color: #64748b !important;
+}
+
+.super-theme .learner-preview :is(.border-gray-100, .border-gray-200, .border-gray-300, .border-slate-100, .border-slate-200, .border-slate-300) {
+  border-color: #e2e8f0 !important;
+}
+
+.super-theme .learner-preview :is(input, textarea, select) {
+  border-color: #e2e8f0 !important;
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+.super-theme .learner-preview [data-slot="card"],
+.super-theme .learner-preview .super-glass-panel {
+  border-color: #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  backdrop-filter: none;
+}
+
 .super-theme:has(.control-shell) {
   background: #0A0F1E;
 }

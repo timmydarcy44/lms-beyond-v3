@@ -142,6 +142,7 @@ export function FormationStudio({
   playBase,
   backHref,
   snapshot,
+  preview = false,
 }: {
   courseId: string;
   code: string;
@@ -151,6 +152,8 @@ export function FormationStudio({
   playBase: string;
   backHref: string;
   snapshot: CourseBuilderSnapshot | null;
+  /** Ouvre tout le cours, sans verrou d'inscription ni de quiz. */
+  preview?: boolean;
   skills?: string[];
   episodes?: { id: string; progress?: number | null }[];
 }) {
@@ -280,17 +283,20 @@ export function FormationStudio({
       (section.chapters ?? []).forEach((chapter) => {
         if (!isCourseNodeVisible(chapter)) return;
         const lockedByQuiz = Boolean(sectionGate);
-        const locked =
-          Boolean(schedule) ||
-          lockedByQuiz ||
-          ((linear || Boolean(chapter.unlock_condition)) && !(visibleSection === 0 && visibleChapter === 0) && !previousDone);
-        const lockReason = schedule
-          ? schedule
-          : lockedByQuiz && sectionGate
-            ? moduleGateMessage(sectionGate)
-            : locked
-              ? lockExplanation(previousTitle, chapter.unlock_condition)
-              : undefined;
+        const locked = preview
+          ? false
+          : Boolean(schedule) ||
+            lockedByQuiz ||
+            ((linear || Boolean(chapter.unlock_condition)) && !(visibleSection === 0 && visibleChapter === 0) && !previousDone);
+        const lockReason = preview
+          ? undefined
+          : schedule
+            ? schedule
+            : lockedByQuiz && sectionGate
+              ? moduleGateMessage(sectionGate)
+              : locked
+                ? lockExplanation(previousTitle, chapter.unlock_condition)
+                : undefined;
         const leaves: Leaf[] = (chapter.subchapters ?? []).filter((sub) => isCourseNodeVisible(sub)).map((sub) => ({
           id: String(sub.id),
           title: sub.title?.trim() || "Sans titre",
@@ -341,7 +347,7 @@ export function FormationStudio({
       visibleSection += 1;
     });
     return built;
-  }, [enrolledAtMs, gateKey, leafCompletedAt, playBase, progressById, quizScores, quizScoresReady, scheduleReady, snapshot]);
+  }, [enrolledAtMs, gateKey, leafCompletedAt, playBase, preview, progressById, quizScores, quizScoresReady, scheduleReady, snapshot]);
 
   const noteChapters: NoteChapter[] = useMemo(
     () =>

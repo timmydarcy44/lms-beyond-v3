@@ -104,7 +104,8 @@ function ControlFrame({
   }, [query]);
 
   const homeActive = pathname === "/super";
-  const formationBuilder = /^\/super\/lms\/formations\/.+/.test(pathname);
+  const formationTester = /^\/super\/lms\/formations\/[^/]+\/tester(?:\/|$)/.test(pathname);
+  const formationBuilder = /^\/super\/lms\/formations\/.+/.test(pathname) && !formationTester;
 
   const toggleSection = (id: string) => {
     setOpenSections((current) => {
@@ -206,6 +207,14 @@ function ControlFrame({
       </div>
     </div>
   );
+
+  if (formationTester) {
+    return (
+      <div className={`${manrope.className} min-h-screen bg-black text-white`}>
+        {children}
+      </div>
+    );
+  }
 
   if (formationBuilder) {
     return (

@@ -347,6 +347,8 @@ type LessonPlayViewProps = {
   courseTitle: string;
   /** Thème Jessica Contentin — sans impact sur Edge / catalog. */
   theme?: "edge" | "jessica";
+  /** Parcours libre, sans verrou de quiz ni de calendrier. */
+  preview?: boolean;
 };
 
 export function LessonPlayView({
@@ -363,6 +365,7 @@ export function LessonPlayView({
   courseId,
   courseTitle,
   theme = "edge",
+  preview = false,
 }: LessonPlayViewProps) {
   const isJessica = theme === "jessica";
   const [mounted, setMounted] = useState(false);
@@ -1072,6 +1075,7 @@ export function LessonPlayView({
   }, [gateTestKey]);
 
   const lessonLock = (lessonId: string): { message: string; quizLessonId?: string } | null => {
+    if (preview) return null;
     const completedAt: Record<string, number> = {};
     for (const [id, value] of Object.entries(leafCompletedAt)) {
       const ms = Date.parse(value);
@@ -1715,7 +1719,7 @@ export function LessonPlayView({
   };
   const goReaderNext = () => {
     const currentId = String(activeLesson.id ?? "");
-    if (courseId && currentId) {
+    if (!preview && courseId && currentId) {
       markLeafDone(courseId, currentId);
       setProgressMap((prev) => ({ ...prev, [currentId]: { state: "completed", percent: 100 } }));
       setLeafCompletedAt((prev) => (prev[currentId] ? prev : { ...prev, [currentId]: new Date().toISOString() }));

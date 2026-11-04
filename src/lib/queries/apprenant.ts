@@ -1,7 +1,8 @@
 import { extractChapterPlainText } from "@/lib/course-builder/chapter-content-text";
 import { readModuleOpenRule, type ModuleOpenRule } from "@/lib/lms/module-open";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
-import type { CourseBuilderChapter } from "@/types/course-builder";
+import type { CourseBuilderChapter, WorkshopConfig } from "@/types/course-builder";
+import { readWorkshopConfig, workshopMode } from "@/lib/workshops/workshop-block";
 import { EDGE_LAB_COURSE_CATEGORY_LABELS } from "@/lib/edge-lab-course-categories";
 import {
   EDGE_LAB_GALAXY_LOGO_URL,
@@ -219,7 +220,7 @@ export type LearnerLesson = {
   description?: string;
   videoUrl?: string;
   duration?: string;
-  kind?: "chapter" | "subchapter" | "test" | "quiz" | "experiential_interview" | "resource";
+  kind?: "chapter" | "subchapter" | "test" | "quiz" | "experiential_interview" | "resource" | "case_study";
   parentChapterId?: string;
   quiz_id?: string;
   gateNextModule?: boolean;
@@ -239,6 +240,8 @@ export type LearnerLesson = {
     endings: { id: string; min: number; title: string }[];
   };
   interview_audience?: "professional" | "parent";
+  /** Présent seulement si kind vaut case_study. Les leçons n'ont pas ce champ. */
+  workshop?: WorkshopConfig;
   /** UUID chapitre/sous-chapitre en base (pont avec flashcards `chapter_id` et cache local). */
   dbChapterId?: string | null;
   game?: {
@@ -1221,6 +1224,9 @@ export async function getLearnerContentDetail(
               if (chapter.subchapters && Array.isArray(chapter.subchapters)) {
                 chapter.subchapters.filter((subchapter: { deleted_at?: string | null }) => isCourseNodeVisible(subchapter)).forEach((subchapter: any) => {
                   const isInterview = subchapter.kind === "experiential_interview";
+                  const isCaseStudy = subchapter.kind === "case_study";
+                  const workshop = isCaseStudy ? readWorkshopConfig(subchapter.workshop) : undefined;
+                  const isAtelier = isCaseStudy && workshopMode(workshop) === "atelier";
                   const isResource =
                     subchapter.kind === "resource" || Boolean(subchapter.resource_id);
                   let interviewContext =
@@ -1242,6 +1248,7 @@ export async function getLearnerContentDetail(
                     subchapter.mediaUrl ||
                     isInterview ||
                     isResource ||
+                    isCaseStudy ||
                     hasInterviewContext
                   ) {
                     const isQuiz = subchapter.kind === "quiz" || Boolean(subchapter.quiz_id);
@@ -1252,7 +1259,7 @@ export async function getLearnerContentDetail(
                       id: subchapter.id || `subchapter-${subchapter.title || Date.now()}`,
                       title: subchapter.title || "Sans titre",
                       type: subchapter.type || (subchapter.videoUrl || subchapter.mediaUrl ? "video" : "document"),
-                      description: isInterview ? "" : subchapter.content || subchapter.description,
+                      description: isInterview || isAtelier ? "" : subchapter.content || subchapter.description,
                       videoUrl: subchapter.videoUrl || subchapter.mediaUrl,
                       duration: subchapter.duration || "3 min",
                       kind: isQuiz
@@ -1261,7 +1268,9 @@ export async function getLearnerContentDetail(
                           ? "experiential_interview"
                           : isResource
                             ? "resource"
-                            : "subchapter",
+                            : isCaseStudy
+                              ? "case_study"
+                              : "subchapter",
                       parentChapterId: chapter.id || undefined,
                       quiz_id: subchapter.quiz_id ? String(subchapter.quiz_id) : undefined,
                       gateNextModule: subchapter.gate_next_module === true,
@@ -1288,6 +1297,7 @@ export async function getLearnerContentDetail(
                           ? subchapter.interview_audience
                           : undefined,
                       game: subchapter.game && typeof subchapter.game === "object" ? subchapter.game : undefined,
+                      workshop,
                     });
                   }
                 });

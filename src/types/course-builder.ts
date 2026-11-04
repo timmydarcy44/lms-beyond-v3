@@ -2,7 +2,34 @@ import type { ModuleOpenMode, ModuleOpenUnit } from "@/lib/lms/module-open";
 
 export type BuilderContentType = "video" | "audio" | "document" | "text" | "interactive_game";
 
-export type CourseBuilderSubchapterKind = "quiz" | "experiential_interview" | "resource";
+export type CourseBuilderSubchapterKind = "quiz" | "experiential_interview" | "resource" | "case_study";
+
+export type WorkshopFieldType = "short" | "long";
+
+export type WorkshopField = {
+  id: string;
+  label: string;
+  placeholder?: string;
+  type: WorkshopFieldType;
+};
+
+export type WorkshopCriterion = {
+  id: string;
+  label: string;
+};
+
+/** Absent ou « evaluation » : étude de cas de certification. « atelier » : entraînement. */
+export type WorkshopMode = "evaluation" | "atelier";
+
+export type WorkshopConfig = {
+  mode?: WorkshopMode;
+  brief?: string;
+  situation?: string;
+  example?: string;
+  fields?: WorkshopField[];
+  criteria?: WorkshopCriterion[];
+  maxImprovements?: number;
+};
 
 export type CourseBuilderSubchapter = {
   id: string;
@@ -43,6 +70,8 @@ export type CourseBuilderSubchapter = {
   };
   /** Thématique de l'entretien expérientiel uniquement. */
   interview_audience?: "professional" | "parent";
+  /** Étude de cas. Sans mode, ou mode evaluation : épreuve. mode atelier : entraînement. */
+  workshop?: WorkshopConfig;
   /** Annonce affichée à l'apprenant avant un jeu interactif. */
   game?: {
     title?: string;

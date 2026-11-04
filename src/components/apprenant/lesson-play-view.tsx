@@ -27,6 +27,8 @@ import { ReadingNotesPanel } from "@/components/apprenant/reading-notes-panel";
 import { stampNoteBlocks } from "@/lib/lms/html-plain";
 import { revealReadingAnchor } from "@/lib/lms/reading-notes";
 import { CaseStudyWorkspace } from "@/components/apprenant/CaseStudyWorkspace";
+import { WorkshopLearnerView } from "@/components/apprenant/workshop-learner-view";
+import { workshopMode } from "@/lib/workshops/workshop-block";
 import { FlashcardPlayer, type FlashcardItem } from "@/components/beyond-flash/FlashcardPlayer";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { usePomodoro } from "@/components/apprenant/pomodoro-provider";
@@ -66,6 +68,7 @@ import {
   Trophy,
   MessageCircle,
   Library,
+  NotebookPen,
 } from "lucide-react";
 import type {
   LearnerDetail,
@@ -834,6 +837,8 @@ export function LessonPlayView({
     () => (activeLesson as any).kind === "resource" || Boolean(embeddedResourceId),
     [activeLesson, embeddedResourceId],
   );
+  const isAtelierLesson =
+    activeLesson.kind === "case_study" && workshopMode(activeLesson.workshop) === "atelier";
   
   // Le mode focus est géré automatiquement par PomodoroFocusManager
   // On garde focusMode pour l'affichage local (masquer les flashcards, etc.)
@@ -1290,6 +1295,7 @@ export function LessonPlayView({
     const isInterviewOutline = isInterviewLikeLesson(moduleLesson);
     const isResourceOutline =
       moduleLesson.kind === "resource" || Boolean((moduleLesson as { resource_id?: string }).resource_id);
+    const isAtelierOutline = moduleLesson.kind === "case_study" && workshopMode(moduleLesson.workshop) === "atelier";
     const lessonHrefForItem = isInterviewOutline
       ? `${lessonHref(moduleLesson.id)}/entretien`
       : lessonHref(moduleLesson.id);
@@ -1302,13 +1308,15 @@ export function LessonPlayView({
       ? Trophy
       : isInterviewOutline
         ? MessageCircle
-        : isResourceOutline
-          ? Library
-          : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
-            ? ClipboardCheck
-            : hasVideoHint
-              ? PlayCircle
-              : FileText;
+        : isAtelierOutline
+          ? NotebookPen
+          : isResourceOutline
+            ? Library
+            : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
+              ? ClipboardCheck
+              : hasVideoHint
+                ? PlayCircle
+                : FileText;
     const isTestLesson = (moduleLesson as any).kind === "test" || moduleLesson.type === "test";
 
     const outlineLock = lessonLock(moduleLesson.id);
@@ -2057,7 +2065,7 @@ export function LessonPlayView({
             ) : null}
           </div>}
 
-          {isInteractiveGame ? (
+          {!isAtelierLesson && isInteractiveGame ? (
             <GameIntroCard
               lessonTitle={activeLesson.title}
               chapterTitle={activeModule?.title}
@@ -2103,7 +2111,7 @@ export function LessonPlayView({
               )
             : null}
 
-          {isMediaContent && normalizedVideoSrc ? (
+          {!isAtelierLesson && isMediaContent && normalizedVideoSrc ? (
             <div className={neo ? "lesson-reader__video" : "relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-black transition"}>
               {normalizedVideoSrc &&
               (normalizedVideoSrc.includes('.mp3') ||
@@ -2186,7 +2194,9 @@ export function LessonPlayView({
             </div>
           ) : null}
 
-          {isExperientialInterviewLesson ? (
+          {isAtelierLesson && activeLesson.workshop ? (
+            <WorkshopLearnerView key={String(activeLesson.id)} courseId={courseId} blockId={String(activeLesson.id)} workshop={activeLesson.workshop} />
+          ) : isExperientialInterviewLesson ? (
             <div className="apprenant-studio-light">
               {interviewDoneForActiveLesson ? (
                 <div className="mx-auto w-full max-w-3xl space-y-6 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-8 text-slate-900">
@@ -3010,7 +3020,7 @@ export function LessonPlayView({
           chapterDone={reader.chapterDone}
           chapterTotal={reader.chapterTotal}
           chapterPercent={reader.chapterPercent}
-          chip={`Sous-chapitre ${reader.localIndex + 1} sur ${total} · ${readingDuration}`}
+          chip={isAtelierLesson ? "Atelier" : `Sous-chapitre ${reader.localIndex + 1} sur ${total} · ${readingDuration}`}
           heading={readingHeading}
           segments={(reader.current?.items ?? []).map((item) => (item.status === "done" || item.status === "current" ? item.status : "todo"))}
           index={reader.localIndex + 1}

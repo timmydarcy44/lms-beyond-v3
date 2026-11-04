@@ -411,6 +411,7 @@ export const useCourseBuilder = create<CourseBuilderState>((set, get) => ({
       kind: block.kind,
       quiz_id: block.quiz_id,
       interview_context: block.interview_context,
+      workshop: block.workshop,
     };
     const selectAfterCreate = options?.selectAfterCreate !== false;
     set((state) => ({

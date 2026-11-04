@@ -11,6 +11,7 @@ import {
   Gamepad2,
   FileWarning,
   GraduationCap,
+  NotebookPen,
   HeartPulse,
   Home,
   LayoutDashboard,
@@ -119,6 +120,7 @@ const SKILLS_NAV: ApprenantNavItem[] = [
 
 const LEARNING_NAV: ApprenantNavItem[] = [
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
+  { label: "Mon projet expert", href: "/dashboard/apprenant/mon-projet-expert", icon: NotebookPen },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
   { label: "Mes parcours", href: "/dashboard/apprenant/parcours", icon: BookMarked },
@@ -260,6 +262,7 @@ export function resolveEdgeAppFromPathname(pathname: string | null | undefined):
 
   if (
     p.startsWith("/dashboard/apprenant/formations") ||
+    p.startsWith("/dashboard/apprenant/mon-projet-expert") ||
     p.startsWith("/dashboard/apprenant/jeux") ||
     p.startsWith("/dashboard/apprenant/parcours") ||
     p.startsWith("/dashboard/apprenant/online") ||

@@ -33,8 +33,11 @@ import {
   Trophy,
   MessageCircle,
   Library,
+  NotebookPen,
 } from "lucide-react";
 
+import { WorkshopEditorForm } from "@/components/formation-builder/workshop-editor-form";
+import { emptyWorkshop, isWorkshopBlock, workshopActivityLabel } from "@/lib/workshops/workshop-block";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -646,6 +649,7 @@ function ChapterCard({
     "bg-gradient-to-r from-[#003366] via-[#6633CC] to-[#FF00FF] text-white font-bold hover:opacity-95";
   const removeChapter = useCourseBuilder((state) => state.removeChapter);
   const addSubchapter = useCourseBuilder((state) => state.addSubchapter);
+  const appendSubchapterBlock = useCourseBuilder((state) => state.appendSubchapterBlock);
   const selectChapter = useCourseBuilder((state) => state.selectChapter);
   const selectSubchapter = useCourseBuilder((state) => state.selectSubchapter);
   const removeSubchapter = useCourseBuilder((state) => state.removeSubchapter);
@@ -920,6 +924,29 @@ function ChapterCard({
               variant="outline"
               onClick={(event) => {
                 event.stopPropagation();
+                appendSubchapterBlock(sectionId, chapter.id, {
+                  title: "Atelier",
+                  duration: "",
+                  type: "text",
+                  summary: "",
+                  content: "",
+                  kind: "case_study",
+                  workshop: emptyWorkshop("atelier"),
+                });
+              }}
+              className={
+                isLight
+                  ? "rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                  : "rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/5"
+              }
+            >
+              <NotebookPen className="mr-2 h-4 w-4" /> Atelier
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={(event) => {
+                event.stopPropagation();
                 removeChapter(sectionId, chapter.id);
               }}
               className={
@@ -1050,6 +1077,7 @@ function SubchapterRow({
     });
   };
   const isInterviewBlock = (subchapter as any).kind === "experiential_interview";
+  const isWorkshop = isWorkshopBlock(subchapter);
   const isResourceBlock =
     (subchapter as any).kind === "resource" || Boolean((subchapter as any).resource_id);
   const subStatus = arborescenceNodeStatus({
@@ -1136,6 +1164,11 @@ function SubchapterRow({
                 )}
                 aria-hidden
               />
+            ) : isWorkshop ? (
+              <NotebookPen
+                className={cn("h-5 w-5 shrink-0 text-[#6E5BFF]")}
+                aria-hidden
+              />
             ) : isResourceBlock ? (
               <Library
                 className={cn(
@@ -1195,8 +1228,8 @@ function SubchapterRow({
                     : "border-white/10 bg-white/5 text-white/60",
               )}
             >
-              {isResourceBlock ? <Library className="h-3 w-3" /> : <typeMeta.icon className="h-3 w-3" />}
-              {isResourceBlock ? "Ressource" : typeMeta.label}
+              {isWorkshop ? <NotebookPen className="h-3 w-3" /> : isResourceBlock ? <Library className="h-3 w-3" /> : <typeMeta.icon className="h-3 w-3" />}
+              {isWorkshop ? workshopActivityLabel(subchapter.workshop) : isResourceBlock ? "Ressource" : typeMeta.label}
             </span>
           </div>
         </div>
@@ -1613,11 +1646,32 @@ function EditorPanel({
     (nodes.subchapter as { interview_objectives?: string }).interview_objectives ?? "",
   ).trim();
 
+    const isWorkshopEditor = isWorkshopBlock(nodes.subchapter);
     const isQuizEditor =
       (nodes.subchapter as { kind?: string }).kind === "quiz" || Boolean((nodes.subchapter as { quiz_id?: string }).quiz_id);
     const quizTestId = quizDatabaseId(nodes.subchapter);
 
-    if (isQuizEditor) {
+    if (isWorkshopEditor) {
+      content = (
+        <EditorLayout
+          title={workshopActivityLabel(nodes.subchapter.workshop)}
+          badge={workshopActivityLabel(nodes.subchapter.workshop)}
+          isLight={isLight}
+        >
+          <WorkshopEditorForm
+            appearance={isLight ? "light" : "dark"}
+            title={nodes.subchapter.title}
+            workshop={nodes.subchapter.workshop}
+            onTitle={(title) =>
+              updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, { title })
+            }
+            onWorkshop={(workshop) =>
+              updateSubchapter(selection.sectionId, selection.chapterId, selection.subchapterId, { workshop })
+            }
+          />
+        </EditorLayout>
+      );
+    } else if (isQuizEditor) {
       content = (
         <EditorLayout title="Quiz" badge="Questions" isLight={isLight}>
           <p className={cn("text-sm leading-relaxed", isLight ? "text-slate-600" : "text-white/65")}>

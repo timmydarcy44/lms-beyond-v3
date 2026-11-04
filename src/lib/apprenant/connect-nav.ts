@@ -24,6 +24,8 @@ import {
 
   Gamepad2,
 
+  NotebookPen,
+
 } from "lucide-react";
 
 
@@ -74,6 +76,7 @@ const BASE: ApprenantNavItem[] = [
     action: "share-profile",
   },
   { label: "Mes formations", href: "/dashboard/apprenant/formations", icon: BookOpen },
+  { label: "Mon projet expert", href: "/dashboard/apprenant/mon-projet-expert", icon: NotebookPen },
   { label: "Mes jeux", href: "/dashboard/apprenant/jeux", icon: Gamepad2 },
   { label: "Parcours", href: PARCOURS_HREF, icon: BookMarked },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
@@ -92,6 +95,7 @@ const JESSICA_BASE: ApprenantNavItem[] = [
   },
   { label: "Parcours guidé", href: "/jessica-contentin/parcours-guide", icon: BookMarked },
   { label: "Mes parcours", href: PARCOURS_HREF, icon: BookMarked },
+  { label: "Mon projet expert", href: "/dashboard/apprenant/mon-projet-expert", icon: NotebookPen },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
 ];

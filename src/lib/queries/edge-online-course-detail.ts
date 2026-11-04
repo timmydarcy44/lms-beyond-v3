@@ -1,4 +1,5 @@
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
+import { readWorkshopConfig, workshopMode } from "@/lib/workshops/workshop-block";
 import type { LearnerCard, LearnerDetail, LearnerLesson, LearnerModule } from "@/lib/queries/apprenant";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -46,12 +47,15 @@ function buildModulesFromSnapshot(snapshotRaw: unknown): LearnerModule[] {
         if (sub.content || sub.title || sub.videoUrl || sub.mediaUrl || sub.kind) {
           const isQuiz = sub.kind === "quiz" || Boolean(sub.quiz_id);
           const isInterview = sub.kind === "experiential_interview";
+          const isCaseStudy = sub.kind === "case_study";
+          const workshop = isCaseStudy ? readWorkshopConfig(sub.workshop) : undefined;
+          const isAtelier = isCaseStudy && workshopMode(workshop) === "atelier";
           const isResource = sub.kind === "resource" || Boolean(sub.resource_id);
           lessons.push({
             id: String(sub.id ?? `sub-${sIdx}-${lessons.length}`),
             title: String(sub.title ?? "Sans titre"),
             type: String(sub.type ?? (sub.videoUrl || sub.mediaUrl ? "video" : "document")),
-            description: isInterview ? "" : ((sub.content as string) || (sub.description as string) || null),
+            description: isInterview || isAtelier ? "" : ((sub.content as string) || (sub.description as string) || null),
             videoUrl: (sub.videoUrl as string) || (sub.mediaUrl as string) || null,
             duration: String(sub.duration ?? "3 min"),
             kind: isQuiz
@@ -60,10 +64,13 @@ function buildModulesFromSnapshot(snapshotRaw: unknown): LearnerModule[] {
                 ? "experiential_interview"
                 : isResource
                   ? "resource"
-                  : "subchapter",
+                  : isCaseStudy
+                    ? "case_study"
+                    : "subchapter",
             parentChapterId: chapter.id ? String(chapter.id) : undefined,
             quiz_id: sub.quiz_id ? String(sub.quiz_id) : undefined,
             resource_id: sub.resource_id ? String(sub.resource_id) : undefined,
+            workshop,
           } as LearnerLesson);
         }
       }

@@ -16,6 +16,17 @@ type WorkshopEditorFormProps = {
   appearance?: "light" | "dark";
 };
 
+const ATELIER_JSON_PLACEHOLDER = `{
+  "type": "atelier",
+  "title": "Rédiger 3 objectifs",
+  "instructions": "…",
+  "scenario": "…",
+  "example": "…",
+  "fields": [{ "label": "Votre métier", "type": "short" }],
+  "criteria": ["Verbe d'action", "Situation précise"],
+  "max_improvements": 2
+}`;
+
 const lightField = "w-full rounded-2xl border border-[#E3E0D8] bg-white px-3 py-3 text-sm text-[#07080B] outline-none focus:border-[#6E5BFF]";
 const darkField = "w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white outline-none";
 
@@ -97,7 +108,7 @@ export function WorkshopEditorForm({
             <textarea
               className={`${field} min-h-36 font-mono text-xs`}
               aria-label="JSON de l'atelier"
-              placeholder={'{\n  "type": "atelier",\n  "title": "Rédiger 3 objectifs",\n  "instructions": "…",\n  "scenario": "…",\n  "example": "…",\n  "fields": [{ "label": "Votre métier", "type": "short" }],\n  "criteria": ["Verbe d'action", "Situation précise"],\n  "max_improvements": 2\n}'}
+              placeholder={ATELIER_JSON_PLACEHOLDER}
               value={jsonText}
               onChange={(event) => {
                 setJsonText(event.target.value);

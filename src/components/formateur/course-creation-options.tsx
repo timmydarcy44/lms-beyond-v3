@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import Link from "next/link";
 
 type CreationMethod = "zero" | "paste" | "ai" | null;
@@ -96,6 +97,13 @@ export function CourseCreationOptions() {
         }
 
         structure = await response.json();
+      }
+
+      const importWarnings = Array.isArray(structure?.warnings) ? structure.warnings : [];
+      if (importWarnings.length > 0 && typeof importWarnings[0]?.message === "string") {
+        toast.error(importWarnings[0].message, {
+          description: importWarnings.length > 1 ? `${importWarnings.length} ateliers ignorés. Le reste de la structure est importé.` : "Le reste de la structure est importé.",
+        });
       }
 
       // Rediriger vers la page de validation avec la structure

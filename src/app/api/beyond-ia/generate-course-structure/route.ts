@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+import { parseFormationImportText } from "@/lib/course-builder/import-structure";
+
 // Squelette OpenAI : on garde un fallback mock pour le builder
 // afin de permettre le flow end-to-end sans clé.
 // (À remplacer par un appel OpenAI structuré quand prêt.)
@@ -64,6 +66,22 @@ export async function POST(req: NextRequest) {
     }
     if (!prompt || prompt.length < 10) {
       return NextResponse.json({ success: false, error: "Prompt trop court" }, { status: 400 });
+    }
+
+    if (mode === "paste") {
+      const imported = parseFormationImportText(prompt);
+      if (imported) {
+        return NextResponse.json({
+          success: true,
+          structure: {
+            sections: imported.sections,
+            objectifs: imported.objectifs,
+            warnings: imported.warnings,
+            meta: { openBadgeId: body?.openBadgeId ?? null, title },
+          },
+          mode: "json",
+        });
+      }
     }
 
     const systemPrompt =
@@ -150,6 +168,7 @@ export async function POST(req: NextRequest) {
             `Titre: ${title}\n` +
             `Contraintes: Retourne UNIQUEMENT du JSON valide selon ce schéma:\n` +
             `{\n  "sections": [\n    {\n      "title": string,\n      "chapters": [\n        {\n          "title": string,\n          "subChapters": string[]\n        }\n      ]\n    }\n  ]\n}\n` +
+            `Un collage JSON peut aussi placer dans "subchapters" un objet {"type":"atelier","title","instructions","scenario","example","fields":[{"label","type":"short"|"long"}],"criteria":string[],"max_improvements"}.\n` +
             `ET ajoute un champ "objectifs": string[] (3 à 7 objectifs).\n` +
             (mode === "paste" ? `Contenu à structurer:\n${prompt}\n` : `Sujet: ${prompt}\n`),
         },

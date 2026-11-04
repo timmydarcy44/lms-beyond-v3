@@ -39,6 +39,7 @@ import { LineList } from "@/components/formation-builder/line-list";
 import { BadgeCreatorOverlay } from "@/components/studio/badge-creator-overlay";
 import type { OpenBadgeSavePayload } from "@/components/super-admin/open-badge-types";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
+import { importFormationStructure } from "@/lib/course-builder/import-structure";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
@@ -803,14 +804,8 @@ export function FormateurFormationBuilderWhite({
           throw new Error(data?.error || "Erreur lors de la génération Byound AI");
         }
 
-        const objectifs = Array.isArray(data?.structure?.objectifs) ? data.structure.objectifs : [];
-        const safeObjectifs = objectifs
-          .map((x: any) => String(x ?? "").trim())
-          .filter((x: string) => x.length > 0)
-          .slice(0, 12);
-
-        const sections = Array.isArray(data?.structure?.sections) ? data.structure.sections : [];
-        if (!sections.length) {
+        const imported = importFormationStructure(data?.structure ?? {});
+        if (!imported.sections.length) {
           throw new Error("Aucune section générée.");
         }
 
@@ -818,46 +813,15 @@ export function FormateurFormationBuilderWhite({
           ...latestSnapshot,
           general: {
             ...latestSnapshot.general,
-            ...(safeObjectifs.length ? { objectifs: safeObjectifs } : {}),
+            ...(imported.objectifs.length ? { objectifs: imported.objectifs } : {}),
           },
-          sections: sections.map((section: any, sectionIndex: number) => ({
-            id: `section-${Date.now()}-${sectionIndex}`,
-            title: String(section.title ?? `Section ${sectionIndex + 1}`),
-            description: String(section.description ?? ""),
-            chapters: Array.isArray(section.chapters)
-              ? section.chapters.map((chapter: any, chapterIndex: number) => ({
-                  id: `chapter-${Date.now()}-${sectionIndex}-${chapterIndex}`,
-                  title: String(chapter.title ?? `Chapitre ${chapterIndex + 1}`),
-                  duration: "",
-                  type: "text" as const,
-                  summary: String(chapter.summary ?? ""),
-                  content: "",
-                  // Accept both formats:
-                  // - legacy: subchapters: [{title, ...}]
-                  // - required schema: subChapters: string[]
-                  subchapters: Array.isArray(chapter.subchapters)
-                    ? chapter.subchapters.map((sub: any, subIndex: number) => ({
-                        id: `subchapter-${Date.now()}-${sectionIndex}-${chapterIndex}-${subIndex}`,
-                        title: String(sub.title ?? `Sous-chapitre ${subIndex + 1}`),
-                        duration: "",
-                        type: "text" as const,
-                        summary: String(sub.summary ?? ""),
-                        content: String(sub.content ?? ""),
-                      }))
-                    : Array.isArray(chapter.subChapters)
-                      ? chapter.subChapters.map((title: any, subIndex: number) => ({
-                          id: `subchapter-${Date.now()}-${sectionIndex}-${chapterIndex}-${subIndex}`,
-                          title: String(title ?? `Sous-chapitre ${subIndex + 1}`),
-                          duration: "",
-                          type: "text" as const,
-                          summary: "",
-                          content: "",
-                        }))
-                      : [],
-                }))
-              : [],
-          })),
+          sections: imported.sections,
         });
+        if (imported.warnings.length > 0) {
+          toast.error(imported.warnings[0].message, {
+            description: imported.warnings.length > 1 ? `${imported.warnings.length} ateliers ignorés. Le reste de la structure est importé.` : "Le reste de la structure est importé.",
+          });
+        }
 
         toast.success("Structure générée", {
           description: "La structure a été injectée dans le builder. Vous pouvez réorganiser et enrichir.",

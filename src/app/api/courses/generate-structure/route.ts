@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateJSON } from "@/lib/ai/openai-client";
+import { importFormationStructure, orderImportedSubchapters, parseFormationImportText } from "@/lib/course-builder/import-structure";
 import { getServerClient } from "@/lib/supabase/server";
 import { CourseBuilderSection } from "@/types/course-builder";
 
@@ -49,6 +50,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Titre et contenu requis" }, { status: 400 });
     }
 
+    const importedJson = typeof content === "string" ? parseFormationImportText(content) : null;
+    if (importedJson) {
+      return NextResponse.json({ sections: importedJson.sections, warnings: importedJson.warnings });
+    }
+
     // Prompt pour générer la structure depuis le texte collé
     const prompt = `Analyse ce contenu de formation et génère une structure complète au format JSON.
 
@@ -62,7 +68,8 @@ Génère une structure de formation avec des sections, chapitres et sous-chapitr
 - title: le titre
 - description (optionnel pour sections)
 - duration: une durée estimée (ex: "15 min")
-- type: "text" | "video" | "audio" | "document"
+- type: "text" | "video" | "audio" | "document" | "atelier"
+Un sous-chapitre atelier a : instructions (obligatoire), scenario, example, fields (1 à 6 objets label + type "short" ou "long"), criteria (2 à 6 textes), max_improvements (0 à 6).
 - content (optionnel): un résumé du contenu
 
 Format JSON attendu:
@@ -105,30 +112,38 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
       );
     }
 
-    // Valider et formater la structure
+    const warnings: { message: string }[] = [];
     const sections: CourseBuilderSection[] = result.sections.map((section: any, sectionIndex: number) => ({
       id: section.id || `section-${sectionIndex + 1}`,
       title: section.title || "Section sans titre",
       description: section.description || "",
-      chapters: (section.chapters || []).map((chapter: any, chapterIndex: number) => ({
-        id: chapter.id || `chapter-${sectionIndex + 1}-${chapterIndex + 1}`,
-        title: chapter.title || "Chapitre sans titre",
-        duration: chapter.duration || "15 min",
-        type: (chapter.type || "text") as "video" | "audio" | "document" | "text",
-        summary: chapter.summary || "",
-        content: chapter.content || "",
-        subchapters: (chapter.subchapters || []).map((subchapter: any, subIndex: number) => ({
-          id: subchapter.id || `subchapter-${sectionIndex + 1}-${chapterIndex + 1}-${subIndex + 1}`,
-          title: subchapter.title || "Sous-chapitre sans titre",
-          duration: subchapter.duration || "10 min",
-          type: (subchapter.type || "text") as "video" | "audio" | "document" | "text",
-          summary: subchapter.summary || "",
-          content: subchapter.content || "",
-        })),
-      })),
+      chapters: (section.chapters || []).map((chapter: any, chapterIndex: number) => {
+        const ordered = orderImportedSubchapters(
+          chapter.subchapters || chapter.subChapters || [],
+          chapter.title || "Chapitre sans titre",
+          (subchapter: any, subIndex: number) => ({
+            id: subchapter?.id || `subchapter-${sectionIndex + 1}-${chapterIndex + 1}-${subIndex + 1}`,
+            title: (typeof subchapter === "string" ? subchapter : subchapter?.title) || "Sous-chapitre sans titre",
+            duration: (typeof subchapter === "string" ? "" : subchapter?.duration) || "10 min",
+            type: (subchapter?.type || "text") as "video" | "audio" | "document" | "text",
+            summary: subchapter?.summary || "",
+            content: subchapter?.content || "",
+          }),
+        );
+        warnings.push(...ordered.warnings);
+        return {
+          id: chapter.id || `chapter-${sectionIndex + 1}-${chapterIndex + 1}`,
+          title: chapter.title || "Chapitre sans titre",
+          duration: chapter.duration || "15 min",
+          type: (chapter.type || "text") as "video" | "audio" | "document" | "text",
+          summary: chapter.summary || "",
+          content: chapter.content || "",
+          subchapters: ordered.subchapters,
+        };
+      }),
     }));
 
-    return NextResponse.json({ sections });
+    return NextResponse.json({ sections, warnings });
   } catch (error) {
     console.error("[api/courses/generate-structure] Error:", error);
     return NextResponse.json(

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useCourseBuilder } from "@/hooks/use-course-builder";
+import { orderImportedSubchapters } from "@/lib/course-builder/import-structure";
 import { createEmptyCourseBuilderSnapshot } from "@/data/course-builder-fallback";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 
@@ -123,14 +124,18 @@ export function CourseStructureGeneratorModal({
             content: chapter.content || "",
             duration: chapter.duration || "15 min",
             type: (chapter.type || "text") as "video" | "audio" | "document" | "text",
-            subchapters: chapter.subchapters.map((subchapter: any, subchapterIndex: number) => ({
-              id: `subchapter-${Date.now()}-${sectionIndex}-${chapterIndex}-${subchapterIndex}`,
-              title: subchapter.title,
-              summary: subchapter.summary || "",
-              content: subchapter.content || "",
-              duration: subchapter.duration || "10 min",
-              type: (subchapter.type || "text") as "video" | "audio" | "document" | "text",
-            })),
+            subchapters: orderImportedSubchapters(
+              chapter.subchapters || chapter.subChapters || [],
+              chapter.title || "Chapitre",
+              (subchapter: any, subchapterIndex: number) => ({
+                id: `subchapter-${Date.now()}-${sectionIndex}-${chapterIndex}-${subchapterIndex}`,
+                title: (typeof subchapter === "string" ? subchapter : subchapter?.title) || "Sous-chapitre",
+                summary: subchapter?.summary || "",
+                content: subchapter?.content || "",
+                duration: subchapter?.duration || "10 min",
+                type: (subchapter?.type || "text") as "video" | "audio" | "document" | "text",
+              }),
+            ).subchapters,
           })),
         }));
 

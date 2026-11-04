@@ -2195,7 +2195,15 @@ export function LessonPlayView({
           ) : null}
 
           {isAtelierLesson && activeLesson.workshop ? (
-            <WorkshopLearnerView key={String(activeLesson.id)} courseId={courseId} blockId={String(activeLesson.id)} workshop={activeLesson.workshop} />
+            <WorkshopLearnerView
+              key={String(activeLesson.id)}
+              courseId={courseId}
+              blockId={String(activeLesson.id)}
+              workshop={activeLesson.workshop}
+              title={activeLesson.title}
+              duration={activeLesson.duration}
+              continueHref={nextLesson && !nextGate ? lessonHref(nextLesson.id) : null}
+            />
           ) : isExperientialInterviewLesson ? (
             <div className="apprenant-studio-light">
               {interviewDoneForActiveLesson ? (

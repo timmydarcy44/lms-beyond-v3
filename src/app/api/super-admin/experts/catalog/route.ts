@@ -10,9 +10,15 @@ export async function GET() {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ badges: [] });
 
-  const { data, error } = await db.from("open_badges").select("id,name").order("name", { ascending: true }).limit(300);
-  if (error) return NextResponse.json({ badges: [] });
+  const full = await db.from("open_badges").select("id,name,image_url,domain").order("name", { ascending: true }).limit(300);
+  const fallback = full.error ? await db.from("open_badges").select("id,name").order("name", { ascending: true }).limit(300) : full;
+  if (fallback.error) return NextResponse.json({ badges: [] });
   return NextResponse.json({
-    badges: (data ?? []).map((badge) => ({ id: String(badge.id), name: String(badge.name ?? "Open badge") })),
+    badges: (fallback.data ?? []).map((badge) => ({
+      id: String(badge.id),
+      name: String((badge as { name?: string }).name ?? "Open badge"),
+      imageUrl: String((badge as { image_url?: string }).image_url ?? "") || null,
+      domain: String((badge as { domain?: string }).domain ?? "") || null,
+    })),
   });
 }

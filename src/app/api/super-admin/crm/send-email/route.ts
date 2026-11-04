@@ -1,9 +1,11 @@
+import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendEmail } from "@/lib/email/resend-client";
 import { getCrmUsers } from "@/lib/queries/super-admin";
 import { formatCrmRoleLabel } from "@/lib/crm/crm-shared";
 import { edgeEmailBrand } from "@/lib/emails/edge-email-shell";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 type InlineImage = {
   id?: string;
@@ -20,6 +22,9 @@ type Body = {
   role?: string;
   email?: string;
   images?: InlineImage[];
+  expertId?: string;
+  test?: boolean;
+  templateLabel?: string;
 };
 
 function escapeHtml(value: string): string {
@@ -118,9 +123,41 @@ export async function POST(req: NextRequest) {
     "https://www.byound.fr",
   ].join("\n\n");
 
+  const expertId = body?.expertId?.trim() ?? "";
+  const testSend = body?.test === true;
+  let expertEmail = "";
   let recipients: string[] = [];
 
-  if (segment === "single") {
+  if (expertId) {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const expert = await db.from("experts").select("id,email").eq("id", expertId).maybeSingle();
+    expertEmail = String(expert.data?.email ?? "").trim().toLowerCase();
+    if (expert.error || !expertEmail) {
+      return NextResponse.json({ error: "Expert introuvable" }, { status: 404 });
+    }
+    const auth = await getServerClient();
+    const user = auth ? (await auth.auth.getUser()).data.user : null;
+    const staffEmail = user?.email?.trim().toLowerCase() ?? "";
+    if (testSend) {
+      if (!staffEmail) return NextResponse.json({ error: "Aucune adresse pour l'envoi test." }, { status: 400 });
+      if (staffEmail === expertEmail) {
+        return NextResponse.json({ error: "L'envoi test ne part pas vers l'expert." }, { status: 400 });
+      }
+      recipients = [staffEmail];
+    } else {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const recent = await db
+        .from("expert_emails")
+        .select("id", { count: "exact", head: true })
+        .eq("expert_id", expertId)
+        .gte("created_at", since);
+      if (!recent.error && (recent.count ?? 0) >= 6) {
+        return NextResponse.json({ error: "Trop d'envois pour cet expert cette heure." }, { status: 429 });
+      }
+      recipients = [expertEmail];
+    }
+  } else if (segment === "single") {
     const email = body?.email?.trim().toLowerCase();
     if (!email) {
       return NextResponse.json({ error: "Email destinataire requis" }, { status: 400 });
@@ -141,6 +178,7 @@ export async function POST(req: NextRequest) {
 
   let sent = 0;
   const errors: string[] = [];
+  let resendId: string | undefined;
 
   for (const recipient of recipients) {
     const result = await sendEmail({
@@ -151,9 +189,12 @@ export async function POST(req: NextRequest) {
       replyTo: "contact@byound.fr",
       attachments,
       headers: { "List-Unsubscribe": "<mailto:contact@byound.fr>" },
+      tags: expertId && !testSend ? { expert_email: expertId } : undefined,
     });
-    if (result.success) sent += 1;
-    else errors.push(result.error ?? "Erreur inconnue");
+    if (result.success) {
+      sent += 1;
+      resendId = result.messageId;
+    } else errors.push(result.error ?? "Erreur inconnue");
   }
 
   if (sent === 0) {
@@ -166,12 +207,45 @@ export async function POST(req: NextRequest) {
   const roleLabel =
     segment === "role" && body?.role ? formatCrmRoleLabel(body.role) : null;
 
+  let history = false;
+  if (expertId && !testSend && sent > 0) {
+    const db = getServiceRoleClient();
+    const auth = await getServerClient();
+    const user = auth ? (await auth.auth.getUser()).data.user : null;
+    const label = body?.templateLabel?.trim() || subject;
+    if (db) {
+      const inserted = await db.from("expert_emails").insert({
+        expert_id: expertId,
+        sender_user_id: user?.id ?? null,
+        sender_email: user?.email ?? null,
+        subject,
+        html: htmlDocument,
+        resend_id: resendId ?? null,
+        status: "envoyé",
+        template_label: body?.templateLabel?.trim() || null,
+      });
+      history = !inserted.error;
+      const current = await db.from("experts").select("references").eq("id", expertId).maybeSingle();
+      const references = Array.isArray(current.data?.references) ? [...current.data.references] : [];
+      references.push({
+        _type: "edge_review_note",
+        action: "internal_note",
+        message: `E-mail envoyé : ${label}`,
+        at: new Date().toISOString(),
+      });
+      await db.from("experts").update({ references }).eq("id", expertId);
+      revalidatePath(`/super/experts/${expertId}`);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     sent,
     total: recipients.length,
-    segment,
+    segment: expertId ? "single" : segment,
     roleLabel,
+    test: testSend,
+    history,
     errors: errors.length > 0 ? errors : undefined,
   });
 }

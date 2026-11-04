@@ -59,8 +59,8 @@ export async function POST(
         console.error("[toggle_care] memberships", membership.error.message);
       }
     } else if (action === "set_assignments") {
-      const known = new Map(CFA_SPECIALIZATIONS.map((item) => [item.value, item.label]));
-      const knownLabels = new Set(known.values());
+      const known = new Map<string, string>(CFA_SPECIALIZATIONS.map((item) => [item.value, item.label]));
+      const knownLabels = new Set<string>(known.values());
       const selected = Array.isArray(body.cursus)
         ? body.cursus.map((value: unknown) => String(value)).filter((value: string) => known.has(value))
         : [];
@@ -92,6 +92,32 @@ export async function POST(
         showOnHomepage,
         homepageOrder: Number.isFinite(homepageOrder) ? homepageOrder : null,
       });
+    } else if (action === "update_referential") {
+      const list = (value: unknown) =>
+        Array.isArray(value) ? value.map((item: unknown) => String(item).trim()).filter(Boolean) : [];
+      const knownLabels = new Set<string>(CFA_SPECIALIZATIONS.map((item) => item.label));
+      const keptCursus = Array.isArray(expert.specialties)
+        ? expert.specialties.filter((item: unknown) => knownLabels.has(String(item)))
+        : [];
+      const skills = list(body.specialties).filter((item: string) => !knownLabels.has(item));
+      patch.specialties = [...skills, ...keptCursus];
+      patch.formats_supported = list(body.formats);
+      patch.regions = list(body.zones);
+      const metaIndex = references.findIndex(
+        (item) => item && typeof item === "object" && (item as { _type?: string })._type === "edge_registration_meta",
+      );
+      const meta: Record<string, unknown> =
+        metaIndex >= 0 && references[metaIndex] && typeof references[metaIndex] === "object"
+          ? { ...(references[metaIndex] as Record<string, unknown>) }
+          : { _type: "edge_registration_meta" };
+      meta.audiences = list(body.audiences);
+      meta.languages = list(body.languages);
+      meta.availabilities = list(body.availabilities);
+      meta.geographic_zones = list(body.zones);
+      meta.domains = list(body.domains);
+      if (metaIndex >= 0) references[metaIndex] = meta;
+      else references.push(meta);
+      patch.references = references;
     } else if (action === "add_note") {
       const note = typeof body.note === "string" ? body.note.trim() : "";
       if (!note) {

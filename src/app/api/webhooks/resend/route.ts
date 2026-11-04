@@ -58,19 +58,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Signature invalide" }, { status: 400 });
   }
 
-  if (event.type !== "email.opened") {
-    return NextResponse.json({ ok: true, ignored: event.type ?? null });
-  }
-
   const emailId = event.data?.email_id?.trim();
   const dealIdFromTag = tagValue(event.data?.tags, "deal_id");
-  if (!emailId && !dealIdFromTag) {
-    return NextResponse.json({ ok: true, skipped: "no_email_id" });
-  }
 
   const supabase = getServiceRoleClient();
   if (!supabase) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  }
+
+  if (emailId && (event.type === "email.delivered" || event.type === "email.opened" || event.type === "email.bounced" || event.type === "email.complained")) {
+    const next = event.type === "email.opened" ? "ouvert" : event.type === "email.delivered" ? "délivré" : "rejeté";
+    const current = await supabase.from("expert_emails").select("id,status").eq("resend_id", emailId).maybeSingle();
+    if (!current.error && current.data) {
+      const rank = ["envoyé", "délivré", "ouvert"];
+      const currentRank = rank.indexOf(String(current.data.status));
+      const nextRank = rank.indexOf(next);
+      if (next === "rejeté" || nextRank > currentRank) {
+        await supabase.from("expert_emails").update({ status: next }).eq("id", current.data.id);
+      }
+    }
+  }
+
+  if (event.type !== "email.opened") {
+    return NextResponse.json({ ok: true, ignored: event.type ?? null });
+  }
+
+  if (!emailId && !dealIdFromTag) {
+    return NextResponse.json({ ok: true, skipped: "no_email_id" });
   }
 
   const openedAt = event.created_at || new Date().toISOString();

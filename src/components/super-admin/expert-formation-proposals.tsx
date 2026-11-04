@@ -186,20 +186,20 @@ export function ExpertFormationProposals({ proposals }: { proposals: FormationPr
   const [open, setOpen] = useState<FormationProposal | null>(null);
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Propositions de formation</h2>
+    <section className="rounded-[28px] border border-[#1A2340] bg-[#111831]">
+      <div className="border-b border-[#1A2340] px-6 py-5">
+        <h2 className="text-[18px] font-extrabold text-white">Propositions de formation</h2>
       </div>
-      <div className="p-5">
+      <div className="p-6">
         {proposals.length === 0 ? (
-          <p className="text-sm text-slate-400">Aucune proposition de formation.</p>
+          <p className="text-sm text-[#9AA3BD]">Aucune proposition de formation.</p>
         ) : (
           <ul className="space-y-3">
             {proposals.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#1A2340] bg-[#0B1122] px-4 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="text-sm font-extrabold text-white">{item.title}</p>
+                  <p className="mt-1 text-xs text-[#9AA3BD]">
                     {STATUS[item.status]}
                     {item.priceEur != null ? ` · ${item.priceEur.toLocaleString("fr-FR")} €` : ""}
                   </p>

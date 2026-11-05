@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import { Manrope } from "next/font/google";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Sparkles } from "lucide-react";
+import { Gamepad2, ListChecks, NotebookPen, Sparkles } from "lucide-react";
 import { AddCourseResourceModal } from "@/components/formateur/course-builder/add-course-resource-modal";
 import { ModuleOpenButton } from "@/components/formateur/course-builder/module-open-button";
 import { CourseResourcesManager } from "@/components/formateur/course-builder/course-resources-manager";
@@ -17,7 +17,7 @@ import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
 import { ficheScore } from "@/lib/courses/fiche-checklist";
 import { formatEvaluationMethodsSummary } from "@/lib/openbadges/badge-evaluation";
-import { emptyWorkshop, workshopActivityLabel } from "@/lib/workshops/workshop-block";
+import { emptyWorkshop, workshopActivityLabel, workshopMode } from "@/lib/workshops/workshop-block";
 import type { CourseBuilderChapter, CourseBuilderSubchapter } from "@/types/course-builder";
 
 const ACCESSIBILITY_TEXT = "Formation accessible aux personnes en situation de handicap. Notre LMS est neuroadapté.";
@@ -125,6 +125,37 @@ function blockLabel(item: { type?: string; kind?: string; workshop?: CourseBuild
 
 function isQuizBlock(item: { kind?: string; quiz_id?: string }) {
   return item.kind === "quiz" || Boolean(item.quiz_id);
+}
+
+type ActivityItem = {
+  kind?: string;
+  type?: string;
+  quiz_id?: string | null;
+  workshop?: CourseBuilderSubchapter["workshop"];
+};
+
+function activityKind(item: ActivityItem): "quiz" | "atelier" | "jeu" | null {
+  if (item.kind === "quiz" || item.quiz_id) return "quiz";
+  if (item.kind === "case_study" && workshopMode(item.workshop) === "atelier") return "atelier";
+  if (item.type === "interactive_game") return "jeu";
+  return null;
+}
+
+function ActivityChip({ item }: { item: ActivityItem }) {
+  const kind = activityKind(item);
+  if (!kind) return null;
+  const Icon = kind === "quiz" ? ListChecks : kind === "jeu" ? Gamepad2 : NotebookPen;
+  const label = kind === "quiz" ? "Quiz" : kind === "jeu" ? "Jeu" : "Atelier";
+  const tone =
+    kind === "jeu"
+      ? "bg-[#1e2130] text-[#c9c2ff]"
+      : "bg-[#EEEBFF] text-[#4B3BD1]";
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${tone}`}>
+      <Icon className="h-3.5 w-3.5" aria-hidden />
+      {label}
+    </span>
+  );
 }
 
 function moduleEndQuiz(chapters: CourseBuilderChapter[]) {
@@ -941,10 +972,13 @@ export function EntrepriseFormationStudio({
                           <div key={chapter.id} className="rounded-[24px] border border-[#F1EFE9] p-3">
                             <div className="flex flex-wrap items-center gap-2">
                               <ContentDot filled={hasContent(chapter)} />
+                              <ActivityChip item={chapter} />
                               <button type="button" className="min-w-0 flex-1 truncate text-left text-sm font-semibold" onClick={() => selectChapter(section.id, chapter.id)}>
                                 {chapter.title || "Chapitre"}
                               </button>
-                              <span className="rounded-full bg-[#EEEBFF] px-2 py-0.5 text-xs font-semibold text-[#4B3BD1]">{blockLabel(chapter)}</span>
+                              {activityKind(chapter) ? null : (
+                                <span className="rounded-full bg-[#EEEBFF] px-2 py-0.5 text-xs font-semibold text-[#4B3BD1]">{blockLabel(chapter)}</span>
+                              )}
                               <button type="button" className="px-2 text-sm" aria-label="Monter" onClick={() => move(chapters.map((row) => row.id), chapter.id, -1, (active, over) => reorderChapters(section.id, active, over))}>↑</button>
                               <button type="button" className="px-2 text-sm" aria-label="Descendre" onClick={() => move(chapters.map((row) => row.id), chapter.id, 1, (active, over) => reorderChapters(section.id, active, over))}>↓</button>
                               <button
@@ -1008,6 +1042,7 @@ export function EntrepriseFormationStudio({
                                 <div key={sub.id} className="mt-2 pl-4">
                                   <div className="flex items-center gap-2">
                                   <ContentDot filled={hasContent(sub)} />
+                                  <ActivityChip item={sub} />
                                   <button
                                     type="button"
                                     className="min-w-0 flex-1 truncate text-left text-sm"
@@ -1018,7 +1053,9 @@ export function EntrepriseFormationStudio({
                                   >
                                     {sub.title || "Sans titre"}
                                   </button>
-                                  <span className="rounded-full bg-[#F7F6F2] px-2 py-0.5 text-xs font-semibold text-[#3A3D45]">{blockLabel(sub)}</span>
+                                  {activityKind(sub) ? null : (
+                                    <span className="rounded-full bg-[#F7F6F2] px-2 py-0.5 text-xs font-semibold text-[#3A3D45]">{blockLabel(sub)}</span>
+                                  )}
                                   <button type="button" className={plusBtn} aria-label="Ajouter une leçon" title="Ajouter une leçon" onClick={() => addLesson(section.id, chapter.id)}>
                                     +
                                   </button>
@@ -1058,7 +1095,10 @@ export function EntrepriseFormationStudio({
                   </article>
                   {endQuiz ? (
                     <div className="mx-3 rounded-[24px] border border-dashed border-[#C9C4FF] bg-[#F6F4FF] px-4 py-4 sm:mx-8">
-                      <p className="text-xs font-semibold text-[#4B3BD1]">Quiz de fin de module</p>
+                      <p className="inline-flex items-center gap-1 text-xs font-semibold text-[#4B3BD1]">
+                        <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                        Quiz de fin de module
+                      </p>
                       <div className="mt-2 flex items-center gap-2">
                         <button
                           type="button"

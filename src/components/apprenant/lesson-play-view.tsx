@@ -69,6 +69,7 @@ import {
   MessageCircle,
   Library,
   NotebookPen,
+  Gamepad2,
 } from "lucide-react";
 import type {
   LearnerDetail,
@@ -86,11 +87,12 @@ function partCodeFromTitle(title: string, index: number) {
   return match?.[1] ?? String(index + 1);
 }
 
-function readerMark(lesson: LearnerLesson): "quiz" | "game" | "interview" | undefined {
+function readerMark(lesson: LearnerLesson): "quiz" | "game" | "interview" | "atelier" | undefined {
   const type = String(lesson.type ?? "");
   const title = String(lesson.title ?? "");
   if (lesson.kind === "quiz" || type === "quiz" || lesson.quiz_id || extractLinkedQuizTestId(lesson)) return "quiz";
   if (isInterviewLikeLesson(lesson)) return "interview";
+  if (lesson.kind === "case_study" && workshopMode(lesson.workshop) === "atelier") return "atelier";
   if (type === "interactive_game" || /jeu\s+interactif/i.test(title)) return "game";
   return undefined;
 }
@@ -1296,6 +1298,8 @@ export function LessonPlayView({
     const isResourceOutline =
       moduleLesson.kind === "resource" || Boolean((moduleLesson as { resource_id?: string }).resource_id);
     const isAtelierOutline = moduleLesson.kind === "case_study" && workshopMode(moduleLesson.workshop) === "atelier";
+    const isGameOutline =
+      moduleLesson.type === "interactive_game" || /jeu\s+interactif/i.test(moduleLesson.title || "");
     const lessonHrefForItem = isInterviewOutline
       ? `${lessonHref(moduleLesson.id)}/entretien`
       : lessonHref(moduleLesson.id);
@@ -1310,13 +1314,15 @@ export function LessonPlayView({
         ? MessageCircle
         : isAtelierOutline
           ? NotebookPen
-          : isResourceOutline
-            ? Library
-            : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
-              ? ClipboardCheck
-              : hasVideoHint
-                ? PlayCircle
-                : FileText;
+          : isGameOutline
+            ? Gamepad2
+            : isResourceOutline
+              ? Library
+              : (moduleLesson as any).kind === "test" || moduleLesson.type === "test"
+                ? ClipboardCheck
+                : hasVideoHint
+                  ? PlayCircle
+                  : FileText;
     const isTestLesson = (moduleLesson as any).kind === "test" || moduleLesson.type === "test";
 
     const outlineLock = lessonLock(moduleLesson.id);
@@ -1361,7 +1367,11 @@ export function LessonPlayView({
                       ? isJessica
                         ? "h-7 w-7 bg-[#2A9D8F] text-white shadow-sm"
                         : "h-7 w-7 bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-500 text-white shadow-sm"
-                      : cn(
+                      : isAtelierOutline
+                        ? "h-7 w-7 bg-[#EEEBFF] text-[#4B3BD1] shadow-sm"
+                        : isGameOutline
+                          ? "h-7 w-7 bg-[#1e2130] text-[#c9c2ff] shadow-sm"
+                          : cn(
                           isJessica ? "h-4 w-4 text-slate-500" : "h-4 w-4 text-white/70",
                           isSubchapter && (isJessica ? "text-slate-400" : "text-white/45"),
                         ),
@@ -1376,7 +1386,7 @@ export function LessonPlayView({
               <LessonIcon
                 className={cn(
                   "h-3.5 w-3.5",
-                  (isSubchapter || isQuizOutline || isInterviewOutline || isResourceOutline) && "h-3 w-3",
+                  (isSubchapter || isQuizOutline || isInterviewOutline || isResourceOutline || isAtelierOutline || isGameOutline) && "h-3 w-3",
                 )}
                 aria-hidden="true"
               />
@@ -1452,6 +1462,23 @@ export function LessonPlayView({
                     )}
                   >
                     Ressource
+                  </span>
+                ) : null}
+                {isAtelierOutline ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]",
+                      isJessica
+                        ? "border-[#6E5BFF]/40 bg-[#EEEBFF] text-[#4B3BD1]"
+                        : "border-violet-300/40 bg-violet-500/10 text-violet-100",
+                    )}
+                  >
+                    Atelier
+                  </span>
+                ) : null}
+                {isGameOutline ? (
+                  <span className="inline-flex items-center rounded-full border border-[#c9c2ff]/40 bg-[#1e2130] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#c9c2ff]">
+                    Jeu
                   </span>
                 ) : null}
                 {isTestLesson ? (

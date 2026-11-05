@@ -533,7 +533,7 @@ function Brief({
         {duration?.trim() ? <p className="mt-3 text-sm text-white/60">{duration.trim()}</p> : null}
       </article>
       {situation ? (
-        <div>
+        <div className="workshop-on-canvas">
           <h3 className="text-sm font-semibold text-white/70">Situation</h3>
           <p className="mt-3 whitespace-pre-wrap text-xl leading-relaxed text-white/90">{situation}</p>
         </div>
@@ -551,7 +551,7 @@ function Brief({
         </article>
       ) : null}
       {pieces.length > 0 ? (
-        <div>
+        <div className="workshop-on-canvas">
           <h3 className="text-sm font-semibold text-white/70">Pièces</h3>
           <PieceList pieces={pieces} onOpen={onOpenPiece} />
         </div>
@@ -568,7 +568,7 @@ function Brief({
         </button>
       ) : null}
       {criteria.length > 0 ? (
-        <div>
+        <div className="workshop-on-canvas">
           <h3 className="text-sm font-semibold text-white/70">Ce qui sera regardé</h3>
           <ol className="mt-3 flex flex-col gap-2">
             {criteria.map((label, index) => (

@@ -1011,11 +1011,23 @@
 
 .lesson-reader__mark {
   display: inline-flex;
-  width: 22px;
+  width: auto;
+  min-width: 22px;
   height: 22px;
   align-items: center;
   justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
   border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.lesson-reader__mark:not(:has(span)) {
+  width: 22px;
+  padding: 0;
 }
 
 .lesson-reader__mark[data-mark="quiz"] {
@@ -1033,9 +1045,14 @@
   color: #0f7a45;
 }
 
+.lesson-reader__mark[data-mark="atelier"] {
+  background: #efeaff;
+  color: #4b3bd1;
+}
+
 .lesson-reader__leaves a {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 4px 10px;
   min-height: 52px;
   align-items: center;
@@ -1206,6 +1223,11 @@
   border-color: #c9c4b8;
   background: #ffffff;
   color: #1f1d1a;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-on-canvas > :is(h3, p),
+.lesson-reader[data-reading-theme="dys"] .workshop-on-canvas > :is(h3, p) {
+  color: var(--r-text);
 }
 
 @media (max-width: 1023px) {

@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Atkinson_Hyperlegible, Manrope } from "next/font/google";
-import { ChevronLeft, ChevronRight, Gamepad2, List, ListChecks, Lock, MessagesSquare, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Gamepad2, List, ListChecks, Lock, MessagesSquare, MoreHorizontal, NotebookPen } from "lucide-react";
 import "./lesson-reader.css";
 
 const manrope = Manrope({ subsets: ["latin"] });
@@ -19,7 +19,7 @@ export type ReaderLeaf = {
   title: string;
   status: "done" | "current" | "todo" | "locked";
   percent?: number | null;
-  mark?: "quiz" | "game" | "interview";
+  mark?: "quiz" | "game" | "interview" | "atelier";
 };
 
 export type ReaderPart = {
@@ -236,14 +236,23 @@ export function LessonReaderShell({
                   <li key={item.id}>
                     <Link href={item.href} aria-current={item.status === "current" ? "page" : undefined} onClick={() => setSheetOpen(false)}>
                       {item.mark ? (
-                        <span className="lesson-reader__mark" data-mark={item.mark} aria-hidden>
+                        <span className="lesson-reader__mark" data-mark={item.mark}>
                           {item.mark === "quiz" ? (
-                            <ListChecks size={13} strokeWidth={2} />
+                            <ListChecks size={13} strokeWidth={2} aria-hidden />
                           ) : item.mark === "game" ? (
-                            <Gamepad2 size={13} strokeWidth={2} />
+                            <Gamepad2 size={13} strokeWidth={2} aria-hidden />
+                          ) : item.mark === "atelier" ? (
+                            <NotebookPen size={13} strokeWidth={2} aria-hidden />
                           ) : (
-                            <MessagesSquare size={13} strokeWidth={2} />
+                            <MessagesSquare size={13} strokeWidth={2} aria-hidden />
                           )}
+                          {item.mark === "quiz" ? (
+                            <span>Quiz</span>
+                          ) : item.mark === "game" ? (
+                            <span>Jeu</span>
+                          ) : item.mark === "atelier" ? (
+                            <span>Atelier</span>
+                          ) : null}
                         </span>
                       ) : item.status === "locked" ? (
                         <Lock size={14} strokeWidth={2} aria-hidden />

@@ -30,14 +30,13 @@ import {
   Gamepad2,
   Text,
   Trash2,
-  Trophy,
   MessageCircle,
   Library,
   NotebookPen,
 } from "lucide-react";
 
 import { WorkshopEditorForm } from "@/components/formation-builder/workshop-editor-form";
-import { emptyWorkshop, isWorkshopBlock, workshopActivityLabel } from "@/lib/workshops/workshop-block";
+import { emptyWorkshop, isWorkshopBlock, workshopActivityLabel, workshopMode } from "@/lib/workshops/workshop-block";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -870,6 +869,12 @@ function ChapterCard({
                       })}
                       className="mt-2.5"
                     />
+                    {chapter.type === "interactive_game" ? (
+                      <span className="mt-1.5 inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1e2130] px-2 py-0.5 text-xs font-semibold text-[#c9c2ff]">
+                        <Gamepad2 className="h-3.5 w-3.5" aria-hidden />
+                        Jeu
+                      </span>
+                    ) : null}
                     <Input
                       value={chapter.title || ""}
                       onChange={(event) => updateChapter(sectionId, chapter.id, { title: event.target.value })}
@@ -1147,15 +1152,10 @@ function SubchapterRow({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <ArborescenceStatusDot status={subStatus} className="shrink-0" />
             {isQuizBlock ? (
-              <Trophy
-                className={cn(
-                  "h-5 w-5 shrink-0 text-amber-300",
-                  isLight
-                    ? "drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
-                    : "drop-shadow-[0_0_10px_rgba(251,191,36,0.45)]",
-                )}
-                aria-hidden
-              />
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EEEBFF] px-2 py-0.5 text-xs font-semibold text-[#4B3BD1]">
+                <ListChecks className="h-3.5 w-3.5" aria-hidden />
+                Quiz
+              </span>
             ) : isInterviewBlock ? (
               <MessageCircle
                 className={cn(
@@ -1164,11 +1164,18 @@ function SubchapterRow({
                 )}
                 aria-hidden
               />
+            ) : isWorkshop && workshopMode(subchapter.workshop) === "atelier" ? (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#EEEBFF] px-2 py-0.5 text-xs font-semibold text-[#4B3BD1]">
+                <NotebookPen className="h-3.5 w-3.5" aria-hidden />
+                Atelier
+              </span>
             ) : isWorkshop ? (
-              <NotebookPen
-                className={cn("h-5 w-5 shrink-0 text-[#6E5BFF]")}
-                aria-hidden
-              />
+              <NotebookPen className="h-5 w-5 shrink-0 text-[#6E5BFF]" aria-hidden />
+            ) : subchapter.type === "interactive_game" ? (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#1e2130] px-2 py-0.5 text-xs font-semibold text-[#c9c2ff]">
+                <Gamepad2 className="h-3.5 w-3.5" aria-hidden />
+                Jeu
+              </span>
             ) : isResourceBlock ? (
               <Library
                 className={cn(

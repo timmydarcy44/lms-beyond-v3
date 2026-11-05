@@ -17,8 +17,7 @@ import { COURSE_LEVEL_BUILDER_OPTIONS } from "@/lib/course-level-options";
 import { COURSE_TOOL_OPTIONS, normalizeCourseTools } from "@/lib/course-tools";
 import { ficheScore } from "@/lib/courses/fiche-checklist";
 import { formatEvaluationMethodsSummary } from "@/lib/openbadges/badge-evaluation";
-import { WorkshopEditorForm } from "@/components/formation-builder/workshop-editor-form";
-import { emptyWorkshop, isWorkshopBlock, workshopActivityLabel } from "@/lib/workshops/workshop-block";
+import { emptyWorkshop, workshopActivityLabel } from "@/lib/workshops/workshop-block";
 import type { CourseBuilderChapter, CourseBuilderSubchapter } from "@/types/course-builder";
 
 const ACCESSIBILITY_TEXT = "Formation accessible aux personnes en situation de handicap. Notre LMS est neuroadapté.";
@@ -1036,16 +1035,6 @@ export function EntrepriseFormationStudio({
                                     Supprimer
                                   </button>
                                   </div>
-                                  {isWorkshopBlock(sub) ? (
-                                    <div className="mt-3">
-                                      <WorkshopEditorForm
-                                        title={sub.title}
-                                        workshop={sub.workshop}
-                                        onTitle={(title) => updateSubchapter(section.id, chapter.id, sub.id, { title })}
-                                        onWorkshop={(workshop) => updateSubchapter(section.id, chapter.id, sub.id, { workshop })}
-                                      />
-                                    </div>
-                                  ) : null}
                                   {quiz ? (
                                     <div className="mt-2">
                                       <QuizSuccessFields

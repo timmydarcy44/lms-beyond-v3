@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Compass, NotebookPen } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, NotebookPen } from "lucide-react";
 
+import { PieceDocument, pieceKindLabel } from "@/components/apprenant/workshop-piece-view";
 import { workshopMaxImprovements } from "@/lib/workshops/workshop-block";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { WorkshopConfig, WorkshopField } from "@/types/course-builder";
+import type { WorkshopCharacter, WorkshopConfig, WorkshopField, WorkshopPiece } from "@/types/course-builder";
 
 type Feedback = {
   criteres: { critere: string; statut: "reussi" | "a_ameliorer"; commentaire: string; suggestion: string }[];
@@ -78,6 +79,8 @@ export function WorkshopLearnerView({
   const example = workshop.example?.trim() ?? "";
   const situation = workshop.situation?.trim() ?? "";
   const brief = workshop.brief?.trim() ?? "";
+  const personnage = visibleCharacter(workshop.personnage);
+  const pieces = workshop.pieces ?? [];
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [feedbackCount, setFeedbackCount] = useState(0);
@@ -92,6 +95,8 @@ export function WorkshopLearnerView({
   const [checked, setChecked] = useState<Record<number, boolean>>({});
   const [exampleOpen, setExampleOpen] = useState(false);
   const [criteriaOpen, setCriteriaOpen] = useState(false);
+  const [piecesOpen, setPiecesOpen] = useState(false);
+  const [openPiece, setOpenPiece] = useState<WorkshopPiece | null>(null);
   const [validatedAt, setValidatedAt] = useState<string | null>(null);
   const [waitIndex, setWaitIndex] = useState(0);
   const savedRef = useRef("{}");
@@ -326,9 +331,12 @@ export function WorkshopLearnerView({
             duration={duration}
             brief={brief}
             situation={situation}
+            personnage={personnage}
+            pieces={pieces}
             criteria={criteria}
             example={example}
             onExample={openExample}
+            onOpenPiece={setOpenPiece}
             onStart={() => setStep(2)}
           />
         ) : null}
@@ -345,6 +353,7 @@ export function WorkshopLearnerView({
             checked={checked}
             saveState={saveState}
             example={example}
+            pieces={pieces}
             notice={notice}
             busy={busy !== null}
             hasAnswer={hasAnswer}
@@ -352,6 +361,8 @@ export function WorkshopLearnerView({
             onCheck={(index) => setChecked((current) => ({ ...current, [index]: !current[index] }))}
             onExample={openExample}
             onCriteria={() => setCriteriaOpen(true)}
+            onPieces={() => setPiecesOpen(true)}
+            onOpenPiece={setOpenPiece}
             onChange={(id, value) => setAnswers((current) => ({ ...current, [id]: value }))}
             onPrev={() => setFieldIndex((value) => Math.max(0, value - 1))}
             onNext={() => setFieldIndex((value) => Math.min(visibleFields.length - 1, value + 1))}
@@ -396,6 +407,26 @@ export function WorkshopLearnerView({
             <SheetDescription className="text-white/60">Une réponse qui répond aux critères.</SheetDescription>
           </SheetHeader>
           <p className="whitespace-pre-wrap px-4 text-base leading-relaxed">{example}</p>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={piecesOpen} onOpenChange={setPiecesOpen}>
+        <SheetContent side="bottom" className="max-h-[80vh] border-[#1A2340] bg-[#111831] text-[#F4F1EA]">
+          <SheetHeader>
+            <SheetTitle className="text-[#F4F1EA]">Pièces</SheetTitle>
+            <SheetDescription className="text-white/60">Ouvrez un document pendant que vous répondez.</SheetDescription>
+          </SheetHeader>
+          <PieceList pieces={pieces} onOpen={(piece) => { setPiecesOpen(false); setOpenPiece(piece); }} />
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={Boolean(openPiece)} onOpenChange={(open) => { if (!open) setOpenPiece(null); }}>
+        <SheetContent side="right" className="w-full overflow-x-hidden overflow-y-auto border-[#1A2340] bg-[#0A0F1E] text-[#F4F1EA] sm:max-w-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-[#F4F1EA]">{openPiece?.titre || "Pièce"}</SheetTitle>
+            <SheetDescription className="text-white/60">{openPiece ? pieceKindLabel(openPiece) : ""}</SheetDescription>
+          </SheetHeader>
+          <div className="min-w-0 overflow-x-auto px-4 pb-6">{openPiece ? <PieceDocument piece={openPiece} /> : null}</div>
         </SheetContent>
       </Sheet>
 
@@ -453,23 +484,42 @@ function Stepper({
   );
 }
 
+function visibleCharacter(personnage?: WorkshopCharacter) {
+  const nom = personnage?.nom?.trim() ?? "";
+  const fonction = personnage?.fonction?.trim() ?? "";
+  const description = personnage?.description?.trim() ?? "";
+  if (!nom && !fonction && !description) return null;
+  return { nom, fonction, description };
+}
+
+function characterInitials(nom: string) {
+  const letters = nom.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+  return letters || "?";
+}
+
 function Brief({
   title,
   duration,
   brief,
   situation,
+  personnage,
+  pieces,
   criteria,
   example,
   onExample,
+  onOpenPiece,
   onStart,
 }: {
   title: string;
   duration?: string;
   brief: string;
   situation: string;
+  personnage: { nom: string; fonction: string; description: string } | null;
+  pieces: WorkshopPiece[];
   criteria: string[];
   example: string;
   onExample: () => void;
+  onOpenPiece: (piece: WorkshopPiece) => void;
   onStart: () => void;
 }) {
   return (
@@ -481,12 +531,35 @@ function Brief({
         </p>
         <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">{title}</h2>
         {duration?.trim() ? <p className="mt-3 text-sm text-white/60">{duration.trim()}</p> : null}
-        {brief ? <p className="mt-6 whitespace-pre-wrap text-lg leading-relaxed text-white/90">{brief}</p> : null}
       </article>
       {situation ? (
-        <div className="flex gap-3 rounded-[24px] border border-[#26304F] bg-[#0B1122] p-5">
-          <Compass className="mt-1 size-5 shrink-0 text-[#E85AA8]" aria-hidden />
-          <p className="whitespace-pre-wrap text-base leading-relaxed text-white/85">{situation}</p>
+        <div>
+          <h3 className="text-sm font-semibold text-white/70">Situation</h3>
+          <p className="mt-3 whitespace-pre-wrap text-xl leading-relaxed text-white/90">{situation}</p>
+        </div>
+      ) : null}
+      {personnage ? (
+        <article className="flex gap-4 rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+          <span aria-hidden className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] text-sm font-semibold">
+            {characterInitials(personnage.nom)}
+          </span>
+          <div>
+            {personnage.nom ? <p className="text-lg font-semibold">{personnage.nom}</p> : null}
+            {personnage.fonction ? <p className="text-sm text-[#d9d4ff]">{personnage.fonction}</p> : null}
+            {personnage.description ? <p className="mt-2 whitespace-pre-wrap text-base leading-relaxed text-white/85">{personnage.description}</p> : null}
+          </div>
+        </article>
+      ) : null}
+      {pieces.length > 0 ? (
+        <div>
+          <h3 className="text-sm font-semibold text-white/70">Pièces</h3>
+          <PieceList pieces={pieces} onOpen={onOpenPiece} />
+        </div>
+      ) : null}
+      {brief ? (
+        <div className="rounded-[24px] border border-[#26304F] bg-[#0B1122] p-5">
+          <h3 className="text-sm font-semibold text-[#E85AA8]">Votre mission</h3>
+          <p className="mt-3 whitespace-pre-wrap text-lg leading-relaxed text-white/90">{brief}</p>
         </div>
       ) : null}
       {example ? (
@@ -532,6 +605,7 @@ function Production(props: {
   checked: Record<number, boolean>;
   saveState: "idle" | "saving" | "saved" | "error";
   example: string;
+  pieces: WorkshopPiece[];
   notice: string;
   busy: boolean;
   hasAnswer: boolean;
@@ -539,6 +613,8 @@ function Production(props: {
   onCheck: (index: number) => void;
   onExample: () => void;
   onCriteria: () => void;
+  onPieces: () => void;
+  onOpenPiece: (piece: WorkshopPiece) => void;
   onChange: (id: string, value: string) => void;
   onPrev: () => void;
   onNext: () => void;
@@ -550,7 +626,7 @@ function Production(props: {
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-white/70">
-            Champ {props.fields.length ? props.index + 1 : 0}/{props.fields.length}
+            Question {props.fields.length ? props.index + 1 : 0}/{props.fields.length}
           </p>
           <p className="text-sm text-white/60" aria-live="polite">
             {props.saveState === "saving" ? "Enregistrement…" : props.saveState === "saved" ? <SavedMark /> : props.saveState === "error" ? "Enregistrement interrompu" : ""}
@@ -563,7 +639,7 @@ function Production(props: {
           />
         </div>
         <button type="button" onClick={props.onToggleAll} className="mb-4 hidden text-sm font-semibold text-[#d9d4ff] underline-offset-4 hover:underline lg:inline">
-          {props.showAll ? "Un champ à la fois" : "Voir tous les champs"}
+          {props.showAll ? "Une question à la fois" : "Voir toutes les questions"}
         </button>
         <div className="flex flex-col gap-4">
           {(props.showAll ? props.fields : props.field ? [props.field] : []).map((field) => (
@@ -572,6 +648,11 @@ function Production(props: {
         </div>
         {props.notice ? <p className="mt-3 text-sm text-[#E4A84A]">{props.notice}</p> : null}
         <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-[#1A2340] bg-[#0A0F1E]/95 p-4 backdrop-blur lg:static lg:mt-5 lg:border-0 lg:bg-transparent lg:p-0">
+          {props.pieces.length > 0 ? (
+            <button type="button" onClick={props.onPieces} className="inline-flex min-h-12 items-center rounded-full border border-[#26304F] px-4 text-sm font-semibold lg:hidden">
+              Pièces
+            </button>
+          ) : null}
           <button type="button" onClick={props.onCriteria} className="inline-flex min-h-12 items-center rounded-full border border-[#26304F] px-4 text-sm font-semibold lg:hidden">
             Critères
           </button>
@@ -591,15 +672,23 @@ function Production(props: {
           )}
         </div>
       </div>
-      <aside className="hidden h-fit rounded-[24px] border border-[#1A2340] bg-[#111831] p-5 lg:block">
-        <h3 className="text-sm font-semibold">Ce qui sera regardé</h3>
-        <p className="mt-1 text-xs text-white/50">Cochez pour vous. Ce n’est pas enregistré.</p>
-        <CriteriaList criteria={props.criteria} checked={props.checked} onCheck={props.onCheck} />
-        {props.example ? (
-          <button type="button" onClick={props.onExample} className="mt-4 text-sm font-semibold text-[#d9d4ff] underline-offset-4 hover:underline">
-            Voir un exemple
-          </button>
+      <aside className="hidden h-fit flex-col gap-4 lg:flex">
+        {props.pieces.length > 0 ? (
+          <div className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+            <h3 className="text-sm font-semibold">Pièces</h3>
+            <PieceList pieces={props.pieces} onOpen={props.onOpenPiece} />
+          </div>
         ) : null}
+        <div className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+          <h3 className="text-sm font-semibold">Ce qui sera regardé</h3>
+          <p className="mt-1 text-xs text-white/50">Cochez pour vous. Ce n’est pas enregistré.</p>
+          <CriteriaList criteria={props.criteria} checked={props.checked} onCheck={props.onCheck} />
+          {props.example ? (
+            <button type="button" onClick={props.onExample} className="mt-4 text-sm font-semibold text-[#d9d4ff] underline-offset-4 hover:underline">
+              Voir un exemple
+            </button>
+          ) : null}
+        </div>
       </aside>
     </div>
   );
@@ -641,6 +730,25 @@ function FieldCard({
         />
       )}
     </label>
+  );
+}
+
+function PieceList({ pieces, onOpen }: { pieces: WorkshopPiece[]; onOpen: (piece: WorkshopPiece) => void }) {
+  return (
+    <ul className="mt-3 flex flex-col gap-2">
+      {pieces.map((piece) => (
+        <li key={piece.id}>
+          <button
+            type="button"
+            onClick={() => onOpen(piece)}
+            className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#26304F] bg-[#0B1122] px-4 py-3 text-left"
+          >
+            <span className="text-sm font-semibold">{piece.titre}</span>
+            <span className="shrink-0 text-xs text-[#d9d4ff]">{pieceKindLabel(piece)}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

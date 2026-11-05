@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
 
-import type { CourseBuilderSection, CourseBuilderSubchapter, WorkshopFieldType } from "@/types/course-builder";
+import type { CourseBuilderSection, CourseBuilderSubchapter, WorkshopCharacter, WorkshopFieldType, WorkshopPiece } from "@/types/course-builder";
 
 export type ImportWarning = {
   chapter: string;
@@ -73,7 +73,7 @@ function readAtelier(
   chapterTitle: string,
 ): { block: CourseBuilderSubchapter } | { warning: ImportWarning } {
   const title = textOf(raw.title) || "Atelier";
-  const instructions = textOf(raw.instructions) || textOf(raw.brief);
+  const instructions = textOf(raw.instructions) || textOf(raw.brief) || textOf(raw.consigne) || textOf(raw.mission);
   const fieldsRaw = Array.isArray(raw.fields) ? raw.fields : [];
   const criteriaRaw = Array.isArray(raw.criteria) ? raw.criteria : [];
   const fields = fieldsRaw.flatMap((item) => {
@@ -91,7 +91,7 @@ function readAtelier(
   const maxRaw = raw.max_improvements ?? raw.maxImprovements;
   const max = maxRaw == null || maxRaw === "" ? 2 : Number(maxRaw);
 
-  if (!instructions) return { warning: atelierError(chapterTitle, title, "la consigne est obligatoire.") };
+  if (!instructions) return { warning: atelierError(chapterTitle, title, "la mission est obligatoire.") };
   if (fields.length < 1 || fields.length > 6) {
     return { warning: atelierError(chapterTitle, title, "il faut entre 1 et 6 champs.") };
   }
@@ -101,6 +101,10 @@ function readAtelier(
   if (!Number.isInteger(max) || max < 0 || max > 6) {
     return { warning: atelierError(chapterTitle, title, "le nombre d'améliorations doit être un entier entre 0 et 6.") };
   }
+  const personnage = readPersonnage(raw.personnage);
+  if ("warning" in personnage) return { warning: atelierError(chapterTitle, title, personnage.warning) };
+  const pieces = readImportedPieces(raw.pieces, chapterTitle, title);
+  if ("warning" in pieces) return pieces;
 
   return {
     block: {
@@ -114,14 +118,83 @@ function readAtelier(
       workshop: {
         mode: "atelier",
         brief: instructions,
-        situation: textOf(raw.scenario) || textOf(raw.situation),
+        situation: textOf(raw.scenario) || textOf(raw.situation) || textOf(raw.mise_en_situation),
         example: textOf(raw.example),
         fields,
         criteria,
         maxImprovements: max,
+        ...(personnage.personnage ? { personnage: personnage.personnage } : {}),
+        ...(pieces.pieces.length ? { pieces: pieces.pieces } : {}),
       },
     },
   };
+}
+
+function readPersonnage(raw: unknown): { personnage?: WorkshopCharacter } | { warning: string } {
+  if (raw == null) return {};
+  if (typeof raw !== "object" || Array.isArray(raw)) return { warning: "le personnage doit être un objet." };
+  const row = raw as Record<string, unknown>;
+  const personnage = {
+    nom: textOf(row.nom),
+    fonction: textOf(row.fonction),
+    description: textOf(row.description),
+  };
+  if (!personnage.nom && !personnage.fonction && !personnage.description) return {};
+  return { personnage };
+}
+
+function readImportedPieces(
+  raw: unknown,
+  chapterTitle: string,
+  title: string,
+): { pieces: WorkshopPiece[] } | { warning: ImportWarning } {
+  if (raw == null) return { pieces: [] };
+  if (!Array.isArray(raw)) return { warning: atelierError(chapterTitle, title, "les pièces doivent être une liste.") };
+  if (raw.length > 5) {
+    const extra = raw[5];
+    const pieceTitle = extra && typeof extra === "object" ? textOf((extra as { titre?: unknown }).titre) : "";
+    return { warning: atelierError(chapterTitle, title, `pièce « ${pieceTitle || "6"} » : 5 pièces maximum.`) };
+  }
+  const pieces: WorkshopPiece[] = [];
+  for (let index = 0; index < raw.length; index += 1) {
+    const item = raw[index];
+    const row = item && typeof item === "object" && !Array.isArray(item) ? (item as Record<string, unknown>) : {};
+    const pieceTitle = textOf(row.titre) || `Pièce ${index + 1}`;
+    const type = textOf(row.type).toLowerCase();
+    const id = textOf(row.id) || nanoid();
+    if (type === "mail") {
+      pieces.push({ id, type: "mail", titre: pieceTitle, de: textOf(row.de), objet: textOf(row.objet), contenu: textOf(row.contenu) });
+      continue;
+    }
+    if (type === "note") {
+      pieces.push({ id, type: "note", titre: pieceTitle, contenu: textOf(row.contenu) });
+      continue;
+    }
+    if (type === "fichier") {
+      const url = textOf(row.url);
+      if (!url) return { warning: atelierError(chapterTitle, title, `pièce « ${pieceTitle} » : l'url du fichier est obligatoire.`) };
+      pieces.push({ id, type: "fichier", titre: pieceTitle, url });
+      continue;
+    }
+    if (type === "donnees") {
+      if (!Array.isArray(row.colonnes) || row.colonnes.length === 0) {
+        return { warning: atelierError(chapterTitle, title, `pièce « ${pieceTitle} » : indiquez les colonnes.`) };
+      }
+      const colonnes = row.colonnes.map((cell) => textOf(cell)).filter(Boolean).slice(0, 12);
+      if (!colonnes.length) return { warning: atelierError(chapterTitle, title, `pièce « ${pieceTitle} » : indiquez les colonnes.`) };
+      if (!Array.isArray(row.lignes)) {
+        return { warning: atelierError(chapterTitle, title, `pièce « ${pieceTitle} » : les lignes doivent être une liste.`) };
+      }
+      const lignes = row.lignes.slice(0, 40).map((line) => {
+        const cells = Array.isArray(line) ? line.map((cell) => (cell == null ? "" : String(cell).trim())) : [];
+        return colonnes.map((_, cellIndex) => cells[cellIndex] ?? "");
+      });
+      pieces.push({ id, type: "donnees", titre: pieceTitle, colonnes, lignes });
+      continue;
+    }
+    return { warning: atelierError(chapterTitle, title, `pièce « ${pieceTitle} » : type « ${type || "absent"} » inconnu.`) };
+  }
+  return { pieces };
 }
 
 function isAtelier(raw: unknown) {

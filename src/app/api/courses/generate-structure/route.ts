@@ -69,7 +69,7 @@ Génère une structure de formation avec des sections, chapitres et sous-chapitr
 - description (optionnel pour sections)
 - duration: une durée estimée (ex: "15 min")
 - type: "text" | "video" | "audio" | "document" | "atelier"
-Un sous-chapitre atelier a : instructions (obligatoire), scenario, example, fields (1 à 6 objets label + type "short" ou "long"), criteria (2 à 6 textes), max_improvements (0 à 6).
+Un sous-chapitre atelier a : instructions ou mission (obligatoire), scenario ou situation, example, personnage optionnel (nom, fonction, description), pieces optionnelles (5 maximum : mail, note, donnees, fichier), fields (1 à 6 objets label + type "short" ou "long"), criteria (2 à 6 textes), max_improvements (0 à 6).
 - content (optionnel): un résumé du contenu
 
 Format JSON attendu:

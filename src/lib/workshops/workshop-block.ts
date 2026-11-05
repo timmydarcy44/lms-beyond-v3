@@ -1,6 +1,12 @@
 import { nanoid } from "nanoid";
 
-import type { CourseBuilderSubchapter, WorkshopConfig, WorkshopMode } from "@/types/course-builder";
+import type {
+  CourseBuilderSubchapter,
+  WorkshopCharacter,
+  WorkshopConfig,
+  WorkshopMode,
+  WorkshopPiece,
+} from "@/types/course-builder";
 
 /** Uniquement pour un bloc `case_study`. Une leçon sans ce kind n'a pas de mode. */
 export function workshopMode(workshop?: WorkshopConfig | null): WorkshopMode {
@@ -64,6 +70,8 @@ export function readWorkshopConfig(raw: unknown): WorkshopConfig | undefined {
         return [{ id, label: typeof criterion.label === "string" ? criterion.label : "" }];
       })
     : [];
+  const personnage = readCharacter(value.personnage);
+  const pieces = readPieces(value.pieces);
   return {
     mode: value.mode === "atelier" ? "atelier" : value.mode === "evaluation" ? "evaluation" : undefined,
     brief: typeof value.brief === "string" ? value.brief : "",
@@ -72,7 +80,94 @@ export function readWorkshopConfig(raw: unknown): WorkshopConfig | undefined {
     fields,
     criteria,
     maxImprovements: workshopMaxImprovements({ maxImprovements: Number(value.maxImprovements) }),
+    ...(personnage ? { personnage } : {}),
+    ...(pieces.length ? { pieces } : {}),
   };
+}
+
+function readCharacter(raw: unknown): WorkshopCharacter | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const row = raw as Record<string, unknown>;
+  const nom = typeof row.nom === "string" ? row.nom.trim() : "";
+  const fonction = typeof row.fonction === "string" ? row.fonction.trim() : "";
+  const description = typeof row.description === "string" ? row.description.trim() : "";
+  if (!nom && !fonction && !description) return undefined;
+  return { nom, fonction, description };
+}
+
+function cellText(value: unknown, max = 500) {
+  return value == null ? "" : String(value).slice(0, max);
+}
+
+function readPieces(raw: unknown): WorkshopPiece[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 5).flatMap((item, index) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    const type = typeof row.type === "string" ? row.type.trim() : "";
+    const titre = typeof row.titre === "string" && row.titre.trim() ? row.titre.trim() : `Pièce ${index + 1}`;
+    const id = typeof row.id === "string" && row.id.trim() ? row.id.trim() : `piece-${index}`;
+    if (type === "mail") {
+      return [{ id, type: "mail" as const, titre, de: cellText(row.de), objet: cellText(row.objet, 300), contenu: cellText(row.contenu, 12000) }];
+    }
+    if (type === "note") return [{ id, type: "note" as const, titre, contenu: cellText(row.contenu, 12000) }];
+    if (type === "fichier") {
+      const url = typeof row.url === "string" ? row.url.trim() : "";
+      return [{ id, type: "fichier" as const, titre, ...(url ? { url } : {}) }];
+    }
+    if (type === "donnees") {
+      const colonnes = Array.isArray(row.colonnes) ? row.colonnes.map((cell) => cellText(cell)).filter(Boolean).slice(0, 12) : [];
+      if (!colonnes.length) return [];
+      const lignes = Array.isArray(row.lignes)
+        ? row.lignes.slice(0, 40).map((line) => {
+            const cells = Array.isArray(line) ? line : [];
+            return colonnes.map((_, cellIndex) => cellText(cells[cellIndex]));
+          })
+        : [];
+      return [{ id, type: "donnees" as const, titre, colonnes, lignes }];
+    }
+    return [];
+  });
+}
+
+function clip(value: string | undefined, max = 3000) {
+  const text = (value ?? "").trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}…`;
+}
+
+/** Texte ajouté au prompt de retour. Un fichier n'envoie que son titre. */
+export function workshopCaseBrief(workshop?: WorkshopConfig | null) {
+  const lines: string[] = [];
+  const situation = clip(workshop?.situation);
+  if (situation) lines.push(`Situation :\n${situation}`);
+  const person = workshop?.personnage;
+  const nom = person?.nom?.trim() ?? "";
+  const fonction = person?.fonction?.trim() ?? "";
+  const description = clip(person?.description);
+  if (nom || fonction || description) {
+    lines.push(
+      ["Personnage :", nom, fonction ? `Fonction : ${fonction}` : "", description].filter(Boolean).join("\n"),
+    );
+  }
+  const pieces = workshop?.pieces ?? [];
+  if (pieces.length) {
+    lines.push(
+      `Pièces :\n${pieces
+        .map((piece) => {
+          if (piece.type === "fichier") return `- Fichier « ${piece.titre} »`;
+          if (piece.type === "mail") {
+            return `- Mail « ${piece.titre} »\nDe : ${piece.de?.trim() || ""}\nObjet : ${piece.objet?.trim() || ""}\n${clip(piece.contenu)}`;
+          }
+          if (piece.type === "note") return `- Note « ${piece.titre} »\n${clip(piece.contenu)}`;
+          const header = piece.colonnes.join(" | ");
+          const rows = piece.lignes.map((row) => row.join(" | ")).join("\n");
+          return `- Données « ${piece.titre} »\n${header}\n${clip(rows, 4000)}`;
+        })
+        .join("\n\n")}`,
+    );
+  }
+  return lines.join("\n\n");
 }
 
 export function findWorkshopBlock(

@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
             `Titre: ${title}\n` +
             `Contraintes: Retourne UNIQUEMENT du JSON valide selon ce schéma:\n` +
             `{\n  "sections": [\n    {\n      "title": string,\n      "chapters": [\n        {\n          "title": string,\n          "subChapters": string[]\n        }\n      ]\n    }\n  ]\n}\n` +
-            `Un collage JSON peut aussi placer dans "subchapters" un objet {"type":"atelier","title","instructions","scenario","example","fields":[{"label","type":"short"|"long"}],"criteria":string[],"max_improvements"}.\n` +
+            `Un collage JSON peut aussi placer dans "subchapters" un objet {"type":"atelier","title","instructions"|"mission","scenario"|"situation","example","personnage":{"nom","fonction","description"},"pieces":[{"type":"mail"|"note"|"donnees"|"fichier","titre"}],"fields":[{"label","type":"short"|"long"}],"criteria":string[],"max_improvements"}. Personnage et pièces sont optionnels, 5 pièces maximum.\n` +
             `ET ajoute un champ "objectifs": string[] (3 à 7 objectifs).\n` +
             (mode === "paste" ? `Contenu à structurer:\n${prompt}\n` : `Sujet: ${prompt}\n`),
         },

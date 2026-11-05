@@ -44,6 +44,8 @@ describe("import formation", () => {
     expect(subs[1].workshop?.fields).toHaveLength(2);
     expect(subs[1].workshop?.criteria).toHaveLength(2);
     expect(subs[1].workshop?.maxImprovements).toBe(2);
+    expect(subs[1].workshop?.personnage).toBeUndefined();
+    expect(subs[1].workshop?.pieces).toBeUndefined();
   });
 
   it("conserve un import sans atelier", () => {
@@ -84,5 +86,74 @@ describe("import formation", () => {
     expect(result.sections[0].chapters[0].subchapters.map((item) => item.title)).toEqual(["La leçon"]);
     expect(result.warnings[0]?.message).toContain("Accueillir");
     expect(result.warnings[0]?.message).toContain("Trop court");
+  });
+
+  it("lit le personnage, les pièces et les alias mission / situation", () => {
+    const result = importFormationStructure({
+      sections: [
+        {
+          title: "Module",
+          chapters: [
+            {
+              title: "Budget",
+              subchapters: [
+                {
+                  type: "atelier",
+                  title: "Répondre à Claire",
+                  mission: "Rédigez la réponse.",
+                  situation: "Le budget est contesté.",
+                  personnage: { nom: "Claire", fonction: "Responsable budget", description: "Elle veut un chiffre." },
+                  pieces: [
+                    { type: "mail", titre: "Demande", de: "Claire", objet: "Budget", contenu: "Justifiez." },
+                    { type: "note", titre: "Mémo", contenu: "Rappel interne." },
+                    { type: "donnees", titre: "Dépenses", colonnes: ["Poste", "Montant"], lignes: [["Formation", "1200"]] },
+                    { type: "fichier", titre: "Devis", url: "https://cdn.example/devis.pdf" },
+                  ],
+                  fields: [{ label: "Réponse", type: "long" }],
+                  criteria: ["Répond au besoin", "Chiffre présent"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const workshop = result.sections[0].chapters[0].subchapters[0].workshop;
+    expect(result.warnings).toEqual([]);
+    expect(workshop?.brief).toBe("Rédigez la réponse.");
+    expect(workshop?.situation).toBe("Le budget est contesté.");
+    expect(workshop?.personnage).toEqual({ nom: "Claire", fonction: "Responsable budget", description: "Elle veut un chiffre." });
+    expect(workshop?.pieces?.map((piece) => piece.type)).toEqual(["mail", "note", "donnees", "fichier"]);
+  });
+
+  it("refuse une sixième pièce en nommant l'atelier et la pièce", () => {
+    const pieces = ["A", "B", "C", "D", "E", "Annexe"].map((titre) => ({ type: "note", titre, contenu: "texte" }));
+    const result = importFormationStructure({
+      sections: [
+        {
+          title: "Module",
+          chapters: [
+            {
+              title: "Budget",
+              subchapters: [
+                { title: "La leçon", content: "Texte" },
+                {
+                  type: "atelier",
+                  title: "Répondre à Claire",
+                  mission: "Rédigez.",
+                  fields: [{ label: "Réponse", type: "long" }],
+                  criteria: ["Clair", "Chiffré"],
+                  pieces,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(result.sections[0].chapters[0].subchapters.map((item) => item.title)).toEqual(["La leçon"]);
+    expect(result.warnings[0]?.message).toContain("Répondre à Claire");
+    expect(result.warnings[0]?.message).toContain("Annexe");
+    expect(result.warnings[0]?.message).toContain("5 pièces maximum");
   });
 });

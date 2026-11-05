@@ -5,7 +5,7 @@ import { generateJSON } from "@/lib/ai/openai-client";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { normalizeWorkshopFeedback } from "@/lib/workshops/normalize-feedback";
-import { findWorkshopBlock, workshopMaxImprovements, workshopMode } from "@/lib/workshops/workshop-block";
+import { findWorkshopBlock, workshopCaseBrief, workshopMaxImprovements, workshopMode } from "@/lib/workshops/workshop-block";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
 
 const PREVIEW_ROLES = ["instructor", "formateur", "admin", "tutor", "super_admin", "owner"];
@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
     .filter((line) => !line.endsWith(":"));
   const prompt = [
     `Formation : ${course.title || "Formation"}`,
-    `Consigne : ${block.workshop?.brief || block.title || "Atelier"}`,
-    block.workshop?.situation ? `Mise en situation : ${block.workshop.situation}` : "",
+    `Votre mission : ${block.workshop?.brief || block.title || "Atelier"}`,
+    workshopCaseBrief(block.workshop),
     criteria.length ? `Critères :\n- ${criteria.join("\n- ")}` : "",
     "Réponses de l'apprenant :",
     fields.join("\n"),
@@ -130,6 +130,7 @@ export async function POST(request: NextRequest) {
       },
       [
         "Vous évaluez un atelier d'entraînement, en français, avec le vouvoiement.",
+        "Jugez la réponse par rapport à la situation, au personnage et aux pièces. Un mail, une note ou un tableau est donné en entier. Pour un fichier, seul le titre est connu.",
         "Ton bienveillant, précis, orienté action.",
         "Utilisez exactement ces clés : criteres, critere, statut, commentaire, suggestion, commentaire_global.",
         "statut vaut uniquement reussi ou a_ameliorer, sans accent.",

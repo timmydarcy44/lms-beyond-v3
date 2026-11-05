@@ -21,6 +21,18 @@ export type WorkshopCriterion = {
 /** Absent ou « evaluation » : étude de cas de certification. « atelier » : entraînement. */
 export type WorkshopMode = "evaluation" | "atelier";
 
+export type WorkshopCharacter = {
+  nom?: string;
+  fonction?: string;
+  description?: string;
+};
+
+export type WorkshopPiece =
+  | { id: string; type: "mail"; titre: string; de?: string; objet?: string; contenu?: string }
+  | { id: string; type: "note"; titre: string; contenu?: string }
+  | { id: string; type: "donnees"; titre: string; colonnes: string[]; lignes: string[][] }
+  | { id: string; type: "fichier"; titre: string; url?: string };
+
 export type WorkshopConfig = {
   mode?: WorkshopMode;
   brief?: string;
@@ -29,6 +41,10 @@ export type WorkshopConfig = {
   fields?: WorkshopField[];
   criteria?: WorkshopCriterion[];
   maxImprovements?: number;
+  /** Optionnel. Absent : l'atelier s'affiche comme avant. */
+  personnage?: WorkshopCharacter;
+  /** Optionnel, 0 à 5. Absent : aucune pièce. */
+  pieces?: WorkshopPiece[];
 };
 
 export type CourseBuilderSubchapter = {

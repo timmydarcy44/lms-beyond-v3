@@ -1139,6 +1139,75 @@
   }
 }
 
+.workshop-feedback-card[data-status="reussi"] {
+  border-color: rgba(47, 208, 138, 0.45);
+  background: rgba(47, 208, 138, 0.1);
+  color: #f4f1ea;
+}
+
+.workshop-feedback-card[data-status="a_ameliorer"] {
+  border-color: rgba(228, 168, 74, 0.55);
+  background: rgba(228, 168, 74, 0.1);
+  color: #f4f1ea;
+}
+
+.workshop-feedback-title,
+.workshop-feedback-body,
+.workshop-feedback-note,
+.workshop-feedback-rework {
+  color: rgba(244, 241, 234, 0.9);
+}
+
+.workshop-feedback-status[data-status="reussi"] {
+  color: #2fd08a;
+}
+
+.workshop-feedback-status[data-status="a_ameliorer"] {
+  color: #e4a84a;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-card[data-status="reussi"],
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-card[data-status="reussi"] {
+  border-color: #1f9d62;
+  background: #e8f8f0;
+  color: #1f1d1a;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-card[data-status="a_ameliorer"],
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-card[data-status="a_ameliorer"] {
+  border-color: #c4842a;
+  background: #fff6e8;
+  color: #1f1d1a;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-title,
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-body,
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-note,
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-rework,
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-title,
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-body,
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-note,
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-rework {
+  color: #1f1d1a;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-status[data-status="reussi"],
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-status[data-status="reussi"] {
+  color: #0e7a4b;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-status[data-status="a_ameliorer"],
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-status[data-status="a_ameliorer"] {
+  color: #8a4b0f;
+}
+
+.lesson-reader[data-reading-theme="light"] .workshop-feedback-validate,
+.lesson-reader[data-reading-theme="dys"] .workshop-feedback-validate {
+  border-color: #c9c4b8;
+  background: #ffffff;
+  color: #1f1d1a;
+}
+
 @media (max-width: 1023px) {
   .lesson-reader__sidebar,
   .lesson-reader__ai-dock {

@@ -841,27 +841,24 @@ function FeedbackView(props: {
             initial={props.reduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: props.motionTime, delay: props.reduceMotion ? 0 : Math.min(index * 0.08, 0.4) }}
-            className="rounded-[24px] border p-5"
-            style={{
-              borderColor: passed ? "rgba(47,208,138,0.45)" : "rgba(228,168,74,0.55)",
-              background: passed ? "rgba(47,208,138,0.1)" : "rgba(228,168,74,0.1)",
-            }}
+            className="workshop-feedback-card rounded-[24px] border p-5"
+            data-status={passed ? "reussi" : "a_ameliorer"}
           >
-            <p className="font-semibold">{item.critere}</p>
-            <p className="mt-1 text-sm font-semibold" style={{ color: passed ? "#2FD08A" : "#E4A84A" }}>
+            <p className="workshop-feedback-title font-semibold">{item.critere}</p>
+            <p className="workshop-feedback-status mt-1 text-sm font-semibold" data-status={passed ? "reussi" : "a_ameliorer"}>
               {passed ? "Réussi" : "À améliorer"}
             </p>
-            {item.commentaire ? <p className="mt-2 whitespace-pre-wrap text-white/85">{item.commentaire}</p> : null}
-            {item.suggestion ? <p className="mt-2 whitespace-pre-wrap text-white/85">{item.suggestion}</p> : null}
+            {item.commentaire ? <p className="workshop-feedback-body mt-2 whitespace-pre-wrap">{item.commentaire}</p> : null}
+            {item.suggestion ? <p className="workshop-feedback-body mt-2 whitespace-pre-wrap">{item.suggestion}</p> : null}
             {!passed && !props.locked ? (
-              <button type="button" onClick={() => props.onRework(item.critere)} className="mt-3 text-sm font-semibold text-[#F4F1EA] underline-offset-4 hover:underline">
+              <button type="button" onClick={() => props.onRework(item.critere)} className="workshop-feedback-rework mt-3 text-sm font-semibold underline-offset-4 hover:underline">
                 Retravailler ce point
               </button>
             ) : null}
           </motion.article>
         );
       })}
-      {props.feedback.commentaire_global ? <p className="whitespace-pre-wrap text-base leading-relaxed text-white/85">{props.feedback.commentaire_global}</p> : null}
+      {props.feedback.commentaire_global ? <p className="workshop-feedback-note whitespace-pre-wrap text-base leading-relaxed">{props.feedback.commentaire_global}</p> : null}
       {props.notice ? <p className="text-sm text-[#E4A84A]">{props.notice}</p> : null}
       {props.locked ? null : (
         <div className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t border-[#1A2340] bg-[#0A0F1E]/95 p-4 backdrop-blur sm:flex-row lg:static lg:border-0 lg:bg-transparent lg:p-0">
@@ -870,7 +867,7 @@ function FeedbackView(props: {
               Améliorer ma réponse ({props.remainingLabel})
             </button>
           ) : null}
-          <button type="button" disabled={props.busy} onClick={props.onValidate} className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-[#26304F] px-4 text-sm font-semibold disabled:opacity-50">
+          <button type="button" disabled={props.busy} onClick={props.onValidate} className="workshop-feedback-validate inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-[#26304F] px-4 text-sm font-semibold disabled:opacity-50">
             {props.busy ? "Validation…" : "Valider ma réponse"}
           </button>
         </div>

@@ -1,7 +1,24 @@
-import { EdgeMarketingRoutePage, createMarketingPageMeta } from "@/components/edge-site/marketing/edge-marketing-route-page";
+import type { Metadata } from "next";
+import { EdgeBusinessFormerEquipesPage } from "@/components/edge-site/business/edge-business-former-equipes-page";
+import { EdgePremiumBrandPillars } from "@/components/edge-site/premium/edge-premium-brand-pillars";
+import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
+import { fetchPublicTrainingCourses } from "@/lib/training-courses/queries";
+import { getServerClient } from "@/lib/supabase/server";
 
-export const generateMetadata = () => createMarketingPageMeta("businessFormations");
+export const metadata: Metadata = {
+  title: "Formations entreprise — Byound",
+  description:
+    "Catalogue de formations pour les équipes : management, vente, IA, communication, RH. Présentiel, distanciel et blended.",
+};
 
-export default function Page() {
-  return <EdgeMarketingRoutePage contentKey="businessFormations" />;
+export default async function Page() {
+  const supabase = await getServerClient();
+  const courses = await fetchPublicTrainingCourses(supabase);
+
+  return (
+    <EdgePremiumShell overlayNav={false}>
+      <EdgeBusinessFormerEquipesPage initialCourses={courses} />
+      <EdgePremiumBrandPillars />
+    </EdgePremiumShell>
+  );
 }

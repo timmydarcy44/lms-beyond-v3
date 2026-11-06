@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseReclamationTheme } from "@/lib/qualiopi/reclamation-themes";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +27,14 @@ export async function POST(req: NextRequest) {
     subject?: string;
     description?: string;
     audience?: string;
+    theme?: string;
     requester_name?: string;
   };
 
   const subject = String(body.subject ?? "").trim();
   const description = String(body.description ?? "").trim();
   const audience = String(body.audience ?? "").trim();
+  const theme = parseReclamationTheme(body.theme);
   if (!subject || subject.length < 3) {
     return NextResponse.json({ error: "Objet trop court" }, { status: 400 });
   }
@@ -40,6 +43,12 @@ export async function POST(req: NextRequest) {
   }
   if (!(AUDIENCES as readonly string[]).includes(audience)) {
     return NextResponse.json({ error: "Espace dashboard invalide" }, { status: 400 });
+  }
+  if (!theme) {
+    return NextResponse.json(
+      { error: "Choisissez une thématique (organisation, outil, programmation, contenu, formateur, autre)" },
+      { status: 400 },
+    );
   }
 
   const { data: profile } = await supabase
@@ -68,6 +77,7 @@ export async function POST(req: NextRequest) {
       subject,
       description,
       audience,
+      theme,
       channel: "dashboard",
       requester_name: requesterName,
       requester_email: user.email ?? (profile?.email ? String(profile.email) : null),

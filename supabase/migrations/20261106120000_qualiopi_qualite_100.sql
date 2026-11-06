@@ -41,6 +41,7 @@ create table if not exists public.crm_qualiopi_reclamations (
   requester_email text,
   requester_user_id uuid references auth.users (id) on delete set null,
   audience text check (audience is null or audience in ('entreprise', 'expert', 'apprenant', 'salarie', 'autre')),
+  theme text check (theme is null or theme in ('organisation', 'outil_byound', 'programmation', 'contenu', 'formateur', 'autre')),
   channel text not null default 'autre' check (channel in ('email', 'satisfaction', 'formulaire', 'dashboard', 'autre')),
   description text not null default '',
   status text not null default 'open' check (status in ('open', 'in_progress', 'closed')),

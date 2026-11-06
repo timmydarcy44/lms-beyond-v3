@@ -4,6 +4,11 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  RECLAMATION_THEMES,
+  RECLAMATION_THEME_LABELS,
+  type ReclamationTheme,
+} from "@/lib/qualiopi/reclamation-themes";
 import { cn } from "@/lib/utils";
 
 export type ReclamationAudience = "entreprise" | "expert" | "apprenant" | "salarie";
@@ -37,6 +42,7 @@ const COPY: Record<ReclamationAudience, { title: string; lead: string }> = {
 export function DashboardReclamationForm({ audience, className, tone = "dark" }: Props) {
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [theme, setTheme] = useState<ReclamationTheme | "">("");
   const [name, setName] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -47,6 +53,10 @@ export function DashboardReclamationForm({ audience, className, tone = "dark" }:
     : "w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]";
 
   const submit = async () => {
+    if (!theme) {
+      toast.error("Choisissez une thématique");
+      return;
+    }
     setSending(true);
     try {
       const res = await fetch("/api/dashboard/reclamations", {
@@ -54,6 +64,7 @@ export function DashboardReclamationForm({ audience, className, tone = "dark" }:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           audience,
+          theme,
           subject,
           description,
           requester_name: name.trim() || undefined,
@@ -64,6 +75,7 @@ export function DashboardReclamationForm({ audience, className, tone = "dark" }:
       setSent(true);
       setSubject("");
       setDescription("");
+      setTheme("");
       toast.success("Réclamation enregistrée — nous vous répondrons sous 15 jours ouvrés.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
@@ -88,7 +100,14 @@ export function DashboardReclamationForm({ audience, className, tone = "dark" }:
       <p className={cn("mt-2 text-sm", light ? "text-gray-500" : "text-white/55")}>{copy.lead}</p>
 
       {sent ? (
-        <div className={cn("mt-6 rounded-xl border px-4 py-3 text-sm", light ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100")}>
+        <div
+          className={cn(
+            "mt-6 rounded-xl border px-4 py-3 text-sm",
+            light
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-100",
+          )}
+        >
           Merci. Votre réclamation est au registre qualité. Vous pouvez en déposer une autre si besoin.
           <Button
             type="button"
@@ -101,6 +120,18 @@ export function DashboardReclamationForm({ audience, className, tone = "dark" }:
         </div>
       ) : (
         <div className="mt-5 space-y-3">
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as ReclamationTheme | "")}
+            className={inputClass}
+          >
+            <option value="">La réclamation porte sur… *</option>
+            {RECLAMATION_THEMES.map((t) => (
+              <option key={t} value={t}>
+                {RECLAMATION_THEME_LABELS[t]}
+              </option>
+            ))}
+          </select>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -123,7 +154,9 @@ export function DashboardReclamationForm({ audience, className, tone = "dark" }:
             type="button"
             disabled={sending}
             onClick={() => void submit()}
-            className={light ? "bg-violet-600 text-white hover:bg-violet-700" : "bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"}
+            className={
+              light ? "bg-violet-600 text-white hover:bg-violet-700" : "bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"
+            }
           >
             {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Envoyer la réclamation

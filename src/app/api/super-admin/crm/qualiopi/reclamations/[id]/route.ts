@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { parseReclamationTheme } from "@/lib/qualiopi/reclamation-themes";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,17 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   if (typeof body.subject === "string") patch.subject = body.subject.trim();
   if (typeof body.description === "string") patch.description = body.description.trim();
-  if (typeof body.response === "string") patch.response = body.response.trim() || null;
+  if (typeof body.response === "string") {
+    patch.response = body.response.trim() || null;
+    if (body.response.trim()) {
+      patch.status = body.close === false ? "in_progress" : "closed";
+      if (body.close !== false) patch.closed_at = new Date().toISOString();
+      if (!body.ack) patch.ack_at = new Date().toISOString();
+    }
+  }
   if (typeof body.requester_name === "string") patch.requester_name = body.requester_name.trim() || null;
+  const theme = parseReclamationTheme(body.theme);
+  if (theme) patch.theme = theme;
   if (body.status === "open" || body.status === "in_progress" || body.status === "closed") {
     patch.status = body.status;
     if (body.status === "closed") patch.closed_at = new Date().toISOString();

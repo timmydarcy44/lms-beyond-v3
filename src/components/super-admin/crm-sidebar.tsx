@@ -17,6 +17,7 @@ import {
   Handshake,
   Bot,
   FileBadge,
+  Newspaper,
   ClipboardList,
   ChevronDown,
 } from "lucide-react";
@@ -139,6 +140,7 @@ const CRM_LINKS: CrmNavLink[] = [
   { href: "/super/utilisateurs?role=tutor", label: "Tuteurs", icon: UserCheck, section: "formation" },
   { href: "/super/crm/validators", label: "Validateurs", icon: ShieldCheck, section: "certification" },
   { href: "/super/crm/qualiopi", label: "Qualiopi", icon: FileBadge, section: "certification" },
+  { href: "/super/crm/qualiopi/veilles", label: "Veilles", icon: Newspaper, section: "certification" },
   { href: "/super/crm/emails", label: "Emails", icon: Mail, section: "outils" },
 ];
 
@@ -187,7 +189,10 @@ function isLinkActive(
     return pathname.startsWith("/super/crm/formations");
   }
   if (item.href === "/super/crm/qualiopi") {
-    return pathname.startsWith("/super/crm/qualiopi");
+    return pathname === "/super/crm/qualiopi";
+  }
+  if (item.href === "/super/crm/qualiopi/veilles") {
+    return pathname.startsWith("/super/crm/qualiopi/veilles");
   }
   if (item.href.includes("?role=")) {
     return pathname === "/super/utilisateurs" && roleParam === item.href.split("role=")[1];

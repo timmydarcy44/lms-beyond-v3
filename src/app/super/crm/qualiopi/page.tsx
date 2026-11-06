@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { ChevronRight, FileText, Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -151,13 +152,18 @@ export default function CrmQualiopiPage() {
               Référentiel RNQ, coffre administratif et preuves de session : convention, émargement, satisfaction.
             </p>
           </div>
-          <Button
-            onClick={() => openAdd()}
-            className="rounded-full bg-white text-[#0b0e18] hover:bg-white/90"
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Ajouter un document
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
+              <Link href="/super/crm/qualiopi/veilles">Veilles</Link>
+            </Button>
+            <Button
+              onClick={() => openAdd()}
+              className="rounded-full bg-white text-[#0b0e18] hover:bg-white/90"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Ajouter un document
+            </Button>
+          </div>
         </div>
       </div>
 

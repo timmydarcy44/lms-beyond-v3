@@ -4,7 +4,7 @@ import { useState } from "react";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Mail, MessageCircle } from "lucide-react";
+import { ChevronDown, Mail, MessageCircle, MessageSquareWarning } from "lucide-react";
 import Link from "next/link";
 
 const FAQ = [
@@ -84,6 +84,18 @@ export default function EntrepriseAidePage() {
             <div>
               <p className="text-sm font-semibold text-gray-900">Messages RH</p>
               <p className="text-xs text-gray-500">Échanges rapides avec vos équipes</p>
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/entreprise/reclamation"
+            className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/80 p-4 shadow-sm transition hover:border-violet-300 sm:col-span-2"
+          >
+            <MessageSquareWarning className="h-5 w-5 text-violet-600" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Signaler un problème (réclamation)</p>
+              <p className="text-xs text-gray-500">
+                Formation, parcours ou service — registre qualité Qualiopi, réponse sous 15 jours ouvrés
+              </p>
             </div>
           </Link>
         </div>

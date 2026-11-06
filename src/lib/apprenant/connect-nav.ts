@@ -26,6 +26,8 @@ import {
 
   NotebookPen,
 
+  MessageSquareWarning,
+
 } from "lucide-react";
 
 
@@ -63,6 +65,7 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
       icon: Share2,
       action: "share-profile",
     },
+    { label: "Réclamation", href: "/dashboard/apprenant/reclamation", icon: MessageSquareWarning },
   ];
 }
 
@@ -82,6 +85,7 @@ const BASE: ApprenantNavItem[] = [
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
   { label: "Mes opportunités", href: "/dashboard/apprenant/matching", icon: Briefcase },
+  { label: "Réclamation", href: "/dashboard/apprenant/reclamation", icon: MessageSquareWarning },
 ];
 
 const JESSICA_BASE: ApprenantNavItem[] = [
@@ -98,6 +102,7 @@ const JESSICA_BASE: ApprenantNavItem[] = [
   { label: "Mon projet expert", href: "/dashboard/apprenant/mon-projet-expert", icon: NotebookPen },
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
+  { label: "Réclamation", href: "/dashboard/apprenant/reclamation", icon: MessageSquareWarning },
 ];
 
 export function buildApprenantNavItems(

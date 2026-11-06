@@ -13,6 +13,7 @@ import {
   type QualiopiSession,
   type QualiopiSessionStatus,
 } from "@/lib/crm/qualiopi-shared";
+import { QualiopiSessionChecklist } from "@/components/super-admin/qualiopi-session-checklist";
 import {
   Dialog,
   DialogContent,
@@ -166,6 +167,7 @@ export default function CrmFormationsPage() {
                       {(session.attendees ?? []).length} collaborateur
                       {(session.attendees ?? []).length > 1 ? "s" : ""}
                     </div>
+                    <QualiopiSessionChecklist session={session} className="mt-2" />
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         size="sm"

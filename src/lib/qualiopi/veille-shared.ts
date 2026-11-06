@@ -67,6 +67,7 @@ export type VeilleHighlight = {
   excerpt: string;
   note: string | null;
   url: string | null;
+  theme?: VeilleTheme | null;
   status: VeilleHighlightStatus;
   created_at: string;
   updated_at: string;

@@ -141,6 +141,11 @@ const CRM_LINKS: CrmNavLink[] = [
   { href: "/super/crm/validators", label: "Validateurs", icon: ShieldCheck, section: "certification" },
   { href: "/super/crm/qualiopi", label: "Qualiopi", icon: FileBadge, section: "certification" },
   { href: "/super/crm/qualiopi/veilles", label: "Veilles", icon: Newspaper, section: "certification" },
+  { href: "/super/crm/qualiopi/qualite", label: "Qualité", icon: ClipboardList, section: "certification" },
+  { href: "/super/crm/qualiopi/process", label: "Process", icon: ClipboardList, section: "certification" },
+  { href: "/super/crm/qualiopi/formateurs", label: "Formateurs", icon: UserCheck, section: "certification" },
+  { href: "/super/crm/qualiopi/catalogue", label: "Preuves catalogue", icon: GraduationCap, section: "certification" },
+  { href: "/super/crm/qualiopi/pilote", label: "Session pilote", icon: Rocket, section: "certification" },
   { href: "/super/crm/emails", label: "Emails", icon: Mail, section: "outils" },
 ];
 
@@ -191,8 +196,8 @@ function isLinkActive(
   if (item.href === "/super/crm/qualiopi") {
     return pathname === "/super/crm/qualiopi";
   }
-  if (item.href === "/super/crm/qualiopi/veilles") {
-    return pathname.startsWith("/super/crm/qualiopi/veilles");
+  if (item.href.startsWith("/super/crm/qualiopi/")) {
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
   }
   if (item.href.includes("?role=")) {
     return pathname === "/super/utilisateurs" && roleParam === item.href.split("role=")[1];

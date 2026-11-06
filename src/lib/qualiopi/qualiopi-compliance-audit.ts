@@ -307,12 +307,14 @@ export function assessQualiopiCompliance(input: {
             "Terminer une session avec émargement complet.",
           ),
 
-    row(
-      17,
-      "partial",
-      "Plateforme LMS + outils numériques ; locaux = hors produit.",
-      "Attester les moyens matériels hors ligne si audit sur site.",
-    ),
+    signals.processDocsReady?.moyens
+      ? row(17, "validated", "Note moyens matériels / locaux documentée.")
+      : row(
+          17,
+          "partial",
+          "Plateforme LMS + outils numériques ; locaux = hors produit.",
+          "Process docs → Moyens, ou attestation.",
+        ),
 
     ev.hasAnySession
       ? row(
@@ -340,12 +342,14 @@ export function assessQualiopiCompliance(input: {
           "Compléter les formations catalogue.",
         ),
 
-    row(
-      20,
-      "partial",
-      "Module école handicap + référent sur fiches ; mobilité alternance hors produit.",
-      "Attester process alternance / mobilité si applicable.",
-    ),
+    signals.processDocsReady?.handicap
+      ? row(20, "validated", "Note handicap / référent documentée dans le dossier process Qualiopi.")
+      : row(
+          20,
+          "partial",
+          "Module école handicap + référent sur fiches ; formaliser la note process.",
+          "Qualiopi → Process docs → Handicap, ou attestation.",
+        ),
 
     hasExperts && signals.approvedExperts >= 2
       ? row(
@@ -367,53 +371,99 @@ export function assessQualiopiCompliance(input: {
             "Approuver les intervenants dans l’espace experts.",
           ),
 
-    row(
-      22,
-      "missing",
-      "Pas de plan de développement des compétences internes dans l’outil.",
-      "Attester avec document RH + preuves de formation des formateurs.",
-    ),
-    row(
-      23,
-      "partial",
-      "Veille fusionnée (réglementaire inclus) dans /super/crm/qualiopi/veilles — actualités + RAG 1/2.",
-      "Surligner au moins une info réglementaire à retravailler.",
-    ),
-    row(
-      24,
-      "partial",
-      "Veille fusionnée (métier inclus) dans /super/crm/qualiopi/veilles.",
-      "Surligner au moins une info métier à retravailler.",
-    ),
-    row(
-      25,
-      "partial",
-      "Veille fusionnée (pédagogie inclus) dans /super/crm/qualiopi/veilles.",
-      "Surligner au moins une info pédagogique à retravailler.",
-    ),
-    row(
-      26,
-      "partial",
-      "Parcours référent handicap + contact sur fiches ; partenariats à lister.",
-      "Attester partenariats handicap dans le dossier qualité.",
-    ),
+    (signals.formateurPlansCount ?? 0) >= 1 && (signals.formateurActionsDoneCount ?? 0) >= 1
+      ? row(
+          22,
+          "validated",
+          `${signals.formateurPlansCount} plan(s) formateur et ${signals.formateurActionsDoneCount} action(s) réalisée(s).`,
+        )
+      : signals.processDocsReady?.formateurs
+        ? row(
+            22,
+            "partial",
+            "Procédure compétences formateurs rédigée ; enregistrer un plan + une action réalisée.",
+            "Qualiopi → Formateurs : créer un plan et marquer une action faite.",
+          )
+        : row(
+            22,
+            "missing",
+            "Pas de plan de développement des compétences dans l’outil.",
+            "Rédiger le process Formateurs puis saisir un plan expert.",
+          ),
+
+    (signals.veille?.reglementaireDone ?? 0) >= 1
+      ? row(23, "validated", "Au moins une info réglementaire surlignée et traitée (90 j).")
+      : (signals.veille?.anySaved ?? 0) >= 1
+        ? row(
+            23,
+            "partial",
+            "Veille active ; passer au moins un highlight réglementaire en « Traité ».",
+            "Veilles → surligner une actu réglementaire → statut Traité.",
+          )
+        : row(
+            23,
+            "partial",
+            "Veille fusionnée (RAG 1/2) prête — aucune info encore exploitée.",
+            "Générer la veille et surligner une info réglementaire.",
+          ),
+
+    (signals.veille?.metierDone ?? 0) >= 1
+      ? row(24, "validated", "Au moins une info métier surlignée et traitée (90 j).")
+      : (signals.veille?.anySaved ?? 0) >= 1
+        ? row(
+            24,
+            "partial",
+            "Veille active ; traiter un highlight métier.",
+            "Veilles → highlight métier → Traité.",
+          )
+        : row(
+            24,
+            "partial",
+            "Veille métier incluse dans la synthèse globale — à exploiter.",
+            "Surligner une info métier.",
+          ),
+
+    (signals.veille?.pedagogieDone ?? 0) >= 1
+      ? row(25, "validated", "Au moins une info pédagogie surlignée et traitée (90 j).")
+      : (signals.veille?.anySaved ?? 0) >= 1
+        ? row(
+            25,
+            "partial",
+            "Veille active ; traiter un highlight pédagogie.",
+            "Veilles → highlight pédagogie → Traité.",
+          )
+        : row(
+            25,
+            "partial",
+            "Veille pédagogie incluse dans la synthèse globale — à exploiter.",
+            "Surligner une info pédagogie.",
+          ),
+
+    signals.processDocsReady?.handicap
+      ? row(26, "validated", "Note handicap / partenariats documentée.")
+      : row(
+          26,
+          "partial",
+          "Référent handicap sur fiches ; formaliser partenariats.",
+          "Process docs → Handicap.",
+        ),
     row(
       27,
       "missing",
-      "Pas de gestion sous-traitants Qualiopi.",
-      "Attester contrats sous-traitants si concerné.",
+      "Hors scope OF B2B sauf sous-traitance — attester N/A ou contrats.",
+      "Attester N/A OF B2B ou déposer les contrats sous-traitants.",
     ),
     row(
       28,
       "missing",
-      "Alternance marketing / contenu ; pas de cockpit CFA–entreprise complet.",
-      "Attester process alternance hors Byound.",
+      "Hors périmètre CFA / apprentissage pour l’audit OF B2B.",
+      "Attester N/A OF B2B.",
     ),
     row(
       29,
-      "partial",
-      "Pages alternance / CFA 2027 ; pilotage promotion alternance à documenter.",
-      "Attester plan promotion alternance.",
+      "missing",
+      "Hors périmètre promotion alternance pour l’audit OF B2B.",
+      "Attester N/A OF B2B.",
     ),
 
     ev.sessionsWithFullSatisfaction >= 1
@@ -436,18 +486,37 @@ export function assessQualiopiCompliance(input: {
             "Clôturer une session et collecter les questionnaires.",
           ),
 
-    row(
-      31,
-      "missing",
-      "Pas de workflow réclamations formation dédié.",
-      "Attester procédure réclamations + registre.",
-    ),
-    row(
-      32,
-      "missing",
-      "Pas de boucle d’actions correctives liée aux enquêtes.",
-      "Attester comité qualité + plan d’actions.",
-    ),
+    signals.reclamationsProcessReady || signals.processDocsReady?.reclamations
+      ? row(
+          31,
+          "validated",
+          signals.reclamationsCount
+            ? `Procédure réclamations active — ${signals.reclamationsCount} ticket(s) au registre.`
+            : "Procédure / registre réclamations en place (registre prêt, 0 ticket OK).",
+        )
+      : row(
+          31,
+          "missing",
+          "Pas de workflow réclamations formation dédié.",
+          "Qualiopi → Qualité : activer la procédure et le registre.",
+        ),
+
+    signals.actionsReviewed ||
+    (signals.actionsDoneCount ?? 0) >= 1 ||
+    signals.processDocsReady?.paq
+      ? row(
+          32,
+          "validated",
+          (signals.actionsDoneCount ?? 0) >= 1
+            ? `Plan d’actions qualité avec ${signals.actionsDoneCount} action(s) clôturée(s) / revue.`
+            : "Comité / plan d’actions documenté.",
+        )
+      : row(
+          32,
+          "missing",
+          "Pas de boucle d’actions correctives liée aux enquêtes.",
+          "Qualiopi → Qualité : créer une revue PAQ ou une action.",
+        ),
   ];
 
   const indicators: QualiopiIndicatorCompliance[] = drafts.map((d) => {

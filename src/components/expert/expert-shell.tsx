@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   Lock,
   Menu,
+  MessageSquareWarning,
   Settings,
   User2,
   X,
@@ -293,6 +294,7 @@ export function ExpertShell({
       icon: BookOpen,
     });
   }
+  items.push({ label: "Réclamation", href: "/dashboard/expert/reclamation", icon: MessageSquareWarning });
   items.push({ label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings });
 
   const identity = (

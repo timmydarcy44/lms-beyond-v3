@@ -15,12 +15,17 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   const body = (await req.json().catch(() => ({}))) as {
     note?: string;
     status?: "saved" | "in_progress" | "done";
+    theme?: string | null;
   };
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (typeof body.note === "string") patch.note = body.note.trim() || null;
   if (body.status === "saved" || body.status === "in_progress" || body.status === "done") {
     patch.status = body.status;
+  }
+  if ("theme" in body) {
+    const { parseVeilleTheme } = await import("@/lib/qualiopi/veille-shared");
+    patch.theme = parseVeilleTheme(body.theme) ?? "transversal";
   }
 
   const { data, error } = await supabase

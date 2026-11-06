@@ -156,6 +156,15 @@ export default function CrmQualiopiPage() {
             <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
               <Link href="/super/crm/qualiopi/veilles">Veilles</Link>
             </Button>
+            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
+              <Link href="/super/crm/qualiopi/qualite">Qualité</Link>
+            </Button>
+            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
+              <Link href="/super/crm/qualiopi/process">Process</Link>
+            </Button>
+            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
+              <Link href="/super/crm/qualiopi/pilote">Pilote</Link>
+            </Button>
             <Button
               onClick={() => openAdd()}
               className="rounded-full bg-white text-[#0b0e18] hover:bg-white/90"

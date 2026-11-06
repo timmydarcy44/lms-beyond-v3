@@ -3,6 +3,7 @@ import {
   BookOpen,
   ClipboardList,
   Home,
+  MessageSquareWarning,
   UserCircle,
   Users,
   Wallet,
@@ -20,6 +21,7 @@ export const SALARIE_NAV_ITEMS: SalarieNavItem[] = [
   { label: "Mes formations", href: "/dashboard/salarie/formations", icon: BookOpen },
   { label: "Mes compétences", href: "/dashboard/salarie/competences", icon: UserCircle },
   { label: "Accompagnement", href: "/dashboard/salarie/accompagnement", icon: Users },
+  { label: "Réclamation", href: "/dashboard/salarie/reclamation", icon: MessageSquareWarning },
   { label: "Mon compte", href: "/dashboard/salarie/profil", icon: Wallet },
 ];
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { isVeilleKind } from "@/lib/qualiopi/veille-shared";
+import { isVeilleKind, parseVeilleTheme } from "@/lib/qualiopi/veille-shared";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     excerpt?: string;
     note?: string;
     url?: string | null;
+    theme?: string | null;
   };
 
   const kind = String(body.kind ?? "");
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       excerpt,
       note: String(body.note ?? "").trim() || null,
       url: body.url ? String(body.url) : null,
+      theme: parseVeilleTheme(body.theme) ?? "transversal",
       status: "saved",
     })
     .select("*")

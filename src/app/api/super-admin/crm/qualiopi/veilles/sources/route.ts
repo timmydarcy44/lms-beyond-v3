@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { VEILLE_DEFAULT_RAG1_SOURCES } from "@/lib/qualiopi/veille-default-sources";
 import { VEILLE_KIND, isVeilleKind, normalizeUrl } from "@/lib/qualiopi/veille-shared";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -11,6 +12,24 @@ export async function GET() {
   }
   const supabase = getServiceRoleClient();
   if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const { count } = await supabase
+    .from("crm_qualiopi_veille_sources")
+    .select("id", { count: "exact", head: true });
+
+  if ((count ?? 0) === 0) {
+    const now = new Date().toISOString();
+    await supabase.from("crm_qualiopi_veille_sources").insert(
+      VEILLE_DEFAULT_RAG1_SOURCES.map((row) => ({
+        kind: VEILLE_KIND,
+        url: row.url,
+        title: row.title,
+        is_priority: true,
+        is_active: true,
+        updated_at: now,
+      })),
+    );
+  }
 
   const { data, error } = await supabase
     .from("crm_qualiopi_veille_sources")

@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { QualiopiComplianceSnapshot, QualiopiComplianceStatus } from "@/lib/qualiopi/qualiopi-compliance-audit";
 import { mergeComplianceIntoCriteria } from "@/lib/qualiopi/qualiopi-compliance-audit";
+import { QUALIOPI_OF_NA_INDICATORS } from "@/lib/qualiopi/qualiopi-of-b2b";
 import { QUALIOPI_INDICATOR_COUNT } from "@/lib/qualiopi/qualiopi-rnq-reference";
 import {
   QUALIOPI_CARD,
@@ -30,6 +32,35 @@ const STATUS_BADGE: Record<
   missing: { short: "manquant", className: "bg-white/5 text-white/45 border-white/10" },
 };
 
+const NA_IDS = new Set(QUALIOPI_OF_NA_INDICATORS.map((i) => i.id));
+
+const NEXT_HREF: Record<string, string> = {
+  coffre: "/super/crm/qualiopi",
+  veille: "/super/crm/qualiopi/veilles",
+  qualite: "/super/crm/qualiopi/qualite",
+  process: "/super/crm/qualiopi/process",
+  formateurs: "/super/crm/qualiopi/formateurs",
+  catalogue: "/super/crm/qualiopi/catalogue",
+  pilot: "/super/crm/qualiopi/pilote",
+  experts: "/super/experts",
+  formations: "/super/crm/formations",
+};
+
+function guessHref(nextStep?: string): string | null {
+  if (!nextStep) return null;
+  const t = nextStep.toLowerCase();
+  if (t.includes("veille")) return NEXT_HREF.veille;
+  if (t.includes("réclamation") || t.includes("paq") || t.includes("qualité")) return NEXT_HREF.qualite;
+  if (t.includes("formateur") || t.includes("compétences")) return NEXT_HREF.formateurs;
+  if (t.includes("process") || t.includes("handicap") || t.includes("moyens")) return NEXT_HREF.process;
+  if (t.includes("catalogue") || t.includes("objectif")) return NEXT_HREF.catalogue;
+  if (t.includes("expert")) return NEXT_HREF.experts;
+  if (t.includes("session") || t.includes("pipeline") || t.includes("émarg")) return NEXT_HREF.formations;
+  if (t.includes("coffre") || t.includes("convention") || t.includes("livret")) return NEXT_HREF.coffre;
+  if (t.includes("n/a") || t.includes("attester")) return null;
+  return NEXT_HREF.pilot;
+}
+
 type Props = {
   className?: string;
   refreshKey?: number;
@@ -40,6 +71,7 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [attestingId, setAttestingId] = useState<number | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const loadCompliance = useCallback(async () => {
     setLoading(true);
@@ -60,23 +92,13 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
     void loadCompliance();
   }, [refreshKey, loadCompliance]);
 
-  const setAttestation = async (indicatorId: number, action: "validate" | "revoke") => {
+  const setAttestation = async (
+    indicatorId: number,
+    action: "validate" | "revoke" | "na",
+  ) => {
     setAttestingId(indicatorId);
     try {
-      if (action === "validate") {
-        const note = window.prompt(
-          "Preuve ou référence (optionnel) — ex. registre papier, URL, date de comité qualité :",
-        );
-        if (note === null) return;
-        const res = await fetch("/api/super-admin/crm/qualiopi/compliance/attestations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ indicatorId, note: note.trim() || undefined }),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Attestation impossible");
-        toast.success(`Indicateur ${indicatorId} marqué validé (attestation)`);
-      } else {
+      if (action === "revoke") {
         const res = await fetch(
           `/api/super-admin/crm/qualiopi/compliance/attestations?indicatorId=${indicatorId}`,
           { method: "DELETE" },
@@ -84,12 +106,52 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Retrait impossible");
         toast.success(`Attestation retirée — recalcul automatique`);
+      } else {
+        let note: string | undefined;
+        if (action === "na") {
+          note = QUALIOPI_OF_NA_INDICATORS.find((i) => i.id === indicatorId)?.note;
+        } else {
+          const typed = window.prompt(
+            "Preuve ou référence — ex. fichier, URL, date de comité qualité :",
+          );
+          if (typed === null) return;
+          note = typed.trim() || undefined;
+        }
+        const res = await fetch("/api/super-admin/crm/qualiopi/compliance/attestations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ indicatorId, note }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Attestation impossible");
+        toast.success(
+          action === "na"
+            ? `Indicateur ${indicatorId} attesté N/A OF B2B`
+            : `Indicateur ${indicatorId} marqué validé (preuve)`,
+        );
       }
       await loadCompliance();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
       setAttestingId(null);
+    }
+  };
+
+  const attestAllNa = async () => {
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/qualiopi/compliance/attestations/bulk-na", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Échec");
+      toast.success(`N/A OF B2B attestés : ${(json.attested as number[]).join(", ")}`);
+      await loadCompliance();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -103,10 +165,22 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
     return criteria.flatMap((c) =>
       c.indicators.map((ind) => ({
         id: ind.id,
+        title: ind.title,
         status: (ind.compliance?.status ?? "missing") as QualiopiComplianceStatus,
+        nextStep: ind.compliance?.nextStep,
+        reason: ind.compliance?.reason,
       })),
     );
   }, [criteria]);
+
+  const todoList = useMemo(() => {
+    return flatIndicators
+      .filter((i) => i.status !== "validated")
+      .sort((a, b) => {
+        const rank = (s: QualiopiComplianceStatus) => (s === "missing" ? 0 : 1);
+        return rank(a.status) - rank(b.status) || a.id - b.id;
+      });
+  }, [flatIndicators]);
 
   const readiness = snapshot?.summary.readinessPercent ?? 0;
 
@@ -116,12 +190,28 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
         <div>
           <h2 className="text-lg font-semibold text-white">Référentiel national Qualiopi</h2>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-            7 critères · {QUALIOPI_INDICATOR_COUNT} indicateurs · automatisé + relecture produit
+            7 critères · {QUALIOPI_INDICATOR_COUNT} indicateurs · checklist audit OF B2B
           </p>
         </div>
-        <span className="rounded-full border border-[#3D7BFF]/30 bg-[#3D7BFF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#9EC0FF]">
-          RNQ v9
-        </span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy}
+            onClick={() => void attestAllNa()}
+            className="border-white/15 bg-transparent text-white hover:bg-white/5"
+          >
+            {bulkBusy ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+            Attester N/A OF B2B
+          </Button>
+          <Link
+            href="/super/crm/qualiopi/pilote"
+            className="inline-flex h-8 items-center rounded-md border border-[#6E5BFF]/40 bg-[#6E5BFF]/15 px-3 text-xs font-semibold text-[#d9d4ff] hover:bg-[#6E5BFF]/25"
+          >
+            Session pilote
+          </Link>
+        </div>
       </div>
 
       {loading ? (
@@ -149,7 +239,9 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9EC0FF]/90">
                   Prêt audit (estimé)
                 </p>
-                <p className="mt-1 text-sm font-medium text-white/90">Dossier à consolider avant audit</p>
+                <p className="mt-1 text-sm font-medium text-white/90">
+                  {todoList.length === 0 ? "Checklist vide — dossier prêt" : `${todoList.length} point(s) à traiter`}
+                </p>
                 <p className={cn("mt-1 text-xs leading-relaxed", QUALIOPI_MUTED)}>
                   validés + moitié des partiels sur {snapshot.summary.total} indicateurs
                 </p>
@@ -186,21 +278,64 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
             ))}
           </div>
 
-          <p className={cn("mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]", QUALIOPI_MUTED)}>
-            <span>
-              {snapshot.runtime.coreDocsUploaded}/{snapshot.runtime.coreDocsTotal} modèles admin
-            </span>
-            <span>{snapshot.runtime.sessionsTotal} sessions</span>
-            <span>{snapshot.runtime.sessionsWithSignedAttendance} émargement complet</span>
-            <span>{snapshot.runtime.satisfactionResponses} satisfaction</span>
-            {"attestationsCount" in snapshot.runtime && snapshot.runtime.attestationsCount > 0 ? (
-              <span>{snapshot.runtime.attestationsCount} attestation(s) manuelle(s)</span>
-            ) : null}
-            <span className="inline-flex items-center gap-1.5 text-[#7BA7FF]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#3D7BFF]" />
-              Données live
-            </span>
-          </p>
+          {todoList.length > 0 ? (
+            <div className={cn(QUALIOPI_CARD_INNER, "mt-6 p-4")}>
+              <h3 className="text-sm font-semibold text-white">À faire pour l’audit</h3>
+              <p className={cn("mt-1 text-xs", QUALIOPI_MUTED)}>
+                Tri missing → partial. Liens vers le module concerné.
+              </p>
+              <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                {todoList.slice(0, 16).map((item) => {
+                  const href = guessHref(item.nextStep);
+                  return (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-medium text-white">
+                          Ind. {item.id}
+                          <span
+                            className={cn(
+                              "ml-2 rounded-full border px-1.5 py-0.5 text-[10px] uppercase",
+                              STATUS_BADGE[item.status].className,
+                            )}
+                          >
+                            {STATUS_BADGE[item.status].short}
+                          </span>
+                        </span>
+                        <p className={cn("mt-0.5 text-xs", QUALIOPI_MUTED)}>
+                          {item.nextStep || item.reason || item.title}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {NA_IDS.has(item.id) ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={attestingId === item.id}
+                            className="h-7 border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-100"
+                            onClick={() => void setAttestation(item.id, "na")}
+                          >
+                            N/A
+                          </Button>
+                        ) : null}
+                        {href ? (
+                          <Link
+                            href={href}
+                            className="inline-flex h-7 items-center rounded-md border border-white/15 px-2 text-[11px] text-white/80 hover:bg-white/5"
+                          >
+                            Ouvrir
+                          </Link>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
 
           <div className="mt-6 space-y-2">
             {criteria?.map((criterion) => {
@@ -229,17 +364,6 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
                       </span>
                       <span className={cn("mt-0.5 block truncate text-xs", QUALIOPI_MUTED)}>{shortTitle}</span>
                     </span>
-                    <span className="hidden shrink-0 gap-0.5 sm:flex">
-                      {criterion.indicators.map((ind) => {
-                        const st = (ind.compliance?.status ?? "missing") as QualiopiComplianceStatus;
-                        return (
-                          <span
-                            key={ind.id}
-                            className={cn("h-2 w-3 rounded-[2px]", STATUS_SEGMENT[st])}
-                          />
-                        );
-                      })}
-                    </span>
                     <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 text-[10px] font-medium">
                       {counts.partial > 0 ? (
                         <span className={cn("rounded-full border px-2 py-0.5", STATUS_BADGE.partial.className)}>
@@ -264,6 +388,7 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
                       const c = ind.compliance;
                       const st = (c?.status ?? "missing") as QualiopiComplianceStatus;
                       const badge = STATUS_BADGE[st];
+                      const href = guessHref(c?.nextStep);
                       return (
                         <li key={ind.id} className={cn("px-3 py-2.5 text-sm", QUALIOPI_CARD_INNER)}>
                           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -293,16 +418,38 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
                           ) : null}
                           <div className="mt-2 flex flex-wrap gap-2">
                             {st !== "validated" ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={attestingId === ind.id}
-                                className="h-7 border-white/15 bg-transparent text-[11px] text-white/80 hover:bg-white/10"
-                                onClick={() => void setAttestation(ind.id, "validate")}
-                              >
-                                {attestingId === ind.id ? "…" : "Marquer validé (preuve hors Byound)"}
-                              </Button>
+                              <>
+                                {NA_IDS.has(ind.id) ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={attestingId === ind.id}
+                                    className="h-7 border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-100 hover:bg-amber-500/20"
+                                    onClick={() => void setAttestation(ind.id, "na")}
+                                  >
+                                    Attester N/A
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={attestingId === ind.id}
+                                  className="h-7 border-white/15 bg-transparent text-[11px] text-white/80 hover:bg-white/10"
+                                  onClick={() => void setAttestation(ind.id, "validate")}
+                                >
+                                  {attestingId === ind.id ? "…" : "Attester avec preuve"}
+                                </Button>
+                                {href ? (
+                                  <Link
+                                    href={href}
+                                    className="inline-flex h-7 items-center rounded-md border border-[#3D7BFF]/30 bg-[#3D7BFF]/10 px-2 text-[11px] text-[#9EC0FF] hover:bg-[#3D7BFF]/20"
+                                  >
+                                    Ouvrir le module
+                                  </Link>
+                                ) : null}
+                              </>
                             ) : c?.validatedSource === "attestation" ? (
                               <Button
                                 type="button"
@@ -327,11 +474,9 @@ export function QualiopiRnqPanel({ className, refreshKey = 0 }: Props) {
 
           <p className={cn("mt-6 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-xs leading-relaxed", QUALIOPI_MUTED)}>
             <span className="font-semibold text-white/70">Méthode — </span>
-            <strong className="text-white/60">Validé :</strong> preuves Byound (coffre, envoi pack, émargement complet,
-            satisfaction…) ou attestation manuelle avec note. <strong className="text-white/60">Partiel :</strong>{" "}
-            suivez la ligne « → » sous l&apos;indicateur pour passer en validé automatiquement.{" "}
-            <strong className="text-white/60">Non couvert :</strong> processus hors produit — attestation ou preuve
-            externe. L&apos;audit certificateur reste décisionnaire.
+            <strong className="text-white/60">N/A OF B2B :</strong> indicateurs hors périmètre (RNCP, CFA…).{" "}
+            <strong className="text-white/60">Preuve :</strong> note + fichier / module Byound. L&apos;audit
+            certificateur reste décisionnaire.
           </p>
         </>
       ) : null}

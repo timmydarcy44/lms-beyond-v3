@@ -20,6 +20,25 @@ export async function POST(_req: Request, ctx: Ctx) {
   const { data: deal } = await supabase.from("crm_pipeline_deals").select("*").eq("id", session.deal_id).maybeSingle();
   if (!deal) return NextResponse.json({ error: "Fiche client introuvable" }, { status: 404 });
 
+  const { data: vaultDocs } = await supabase
+    .from("crm_qualiopi_documents")
+    .select("kind, file_url")
+    .is("session_id", null)
+    .in("kind", ["convention", "reglement", "livret"]);
+  const uploaded = new Set(
+    (vaultDocs ?? []).filter((d) => d.file_url).map((d) => String(d.kind)),
+  );
+  const missingVault = ["convention", "reglement", "livret"].filter((k) => !uploaded.has(k));
+  if (missingVault.length) {
+    return NextResponse.json(
+      {
+        error: `Coffre incomplet (${missingVault.join(", ")}). Déposez les 3 PDF modèles avant de démarrer.`,
+        missingVault,
+      },
+      { status: 400 },
+    );
+  }
+
   const { data: attendees } = await supabase.from("crm_qualiopi_attendees").select("*").eq("session_id", id);
   if (!attendees?.length) {
     return NextResponse.json({ error: "Intégrez d'abord les collaborateurs invités." }, { status: 400 });

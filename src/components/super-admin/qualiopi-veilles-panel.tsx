@@ -20,6 +20,8 @@ import {
   type VeilleTheme,
 } from "@/lib/qualiopi/veille-shared";
 
+const HIGHLIGHT_THEMES: VeilleTheme[] = ["reglementaire", "metier", "pedagogie", "transversal"];
+
 export function QualiopiVeillesPanel() {
   const [sources, setSources] = useState<VeilleSource[]>([]);
   const [digests, setDigests] = useState<VeilleDigest[]>([]);
@@ -119,6 +121,7 @@ export function QualiopiVeillesPanel() {
     title: string;
     excerpt: string;
     url?: string | null;
+    theme?: VeilleTheme | null;
   }) => {
     const res = await fetch("/api/super-admin/crm/qualiopi/veilles/highlights", {
       method: "POST",
@@ -140,6 +143,7 @@ export function QualiopiVeillesPanel() {
       title: item.title,
       excerpt: item.summary,
       url: item.url ?? null,
+      theme: (item.theme as VeilleTheme | null | undefined) ?? "transversal",
     });
   };
 
@@ -158,7 +162,10 @@ export function QualiopiVeillesPanel() {
     });
   };
 
-  const updateHighlight = async (id: string, patch: { note?: string; status?: VeilleHighlight["status"] }) => {
+  const updateHighlight = async (
+    id: string,
+    patch: { note?: string; status?: VeilleHighlight["status"]; theme?: VeilleTheme },
+  ) => {
     const res = await fetch(`/api/super-admin/crm/qualiopi/veilles/highlights/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -189,7 +196,7 @@ export function QualiopiVeillesPanel() {
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Veille</h1>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
             Actualités formation continue (réglementaire, métier, pédagogie fusionnés). RAG 1 = vos sources.
-            RAG 2 = le web. Synthèse chaque lundi matin.
+            RAG 2 = le web. Rituel lundi : mail → 10 min de surlignage (thème + Traité) → 1 action PAQ si besoin.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -391,19 +398,36 @@ export function QualiopiVeillesPanel() {
                       </a>
                     ) : null}
                   </div>
-                  <select
-                    value={row.status}
-                    onChange={(event) =>
-                      void updateHighlight(row.id, {
-                        status: event.target.value as VeilleHighlight["status"],
-                      })
-                    }
-                    className="rounded-full border border-white/10 bg-[#0B1122] px-3 py-1.5 text-xs text-white"
-                  >
-                    <option value="saved">Sauvegardé</option>
-                    <option value="in_progress">En cours</option>
-                    <option value="done">Traité</option>
-                  </select>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      value={row.theme ?? "transversal"}
+                      onChange={(event) =>
+                        void updateHighlight(row.id, {
+                          theme: event.target.value as VeilleTheme,
+                        })
+                      }
+                      className="rounded-full border border-white/10 bg-[#0B1122] px-3 py-1.5 text-xs text-white"
+                    >
+                      {HIGHLIGHT_THEMES.map((theme) => (
+                        <option key={theme} value={theme}>
+                          {VEILLE_THEME_LABELS[theme]}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={row.status}
+                      onChange={(event) =>
+                        void updateHighlight(row.id, {
+                          status: event.target.value as VeilleHighlight["status"],
+                        })
+                      }
+                      className="rounded-full border border-white/10 bg-[#0B1122] px-3 py-1.5 text-xs text-white"
+                    >
+                      <option value="saved">Sauvegardé</option>
+                      <option value="in_progress">En cours</option>
+                      <option value="done">Traité</option>
+                    </select>
+                  </div>
                 </div>
                 <textarea
                   defaultValue={row.note ?? ""}

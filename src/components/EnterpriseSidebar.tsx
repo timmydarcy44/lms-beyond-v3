@@ -19,6 +19,7 @@ import {
   CircleHelp,
   Award,
   GraduationCap,
+  MessageSquareWarning,
 } from "lucide-react";
 
 type NavLeaf = { label: string; href: string; section?: string };
@@ -77,6 +78,7 @@ const ACCOUNT_SUBMENU = [
   { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { label: "Tarifs", href: "/dashboard/entreprise/abonnement", icon: CreditCard },
   { label: "Aide", href: "/dashboard/entreprise/aide", icon: CircleHelp },
+  { label: "Réclamation", href: "/dashboard/entreprise/reclamation", icon: MessageSquareWarning },
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
 ] as const;
 

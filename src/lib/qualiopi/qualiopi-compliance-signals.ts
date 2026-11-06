@@ -7,10 +7,26 @@ export type QualiopiIndicatorAttestation = {
   updatedAt: string;
 };
 
+export type QualiopiVeilleThemeCounts = {
+  reglementaireDone: number;
+  metierDone: number;
+  pedagogieDone: number;
+  anyDone: number;
+  anySaved: number;
+};
+
 export type QualiopiAuditSignals = {
   coursesWithObjectives: number;
   approvedExperts: number;
   attestations: QualiopiIndicatorAttestation[];
+  veille?: QualiopiVeilleThemeCounts;
+  reclamationsProcessReady?: boolean;
+  reclamationsCount?: number;
+  actionsReviewed?: boolean;
+  actionsDoneCount?: number;
+  formateurPlansCount?: number;
+  formateurActionsDoneCount?: number;
+  processDocsReady?: Partial<Record<"reclamations" | "paq" | "formateurs" | "handicap" | "moyens", boolean>>;
 };
 
 export type QualiopiSessionEvidence = {

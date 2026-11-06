@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Highlighter, Link2, Loader2, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Highlighter, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,18 +11,16 @@ import {
   QUALIOPI_MUTED,
 } from "@/components/super-admin/qualiopi/qualiopi-audit-styles";
 import {
-  VEILLE_KIND_HINTS,
-  VEILLE_KIND_LABELS,
-  VEILLE_KINDS,
+  VEILLE_KIND,
+  VEILLE_THEME_LABELS,
   type VeilleDigest,
   type VeilleDigestItem,
   type VeilleHighlight,
-  type VeilleKind,
   type VeilleSource,
+  type VeilleTheme,
 } from "@/lib/qualiopi/veille-shared";
 
 export function QualiopiVeillesPanel() {
-  const [kind, setKind] = useState<VeilleKind>("legale");
   const [sources, setSources] = useState<VeilleSource[]>([]);
   const [digests, setDigests] = useState<VeilleDigest[]>([]);
   const [highlights, setHighlights] = useState<VeilleHighlight[]>([]);
@@ -30,6 +28,7 @@ export function QualiopiVeillesPanel() {
   const [running, setRunning] = useState(false);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,19 +63,16 @@ export function QualiopiVeillesPanel() {
     void load();
   }, [load]);
 
-  const kindSources = useMemo(() => sources.filter((row) => row.kind === kind), [sources, kind]);
-  const kindDigests = useMemo(() => digests.filter((row) => row.kind === kind), [digests, kind]);
-  const latest = kindDigests[0] ?? null;
-  const kindHighlights = useMemo(
-    () => highlights.filter((row) => row.kind === kind),
-    [highlights, kind],
-  );
+  const latest = useMemo(() => {
+    const unified = digests.find((row) => row.kind === VEILLE_KIND);
+    return unified ?? digests[0] ?? null;
+  }, [digests]);
 
   const addSource = async () => {
     const res = await fetch("/api/super-admin/crm/qualiopi/veilles/sources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, url, title, is_priority: true }),
+      body: JSON.stringify({ kind: VEILLE_KIND, url, title, is_priority: true }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -85,7 +81,7 @@ export function QualiopiVeillesPanel() {
     }
     setUrl("");
     setTitle("");
-    toast.success("URL prioritaire ajoutée");
+    toast.success("Source RAG 1 ajoutée");
     await load();
   };
 
@@ -109,7 +105,7 @@ export function QualiopiVeillesPanel() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Échec");
-      toast.success(sendEmail ? "Synthèse générée et mail envoyé" : "Synthèse générée");
+      toast.success(sendEmail ? "Actualités générées et mail envoyé" : "Actualités générées");
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Échec");
@@ -119,7 +115,6 @@ export function QualiopiVeillesPanel() {
   };
 
   const saveHighlight = async (payload: {
-    kind: VeilleKind;
     digest_id?: string | null;
     title: string;
     excerpt: string;
@@ -128,7 +123,7 @@ export function QualiopiVeillesPanel() {
     const res = await fetch("/api/super-admin/crm/qualiopi/veilles/highlights", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ kind: VEILLE_KIND, ...payload }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -141,7 +136,6 @@ export function QualiopiVeillesPanel() {
 
   const highlightItem = async (digest: VeilleDigest, item: VeilleDigestItem) => {
     await saveHighlight({
-      kind: digest.kind,
       digest_id: digest.id,
       title: item.title,
       excerpt: item.summary,
@@ -153,11 +147,10 @@ export function QualiopiVeillesPanel() {
     if (!latest) return;
     const selected = typeof window !== "undefined" ? window.getSelection()?.toString().trim() : "";
     if (!selected || selected.length < 8) {
-      toast.error("Sélectionnez un passage dans la synthèse (8 caractères min.)");
+      toast.error("Sélectionnez un passage (8 caractères min.)");
       return;
     }
     await saveHighlight({
-      kind: latest.kind,
       digest_id: latest.id,
       title: selected.slice(0, 80) + (selected.length > 80 ? "…" : ""),
       excerpt: selected.slice(0, 2000),
@@ -193,9 +186,10 @@ export function QualiopiVeillesPanel() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Veilles Qualiopi</h1>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">Veille</h1>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-            Légale, métier et pédagogie. URL prioritaires + recherche web. Synthèse envoyée chaque lundi matin.
+            Actualités formation continue (réglementaire, métier, pédagogie fusionnés). RAG 1 = vos sources.
+            RAG 2 = le web. Synthèse chaque lundi matin.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -220,77 +214,21 @@ export function QualiopiVeillesPanel() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {VEILLE_KINDS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setKind(value)}
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-semibold",
-              kind === value ? "bg-[#6E5BFF] text-white" : "border border-white/10 text-white/70 hover:bg-white/5",
-            )}
-          >
-            {VEILLE_KIND_LABELS[value]}
-          </button>
-        ))}
-      </div>
-
-      <p className={cn("text-sm", QUALIOPI_MUTED)}>{VEILLE_KIND_HINTS[kind]}</p>
-
       {loading ? (
         <p className={cn("text-sm", QUALIOPI_MUTED)}>Chargement…</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className={cn(QUALIOPI_CARD, "p-5")}>
-            <h2 className="text-lg font-semibold text-white">URL prioritaires</h2>
-            <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
-              Ces pages sont lues en premier. Le reste vient de la recherche web.
-            </p>
-            <div className="mt-4 space-y-2">
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Titre (optionnel)"
-                className="w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
-              />
-              <div className="flex gap-2">
-                <input
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  placeholder="https://…"
-                  className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
-                />
-                <Button type="button" onClick={() => void addSource()} className="bg-[#3D7BFF] text-white hover:bg-[#3568d4]">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <ul className="mt-4 space-y-2">
-              {kindSources.length === 0 ? (
-                <li className={cn("text-sm", QUALIOPI_MUTED)}>Aucune URL pour cette veille.</li>
-              ) : (
-                kindSources.map((source) => (
-                  <li key={source.id} className={cn(QUALIOPI_CARD_INNER, "flex items-start gap-3 p-3")}>
-                    <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-[#8C94B2]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{source.title || source.url}</p>
-                      <a href={source.url} target="_blank" rel="noreferrer" className="truncate text-xs text-[#9BB0FF] hover:underline">
-                        {source.url}
-                      </a>
-                    </div>
-                    <button type="button" onClick={() => void removeSource(source.id)} className="text-white/40 hover:text-red-300" aria-label="Supprimer">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
-
+        <>
           <section className={cn(QUALIOPI_CARD, "p-5")}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-white">Dernière synthèse</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Actualités de la semaine</h2>
+                {latest ? (
+                  <p className="mt-1 text-xs text-white/40">
+                    Semaine du {latest.week_start}
+                    {latest.email_sent_at ? " · mail envoyé" : ""}
+                  </p>
+                ) : null}
+              </div>
               {latest ? (
                 <Button
                   type="button"
@@ -304,65 +242,144 @@ export function QualiopiVeillesPanel() {
                 </Button>
               ) : null}
             </div>
+
             {!latest ? (
-              <p className={cn("mt-3 text-sm", QUALIOPI_MUTED)}>Pas encore de synthèse. Lancez une génération.</p>
+              <p className={cn("mt-4 text-sm", QUALIOPI_MUTED)}>
+                Pas encore d’actualités. Ajoutez éventuellement des sources RAG 1, puis générez.
+              </p>
             ) : (
-              <div className="mt-3 space-y-3">
-                <p className={cn("text-xs", QUALIOPI_MUTED)}>
-                  Sélectionnez un passage puis cliquez « Surligner la sélection », ou utilisez le bouton sur chaque point.
-                </p>
-                <p className="text-xs text-white/40">
-                  Semaine du {latest.week_start}
-                  {latest.email_sent_at ? ` · mail envoyé` : ""}
-                </p>
-                <h3 className="font-semibold text-white">{latest.title}</h3>
-                <p className="text-sm leading-relaxed text-white/70">{latest.summary}</p>
+              <div className="mt-4 space-y-4">
+                <h3 className="text-base font-semibold text-white">{latest.title}</h3>
+                <p className="text-sm leading-relaxed text-white/75">{latest.summary}</p>
                 <ul className="space-y-3">
-                  {(latest.items ?? []).map((item) => (
-                    <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-3")}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white">
-                            {item.isPriority ? <span className="mr-2 text-[10px] uppercase tracking-wide text-[#F2C15A]">Priorité</span> : null}
-                            {item.title}
-                          </p>
-                          <p className="mt-1 text-sm text-white/65">{item.summary}</p>
-                          {item.url ? (
-                            <a href={item.url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-[#9BB0FF] hover:underline">
-                              {item.url}
-                            </a>
-                          ) : null}
+                  {(latest.items ?? []).map((item) => {
+                    const themeLabel = item.theme
+                      ? VEILLE_THEME_LABELS[item.theme as VeilleTheme]
+                      : null;
+                    return (
+                      <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {themeLabel ? (
+                                <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/55">
+                                  {themeLabel}
+                                </span>
+                              ) : null}
+                              <span
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+                                  item.rag === "rag1"
+                                    ? "bg-[#F2C15A]/15 text-[#F2C15A]"
+                                    : "bg-white/5 text-white/45",
+                                )}
+                              >
+                                {item.rag === "rag1" ? "RAG 1" : "RAG 2"}
+                              </span>
+                            </div>
+                            <p className="text-sm font-semibold text-white">{item.title}</p>
+                            <p className="text-sm leading-relaxed text-white/65">{item.summary}</p>
+                            {item.url ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-block text-xs text-[#9BB0FF] hover:underline"
+                              >
+                                Lire la source
+                              </a>
+                            ) : null}
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void highlightItem(latest, item)}
+                            className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
+                          >
+                            <Highlighter className="mr-1 h-3.5 w-3.5" />
+                            Surligner
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void highlightItem(latest, item)}
-                          className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
-                        >
-                          <Highlighter className="mr-1 h-3.5 w-3.5" />
-                          Surligner
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
           </section>
-        </div>
+
+          <section className={cn(QUALIOPI_CARD, "overflow-hidden")}>
+            <button
+              type="button"
+              onClick={() => setSourcesOpen((open) => !open)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+            >
+              <div>
+                <h2 className="text-base font-semibold text-white">Sources RAG 1</h2>
+                <p className={cn("mt-0.5 text-sm", QUALIOPI_MUTED)}>
+                  URLs à lire en priorité. Le RAG 2 couvre le reste du web formation continue.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-white/50">
+                <span className="text-xs">{sources.length}</span>
+                <ChevronDown className={cn("h-4 w-4 transition", sourcesOpen && "rotate-180")} />
+              </div>
+            </button>
+            {sourcesOpen ? (
+              <div className="space-y-3 border-t border-white/10 px-5 py-4">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder="Libellé (optionnel)"
+                    className="w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF] sm:max-w-[200px]"
+                  />
+                  <input
+                    value={url}
+                    onChange={(event) => setUrl(event.target.value)}
+                    placeholder="https://…"
+                    className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
+                  />
+                  <Button type="button" onClick={() => void addSource()} className="bg-[#3D7BFF] text-white hover:bg-[#3568d4]">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <ul className="space-y-2">
+                  {sources.length === 0 ? (
+                    <li className={cn("text-sm", QUALIOPI_MUTED)}>Aucune source RAG 1 pour l’instant.</li>
+                  ) : (
+                    sources.map((source) => (
+                      <li key={source.id} className="flex items-center justify-between gap-3 text-sm text-white/70">
+                        <span className="min-w-0 truncate">{source.title || source.url}</span>
+                        <button
+                          type="button"
+                          onClick={() => void removeSource(source.id)}
+                          className="text-white/35 hover:text-red-300"
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        </>
       )}
 
       <section className={cn(QUALIOPI_CARD, "p-5")}>
         <h2 className="text-lg font-semibold text-white">Informations surlignées</h2>
         <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
-          À retravailler de votre côté (offre, procédure, support). C’est la preuve que la veille est exploitée.
+          À retravailler de votre côté — preuve que la veille est exploitée.
         </p>
         <ul className="mt-4 space-y-3">
-          {kindHighlights.length === 0 ? (
-            <li className={cn("text-sm", QUALIOPI_MUTED)}>Rien de surligné pour cette veille.</li>
+          {highlights.length === 0 ? (
+            <li className={cn("text-sm", QUALIOPI_MUTED)}>Rien de surligné pour l’instant.</li>
           ) : (
-            kindHighlights.map((row) => (
+            highlights.map((row) => (
               <li key={row.id} className={cn(QUALIOPI_CARD_INNER, "space-y-3 p-4")}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -370,7 +387,7 @@ export function QualiopiVeillesPanel() {
                     <p className="mt-1 text-sm text-white/65">{row.excerpt}</p>
                     {row.url ? (
                       <a href={row.url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-[#9BB0FF] hover:underline">
-                        {row.url}
+                        Lire la source
                       </a>
                     ) : null}
                   </div>

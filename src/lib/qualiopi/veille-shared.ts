@@ -1,44 +1,35 @@
-export const VEILLE_KINDS = ["legale", "metier", "pedagogie"] as const;
-export type VeilleKind = (typeof VEILLE_KINDS)[number];
+/** Une seule veille fusionnée (réglementaire + métier + pédagogie). */
+export const VEILLE_KIND = "globale" as const;
+export type VeilleKind = typeof VEILLE_KIND | "legale" | "metier" | "pedagogie";
 
-export const VEILLE_KIND_LABELS: Record<VeilleKind, string> = {
-  legale: "Veille légale",
-  metier: "Veille métier",
-  pedagogie: "Veille pédagogie",
+export const VEILLE_KIND_LABEL = "Veille formation continue";
+
+export type VeilleTheme = "reglementaire" | "metier" | "pedagogie" | "transversal";
+export type VeilleRag = "rag1" | "rag2";
+
+export const VEILLE_THEME_LABELS: Record<VeilleTheme, string> = {
+  reglementaire: "Réglementaire",
+  metier: "Métier",
+  pedagogie: "Pédagogie",
+  transversal: "Transversal",
 };
 
-export const VEILLE_KIND_HINTS: Record<VeilleKind, string> = {
-  legale:
-    "Code du travail, Qualiopi, financement de la formation, obligations des organismes.",
-  metier:
-    "Compétences, métiers, emplois, formations et besoins des entreprises dans vos domaines.",
-  pedagogie:
-    "Innovations pédagogiques, outils numériques, IA appliquée à la formation.",
-};
-
-export const VEILLE_DEFAULT_QUERIES: Record<VeilleKind, string[]> = {
-  legale: [
-    "Qualiopi référentiel national qualité formation professionnelle",
-    "réforme formation professionnelle France actualité",
-    "Code du travail organisme de formation obligations",
-  ],
-  metier: [
-    "compétences métiers formation continue France",
-    "intelligence artificielle compétences commerciales formation",
-    "besoins formation entreprises automatisation",
-  ],
-  pedagogie: [
-    "innovation pédagogique formation professionnelle numérique",
-    "IA générative pédagogie formation adultes",
-    "apprentissage asynchrone e-learning bonnes pratiques",
-  ],
-};
+/** RAG 2 — recherche web formation continue (pas une liste de sites). */
+export const VEILLE_WEB_QUERIES = [
+  "actualité formation professionnelle continue France",
+  "Qualiopi actualité organisme de formation",
+  "réforme financement formation continue CPF OPCO",
+  "innovation pédagogique formation adultes compétences",
+  "compétences métiers formation continue entreprises",
+] as const;
 
 export type VeilleDigestItem = {
   id: string;
   title: string;
   summary: string;
   url?: string | null;
+  theme?: VeilleTheme | null;
+  rag?: VeilleRag | null;
   sourceLabel?: string | null;
   isPriority?: boolean;
 };
@@ -61,7 +52,7 @@ export type VeilleDigest = {
   title: string;
   summary: string;
   items: VeilleDigestItem[];
-  sources_used: Array<{ url?: string; title?: string; priority?: boolean }>;
+  sources_used: Array<{ url?: string; title?: string; priority?: boolean; rag?: VeilleRag }>;
   email_sent_at: string | null;
   created_at: string;
 };
@@ -82,7 +73,7 @@ export type VeilleHighlight = {
 };
 
 export function isVeilleKind(value: string): value is VeilleKind {
-  return (VEILLE_KINDS as readonly string[]).includes(value);
+  return value === VEILLE_KIND || value === "legale" || value === "metier" || value === "pedagogie";
 }
 
 /** Lundi de la semaine (UTC date) pour regrouper les digests. */
@@ -105,4 +96,16 @@ export function normalizeUrl(raw: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function parseVeilleTheme(value: unknown): VeilleTheme | null {
+  if (value === "reglementaire" || value === "metier" || value === "pedagogie" || value === "transversal") {
+    return value;
+  }
+  return null;
+}
+
+export function parseVeilleRag(value: unknown): VeilleRag | null {
+  if (value === "rag1" || value === "rag2") return value;
+  return null;
 }

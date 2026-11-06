@@ -1,5 +1,4 @@
-import type { VeilleKind } from "@/lib/qualiopi/veille-shared";
-import { VEILLE_DEFAULT_QUERIES } from "@/lib/qualiopi/veille-shared";
+import { VEILLE_WEB_QUERIES } from "@/lib/qualiopi/veille-shared";
 
 export type VeilleRawSnippet = {
   title: string;
@@ -7,6 +6,7 @@ export type VeilleRawSnippet = {
   url?: string;
   sourceLabel?: string;
   isPriority?: boolean;
+  rag: "rag1" | "rag2";
 };
 
 function stripHtml(html: string): string {
@@ -23,6 +23,7 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+/** RAG 1 — contenu des URLs prioritaires fournies. */
 export async function fetchPriorityPage(url: string, title?: string | null): Promise<VeilleRawSnippet | null> {
   try {
     const controller = new AbortController();
@@ -43,26 +44,30 @@ export async function fetchPriorityPage(url: string, title?: string | null): Pro
     const pageTitle =
       title?.trim() ||
       html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.replace(/\s+/g, " ").trim() ||
-      url;
+      "Source prioritaire";
     return {
       title: pageTitle.slice(0, 180),
-      summary: text.slice(0, 1200),
+      summary: text.slice(0, 1600),
       url,
-      sourceLabel: "URL prioritaire",
+      sourceLabel: "RAG 1",
       isPriority: true,
+      rag: "rag1",
     };
   } catch {
     return null;
   }
 }
 
+/** RAG 2 — signaux web formation continue. */
 async function searchBrave(query: string): Promise<VeilleRawSnippet[]> {
   const apiKey = process.env.BRAVE_SEARCH_API_KEY?.trim();
   if (!apiKey) return [];
   try {
     const url = new URL("https://api.search.brave.com/res/v1/web/search");
     url.searchParams.set("q", query);
-    url.searchParams.set("count", "6");
+    url.searchParams.set("count", "8");
+    url.searchParams.set("search_lang", "fr");
+    url.searchParams.set("country", "FR");
     const res = await fetch(url.toString(), {
       headers: { Accept: "application/json", "X-Subscription-Token": apiKey },
     });
@@ -77,11 +82,12 @@ async function searchBrave(query: string): Promise<VeilleRawSnippet[]> {
         const link = String(row.url ?? "").trim();
         if (!title && !summary) return null;
         return {
-          title: title || link || "Résultat web",
+          title: title || "Actualité",
           summary: summary || title,
           url: link || undefined,
-          sourceLabel: "Recherche web",
+          sourceLabel: "RAG 2",
           isPriority: false,
+          rag: "rag2" as const,
         } satisfies VeilleRawSnippet;
       })
       .filter((row): row is VeilleRawSnippet => Boolean(row));
@@ -91,25 +97,25 @@ async function searchBrave(query: string): Promise<VeilleRawSnippet[]> {
 }
 
 export async function collectVeilleSnippets(input: {
-  kind: VeilleKind;
   priorityUrls: Array<{ url: string; title?: string | null }>;
 }): Promise<VeilleRawSnippet[]> {
-  const priority: VeilleRawSnippet[] = [];
-  for (const source of input.priorityUrls.slice(0, 8)) {
+  const rag1: VeilleRawSnippet[] = [];
+  for (const source of input.priorityUrls.slice(0, 10)) {
     const page = await fetchPriorityPage(source.url, source.title);
-    if (page) priority.push(page);
+    if (page) rag1.push(page);
   }
 
-  const general: VeilleRawSnippet[] = [];
-  for (const query of VEILLE_DEFAULT_QUERIES[input.kind]) {
+  const rag2: VeilleRawSnippet[] = [];
+  for (const query of VEILLE_WEB_QUERIES) {
     const hits = await searchBrave(query);
     for (const hit of hits) {
-      if (general.some((row) => row.url && hit.url && row.url === hit.url)) continue;
-      general.push(hit);
-      if (general.length >= 10) break;
+      if (rag2.some((row) => row.url && hit.url && row.url === hit.url)) continue;
+      if (rag1.some((row) => row.url && hit.url && row.url === hit.url)) continue;
+      rag2.push(hit);
+      if (rag2.length >= 14) break;
     }
-    if (general.length >= 10) break;
+    if (rag2.length >= 14) break;
   }
 
-  return [...priority, ...general].slice(0, 16);
+  return [...rag1, ...rag2].slice(0, 22);
 }

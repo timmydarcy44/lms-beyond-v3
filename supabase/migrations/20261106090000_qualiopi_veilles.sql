@@ -2,7 +2,7 @@
 
 create table if not exists public.crm_qualiopi_veille_sources (
   id uuid primary key default gen_random_uuid(),
-  kind text not null check (kind in ('legale', 'metier', 'pedagogie')),
+  kind text not null check (kind in ('globale', 'legale', 'metier', 'pedagogie')),
   url text not null,
   title text,
   is_priority boolean not null default true,
@@ -15,7 +15,7 @@ create table if not exists public.crm_qualiopi_veille_sources (
 create table if not exists public.crm_qualiopi_veille_digests (
   id uuid primary key default gen_random_uuid(),
   week_start date not null,
-  kind text not null check (kind in ('legale', 'metier', 'pedagogie')),
+  kind text not null check (kind in ('globale', 'legale', 'metier', 'pedagogie')),
   title text not null,
   summary text not null default '',
   items jsonb not null default '[]'::jsonb,
@@ -30,7 +30,7 @@ create index if not exists crm_qualiopi_veille_digests_created_idx
 
 create table if not exists public.crm_qualiopi_veille_highlights (
   id uuid primary key default gen_random_uuid(),
-  kind text not null check (kind in ('legale', 'metier', 'pedagogie')),
+  kind text not null check (kind in ('globale', 'legale', 'metier', 'pedagogie')),
   digest_id uuid references public.crm_qualiopi_veille_digests (id) on delete set null,
   title text not null,
   excerpt text not null,

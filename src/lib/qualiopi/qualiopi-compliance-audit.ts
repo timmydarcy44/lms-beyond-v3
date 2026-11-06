@@ -376,20 +376,20 @@ export function assessQualiopiCompliance(input: {
     row(
       23,
       "partial",
-      "Veille légale prévue dans /super/crm/qualiopi/veilles (synthèse hebdo + URL prioritaires).",
-      "Lancer une synthèse et surligner au moins une info à retravailler.",
+      "Veille fusionnée (réglementaire inclus) dans /super/crm/qualiopi/veilles — actualités + RAG 1/2.",
+      "Surligner au moins une info réglementaire à retravailler.",
     ),
     row(
       24,
       "partial",
-      "Veille métier prévue dans /super/crm/qualiopi/veilles.",
-      "Lancer une synthèse et surligner au moins une info à retravailler.",
+      "Veille fusionnée (métier inclus) dans /super/crm/qualiopi/veilles.",
+      "Surligner au moins une info métier à retravailler.",
     ),
     row(
       25,
       "partial",
-      "Veille pédagogie prévue dans /super/crm/qualiopi/veilles.",
-      "Lancer une synthèse et surligner au moins une info à retravailler.",
+      "Veille fusionnée (pédagogie inclus) dans /super/crm/qualiopi/veilles.",
+      "Surligner au moins une info pédagogique à retravailler.",
     ),
     row(
       26,

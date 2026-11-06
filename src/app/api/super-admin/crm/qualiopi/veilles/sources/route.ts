@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { isVeilleKind, normalizeUrl } from "@/lib/qualiopi/veille-shared";
+import { VEILLE_KIND, isVeilleKind, normalizeUrl } from "@/lib/qualiopi/veille-shared";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     is_priority?: boolean;
   };
 
-  const kind = String(body.kind ?? "");
+  const kind = String(body.kind ?? VEILLE_KIND);
   if (!isVeilleKind(kind)) {
     return NextResponse.json({ error: "Type de veille invalide" }, { status: 400 });
   }

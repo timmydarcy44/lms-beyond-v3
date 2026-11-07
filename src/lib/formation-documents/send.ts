@@ -25,6 +25,7 @@ async function pdfAttachment(
   if (!ctx) return null;
   const { buffer } = await resolveFormationPdfBuffer(service, {
     kind,
+    ctx,
     buildFallback: () => buildFormationDocumentPdf({ ctx, kind, participantName }),
   });
   return {

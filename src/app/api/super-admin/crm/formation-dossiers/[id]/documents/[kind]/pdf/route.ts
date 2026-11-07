@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
   const { buffer } = await resolveFormationPdfBuffer(service, {
     kind,
+    ctx: docCtx,
     buildFallback: () => buildFormationDocumentPdf({ ctx: docCtx, kind }),
   });
   return new NextResponse(new Uint8Array(buffer), {

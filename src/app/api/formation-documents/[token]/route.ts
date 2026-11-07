@@ -82,6 +82,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
   const { buffer } = await resolveFormationPdfBuffer(service, {
     kind: doc.kind,
+    ctx: docCtx,
     buildFallback: () =>
       buildFormationDocumentPdf({
         ctx: docCtx,

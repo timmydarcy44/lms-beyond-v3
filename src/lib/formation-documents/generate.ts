@@ -82,6 +82,7 @@ export async function generateFormationDocuments(
     // Coffre Qualiopi pour convention / règlement / livret ; CGV reste générée (absente du coffre)
     const { buffer } = await resolveFormationPdfBuffer(service, {
       kind,
+      ctx,
       buildFallback: () =>
         buildFormationDocumentPdf({
           ctx,

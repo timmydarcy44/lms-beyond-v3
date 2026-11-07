@@ -1,20 +1,28 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Lot4DocumentKind } from "@/lib/formation-documents/constants";
+import type { DossierDocContext } from "@/lib/formation-documents/context";
 
 /**
- * Modèles PDF du coffre Qualiopi utilisables tels quels (statiques).
- * La convention est générée dynamiquement (parties, formation, objectifs, dates, prix).
+ * Modèles PDF du coffre Qualiopi.
+ * - reglement / livret : utilisés tels quels
+ * - convention : modèle rempli dynamiquement (fill-convention-vault)
  */
-export const VAULT_TEMPLATE_KINDS = ["reglement", "livret"] as const;
+export const VAULT_TEMPLATE_KINDS = ["convention", "reglement", "livret"] as const;
 export type VaultTemplateKind = (typeof VAULT_TEMPLATE_KINDS)[number];
+
+/** Modèles servi sans modification */
+export const VAULT_STATIC_KINDS = ["reglement", "livret"] as const;
 
 export function isVaultTemplateKind(kind: string): kind is VaultTemplateKind {
   return (VAULT_TEMPLATE_KINDS as readonly string[]).includes(kind);
 }
 
+export function isVaultStaticKind(kind: string): boolean {
+  return (VAULT_STATIC_KINDS as readonly string[]).includes(kind);
+}
+
 /**
  * Télécharge le PDF modèle du coffre Qualiopi (session_id IS NULL).
- * Convention / CGV → null (génération jsPDF).
  */
 export async function fetchVaultTemplatePdf(
   service: SupabaseClient,
@@ -51,11 +59,22 @@ export async function resolveFormationPdfBuffer(
   params: {
     kind: Lot4DocumentKind;
     buildFallback: () => Buffer;
+    /** Requis pour remplir la convention coffre */
+    ctx?: DossierDocContext | null;
   },
-): Promise<{ buffer: Buffer; source: "vault" | "generated" }> {
-  if (isVaultTemplateKind(params.kind)) {
-    const vault = await fetchVaultTemplatePdf(service, params.kind);
+): Promise<{ buffer: Buffer; source: "vault" | "vault_filled" | "generated" }> {
+  if (params.kind === "convention" && params.ctx) {
+    const { fillVaultConventionPdf } = await import(
+      "@/lib/formation-documents/fill-convention-vault"
+    );
+    const filled = await fillVaultConventionPdf(service, params.ctx);
+    if (filled) return { buffer: filled, source: "vault_filled" };
+  }
+
+  if (isVaultStaticKind(params.kind)) {
+    const vault = await fetchVaultTemplatePdf(service, params.kind as "reglement" | "livret");
     if (vault) return { buffer: vault.buffer, source: "vault" };
   }
+
   return { buffer: params.buildFallback(), source: "generated" };
 }

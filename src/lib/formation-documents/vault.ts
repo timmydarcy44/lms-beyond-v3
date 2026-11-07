@@ -1,8 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Lot4DocumentKind } from "@/lib/formation-documents/constants";
 
-/** Kinds dont le modèle PDF vit dans le coffre Qualiopi (`crm_qualiopi_documents`). */
-export const VAULT_TEMPLATE_KINDS = ["convention", "reglement", "livret"] as const;
+/**
+ * Modèles PDF du coffre Qualiopi utilisables tels quels (statiques).
+ * La convention est générée dynamiquement (parties, formation, objectifs, dates, prix).
+ */
+export const VAULT_TEMPLATE_KINDS = ["reglement", "livret"] as const;
 export type VaultTemplateKind = (typeof VAULT_TEMPLATE_KINDS)[number];
 
 export function isVaultTemplateKind(kind: string): kind is VaultTemplateKind {
@@ -11,7 +14,7 @@ export function isVaultTemplateKind(kind: string): kind is VaultTemplateKind {
 
 /**
  * Télécharge le PDF modèle du coffre Qualiopi (session_id IS NULL).
- * CGV absentes du coffre → null (fallback jsPDF).
+ * Convention / CGV → null (génération jsPDF).
  */
 export async function fetchVaultTemplatePdf(
   service: SupabaseClient,

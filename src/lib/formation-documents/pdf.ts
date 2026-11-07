@@ -140,47 +140,180 @@ function buildDevis(doc: jsPDF, ctx: DossierDocContext) {
   );
 }
 
-function buildConvention(doc: jsPDF, ctx: DossierDocContext) {
-  let y = drawHeader(doc, ctx, "Convention de formation");
-  const margin = 18;
+function writeBlocks(
+  doc: jsPDF,
+  blocks: string[],
+  startY: number,
+  opts?: { margin?: number; fontSize?: number; gap?: number },
+): number {
+  const margin = opts?.margin ?? 18;
+  const fontSize = opts?.fontSize ?? 10;
+  const gap = opts?.gap ?? 3;
+  let y = startY;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
+  doc.setFontSize(fontSize);
   doc.setTextColor(40, 40, 50);
-
-  const blocks = [
-    `Entre ${ctx.of.legal_name}, organisme de formation${ctx.of.nda ? ` (NDA ${ctx.of.nda})` : ""}, ci-après « l'Organisme »,`,
-    `Et ${ctx.organization.name}${ctx.organization.siret ? ` (SIRET ${ctx.organization.siret})` : ""}, ci-après « le Client »,`,
-    `Il est convenu ce qui suit.`,
-    `Article 1 — Objet : ${ctx.dossier.course_title || ctx.session?.title || "Formation professionnelle"}.`,
-    `Article 2 — Modalités : ${[ctx.dossier.modality_intra_inter, ctx.dossier.modality_presence].filter(Boolean).join(" · ") || "à préciser"}.`,
-    `Article 3 — Dates :`,
-    ...slotsSummary(ctx),
-    `Article 4 — Lieu : ${ctx.session?.location_label || "à confirmer"}.`,
-    `Article 5 — Prix : ${moneyLines(ctx).join(" · ")}.`,
-    `Article 6 — Financement : ${ctx.dossier.funding_type || "à préciser"}.`,
-    `Article 7 — Les CGV et le règlement intérieur joints font partie intégrante de la présente convention.`,
-  ];
-
   for (const line of blocks) {
+    const isTitle = line.startsWith("Article ") || line.startsWith("Annexe");
+    doc.setFont("helvetica", isTitle ? "bold" : "normal");
+    doc.setFontSize(isTitle ? fontSize + 1 : fontSize);
     const wrapped = doc.splitTextToSize(line, 174);
-    doc.text(wrapped, margin, y);
-    y += wrapped.length * 5.2 + 2;
-    if (y > 260) {
+    if (y + wrapped.length * 5 > 270) {
       doc.addPage();
       y = 24;
     }
+    doc.text(wrapped, margin, y);
+    y += wrapped.length * 5 + gap;
   }
+  return y;
+}
 
-  y += 10;
+function modalityLabel(ctx: DossierDocContext): string {
+  const parts: string[] = [];
+  if (ctx.dossier.modality_intra_inter === "intra") parts.push("Intra-entreprise");
+  else if (ctx.dossier.modality_intra_inter === "inter") parts.push("Inter-entreprises");
+  else if (ctx.dossier.modality_intra_inter) parts.push(ctx.dossier.modality_intra_inter);
+  if (ctx.dossier.modality_presence === "presentiel") parts.push("présentiel");
+  else if (ctx.dossier.modality_presence === "distanciel") parts.push("distanciel");
+  else if (ctx.dossier.modality_presence === "hybride") parts.push("hybride");
+  else if (ctx.dossier.modality_presence) parts.push(ctx.dossier.modality_presence);
+  return parts.join(" · ") || "à préciser";
+}
+
+function fundingLabel(raw: string | null): string {
+  if (!raw) return "à préciser";
+  const map: Record<string, string> = {
+    opco: "OPCO (subrogation)",
+    entreprise: "Entreprise",
+    particulier: "Particulier",
+    fifpl: "FIF PL",
+    agefice: "AGEFICE",
+    cpf: "CPF",
+  };
+  return map[raw] || raw;
+}
+
+function buildConvention(doc: jsPDF, ctx: DossierDocContext) {
+  let y = drawHeader(doc, ctx, "Convention de formation professionnelle");
+  const margin = 18;
+  const courseTitle =
+    ctx.course?.title || ctx.dossier.course_title || ctx.session?.title || "Formation professionnelle";
+  const ref = `CONV-${ctx.dossier.id.slice(0, 8).toUpperCase()}`;
+  const ofAddr = [
+    ctx.of.address_line,
+    [ctx.of.address_zip, ctx.of.address_city].filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const blocks: string[] = [
+    `Référence : ${ref} — Date : ${new Date().toLocaleDateString("fr-FR")}`,
+    "",
+    `Entre les soussignés :`,
+    `${ctx.of.legal_name}, organisme de formation${ctx.of.nda ? ` déclaré sous le NDA ${ctx.of.nda}` : ""}${ctx.of.siret ? `, SIRET ${ctx.of.siret}` : ""}${ofAddr ? `, dont le siège est situé ${ofAddr}` : ""}, ci-après dénommé « l'Organisme »,`,
+    `Et`,
+    `${ctx.organization.name}${ctx.organization.siret ? ` (SIRET ${ctx.organization.siret})` : ""}${ctx.dossier.contact_name ? `, représentée par ${ctx.dossier.contact_name}` : ""}${ctx.dossier.contact_email ? ` (${ctx.dossier.contact_email})` : ""}${ctx.dossier.contact_phone ? `, tél. ${ctx.dossier.contact_phone}` : ""}, ci-après dénommé « le Client »,`,
+    `Il a été convenu ce qui suit.`,
+    "",
+    `Article 1 — Objet`,
+    `La présente convention a pour objet la réalisation par l'Organisme de l'action de formation intitulée « ${courseTitle} ».`,
+    ctx.course?.short_description || "",
+    "",
+    `Article 2 — Nature et caractéristiques de l'action`,
+    `Nature : action de formation professionnelle continue.`,
+    `Modalité : ${modalityLabel(ctx)}.`,
+    `Durée : ${ctx.course?.duration || `${Math.max(1, Math.ceil(ctx.slots.length / 2))} jour(s)`} (${ctx.slots.length || "—"} demi-journée(s)).`,
+    ctx.course?.level ? `Niveau : ${ctx.course.level}.` : "",
+    ctx.course?.prerequisites ? `Prérequis : ${ctx.course.prerequisites}` : "",
+    ctx.course?.audience?.length
+      ? `Public concerné : ${ctx.course.audience.join(", ")}.`
+      : "",
+    "",
+    `Article 3 — Objectifs pédagogiques`,
+    ...(ctx.course?.objectives?.length
+      ? ctx.course.objectives.map((o, i) => `${i + 1}. ${o}`)
+      : ["Objectifs détaillés communiqués dans le programme joint."]),
+    "",
+    ...(ctx.course?.skills?.length
+      ? [
+          `Compétences visées :`,
+          ...ctx.course.skills.map((s) => `• ${s}`),
+          "",
+        ]
+      : []),
+    `Article 4 — Dates et horaires`,
+    ...(ctx.slots.length
+      ? ctx.slots.map((s) => {
+          const part = s.day_part === "matin" ? "matin" : "après-midi";
+          const hours =
+            s.starts_at && s.ends_at
+              ? ` (${new Date(s.starts_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })} – ${new Date(s.ends_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })})`
+              : "";
+          return `• ${formatFrDate(s.slot_date)} — ${part}${hours}`;
+        })
+      : ["Dates à confirmer d'un commun accord."]),
+    "",
+    `Article 5 — Lieu`,
+    ctx.session?.location_label || "Lieu communiqué sur la convocation.",
+    "",
+    `Article 6 — Stagiaires`,
+    ctx.participants.length
+      ? `Nombre de stagiaires : ${ctx.participants.length}.`
+      : "Liste des stagiaires transmise par le Client avant le démarrage.",
+    ...ctx.participants.map(
+      (p) => `• ${p.name}${p.job_title ? ` — ${p.job_title}` : ""}${p.email ? ` (${p.email})` : ""}`,
+    ),
+    "",
+    `Article 7 — Prix et conditions financières`,
+    ...moneyLines(ctx),
+    `Financement : ${fundingLabel(ctx.dossier.funding_type)}.`,
+    `Le règlement s'effectue selon les modalités indiquées sur le devis et la facture.`,
+    "",
+    `Article 8 — Obligations des parties`,
+    `L'Organisme s'engage à mettre en œuvre les moyens pédagogiques, techniques et d'encadrement nécessaires à la qualité de l'action.`,
+    `Le Client s'engage à transmettre les informations nécessaires, à assurer la présence des stagiaires et à régler le prix convenu.`,
+    "",
+    `Article 9 — Documents contractuels`,
+    `Les conditions générales de vente, le règlement intérieur et le programme de formation joints (ou accessibles via le lien de signature) font partie intégrante de la présente convention.`,
+    "",
+    `Article 10 — Droit applicable`,
+    `La présente convention est soumise au droit français. Les parties s'efforceront de résoudre à l'amiable tout différend avant tout recours.`,
+  ].filter((line) => line !== undefined);
+
+  y = writeBlocks(
+    doc,
+    blocks.filter((b) => b !== ""),
+    y,
+    { margin, fontSize: 10, gap: 2.5 },
+  );
+
+  y += 12;
+  if (y > 250) {
+    doc.addPage();
+    y = 30;
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
   doc.text("Pour l'Organisme", margin, y);
   doc.text("Pour le Client", margin + 95, y);
-  y += 18;
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(ctx.of.legal_name, margin, y);
+  doc.text(ctx.organization.name, margin + 95, y);
+  y += 16;
   doc.setDrawColor(180, 180, 190);
   doc.line(margin, y, margin + 60, y);
   doc.line(margin + 95, y, margin + 155, y);
   y += 6;
   doc.setFontSize(8);
+  doc.setTextColor(100, 100, 110);
   doc.text("Signature électronique via le lien reçu par e-mail", margin, y);
+  doc.text(
+    ctx.dossier.contact_name ? `Signataire : ${ctx.dossier.contact_name}` : "Signature Client",
+    margin + 95,
+    y,
+  );
 }
 
 function buildCgv(doc: jsPDF, ctx: DossierDocContext) {

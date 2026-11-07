@@ -12,16 +12,30 @@ export type OfIdentity = {
   address_country: string | null;
 };
 
+export type CourseDocInfo = {
+  id: string;
+  title: string;
+  short_description: string | null;
+  duration: string | null;
+  level: string | null;
+  objectives: string[];
+  skills: string[];
+  prerequisites: string | null;
+  audience: string[];
+};
+
 export type DossierDocContext = {
   dossier: {
     id: string;
     organization_id: string;
+    training_course_id: string | null;
     course_title: string | null;
     amount_ht_cents: number | null;
     amount_tva_cents: number | null;
     amount_ttc_cents: number | null;
     contact_name: string | null;
     contact_email: string | null;
+    contact_phone: string | null;
     modality_intra_inter: string | null;
     modality_presence: string | null;
     funding_type: string | null;
@@ -35,6 +49,7 @@ export type DossierDocContext = {
     siren: string | null;
   };
   of: OfIdentity;
+  course: CourseDocInfo | null;
   slots: Array<{
     slot_date: string;
     day_part: string;
@@ -75,7 +90,7 @@ export async function loadDossierDocContext(
   const { data: dossier } = await service
     .from("formation_dossiers")
     .select(
-      "id, organization_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, modality_intra_inter, modality_presence, funding_type, session_id, status",
+      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, session_id, status",
     )
     .eq("id", dossierId)
     .maybeSingle();
@@ -150,16 +165,76 @@ export async function loadDossierDocContext(
     address_country: ofRow?.address_country ? String(ofRow.address_country) : "FR",
   };
 
+  let course: CourseDocInfo | null = null;
+  const trainingCourseId = dossier.training_course_id
+    ? String(dossier.training_course_id)
+    : null;
+  if (trainingCourseId) {
+    const { data: tc } = await service
+      .from("training_courses")
+      .select(
+        "id, title, short_description, duration, level, objectives, skills, prerequisites, audience",
+      )
+      .eq("id", trainingCourseId)
+      .maybeSingle();
+    if (tc) {
+      course = {
+        id: String(tc.id),
+        title: String(tc.title || ""),
+        short_description: tc.short_description ? String(tc.short_description) : null,
+        duration: tc.duration ? String(tc.duration) : null,
+        level: tc.level ? String(tc.level) : null,
+        objectives: Array.isArray(tc.objectives)
+          ? tc.objectives.map((o) => String(o)).filter(Boolean)
+          : [],
+        skills: Array.isArray(tc.skills) ? tc.skills.map((o) => String(o)).filter(Boolean) : [],
+        prerequisites: tc.prerequisites ? String(tc.prerequisites) : null,
+        audience: Array.isArray(tc.audience)
+          ? tc.audience.map((o) => String(o)).filter(Boolean)
+          : [],
+      };
+    }
+  }
+  if (!course && dossier.course_title) {
+    const { data: tc } = await service
+      .from("training_courses")
+      .select(
+        "id, title, short_description, duration, level, objectives, skills, prerequisites, audience",
+      )
+      .ilike("title", String(dossier.course_title))
+      .limit(1)
+      .maybeSingle();
+    if (tc) {
+      course = {
+        id: String(tc.id),
+        title: String(tc.title || ""),
+        short_description: tc.short_description ? String(tc.short_description) : null,
+        duration: tc.duration ? String(tc.duration) : null,
+        level: tc.level ? String(tc.level) : null,
+        objectives: Array.isArray(tc.objectives)
+          ? tc.objectives.map((o) => String(o)).filter(Boolean)
+          : [],
+        skills: Array.isArray(tc.skills) ? tc.skills.map((o) => String(o)).filter(Boolean) : [],
+        prerequisites: tc.prerequisites ? String(tc.prerequisites) : null,
+        audience: Array.isArray(tc.audience)
+          ? tc.audience.map((o) => String(o)).filter(Boolean)
+          : [],
+      };
+    }
+  }
+
   return {
     dossier: {
       id: String(dossier.id),
       organization_id: String(dossier.organization_id),
+      training_course_id: trainingCourseId,
       course_title: dossier.course_title ? String(dossier.course_title) : null,
       amount_ht_cents: dossier.amount_ht_cents != null ? Number(dossier.amount_ht_cents) : null,
       amount_tva_cents: dossier.amount_tva_cents != null ? Number(dossier.amount_tva_cents) : null,
       amount_ttc_cents: dossier.amount_ttc_cents != null ? Number(dossier.amount_ttc_cents) : null,
       contact_name: dossier.contact_name ? String(dossier.contact_name) : null,
       contact_email: dossier.contact_email ? String(dossier.contact_email) : null,
+      contact_phone: dossier.contact_phone ? String(dossier.contact_phone) : null,
       modality_intra_inter: dossier.modality_intra_inter
         ? String(dossier.modality_intra_inter)
         : null,
@@ -175,6 +250,7 @@ export async function loadDossierDocContext(
       siren: org.siren ? String(org.siren) : null,
     },
     of,
+    course,
     slots,
     participants: (partRows ?? []).map((p) => {
       const profile = profileById.get(String(p.profile_id));

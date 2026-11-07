@@ -171,9 +171,11 @@ export async function sendPackFormateurEmail(
     .maybeSingle();
 
   const origin = appOrigin();
-  // Page éphémère publique (pas /super) — lancement + QR pour le formateur.
-  const emargerUrl = slot ? `${origin}/e/p/${slot.id}` : `${origin}/dashboard/formateur`;
-  const projectUrl = slot ? `${origin}/e/p/${slot.id}` : null;
+  // /e?slot= — page publique fiable (évite 404 Vercel sur /e/p/…)
+  const emargerUrl = slot
+    ? `${origin}/e?slot=${encodeURIComponent(slot.id)}`
+    : `${origin}/dashboard/formateur`;
+  const projectUrl = slot ? `${origin}/e?slot=${encodeURIComponent(slot.id)}` : null;
   const formateurUrl = `${origin}/dashboard/formateur`;
   const programmeUrl = programme?.access_token
     ? `${origin}/d/${programme.access_token}`

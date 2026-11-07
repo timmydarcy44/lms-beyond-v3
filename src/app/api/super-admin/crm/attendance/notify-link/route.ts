@@ -12,7 +12,7 @@ import { loadSlotContext } from "@/lib/formation-attendance/slot-context";
 import { resolveTrainerNameForSession } from "@/lib/formation-attendance/trainer";
 
 /**
- * Envoi manuel du lien d'émargement (/e/s/[launchId]) aux participants.
+ * Envoi manuel du lien d'émargement (/e?launch=…) aux participants.
  * Jamais le code HOTP dans le mail — le code reste annoncé / projeté en salle.
  */
 export async function POST(req: NextRequest) {
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   const origin = new URL(req.url).origin;
-  const publicUrl = `${origin}/e/s/${launch.id}`;
+  const publicUrl = `${origin}/e?launch=${encodeURIComponent(String(launch.id))}`;
   const trainerName = await resolveTrainerNameForSession(service, ctx.session.id);
   const title = ctx.session.title || ctx.dossiers[0]?.course_title || "Formation";
   const dayPart = ctx.slot.day_part === "matin" ? "matin" : "après-midi";

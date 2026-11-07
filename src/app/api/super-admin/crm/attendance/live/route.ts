@@ -85,7 +85,8 @@ export async function GET(req: NextRequest) {
       counter: live.counter,
       expires_in_ms: live.expiresInMs,
       refresh_in_s: secondsUntilRefresh(),
-      public_url: `${origin}/e/s/${launch.id}`,
+      public_url: `${origin}/e?launch=${encodeURIComponent(String(launch.id))}`,
+      project_url: `${origin}/e?slot=${encodeURIComponent(slotId)}`,
     };
   }
 

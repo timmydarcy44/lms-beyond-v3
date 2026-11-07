@@ -195,7 +195,7 @@ export default function TrainerEmargementPage() {
     const url =
       data?.live?.public_url ||
       (data?.live?.launch_id && typeof window !== "undefined"
-        ? `${window.location.origin}/e/s/${data.live.launch_id}`
+        ? `${window.location.origin}/e?launch=${encodeURIComponent(data.live.launch_id)}`
         : "");
     if (!url) {
       toast.error("Aucun lien actif");
@@ -264,7 +264,7 @@ export default function TrainerEmargementPage() {
             ← Programmation
           </Link>
           <Link
-            href={`/e/p/${slotId}`}
+            href={`/e?slot=${encodeURIComponent(slotId)}`}
             className="text-sm text-[#B7AEFF]"
             target="_blank"
           >
@@ -345,7 +345,7 @@ export default function TrainerEmargementPage() {
               <p className="mt-2 break-all text-xs text-[#B7AEFF]">{data.live.public_url}</p>
             ) : data.live.launch_id ? (
               <p className="mt-2 break-all text-xs text-[#B7AEFF]">
-                /e/s/{data.live.launch_id}
+                /e?launch={data.live.launch_id}
               </p>
             ) : null}
             <div className="mt-4 flex flex-col gap-2">

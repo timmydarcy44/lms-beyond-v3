@@ -102,7 +102,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       code: live.code,
       refresh_in_s: secondsUntilRefresh(),
       expires_in_ms: live.expiresInMs,
-      public_url: `${origin}/e/s/${launch.id}`,
+      public_url: `${origin}/e?launch=${encodeURIComponent(String(launch.id))}`,
     },
   });
 }
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   return NextResponse.json({
     ok: true,
     launch_id: launch.id,
-    public_url: `${origin}/e/s/${launch.id}`,
-    project_url: `${origin}/e/p/${slotId}`,
+    public_url: `${origin}/e?launch=${encodeURIComponent(String(launch.id))}`,
+    project_url: `${origin}/e?slot=${encodeURIComponent(slotId)}`,
   });
 }

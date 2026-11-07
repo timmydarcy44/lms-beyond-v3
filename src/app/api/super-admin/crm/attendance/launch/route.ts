@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   const slotKey = deriveSlotKey(slotId, nonce);
   const { code, expiresInMs, counter } = currentRoomCode(slotKey);
   const origin = new URL(req.url).origin;
-  const publicUrl = `${origin}/e/s/${launch.id}`;
+  const publicUrl = `${origin}/e?launch=${encodeURIComponent(String(launch.id))}`;
 
   return NextResponse.json({
     launch: {

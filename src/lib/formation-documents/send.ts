@@ -12,6 +12,7 @@ import { buildFormationDocMail } from "@/lib/formation-documents/mail";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";
 import { scheduleDocRelances } from "@/lib/formation-documents/schedule";
 import { formationDocumentPublicUrl } from "@/lib/formation-documents/public-url";
+import { resolveFormationPdfBuffer } from "@/lib/formation-documents/vault";
 
 async function pdfAttachment(
   service: SupabaseClient,
@@ -22,7 +23,10 @@ async function pdfAttachment(
 ): Promise<EmailAttachment | null> {
   const ctx = await loadDossierDocContext(service, dossierId);
   if (!ctx) return null;
-  const buffer = buildFormationDocumentPdf({ ctx, kind, participantName });
+  const { buffer } = await resolveFormationPdfBuffer(service, {
+    kind,
+    buildFallback: () => buildFormationDocumentPdf({ ctx, kind, participantName }),
+  });
   return {
     filename,
     content: buffer,

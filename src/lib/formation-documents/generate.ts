@@ -7,7 +7,12 @@ import {
 } from "@/lib/formation-documents/constants";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";
-import { newDocToken, uploadFormationPdf } from "@/lib/formation-documents/storage";
+import {
+  isPublicStorageUrl,
+  newDocToken,
+  uploadFormationPdf,
+} from "@/lib/formation-documents/storage";
+import { resolveFormationPdfBuffer } from "@/lib/formation-documents/vault";
 
 export type GenerateResult = {
   kind: string;
@@ -74,15 +79,20 @@ export async function generateFormationDocuments(
 
   for (const kind of kinds) {
     const row = await ensureDocRow(service, params.dossierId, kind, DOC_TITLES[kind]);
-    const buffer = buildFormationDocumentPdf({
-      ctx,
+    // Coffre Qualiopi pour convention / règlement / livret ; CGV reste générée (absente du coffre)
+    const { buffer } = await resolveFormationPdfBuffer(service, {
       kind,
-      participantName:
-        kind === "convocation" || kind === "certificat" || kind === "attestation"
-          ? params.participantName
-          : null,
-      attendedHalfDays: params.attendedHalfDays,
-      plannedHalfDays: params.plannedHalfDays,
+      buildFallback: () =>
+        buildFormationDocumentPdf({
+          ctx,
+          kind,
+          participantName:
+            kind === "convocation" || kind === "certificat" || kind === "attestation"
+              ? params.participantName
+              : null,
+          attendedHalfDays: params.attendedHalfDays,
+          plannedHalfDays: params.plannedHalfDays,
+        }),
     });
     const uploaded = await uploadFormationPdf(service, {
       dossierId: params.dossierId,
@@ -96,19 +106,38 @@ export async function generateFormationDocuments(
         ? row.accept_token || newDocToken()
         : row.accept_token;
 
-    const { data: updated, error } = await service
+    const patch: Record<string, unknown> = {
+      // Réf privée (private://…) ou null — jamais d'URL publique
+      file_url: uploaded?.fileUrl ?? (isPublicStorageUrl(row.file_url) ? null : row.file_url),
+      access_token: accessToken,
+      accept_token: acceptToken ?? null,
+      generated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      status: row.status === "to_generate" ? "to_generate" : row.status,
+    };
+    if (uploaded) {
+      patch.storage_bucket = uploaded.bucket;
+      patch.storage_path = uploaded.path;
+    }
+
+    let { data: updated, error } = await service
       .from("formation_documents")
-      .update({
-        file_url: uploaded?.fileUrl ?? row.file_url,
-        access_token: accessToken,
-        accept_token: acceptToken ?? null,
-        generated_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        status: row.status === "to_generate" ? "to_generate" : row.status,
-      })
+      .update(patch)
       .eq("id", row.id)
       .select("id, file_url, access_token")
       .single();
+
+    // Colonnes storage_* absentes tant que la migration n'est pas appliquée
+    if (error && /storage_(bucket|path)/i.test(error.message)) {
+      delete patch.storage_bucket;
+      delete patch.storage_path;
+      ({ data: updated, error } = await service
+        .from("formation_documents")
+        .update(patch)
+        .eq("id", row.id)
+        .select("id, file_url, access_token")
+        .single());
+    }
 
     if (error || !updated) {
       return { results, error: error?.message || `Échec génération ${kind}` };

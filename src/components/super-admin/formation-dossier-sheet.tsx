@@ -21,6 +21,7 @@ type DocRow = {
   title: string;
   status: string;
   file_url: string | null;
+  access_token?: string | null;
   sent_at: string | null;
   opened_at: string | null;
   signed_at: string | null;
@@ -210,11 +211,16 @@ export function FormationDossierSheet({
   };
 
   const previewDoc = (doc: DocRow) => {
-    if (doc.kind === "facture" && doc.file_url) {
-      window.open(doc.file_url, "_blank", "noopener,noreferrer");
+    // Toujours passer par l'API (token ou admin) — jamais d'URL storage publique
+    if (doc.access_token) {
+      window.open(
+        `/api/formation-documents/${encodeURIComponent(doc.access_token)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
       return;
     }
-    if (!LOT4_KINDS.has(doc.kind)) {
+    if (!LOT4_KINDS.has(doc.kind) && doc.kind !== "facture") {
       toast.message("Prévisualisation bientôt");
       return;
     }

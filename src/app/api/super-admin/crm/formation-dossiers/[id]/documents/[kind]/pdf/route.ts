@@ -5,6 +5,7 @@ import { isLot4Kind } from "@/lib/formation-documents/constants";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";
 import { generateFormationDocuments } from "@/lib/formation-documents/generate";
+import { resolveFormationPdfBuffer } from "@/lib/formation-documents/vault";
 
 type Ctx = { params: Promise<{ id: string; kind: string }> };
 
@@ -28,7 +29,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const docCtx = await loadDossierDocContext(service, id);
   if (!docCtx) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
 
-  const buffer = buildFormationDocumentPdf({ ctx: docCtx, kind });
+  const { buffer } = await resolveFormationPdfBuffer(service, {
+    kind,
+    buildFallback: () => buildFormationDocumentPdf({ ctx: docCtx, kind }),
+  });
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,
     headers: {

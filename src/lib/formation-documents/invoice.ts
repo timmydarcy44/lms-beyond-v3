@@ -262,21 +262,35 @@ export async function issueFormationInvoice(
       buffer: pdf,
     });
     const accessToken = newDocToken();
-    await service.from("formation_documents").upsert(
-      {
-        dossier_id: params.dossierId,
-        kind: "facture",
-        title: "Facture",
-        status: "sent",
-        file_url: uploaded?.fileUrl ?? null,
-        access_token: accessToken,
-        generated_at: new Date().toISOString(),
-        sent_at: new Date().toISOString(),
-        last_sent_to: dossier.contact_email || null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "dossier_id,kind" },
-    );
+    const factureRow: Record<string, unknown> = {
+      dossier_id: params.dossierId,
+      kind: "facture",
+      title: "Facture",
+      status: "sent",
+      file_url: uploaded?.fileUrl ?? null,
+      access_token: accessToken,
+      generated_at: new Date().toISOString(),
+      sent_at: new Date().toISOString(),
+      last_sent_to: dossier.contact_email || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (uploaded) {
+      factureRow.storage_bucket = uploaded.bucket;
+      factureRow.storage_path = uploaded.path;
+    }
+    let { error: factureErr } = await service
+      .from("formation_documents")
+      .upsert(factureRow, { onConflict: "dossier_id,kind" });
+    if (factureErr && /storage_(bucket|path)/i.test(factureErr.message)) {
+      delete factureRow.storage_bucket;
+      delete factureRow.storage_path;
+      ({ error: factureErr } = await service
+        .from("formation_documents")
+        .upsert(factureRow, { onConflict: "dossier_id,kind" }));
+    }
+    if (factureErr) {
+      console.warn("[invoice] upsert facture:", factureErr.message);
+    }
 
     if (dossier.contact_email) {
       const { formationDocumentPublicUrl } = await import("@/lib/formation-documents/public-url");

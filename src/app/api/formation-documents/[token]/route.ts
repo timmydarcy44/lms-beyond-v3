@@ -4,8 +4,22 @@ import { isLot4Kind } from "@/lib/formation-documents/constants";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";
 import { cancelDocRelances } from "@/lib/formation-documents/schedule";
+import { downloadFormationPdf } from "@/lib/formation-documents/storage";
+import { resolveFormationPdfBuffer } from "@/lib/formation-documents/vault";
 
 type Ctx = { params: Promise<{ token: string }> };
+
+function pdfResponse(buffer: Buffer, filename: string) {
+  return new NextResponse(new Uint8Array(buffer), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   const service = getServiceRoleClient();
@@ -49,8 +63,14 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       .eq("id", doc.id);
   }
 
-  if (doc.file_url) {
-    return NextResponse.redirect(String(doc.file_url), 302);
+  // Jamais de redirect vers une URL storage publique (énumérable).
+  const fromPrivate = await downloadFormationPdf(service, {
+    bucket: doc.storage_bucket,
+    path: doc.storage_path,
+    fileUrl: doc.file_url,
+  });
+  if (fromPrivate) {
+    return pdfResponse(fromPrivate, `${doc.kind}.pdf`);
   }
 
   if (!isLot4Kind(String(doc.kind))) {
@@ -60,17 +80,15 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const docCtx = await loadDossierDocContext(service, String(doc.dossier_id));
   if (!docCtx) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
 
-  const buffer = buildFormationDocumentPdf({
-    ctx: docCtx,
+  const { buffer } = await resolveFormationPdfBuffer(service, {
     kind: doc.kind,
+    buildFallback: () =>
+      buildFormationDocumentPdf({
+        ctx: docCtx,
+        kind: doc.kind,
+      }),
   });
-  return new NextResponse(new Uint8Array(buffer), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${doc.kind}.pdf"`,
-    },
-  });
+  return pdfResponse(buffer, `${doc.kind}.pdf`);
 }
 
 /** Acceptation devis / convention (signature légère Lot 4a ; UI enrichie Lot 5). */

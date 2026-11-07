@@ -7,7 +7,8 @@ import {
   edgeEmailParagraph,
   escapeEdgeEmailHtml,
 } from "@/lib/emails/edge-email-shell";
-import { appOrigin } from "@/lib/formation-documents/context";
+import { formationDocumentPublicUrl } from "@/lib/formation-documents/public-url";
+import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
 
 function dayPartLabel(dayPart: string): string {
   return dayPart === "matin" ? "matin" : "après-midi";
@@ -170,7 +171,7 @@ export async function sendPackFormateurEmail(
     .limit(1)
     .maybeSingle();
 
-  const origin = appOrigin();
+  const origin = BYOUND_PUBLIC_ORIGIN;
   // /e?slot= — page publique fiable (évite 404 Vercel sur /e/p/…)
   const emargerUrl = slot
     ? `${origin}/e?slot=${encodeURIComponent(slot.id)}`
@@ -178,7 +179,7 @@ export async function sendPackFormateurEmail(
   const projectUrl = slot ? `${origin}/e?slot=${encodeURIComponent(slot.id)}` : null;
   const formateurUrl = `${origin}/dashboard/formateur`;
   const programmeUrl = programme?.access_token
-    ? `${origin}/doc?token=${encodeURIComponent(String(programme.access_token))}`
+    ? formationDocumentPublicUrl(String(programme.access_token))
     : null;
 
   const whenLine = slot

@@ -14,6 +14,7 @@ type LivePayload = {
     code: string;
     refresh_in_s: number;
     slot_key_b64: string;
+    public_url?: string;
   } | null;
   enrolled: number;
   present: number;
@@ -31,6 +32,7 @@ type LivePayload = {
     signed_at: string | null;
     method: string | null;
     status: string | null;
+    minutes_late?: number;
     needs_specific_support: boolean;
     first_activation: boolean;
     passkey: {
@@ -165,6 +167,66 @@ export default function TrainerEmargementPage() {
     await load();
   };
 
+  const notifyLink = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/attendance/notify-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot_id: slotId }),
+      });
+      const json = await parseFetchJson<{
+        error?: string;
+        sent?: number;
+        total?: number;
+      }>(res);
+      if (!res.ok) throw new Error(json.error || "Envoi impossible");
+      toast.success(
+        `Lien envoyé à ${json.sent ?? 0} / ${json.total ?? 0} apprenant${(json.total ?? 0) > 1 ? "s" : ""}`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Envoi refusé");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyPublicUrl = async () => {
+    const url =
+      data?.live?.public_url ||
+      (data?.live?.launch_id && typeof window !== "undefined"
+        ? `${window.location.origin}/e/s/${data.live.launch_id}`
+        : "");
+    if (!url) {
+      toast.error("Aucun lien actif");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copié");
+    } catch {
+      toast.error("Copie impossible");
+    }
+  };
+
+  const sendPackFormateur = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/attendance/pack-formateur", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slot_id: slotId }),
+      });
+      const json = await parseFetchJson<{ error?: string; to?: string }>(res);
+      if (!res.ok) throw new Error(json.error || "Envoi impossible");
+      toast.success(`Pack formateur envoyé${json.to ? ` à ${json.to}` : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Envoi refusé");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const revokePasskeys = async (row: LivePayload["roster"][number]) => {
     if (!row.passkey.credential_ids.length) return;
     if (
@@ -202,7 +264,7 @@ export default function TrainerEmargementPage() {
             ← Programmation
           </Link>
           <Link
-            href={`/super/crm/programmation/emarger/${slotId}/projeter`}
+            href={`/e/p/${slotId}`}
             className="text-sm text-[#B7AEFF]"
             target="_blank"
           >
@@ -216,6 +278,15 @@ export default function TrainerEmargementPage() {
             {(data?.context.clients ?? []).join(" · ")} · {data?.context.slot_date} ·{" "}
             {data?.context.day_part}
           </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            className="mt-3 border-[#262A4A] bg-transparent text-[#B7AEFF]"
+            onClick={() => void sendPackFormateur()}
+          >
+            Envoyer le pack formateur
+          </Button>
         </header>
 
         <div className="flex gap-2">
@@ -268,9 +339,39 @@ export default function TrainerEmargementPage() {
               Renouvellement dans{" "}
               {data.live.refresh_in_s >= 60
                 ? `${Math.ceil(data.live.refresh_in_s / 60)} min`
-                : `${data.live.refresh_in_s}s`}{" "}
-              · page publique /e
+                : `${data.live.refresh_in_s}s`}
             </p>
+            {data.live.public_url ? (
+              <p className="mt-2 break-all text-xs text-[#B7AEFF]">{data.live.public_url}</p>
+            ) : data.live.launch_id ? (
+              <p className="mt-2 break-all text-xs text-[#B7AEFF]">
+                /e/s/{data.live.launch_id}
+              </p>
+            ) : null}
+            <div className="mt-4 flex flex-col gap-2">
+              <Button
+                type="button"
+                disabled={busy}
+                className="w-full bg-[#6C5CF5] text-white"
+                onClick={() => void notifyLink()}
+              >
+                Envoyer le lien aux apprenants
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                className="w-full border-[#262A4A] bg-transparent"
+                onClick={() => void copyPublicUrl()}
+              >
+                Copier le lien
+              </Button>
+              <p className="text-left text-[11px] leading-relaxed text-[#A3A8C7]">
+                Le retard se calcule à partir du début de créneau, ou de l&apos;heure d&apos;ouverture
+                de l&apos;émargement si vous lancez après. Grâce de 5&nbsp;min ; un retardé peut
+                toujours signer.
+              </p>
+            </div>
           </div>
         )}
 
@@ -304,6 +405,18 @@ export default function TrainerEmargementPage() {
                     {Array.isArray(row.alerts) && row.alerts.length ? " · alerte" : ""}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1">
+                    {row.signed ? (
+                      (row.minutes_late ?? 0) > 0 ||
+                      (Array.isArray(row.alerts) && row.alerts.includes("late")) ? (
+                        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-200">
+                          Retard · {Math.max(1, row.minutes_late ?? 1)} min
+                        </span>
+                      ) : (
+                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-200">
+                          À l&apos;heure
+                        </span>
+                      )
+                    ) : null}
                     {row.first_activation ? (
                       <span className="rounded bg-[#6C5CF5]/25 px-1.5 py-0.5 text-[10px] text-[#B7AEFF]">
                         1re activation

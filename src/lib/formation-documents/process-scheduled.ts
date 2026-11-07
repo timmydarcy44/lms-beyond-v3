@@ -230,6 +230,28 @@ export async function processDueFormationMails(
       continue;
     }
 
+    if (row.kind === "pack_formateur_j1") {
+      const { sendPackFormateurEmail } = await import(
+        "@/lib/formation-documents/pack-formateur"
+      );
+      const result = await sendPackFormateurEmail(service, {
+        dossierId: row.dossier_id,
+        toEmail: row.to_email,
+        slotId: row.slot_id,
+        payload: row.payload,
+      });
+      if (!result.ok) {
+        errors.push(`${row.id}: ${result.error}`);
+        continue;
+      }
+      await service
+        .from("formation_scheduled_mails")
+        .update({ sent_at: now, updated_at: now })
+        .eq("id", row.id);
+      sent += 1;
+      continue;
+    }
+
     if (row.kind === "eval_froid_j60" || row.kind === "questionnaire_entreprise_j60") {
       const kind =
         row.kind === "eval_froid_j60" ? "eval_froid" : "questionnaire_entreprise";

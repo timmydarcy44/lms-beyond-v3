@@ -10,6 +10,7 @@ import {
   readOrCreateDeviceToken,
 } from "@/lib/formation-attendance/cookies";
 import { loadSlotContext } from "@/lib/formation-attendance/slot-context";
+import { computePunctuality } from "@/lib/formation-attendance/punctuality";
 
 export async function POST(req: NextRequest) {
   const service = getServiceRoleClient();
@@ -94,9 +95,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const delayMs = Math.max(0, Date.now() - (session.exp - 3 * 60 * 1000));
+  const scanToSignMs = Math.max(0, Date.now() - (session.exp - 3 * 60 * 1000));
   const alerts: string[] = [];
-  if (delayMs > 2 * 60 * 1000) alerts.push("scan_to_sign_gt_2min");
+  if (scanToSignMs > 2 * 60 * 1000) alerts.push("scan_to_sign_gt_2min");
 
   // Alerte légère : OTP alors qu'une passkey existe
   if (identificationMethod === "otp") {
@@ -118,6 +119,22 @@ export async function POST(req: NextRequest) {
     if (cred?.synced || cred?.backed_up) alerts.push("passkey_synced");
   }
 
+  const { data: launchRow } = session.launchId
+    ? await service
+        .from("attendance_slot_launches")
+        .select("opened_at")
+        .eq("id", session.launchId)
+        .maybeSingle()
+    : { data: null };
+
+  const signedAt = new Date();
+  const punctuality = computePunctuality({
+    startsAt: ctx.slot.starts_at,
+    openedAt: launchRow?.opened_at ?? null,
+    signedAt,
+  });
+  if (!punctuality.onTime) alerts.push("late");
+
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
@@ -135,11 +152,14 @@ export async function POST(req: NextRequest) {
       credential_id: credentialDbId,
       launch_id: session.launchId,
       token_counter: session.counter,
-      delay_ms: delayMs,
+      delay_ms: scanToSignMs,
+      minutes_late: punctuality.minutesLate,
+      punctuality_ref_at: punctuality.punctualityRefAt.toISOString(),
+      minutes_after_scheduled_start: punctuality.minutesAfterScheduledStart,
       source: session.source,
       identification_method: identificationMethod,
       validation_mode: validationMode,
-      arrived_at: new Date().toISOString(),
+      arrived_at: signedAt.toISOString(),
       first_activation: firstActivation,
       status: "ok",
       alerts,

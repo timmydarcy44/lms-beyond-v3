@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const code = String(body?.code ?? "").trim();
-  // Optionnel : slot hint si plusieurs lancements — sinon on matche le code sur les lancements actifs
+  // Optionnel : slot / launch hint (page éphémère /e/s/[token])
   const slotHint = String(body?.slot_id ?? "").trim();
+  const launchHint = String(body?.launch_id ?? "").trim();
 
   const { token: deviceToken } = await readOrCreateDeviceToken();
   const deviceHash = deviceTokenHash(deviceToken);
@@ -54,7 +55,8 @@ export async function POST(req: NextRequest) {
     .is("revoked_at", null)
     .order("opened_at", { ascending: false })
     .limit(40);
-  if (slotHint) query = query.eq("slot_id", slotHint);
+  if (launchHint) query = query.eq("id", launchHint);
+  else if (slotHint) query = query.eq("slot_id", slotHint);
 
   const { data: launches } = await query;
   if (!launches?.length) {
@@ -103,6 +105,11 @@ export async function POST(req: NextRequest) {
     }),
   );
 
+  const { resolveTrainerNameForSession } = await import(
+    "@/lib/formation-attendance/trainer"
+  );
+  const trainerName = await resolveTrainerNameForSession(service, ctx.session.id);
+
   return NextResponse.json({
     ok: true,
     slot_id: matched.slot_id,
@@ -115,6 +122,7 @@ export async function POST(req: NextRequest) {
       starts_at: ctx.slot.starts_at,
       ends_at: ctx.slot.ends_at,
       location: ctx.session.location_label,
+      trainer_name: trainerName,
     },
   });
 }

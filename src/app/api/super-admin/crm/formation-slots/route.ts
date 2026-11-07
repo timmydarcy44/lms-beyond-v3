@@ -115,7 +115,9 @@ export async function POST(req: NextRequest) {
             .in("id", profileIds)
         : { data: [] as Array<Record<string, unknown>> };
       const byId = new Map((profiles ?? []).map((p) => [String(p.id), p]));
-      const { schedulePositionnementMails } = await import("@/lib/formation-documents/schedule");
+      const { schedulePositionnementMails, schedulePackFormateurMails } = await import(
+        "@/lib/formation-documents/schedule"
+      );
       const { resolveTrainerEmail } = await import("@/lib/formation-assessments/synth");
       const trainerEmail = await resolveTrainerEmail(service, dossierId);
       await schedulePositionnementMails(service, {
@@ -141,6 +143,28 @@ export async function POST(req: NextRequest) {
             };
           })
           .filter((p) => p.email.includes("@")),
+      });
+
+      const { data: allSlots } = await service
+        .from("formation_slots")
+        .select("id, slot_date, day_part")
+        .eq("session_id", sessionId)
+        .order("slot_date", { ascending: true });
+      const { data: sessionRow } = await service
+        .from("formation_sessions")
+        .select("location_label")
+        .eq("id", sessionId)
+        .maybeSingle();
+      await schedulePackFormateurMails(service, {
+        dossierId,
+        trainerEmail,
+        courseTitle: dossierFull.course_title ? String(dossierFull.course_title) : null,
+        location: sessionRow?.location_label ? String(sessionRow.location_label) : null,
+        slots: (allSlots ?? []).map((s) => ({
+          id: String(s.id),
+          slot_date: String(s.slot_date),
+          day_part: String(s.day_part),
+        })),
       });
     }
   } catch (e) {

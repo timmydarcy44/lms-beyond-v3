@@ -192,6 +192,29 @@ export async function transitionFormationDossier(
               name: p.name,
             })),
         });
+
+        const { schedulePackFormateurMails } = await import(
+          "@/lib/formation-documents/schedule"
+        );
+        const sessionId = ctx.dossier.session_id;
+        if (sessionId) {
+          const { data: allSlots } = await service
+            .from("formation_slots")
+            .select("id, slot_date, day_part")
+            .eq("session_id", sessionId)
+            .order("slot_date", { ascending: true });
+          await schedulePackFormateurMails(service, {
+            dossierId: params.dossierId,
+            trainerEmail,
+            courseTitle: ctx.dossier.course_title,
+            location: ctx.session?.location_label ?? null,
+            slots: (allSlots ?? []).map((s) => ({
+              id: String(s.id),
+              slot_date: String(s.slot_date),
+              day_part: String(s.day_part),
+            })),
+          });
+        }
       }
     } else if (params.toStatus === "fin") {
       await generateFormationDocuments(service, {

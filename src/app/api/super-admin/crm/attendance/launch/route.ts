@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
 
   const slotKey = deriveSlotKey(slotId, nonce);
   const { code, expiresInMs, counter } = currentRoomCode(slotKey);
+  const origin = new URL(req.url).origin;
+  const publicUrl = `${origin}/e/s/${launch.id}`;
 
   return NextResponse.json({
     launch: {
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
       counter,
       expires_in_ms: expiresInMs,
       refresh_in_s: secondsUntilRefresh(),
+      public_url: publicUrl,
     },
     context: {
       title: ctx.session.title || ctx.dossiers[0]?.course_title || "Formation",

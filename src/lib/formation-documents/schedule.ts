@@ -137,6 +137,62 @@ export async function scheduleAbsentRelances(
 }
 
 /**
+ * Pack formateur : la veille à 17h (heure locale Paris approximée via ISO),
+ * ou le matin du jour J si J-1 est déjà passé.
+ * Un mail par jour de session (premier créneau du jour).
+ */
+export async function schedulePackFormateurMails(
+  service: SupabaseClient,
+  params: {
+    dossierId: string;
+    trainerEmail: string | null;
+    courseTitle?: string | null;
+    location?: string | null;
+    slots: Array<{
+      id: string;
+      slot_date: string;
+      day_part: string;
+    }>;
+  },
+) {
+  if (!params.trainerEmail?.includes("@")) return;
+
+  const byDate = new Map<string, (typeof params.slots)[number]>();
+  for (const slot of params.slots) {
+    const key = String(slot.slot_date);
+    if (!byDate.has(key)) byDate.set(key, slot);
+  }
+
+  for (const slot of byDate.values()) {
+    const day = new Date(`${slot.slot_date}T17:00:00`);
+    if (!Number.isFinite(day.getTime())) continue;
+    const j1 = new Date(day.getTime() - DAY_MS);
+    // Veille 17h ; si trop tard → 7h le jour J, ou maintenant + 2 min
+    let sendAt = j1;
+    if (sendAt.getTime() < Date.now()) {
+      sendAt = new Date(`${slot.slot_date}T07:00:00`);
+    }
+    if (sendAt.getTime() < Date.now()) {
+      sendAt = new Date(Date.now() + 2 * 60_000);
+    }
+
+    await upsertScheduledMail(service, {
+      dossierId: params.dossierId,
+      kind: "pack_formateur_j1",
+      toEmail: params.trainerEmail,
+      scheduledAt: sendAt,
+      slotId: slot.id,
+      payload: {
+        course_title: params.courseTitle ?? null,
+        location: params.location ?? null,
+        slot_date: slot.slot_date,
+        day_part: slot.day_part,
+      },
+    });
+  }
+}
+
+/**
  * Après convention + date de session fixée : positionnement à J-3 pour chaque
  * participant, puis synthèse formateur à J-1.
  */

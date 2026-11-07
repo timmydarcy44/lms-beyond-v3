@@ -117,26 +117,46 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       const allDone =
         partIds.size > 0 && [...partIds].every((id) => doneIds.has(id));
       if (allDone) {
+        // Claim atomique du mail planifié pour éviter un double envoi concurrent.
+        const { data: pendingSynth } = await service
+          .from("formation_scheduled_mails")
+          .select("id, to_email")
+          .eq("dossier_id", attempt.dossier_id)
+          .eq("kind", "positionnement_synth_formateur")
+          .is("sent_at", null)
+          .is("cancelled_at", null)
+          .limit(1)
+          .maybeSingle();
+
         const { resolveTrainerEmail, sendPositionnementSynthToTrainer } = await import(
           "@/lib/formation-assessments/synth"
         );
-        const trainerEmail = await resolveTrainerEmail(service, String(attempt.dossier_id));
+        const trainerEmail =
+          (pendingSynth?.to_email && String(pendingSynth.to_email)) ||
+          (await resolveTrainerEmail(service, String(attempt.dossier_id)));
+
         if (trainerEmail) {
-          await sendPositionnementSynthToTrainer(service, {
-            dossierId: String(attempt.dossier_id),
-            toEmail: trainerEmail,
-          });
-          await service
-            .from("formation_scheduled_mails")
-            .update({
-              cancelled_at: now,
-              cancel_reason: "all_completed_early",
-              updated_at: now,
-            })
-            .eq("dossier_id", attempt.dossier_id)
-            .eq("kind", "positionnement_synth_formateur")
-            .is("sent_at", null)
-            .is("cancelled_at", null);
+          let shouldSend = !pendingSynth?.id;
+          if (pendingSynth?.id) {
+            const { data: claimed } = await service
+              .from("formation_scheduled_mails")
+              .update({
+                sent_at: now,
+                cancel_reason: "all_completed_early",
+                updated_at: now,
+              })
+              .eq("id", pendingSynth.id)
+              .is("sent_at", null)
+              .select("id")
+              .maybeSingle();
+            shouldSend = Boolean(claimed?.id);
+          }
+          if (shouldSend) {
+            await sendPositionnementSynthToTrainer(service, {
+              dossierId: String(attempt.dossier_id),
+              toEmail: trainerEmail,
+            });
+          }
         }
       }
     } catch (e) {

@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const { data: signatures } = await service
     .from("attendance_signatures")
     .select(
-      "id, profile_id, server_timestamp, source, identification_method, validation_mode, status, alerts, first_activation, person_seen",
+      "id, profile_id, server_timestamp, source, identification_method, validation_mode, status, alerts, first_activation, person_seen, minutes_late, punctuality_ref_at, minutes_after_scheduled_start",
     )
     .eq("slot_id", slotId);
 
@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
   if (launch?.nonce) {
     const slotKey = deriveSlotKey(slotId, String(launch.nonce));
     const live = currentRoomCode(slotKey);
+    const origin = new URL(req.url).origin;
     codePayload = {
       launch_id: launch.id,
       mode: launch.mode,
@@ -84,6 +85,7 @@ export async function GET(req: NextRequest) {
       counter: live.counter,
       expires_in_ms: live.expiresInMs,
       refresh_in_s: secondsUntilRefresh(),
+      public_url: `${origin}/e/s/${launch.id}`,
     };
   }
 
@@ -107,6 +109,7 @@ export async function GET(req: NextRequest) {
         method: sig?.identification_method ?? null,
         source: sig?.source ?? null,
         status: sig?.status ?? null,
+        minutes_late: sig?.minutes_late != null ? Number(sig.minutes_late) : 0,
         first_activation: Boolean(sig?.first_activation),
         passkey: {
           has: passkeys.length > 0,

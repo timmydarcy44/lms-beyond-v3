@@ -115,6 +115,7 @@ export type ScheduledMailKind =
   | "convocation_j7"
   | "positionnement_j3"
   | "positionnement_synth_formateur"
+  | "pack_formateur_j1"
   | "absent_relance"
   | "eval_froid_j60"
   | "questionnaire_entreprise_j60";

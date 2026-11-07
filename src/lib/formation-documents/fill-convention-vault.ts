@@ -235,29 +235,41 @@ export async function fillVaultConventionPdf(
     setText(form, `objective_${i + 1}`, obj);
   });
 
-  // Modules : sans programme structure, on aligne sur les jours / objectifs
+  // Modules annexe : depuis program_structure (Section → Chapitre → Sous-chapitre)
   const dayLabels = [...new Set(ctx.slots.map((s) => formatFrDate(s.slot_date)))];
-  for (let m = 1; m <= 2; m++) {
-    const day = dayLabels[m - 1] || "";
-    setText(form, `module_${m}_schedule`, day ? `Jour ${m} · ${day} · ${hoursLine(ctx)}` : "");
-    setText(form, `module_${m}_title`, day ? `Module ${m}` : "");
-    setText(form, `module_${m}_duration`, day ? "7 h" : "");
-    const chunk = objectives.slice((m - 1) * 3, m * 3);
-    chunk.forEach((obj, i) => {
-      setText(form, `module_${m}_chapter_${i + 1}_title`, `Chapitre ${m}.${i + 1}`);
-      setText(form, `module_${m}_chapter_${i + 1}_item_1`, obj);
+  const sections = ctx.course?.program_structure ?? [];
+  const flatChapters = sections.flatMap((section) =>
+    section.chapters.map((chapter) => ({
+      sectionTitle: section.title,
+      chapterTitle: chapter.title,
+      subchapters: chapter.subchapters.map((s) => s.title),
+    })),
+  );
+  for (let m = 1; m <= 4; m++) {
+    const chapter = flatChapters[m - 1];
+    if (!chapter) continue;
+    const dayIdx = Math.min(m - 1, Math.max(dayLabels.length - 1, 0));
+    const day = dayLabels[dayIdx] || "";
+    setText(
+      form,
+      `module_${m}_schedule`,
+      day ? `Jour ${dayIdx + 1} · ${day} · ${hoursLine(ctx)}` : chapter.sectionTitle,
+    );
+    setText(form, `module_${m}_title`, `${chapter.sectionTitle} — ${chapter.chapterTitle}`);
+    setText(form, `module_${m}_duration`, "3 h 30");
+    setText(form, `module_${m}_chapter_1_title`, chapter.chapterTitle);
+    chapter.subchapters.slice(0, 3).forEach((sub, i) => {
+      setText(form, `module_${m}_chapter_${i + 1}_title`, i === 0 ? chapter.chapterTitle : `Point ${i + 1}`);
+      setText(form, `module_${m}_chapter_${i + 1}_item_1`, sub);
     });
-    setText(
-      form,
-      `module_${m}_practice`,
-      day ? "Mise en situation et cas clients." : "",
-    );
-    setText(
-      form,
-      `module_${m}_production`,
-      day ? "Plan d'action / livrable de la journee." : "",
-    );
+    setText(form, `module_${m}_practice`, "Atelier et cas pratiques.");
+    setText(form, `module_${m}_production`, "Livrable de la sequence.");
   }
+  setText(
+    form,
+    "annex_modules_count",
+    String(Math.max(flatChapters.length, sections.length) || 2),
+  );
 
   setText(form, "lunch_break", "Pause dejeuner selon planning du jour");
   setText(

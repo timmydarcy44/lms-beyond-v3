@@ -47,6 +47,7 @@ const ctx: DossierDocContext = {
     skills: ["Écoute active", "Feedback"],
     prerequisites: "Manager d'équipe",
     audience: ["Managers"],
+    program_structure: [],
   },
   slots: [{ slot_date: "2026-12-01", day_part: "matin", starts_at: null, ends_at: null, location_label: "Paris" }],
   participants: [

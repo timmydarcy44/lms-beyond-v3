@@ -12,6 +12,15 @@ export type OfIdentity = {
   address_country: string | null;
 };
 
+export type CourseProgramSection = {
+  title: string;
+  description?: string;
+  chapters: Array<{
+    title: string;
+    subchapters: Array<{ title: string }>;
+  }>;
+};
+
 export type CourseDocInfo = {
   id: string;
   title: string;
@@ -22,6 +31,7 @@ export type CourseDocInfo = {
   skills: string[];
   prerequisites: string | null;
   audience: string[];
+  program_structure: CourseProgramSection[];
 };
 
 export type DossierDocContext = {
@@ -165,62 +175,88 @@ export async function loadDossierDocContext(
     address_country: ofRow?.address_country ? String(ofRow.address_country) : "FR",
   };
 
+  function mapCourseRow(tc: Record<string, unknown>): CourseDocInfo {
+    const structureRaw = Array.isArray(tc.program_structure) ? tc.program_structure : [];
+    const program_structure: CourseProgramSection[] = structureRaw
+      .map((section) => {
+        if (!section || typeof section !== "object") return null;
+        const s = section as {
+          title?: string;
+          description?: string;
+          chapters?: unknown[];
+        };
+        const title = String(s.title ?? "").trim();
+        if (!title) return null;
+        const chapters = Array.isArray(s.chapters)
+          ? s.chapters
+              .map((chapter) => {
+                if (!chapter || typeof chapter !== "object") return null;
+                const c = chapter as { title?: string; subchapters?: unknown[] };
+                const chapterTitle = String(c.title ?? "").trim();
+                if (!chapterTitle) return null;
+                const subchapters = Array.isArray(c.subchapters)
+                  ? c.subchapters
+                      .map((sub) => {
+                        if (typeof sub === "string") return { title: sub.trim() };
+                        if (sub && typeof sub === "object" && "title" in sub) {
+                          return { title: String((sub as { title: string }).title).trim() };
+                        }
+                        return null;
+                      })
+                      .filter((x): x is { title: string } => Boolean(x?.title))
+                  : [];
+                return { title: chapterTitle, subchapters };
+              })
+              .filter(Boolean)
+          : [];
+        return {
+          title,
+          description: s.description ? String(s.description) : undefined,
+          chapters: chapters as CourseProgramSection["chapters"],
+        };
+      })
+      .filter(Boolean) as CourseProgramSection[];
+
+    return {
+      id: String(tc.id),
+      title: String(tc.title || ""),
+      short_description: tc.short_description ? String(tc.short_description) : null,
+      duration: tc.duration ? String(tc.duration) : null,
+      level: tc.level ? String(tc.level) : null,
+      objectives: Array.isArray(tc.objectives)
+        ? tc.objectives.map((o) => String(o)).filter(Boolean)
+        : [],
+      skills: Array.isArray(tc.skills) ? tc.skills.map((o) => String(o)).filter(Boolean) : [],
+      prerequisites: tc.prerequisites ? String(tc.prerequisites) : null,
+      audience: Array.isArray(tc.audience)
+        ? tc.audience.map((o) => String(o)).filter(Boolean)
+        : [],
+      program_structure,
+    };
+  }
+
   let course: CourseDocInfo | null = null;
   const trainingCourseId = dossier.training_course_id
     ? String(dossier.training_course_id)
     : null;
+  const courseSelect =
+    "id, title, short_description, duration, level, objectives, skills, prerequisites, audience, program_structure";
   if (trainingCourseId) {
     const { data: tc } = await service
       .from("training_courses")
-      .select(
-        "id, title, short_description, duration, level, objectives, skills, prerequisites, audience",
-      )
+      .select(courseSelect)
       .eq("id", trainingCourseId)
       .maybeSingle();
-    if (tc) {
-      course = {
-        id: String(tc.id),
-        title: String(tc.title || ""),
-        short_description: tc.short_description ? String(tc.short_description) : null,
-        duration: tc.duration ? String(tc.duration) : null,
-        level: tc.level ? String(tc.level) : null,
-        objectives: Array.isArray(tc.objectives)
-          ? tc.objectives.map((o) => String(o)).filter(Boolean)
-          : [],
-        skills: Array.isArray(tc.skills) ? tc.skills.map((o) => String(o)).filter(Boolean) : [],
-        prerequisites: tc.prerequisites ? String(tc.prerequisites) : null,
-        audience: Array.isArray(tc.audience)
-          ? tc.audience.map((o) => String(o)).filter(Boolean)
-          : [],
-      };
-    }
+    if (tc) course = mapCourseRow(tc as Record<string, unknown>);
   }
   if (!course && dossier.course_title) {
     const { data: tc } = await service
       .from("training_courses")
-      .select(
-        "id, title, short_description, duration, level, objectives, skills, prerequisites, audience",
-      )
+      .select(courseSelect)
       .ilike("title", String(dossier.course_title))
       .limit(1)
       .maybeSingle();
-    if (tc) {
-      course = {
-        id: String(tc.id),
-        title: String(tc.title || ""),
-        short_description: tc.short_description ? String(tc.short_description) : null,
-        duration: tc.duration ? String(tc.duration) : null,
-        level: tc.level ? String(tc.level) : null,
-        objectives: Array.isArray(tc.objectives)
-          ? tc.objectives.map((o) => String(o)).filter(Boolean)
-          : [],
-        skills: Array.isArray(tc.skills) ? tc.skills.map((o) => String(o)).filter(Boolean) : [],
-        prerequisites: tc.prerequisites ? String(tc.prerequisites) : null,
-        audience: Array.isArray(tc.audience)
-          ? tc.audience.map((o) => String(o)).filter(Boolean)
-          : [],
-      };
-    }
+    if (tc) course = mapCourseRow(tc as Record<string, unknown>);
   }
 
   return {

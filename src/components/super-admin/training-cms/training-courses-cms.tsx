@@ -22,6 +22,7 @@ import {
   type TrainingProgramSection,
   type TrainingSessionRow,
 } from "@/lib/training-courses/cms-types";
+import { normalizeAiProgramStructure } from "@/lib/training-courses/normalize-ai-program";
 import { TrainingProgramBuilder } from "@/components/super-admin/training-cms/training-program-builder";
 import { TrainingInstructorsPicker } from "@/components/super-admin/training-cms/training-instructors-picker";
 import { TrainingOpenBadgePicker } from "@/components/super-admin/training-cms/training-open-badge-picker";
@@ -303,9 +304,9 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
 
   const applyAi = (content: TrainingAiGeneratedContent | Record<string, unknown>) => {
     if (!state) return;
-    const programStructure = Array.isArray(content.program_structure)
-      ? (content.program_structure as TrainingProgramSection[])
-      : state.program_structure;
+    const rawProgram = content.program_structure ?? (content as { program?: unknown }).program;
+    const normalized = normalizeAiProgramStructure(rawProgram);
+    const programStructure = normalized.length ? normalized : state.program_structure;
 
     setState({
       ...state,
@@ -342,8 +343,10 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
 
   const handleAiGenerated = (content: TrainingAiGeneratedContent) => {
     applyAi(content);
-    setMessage("Fiche générée. Vérifiez les informations puis cliquez sur Enregistrer.");
-    setTab("general");
+    setMessage(
+      "Fiche générée avec programme Section → Chapitre → Sous-chapitre. Vérifiez l'onglet Programme puis Enregistrer.",
+    );
+    setTab("program");
   };
 
   const runAiImprove = async () => {
@@ -370,7 +373,10 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur IA");
       applyAi(json.content);
-      setMessage("Fiche améliorée. Vérifiez les informations puis cliquez sur Enregistrer.");
+      setMessage(
+        "Fiche améliorée avec programme Section → Chapitre → Sous-chapitre. Vérifiez l'onglet Programme puis Enregistrer.",
+      );
+      setTab("program");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur IA");
     } finally {

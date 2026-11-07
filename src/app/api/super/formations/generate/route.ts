@@ -3,26 +3,32 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { generateJSON } from "@/lib/ai/openai-client";
 import { normalizeAiProgramStructure } from "@/lib/training-courses/normalize-ai-program";
 
+/** Même arborescence que le builder Programme : Section → Chapitre → Sous-chapitre. */
 const PROGRAM_STRUCTURE_SCHEMA = {
   type: "array",
+  minItems: 2,
+  maxItems: 6,
   items: {
     type: "object",
     properties: {
-      title: { type: "string" },
-      description: { type: "string" },
+      title: { type: "string", description: "Titre de la SECTION (ex. Introduction à l'Account Management)" },
+      description: { type: "string", description: "Description courte de la section" },
       chapters: {
         type: "array",
+        minItems: 2,
+        maxItems: 8,
         items: {
           type: "object",
           properties: {
-            title: { type: "string" },
-            duration: { type: "string" },
+            title: { type: "string", description: "Titre du CHAPITRE" },
             subchapters: {
               type: "array",
-              items: { type: "string" },
+              minItems: 2,
+              maxItems: 8,
+              items: { type: "string", description: "Titre du SOUS-CHAPITRE" },
             },
           },
-          required: ["title"],
+          required: ["title", "subchapters"],
         },
       },
     },
@@ -158,9 +164,14 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt =
-      "Tu es rédacteur formation professionnelle pour Byound Business (France), style CEGOS/Orsys. Réponds UNIQUEMENT en JSON valide, en français, ton premium et concret. Prix en euros HT. intra_price = prix groupe, inter_price = prix par participant. program = arborescence publique (sections avec description, chapitres avec duration optionnelle, sous-chapitres en tableau de strings) — PAS de contenu LMS. slug = kebab-case sans accents. cover_prompt = description visuelle pour générer une image de couverture professionnelle. max_intra_participants = 12 par défaut si non précisé.";
+      "Tu es rédacteur formation professionnelle pour Byound Business (France), style CEGOS/Orsys. Réponds UNIQUEMENT en JSON valide, en français, ton premium et concret. Prix en euros HT. intra_price = prix groupe, inter_price = prix par participant. " +
+      "IMPORTANT — program = arborescence EXACTE du builder catalogue Byound : " +
+      "SECTION (title + description) → CHAPITRES (title) → SOUS-CHAPITRES (tableau de strings titres). " +
+      "Minimum 2 sections, chaque section a au moins 2 chapitres, chaque chapitre a au moins 2 sous-chapitres. " +
+      "Ne dis PAS « module » : utilise Section / Chapitre / Sous-chapitre. PAS de contenu LMS. " +
+      "slug = kebab-case sans accents. cover_prompt = description visuelle couverture. max_intra_participants = 12 par défaut si non précisé.";
 
-    const sharedFields = `title, slug, short_description, long_description, domain, cover_prompt, objectives (6-10), skills (8-12), benefits (4-6), why_choose (4-6), case_studies (3-5), deliverables (3-5), methodology (4-6), program (2-4 sections, 3-6 chapitres/section, sous-chapitres si pertinent), prerequisites, audience (3-5), badge_name, inter_price, intra_price, max_intra_participants, formats, duration, level, meta_description (150-160 car.), seo_tags (8-12), faq (4-6 avec q et a)`;
+    const sharedFields = `title, slug, short_description, long_description, domain, cover_prompt, objectives (6-10), skills (8-12), benefits (4-6), why_choose (4-6), case_studies (3-5), deliverables (3-5), methodology (4-6), program (2-4 SECTIONS ; chaque section: 2-6 CHAPITRES ; chaque chapitre: 2-6 SOUS-CHAPITRES obligatoires), prerequisites, audience (3-5), badge_name, inter_price, intra_price, max_intra_participants, formats, duration, level, meta_description (150-160 car.), seo_tags (8-12), faq (4-6 avec q et a)`;
 
     const constraints = [
       domain ? `Domaine imposé : ${domain}` : null,
@@ -213,6 +224,25 @@ Retourne le JSON avec: ${sharedFields}.`;
 
     const programRaw = result.program ?? result.program_structure;
     const program_structure = normalizeAiProgramStructure(programRaw);
+    const chapterCount = program_structure.reduce((n, s) => n + s.chapters.length, 0);
+    const subCount = program_structure.reduce(
+      (n, s) => n + s.chapters.reduce((m, c) => m + c.subchapters.length, 0),
+      0,
+    );
+    if (program_structure.length < 2 || chapterCount < 2 || subCount < 2) {
+      return NextResponse.json(
+        {
+          error:
+            "L'IA n'a pas produit un programme Section → Chapitre → Sous-chapitre complet. Relancez la génération.",
+          debug: {
+            sections: program_structure.length,
+            chapters: chapterCount,
+            subchapters: subCount,
+          },
+        },
+        { status: 422 },
+      );
+    }
 
     const content = {
       ...result,

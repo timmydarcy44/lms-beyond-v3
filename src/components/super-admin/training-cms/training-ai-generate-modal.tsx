@@ -49,13 +49,18 @@ export type TrainingAiGeneratedContent = {
   case_studies?: string[];
   deliverables?: string[];
   methodology?: string[];
-  program_structure?: unknown[];
+  /** Même shape que le builder : Section → Chapitre → Sous-chapitre */
+  program_structure?: Array<{
+    title?: string;
+    description?: string;
+    chapters?: Array<{ title?: string; subchapters?: Array<string | { title?: string }> }>;
+  }>;
 };
 
 const EXAMPLE_PROMPTS = [
-  "Crée une formation de 2 jours pour des managers de proximité sur la gestion des conflits. Niveau initiation. Public : managers débutants. Format : présentiel et distanciel. Inclure des cas pratiques, un programme en 4 modules, un Open Badge, un prix inter et un prix intra.",
-  "Formation IA générative pour les équipes marketing : 1 jour, niveau intermédiaire, distanciel. Objectifs opérationnels, 6 compétences clés, cas pratiques ChatGPT et Midjourney, badge « IA Marketing Byound ».",
-  "Parcours leadership inclusif — 3 jours, niveau avancé, blended learning. Public : DRH et managers seniors. Programme en 5 modules, certification Open Badge, tarifs intra jusqu'à 12 participants.",
+  "Crée une formation de 2 jours pour des managers de proximité sur la gestion des conflits. Niveau initiation. Public : managers débutants. Format : présentiel et distanciel. Programme en Sections / Chapitres / Sous-chapitres, Open Badge, prix inter et intra.",
+  "Formation IA générative pour les équipes marketing : 1 jour, niveau intermédiaire, distanciel. Objectifs opérationnels, compétences clés, cas ChatGPT/Midjourney, programme structuré Section→Chapitre→Sous-chapitre, badge « IA Marketing Byound ».",
+  "Parcours leadership inclusif — 3 jours, niveau avancé, blended. Public : DRH et managers seniors. Au moins 3 sections avec chapitres et sous-chapitres, Open Badge, tarifs intra jusqu'à 12 participants.",
 ];
 
 const INPUT =
@@ -144,6 +149,25 @@ export function TrainingAiGenerateModal({ open, onOpenChange, onGenerated, defau
   };
 
   const programSections = Array.isArray(preview?.program_structure) ? preview.program_structure.length : 0;
+  const programChapters = Array.isArray(preview?.program_structure)
+    ? preview.program_structure.reduce(
+        (n, s) => n + (Array.isArray(s.chapters) ? s.chapters.length : 0),
+        0,
+      )
+    : 0;
+  const programSubchapters = Array.isArray(preview?.program_structure)
+    ? preview.program_structure.reduce(
+        (n, s) =>
+          n +
+          (Array.isArray(s.chapters)
+            ? s.chapters.reduce(
+                (m, c) => m + (Array.isArray(c.subchapters) ? c.subchapters.length : 0),
+                0,
+              )
+            : 0),
+        0,
+      )
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -172,7 +196,7 @@ export function TrainingAiGenerateModal({ open, onOpenChange, onGenerated, defau
               onChange={(e) => setPrompt(e.target.value)}
               rows={7}
               placeholder={`Exemple :
-"Crée une formation de 2 jours pour des managers de proximité sur la gestion des conflits. Niveau initiation. Public : managers débutants. Format : présentiel et distanciel. Inclure des cas pratiques, un programme en 4 modules, un Open Badge, un prix inter et un prix intra."`}
+"Crée une formation de 2 jours pour des managers de proximité sur la gestion des conflits. Niveau initiation. Public : managers débutants. Format : présentiel et distanciel. Programme en Sections / Chapitres / Sous-chapitres, Open Badge, prix inter et intra."`}
               className={cn(INPUT, "min-h-[180px] resize-y leading-relaxed")}
             />
           </label>
@@ -246,7 +270,10 @@ export function TrainingAiGenerateModal({ open, onOpenChange, onGenerated, defau
               <ul className="mt-4 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
                 <li>{preview.objectives?.length ?? 0} objectifs</li>
                 <li>{preview.skills?.length ?? 0} compétences</li>
-                <li>{programSections} sections programme</li>
+                <li>
+                  Programme : {programSections} sections · {programChapters} chapitres ·{" "}
+                  {programSubchapters} sous-chapitres
+                </li>
                 <li>{preview.faq?.length ?? 0} questions FAQ</li>
                 {preview.inter_price != null ? <li>Inter : {preview.inter_price} € HT</li> : null}
                 {preview.intra_price != null ? <li>Intra : {preview.intra_price} € HT</li> : null}

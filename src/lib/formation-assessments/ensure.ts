@@ -64,5 +64,5 @@ export async function ensureAssessmentAttempt(
 }
 
 export function assessmentUrl(accessToken: string): string {
-  return `${appOrigin()}/q/${accessToken}`;
+  return `${appOrigin()}/a/${accessToken}`;
 }

@@ -10,7 +10,7 @@ import {
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/browser";
 
 /**
- * Prefer the live request host (byound.fr / localhost / …) over NEXT_PUBLIC_SITE_URL.
+ * Prefer the live page host (byound.fr / localhost / …) over NEXT_PUBLIC_SITE_URL.
  * SITE_URL may point to another brand domain (ex. edgebs) on the same Vercel project,
  * which breaks WebAuthn RP ID checks in the browser.
  */
@@ -18,6 +18,7 @@ export function resolveWebAuthnConfig(requestUrl?: string): {
   rpID: string;
   rpName: string;
   origin: string;
+  origins: string[];
 } {
   let origin = "";
   if (requestUrl) {
@@ -45,19 +46,53 @@ export function resolveWebAuthnConfig(requestUrl?: string): {
     rpID,
     rpName: "Byound",
     origin,
+    origins: relatedOrigins(origin),
   };
 }
 
-/** Build absolute origin from a Next request (honours reverse-proxy hosts). */
+/** www + apex variants of an origin (same protocol). */
+export function relatedOrigins(origin: string): string[] {
+  try {
+    const u = new URL(origin);
+    const hosts = new Set<string>([u.host]);
+    if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
+      return [`${u.protocol}//${u.host}`];
+    }
+    if (u.hostname.startsWith("www.")) {
+      hosts.add(u.host.replace(/^www\./, ""));
+    } else {
+      hosts.add(`www.${u.host}`);
+    }
+    return Array.from(hosts).map((h) => `${u.protocol}//${h}`);
+  } catch {
+    return [origin];
+  }
+}
+
+/** Build absolute origin from a Next request (page Referer > proxy host). */
 export function originFromRequest(req: {
   url: string;
   headers: { get(name: string): string | null };
   nextUrl?: { origin: string };
 }): string {
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      const u = new URL(referer);
+      if (u.protocol === "http:" || u.protocol === "https:") {
+        return `${u.protocol}//${u.host}`;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   const forwardedHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
   const proto = req.headers.get("x-forwarded-proto") || "https";
   if (forwardedHost) {
-    return `${proto}://${forwardedHost.split(",")[0]!.trim()}`;
+    const host = forwardedHost.split(",")[0]!.trim();
+    // Ignore raw vercel.app deployment host when a public referer was missing —
+    // still better than edgebs SITE_URL if the request actually hit a custom domain.
+    return `${proto}://${host}`;
   }
   if (req.nextUrl?.origin) return req.nextUrl.origin;
   try {
@@ -123,11 +158,11 @@ export async function verifyRegistration(params: {
   expectedChallenge: string;
   requestUrl?: string;
 }): Promise<VerifiedRegistrationResponse> {
-  const { rpID, origin } = resolveWebAuthnConfig(params.requestUrl);
+  const { rpID, origins } = resolveWebAuthnConfig(params.requestUrl);
   return verifyRegistrationResponse({
     response: params.response,
     expectedChallenge: params.expectedChallenge,
-    expectedOrigin: origin,
+    expectedOrigin: origins,
     expectedRPID: rpID,
     requireUserVerification: true,
   });
@@ -139,12 +174,12 @@ export async function verifyAuthentication(params: {
   credential: StoredCredential;
   requestUrl?: string;
 }): Promise<VerifiedAuthenticationResponse> {
-  const { rpID, origin } = resolveWebAuthnConfig(params.requestUrl);
+  const { rpID, origins } = resolveWebAuthnConfig(params.requestUrl);
   const publicKey = Buffer.from(params.credential.publicKey, "base64url");
   return verifyAuthenticationResponse({
     response: params.response,
     expectedChallenge: params.expectedChallenge,
-    expectedOrigin: origin,
+    expectedOrigin: origins,
     expectedRPID: rpID,
     requireUserVerification: true,
     credential: {

@@ -153,31 +153,7 @@ export async function POST(req: NextRequest) {
 
   const dayPartLabel = ctx.slot.day_part === "matin" ? "matin" : "après-midi";
 
-  // Lot 6 — proposer le positionnement s'il n'est pas fait
-  let positionnementUrl: string | null = null;
-  try {
-    const { data: partRow } = await service
-      .from("formation_participants")
-      .select("id")
-      .eq("dossier_id", participant.dossier_id)
-      .eq("profile_id", participant.profile_id)
-      .maybeSingle();
-    const { ensureAssessmentAttempt, assessmentUrl } = await import(
-      "@/lib/formation-assessments/ensure"
-    );
-    const attempt = await ensureAssessmentAttempt(service, {
-      dossierId: participant.dossier_id,
-      kind: "positionnement",
-      participantId: partRow?.id ? String(partRow.id) : null,
-      profileId: participant.profile_id,
-    });
-    if (attempt.status !== "completed") {
-      positionnementUrl = assessmentUrl(attempt.access_token);
-    }
-  } catch {
-    /* non-bloquant */
-  }
-
+  // Positionnement = avant la session (mail J-7 / convocation), jamais après l'émargement.
   await sendEmail({
     to: participant.email,
     from: EDGE_COCKPIT_FROM,
@@ -186,15 +162,7 @@ export async function POST(req: NextRequest) {
       title: "Présence enregistrée",
       preheader: `${participant.name} · ${dayPartLabel}`,
       bodyHtml: `<p style="margin:0 0 12px;font-size:15px;color:#4A4A4A;">Bonjour ${escapeEdgeEmailHtml(participant.name)},</p>
-<p style="margin:0 0 12px;font-size:15px;color:#4A4A4A;">Votre présence a été enregistrée pour la demi-journée du ${escapeEdgeEmailHtml(ctx.slot.slot_date)} (${escapeEdgeEmailHtml(dayPartLabel)}).</p>
-${
-  positionnementUrl
-    ? `<p style="margin:0;font-size:15px;color:#4A4A4A;">Si ce n'est pas encore fait, complétez votre test de positionnement.</p>`
-    : ""
-}`,
-      cta: positionnementUrl
-        ? { label: "Commencer le test", href: positionnementUrl }
-        : undefined,
+<p style="margin:0;font-size:15px;color:#4A4A4A;">Votre présence a été enregistrée pour la demi-journée du ${escapeEdgeEmailHtml(ctx.slot.slot_date)} (${escapeEdgeEmailHtml(dayPartLabel)}).</p>`,
     }),
     tags: { type: "attendance-recap", slot_id: session.slotId },
   });
@@ -225,6 +193,5 @@ ${
       name: participant.name,
     },
     next_slot_label: nextLabel,
-    positionnement_url: positionnementUrl,
   });
 }

@@ -51,7 +51,6 @@ export default function EmargementPublicPage() {
   const [firstActivation, setFirstActivation] = useState(false);
   const [credentialDbId, setCredentialDbId] = useState<string | null>(null);
   const [identificationMethod, setIdentificationMethod] = useState<"otp" | "passkey">("otp");
-  const [positionnementUrl, setPositionnementUrl] = useState<string | null>(null);
 
   const code = useMemo(() => digits.join(""), [digits]);
   const canPasskey = supportsPasskeys();
@@ -261,13 +260,11 @@ export default function EmargementPublicPage() {
         error?: string;
         signature?: { signed_at: string; name: string };
         next_slot_label?: string | null;
-        positionnement_url?: string | null;
       };
       if (!res.ok) throw new Error(json.error || "Échec");
       setSignedAt(json.signature?.signed_at ?? new Date().toISOString());
       setName(json.signature?.name || name);
       setNextLabel(json.next_slot_label ?? null);
-      setPositionnementUrl(json.positionnement_url ?? null);
       setStep("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -369,7 +366,8 @@ export default function EmargementPublicPage() {
           <section className="rounded-2xl p-5" style={{ background: SURFACE, border: `1px solid ${BORDER}` }}>
             <h2 className="text-lg font-bold">Identifiez-vous</h2>
             <p className="mt-1 text-sm" style={{ color: MUTED }}>
-              E-mail communiqué à Byound. Aucune liste de noms n&apos;est affichée.
+              Saisissez l&apos;e-mail communiqué à Byound. Vous recevrez un code à 6 chiffres
+              à coller à l&apos;écran suivant (distinct du code salle).
             </p>
             <label className="mt-4 block text-sm" style={{ color: MUTED }} htmlFor="email">
               E-mail
@@ -418,13 +416,20 @@ export default function EmargementPublicPage() {
         {step === "otp" ? (
           <section className="rounded-2xl p-5" style={{ background: SURFACE, border: `1px solid ${BORDER}` }}>
             <h2 className="text-lg font-bold">Code reçu par e-mail</h2>
+            <p className="mt-2 text-sm" style={{ color: MUTED }}>
+              Ouvrez l&apos;e-mail « Code émargement Byound » envoyé à{" "}
+              <span style={{ color: TEXT }}>{email}</span>, puis saisissez ici les{" "}
+              <strong style={{ color: TEXT }}>6 chiffres</strong> (pas le code salle à 4 chiffres).
+            </p>
             <input
               inputMode="numeric"
+              autoComplete="one-time-code"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="mt-4 w-full rounded-xl px-3 py-3 text-center text-2xl tracking-[0.3em] outline-none"
               style={{ background: BG, border: `1px solid ${BORDER}`, color: TEXT, minHeight: 44 }}
-              aria-label="Code à 6 chiffres"
+              aria-label="Code à 6 chiffres reçu par e-mail"
+              placeholder="••••••"
             />
             {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
             <button
@@ -572,15 +577,6 @@ export default function EmargementPublicPage() {
               <p className="mt-6 text-sm" style={{ color: MUTED }}>
                 Prochaine signature : {nextLabel}
               </p>
-            ) : null}
-            {positionnementUrl ? (
-              <a
-                href={positionnementUrl}
-                className="mt-4 block w-full rounded-2xl py-3.5 text-center font-semibold text-white"
-                style={{ background: ACCENT, minHeight: 44 }}
-              >
-                Commencer le test de positionnement
-              </a>
             ) : null}
           </section>
         ) : null}

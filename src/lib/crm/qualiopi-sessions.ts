@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { SIGNED_DEAL_STAGES_FOR_FORMATIONS } from "@/lib/crm/pipeline-shared";
 import { QUALIOPI_CORE_DOCS } from "@/lib/crm/qualiopi-shared";
 
+/** @deprecated Prefer isDossierDealTriggerStage — client_actif ne crée plus de dossier. */
 export function isSignedDealStage(stageSlug: string | null | undefined) {
   return SIGNED_DEAL_STAGES_FOR_FORMATIONS.includes(
     String(stageSlug) as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
@@ -35,42 +36,17 @@ export async function copyTemplateDocsToSession(supabase: SupabaseClient, sessio
   }
 }
 
+/** @deprecated Lot 1 — plus de coquilles vides. Utiliser ensureDossierFromWonDeal. */
 export async function ensureQualiopiSessionForDeal(
-  supabase: SupabaseClient,
-  deal: { id: string; company_name?: string | null; quoted_course_ids?: string[] | null }
+  _supabase: SupabaseClient,
+  _deal: { id: string; company_name?: string | null; quoted_course_ids?: string[] | null },
 ) {
-  const { data: existing } = await supabase
-    .from("crm_qualiopi_sessions")
-    .select("id")
-    .eq("deal_id", deal.id)
-    .limit(1);
-  if (existing?.length) return existing[0];
-
-  const quoted = Array.isArray(deal.quoted_course_ids) ? deal.quoted_course_ids : [];
-  const { data: session, error } = await supabase
-    .from("crm_qualiopi_sessions")
-    .insert({
-      deal_id: deal.id,
-      course_id: quoted[0] ?? null,
-      course_name: "Formation à programmer",
-      status: "scheduled",
-    })
-    .select()
-    .single();
-  if (error || !session) return null;
-  await copyTemplateDocsToSession(supabase, session.id);
-  return session;
+  return null;
 }
 
-export async function syncSignedDealsIntoFormations(supabase: SupabaseClient) {
-  const { data: deals } = await supabase
-    .from("crm_pipeline_deals")
-    .select("id, company_name, quoted_course_ids, stage_slug")
-    .eq("pipeline_type", "btob")
-    .in("stage_slug", [...SIGNED_DEAL_STAGES_FOR_FORMATIONS]);
-  for (const deal of deals ?? []) {
-    await ensureQualiopiSessionForDeal(supabase, deal);
-  }
+/** @deprecated Lot 1 — backfill désactivé. */
+export async function syncSignedDealsIntoFormations(_supabase: SupabaseClient) {
+  return;
 }
 
 export function newAttendeeToken() {

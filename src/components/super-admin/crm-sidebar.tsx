@@ -134,7 +134,8 @@ const CRM_LINKS: CrmNavLink[] = [
   { href: "/super/crm/onboarding", label: "Onboarding clients", icon: Rocket, section: "commercial" },
   { href: "/super/organisations", label: "Comptes clients", icon: Building2, section: "clients" },
   { href: "/super/utilisateurs?role=btoc", label: "Clients particuliers", icon: ShoppingBag, section: "clients" },
-  { href: "/super/crm/formations", label: "Formations", icon: ClipboardList, section: "formation" },
+  { href: "/super/crm/programmation", label: "Programmation", icon: ClipboardList, section: "formation" },
+  { href: "/super/crm/formations", label: "Legacy Qualiopi", icon: ClipboardList, section: "formation" },
   { href: "/super/utilisateurs?role=learner", label: "Apprenants", icon: UserCircle, section: "formation" },
   { href: "/super/utilisateurs?role=instructor", label: "Formateurs", icon: GraduationCap, section: "formation" },
   { href: "/super/utilisateurs?role=tutor", label: "Tuteurs", icon: UserCheck, section: "formation" },
@@ -142,6 +143,7 @@ const CRM_LINKS: CrmNavLink[] = [
   { href: "/super/crm/qualiopi", label: "Qualiopi", icon: FileBadge, section: "certification" },
   { href: "/super/crm/qualiopi/veilles", label: "Veilles", icon: Newspaper, section: "certification" },
   { href: "/super/crm/qualiopi/qualite", label: "Qualité", icon: ClipboardList, section: "certification" },
+  { href: "/super/qualite/bpf", label: "BPF", icon: FileBadge, section: "certification" },
   { href: "/super/crm/qualiopi/process", label: "Process", icon: ClipboardList, section: "certification" },
   { href: "/super/crm/qualiopi/formateurs", label: "Formateurs", icon: UserCheck, section: "certification" },
   { href: "/super/crm/qualiopi/catalogue", label: "Preuves catalogue", icon: GraduationCap, section: "certification" },
@@ -189,6 +191,9 @@ function isLinkActive(
   }
   if (item.href === "/super/experts") {
     return pathname.startsWith("/super/experts");
+  }
+  if (item.href === "/super/crm/programmation") {
+    return pathname.startsWith("/super/crm/programmation");
   }
   if (item.href === "/super/crm/formations") {
     return pathname.startsWith("/super/crm/formations");

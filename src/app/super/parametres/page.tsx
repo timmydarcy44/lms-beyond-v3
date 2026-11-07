@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, User, Mail } from "lucide-react";
 import { StripeConnectButton } from "@/components/super-admin/stripe-connect-button";
+import { OfSettingsForm } from "@/components/super-admin/of-settings-form";
 
 export default async function SettingsPage() {
   return (
@@ -14,6 +15,8 @@ export default async function SettingsPage() {
           Configuration et gestion de l'accès super admin
         </p>
       </div>
+
+      <OfSettingsForm />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-gray-200 bg-white shadow-sm">

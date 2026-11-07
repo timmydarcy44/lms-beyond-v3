@@ -4,12 +4,16 @@ import { applyCommercialFieldsFromBody } from "@/lib/crm/apply-commercial-deal-f
 import { updatePipelineDeal } from "@/lib/crm/pipeline-deal-update";
 import { syncSchoolCompany } from "@/lib/cfa/sync-school-company";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
-import { ensureQualiopiSessionForDeal, isSignedDealStage } from "@/lib/crm/qualiopi-sessions";
 import {
   applyOpportunityFieldsToDealPatch,
   logDealStageChange,
   syncPrimaryOpportunity,
 } from "@/lib/crm/pipeline-opportunity-sync";
+import {
+  ensureDossierFromWonDeal,
+  syncDealRegressionFlag,
+} from "@/lib/formation-dossier/create-dossier";
+import { isDossierDealTriggerStage } from "@/lib/formation-dossier/constants";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -151,12 +155,29 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     });
   }
 
-  if (isSignedDealStage(nextStage) && data) {
-    await ensureQualiopiSessionForDeal(supabase, {
-      id,
-      company_name: data.company_name,
-      quoted_course_ids: data.quoted_course_ids,
-    });
+  if (prevStage !== nextStage && nextStage) {
+    await syncDealRegressionFlag(supabase, id, prevStage, nextStage);
+  }
+
+  if (isDossierDealTriggerStage(nextStage) && data) {
+    let actorUserId: string | null = null;
+    try {
+      const userClient = await getServerClient();
+      const { data: auth } = userClient
+        ? await userClient.auth.getUser()
+        : { data: { user: null } };
+      actorUserId = auth.user?.id ?? null;
+    } catch {
+      /* ignore */
+    }
+    try {
+      await ensureDossierFromWonDeal(supabase, id, actorUserId);
+    } catch (err) {
+      console.warn(
+        "[pipeline/deals] dossier auto:",
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 
   return NextResponse.json({ deal: data });

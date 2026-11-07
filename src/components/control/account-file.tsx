@@ -12,12 +12,24 @@ import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
-type Tab = "overview" | "members" | "courses" | "badges" | "tests" | "revenue" | "funding" | "documents" | "modules" | "journal";
+type Tab =
+  | "overview"
+  | "members"
+  | "courses"
+  | "dossiers"
+  | "badges"
+  | "tests"
+  | "revenue"
+  | "funding"
+  | "documents"
+  | "modules"
+  | "journal";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "members", label: "Membres" },
-  { id: "courses", label: "Formations" },
+  { id: "courses", label: "Formations LMS" },
+  { id: "dossiers", label: "Dossiers formation" },
   { id: "badges", label: "Open Badges" },
   { id: "tests", label: "Tests" },
   { id: "revenue", label: "Chiffre d'affaires" },
@@ -112,6 +124,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {tab === "overview" ? <Overview detail={detail} onOpen={setPanel} /> : null}
       {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
       {tab === "courses" ? <CoursesTab detail={detail} onAssign={() => setPanel("course")} /> : null}
+      {tab === "dossiers" ? <FormationDossiersTab organizationId={account.id} /> : null}
       {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
       {tab === "tests" ? <EmptyState title="Aucun test envoyé pour ce compte." /> : null}
       {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
@@ -807,6 +820,123 @@ function ImportPanel({ orgId, onClose, onDone }: { orgId: string; onClose: () =>
         </form>
       ) : null}
     </SidePanel>
+  );
+}
+
+function FormationDossiersTab({ organizationId }: { organizationId: string }) {
+  const [rows, setRows] = useState<
+    Array<{
+      id: string;
+      course_title: string | null;
+      status: string;
+      amount_ht_cents: number | null;
+      deal_regressed: boolean;
+      pending_confirm_fields: unknown;
+      created_at: string;
+    }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [notice, setLocalNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/super-admin/crm/formation-dossiers?organization_id=${encodeURIComponent(organizationId)}`,
+        );
+        const json = (await res.json()) as { dossiers?: typeof rows; error?: string };
+        if (!cancelled) setRows(json.dossiers ?? []);
+      } catch {
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[#9AA3BD]">
+          Dossiers de programmation (hors LMS). Remplace les anciennes coquilles Qualiopi.
+        </p>
+        <button
+          type="button"
+          disabled={creating}
+          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
+          onClick={async () => {
+            setCreating(true);
+            setLocalNotice(null);
+            try {
+              const res = await fetch("/api/super-admin/crm/formation-dossiers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ organization_id: organizationId, source: "manual" }),
+              });
+              const json = (await res.json()) as { dossier?: { id: string }; error?: string };
+              if (!res.ok) throw new Error(json.error || "Création impossible");
+              setRows((current) => [
+                {
+                  id: json.dossier!.id,
+                  course_title: null,
+                  status: "qualification",
+                  amount_ht_cents: null,
+                  deal_regressed: false,
+                  pending_confirm_fields: [],
+                  created_at: new Date().toISOString(),
+                },
+                ...current,
+              ]);
+              setLocalNotice("Dossier créé en Qualification.");
+            } catch (error) {
+              setLocalNotice(error instanceof Error ? error.message : "Création impossible");
+            } finally {
+              setCreating(false);
+            }
+          }}
+        >
+          Nouveau dossier
+        </button>
+      </div>
+      {notice ? <p className="text-sm text-[#C4BAFF]">{notice}</p> : null}
+      {loading ? (
+        <EmptyState title="Chargement des dossiers…" />
+      ) : rows.length === 0 ? (
+        <EmptyState title="Aucun dossier formation pour cette entreprise." />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-[#262A4A]">
+          <div className="grid grid-cols-[1.4fr_0.8fr_0.7fr_0.6fr] gap-2 border-b border-[#262A4A] bg-[#141731] px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-[#A3A8C7]">
+            <span>Formation</span>
+            <span>Statut</span>
+            <span>Montant HT</span>
+            <span>Flags</span>
+          </div>
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              className="grid grid-cols-[1.4fr_0.8fr_0.7fr_0.6fr] gap-2 border-b border-[#262A4A]/px-4 py-3 text-sm text-[#F3F4FA] last:border-b-0"
+            >
+              <span>{row.course_title?.trim() || "À confirmer"}</span>
+              <span className="text-[#A3A8C7]">{row.status}</span>
+              <span>
+                {row.amount_ht_cents != null
+                  ? `${(row.amount_ht_cents / 100).toLocaleString("fr-FR")} €`
+                  : "—"}
+              </span>
+              <span className="text-[#A3A8C7]">
+                {row.deal_regressed ? "Deal reculé" : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

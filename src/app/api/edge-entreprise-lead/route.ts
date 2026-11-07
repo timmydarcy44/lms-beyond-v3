@@ -62,7 +62,50 @@ Besoin principal : ${escapeHtml(besoin)}</p>
       console.info("[edge-entreprise-lead]", { nom, email, entreprise, taille, besoin, message });
     }
 
-    return NextResponse.json({ success: true });
+    let dossierId: string | null = null;
+    try {
+      const { getServiceRoleClient } = await import("@/lib/supabase/server");
+      const { createFormationDossier } = await import("@/lib/formation-dossier/create-dossier");
+      const service = getServiceRoleClient();
+      if (service) {
+        const slugBase = entreprise
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 40);
+        const slug = `${slugBase || "entreprise"}-${Date.now().toString(36)}`;
+        const { data: org } = await service
+          .from("organizations")
+          .insert({
+            name: entreprise,
+            slug,
+            status: "onboarding",
+            kind: "client",
+          })
+          .select("id")
+          .single();
+        if (org?.id) {
+          const dossier = await createFormationDossier(service, {
+            organizationId: String(org.id),
+            source: "site_request",
+            courseTitle: besoin,
+            contactName: nom,
+            contactEmail: email,
+            notes: [`Taille: ${taille}`, message].filter(Boolean).join("\n"),
+          });
+          dossierId = dossier.id;
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "[edge-entreprise-lead] dossier:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+
+    return NextResponse.json({ success: true, dossierId });
   } catch (e) {
     console.error("[edge-entreprise-lead]", e);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

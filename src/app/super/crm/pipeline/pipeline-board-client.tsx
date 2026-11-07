@@ -84,6 +84,7 @@ type DealForm = {
   city: string;
   zip_code: string;
   company_creation_date: string;
+  organization_id?: string | null;
   quoted_course_ids: string[];
   quoted_products: PipelineQuotedProductLine[];
 };
@@ -108,6 +109,7 @@ const emptyDeal = (stage: string): DealForm => ({
   city: "",
   zip_code: "",
   company_creation_date: "",
+  organization_id: null,
   quoted_course_ids: [],
   quoted_products: [],
 });
@@ -420,6 +422,7 @@ export const PipelineBoardClient = forwardRef<
       city: deal.city ?? "",
       zip_code: deal.zip_code ?? "",
       company_creation_date: (deal.company_creation_date ?? "") as string,
+      organization_id: deal.organization_id ?? null,
       quoted_course_ids: deal.quoted_course_ids ?? [],
       quoted_products: parseQuotedProducts(deal.quoted_products),
     });

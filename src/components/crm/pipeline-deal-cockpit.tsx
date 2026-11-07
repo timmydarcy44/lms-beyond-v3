@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
 import { PipelineQuoteFormationsCompact } from "@/components/crm/pipeline-quote-formations";
 import { PipelineQuoteProducts } from "@/components/crm/pipeline-quote-products";
-import { PipelineDealQualiopiDossier } from "@/components/crm/pipeline-deal-qualiopi-dossier";
+import { PipelineDealFormationDossiers } from "@/components/crm/pipeline-deal-formation-dossiers";
 import {
   computeQuotedProductsCents,
   type PipelineQuotedProductLine,
@@ -50,6 +50,7 @@ import { PIPELINE_OPPORTUNITY_TYPE_OPTIONS } from "@/lib/crm/pipeline-opportunit
 
 export type DealCockpitForm = {
   id?: string;
+  organization_id?: string | null;
   stage_slug: string;
   contact_owner_email: string;
   siret: string;
@@ -975,7 +976,11 @@ export function PipelineDealCockpit({
 
       {activeTab === "qualiopi" ? (
         <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <PipelineDealQualiopiDossier dealId={form.id} tone="dark" />
+          <PipelineDealFormationDossiers
+            dealId={form.id}
+            organizationId={form.organization_id}
+            tone="dark"
+          />
         </section>
       ) : null}
     </div>

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
-import {
-  copyTemplateDocsToSession,
-  newAttendeeToken,
-  syncSignedDealsIntoFormations,
-} from "@/lib/crm/qualiopi-sessions";
 
 export async function GET() {
   if (!(await isSuperAdmin())) {
@@ -14,12 +9,20 @@ export async function GET() {
   const supabase = getServiceRoleClient();
   if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  await syncSignedDealsIntoFormations(supabase);
-
-  const { data: sessions, error } = await supabase
+  // Plus de backfill de coquilles « Formation à programmer » (Lot 1 dossiers).
+  let sessionsQuery = supabase
     .from("crm_qualiopi_sessions")
     .select("*")
     .order("created_at", { ascending: false });
+
+  // archived_at ajouté par migration Lot 1 — fallback si colonne absente
+  const withArchive = await sessionsQuery.is("archived_at", null);
+  const sessionsResult =
+    withArchive.error && /archived_at/i.test(withArchive.error.message)
+      ? await supabase.from("crm_qualiopi_sessions").select("*").order("created_at", { ascending: false })
+      : withArchive;
+
+  const { data: sessions, error } = sessionsResult;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const ids = (sessions ?? []).map((row) => row.id);
@@ -67,57 +70,18 @@ export async function GET() {
   });
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
-  const supabase = getServiceRoleClient();
-  if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-  const dealId = String(body?.deal_id ?? "").trim();
-  if (!dealId) return NextResponse.json({ error: "Client manquant" }, { status: 400 });
-
-  const { data: deal } = await supabase.from("crm_pipeline_deals").select("*").eq("id", dealId).maybeSingle();
-  if (!deal) return NextResponse.json({ error: "Fiche client introuvable" }, { status: 404 });
-
-  const courseName = String(body?.course_name ?? "").trim() || "Formation à programmer";
-  const { data: session, error } = await supabase
-    .from("crm_qualiopi_sessions")
-    .insert({
-      deal_id: dealId,
-      course_id: body?.course_id ? String(body.course_id) : null,
-      course_name: courseName,
-      scheduled_at: body?.scheduled_at ? String(body.scheduled_at) : null,
-      status: "scheduled",
-    })
-    .select()
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-  await copyTemplateDocsToSession(supabase, session.id);
-
-  const attendeesRaw = Array.isArray(body?.attendees) ? body.attendees : [];
-  const attendees = attendeesRaw
-    .map((item) => {
-      const row = item as Record<string, unknown>;
-      return {
-        full_name: String(row.full_name ?? row.name ?? "").trim(),
-        email: String(row.email ?? "").trim().toLowerCase(),
-      };
-    })
-    .filter((item) => item.full_name && item.email.includes("@"));
-  if (attendees.length) {
-    await supabase.from("crm_qualiopi_attendees").insert(
-      attendees.map((item) => ({
-        session_id: session.id,
-        full_name: item.full_name,
-        email: item.email,
-        token: newAttendeeToken(),
-        satisfaction_token: newAttendeeToken(),
-      }))
-    );
-  }
-
-  return NextResponse.json({ session });
+  // Lot 1 : plus de coquilles Qualiopi vides — utiliser POST /api/super-admin/crm/formation-dossiers
+  return NextResponse.json(
+    {
+      error:
+        "Utilisez les Dossiers formation (Programmation). La création de sessions Qualiopi vides est désactivée.",
+      code: "use_formation_dossiers",
+    },
+    { status: 410 },
+  );
 }

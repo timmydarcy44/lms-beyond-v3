@@ -170,7 +170,19 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     label: "Qualité et pilotage",
     dot: "#9AA3BD",
     items: [
+      {
+        id: "programmation",
+        label: "Programmation",
+        href: "/super/crm/programmation",
+        match: under("/super/crm/programmation"),
+      },
       { id: "qualiopi", label: "Qualiopi", href: "/super/crm/qualiopi", match: exact("/super/crm/qualiopi") },
+      {
+        id: "bpf",
+        label: "BPF",
+        href: "/super/qualite/bpf",
+        match: under("/super/qualite/bpf"),
+      },
       {
         id: "veilles",
         label: "Veilles",

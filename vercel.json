@@ -55,6 +55,18 @@
     {
       "path": "/api/cron/qualiopi-veilles",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/formation-relances",
+      "schedule": "15 7 * * *"
+    },
+    {
+      "path": "/api/cron/bpf-campaign",
+      "schedule": "0 8 1 4 *"
+    },
+    {
+      "path": "/api/cron/bpf-campaign",
+      "schedule": "30 8 * * 1"
     }
   ]
 }

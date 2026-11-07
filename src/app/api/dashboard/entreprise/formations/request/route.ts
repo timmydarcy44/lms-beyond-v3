@@ -126,5 +126,36 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ success: true, messageId: result.messageId });
+  let dossierId: string | null = null;
+  try {
+    const { createFormationDossier } = await import("@/lib/formation-dossier/create-dossier");
+    if (service) {
+      const dossier = await createFormationDossier(service, {
+        organizationId: access.organizationId,
+        source: "dashboard_request",
+        courseTitle: training.title,
+        contactName,
+        contactEmail,
+        contactPhone: contactPhone || null,
+        notes: [
+          preferredFormat ? `Format: ${preferredFormat}` : null,
+          preferredPeriod ? `Période: ${preferredPeriod}` : null,
+          participants ? `Participants: ${participants}` : null,
+          notes || null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        createdBy: access.userId ?? null,
+        ownerUserId: access.userId ?? null,
+      });
+      dossierId = dossier.id;
+    }
+  } catch (err) {
+    console.warn(
+      "[entreprise/formations/request] dossier:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  return NextResponse.json({ success: true, messageId: result.messageId, dossierId });
 }

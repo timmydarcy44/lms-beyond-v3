@@ -136,6 +136,61 @@ export async function scheduleAbsentRelances(
   }
 }
 
+/**
+ * Après convention + date de session fixée : positionnement à J-3 pour chaque
+ * participant, puis synthèse formateur à J-1.
+ */
+export async function schedulePositionnementMails(
+  service: SupabaseClient,
+  params: {
+    dossierId: string;
+    /** Première date de session (YYYY-MM-DD). */
+    firstSlotDate: string;
+    participants: Array<{
+      participantId: string;
+      profileId: string;
+      email: string;
+      name: string;
+    }>;
+    trainerEmail: string | null;
+    courseTitle?: string | null;
+  },
+) {
+  const slotDate = new Date(`${params.firstSlotDate}T09:00:00`);
+  if (!Number.isFinite(slotDate.getTime())) return;
+
+  const j3 = new Date(slotDate.getTime() - 3 * DAY_MS);
+  const j1 = new Date(slotDate.getTime() - 1 * DAY_MS);
+  const sendAtJ3 = j3.getTime() < Date.now() ? new Date() : j3;
+  const sendAtJ1 = j1.getTime() < Date.now() ? new Date(Date.now() + 5 * 60_000) : j1;
+
+  for (const p of params.participants) {
+    if (!p.email.includes("@")) continue;
+    await upsertScheduledMail(service, {
+      dossierId: params.dossierId,
+      kind: "positionnement_j3",
+      toEmail: p.email,
+      scheduledAt: sendAtJ3,
+      participantId: p.participantId,
+      profileId: p.profileId,
+      payload: { name: p.name, course_title: params.courseTitle ?? null },
+    });
+  }
+
+  if (params.trainerEmail?.includes("@")) {
+    await upsertScheduledMail(service, {
+      dossierId: params.dossierId,
+      kind: "positionnement_synth_formateur",
+      toEmail: params.trainerEmail,
+      scheduledAt: sendAtJ1,
+      payload: {
+        course_title: params.courseTitle ?? null,
+        first_slot_date: params.firstSlotDate,
+      },
+    });
+  }
+}
+
 /** J+60 éval à froid (participants) + questionnaire entreprise (contact). */
 export async function schedulePostSessionMails(
   service: SupabaseClient,

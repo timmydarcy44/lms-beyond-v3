@@ -113,6 +113,8 @@ export type ScheduledMailKind =
   | "convention_relance_j3"
   | "convention_relance_j7"
   | "convocation_j7"
+  | "positionnement_j3"
+  | "positionnement_synth_formateur"
   | "absent_relance"
   | "eval_froid_j60"
   | "questionnaire_entreprise_j60";

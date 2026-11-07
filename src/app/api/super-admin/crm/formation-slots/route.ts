@@ -85,6 +85,68 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: slotErr?.message || "Créneau impossible" }, { status: 400 });
   }
 
+  // Si une date de session est fixée : (re)planifier positionnement J-3 + synthèse formateur.
+  try {
+    const { data: dossierFull } = await service
+      .from("formation_dossiers")
+      .select("id, status, course_title, trainer_user_id")
+      .eq("id", dossierId)
+      .maybeSingle();
+    if (
+      dossierFull &&
+      ["mise_en_place", "session", "convention"].includes(String(dossierFull.status))
+    ) {
+      const { data: firstSlot } = await service
+        .from("formation_slots")
+        .select("slot_date")
+        .eq("session_id", sessionId)
+        .order("slot_date", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const { data: parts } = await service
+        .from("formation_participants")
+        .select("id, profile_id")
+        .eq("dossier_id", dossierId);
+      const profileIds = (parts ?? []).map((p) => String(p.profile_id));
+      const { data: profiles } = profileIds.length
+        ? await service
+            .from("profiles")
+            .select("id, email, reference_email, full_name, first_name, last_name")
+            .in("id", profileIds)
+        : { data: [] as Array<Record<string, unknown>> };
+      const byId = new Map((profiles ?? []).map((p) => [String(p.id), p]));
+      const { schedulePositionnementMails } = await import("@/lib/formation-documents/schedule");
+      const { resolveTrainerEmail } = await import("@/lib/formation-assessments/synth");
+      const trainerEmail = await resolveTrainerEmail(service, dossierId);
+      await schedulePositionnementMails(service, {
+        dossierId,
+        firstSlotDate: String(firstSlot?.slot_date || slot.slot_date),
+        courseTitle: dossierFull.course_title ? String(dossierFull.course_title) : null,
+        trainerEmail,
+        participants: (parts ?? [])
+          .map((p) => {
+            const profile = byId.get(String(p.profile_id));
+            const email = String(profile?.reference_email || profile?.email || "")
+              .trim()
+              .toLowerCase();
+            const name =
+              String(profile?.full_name ?? "").trim() ||
+              [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+              email;
+            return {
+              participantId: String(p.id),
+              profileId: String(p.profile_id),
+              email,
+              name,
+            };
+          })
+          .filter((p) => p.email.includes("@")),
+      });
+    }
+  } catch (e) {
+    console.warn("[formation-slots] schedule positionnement:", e);
+  }
+
   return NextResponse.json({ session_id: sessionId, slot }, { status: 201 });
 }
 

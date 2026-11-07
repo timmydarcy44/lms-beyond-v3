@@ -140,9 +140,9 @@ export async function transitionFormationDossier(
   try {
     const { generateFormationDocuments } = await import("@/lib/formation-documents/generate");
     const { loadDossierDocContext } = await import("@/lib/formation-documents/context");
-    const { schedulePostSessionMails, upsertScheduledMail } = await import(
-      "@/lib/formation-documents/schedule"
-    );
+    const { schedulePostSessionMails, schedulePositionnementMails, upsertScheduledMail } =
+      await import("@/lib/formation-documents/schedule");
+    const { resolveTrainerEmail } = await import("@/lib/formation-assessments/synth");
 
     if (params.toStatus === "devis") {
       await generateFormationDocuments(service, {
@@ -177,6 +177,21 @@ export async function transitionFormationDossier(
             payload: { name: p.name },
           });
         }
+        const trainerEmail = await resolveTrainerEmail(service, params.dossierId);
+        await schedulePositionnementMails(service, {
+          dossierId: params.dossierId,
+          firstSlotDate: firstSlot.slot_date,
+          courseTitle: ctx.dossier.course_title,
+          trainerEmail,
+          participants: ctx.participants
+            .filter((p) => p.email)
+            .map((p) => ({
+              participantId: p.id,
+              profileId: p.profile_id,
+              email: p.email!,
+              name: p.name,
+            })),
+        });
       }
     } else if (params.toStatus === "fin") {
       await generateFormationDocuments(service, {

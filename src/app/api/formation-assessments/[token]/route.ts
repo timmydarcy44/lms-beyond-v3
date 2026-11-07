@@ -97,6 +97,53 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: error?.message || "Enregistrement impossible" }, { status: 400 });
   }
 
+  // Positionnement : si tout le monde a répondu, envoyer la synthèse formateur tout de suite.
+  if (complete && attempt.kind === "positionnement") {
+    try {
+      const { data: parts } = await service
+        .from("formation_participants")
+        .select("id")
+        .eq("dossier_id", attempt.dossier_id);
+      const { data: done } = await service
+        .from("formation_assessment_attempts")
+        .select("participant_id")
+        .eq("dossier_id", attempt.dossier_id)
+        .eq("kind", "positionnement")
+        .eq("status", "completed");
+      const partIds = new Set((parts ?? []).map((p) => String(p.id)));
+      const doneIds = new Set(
+        (done ?? []).map((d) => String(d.participant_id || "")).filter(Boolean),
+      );
+      const allDone =
+        partIds.size > 0 && [...partIds].every((id) => doneIds.has(id));
+      if (allDone) {
+        const { resolveTrainerEmail, sendPositionnementSynthToTrainer } = await import(
+          "@/lib/formation-assessments/synth"
+        );
+        const trainerEmail = await resolveTrainerEmail(service, String(attempt.dossier_id));
+        if (trainerEmail) {
+          await sendPositionnementSynthToTrainer(service, {
+            dossierId: String(attempt.dossier_id),
+            toEmail: trainerEmail,
+          });
+          await service
+            .from("formation_scheduled_mails")
+            .update({
+              cancelled_at: now,
+              cancel_reason: "all_completed_early",
+              updated_at: now,
+            })
+            .eq("dossier_id", attempt.dossier_id)
+            .eq("kind", "positionnement_synth_formateur")
+            .is("sent_at", null)
+            .is("cancelled_at", null);
+        }
+      }
+    } catch (e) {
+      console.warn("[formation-assessments] synth formateur:", e);
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     status: updated.status,

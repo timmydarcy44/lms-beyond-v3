@@ -77,7 +77,7 @@ export async function sendAssessmentInvites(
     const url = assessmentUrl(attempt.access_token);
     const body =
       params.kind === "positionnement"
-        ? `Avant ou au début de « ${escapeEdgeEmailHtml(course)} », merci de répondre à quelques questions (1 écran = 1 question).`
+        ? `Votre formation « ${escapeEdgeEmailHtml(course)} » approche. Merci de répondre à ce court test de positionnement 2 à 3 jours avant la session (1 écran = 1 question).`
         : params.kind === "eval_chaud"
           ? `La formation « ${escapeEdgeEmailHtml(course)} » vient de se terminer. Votre avis à chaud nous est précieux.`
           : `Deux mois après « ${escapeEdgeEmailHtml(course)} », partagez l'impact sur votre pratique.`;

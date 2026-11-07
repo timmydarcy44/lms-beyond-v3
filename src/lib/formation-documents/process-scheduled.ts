@@ -144,6 +144,15 @@ export async function processDueFormationMails(
         errors.push(`${row.id}: ${result.error}`);
         continue;
       }
+      await service
+        .from("formation_scheduled_mails")
+        .update({ sent_at: now, updated_at: now })
+        .eq("id", row.id);
+      sent += 1;
+      continue;
+    }
+
+    if (row.kind === "positionnement_j3") {
       try {
         const attempt = await ensureAssessmentAttempt(service, {
           dossierId: row.dossier_id,
@@ -151,26 +160,67 @@ export async function processDueFormationMails(
           participantId: row.participant_id,
           profileId: row.profile_id,
         });
+        if (attempt.status === "completed") {
+          await service
+            .from("formation_scheduled_mails")
+            .update({
+              cancelled_at: now,
+              cancel_reason: "already_completed",
+              updated_at: now,
+            })
+            .eq("id", row.id);
+          skipped += 1;
+          continue;
+        }
         const name =
           row.payload && typeof row.payload.name === "string" ? row.payload.name : null;
-        await sendEmail({
+        const course =
+          row.payload && typeof row.payload.course_title === "string"
+            ? row.payload.course_title
+            : "votre formation";
+        const result = await sendEmail({
           to: row.to_email,
           from: EDGE_COCKPIT_FROM,
           subject: "Test de positionnement — Byound",
           html: buildEdgeEmailShell({
             title: "Test de positionnement",
-            preheader: "Quelques questions avant la formation",
+            preheader: "À faire 2–3 jours avant la session",
             bodyHtml: `${edgeEmailParagraph(
               name ? `Bonjour ${escapeEdgeEmailHtml(name)},` : "Bonjour,",
             )}${edgeEmailParagraph(
-              "Avant votre session, répondez à un court test de positionnement (une question par écran).",
+              `Votre formation « ${escapeEdgeEmailHtml(course)} » approche. Merci de répondre à ce court test de positionnement (une question par écran) — idéalement 2 à 3 jours avant la session.`,
             )}`,
             cta: { label: "Commencer le test", href: assessmentUrl(attempt.access_token) },
           }),
           tags: { type: "formation-positionnement", dossier_id: row.dossier_id },
         });
+        if (!result.success) {
+          errors.push(`${row.id}: ${result.error}`);
+          continue;
+        }
       } catch (e) {
-        console.warn("[formation-relances] positionnement:", e);
+        errors.push(`${row.id}: ${e instanceof Error ? e.message : "positionnement"}`);
+        continue;
+      }
+      await service
+        .from("formation_scheduled_mails")
+        .update({ sent_at: now, updated_at: now })
+        .eq("id", row.id);
+      sent += 1;
+      continue;
+    }
+
+    if (row.kind === "positionnement_synth_formateur") {
+      const { sendPositionnementSynthToTrainer } = await import(
+        "@/lib/formation-assessments/synth"
+      );
+      const result = await sendPositionnementSynthToTrainer(service, {
+        dossierId: row.dossier_id,
+        toEmail: row.to_email,
+      });
+      if (!result.ok) {
+        errors.push(`${row.id}: ${result.error}`);
+        continue;
       }
       await service
         .from("formation_scheduled_mails")

@@ -6,7 +6,7 @@ import {
   isLot4Kind,
   type Lot4DocumentKind,
 } from "@/lib/formation-documents/constants";
-import { appOrigin, loadDossierDocContext } from "@/lib/formation-documents/context";
+import { loadDossierDocContext } from "@/lib/formation-documents/context";
 import { generateFormationDocuments } from "@/lib/formation-documents/generate";
 import { buildFormationDocMail } from "@/lib/formation-documents/mail";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";

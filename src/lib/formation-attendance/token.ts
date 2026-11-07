@@ -1,10 +1,12 @@
 import { createHmac, createHash, randomBytes, timingSafeEqual } from "crypto";
 
-export const ATTENDANCE_STEP_SECONDS = 20;
+/** Durée d'un code salle (HOTP) — min. 5 minutes pour laisser le temps d'ouvrir /e + e-mail. */
+export const ATTENDANCE_STEP_SECONDS = 5 * 60;
 export const ATTENDANCE_CODE_DIGITS = 4;
-/** Fenêtre acceptée : courante + précédente. */
+/** Fenêtre acceptée : courante + précédente (= jusqu'à ~10 min). */
 export const ATTENDANCE_WINDOW_TOLERANCE = 1;
-export const ATTENDANCE_SESSION_TTL_MS = 3 * 60 * 1000;
+/** Cookie session après code salle (OTP + Face ID). */
+export const ATTENDANCE_SESSION_TTL_MS = 15 * 60 * 1000;
 export const ATTENDANCE_OTP_TTL_MS = 10 * 60 * 1000;
 export const ATTENDANCE_MAX_ROOM_ATTEMPTS_PER_MIN = 5;
 export const ATTENDANCE_MAX_OTP_ATTEMPTS = 5;

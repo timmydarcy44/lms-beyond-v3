@@ -265,7 +265,11 @@ export default function TrainerEmargementPage() {
               </>
             )}
             <p className="mt-3 text-sm text-[#A3A8C7]">
-              Renouvellement dans {data.live.refresh_in_s}s · page publique /e
+              Renouvellement dans{" "}
+              {data.live.refresh_in_s >= 60
+                ? `${Math.ceil(data.live.refresh_in_s / 60)} min`
+                : `${data.live.refresh_in_s}s`}{" "}
+              · page publique /e
             </p>
           </div>
         )}

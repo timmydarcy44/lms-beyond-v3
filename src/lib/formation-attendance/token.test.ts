@@ -57,10 +57,12 @@ describe("attendance rotating token", () => {
     expect(verifyRoomCode(key, "0000", 1_700_000_000_000).ok).toBe(false);
   });
 
-  it("expire après ~20 s (compteur change)", () => {
+  it("expire après ~5 min (compteur change)", () => {
     const t0 = 1_700_000_040_000; // aligned-ish
     const c0 = hotpCounter(t0);
     const later = t0 + ATTENDANCE_STEP_SECONDS * 1000 + 50;
     expect(hotpCounter(later)).toBeGreaterThan(c0);
+    expect(ATTENDANCE_STEP_SECONDS).toBeGreaterThanOrEqual(5 * 60);
   });
 });
+

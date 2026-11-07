@@ -9,31 +9,62 @@ import {
 } from "@simplewebauthn/server";
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/browser";
 
+/**
+ * Prefer the live request host (byound.fr / localhost / …) over NEXT_PUBLIC_SITE_URL.
+ * SITE_URL may point to another brand domain (ex. edgebs) on the same Vercel project,
+ * which breaks WebAuthn RP ID checks in the browser.
+ */
 export function resolveWebAuthnConfig(requestUrl?: string): {
   rpID: string;
   rpName: string;
   origin: string;
 } {
-  const envOrigin =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    "";
-  let origin = envOrigin.replace(/\/$/, "");
-  if (!origin && requestUrl) {
+  let origin = "";
+  if (requestUrl) {
     try {
       const u = new URL(requestUrl);
-      origin = `${u.protocol}//${u.host}`;
+      if (u.host) origin = `${u.protocol}//${u.host}`.replace(/\/$/, "");
     } catch {
-      origin = "http://localhost:3001";
+      /* ignore */
     }
   }
-  if (!origin) origin = "http://localhost:3001";
+  if (!origin) {
+    origin = (
+      process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+      process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+      "http://localhost:3001"
+    ).replace(/\/$/, "");
+  }
   const host = new URL(origin).hostname;
+  // www.byound.fr → rpID byound.fr so Face ID works on apex + www
+  const rpID =
+    host === "localhost" || host === "127.0.0.1"
+      ? "localhost"
+      : host.replace(/^www\./, "");
   return {
-    rpID: host === "localhost" ? "localhost" : host,
+    rpID,
     rpName: "Byound",
     origin,
   };
+}
+
+/** Build absolute origin from a Next request (honours reverse-proxy hosts). */
+export function originFromRequest(req: {
+  url: string;
+  headers: { get(name: string): string | null };
+  nextUrl?: { origin: string };
+}): string {
+  const forwardedHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  if (forwardedHost) {
+    return `${proto}://${forwardedHost.split(",")[0]!.trim()}`;
+  }
+  if (req.nextUrl?.origin) return req.nextUrl.origin;
+  try {
+    return new URL(req.url).origin;
+  } catch {
+    return "http://localhost:3001";
+  }
 }
 
 export type StoredCredential = {

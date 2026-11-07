@@ -8,6 +8,7 @@ import {
 } from "@/lib/formation-attendance/cookies";
 import {
   buildAuthenticationOptions,
+  originFromRequest,
   verifyAuthentication,
 } from "@/lib/formation-attendance/webauthn";
 import { loadSlotContext } from "@/lib/formation-attendance/slot-context";
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   const options = await buildAuthenticationOptions({
     allowCredentialIds: creds.map((c) => String(c.credential_id)),
-    requestUrl: req.url,
+    requestUrl: originFromRequest(req),
   });
 
   await service.from("attendance_webauthn_challenges").insert({
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
         transports: cred.transports as string[] | null,
         backedUp: Boolean(cred.backed_up ?? cred.synced),
       },
-      requestUrl: req.url,
+      requestUrl: originFromRequest(req),
     });
   } catch (err) {
     return NextResponse.json(

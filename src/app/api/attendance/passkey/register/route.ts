@@ -4,6 +4,7 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import { readEmargeSession } from "@/lib/formation-attendance/cookies";
 import {
   buildRegistrationOptions,
+  originFromRequest,
   uint8ToBase64Url,
   verifyRegistration,
 } from "@/lib/formation-attendance/webauthn";
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
       [profile.first_name, profile.last_name].filter(Boolean).join(" ") ||
       "Apprenant",
     existingCredentialIds: (existing ?? []).map((c) => String(c.credential_id)),
-    requestUrl: req.url,
+    requestUrl: originFromRequest(req),
   });
 
   await service.from("attendance_webauthn_challenges").insert({
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
     verification = await verifyRegistration({
       response: body.response,
       expectedChallenge: String(challengeRow.challenge),
-      requestUrl: req.url,
+      requestUrl: originFromRequest(req),
     });
   } catch (err) {
     return NextResponse.json(

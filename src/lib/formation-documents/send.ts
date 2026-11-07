@@ -11,6 +11,7 @@ import { generateFormationDocuments } from "@/lib/formation-documents/generate";
 import { buildFormationDocMail } from "@/lib/formation-documents/mail";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";
 import { scheduleDocRelances } from "@/lib/formation-documents/schedule";
+import { formationDocumentPublicUrl } from "@/lib/formation-documents/public-url";
 
 async function pdfAttachment(
   service: SupabaseClient,
@@ -81,11 +82,12 @@ export async function sendFormationDocument(
     return { ok: false, error: "Document non généré", code: "not_generated" };
   }
 
-  const baseView = `${appOrigin()}/d/${doc.access_token}`;
-  const viewUrl =
+  const viewUrl = formationDocumentPublicUrl(
+    String(doc.access_token),
     (params.kind === "devis" || params.kind === "convention") && doc.accept_token
-      ? `${baseView}?accept=${encodeURIComponent(String(doc.accept_token))}`
-      : baseView;
+      ? String(doc.accept_token)
+      : null,
+  );
   const courseTitle = ctx.dossier.course_title || ctx.session?.title;
   const sentTo: string[] = [];
 

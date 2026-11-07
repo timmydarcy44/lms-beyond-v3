@@ -178,7 +178,7 @@ export async function sendPackFormateurEmail(
   const projectUrl = slot ? `${origin}/e?slot=${encodeURIComponent(slot.id)}` : null;
   const formateurUrl = `${origin}/dashboard/formateur`;
   const programmeUrl = programme?.access_token
-    ? `${origin}/d/${programme.access_token}`
+    ? `${origin}/doc?token=${encodeURIComponent(String(programme.access_token))}`
     : null;
 
   const whenLine = slot

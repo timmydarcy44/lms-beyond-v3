@@ -8,6 +8,7 @@ import {
 } from "@/lib/emails/edge-email-shell";
 import { appOrigin } from "@/lib/formation-documents/context";
 import { sendFormationDocument } from "@/lib/formation-documents/send";
+import { formationDocumentPublicUrl } from "@/lib/formation-documents/public-url";
 import {
   assessmentUrl,
   ensureAssessmentAttempt,
@@ -77,11 +78,12 @@ async function resolveViewUrl(service: SupabaseClient, row: DueRow): Promise<str
       .maybeSingle();
     if (doc?.access_token) {
       if (doc.status === "signed") return "";
-      const base = `${appOrigin()}/d/${doc.access_token}`;
-      if ((doc.kind === "devis" || doc.kind === "convention") && doc.accept_token) {
-        return `${base}?accept=${encodeURIComponent(String(doc.accept_token))}`;
-      }
-      return base;
+      return formationDocumentPublicUrl(
+        String(doc.access_token),
+        (doc.kind === "devis" || doc.kind === "convention") && doc.accept_token
+          ? String(doc.accept_token)
+          : null,
+      );
     }
   }
   return `${appOrigin()}/`;

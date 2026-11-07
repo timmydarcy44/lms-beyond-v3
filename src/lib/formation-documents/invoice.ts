@@ -279,7 +279,8 @@ export async function issueFormationInvoice(
     );
 
     if (dossier.contact_email) {
-      const viewUrl = `${appOrigin()}/d/${accessToken}`;
+      const { formationDocumentPublicUrl } = await import("@/lib/formation-documents/public-url");
+      const viewUrl = formationDocumentPublicUrl(accessToken);
       const greeting = dossier.contact_name
         ? `Bonjour ${escapeEdgeEmailHtml(String(dossier.contact_name))},`
         : "Bonjour,";

@@ -10,6 +10,9 @@ import { formatEuroDelta, formatEurosHt, summarizeRevenue, type BillingDoc } fro
 import type { loadAccountDetail } from "@/lib/control/load";
 import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
+import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
+import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
+import { PIPELINE_PRODUCT_CATALOG } from "@/lib/crm/pipeline-quoted-products";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
 type Tab =
@@ -28,14 +31,14 @@ type Tab =
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "dossiers", label: "Dossiers formation" },
+  { id: "courses", label: "Accès LMS" },
+  { id: "modules", label: "Offres SaaS" },
   { id: "members", label: "Membres" },
-  { id: "courses", label: "Formations LMS" },
   { id: "badges", label: "Open Badges" },
   { id: "tests", label: "Tests" },
   { id: "revenue", label: "Chiffre d'affaires" },
   { id: "funding", label: "Financement" },
   { id: "documents", label: "Documents" },
-  { id: "modules", label: "Modules" },
   { id: "journal", label: "Journal" },
 ];
 
@@ -52,6 +55,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "overview");
   const [actionsOpen, setActionsOpen] = useState(false);
   const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | "space" | null>(null);
+  const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   if (!account) return null;
 
@@ -96,16 +100,19 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           ) : (
             <DisabledTip label="Contacter l'admin" reason="Aucun administrateur actif sur ce compte" />
           )}
+          <button
+            type="button"
+            onClick={() => setRequestWizardOpen(true)}
+            className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+          >
+            Nouvelle demande formation
+          </button>
           <span className="relative">
-            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold">Faire une action</button>
+            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold">Plus</button>
             {actionsOpen ? (
               <span className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-[#26304F] bg-[#111831] p-2 text-sm">
                 <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("invite"); }}>Inviter</button>
-                {detail.catalogue.length && detail.people.some((person) => !person.invited) ? (
-                  <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); }}>Assigner une formation</button>
-                ) : (
-                  <span className="block px-2 py-1.5 text-[#8A93AE]" title={detail.catalogue.length ? "Aucun participant avec un compte actif" : "Aucune formation disponible pour ce compte"}>Assigner une formation</span>
-                )}
+                <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); openTab("courses"); }}>Accès LMS</button>
                 <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>
               </span>
             ) : null}
@@ -122,17 +129,28 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {notice ? <p className="mt-4 text-sm text-[#6BE39B]">{notice}</p> : null}
 
       {tab === "overview" ? (
-        <Overview detail={detail} onOpen={setPanel} onOpenDossiers={() => openTab("dossiers")} />
+        <Overview
+          detail={detail}
+          onNewRequest={() => setRequestWizardOpen(true)}
+          onOpenDossiers={() => openTab("dossiers")}
+          onOpenLms={() => openTab("courses")}
+          onOpenSaas={() => openTab("modules")}
+        />
       ) : null}
       {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
       {tab === "courses" ? <CoursesTab detail={detail} onAssign={() => setPanel("course")} /> : null}
-      {tab === "dossiers" ? <FormationDossiersTab organizationId={account.id} /> : null}
+      {tab === "dossiers" ? (
+        <FormationDossiersTab
+          organizationId={account.id}
+          onNewRequest={() => setRequestWizardOpen(true)}
+        />
+      ) : null}
       {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
       {tab === "tests" ? <EmptyState title="Aucun test envoyé pour ce compte." /> : null}
       {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
       {tab === "funding" ? <EmptyState title="Aucun dossier de financement pour ce compte." /> : null}
       {tab === "documents" ? <EmptyState title="Aucun document pour ce compte." /> : null}
-      {tab === "modules" ? <ModulesTab modules={account.modules} /> : null}
+      {tab === "modules" ? <SaasOffersTab orgId={account.id} modules={account.modules} /> : null}
       {tab === "journal" ? <JournalTab detail={detail} name={account.name} /> : null}
 
       {panel === "invite" ? <InvitePanel orgId={account.id} courses={detail.catalogue} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
@@ -140,6 +158,21 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {panel === "badge" ? <BadgePanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "import" ? <ImportPanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "space" ? <SpaceDialog orgId={account.id} orgName={account.name} onClose={() => setPanel(null)} /> : null}
+      {requestWizardOpen ? (
+        <AccountFormationRequestWizard
+          orgId={account.id}
+          orgName={account.name}
+          contactEmail={detail.members.find((m) => m.role === "admin" && m.email.includes("@"))?.email}
+          contactName={detail.members.find((m) => m.role === "admin")?.name}
+          people={detail.people}
+          onClose={() => setRequestWizardOpen(false)}
+          onDone={(message) => {
+            setNotice(message);
+            openTab("dossiers");
+            router.refresh();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -232,97 +265,93 @@ function TabBar({ tab, counts, onChange }: { tab: Tab; counts: Partial<Record<Ta
 
 function Overview({
   detail,
-  onOpen,
+  onNewRequest,
   onOpenDossiers,
+  onOpenLms,
+  onOpenSaas,
 }: {
   detail: Detail;
-  onOpen: (panel: "invite" | "course" | "badge") => void;
+  onNewRequest: () => void;
   onOpenDossiers: () => void;
+  onOpenLms: () => void;
+  onOpenSaas: () => void;
 }) {
   const account = detail.account;
   if (!account) return null;
-  const actions = [
-    { id: "invite" as const, label: "Inviter des collaborateurs", icon: "+", primary: true, enabled: true, reason: "" },
-    { id: "course" as const, label: "Assigner une formation", icon: "▤", primary: false, enabled: detail.catalogue.length > 0 && detail.people.some((person) => !person.invited), reason: detail.catalogue.length ? "Aucun participant avec un compte actif" : "Aucune formation disponible pour ce compte" },
-    { id: "tests" as const, label: "Envoyer les tests", icon: "✎", primary: false, enabled: false, reason: "Aucun test à envoyer pour ce compte" },
-    { id: "opco" as const, label: "Dossier OPCO", icon: "€", primary: false, enabled: false, reason: "Aucun dossier OPCO pour ce compte" },
-    { id: "badge" as const, label: "Créer un Open Badge", icon: "◎", primary: false, enabled: true, reason: "" },
-    { id: "doc" as const, label: "Ajouter un document", icon: "⇪", primary: false, enabled: false, reason: "Aucun espace document pour ce compte" },
-  ];
   return (
-    <div className="mt-5 grid gap-4 lg:grid-cols-[1.6fr_.8fr]">
-      <div className="space-y-4">
-        <section className="rounded-[28px] border border-[#6E5BFF]/40 bg-[#17122E] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-extrabold">Pilotage formation</h2>
-              <p className="mt-1 text-sm text-[#C9D2E8]">
-                Demandes, dossiers Qualiopi, devis et conventions — depuis le compte client, pas le pipeline.
-              </p>
-            </div>
+    <div className="mt-5 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="rounded-[28px] border border-[#6E5BFF]/45 bg-[#17122E] p-5 lg:col-span-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#C4B8FF]">Formation Qualiopi</p>
+          <h2 className="mt-2 text-lg font-extrabold">Nouvelle demande</h2>
+          <p className="mt-2 text-sm text-[#C9D2E8]">
+            Catalogue → participants → dates / lieu → devis &amp; convention.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onNewRequest}
+              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+            >
+              Nouvelle demande
+            </button>
             <button
               type="button"
               onClick={onOpenDossiers}
-              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+              className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
             >
-              Ouvrir les dossiers formation
+              Voir les dossiers
             </button>
           </div>
         </section>
+
         <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-          <h2 className="text-lg font-extrabold">Agir pour {account.name}</h2>
-          <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {actions.map((action) => {
-              const circle = (
-                <span className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full text-lg" style={{ background: action.primary ? "#6E5BFF" : "#1A2340" }}>{action.icon}</span>
-              );
-              if (!action.enabled || (action.id !== "invite" && action.id !== "course" && action.id !== "badge")) {
-                return (
-                  <span key={action.label} className="group relative text-center text-xs text-[#8A93AE]">
-                    <button type="button" disabled title={action.reason} className="cursor-not-allowed opacity-70">{circle}{action.label}</button>
-                    <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-48 -translate-x-1/2 rounded-2xl bg-[#0B1122] px-3 py-2 group-hover:block">{action.reason}</span>
-                  </span>
-                );
-              }
-              return (
-                <button key={action.label} type="button" className="text-center text-xs" onClick={() => onOpen(action.id)}>
-                  {circle}{action.label}
-                </button>
-              );
-            })}
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">Accès LMS</p>
+          <h2 className="mt-2 text-lg font-extrabold">Parcours digitaux</h2>
+          <p className="mt-2 text-sm text-[#C9D2E8]">
+            Assigner aux collabs ou mettre à disposition du dashboard entreprise.
+          </p>
+          <p className="mt-3 text-xs text-[#8A93AE]">
+            {detail.courses.length} formation(s) liée(s) · {detail.catalogue.length} au catalogue
+          </p>
+          <button
+            type="button"
+            onClick={onOpenLms}
+            className="mt-4 rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold"
+          >
+            Gérer les accès LMS
+          </button>
         </section>
-        <div className="grid gap-3 md:grid-cols-4">
-          <KpiCard label="Utilisateurs actifs" value={`${account.activeUsers} / ${account.totalUsers}`} />
-          <KpiCard label="Formations en cours" value={String(detail.courses.length)} />
-          <KpiCard label="Open Badges délivrés" value={String(detail.assertions.length)} />
-          <KpiCard label="Prochaine session" value="—" />
-        </div>
-        <RevenueBlock documents={detail.documents} fallbackCents={account.revenue12HtCents} />
+
         <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-          <h2 className="font-extrabold">Journal du compte</h2>
-          <JournalList items={detail.activity.slice(0, 5)} name={account.name} />
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">Offres SaaS</p>
+          <h2 className="mt-2 text-lg font-extrabold">Licences &amp; produits</h2>
+          <p className="mt-2 text-sm text-[#C9D2E8]">
+            Activer LMS, Connect, Care, nevo… sur ce compte.
+          </p>
+          <button
+            type="button"
+            onClick={onOpenSaas}
+            className="mt-4 rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold"
+          >
+            Gérer les offres
+          </button>
         </section>
       </div>
-      <aside className="space-y-4">
-        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5 text-sm">
-          <h2 className="font-extrabold">Démarrage</h2>
-          <ul className="mt-3 space-y-2 text-[#C9D2E8]">
-            <li>{account.logoUrl ? "Logo déposé" : "Logo à déposer"}</li>
-            <li>{hasAdmin(detail) ? "Admin invité" : "Admin à inviter"}</li>
-            <li>{detail.employees.length ? "Collaborateurs importés" : "Collaborateurs à importer"}</li>
-            <li>{detail.courses.length ? "Première formation assignée" : "Première formation à assigner"}</li>
-            <li>Tests à envoyer</li>
-          </ul>
-        </section>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <KpiCard label="Utilisateurs actifs" value={`${account.activeUsers} / ${account.totalUsers}`} />
+        <KpiCard label="Formations LMS" value={String(detail.courses.length)} />
+        <KpiCard label="Open Badges" value={String(detail.assertions.length)} />
+        <KpiCard label="CA 12 mois" value={formatEurosHt(account.revenue12HtCents)} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.4fr_.8fr]">
+        <RevenueBlock documents={detail.documents} fallbackCents={account.revenue12HtCents} />
         <NoteForm orgId={account.id} initial={detail.note?.body ?? ""} />
-      </aside>
+      </div>
     </div>
   );
-}
-
-function hasAdmin(detail: Detail) {
-  return detail.members.some((member) => member.role === "admin");
 }
 
 function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; onInvite: () => void; onImport: () => void; onNotice: (message: string) => void }) {
@@ -621,24 +650,46 @@ function RevenueBlock({ documents, fallbackCents }: { documents: Detail["documen
   );
 }
 
-function ModulesTab({ modules }: { modules: string[] }) {
-  const items = [
-    { key: "beyond_lms", label: "LMS et parcours" },
-    { key: "open_badges", label: "Open Badges" },
-    { key: "tests", label: "Tests" },
-    { key: "beyond_care", label: "Byound Care" },
-  ];
+function SaasOffersTab({ orgId, modules }: { orgId: string; modules: string[] }) {
+  const initialFeatures = [
+    "beyond_connect",
+    "beyond_lms",
+    "beyond_care",
+    "beyond_play",
+    "beyond_note",
+  ].map((feature_key) => ({
+    feature_key,
+    is_enabled:
+      feature_key === "beyond_care"
+        ? modules.includes("beyond_care") || modules.includes("mental_health_tracking")
+        : modules.includes(feature_key),
+  }));
+
   return (
-    <div className="mt-5 grid gap-3 md:grid-cols-2">
-      {items.map((item) => {
-        const active = item.key === "beyond_care" ? modules.includes("beyond_care") || modules.includes("mental_health_tracking") : modules.includes(item.key);
-        return (
-          <article key={item.key} className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-4">
-            <h3 className="font-extrabold">{item.label}</h3>
-            <p className="mt-2 text-sm text-[#8A93AE]">{active ? "Option active" : "Non activé"}</p>
-          </article>
-        );
-      })}
+    <div className="mt-5 space-y-5">
+      <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+        <h2 className="text-lg font-extrabold">Produits Byound</h2>
+        <p className="mt-1 text-sm text-[#8A93AE]">
+          Activez les accès SaaS du compte. La facturation sièges arrivera ensuite.
+        </p>
+        <div className="mt-4 [&_div]:border-[#26304F] [&_div]:bg-[#0B1122] [&_p.text-sm]:text-white [&_p.text-xs]:text-[#8A93AE]">
+          <OrganizationFeaturesPanel orgId={orgId} initialFeatures={initialFeatures} />
+        </div>
+      </section>
+      <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+        <h2 className="text-lg font-extrabold">Référentiel commercial</h2>
+        <p className="mt-1 text-sm text-[#8A93AE]">
+          Offres typiques (hors devis formation Qualiopi) — pour cadrer la conversation.
+        </p>
+        <ul className="mt-4 grid gap-3 md:grid-cols-2">
+          {PIPELINE_PRODUCT_CATALOG.map((product) => (
+            <li key={product.id} className="rounded-2xl border border-[#26304F] bg-[#0B1122] p-4">
+              <p className="font-semibold text-white">{product.label}</p>
+              <p className="mt-1 text-xs text-[#8A93AE]">{product.hint}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
@@ -747,27 +798,116 @@ function InvitePanel({ orgId, courses, onClose, onDone }: { orgId: string; cours
 function AssignPanel({ orgId, courses, people, onClose, onDone }: { orgId: string; courses: Detail["catalogue"]; people: Detail["people"]; onClose: () => void; onDone: (message: string) => void }) {
   const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
   const [selected, setSelected] = useState<string[]>([]);
+  const [mode, setMode] = useState<"members" | "company">("members");
+  const [saving, setSaving] = useState(false);
   const participants = people.filter((person) => !person.invited && !person.userId.startsWith("employee:"));
   return (
-    <SidePanel title="Assigner une formation" onClose={onClose}>
-      <form onSubmit={async (event) => {
-        event.preventDefault();
-        const response = await fetch(`/api/super/comptes-clients/${orgId}/assign-course`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId, userIds: selected }) });
-        const json = (await response.json()) as { error?: string; created?: number };
-        onDone(response.ok ? `${json.created ?? 0} inscription(s) créée(s).` : json.error || "Assignation impossible");
-        if (response.ok) onClose();
-      }}>
-        <Field label="Formation"><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></Field>
-        <p className="mb-2 text-sm text-[#8A93AE]">Participants</p>
-        <div className="mb-4 max-h-48 space-y-1 overflow-auto">
-          {participants.map((person) => (
-            <label key={person.userId} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={selected.includes(person.userId)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, person.userId] : current.filter((id) => id !== person.userId))} />
-              {person.name}
-            </label>
-          ))}
+    <SidePanel title="Accès LMS" onClose={onClose}>
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          if (!courseId) return;
+          setSaving(true);
+          try {
+            if (mode === "company") {
+              const grant = await fetch("/api/super-admin/catalogue/access/grant", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  organization_id: orgId,
+                  catalog_item_id: courseId,
+                  grant_reason: "Mise à disposition depuis Compte client",
+                }),
+              });
+              if (!grant.ok) {
+                const assign = await fetch("/api/super-admin/assign-content-to-organization", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organizationId: orgId, contentIds: [courseId] }),
+                });
+                const json = (await assign.json()) as { error?: string };
+                onDone(assign.ok ? "Formation mise à disposition du dashboard entreprise." : json.error || "Mise à disposition impossible");
+                if (assign.ok) onClose();
+                return;
+              }
+              onDone("Formation mise à disposition du dashboard entreprise.");
+              onClose();
+              return;
+            }
+            const response = await fetch(`/api/super/comptes-clients/${orgId}/assign-course`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ courseId, userIds: selected }),
+            });
+            const json = (await response.json()) as { error?: string; created?: number };
+            onDone(response.ok ? `${json.created ?? 0} inscription(s) créée(s).` : json.error || "Assignation impossible");
+            if (response.ok) onClose();
+          } finally {
+            setSaving(false);
+          }
+        }}
+      >
+        <Field label="Formation LMS">
+          <select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div className="mb-3 grid gap-2">
+          <label className="flex items-start gap-2 rounded-2xl border border-[#26304F] bg-[#111831] p-3 text-sm">
+            <input type="radio" checked={mode === "members"} onChange={() => setMode("members")} className="mt-1" />
+            <span>
+              <span className="font-semibold">Assigner à des collaborateurs</span>
+              <span className="mt-0.5 block text-xs text-[#8A93AE]">Accès immédiat pour les profils sélectionnés.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 rounded-2xl border border-[#26304F] bg-[#111831] p-3 text-sm">
+            <input type="radio" checked={mode === "company"} onChange={() => setMode("company")} className="mt-1" />
+            <span>
+              <span className="font-semibold">Mettre à disposition du compte</span>
+              <span className="mt-0.5 block text-xs text-[#8A93AE]">
+                Le dashboard entreprise pourra ouvrir les accès ensuite.
+              </span>
+            </span>
+          </label>
         </div>
-        <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Assigner</button>
+        {mode === "members" ? (
+          <>
+            <p className="mb-2 text-sm text-[#8A93AE]">Participants</p>
+            <div className="mb-4 max-h-48 space-y-1 overflow-auto">
+              {participants.length === 0 ? (
+                <p className="text-sm text-[#8A93AE]">Aucun collaborateur actif avec compte.</p>
+              ) : (
+                participants.map((person) => (
+                  <label key={person.userId} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(person.userId)}
+                      onChange={(event) =>
+                        setSelected((current) =>
+                          event.target.checked
+                            ? [...current, person.userId]
+                            : current.filter((id) => id !== person.userId),
+                        )
+                      }
+                    />
+                    {person.name}
+                  </label>
+                ))
+              )}
+            </div>
+          </>
+        ) : null}
+        <button
+          type="submit"
+          disabled={saving || !courseId || (mode === "members" && selected.length === 0)}
+          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] disabled:opacity-50"
+        >
+          {mode === "company" ? "Mettre à disposition" : "Assigner"}
+        </button>
       </form>
     </SidePanel>
   );
@@ -850,7 +990,13 @@ function ImportPanel({ orgId, onClose, onDone }: { orgId: string; onClose: () =>
   );
 }
 
-function FormationDossiersTab({ organizationId }: { organizationId: string }) {
+function FormationDossiersTab({
+  organizationId,
+  onNewRequest,
+}: {
+  organizationId: string;
+  onNewRequest?: () => void;
+}) {
   const [rows, setRows] = useState<
     Array<{
       id: string;
@@ -896,39 +1042,45 @@ function FormationDossiersTab({ organizationId }: { organizationId: string }) {
         <button
           type="button"
           disabled={creating}
-          className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
-          onClick={async () => {
-            setCreating(true);
-            setLocalNotice(null);
-            try {
-              const res = await fetch("/api/super-admin/crm/formation-dossiers", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ organization_id: organizationId, source: "manual" }),
-              });
-              const json = (await res.json()) as { dossier?: { id: string }; error?: string };
-              if (!res.ok) throw new Error(json.error || "Création impossible");
-              setRows((current) => [
-                {
-                  id: json.dossier!.id,
-                  course_title: null,
-                  status: "qualification",
-                  amount_ht_cents: null,
-                  deal_regressed: false,
-                  pending_confirm_fields: [],
-                  created_at: new Date().toISOString(),
-                },
-                ...current,
-              ]);
-              setLocalNotice("Dossier créé en Qualification.");
-            } catch (error) {
-              setLocalNotice(error instanceof Error ? error.message : "Création impossible");
-            } finally {
-              setCreating(false);
+          className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+          onClick={() => {
+            if (onNewRequest) {
+              onNewRequest();
+              return;
             }
+            void (async () => {
+              setCreating(true);
+              setLocalNotice(null);
+              try {
+                const res = await fetch("/api/super-admin/crm/formation-dossiers", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ organization_id: organizationId, source: "manual" }),
+                });
+                const json = (await res.json()) as { dossier?: { id: string }; error?: string };
+                if (!res.ok) throw new Error(json.error || "Création impossible");
+                setRows((current) => [
+                  {
+                    id: json.dossier!.id,
+                    course_title: null,
+                    status: "qualification",
+                    amount_ht_cents: null,
+                    deal_regressed: false,
+                    pending_confirm_fields: [],
+                    created_at: new Date().toISOString(),
+                  },
+                  ...current,
+                ]);
+                setLocalNotice("Dossier créé en Qualification.");
+              } catch (error) {
+                setLocalNotice(error instanceof Error ? error.message : "Création impossible");
+              } finally {
+                setCreating(false);
+              }
+            })();
           }}
         >
-          Nouveau dossier
+          {creating ? "Création…" : "Nouvelle demande"}
         </button>
       </div>
       {notice ? <p className="text-sm text-[#C4BAFF]">{notice}</p> : null}

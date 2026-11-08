@@ -155,6 +155,10 @@ export async function POST(req: NextRequest) {
       courseTitle: body?.course_title ? String(body.course_title) : null,
       amountHtCents:
         body?.amount_ht_cents != null ? Math.round(Number(body.amount_ht_cents)) : null,
+      amountTvaCents:
+        body?.amount_tva_cents != null ? Math.round(Number(body.amount_tva_cents)) : null,
+      amountTtcCents:
+        body?.amount_ttc_cents != null ? Math.round(Number(body.amount_ttc_cents)) : null,
       contactName: body?.contact_name ? String(body.contact_name) : null,
       contactEmail: body?.contact_email ? String(body.contact_email) : null,
       contactPhone: body?.contact_phone ? String(body.contact_phone) : null,

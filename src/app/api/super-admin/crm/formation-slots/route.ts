@@ -21,13 +21,23 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   if (!dossier) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
 
+  const locationLabel =
+    body?.location_label != null ? String(body.location_label).trim() || null : null;
+  const modalityPresence =
+    body?.modality_presence === "presentiel" ||
+    body?.modality_presence === "distanciel" ||
+    body?.modality_presence === "hybride"
+      ? String(body.modality_presence)
+      : null;
+
   let sessionId = dossier.session_id ? String(dossier.session_id) : null;
   if (!sessionId) {
     const { data: session, error } = await service
       .from("formation_sessions")
       .insert({
         title: dossier.course_title || "Session formation",
-        modality_presence: dossier.modality_presence || "presentiel",
+        modality_presence: modalityPresence || dossier.modality_presence || "presentiel",
+        location_label: locationLabel,
         status: "ready",
       })
       .select("id")
@@ -37,6 +47,11 @@ export async function POST(req: NextRequest) {
     }
     sessionId = String(session.id);
     await service.from("formation_dossiers").update({ session_id: sessionId }).eq("id", dossierId);
+  } else if (locationLabel || modalityPresence) {
+    const sessionPatch: Record<string, unknown> = {};
+    if (locationLabel) sessionPatch.location_label = locationLabel;
+    if (modalityPresence) sessionPatch.modality_presence = modalityPresence;
+    await service.from("formation_sessions").update(sessionPatch).eq("id", sessionId);
   }
 
   const slotDate = String(body?.slot_date ?? new Date().toISOString().slice(0, 10));

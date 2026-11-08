@@ -40,17 +40,25 @@ export async function assembleQuote(params: {
 
   const font = await out.embedFont(StandardFonts.Helvetica);
   const total = out.getPageCount();
-  const footerLeft =
+  /** Helvetica WinAnsi : pas d’espaces fins / ° / puces exotiques. */
+  const winAnsi = (s: string) =>
+    String(s || "")
+      .replace(/[\u202f\u00a0\u2009\u2007]/g, " ")
+      .replace(/[°º]/g, "o")
+      .replace(/[·•]/g, "-")
+      .replace(/[^\x20-\x7E\u00C0-\u00FF]/g, "");
+  const footerLeft = winAnsi(
     params.ofFooter ||
-    "SAS Byound Business · 134 rue Élise Deroche, 14760 Bretteville-sur-Odon · contact@byound.fr";
-  const ref = params.quoteNumber;
+      "SAS Byound Business - 134 rue Elise Deroche, 14760 Bretteville-sur-Odon - contact@byound.fr",
+  );
+  const ref = winAnsi(params.quoteNumber);
 
   for (let i = 0; i < total; i++) {
     const page = out.getPage(i);
     const { width } = page.getSize();
     const y = 16;
     const size = 7;
-    const left = `Devis n° ${ref}`;
+    const left = `Devis n ${ref}`;
     const right = `${String(i + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
     page.drawText(left, {
       x: 36,

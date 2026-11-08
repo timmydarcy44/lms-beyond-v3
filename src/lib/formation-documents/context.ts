@@ -81,17 +81,64 @@ export type DossierDocContext = {
   } | null;
 };
 
+/** Identité OF réelle (corps PDF AcroForm) — utilisée si of_settings est vide / placeholder. */
 const DEFAULT_OF: OfIdentity = {
-  legal_name: "Byound",
+  legal_name: "SAS Byound Business",
   nda: null,
-  siret: null,
-  siren: null,
-  vat_intra: null,
-  address_line: null,
-  address_city: null,
-  address_zip: null,
+  siret: "13070905800015",
+  siren: "130709058",
+  vat_intra: "FR30130709058",
+  address_line: "134 rue Élise Deroche",
+  address_city: "Bretteville-sur-Odon",
+  address_zip: "14760",
   address_country: "FR",
 };
+
+function digitsOnly(value: string | null | undefined): string {
+  return String(value || "").replace(/\D/g, "");
+}
+
+/** SIRET démo / incomplet → on retombe sur l’identité Byound. */
+function isUnusableSiret(value: string | null | undefined): boolean {
+  const d = digitsOnly(value);
+  if (d.length !== 14) return true;
+  if (d.startsWith("901234567")) return true;
+  if (/^(\d)\1{13}$/.test(d)) return true;
+  return false;
+}
+
+function resolveOfIdentity(ofRow: Record<string, unknown> | null | undefined): OfIdentity {
+  const rawName = ofRow?.legal_name ? String(ofRow.legal_name).trim() : "";
+  const legal_name =
+    !rawName || rawName === "Byound" ? DEFAULT_OF.legal_name : rawName;
+  const siret = !isUnusableSiret(ofRow?.siret as string | null)
+    ? digitsOnly(String(ofRow?.siret))
+    : DEFAULT_OF.siret;
+  const siren =
+    ofRow?.siren && digitsOnly(String(ofRow.siren)).length === 9
+      ? digitsOnly(String(ofRow.siren))
+      : siret?.slice(0, 9) || DEFAULT_OF.siren;
+  const vat_intra = ofRow?.vat_intra
+    ? String(ofRow.vat_intra).trim()
+    : DEFAULT_OF.vat_intra;
+  return {
+    legal_name,
+    nda: ofRow?.nda ? String(ofRow.nda) : null,
+    siret,
+    siren,
+    vat_intra: vat_intra || DEFAULT_OF.vat_intra,
+    address_line: ofRow?.address_line
+      ? String(ofRow.address_line)
+      : DEFAULT_OF.address_line,
+    address_city: ofRow?.address_city
+      ? String(ofRow.address_city)
+      : DEFAULT_OF.address_city,
+    address_zip: ofRow?.address_zip ? String(ofRow.address_zip) : DEFAULT_OF.address_zip,
+    address_country: ofRow?.address_country
+      ? String(ofRow.address_country)
+      : DEFAULT_OF.address_country,
+  };
+}
 
 export async function loadDossierDocContext(
   service: SupabaseClient,
@@ -163,17 +210,7 @@ export async function loadDossierDocContext(
     }));
   }
 
-  const of: OfIdentity = {
-    legal_name: String(ofRow?.legal_name || DEFAULT_OF.legal_name),
-    nda: ofRow?.nda ? String(ofRow.nda) : null,
-    siret: ofRow?.siret ? String(ofRow.siret) : null,
-    siren: ofRow?.siren ? String(ofRow.siren) : null,
-    vat_intra: ofRow?.vat_intra ? String(ofRow.vat_intra) : null,
-    address_line: ofRow?.address_line ? String(ofRow.address_line) : null,
-    address_city: ofRow?.address_city ? String(ofRow.address_city) : null,
-    address_zip: ofRow?.address_zip ? String(ofRow.address_zip) : null,
-    address_country: ofRow?.address_country ? String(ofRow.address_country) : "FR",
-  };
+  const of = resolveOfIdentity((ofRow ?? null) as Record<string, unknown> | null);
 
   function mapCourseRow(tc: Record<string, unknown>): CourseDocInfo {
     const structureRaw = Array.isArray(tc.program_structure) ? tc.program_structure : [];

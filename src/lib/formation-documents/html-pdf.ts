@@ -69,7 +69,8 @@ ${htmlBody}
   const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    // Pas de réseau (fonts en data-URI) — networkidle0 timeoute souvent sur Vercel.
+    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 20_000 });
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,

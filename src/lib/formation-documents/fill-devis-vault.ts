@@ -198,7 +198,9 @@ export function buildQuoteDetailFromContext(
     deposit,
     ofFooter: [
       ctx.of.legal_name || "SAS Byound Business",
-      ctx.of.siret ? `SIRET ${ctx.of.siret}` : null,
+      ctx.of.siret
+        ? `SIRET ${ctx.of.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, "$1 $2 $3 $4")}`
+        : null,
       ctx.of.vat_intra ? `TVA ${ctx.of.vat_intra}` : null,
     ]
       .filter(Boolean)
@@ -264,11 +266,11 @@ export async function fillVaultDevisPdf(
     appearanceFont,
   );
 
-  setText(form, "session_dates", formatDatesShort(slots) || "A confirmer", appearanceFont);
+  setText(form, "session_dates", formatDatesShort(slots) || "À confirmer", appearanceFont);
   setText(
     form,
     "session_duration",
-    ctx.course?.duration?.trim() || (slots.length ? formatDuration(slots) : "A confirmer"),
+    ctx.course?.duration?.trim() || (slots.length ? formatDuration(slots) : "À confirmer"),
     appearanceFont,
   );
   setText(form, "session_hours", formatHours(slots) || "Selon planning", appearanceFont);
@@ -279,7 +281,7 @@ export async function fillVaultDevisPdf(
   setText(
     form,
     "payment_terms",
-    "Reglement par virement a reception de facture, sous 30 jours.",
+    "Règlement par virement à réception de facture, sous 30 jours.",
     appearanceFont,
   );
   setText(form, "deposit_amount", detail.deposit?.amount || "", appearanceFont);

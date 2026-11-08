@@ -40,18 +40,28 @@ function esc(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Montant centimes → « 5 378,40 € » */
-export function formatEuroFromCents(cents: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(cents / 100);
+/** Espaces fins / insécables → espace normal (jsPDF Helvetica casse U+202F en « / »). */
+export function normalizePdfMoneyText(text: string): string {
+  return String(text || "")
+    .replace(/[\u202f\u00a0\u2009\u2007]/g, " ")
+    .replace(/\u2212/g, "-")
+    .replace(/–|—/g, "-");
 }
 
-/** Remise en montant négatif typographique : « – 498,00 € » */
+/** Montant centimes → « 5 378,40 € » (espaces ASCII, € conservé). */
+export function formatEuroFromCents(cents: number): string {
+  return normalizePdfMoneyText(
+    new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+    }).format(cents / 100),
+  );
+}
+
+/** Remise en montant négatif typographique : « - 498,00 € » */
 export function formatEuroDiscountFromCents(cents: number): string {
   const abs = formatEuroFromCents(Math.abs(cents));
-  return `– ${abs}`;
+  return `- ${abs}`;
 }
 
 export function buildQuoteDetailHtml(data: QuoteDetailData): string {
@@ -224,6 +234,14 @@ ${data.notes ? `<div class="notes"><strong>Notes.</strong> ${esc(data.notes)}</d
 `;
 }
 
+/** Helvetica / WinAnsi : montants et libellés sans espaces fins ni glyphes hors plage. */
+function jsPdfSafe(text: string): string {
+  return normalizePdfMoneyText(text)
+    .replace(/×/g, "x")
+    .replace(/·/g, "-")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\u00C0-\u00FF\u20AC]/g, "");
+}
+
 export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const margin = 16;
@@ -238,7 +256,7 @@ export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
       doc.setTextColor(122, 130, 153);
-      doc.text("Désignation / Qté / Prix unit. HT / TVA / Total HT", margin, y);
+      doc.text(jsPdfSafe("Designation / Qte / Prix unit. HT / TVA / Total HT"), margin, y);
       y += 6;
     }
   };
@@ -246,11 +264,11 @@ export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
   doc.setTextColor(99, 91, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("DÉTAIL DU DEVIS", margin, y);
+  doc.text(jsPdfSafe("DETAIL DU DEVIS"), margin, y);
   y += 7;
   doc.setTextColor(20, 21, 31);
   doc.setFontSize(13);
-  const title = `${data.title}${data.subtitle ? ` · ${data.subtitle}` : ""}`;
+  const title = jsPdfSafe(`${data.title}${data.subtitle ? ` - ${data.subtitle}` : ""}`);
   const titleLines = doc.splitTextToSize(title, maxW);
   doc.text(titleLines, margin, y);
   y += titleLines.length * 6 + 4;
@@ -262,14 +280,14 @@ export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
     doc.setTextColor(99, 91, 255);
     doc.text(String(i + 1).padStart(2, "0"), margin, y);
     doc.setTextColor(20, 21, 31);
-    const des = doc.splitTextToSize(line.designation, maxW - 50);
+    const des = doc.splitTextToSize(jsPdfSafe(line.designation), maxW - 50);
     doc.text(des, margin + 10, y);
     y += des.length * 5;
     if (line.description) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.setTextColor(91, 100, 124);
-      const d = doc.splitTextToSize(line.description, maxW - 50);
+      const d = doc.splitTextToSize(jsPdfSafe(line.description), maxW - 50);
       ensure(d.length * 4.5 + 2);
       doc.text(d, margin + 10, y);
       y += d.length * 4.5;
@@ -278,7 +296,9 @@ export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
     doc.setFontSize(9);
     doc.setTextColor(48, 54, 74);
     doc.text(
-      `${line.qty} × ${line.unitPriceHt} · TVA ${line.vatRate} · ${line.totalHt}`,
+      jsPdfSafe(
+        `${line.qty} x ${line.unitPriceHt} - TVA ${line.vatRate} - ${line.totalHt}`,
+      ),
       margin + 10,
       y,
     );
@@ -292,7 +312,7 @@ export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
     doc.text("Notes", margin, y);
     y += 5;
     doc.setFont("helvetica", "normal");
-    const n = doc.splitTextToSize(data.notes, maxW);
+    const n = doc.splitTextToSize(jsPdfSafe(data.notes), maxW);
     ensure(n.length * 4.5);
     doc.text(n, margin, y);
     y += n.length * 4.5 + 4;
@@ -311,10 +331,18 @@ export function renderQuoteDetailPdfFallback(data: QuoteDetailData): Buffer {
     ensure(6);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(label, margin, y);
-    doc.text(amount, pageW - margin, y, { align: "right" });
+    doc.text(jsPdfSafe(label), margin, y);
+    doc.text(jsPdfSafe(amount), pageW - margin, y, { align: "right" });
     y += 6;
   }
+
+  const foot = jsPdfSafe(
+    `Devis n ${data.quoteNumber}${data.ofFooter ? ` - ${data.ofFooter}` : ""}`,
+  );
+  ensure(10);
+  doc.setFontSize(8);
+  doc.setTextColor(138, 145, 165);
+  doc.text(doc.splitTextToSize(foot, maxW), margin, y + 4);
 
   return Buffer.from(doc.output("arraybuffer"));
 }

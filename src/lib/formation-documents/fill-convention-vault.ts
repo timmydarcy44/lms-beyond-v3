@@ -1,4 +1,7 @@
-import { PDFDocument } from "pdf-lib";
+import { readFile } from "fs/promises";
+import path from "path";
+import { PDFDocument, type PDFFont, type PDFTextField } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
 import { eurosFromCents, formatFrDate } from "@/lib/formation-documents/context";
@@ -15,15 +18,100 @@ function pdfSafe(text: string): string {
     .trim();
 }
 
+/** Phrase : majuscule en début uniquement, pas de Title Case en milieu. */
+function toSentenceCase(text: string): string {
+  let s = pdfSafe(text);
+  if (!s) return s;
+  s = s.toLowerCase();
+  s = s.replace(/(^|[.!?]\s+|\n+)(\p{L})/gu, (_, lead: string, letter: string) => {
+    return `${lead}${letter.toUpperCase()}`;
+  });
+  s = s
+    .replace(/\bbyound\b/gi, "Byound")
+    .replace(/\bopco\b/gi, "OPCO")
+    .replace(/\bqualiopi\b/gi, "Qualiopi")
+    .replace(/\bsiret\b/gi, "SIRET")
+    .replace(/\bsiren\b/gi, "SIREN")
+    .replace(/\bht\b/g, "HT")
+    .replace(/\bttc\b/g, "TTC")
+    .replace(/\btva\b/gi, "TVA")
+    .replace(/\bpdf\b/gi, "PDF");
+  return s;
+}
+
+const SKIP_SENTENCE_CASE = new Set([
+  "convention_number",
+  "established_date",
+  "signed_at_date",
+  "beneficiary_siren",
+  "beneficiary_siret",
+  "summary_amount_ht",
+  "amount_ht",
+  "amount_vat",
+  "amount_ttc",
+  "vat_rate",
+  "trainees_count",
+  "hours",
+  "dates",
+  "summary_dates",
+  "annex_modules_count",
+  "module_1_duration",
+  "module_2_duration",
+  "module_3_duration",
+  "module_4_duration",
+]);
+
 function moneyPlain(cents: number | null | undefined): string {
   return pdfSafe(eurosFromCents(cents).replace(/\s*€$/, "").trim());
 }
 
-function setText(form: ReturnType<PDFDocument["getForm"]>, name: string, value: string) {
-  const v = pdfSafe(value);
+function stripFieldBorders(form: ReturnType<PDFDocument["getForm"]>) {
+  for (const field of form.getFields()) {
+    try {
+      // Contours AcroForm (souvent perçus comme traits blancs après aplatissement)
+      for (const widget of field.acroField.getWidgets()) {
+        widget.getOrCreateBorderStyle().setWidth(0);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function fitFontSize(font: PDFFont, text: string, maxWidth: number, maxSize: number, minSize = 6): number {
+  let size = maxSize;
+  while (size > minSize && font.widthOfTextAtSize(text, size) > maxWidth) {
+    size -= 0.5;
+  }
+  return size;
+}
+
+function fieldMaxWidth(field: PDFTextField): number {
+  try {
+    const widgets = field.acroField.getWidgets();
+    const rect = widgets[0]?.getRectangle();
+    if (rect?.width) return Math.max(24, rect.width - 6);
+  } catch {
+    /* ignore */
+  }
+  return 220;
+}
+
+function setText(
+  form: ReturnType<PDFDocument["getForm"]>,
+  name: string,
+  value: string,
+  opts?: { sentenceCase?: boolean },
+) {
+  const applyCase = opts?.sentenceCase !== false && !SKIP_SENTENCE_CASE.has(name);
+  const v = applyCase ? toSentenceCase(value) : pdfSafe(value);
   if (!v) return;
   try {
-    form.getTextField(name).setText(v);
+    const field = form.getTextField(name);
+    for (const widget of field.acroField.getWidgets()) {
+      widget.getOrCreateBorderStyle().setWidth(0);
+    }
+    field.setText(v);
   } catch {
     /* champ absent du modèle */
   }
@@ -32,10 +120,30 @@ function setText(form: ReturnType<PDFDocument["getForm"]>, name: string, value: 
 function setCheck(form: ReturnType<PDFDocument["getForm"]>, name: string, on: boolean) {
   try {
     const box = form.getCheckBox(name);
+    for (const widget of box.acroField.getWidgets()) {
+      widget.getOrCreateBorderStyle().setWidth(0);
+    }
     if (on) box.check();
     else box.uncheck();
   } catch {
     /* champ absent */
+  }
+}
+
+async function loadInterFonts(pdf: PDFDocument): Promise<{ regular: PDFFont; bold: PDFFont } | null> {
+  try {
+    pdf.registerFontkit(fontkit);
+    const base = path.join(process.cwd(), "public", "fonts");
+    const [regularBytes, boldBytes] = await Promise.all([
+      readFile(path.join(base, "Inter-Regular.ttf")),
+      readFile(path.join(base, "Inter-Bold.ttf")),
+    ]);
+    const regular = await pdf.embedFont(regularBytes, { subset: true });
+    const bold = await pdf.embedFont(boldBytes, { subset: true });
+    return { regular, bold };
+  } catch (err) {
+    console.warn("[fill-convention-vault] Inter fonts unavailable, fallback Helvetica", err);
+    return null;
   }
 }
 
@@ -44,13 +152,13 @@ function conventionRef(ctx: DossierDocContext): string {
 }
 
 function datesLine(ctx: DossierDocContext): string {
-  if (!ctx.slots.length) return "a confirmer";
+  if (!ctx.slots.length) return "A confirmer";
   return [...new Set(ctx.slots.map((s) => formatFrDate(s.slot_date)))].join(" / ");
 }
 
 function hoursLine(ctx: DossierDocContext): string {
   const withHours = ctx.slots.filter((s) => s.starts_at && s.ends_at);
-  if (!withHours.length) return "selon convocation";
+  if (!withHours.length) return "Selon convocation";
   const fmt = (iso: string) =>
     new Date(iso).toLocaleTimeString("fr-FR", {
       hour: "2-digit",
@@ -106,27 +214,33 @@ export async function fillVaultConventionPdf(
 
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const form = pdf.getForm();
+  stripFieldBorders(form);
 
-  const title =
+  const inter = await loadInterFonts(pdf);
+  const titleRaw =
     ctx.course?.title || ctx.dossier.course_title || ctx.session?.title || "Formation professionnelle";
-  const objective =
+  const title = toSentenceCase(titleRaw);
+  const objective = toSentenceCase(
     ctx.course?.objectives?.[0] ||
-    ctx.course?.short_description ||
-    "Developper les competences visees par le programme joint.";
+      ctx.course?.short_description ||
+      "Developper les competences visees par le programme joint.",
+  );
   const ref = conventionRef(ctx);
   const now = new Date();
   const dateStr = now.toLocaleDateString("fr-FR");
-  const orgName = ctx.organization.name;
+  const orgName = toSentenceCase(ctx.organization.name);
   const orgSiret = ctx.organization.siret || "";
   const orgSiren = ctx.organization.siren || (orgSiret ? orgSiret.slice(0, 9) : "");
-  const contact = ctx.dossier.contact_name || "";
+  const contact = toSentenceCase(ctx.dossier.contact_name || "");
   const contactLine = [ctx.dossier.contact_email, ctx.dossier.contact_phone]
     .filter(Boolean)
     .join(" · ");
-  const location = ctx.session?.location_label || "Selon convocation";
-  const audience = ctx.course?.audience?.join(", ") || "Salaries de l'entreprise beneficiaire";
-  const prerequisites = ctx.course?.prerequisites || "Aucun prerequis specifique";
-  const objectives = ctx.course?.objectives ?? [];
+  const location = toSentenceCase(ctx.session?.location_label || "Selon convocation");
+  const audience = toSentenceCase(
+    ctx.course?.audience?.join(", ") || "Salaries de l'entreprise beneficiaire",
+  );
+  const prerequisites = toSentenceCase(ctx.course?.prerequisites || "Aucun prerequis specifique");
+  const objectives = (ctx.course?.objectives ?? []).map(toSentenceCase);
   const funding = (ctx.dossier.funding_type || "").toLowerCase();
   const mod = modalityPresence(ctx);
   const tvaRate =
@@ -137,46 +251,47 @@ export async function fillVaultConventionPdf(
           ),
         )
       : "20";
+  const datesCover = datesLine(ctx);
 
   // Couverture
-  setText(form, "convention_number", ref);
-  setText(form, "established_date", dateStr);
-  setText(form, "course_title", title);
-  setText(form, "general_objective", objective);
-  setText(form, "summary_beneficiary", orgName);
-  setText(form, "summary_dates", datesLine(ctx));
+  setText(form, "convention_number", ref, { sentenceCase: false });
+  setText(form, "established_date", dateStr, { sentenceCase: false });
+  setText(form, "course_title", title, { sentenceCase: false });
+  setText(form, "general_objective", objective, { sentenceCase: false });
+  setText(form, "summary_beneficiary", orgName, { sentenceCase: false });
+  setText(form, "summary_dates", datesCover, { sentenceCase: false });
   setText(form, "summary_duration", durationLabel(ctx));
-  setText(form, "summary_location", location);
-  setText(form, "summary_amount_ht", moneyPlain(ctx.dossier.amount_ht_cents));
+  setText(form, "summary_location", location, { sentenceCase: false });
+  setText(form, "summary_amount_ht", moneyPlain(ctx.dossier.amount_ht_cents), { sentenceCase: false });
 
   // Bénéficiaire
-  setText(form, "beneficiary_name", orgName);
+  setText(form, "beneficiary_name", orgName, { sentenceCase: false });
   setText(form, "beneficiary_status", "Entreprise");
   setText(form, "beneficiary_address", "");
-  setText(form, "beneficiary_siren", orgSiren);
-  setText(form, "beneficiary_siret", orgSiret);
-  setText(form, "beneficiary_representative", contact);
-  setText(form, "beneficiary_contact", contactLine || contact);
+  setText(form, "beneficiary_siren", orgSiren, { sentenceCase: false });
+  setText(form, "beneficiary_siret", orgSiret, { sentenceCase: false });
+  setText(form, "beneficiary_representative", contact, { sentenceCase: false });
+  setText(form, "beneficiary_contact", contactLine || contact, { sentenceCase: false });
 
   // Objet
-  setText(form, "course_title_inline", title);
-  setText(form, "beneficiary_name_inline", orgName);
+  setText(form, "course_title_inline", title, { sentenceCase: false });
+  setText(form, "beneficiary_name_inline", orgName, { sentenceCase: false });
   setText(form, "training_nature", "actions de formation");
 
   // Caractéristiques
-  setText(form, "objective_general", objective);
-  setText(form, "audience", audience);
-  setText(form, "prerequisites", prerequisites);
+  setText(form, "objective_general", objective, { sentenceCase: false });
+  setText(form, "audience", audience, { sentenceCase: false });
+  setText(form, "prerequisites", prerequisites, { sentenceCase: false });
   setText(form, "duration", durationLabel(ctx));
-  setText(form, "dates", datesLine(ctx));
-  setText(form, "hours", hoursLine(ctx));
+  setText(form, "dates", datesCover, { sentenceCase: false });
+  setText(form, "hours", hoursLine(ctx), { sentenceCase: false });
   setCheck(form, "modality_presentiel", mod === "presentiel");
   setCheck(form, "modality_distanciel", mod === "distanciel");
   setCheck(form, "modality_mixte", mod === "mixte");
   setCheck(form, "modality_individuelle", false);
   setCheck(form, "modality_collective", ctx.participants.length > 0);
-  setText(form, "trainees_count", String(ctx.participants.length || ""));
-  setText(form, "location", location);
+  setText(form, "trainees_count", String(ctx.participants.length || ""), { sentenceCase: false });
+  setText(form, "location", location, { sentenceCase: false });
   setText(form, "trainer_name", "Formateur Byound");
 
   setText(
@@ -199,13 +314,15 @@ export async function fillVaultConventionPdf(
     "final_evaluation",
     "Evaluation finale sur cas pratique et restitution des acquis.",
   );
-  setText(form, "badge_name", title);
+  setText(form, "badge_name", title, { sentenceCase: false });
 
   // Financier
-  setText(form, "amount_ht", moneyPlain(ctx.dossier.amount_ht_cents));
-  setText(form, "vat_rate", tvaRate);
-  setText(form, "amount_vat", moneyPlain(ctx.dossier.amount_tva_cents));
-  setText(form, "amount_ttc", moneyPlain(ctx.dossier.amount_ttc_cents ?? ctx.dossier.amount_ht_cents));
+  setText(form, "amount_ht", moneyPlain(ctx.dossier.amount_ht_cents), { sentenceCase: false });
+  setText(form, "vat_rate", tvaRate, { sentenceCase: false });
+  setText(form, "amount_vat", moneyPlain(ctx.dossier.amount_tva_cents), { sentenceCase: false });
+  setText(form, "amount_ttc", moneyPlain(ctx.dossier.amount_ttc_cents ?? ctx.dossier.amount_ht_cents), {
+    sentenceCase: false,
+  });
   setCheck(form, "funding_own", funding.includes("entreprise") || funding.includes("propre"));
   setCheck(form, "funding_opco", funding.includes("opco"));
   setCheck(
@@ -217,22 +334,22 @@ export async function fillVaultConventionPdf(
 
   // Signature
   setText(form, "signed_at_city", ctx.of.address_city || "Bretteville-sur-Odon");
-  setText(form, "signed_at_date", dateStr);
+  setText(form, "signed_at_date", dateStr, { sentenceCase: false });
 
   // Annexe
-  setText(form, "annex_course_title", title);
+  setText(form, "annex_course_title", title, { sentenceCase: false });
   setText(form, "annex_presentation", ctx.course?.short_description || objective);
   setText(form, "annex_duration", durationLabel(ctx));
   setText(form, "annex_format", formatLabel(ctx));
-  setText(form, "annex_modules_count", "2");
+  setText(form, "annex_modules_count", "2", { sentenceCase: false });
   setText(form, "annex_evaluation", "Cas pratique + restitution");
   setText(form, "annex_certification", "Attestation + open badge");
-  setText(form, "annex_objective", objective);
-  setText(form, "annex_audience", audience);
-  setText(form, "annex_prerequisites", prerequisites);
+  setText(form, "annex_objective", objective, { sentenceCase: false });
+  setText(form, "annex_audience", audience, { sentenceCase: false });
+  setText(form, "annex_prerequisites", prerequisites, { sentenceCase: false });
 
   objectives.slice(0, 6).forEach((obj, i) => {
-    setText(form, `objective_${i + 1}`, obj);
+    setText(form, `objective_${i + 1}`, obj, { sentenceCase: false });
   });
 
   // Modules annexe : depuis program_structure (Section → Chapitre → Sous-chapitre)
@@ -240,9 +357,9 @@ export async function fillVaultConventionPdf(
   const sections = ctx.course?.program_structure ?? [];
   const flatChapters = sections.flatMap((section) =>
     section.chapters.map((chapter) => ({
-      sectionTitle: section.title,
-      chapterTitle: chapter.title,
-      subchapters: chapter.subchapters.map((s) => s.title),
+      sectionTitle: toSentenceCase(section.title),
+      chapterTitle: toSentenceCase(chapter.title),
+      subchapters: chapter.subchapters.map((s) => toSentenceCase(s.title)),
     })),
   );
   for (let m = 1; m <= 4; m++) {
@@ -254,13 +371,18 @@ export async function fillVaultConventionPdf(
       form,
       `module_${m}_schedule`,
       day ? `Jour ${dayIdx + 1} · ${day} · ${hoursLine(ctx)}` : chapter.sectionTitle,
+      { sentenceCase: false },
     );
-    setText(form, `module_${m}_title`, `${chapter.sectionTitle} — ${chapter.chapterTitle}`);
-    setText(form, `module_${m}_duration`, "3 h 30");
-    setText(form, `module_${m}_chapter_1_title`, chapter.chapterTitle);
+    setText(form, `module_${m}_title`, `${chapter.sectionTitle} — ${chapter.chapterTitle}`, {
+      sentenceCase: false,
+    });
+    setText(form, `module_${m}_duration`, "3 h 30", { sentenceCase: false });
+    setText(form, `module_${m}_chapter_1_title`, chapter.chapterTitle, { sentenceCase: false });
     chapter.subchapters.slice(0, 3).forEach((sub, i) => {
-      setText(form, `module_${m}_chapter_${i + 1}_title`, i === 0 ? chapter.chapterTitle : `Point ${i + 1}`);
-      setText(form, `module_${m}_chapter_${i + 1}_item_1`, sub);
+      setText(form, `module_${m}_chapter_${i + 1}_title`, i === 0 ? chapter.chapterTitle : `Point ${i + 1}`, {
+        sentenceCase: false,
+      });
+      setText(form, `module_${m}_chapter_${i + 1}_item_1`, sub, { sentenceCase: false });
     });
     setText(form, `module_${m}_practice`, "Atelier et cas pratiques.");
     setText(form, `module_${m}_production`, "Livrable de la sequence.");
@@ -269,6 +391,7 @@ export async function fillVaultConventionPdf(
     form,
     "annex_modules_count",
     String(Math.max(flatChapters.length, sections.length) || 2),
+    { sentenceCase: false },
   );
 
   setText(form, "lunch_break", "Pause dejeuner selon planning du jour");
@@ -284,22 +407,86 @@ export async function fillVaultConventionPdf(
   );
   setText(form, "final_eval_modality", "Cas pratique + restitution orale");
   objectives.slice(0, 6).forEach((obj, i) => {
-    setText(form, `final_deliverable_${i + 1}`, obj);
-    setText(form, `criterion_${i + 1}`, obj);
+    setText(form, `final_deliverable_${i + 1}`, obj, { sentenceCase: false });
+    setText(form, `criterion_${i + 1}`, obj, { sentenceCase: false });
     setText(form, `criterion_${i + 1}_expected`, "Acquis");
   });
   setText(form, "trainer_qualifications", "Formateur expert Byound");
   setText(
     form,
     "session_info",
-    `${title} — ${datesLine(ctx)} — ${location}`,
+    `${title} — ${datesCover} — ${location}`,
+    { sentenceCase: false },
   );
 
+  // Titre de couverture : Inter Bold ; dates : taille adaptée à la largeur du champ
   try {
-    form.updateFieldAppearances(await pdf.embedFont((await import("pdf-lib")).StandardFonts.Helvetica));
+    if (inter) {
+      try {
+        const titleField = form.getTextField("course_title");
+        titleField.setText(title);
+        const titleWidth = fieldMaxWidth(titleField);
+        titleField.setFontSize(fitFontSize(inter.bold, title, titleWidth, 18, 9));
+        titleField.updateAppearances(inter.bold);
+      } catch {
+        /* champ absent */
+      }
+
+      for (const dateFieldName of ["dates", "summary_dates", "established_date"] as const) {
+        try {
+          const dateField = form.getTextField(dateFieldName);
+          const text = dateFieldName === "established_date" ? dateStr : datesCover;
+          if (!text) continue;
+          dateField.setText(text);
+          const w = fieldMaxWidth(dateField);
+          dateField.setFontSize(fitFontSize(inter.regular, text, w, 12, 6));
+          dateField.updateAppearances(inter.regular);
+        } catch {
+          /* champ absent */
+        }
+      }
+
+      form.updateFieldAppearances(inter.regular);
+      // Ré-appliquer titre / dates après update global
+      try {
+        const titleField = form.getTextField("course_title");
+        titleField.setFontSize(fitFontSize(inter.bold, title, fieldMaxWidth(titleField), 18, 9));
+        titleField.updateAppearances(inter.bold);
+      } catch {
+        /* ignore */
+      }
+      for (const dateFieldName of ["dates", "summary_dates", "established_date"] as const) {
+        try {
+          const dateField = form.getTextField(dateFieldName);
+          const text = dateFieldName === "established_date" ? dateStr : datesCover;
+          if (!text) continue;
+          dateField.setFontSize(fitFontSize(inter.regular, text, fieldMaxWidth(dateField), 12, 6));
+          dateField.updateAppearances(inter.regular);
+        } catch {
+          /* ignore */
+        }
+      }
+    } else {
+      const { StandardFonts } = await import("pdf-lib");
+      const helvetica = await pdf.embedFont(StandardFonts.Helvetica);
+      form.updateFieldAppearances(helvetica);
+      for (const dateFieldName of ["dates", "summary_dates", "established_date"] as const) {
+        try {
+          const dateField = form.getTextField(dateFieldName);
+          const text = dateFieldName === "established_date" ? dateStr : datesCover;
+          if (!text) continue;
+          dateField.setFontSize(fitFontSize(helvetica, text, fieldMaxWidth(dateField), 12, 6));
+          dateField.updateAppearances(helvetica);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
   } catch {
     /* appearances optionnelles */
   }
+
+  stripFieldBorders(form);
 
   // Aplatir pour que le PDF soit figé à l'envoi (lecture universelle)
   try {

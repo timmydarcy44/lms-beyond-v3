@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, GripVertical, Plus, Trash2 } from "lucide-react";
+import { Copy, GripVertical, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import {
   createId,
   type TrainingProgramChapter,
@@ -78,9 +78,16 @@ function SortableRow({
 type Props = {
   sections: TrainingProgramSection[];
   onChange: (sections: TrainingProgramSection[]) => void;
+  onAiGenerate?: () => void;
+  aiGenerating?: boolean;
 };
 
-export function TrainingProgramBuilder({ sections, onChange }: Props) {
+export function TrainingProgramBuilder({
+  sections,
+  onChange,
+  onAiGenerate,
+  aiGenerating = false,
+}: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const updateSection = (sectionId: string, patch: Partial<TrainingProgramSection>) => {
@@ -259,26 +266,61 @@ export function TrainingProgramBuilder({ sections, onChange }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Programme détaillé</h3>
           <p className="text-xs text-gray-500">
             Sections → chapitres → sous-chapitres. Structure affichée sur la page publique uniquement.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={addSection}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#635BFF] px-3 py-2 text-xs font-semibold text-white hover:bg-[#7B74FF]"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Section
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {onAiGenerate ? (
+            <button
+              type="button"
+              disabled={aiGenerating}
+              onClick={onAiGenerate}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#635BFF]/25 bg-[#635BFF]/8 px-3 py-2 text-xs font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-50"
+            >
+              {aiGenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              Byound AI
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={addSection}
+            disabled={aiGenerating}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#635BFF] px-3 py-2 text-xs font-semibold text-white hover:bg-[#7B74FF] disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Section
+          </button>
+        </div>
       </div>
 
       {sections.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-400">
-          Aucune section. Ajoutez une section ou générez le programme avec l&apos;IA.
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center">
+          <p className="text-sm text-gray-400">
+            Aucune section. Ajoutez une section ou générez le programme avec Byound AI.
+          </p>
+          {onAiGenerate ? (
+            <button
+              type="button"
+              disabled={aiGenerating}
+              onClick={onAiGenerate}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-[#635BFF]/25 bg-[#635BFF]/8 px-4 py-2.5 text-xs font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-50"
+            >
+              {aiGenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              Générer avec Byound AI
+            </button>
+          ) : null}
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>

@@ -384,6 +384,50 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
     }
   };
 
+  const runAiProgram = async () => {
+    if (!state) return;
+    if (!state.title.trim()) {
+      setError("Saisissez au minimum un titre avant de générer le programme.");
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/super/formations/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "program",
+          title: state.title,
+          domain: state.domain,
+          duration: state.duration,
+          level: state.level,
+          audience: state.audience,
+          existing: stateToPayload(state),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Erreur IA");
+      const programStructure = normalizeAiProgramStructure(json.content?.program_structure);
+      if (!programStructure.length) {
+        throw new Error("Programme IA vide — relancez la génération.");
+      }
+      patch("program_structure", programStructure);
+      const chapters = programStructure.reduce((n, s) => n + s.chapters.length, 0);
+      const subs = programStructure.reduce(
+        (n, s) => n + s.chapters.reduce((m, c) => m + c.subchapters.length, 0),
+        0,
+      );
+      setMessage(
+        `Programme Byound AI : ${programStructure.length} sections · ${chapters} chapitres · ${subs} sous-chapitres. Vérifiez puis Enregistrer.`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur IA");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <>
     <TrainingAiGenerateModal
@@ -669,6 +713,8 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                 <TrainingProgramBuilder
                   sections={state.program_structure}
                   onChange={(v) => patch("program_structure", v)}
+                  onAiGenerate={() => void runAiProgram()}
+                  aiGenerating={generating}
                 />
               )}
 

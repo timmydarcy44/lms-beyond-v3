@@ -6,6 +6,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
 import { eurosFromCents, formatFrDate } from "@/lib/formation-documents/context";
 import { fetchVaultTemplatePdf } from "@/lib/formation-documents/vault";
+import { assembleConventionPdf } from "@/lib/formation-documents/assemble-convention";
+import {
+  buildAnnexData,
+  renderAnnexPdf,
+} from "@/lib/formation-documents/convention-annex";
 
 /** Helvetica / WinAnsi : pas d’espaces fins ni caractères hors plage. */
 function pdfSafe(text: string): string {
@@ -54,11 +59,6 @@ const SKIP_SENTENCE_CASE = new Set([
   "hours",
   "dates",
   "summary_dates",
-  "annex_modules_count",
-  "module_1_duration",
-  "module_2_duration",
-  "module_3_duration",
-  "module_4_duration",
 ]);
 
 function moneyPlain(cents: number | null | undefined): string {
@@ -68,7 +68,6 @@ function moneyPlain(cents: number | null | undefined): string {
 function stripFieldBorders(form: ReturnType<PDFDocument["getForm"]>) {
   for (const field of form.getFields()) {
     try {
-      // Contours AcroForm (souvent perçus comme traits blancs après aplatissement)
       for (const widget of field.acroField.getWidgets()) {
         widget.getOrCreateBorderStyle().setWidth(0);
       }
@@ -93,7 +92,6 @@ function fieldBox(field: PDFTextField): { width: number; height: number } {
   return { width: 220, height: 24 };
 }
 
-/** Estime le nombre de lignes si le texte wrappe à maxWidth (sur-estime un peu = plus sûr). */
 function estimateWrappedLines(font: PDFFont, text: string, fontSize: number, maxWidth: number): number {
   const width = Math.max(8, maxWidth);
   let total = 0;
@@ -140,17 +138,14 @@ function fitFontToBox(
   return minSize;
 }
 
-/** Réduit le texte pour qu'il tienne dans la case à la taille donnée (ellipsis). */
 function truncateToBox(
   font: PDFFont,
   text: string,
   box: { width: number; height: number },
   fontSize: number,
 ): string {
-  const lineHeight = fontSize * 1.2;
-  const maxLines = Math.max(1, Math.floor(box.height / lineHeight));
+  const maxLines = Math.max(1, Math.floor(box.height / (fontSize * 1.2)));
   if (estimateWrappedLines(font, text, fontSize, box.width) <= maxLines) return text;
-
   const ellipsis = "...";
   let low = 0;
   let high = text.length;
@@ -170,13 +165,6 @@ function truncateToBox(
 
 function defaultMaxFontForField(name: string, boxHeight: number): number {
   if (name === "course_title") return Math.min(18, Math.max(9, boxHeight * 0.7));
-  if (name.includes("item_")) return Math.min(8, Math.max(5.5, boxHeight * 0.55));
-  if (name.startsWith("objective_") || name.startsWith("criterion_")) {
-    return Math.min(9, Math.max(6, boxHeight * 0.55));
-  }
-  if (name.includes("chapter_") && name.endsWith("_title")) {
-    return Math.min(9, Math.max(6, boxHeight * 0.55));
-  }
   if (boxHeight >= 40) return 10;
   if (boxHeight >= 24) return 9;
   return 8;
@@ -185,7 +173,7 @@ function defaultMaxFontForField(name: string, boxHeight: number): number {
 function fitAndSetTextField(field: PDFTextField, name: string, text: string, font: PDFFont) {
   const box = fieldBox(field);
   const maxSize = defaultMaxFontForField(name, box.height);
-  let size = fitFontToBox(font, text, box, maxSize);
+  const size = fitFontToBox(font, text, box, maxSize);
   let value = text;
   if (estimateWrappedLines(font, value, size, box.width) > Math.max(1, Math.floor(box.height / (size * 1.2)))) {
     value = truncateToBox(font, value, box, size);
@@ -292,28 +280,40 @@ function modalityPresence(ctx: DossierDocContext): "presentiel" | "distanciel" |
   return null;
 }
 
-function formatLabel(ctx: DossierDocContext): string {
-  const m = modalityPresence(ctx);
-  if (m === "distanciel") return "Distanciel";
-  if (m === "mixte") return "Mixte";
-  return "Presentiel";
+/** Charge le modèle corps (6 pages / 48 champs), prioritaire sur l'ancien vault 10 pages. */
+async function loadCorpsTemplate(
+  service: SupabaseClient,
+  templateBuffer?: Buffer | null,
+): Promise<Buffer | null> {
+  if (templateBuffer?.length) return templateBuffer;
+
+  const localPath = path.join(
+    process.cwd(),
+    "assets",
+    "formation-docs",
+    "Modele_Convention_corps_AcroForm.pdf",
+  );
+  try {
+    const local = await readFile(localPath);
+    if (local.length) return local;
+  } catch {
+    /* pas en local */
+  }
+
+  const vault = await fetchVaultTemplatePdf(service, "convention");
+  return vault?.buffer ?? null;
 }
 
 /**
- * Remplit le modèle AcroForm du coffre Qualiopi (champs nommés).
- * @param templateBuffer optionnel — pour tests locaux sans passer par le storage
+ * Remplit le corps AcroForm (48 champs) puis assemble l'annexe HTML dynamique.
  */
 export async function fillVaultConventionPdf(
   service: SupabaseClient,
   ctx: DossierDocContext,
   templateBuffer?: Buffer | null,
 ): Promise<Buffer | null> {
-  let bytes = templateBuffer ?? null;
-  if (!bytes) {
-    const vault = await fetchVaultTemplatePdf(service, "convention");
-    if (!vault) return null;
-    bytes = vault.buffer;
-  }
+  const bytes = await loadCorpsTemplate(service, templateBuffer);
+  if (!bytes) return null;
 
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const form = pdf.getForm();
@@ -343,7 +343,6 @@ export async function fillVaultConventionPdf(
     ctx.course?.audience?.join(", ") || "Salaries de l'entreprise beneficiaire",
   );
   const prerequisites = toSentenceCase(ctx.course?.prerequisites || "Aucun prerequis specifique");
-  const objectives = (ctx.course?.objectives ?? []).map(toSentenceCase);
   const funding = (ctx.dossier.funding_type || "").toLowerCase();
   const mod = modalityPresence(ctx);
   const tvaRate =
@@ -431,135 +430,34 @@ export async function fillVaultConventionPdf(
   setCheck(
     form,
     "funding_other",
-    Boolean(funding) && !funding.includes("opco") && !funding.includes("entreprise") && !funding.includes("propre"),
+    Boolean(funding) &&
+      !funding.includes("opco") &&
+      !funding.includes("entreprise") &&
+      !funding.includes("propre"),
   );
-  setText(form, "funding_other_label", funding.includes("opco") || funding.includes("entreprise") ? "" : funding);
+  setText(
+    form,
+    "funding_other_label",
+    funding.includes("opco") || funding.includes("entreprise") ? "" : funding,
+  );
 
   // Signature
   setText(form, "signed_at_city", ctx.of.address_city || "Bretteville-sur-Odon");
   setText(form, "signed_at_date", dateStr, { sentenceCase: false });
 
-  // Annexe
-  setText(form, "annex_course_title", title, { sentenceCase: false });
-  setText(form, "annex_presentation", ctx.course?.short_description || objective);
-  setText(form, "annex_duration", durationLabel(ctx));
-  setText(form, "annex_format", formatLabel(ctx));
-  setText(form, "annex_modules_count", "2", { sentenceCase: false });
-  setText(form, "annex_evaluation", "Cas pratique + restitution");
-  setText(form, "annex_certification", "Attestation + open badge");
-  setText(form, "annex_objective", objective, { sentenceCase: false });
-  setText(form, "annex_audience", audience, { sentenceCase: false });
-  setText(form, "annex_prerequisites", prerequisites, { sentenceCase: false });
-
-  objectives.slice(0, 6).forEach((obj, i) => {
-    setText(form, `objective_${i + 1}`, obj, { sentenceCase: false });
-  });
-
-  // Annexe programme : mapping catalogue → AcroForm
-  // Section → module_N | Chapitre → module_N_chapter_M | Sous-chapitre → item_1..3
-  // (le modèle PDF affiche encore « Module / Chapitre », mais le contenu suit la nomenclature Byound)
-  const dayLabels = [...new Set(ctx.slots.map((s) => formatFrDate(s.slot_date)))];
-  const sections = (ctx.course?.program_structure ?? []).slice(0, 4);
-  const hours = hoursLine(ctx);
-  const sectionCount = sections.length;
-
-  for (let m = 1; m <= 4; m++) {
-    const section = sections[m - 1];
-    if (!section) continue;
-
-    const sectionTitle = toSentenceCase(section.title);
-    const sectionDesc = toSentenceCase(section.description || "");
-    const chapters = (section.chapters ?? []).slice(0, 3);
-
-    const dayIdx =
-      dayLabels.length <= 1
-        ? 0
-        : Math.min(
-            Math.floor(((m - 1) * dayLabels.length) / Math.max(sectionCount, 1)),
-            dayLabels.length - 1,
-          );
-    const day = dayLabels[dayIdx] || "";
-    setText(
-      form,
-      `module_${m}_schedule`,
-      day ? `Jour ${dayIdx + 1} · ${day} · ${hours}` : sectionTitle,
-      { sentenceCase: false },
-    );
-    setText(form, `module_${m}_title`, sectionTitle, { sentenceCase: false });
-    // Durée indicative : répartir la journée sur les sections du jour
-    const durationHint =
-      chapters.length >= 3 ? "3 h 30" : chapters.length === 2 ? "2 h 30" : "1 h 45";
-    setText(form, `module_${m}_duration`, durationHint, { sentenceCase: false });
-
-    chapters.forEach((chapter, ci) => {
-      const ch = ci + 1;
-      setText(form, `module_${m}_chapter_${ch}_title`, toSentenceCase(chapter.title), {
-        sentenceCase: false,
-      });
-      (chapter.subchapters ?? []).slice(0, 3).forEach((sub, si) => {
-        setText(
-          form,
-          `module_${m}_chapter_${ch}_item_${si + 1}`,
-          toSentenceCase(sub.title),
-          { sentenceCase: false },
-        );
-      });
-    });
-
-    setText(
-      form,
-      `module_${m}_practice`,
-      sectionDesc || "Atelier pratique et mises en situation sur les acquis de la section.",
-      { sentenceCase: false },
-    );
-    setText(
-      form,
-      `module_${m}_production`,
-      "Restitution des acquis et livrable de la section.",
-    );
-  }
-  setText(form, "annex_modules_count", String(sectionCount || 2), { sentenceCase: false });
-
-  setText(form, "lunch_break", "Pause dejeuner selon planning du jour");
-  setText(
-    form,
-    "annex_methods",
-    "Alternance theorie / pratique, demos, feedback.",
-  );
-  setText(
-    form,
-    "annex_means",
-    "Supports PDF, outils collaboratifs, plateforme Byound.",
-  );
-  setText(form, "final_eval_modality", "Cas pratique + restitution orale");
-  objectives.slice(0, 6).forEach((obj, i) => {
-    setText(form, `final_deliverable_${i + 1}`, obj, { sentenceCase: false });
-    setText(form, `criterion_${i + 1}`, obj, { sentenceCase: false });
-    setText(form, `criterion_${i + 1}_expected`, "Acquis");
-  });
-  setText(form, "trainer_qualifications", "Formateur expert Byound");
-  setText(
-    form,
-    "session_info",
-    `${title} — ${datesCover} — ${location}`,
-    { sentenceCase: false },
-  );
-
-  // Apparences : taille de police + troncature pour rester DANS la case (pas de débordement)
+  // Apparences corps (fit dans les cases)
   try {
     const { StandardFonts } = await import("pdf-lib");
     const fallback = await pdf.embedFont(StandardFonts.Helvetica);
     const regular = inter?.regular ?? fallback;
     const bold = inter?.bold ?? fallback;
-
     for (const field of form.getFields()) {
       try {
         const name = field.getName();
         const textField = form.getTextField(name);
         const raw = textField.getText() || "";
         if (!raw.trim()) continue;
-        const font = name === "course_title" ? bold : regular;
-        fitAndSetTextField(textField, name, raw, font);
+        fitAndSetTextField(textField, name, raw, name === "course_title" ? bold : regular);
       } catch {
         /* checkbox / non-text */
       }
@@ -569,14 +467,32 @@ export async function fillVaultConventionPdf(
   }
 
   stripFieldBorders(form);
-
-  // Aplatir pour que le PDF soit figé à l'envoi (lecture universelle)
   try {
     form.flatten();
   } catch {
-    /* certains viewers gèrent mieux non aplati */
+    /* ignore */
   }
 
-  const out = await pdf.save();
-  return Buffer.from(out);
+  const corpsPdf = Buffer.from(await pdf.save());
+
+  // Annexe HTML dynamique (Section → Chapitre → Sous-chapitre) + assemblage
+  try {
+    const annexData = buildAnnexData(ctx, ref);
+    const annexPdf = await renderAnnexPdf(annexData);
+    return assembleConventionPdf({
+      corpsPdf,
+      annexPdf,
+      conventionRef: ref,
+      ofFooter: [
+        ctx.of.legal_name || "SAS Byound Business",
+        [ctx.of.address_line, ctx.of.address_zip, ctx.of.address_city].filter(Boolean).join(", "),
+        "contact@byound.fr",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    });
+  } catch (err) {
+    console.error("[fill-convention-vault] annex/assemble failed, returning corps only", err);
+    return corpsPdf;
+  }
 }

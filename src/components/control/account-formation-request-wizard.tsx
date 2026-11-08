@@ -200,6 +200,11 @@ export function AccountFormationRequestWizard({
       setError("Renseignez l'adresse postale complète de l'entreprise.");
       return false;
     }
+    const siretDigits = siret.replace(/\D/g, "");
+    if (siretDigits.length !== 14) {
+      setError("SIRET à 14 chiffres requis.");
+      return false;
+    }
     setSavingAddress(true);
     setError(null);
     try {
@@ -211,7 +216,7 @@ export function AccountFormationRequestWizard({
           address_zip: addressZip.trim(),
           address_city: addressCity.trim(),
           address_country: "FR",
-          siret: siret.replace(/\D/g, "") || undefined,
+          siret: siretDigits,
         }),
       });
       const json = (await res.json()) as { error?: string };
@@ -240,25 +245,30 @@ export function AccountFormationRequestWizard({
       setError("La date de fin doit être après la date de début.");
       return;
     }
+    if (!morningStart || !morningEnd || !afternoonStart || !afternoonEnd) {
+      setError("Renseignez les horaires matin et après-midi (requis pour la convention).");
+      return;
+    }
+    if (morningEnd <= morningStart || afternoonEnd <= afternoonStart) {
+      setError("Vérifiez les plages horaires (fin après début).");
+      return;
+    }
     if (modality !== "distanciel" && locationMode === "other" && !locationOther.trim()) {
       setError("Précisez le lieu (autre), ou choisissez Chez le client / Chez Byound.");
       return;
     }
-    // Chez le client sans adresse → bascule Byound plutôt que bloquer Continuer.
-    if (modality !== "distanciel" && locationMode === "client" && !hasClientAddress) {
-      setLocationMode("byound");
-      setError("Lieu basculé sur « Chez Byound » (adresse client manquante).");
-    } else {
-      setError(null);
+    // Adresse + SIRET toujours requis pour la convention (bénéficiaire).
+    if (!hasClientAddress) {
+      setError("Adresse postale de l'entreprise requise pour la convention.");
+      return;
     }
-    // Ne jamais attendre l’API adresse ici — sinon Continuer reste figé.
-    if (hasClientAddress) {
-      const dirty =
-        addressLine !== (orgAddressProp?.addressLine ?? "") ||
-        addressZip !== (orgAddressProp?.addressZip ?? "") ||
-        addressCity !== (orgAddressProp?.addressCity ?? "");
-      if (dirty) void saveClientAddress().catch(() => false);
+    const siretDigits = siret.replace(/\D/g, "");
+    if (siretDigits.length !== 14) {
+      setError("SIRET à 14 chiffres requis pour la convention.");
+      return;
     }
+    setError(null);
+    void saveClientAddress().catch(() => false);
     setStep(4);
   }
 
@@ -281,8 +291,16 @@ export function AccountFormationRequestWizard({
       );
       return;
     }
-    if (modality !== "distanciel" && locationMode === "client" && !hasClientAddress) {
-      setError("Adresse entreprise requise.");
+    if (!hasClientAddress) {
+      setError("Adresse entreprise requise pour la convention.");
+      return;
+    }
+    if (siret.replace(/\D/g, "").length !== 14) {
+      setError("SIRET à 14 chiffres requis pour la convention.");
+      return;
+    }
+    if (!morningStart || !morningEnd || !afternoonStart || !afternoonEnd) {
+      setError("Horaires de session requis.");
       return;
     }
     setLoading(true);
@@ -609,39 +627,49 @@ export function AccountFormationRequestWizard({
             </select>
           </Field>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Matin (début → fin)">
-              <div className="flex gap-2">
-                <input
-                  type="time"
-                  value={morningStart}
-                  onChange={(e) => setMorningStart(e.target.value)}
-                  className={fieldClass}
-                />
-                <input
-                  type="time"
-                  value={morningEnd}
-                  onChange={(e) => setMorningEnd(e.target.value)}
-                  className={fieldClass}
-                />
-              </div>
-            </Field>
-            <Field label="Après-midi (début → fin)">
-              <div className="flex gap-2">
-                <input
-                  type="time"
-                  value={afternoonStart}
-                  onChange={(e) => setAfternoonStart(e.target.value)}
-                  className={fieldClass}
-                />
-                <input
-                  type="time"
-                  value={afternoonEnd}
-                  onChange={(e) => setAfternoonEnd(e.target.value)}
-                  className={fieldClass}
-                />
-              </div>
-            </Field>
+          <div className="rounded-2xl border border-[#26304F] bg-[#111831] p-3">
+            <p className="mb-2 text-sm font-semibold text-white">Horaires de session</p>
+            <p className="mb-3 text-xs text-[#8A93AE]">
+              Repris sur la convention (article dates &amp; horaires) et les créneaux d&apos;émargement.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Matin (début → fin)">
+                <div className="flex gap-2">
+                  <input
+                    type="time"
+                    required
+                    value={morningStart}
+                    onChange={(e) => setMorningStart(e.target.value)}
+                    className={fieldClass}
+                  />
+                  <input
+                    type="time"
+                    required
+                    value={morningEnd}
+                    onChange={(e) => setMorningEnd(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+              </Field>
+              <Field label="Après-midi (début → fin)">
+                <div className="flex gap-2">
+                  <input
+                    type="time"
+                    required
+                    value={afternoonStart}
+                    onChange={(e) => setAfternoonStart(e.target.value)}
+                    className={fieldClass}
+                  />
+                  <input
+                    type="time"
+                    required
+                    value={afternoonEnd}
+                    onChange={(e) => setAfternoonEnd(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+              </Field>
+            </div>
           </div>
 
           {modality !== "distanciel" ? (
@@ -695,59 +723,58 @@ export function AccountFormationRequestWizard({
             </div>
           ) : null}
 
-          {modality !== "distanciel" && locationMode === "client" ? (
-            <div className="space-y-2 rounded-2xl border border-[#6E5BFF]/40 bg-[#17122E] p-3">
-              <p className="text-sm font-semibold text-white">Adresse postale de l&apos;entreprise</p>
-              <p className="text-xs text-[#8A93AE]">
-                Obligatoire pour « Chez le client » (et reprise sur le devis).
-              </p>
-              <Field label="Adresse">
+          <div className="space-y-2 rounded-2xl border border-[#6E5BFF]/40 bg-[#17122E] p-3">
+            <p className="text-sm font-semibold text-white">Bénéficiaire (convention)</p>
+            <p className="text-xs text-[#8A93AE]">
+              Adresse + SIRET obligatoires pour générer devis et convention.
+            </p>
+            <Field label="Adresse">
+              <input
+                value={addressLine}
+                onChange={(e) => setAddressLine(e.target.value)}
+                placeholder="N° et rue"
+                className={fieldClass}
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-[100px_1fr]">
+              <Field label="CP">
                 <input
-                  value={addressLine}
-                  onChange={(e) => setAddressLine(e.target.value)}
-                  placeholder="N° et rue"
+                  value={addressZip}
+                  onChange={(e) => setAddressZip(e.target.value)}
                   className={fieldClass}
                 />
               </Field>
-              <div className="grid gap-3 sm:grid-cols-[100px_1fr]">
-                <Field label="CP">
-                  <input
-                    value={addressZip}
-                    onChange={(e) => setAddressZip(e.target.value)}
-                    className={fieldClass}
-                  />
-                </Field>
-                <Field label="Ville">
-                  <input
-                    value={addressCity}
-                    onChange={(e) => setAddressCity(e.target.value)}
-                    className={fieldClass}
-                  />
-                </Field>
-              </div>
-              <Field label="SIRET (optionnel)">
+              <Field label="Ville">
                 <input
-                  value={siret}
-                  onChange={(e) => setSiret(e.target.value)}
-                  placeholder="14 chiffres"
+                  value={addressCity}
+                  onChange={(e) => setAddressCity(e.target.value)}
                   className={fieldClass}
                 />
               </Field>
-              {!hasClientAddress ||
-              addressLine !== (orgAddressProp?.addressLine ?? "") ||
-              addressZip !== (orgAddressProp?.addressZip ?? "") ||
-              addressCity !== (orgAddressProp?.addressCity ?? "") ? (
-                <button
-                  type="button"
-                  disabled={savingAddress}
-                  className="rounded-full border border-[#26304F] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-                  onClick={() => void saveClientAddress()}
-                >
-                  {savingAddress ? "Enregistrement…" : "Enregistrer l'adresse sur le compte"}
-                </button>
-              ) : null}
             </div>
-          ) : null}
+            <Field label="SIRET">
+              <input
+                value={siret}
+                onChange={(e) => setSiret(e.target.value)}
+                placeholder="14 chiffres"
+                className={fieldClass}
+              />
+            </Field>
+            {!hasClientAddress ||
+            siret.replace(/\D/g, "").length !== 14 ||
+            addressLine !== (orgAddressProp?.addressLine ?? "") ||
+            addressZip !== (orgAddressProp?.addressZip ?? "") ||
+            addressCity !== (orgAddressProp?.addressCity ?? "") ? (
+              <button
+                type="button"
+                disabled={savingAddress}
+                className="rounded-full border border-[#26304F] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                onClick={() => void saveClientAddress()}
+              >
+                {savingAddress ? "Enregistrement…" : "Enregistrer sur le compte"}
+              </button>
+            ) : null}
+          </div>
 
           {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}
           <div className="sticky bottom-0 z-10 -mx-1 flex gap-2 bg-[#111831]/95 py-3 backdrop-blur">
@@ -779,16 +806,29 @@ export function AccountFormationRequestWizard({
               {resolvedLocation ? ` · ${resolvedLocation}` : ""} · {modality}
             </p>
             <p className="mt-1 text-xs">
+              Horaires {morningStart}–{morningEnd} / {afternoonStart}–{afternoonEnd}
+            </p>
+            <p className="mt-1 text-xs">
               {deferParticipants
                 ? "Participants à compléter"
                 : `${selectedPeople.length} participant(s)`}{" "}
               ·{" "}
-              {(amounts.ttc / 100).toLocaleString("fr-FR", {
+              {(amounts.ht / 100).toLocaleString("fr-FR", {
                 style: "currency",
                 currency: "EUR",
               })}{" "}
-              TTC estimé
+              HT catalogue
             </p>
+            <ul className="mt-3 space-y-1 text-[11px] text-[#8A93AE]">
+              <li>✓ Formation + montant catalogue</li>
+              <li>✓ Dates + horaires + lieu</li>
+              <li>✓ Adresse + SIRET bénéficiaire</li>
+              <li>
+                {deferParticipants
+                  ? "○ Participants à compléter après devis"
+                  : "✓ Participants"}
+              </li>
+            </ul>
           </div>
           <Field label="Destinataire du devis">
             <input

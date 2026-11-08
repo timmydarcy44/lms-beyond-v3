@@ -16,11 +16,46 @@ export async function GET(_req: Request, ctx: Ctx) {
   const { data: dossier } = await service
     .from("formation_dossiers")
     .select(
-      "id, status, session_id, trainer_user_id, trainer_assigned_at, invoice_validated_at, amount_ht_cents, amount_tva_cents, amount_ttc_cents, bpf_funder_type, contact_email, contact_name, course_title",
+      "id, status, session_id, trainer_user_id, trainer_assigned_at, invoice_validated_at, amount_ht_cents, amount_tva_cents, amount_ttc_cents, bpf_funder_type, contact_email, contact_name, course_title, training_course_id, modality_intra_inter, notes",
     )
     .eq("id", id)
     .maybeSingle();
   if (!dossier) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
+
+  const { quoteHtCentsFromCatalog } = await import("@/lib/formation-dossier/catalog-pricing");
+  let catalogSuggestedHtCents: number | null = null;
+  let catalogLabel: string | null = null;
+  let catalogCourseId: string | null = dossier.training_course_id
+    ? String(dossier.training_course_id)
+    : null;
+
+  let courseQuery = service
+    .from("training_courses")
+    .select("id, title, intra_price, inter_price");
+  if (catalogCourseId) {
+    courseQuery = courseQuery.eq("id", catalogCourseId);
+  } else if (dossier.course_title) {
+    courseQuery = courseQuery.ilike("title", String(dossier.course_title));
+  }
+  const { data: catalogCourse } =
+    catalogCourseId || dossier.course_title
+      ? await courseQuery.limit(1).maybeSingle()
+      : { data: null };
+
+  if (catalogCourse?.id) {
+    catalogCourseId = String(catalogCourse.id);
+    const modality =
+      String(dossier.modality_intra_inter ?? "intra") === "inter" ? "inter" : "intra";
+    catalogSuggestedHtCents = quoteHtCentsFromCatalog({
+      intraPrice: catalogCourse.intra_price != null ? Number(catalogCourse.intra_price) : null,
+      interPrice: catalogCourse.inter_price != null ? Number(catalogCourse.inter_price) : null,
+      modality,
+      participants: 1,
+    });
+    if (catalogSuggestedHtCents != null) {
+      catalogLabel = `${(catalogSuggestedHtCents / 100).toLocaleString("fr-FR")} € HT catalogue (${modality})`;
+    }
+  }
 
   const { data: convention } = await service
     .from("formation_documents")
@@ -94,6 +129,11 @@ export async function GET(_req: Request, ctx: Ctx) {
       ht: dossier.amount_ht_cents,
       tva: dossier.amount_tva_cents,
       ttc: dossier.amount_ttc_cents,
+    },
+    catalog: {
+      training_course_id: catalogCourseId,
+      suggested_ht_cents: catalogSuggestedHtCents,
+      label: catalogLabel,
     },
   });
 }

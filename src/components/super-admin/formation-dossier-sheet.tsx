@@ -119,6 +119,11 @@ type Lot5Meta = {
   };
   invoice: { number: string; amount_ttc_cents: number | null } | null;
   trainers: Array<{ id: string; name: string }>;
+  catalog?: {
+    training_course_id: string | null;
+    suggested_ht_cents: number | null;
+    label: string | null;
+  };
 };
 
 export function FormationDossierSheet({
@@ -168,14 +173,20 @@ export function FormationDossierSheet({
       const mJson = await parseFetchJson<Lot5Meta & { error?: string }>(mRes);
       if (!dRes.ok) throw new Error(dJson.error);
       setDossier(dJson.dossier ?? null);
+      const catalogHt =
+        mRes.ok && mJson.catalog?.suggested_ht_cents != null && mJson.catalog.suggested_ht_cents > 0
+          ? mJson.catalog.suggested_ht_cents
+          : null;
       if (dJson.dossier) {
         const ht = dJson.dossier.amount_ht_cents;
         const funding = String(dJson.dossier.funding_type ?? "direct");
+        const resolvedHt =
+          ht != null && ht > 0 ? ht : catalogHt;
         setDevisDraft({
           course_title: dJson.dossier.course_title ?? "",
           contact_name: dJson.dossier.contact_name ?? "",
           contact_email: dJson.dossier.contact_email ?? "",
-          amount_ht_euros: ht != null && ht > 0 ? String(ht / 100) : "",
+          amount_ht_euros: resolvedHt != null ? String(resolvedHt / 100) : "",
           funding_type:
             funding === "opco" || funding === "subrogation" ? funding : "direct",
           notes: dJson.dossier.notes ?? "",
@@ -570,6 +581,33 @@ export function FormationDossierSheet({
                       className="border-[#262A4A] bg-[#0A0C1B]"
                       placeholder="1890"
                     />
+                    {meta?.catalog?.suggested_ht_cents != null &&
+                    meta.catalog.suggested_ht_cents > 0 ? (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <p className="text-[11px] text-[#A3A8C7]">
+                          Catalogue :{" "}
+                          <span className="font-semibold text-[#B7AEFF]">
+                            {(meta.catalog.suggested_ht_cents / 100).toLocaleString("fr-FR")} € HT
+                          </span>
+                        </p>
+                        <button
+                          type="button"
+                          className="rounded-full border border-[#6C5CF5]/50 px-2.5 py-0.5 text-[11px] font-semibold text-[#B7AEFF]"
+                          onClick={() =>
+                            setDevisDraft((d) => ({
+                              ...d,
+                              amount_ht_euros: String(meta.catalog!.suggested_ht_cents! / 100),
+                            }))
+                          }
+                        >
+                          Appliquer le prix catalogue
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="pt-1 text-[11px] text-[#A3A8C7]">
+                        Aucun prix catalogue lié — renseignez le montant ou associez une formation CMS.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] text-[#A3A8C7]">Financement</Label>

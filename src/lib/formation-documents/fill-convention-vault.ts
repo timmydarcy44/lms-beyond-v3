@@ -4,7 +4,7 @@ import { PDFDocument, type PDFFont, type PDFTextField } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
-import { eurosFromCents } from "@/lib/formation-documents/context";
+import { eurosFromCents, formatPostalAddress } from "@/lib/formation-documents/context";
 import { fetchVaultTemplatePdf } from "@/lib/formation-documents/vault";
 import { assembleConventionPdf } from "@/lib/formation-documents/assemble-convention";
 import {
@@ -371,7 +371,19 @@ export async function fillVaultConventionPdf(
   // Bénéficiaire
   setText(form, "beneficiary_name", orgName, { sentenceCase: false });
   setText(form, "beneficiary_status", "Entreprise");
-  setText(form, "beneficiary_address", "");
+  setText(
+    form,
+    "beneficiary_address",
+    pdfSafe(
+      formatPostalAddress({
+        address_line: ctx.organization.address_line,
+        address_zip: ctx.organization.address_zip,
+        address_city: ctx.organization.address_city,
+        address_country: ctx.organization.address_country,
+      }) || "",
+    ),
+    { sentenceCase: false },
+  );
   setText(form, "beneficiary_siren", orgSiren, { sentenceCase: false });
   setText(form, "beneficiary_siret", orgSiret, { sentenceCase: false });
   setText(form, "beneficiary_representative", contact, { sentenceCase: false });

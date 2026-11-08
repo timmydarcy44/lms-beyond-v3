@@ -379,7 +379,6 @@ export async function fillVaultConventionPdf(
         address_line: ctx.organization.address_line,
         address_zip: ctx.organization.address_zip,
         address_city: ctx.organization.address_city,
-        address_country: ctx.organization.address_country,
       }) || "",
     ),
     { sentenceCase: false },

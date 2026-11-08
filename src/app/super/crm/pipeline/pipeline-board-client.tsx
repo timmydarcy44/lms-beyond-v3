@@ -56,6 +56,8 @@ import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pip
 import { CatalogueEmailOpenIndicator } from "@/components/crm/catalogue-email-open-indicator";
 import { PipelineCatalogueEmailOverlay } from "@/components/crm/pipeline-catalogue-email-overlay";
 import { PipelineDealCockpit, sanitizeHumanNotes } from "@/components/crm/pipeline-deal-cockpit";
+import { CreateOrganisationModal } from "@/components/onboarding/create-organisation-modal";
+import { canCreateOrganisation } from "@/lib/onboarding/deal-stages";
 import { computeDealIntelligence } from "@/lib/crm/pipeline-deal-intelligence";
 import { PipelineFranceMap } from "@/components/crm/pipeline-france-map";
 import { PipelineB2bLayout } from "./pipeline-b2b-layout";
@@ -163,6 +165,8 @@ export const PipelineBoardClient = forwardRef<
   const [catalogueOverlayDeal, setCatalogueOverlayDeal] = useState<PipelineDeal | null>(null);
   const [pendingStageSlug, setPendingStageSlug] = useState<string | null>(null);
   const [saveAfterCatalogue, setSaveAfterCatalogue] = useState(false);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [createOrgDeal, setCreateOrgDeal] = useState<PipelineDeal | null>(null);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -648,9 +652,12 @@ export const PipelineBoardClient = forwardRef<
       toast.error("Déplacement impossible");
       return;
     }
+    const patched = (await res.json().catch(() => null)) as { deal?: PipelineDeal } | null;
+    const nextDeal = patched?.deal ?? (deal ? { ...deal, stage_slug: stageSlug } : null);
     await load();
     if (
       !isBtoc &&
+      nextDeal &&
       SIGNED_DEAL_STAGES_FOR_FORMATIONS.includes(
         stageSlug as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
       ) &&
@@ -659,7 +666,22 @@ export const PipelineBoardClient = forwardRef<
         deal.stage_slug as (typeof SIGNED_DEAL_STAGES_FOR_FORMATIONS)[number]
       )
     ) {
-      toast.success("Client ajouté à l’onglet Formations");
+      if (canCreateOrganisation(stageSlug, nextDeal.organization_id)) {
+        toast.success("Deal gagné — créez le compte client pour piloter les formations");
+        setCreateOrgDeal({ ...nextDeal, stage_slug: stageSlug });
+        setCreateOrgOpen(true);
+      } else if (nextDeal.organization_id) {
+        toast.success("Compte client actif", {
+          action: {
+            label: "Ouvrir",
+            onClick: () => {
+              window.location.href = `/super/organisations/${nextDeal.organization_id}?tab=dossiers`;
+            },
+          },
+        });
+      } else {
+        toast.success("Deal gagné — dossiers formation disponibles");
+      }
     }
   };
 
@@ -1271,6 +1293,20 @@ export const PipelineBoardClient = forwardRef<
                 last_contact_date: new Date().toISOString().slice(0, 10),
               }));
             }}
+            onCreateOrganisation={() => {
+              const deal = form.id ? deals.find((d) => d.id === form.id) : null;
+              if (!deal) {
+                toast.error("Enregistrez la fiche avant de créer le compte client");
+                return;
+              }
+              setCreateOrgDeal({
+                ...deal,
+                ...form,
+                organization_id: form.organization_id ?? deal.organization_id,
+                stage_slug: form.stage_slug || deal.stage_slug,
+              } as PipelineDeal);
+              setCreateOrgOpen(true);
+            }}
           />
         ) : (
           <div className="space-y-4">
@@ -1363,6 +1399,30 @@ export const PipelineBoardClient = forwardRef<
         currentUserEmail={currentUserEmail}
         onSent={handleCatalogueSent}
       />
+
+      {createOrgDeal ? (
+        <CreateOrganisationModal
+          open={createOrgOpen}
+          onOpenChange={(open) => {
+            setCreateOrgOpen(open);
+            if (!open) setCreateOrgDeal(null);
+          }}
+          deal={createOrgDeal}
+          onSuccess={(organizationId) => {
+            setForm((f) => ({ ...f, organization_id: organizationId }));
+            setCreateOrgDeal((d) => (d ? { ...d, organization_id: organizationId } : d));
+            void load({ silent: true });
+            toast.success("Compte client créé", {
+              action: {
+                label: "Ouvrir",
+                onClick: () => {
+                  window.location.href = `/super/organisations/${organizationId}?tab=dossiers`;
+                },
+              },
+            });
+          }}
+        />
+      ) : null}
     </div>
   );
 });

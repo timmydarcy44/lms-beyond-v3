@@ -27,9 +27,9 @@ type Tab =
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
+  { id: "dossiers", label: "Dossiers formation" },
   { id: "members", label: "Membres" },
   { id: "courses", label: "Formations LMS" },
-  { id: "dossiers", label: "Dossiers formation" },
   { id: "badges", label: "Open Badges" },
   { id: "tests", label: "Tests" },
   { id: "revenue", label: "Chiffre d'affaires" },
@@ -121,7 +121,9 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       <TabBar tab={tab} counts={tabCounts(detail)} onChange={openTab} />
       {notice ? <p className="mt-4 text-sm text-[#6BE39B]">{notice}</p> : null}
 
-      {tab === "overview" ? <Overview detail={detail} onOpen={setPanel} /> : null}
+      {tab === "overview" ? (
+        <Overview detail={detail} onOpen={setPanel} onOpenDossiers={() => openTab("dossiers")} />
+      ) : null}
       {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
       {tab === "courses" ? <CoursesTab detail={detail} onAssign={() => setPanel("course")} /> : null}
       {tab === "dossiers" ? <FormationDossiersTab organizationId={account.id} /> : null}
@@ -228,7 +230,15 @@ function TabBar({ tab, counts, onChange }: { tab: Tab; counts: Partial<Record<Ta
   );
 }
 
-function Overview({ detail, onOpen }: { detail: Detail; onOpen: (panel: "invite" | "course" | "badge") => void }) {
+function Overview({
+  detail,
+  onOpen,
+  onOpenDossiers,
+}: {
+  detail: Detail;
+  onOpen: (panel: "invite" | "course" | "badge") => void;
+  onOpenDossiers: () => void;
+}) {
   const account = detail.account;
   if (!account) return null;
   const actions = [
@@ -242,6 +252,23 @@ function Overview({ detail, onOpen }: { detail: Detail; onOpen: (panel: "invite"
   return (
     <div className="mt-5 grid gap-4 lg:grid-cols-[1.6fr_.8fr]">
       <div className="space-y-4">
+        <section className="rounded-[28px] border border-[#6E5BFF]/40 bg-[#17122E] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold">Pilotage formation</h2>
+              <p className="mt-1 text-sm text-[#C9D2E8]">
+                Demandes, dossiers Qualiopi, devis et conventions — depuis le compte client, pas le pipeline.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenDossiers}
+              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+            >
+              Ouvrir les dossiers formation
+            </button>
+          </div>
+        </section>
         <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
           <h2 className="text-lg font-extrabold">Agir pour {account.name}</h2>
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
@@ -864,7 +891,7 @@ function FormationDossiersTab({ organizationId }: { organizationId: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[#9AA3BD]">
-          Dossiers de programmation (hors LMS). Remplace les anciennes coquilles Qualiopi.
+          Pilotez ici les demandes de formation (devis → convention → session → clôture Qualiopi).
         </p>
         <button
           type="button"

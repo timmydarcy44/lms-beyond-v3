@@ -22,7 +22,7 @@ export const DEFAULT_PIPELINE_STAGES = [
   { slug: "proposition_a_faire", label: "Proposition à faire", sort_order: 4 },
   { slug: "proposition_envoyee", label: "Proposition envoyée", sort_order: 5 },
   { slug: "proposition_signee", label: "Proposition signée", sort_order: 6 },
-  { slug: "reussi", label: "Réussi", sort_order: 7 },
+  { slug: "reussi", label: "Gagné", sort_order: 7 },
   { slug: "client_actif", label: "Client actif", sort_order: 8 },
   { slug: "echec", label: "Échec", sort_order: 9 },
 ] as const;

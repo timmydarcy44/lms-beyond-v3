@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
+  Building2,
   CheckCircle2,
   Circle,
   ExternalLink,
-  Heart,
+  GraduationCap,
   Loader2,
   Mail,
   Phone,
   Sparkles,
-  TrendingUp,
   UserPlus,
   XCircle,
 } from "lucide-react";
@@ -26,12 +27,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
 import { PipelineQuoteFormationsCompact } from "@/components/crm/pipeline-quote-formations";
-import { PipelineQuoteProducts } from "@/components/crm/pipeline-quote-products";
 import { PipelineDealFormationDossiers } from "@/components/crm/pipeline-deal-formation-dossiers";
-import {
-  computeQuotedProductsCents,
-  type PipelineQuotedProductLine,
-} from "@/lib/crm/pipeline-quoted-products";
+import type { PipelineQuotedProductLine } from "@/lib/crm/pipeline-quoted-products";
 import {
   computeDealIntelligence,
   normalizeLinkedInUrl,
@@ -45,8 +42,16 @@ import {
 import { PIPELINE_BTOB_CONTACT_OWNERS, CONTACT_CIVILITY_OPTIONS } from "@/lib/crm/pipeline-btob-owners";
 import type { BtobCommercialFormState } from "@/app/super/crm/pipeline/pipeline-btob-commercial-fields";
 import type { PipelineStage } from "@/lib/crm/pipeline-shared";
-import { PIPELINE_SHEET_BADGE, PIPELINE_SHEET_BTN_OUTLINE, formatDealAmount } from "@/lib/crm/pipeline-shared";
+import {
+  PIPELINE_SHEET_BADGE,
+  PIPELINE_SHEET_BTN_OUTLINE,
+  SIGNED_DEAL_STAGES_FOR_FORMATIONS,
+  formatDealAmount,
+} from "@/lib/crm/pipeline-shared";
 import { PIPELINE_OPPORTUNITY_TYPE_OPTIONS } from "@/lib/crm/pipeline-opportunity-ca";
+import { canCreateOrganisation, hasOrganisationLink } from "@/lib/onboarding/deal-stages";
+
+type CockpitTab = "overview" | "contacts" | "entreprise" | "activity" | "formation";
 
 export type DealCockpitForm = {
   id?: string;
@@ -158,6 +163,7 @@ export function PipelineDealCockpit({
   generatingAiSummary,
   onQuoteTotalChange,
   onActionsChange,
+  onCreateOrganisation,
 }: {
   form: DealCockpitForm;
   setForm: React.Dispatch<React.SetStateAction<DealCockpitForm>>;
@@ -179,14 +185,16 @@ export function PipelineDealCockpit({
   generatingAiSummary?: boolean;
   onQuoteTotalChange: (cents: number) => void;
   onActionsChange?: () => void;
+  onCreateOrganisation?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"identity" | "commercial" | "admin" | "qualiopi">("identity");
-  const formationsCentsRef = useRef(0);
+  const isWonFormationStage = (SIGNED_DEAL_STAGES_FOR_FORMATIONS as readonly string[]).includes(
+    form.stage_slug,
+  );
+  const showCreateOrg = canCreateOrganisation(form.stage_slug, form.organization_id);
+  const showOpenOrg = hasOrganisationLink(form.organization_id);
 
-  const pushCombinedTotal = (formationsCents: number, products: PipelineQuotedProductLine[]) => {
-    formationsCentsRef.current = formationsCents;
-    onQuoteTotalChange(formationsCents + computeQuotedProductsCents(products));
-  };
+  const [activeTab, setActiveTab] = useState<CockpitTab>("overview");
+  const [showIntelligence, setShowIntelligence] = useState(false);
 
   const intel = useMemo(() => computeDealIntelligence(intelligenceInput), [intelligenceInput]);
   const stageLabel =
@@ -200,44 +208,115 @@ export function PipelineDealCockpit({
     form.city,
     employeeLabel(commercial.employee_count),
     sectorLabel(commercial.sector),
+    form.opco_name ? `OPCO ${form.opco_name}` : null,
   ].filter(Boolean);
 
   const nextActionDateLabel = commercial.next_action_date
     ? format(new Date(commercial.next_action_date), "d MMMM yyyy", { locale: fr })
     : null;
 
-  const knowsItems = [
-    form.company_name ? `${form.company_name}${commercial.employee_count ? ` · ${employeeLabel(commercial.employee_count)}` : ""}` : null,
-    form.opco_name ? `OPCO ${form.opco_name}` : null,
-    commercial.training_needs.length > 0
-      ? `Besoins : ${commercial.training_needs.join(", ")}`
-      : "Besoin non encore qualifié",
-    commercial.last_contact_date
-      ? `Dernier contact : ${commercial.last_contact_date}`
-      : "Aucun échange commercial consigné",
-  ].filter(Boolean) as string[];
-
-  const missingItems = intel.missingFields.slice(0, 6).map((f) => f.label);
   const hv = healthVisual(intel.healthScore, intel.healthLevel);
   const nextActionOverdue =
     commercial.next_action_date && commercial.next_action_date < new Date().toISOString().slice(0, 10);
 
-  const tabs = [
-    { id: "identity" as const, label: "Identité" },
-    { id: "commercial" as const, label: "Commercial" },
-    { id: "admin" as const, label: "Administratif" },
-    { id: "qualiopi" as const, label: "Qualiopi" },
+  const qualifItems = [
+    {
+      key: "besoin",
+      label: "Besoin",
+      done: commercial.training_needs.length > 0,
+      detail:
+        commercial.training_needs.length > 0
+          ? commercial.training_needs.join(", ")
+          : "Quel besoin formation ?",
+    },
+    {
+      key: "effectif",
+      label: "Effectif",
+      done: Boolean(commercial.employee_count?.trim()),
+      detail: commercial.employee_count
+        ? employeeLabel(commercial.employee_count)
+        : "Nombre de salariés",
+    },
+    {
+      key: "decideur",
+      label: "Décideur",
+      done: Boolean(commercial.decision_maker_identified || commercial.decision_maker_name?.trim()),
+      detail: commercial.decision_maker_name?.trim() || "Qui signe ?",
+    },
+    {
+      key: "budget",
+      label: "Budget",
+      done: Boolean(commercial.estimated_budget?.trim() || (form.amount && Number(form.amount) > 0)),
+      detail: commercial.estimated_budget?.trim()
+        ? commercial.estimated_budget
+        : form.amount && Number(form.amount) > 0
+          ? `${form.amount} €`
+          : "Montant ou prise en charge OPCO",
+    },
+    {
+      key: "date",
+      label: "Date de décision",
+      done: Boolean(commercial.next_action_date?.trim()),
+      detail: nextActionDateLabel || "Quand ?",
+    },
   ];
+  const qualifDone = qualifItems.filter((i) => i.done).length;
+
+  const tabs: Array<{ id: CockpitTab; label: string }> = [
+    { id: "overview", label: "Aperçu" },
+    { id: "contacts", label: `Contacts${people.length ? ` (${people.length})` : ""}` },
+    { id: "entreprise", label: "Entreprise" },
+    { id: "activity", label: "Activité" },
+  ];
+  if (isWonFormationStage) {
+    tabs.push({ id: "formation", label: "Formation" });
+  }
 
   return (
     <div className="space-y-4 text-white">
-      <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+      {(showCreateOrg || showOpenOrg) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-400/35 bg-emerald-950/40 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-100">
+              {showOpenOrg ? "Compte client actif" : "Deal gagné — créer le compte client"}
+            </p>
+            <p className="text-xs text-emerald-200/80">
+              {showOpenOrg
+                ? "Pilotez dossiers formation et relation depuis Comptes clients."
+                : "Activez l’organisation pour piloter les formations hors pipeline."}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {showOpenOrg && form.organization_id ? (
+              <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-500" asChild>
+                <Link href={`/super/organisations/${form.organization_id}?tab=dossiers`}>
+                  <Building2 className="mr-1.5 h-4 w-4" />
+                  Ouvrir le compte
+                </Link>
+              </Button>
+            ) : null}
+            {showCreateOrg && onCreateOrganisation ? (
+              <Button
+                type="button"
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-500"
+                onClick={onCreateOrganisation}
+              >
+                <GraduationCap className="mr-1.5 h-4 w-4" />
+                Créer le compte client
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-white/5 p-1">
         {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
             className={cn(
-              "flex-1 rounded-lg px-3 py-2 text-sm font-medium transition",
+              "shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition",
               activeTab === t.id
                 ? "bg-indigo-600 text-white shadow-sm"
                 : "text-slate-400 hover:bg-white/5 hover:text-white",
@@ -249,7 +328,7 @@ export function PipelineDealCockpit({
         ))}
       </div>
 
-      {activeTab === "identity" ? (
+      {activeTab === "contacts" ? (
         <section className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-3">
@@ -441,14 +520,71 @@ export function PipelineDealCockpit({
         </section>
       ) : null}
 
-      {activeTab === "commercial" ? (
+      {activeTab === "overview" ? (
         <div className="space-y-4">
-          <div className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-4">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.25),transparent_55%)]" />
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-white">{form.company_name || "Prospect"}</p>
+              {subtitleParts.length > 0 ? (
+                <p className="text-sm text-slate-300">{subtitleParts.join(" · ")}</p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <CatalogueEmailOpenIndicator
+                sentAt={editingDealMeta.catalog_email_sent_at}
+                openedAt={editingDealMeta.catalog_email_opened_at}
+                size="md"
+              />
+              {form.phone?.trim() ? (
+                <Button type="button" size="sm" className="bg-indigo-600 hover:bg-indigo-700" asChild>
+                  <a href={`tel:${form.phone.replace(/\s/g, "")}`}>
+                    <Phone className="mr-1.5 h-4 w-4" />
+                    Appeler
+                  </a>
+                </Button>
+              ) : null}
+              {form.email?.trim() ? (
+                <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} asChild>
+                  <a href={`mailto:${form.email.trim()}`}>
+                    <Mail className="mr-1.5 h-4 w-4" />
+                    E-mail
+                  </a>
+                </Button>
+              ) : null}
+            </div>
+          </div>
 
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Étape</p>
+              <select
+                className="mt-1 w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white"
+                value={form.stage_slug}
+                onChange={(e) => setForm((f) => ({ ...f, stage_slug: e.target.value }))}
+              >
+                {visibleStages.map((s) => (
+                  <option key={s.slug} value={s.slug} className="bg-slate-900">
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">Montant</p>
+              <p className="mt-1 text-base font-bold text-white">
+                {form.amount && Number(form.amount) > 0
+                  ? formatDealAmount(Math.round(Number(form.amount) * 100))
+                  : "—"}
+              </p>
+              <p className="text-xs text-slate-400">
+                {form.quoted_course_ids.length
+                  ? `${form.quoted_course_ids.length} formation${form.quoted_course_ids.length > 1 ? "s" : ""} envisagée${form.quoted_course_ids.length > 1 ? "s" : ""}`
+                  : "Aucune formation sélectionnée"}
+              </p>
+            </div>
             <div
               className={cn(
-                "relative mb-4 rounded-xl border p-4",
+                "rounded-xl border p-3",
                 commercial.next_action?.trim()
                   ? nextActionOverdue
                     ? "border-rose-400/50 bg-rose-950/40"
@@ -456,185 +592,156 @@ export function PipelineDealCockpit({
                   : "border-amber-400/40 bg-amber-950/35",
               )}
             >
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-200/90">
-                Prochaine action
-              </p>
+              <p className="text-[10px] uppercase tracking-wide text-violet-200/90">Prochaine action</p>
               {commercial.next_action?.trim() ? (
                 <>
-                  <p className="mt-1 text-base font-bold text-white">{commercial.next_action}</p>
+                  <p className="mt-1 text-sm font-bold text-white">{commercial.next_action}</p>
                   {nextActionDateLabel ? (
-                    <p
-                      className={cn(
-                        "mt-1 text-sm",
-                        nextActionOverdue ? "font-semibold text-rose-300" : "text-slate-300",
-                      )}
-                    >
-                      {nextActionOverdue ? "⚠ En retard — " : "À réaliser avant le "}
+                    <p className={cn("mt-0.5 text-xs", nextActionOverdue ? "font-semibold text-rose-300" : "text-slate-300")}>
+                      {nextActionOverdue ? "En retard — " : ""}
                       {nextActionDateLabel}
                     </p>
                   ) : null}
                 </>
               ) : (
-                <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-amber-200">
-                  <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
-                  Aucune prochaine action planifiée
+                <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-amber-200">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  Aucune action planifiée
                 </p>
               )}
-              <div className="relative mt-3 flex flex-wrap gap-2">
-                <Input
-                  className="h-9 max-w-xs border-white/20 bg-white/10 text-sm text-white placeholder:text-slate-400"
-                  placeholder="Action à mener…"
-                  value={commercial.next_action}
-                  onChange={(e) => setCommercial((c) => ({ ...c, next_action: e.target.value }))}
-                />
-                <Input
-                  type="date"
-                  className="h-9 w-auto border-white/20 bg-white/10 text-sm text-white"
-                  value={commercial.next_action_date}
-                  onChange={(e) => setCommercial((c) => ({ ...c, next_action_date: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {intel.missingFields.length > 0 ? (
-              <div className="relative mb-4 rounded-xl border border-amber-400/35 bg-amber-950/30 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
-                  Dossier incomplet — {intel.completenessScore}%
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {intel.missingFields.slice(0, 4).map((f) => (
-                    <li key={f.key} className="flex items-center gap-2 text-xs text-amber-100/90">
-                      <Circle className="h-3 w-3 shrink-0" />
-                      {f.label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="relative mb-4 flex items-center gap-2 text-xs text-emerald-300">
-                <CheckCircle2 className="h-4 w-4" />
-                Dossier complet ({intel.completenessScore}%)
-              </div>
-            )}
-
-            <div className={cn("relative mb-4 rounded-xl border p-4", hv.bg, hv.border)}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-200/80">
-                    Health Score
-                  </p>
-                  <p className={cn("mt-1 text-4xl font-bold", hv.text)}>
-                    {intel.healthScore}
-                    <span className="text-xl font-normal text-slate-400">/100</span> {hv.emoji}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-300">
-                    Probabilité de signature :{" "}
-                    <span className="font-semibold text-white">{intel.signatureProbability}%</span>
-                  </p>
-                </div>
-                <TrendingUp className="h-6 w-6 shrink-0 text-indigo-300" />
-              </div>
-              <ul className="mt-3 grid gap-1 sm:grid-cols-2">
-                {intel.checks.slice(0, 6).map((c) => (
-                  <li key={c.label} className="flex items-start gap-2 text-xs">
-                    {c.ok ? (
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                    ) : (
-                      <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
-                    )}
-                    <span className={c.ok ? "text-slate-300" : "text-rose-200"}>{c.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {intel.atRisk ? (
-              <div className="relative mb-4 flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/50 px-4 py-3 text-sm font-semibold text-rose-100">
-                <AlertTriangle className="h-5 w-5 shrink-0 text-rose-400" />
-                Attention : deal en risque — action requise.
-              </div>
-            ) : null}
-
-            <div className="relative grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-center text-sm">
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Étape</p>
-                <p className="font-semibold text-white">{stageLabel}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Priorité</p>
-                <p className="font-semibold text-white">{priorityLabel(commercial.priority)}</p>
-              </div>
-              <div className="flex flex-col items-center">
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Relation</p>
-                <p className="flex items-center gap-1 font-semibold text-white">
-                  <Heart className="h-3.5 w-3.5 text-rose-400" />
-                  {intel.relationshipScore}%
-                </p>
-              </div>
             </div>
           </div>
 
-          <section className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-white">Synthèse Byound</p>
-              {onGenerateAiSummary ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                  disabled={generatingAiSummary || !form.id}
-                  onClick={onGenerateAiSummary}
-                >
-                  {generatingAiSummary ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-1.5 h-4 w-4" />
-                  )}
-                  {aiProspectSummary ? "Régénérer" : "Générer"}
-                </Button>
-              ) : null}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              className="h-9 max-w-xs border-white/20 bg-white/10 text-sm text-white placeholder:text-slate-400"
+              placeholder="Action à mener…"
+              value={commercial.next_action}
+              onChange={(e) => setCommercial((c) => ({ ...c, next_action: e.target.value }))}
+            />
+            <Input
+              type="date"
+              className="h-9 w-auto border-white/20 bg-white/10 text-sm text-white"
+              value={commercial.next_action_date}
+              onChange={(e) => setCommercial((c) => ({ ...c, next_action_date: e.target.value }))}
+            />
+            <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} onClick={() => setActiveTab("activity")}>
+              Planifier / Note
+            </Button>
+          </div>
 
-            {aiProspectSummary ? (
-              <div className="mt-3 rounded-lg border border-emerald-400/30 bg-emerald-950/40 p-3">
-                <p className="whitespace-pre-wrap text-sm text-emerald-100">{aiProspectSummary}</p>
-              </div>
-            ) : (
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-indigo-400/25 bg-indigo-950/40 p-3">
-                  <p className="text-xs font-semibold uppercase text-indigo-200">Ce que nous savons</p>
-                  <ul className="mt-2 space-y-1.5 text-sm text-indigo-50/90">
-                    {knowsItems.map((item) => (
-                      <li key={item} className="flex gap-2">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
-                        {item}
+          <section className="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-white">Qualification · {qualifDone}/{qualifItems.length}</p>
+              <button
+                type="button"
+                className="text-xs text-indigo-300 hover:text-indigo-200"
+                onClick={() => setShowIntelligence((v) => !v)}
+              >
+                {showIntelligence ? "Masquer l'intelligence" : "Intelligence deal"}
+              </button>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {qualifItems.map((item) => (
+                <li key={item.key} className="flex items-start gap-2 text-sm">
+                  {item.done ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                  ) : (
+                    <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-white">{item.label}</p>
+                    <p className="text-xs text-slate-400">{item.detail}</p>
+                  </div>
+                  {!item.done ? (
+                    <button
+                      type="button"
+                      className="shrink-0 text-xs font-semibold text-indigo-300 hover:text-indigo-200"
+                      onClick={() =>
+                        setActiveTab(
+                          item.key === "decideur" || item.key === "besoin" ? "contacts" : "entreprise",
+                        )
+                      }
+                    >
+                      Renseigner
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+
+            {showIntelligence ? (
+              <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+                <div className={cn("rounded-xl border p-3", hv.bg, hv.border)}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-200/80">
+                    Health Score
+                  </p>
+                  <p className={cn("mt-1 text-3xl font-bold", hv.text)}>
+                    {intel.healthScore}
+                    <span className="text-lg font-normal text-slate-400">/100</span>
+                  </p>
+                  <p className="mt-1 text-xs text-slate-300">
+                    Probabilité de signature :{" "}
+                    <span className="font-semibold text-white">{intel.signatureProbability}%</span>
+                    {" · "}Priorité {priorityLabel(commercial.priority)}
+                  </p>
+                  <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                    {intel.checks.slice(0, 6).map((c) => (
+                      <li key={c.label} className="flex items-start gap-2 text-xs">
+                        {c.ok ? (
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                        ) : (
+                          <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+                        )}
+                        <span className={c.ok ? "text-slate-300" : "text-rose-200"}>{c.label}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-                {missingItems.length > 0 ? (
-                  <div className="rounded-lg border border-amber-400/30 bg-amber-950/35 p-3">
-                    <p className="text-xs font-semibold uppercase text-amber-200">Ce qu&apos;il manque</p>
-                    <ul className="mt-2 space-y-1.5 text-sm text-amber-50">
-                      {missingItems.map((item) => (
-                        <li key={item} className="flex gap-2">
-                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+                {intel.atRisk ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-950/50 px-3 py-2 text-xs font-semibold text-rose-100">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+                    Deal en risque — action requise.
                   </div>
                 ) : null}
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-white">Synthèse Byound</p>
+                    {onGenerateAiSummary ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                        disabled={generatingAiSummary || !form.id}
+                        onClick={onGenerateAiSummary}
+                      >
+                        {generatingAiSummary ? (
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-1.5 h-4 w-4" />
+                        )}
+                        {aiProspectSummary ? "Régénérer" : "Générer"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  {aiProspectSummary ? (
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-100">{aiProspectSummary}</p>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-400">
+                      Synthèse optionnelle — ne bloque pas la qualification.
+                    </p>
+                  )}
+                  {aiProspectSummaryAt ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Synthèse du {aiProspectSummaryAt.slice(0, 10)}
+                    </p>
+                  ) : null}
+                </div>
               </div>
-            )}
-            {aiProspectSummaryAt ? (
-              <p className="mt-2 text-xs text-slate-500">
-                Synthèse du {aiProspectSummaryAt.slice(0, 10)}
-              </p>
             ) : null}
           </section>
 
-          <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <section className="rounded-xl border border-white/10 bg-white/5 p-4">
             <p className="text-sm font-semibold text-white">Besoins identifiés</p>
             {commercial.training_needs.length === 0 ? (
               <p className="mt-2 text-sm text-slate-400">Aucun besoin confirmé</p>
@@ -659,44 +766,72 @@ export function PipelineDealCockpit({
                 ))}
               </div>
             )}
-            <div className="mt-2 flex gap-2">
-              <Input
-                placeholder="Ajouter un besoin…"
-                className="h-9 border-white/15 bg-white/10 text-sm text-white placeholder:text-slate-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const v = (e.target as HTMLInputElement).value.trim();
-                    if (v && !commercial.training_needs.includes(v)) {
-                      setCommercial((c) => ({ ...c, training_needs: [...c.training_needs, v] }));
-                      (e.target as HTMLInputElement).value = "";
-                    }
+            <Input
+              placeholder="Ajouter un besoin…"
+              className="mt-2 h-9 border-white/15 bg-white/10 text-sm text-white placeholder:text-slate-500"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const v = (e.target as HTMLInputElement).value.trim();
+                  if (v && !commercial.training_needs.includes(v)) {
+                    setCommercial((c) => ({ ...c, training_needs: [...c.training_needs, v] }));
+                    (e.target as HTMLInputElement).value = "";
                   }
-                }}
-              />
-            </div>
+                }
+              }}
+            />
 
             <div className="mt-5 border-t border-white/10 pt-4">
-              <p className="text-sm font-semibold text-white">Offre envisagée</p>
+              <p className="text-sm font-semibold text-white">Offre formation</p>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Catalogue Byound uniquement — licences / nevo hors de ce pipeline.
+              </p>
               <div className="mt-3">
-                <PipelineQuoteProducts
-                  lines={form.quoted_products ?? []}
-                  onChange={(next) => {
-                    setForm((f) => ({ ...f, quoted_products: next }));
-                    pushCombinedTotal(formationsCentsRef.current, next);
-                  }}
-                  tone="dark"
-                />
-              </div>
-              <div className="mt-4">
                 <PipelineQuoteFormationsCompact
                   selectedIds={form.quoted_course_ids}
                   onChange={(ids) => setForm((f) => ({ ...f, quoted_course_ids: ids }))}
-                  onTotalChange={(cents) => pushCombinedTotal(cents, form.quoted_products ?? [])}
+                  onTotalChange={(cents) => onQuoteTotalChange(cents)}
                   tone="dark"
                 />
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label className="text-xs text-slate-400">Type d&apos;opportunité</Label>
+                  <select
+                    className="mt-1 flex h-9 w-full rounded-md border border-white/15 bg-white/10 px-3 text-sm text-white"
+                    value={form.opportunity_type || "formation_edge"}
+                    onChange={(e) => setForm((f) => ({ ...f, opportunity_type: e.target.value }))}
+                  >
+                    {PIPELINE_OPPORTUNITY_TYPE_OPTIONS.filter((o) =>
+                      ["formation_edge", "autre"].includes(o.value),
+                    ).map((o) => (
+                      <option key={o.value} value={o.value} className="bg-slate-900 text-white">
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-400">Montant identifié (€)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={100}
+                    placeholder="Laisser vide si non chiffré"
+                    className="mt-1 h-9 border-white/15 bg-white/10 text-sm text-white placeholder:text-slate-500"
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-400">Budget estimé</Label>
+                  <Input
+                    className="mt-1 h-9 border-white/15 bg-white/10 text-sm text-white"
+                    value={commercial.estimated_budget}
+                    onChange={(e) => setCommercial((c) => ({ ...c, estimated_budget: e.target.value }))}
+                    placeholder="OPCO / budget interne…"
+                  />
+                </div>
                 <div>
                   <Label className="text-xs text-slate-400">Type de fiche</Label>
                   <select
@@ -717,73 +852,14 @@ export function PipelineDealCockpit({
                     </option>
                   </select>
                 </div>
-                <div>
-                  <Label className="text-xs text-slate-400">Type d&apos;opportunité</Label>
-                  <select
-                    className="mt-1 flex h-9 w-full rounded-md border border-white/15 bg-white/10 px-3 text-sm text-white"
-                    value={form.opportunity_type || "autre"}
-                    onChange={(e) => setForm((f) => ({ ...f, opportunity_type: e.target.value }))}
-                  >
-                    {PIPELINE_OPPORTUNITY_TYPE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value} className="bg-slate-900 text-white">
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <Label className="text-xs text-slate-400">Montant identifié (€)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={100}
-                    placeholder="Laisser vide si non chiffré"
-                    className="mt-1 h-9 border-white/15 bg-white/10 text-sm text-white placeholder:text-slate-500"
-                    value={form.amount}
-                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                  />
-                  {form.amount && Number.parseFloat(form.amount) > 0 ? (
-                    <p className="mt-1 text-[11px] text-emerald-300/90">
-                      Opportunité : {formatDealAmount(Math.round(Number.parseFloat(form.amount) * 100))}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      Prospect sans montant = pas de CA affiché
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
           </section>
+        </div>
+      ) : null}
 
-          <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-            <p className="text-sm font-semibold text-white">Personnes impliquées</p>
-            {people.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-400">Aucun contact renseigné</p>
-            ) : (
-              <ul className="mt-3 space-y-3">
-                {people.map((p) => (
-                  <li key={p.name} className="rounded-lg border border-white/10 bg-slate-900/50 p-3">
-                    <p className="font-medium text-white">{p.name}</p>
-                    <p className="text-xs text-slate-400">{p.roles.join(" · ")}</p>
-                    {p.phone ? <p className="mt-1 text-sm text-slate-300">{p.phone}</p> : null}
-                    {p.email ? <p className="text-sm text-slate-300">{p.email}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className={cn("mt-3", PIPELINE_SHEET_BTN_OUTLINE)}
-              onClick={() => setActiveTab("admin")}
-            >
-              <UserPlus className="mr-1.5 h-4 w-4" />
-              {people.length === 0 ? "Ajouter un contact" : "Compléter les contacts"}
-            </Button>
-          </section>
-
+      {activeTab === "activity" ? (
+        <div className="space-y-4">
           <div className="rounded-xl border border-indigo-400/20 bg-indigo-950/30 p-4 shadow-sm backdrop-blur-sm">
             <PipelineDealActionsSection
               dealId={form.id}
@@ -797,7 +873,6 @@ export function PipelineDealCockpit({
               theme="dark"
             />
           </div>
-
           <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
             <Label className="text-sm font-semibold text-white">Notes internes</Label>
             <p className="mt-0.5 text-xs text-slate-400">
@@ -814,7 +889,7 @@ export function PipelineDealCockpit({
         </div>
       ) : null}
 
-      {activeTab === "admin" ? (
+      {activeTab === "entreprise" ? (
         <div className="space-y-4">
           <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
             <p className="text-sm font-semibold text-white">Enrichir via SIRET</p>
@@ -974,14 +1049,24 @@ export function PipelineDealCockpit({
         </div>
       ) : null}
 
-      {activeTab === "qualiopi" ? (
-        <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-          <PipelineDealFormationDossiers
-            dealId={form.id}
-            organizationId={form.organization_id}
-            tone="dark"
-          />
-        </section>
+      {activeTab === "formation" ? (
+        <div className="space-y-4">
+          {showOpenOrg && form.organization_id ? (
+            <Button type="button" size="sm" variant="outline" className={PIPELINE_SHEET_BTN_OUTLINE} asChild>
+              <Link href={`/super/organisations/${form.organization_id}?tab=dossiers`}>
+                <Building2 className="mr-1.5 h-4 w-4" />
+                Piloter sur le compte client
+              </Link>
+            </Button>
+          ) : null}
+          <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+            <PipelineDealFormationDossiers
+              dealId={form.id}
+              organizationId={form.organization_id}
+              tone="dark"
+            />
+          </section>
+        </div>
       ) : null}
     </div>
   );

@@ -78,23 +78,126 @@ function stripFieldBorders(form: ReturnType<PDFDocument["getForm"]>) {
   }
 }
 
-function fitFontSize(font: PDFFont, text: string, maxWidth: number, maxSize: number, minSize = 6): number {
-  let size = maxSize;
-  while (size > minSize && font.widthOfTextAtSize(text, size) > maxWidth) {
-    size -= 0.5;
-  }
-  return size;
-}
-
-function fieldMaxWidth(field: PDFTextField): number {
+function fieldBox(field: PDFTextField): { width: number; height: number } {
   try {
-    const widgets = field.acroField.getWidgets();
-    const rect = widgets[0]?.getRectangle();
-    if (rect?.width) return Math.max(24, rect.width - 6);
+    const rect = field.acroField.getWidgets()[0]?.getRectangle();
+    if (rect?.width && rect?.height) {
+      return {
+        width: Math.max(20, rect.width - 6),
+        height: Math.max(10, rect.height - 4),
+      };
+    }
   } catch {
     /* ignore */
   }
-  return 220;
+  return { width: 220, height: 24 };
+}
+
+/** Estime le nombre de lignes si le texte wrappe à maxWidth (sur-estime un peu = plus sûr). */
+function estimateWrappedLines(font: PDFFont, text: string, fontSize: number, maxWidth: number): number {
+  const width = Math.max(8, maxWidth);
+  let total = 0;
+  for (const para of text.split(/\n/)) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      total += 1;
+      continue;
+    }
+    let lines = 1;
+    let lineWidth = 0;
+    const space = font.widthOfTextAtSize(" ", fontSize);
+    for (const word of words) {
+      const w = font.widthOfTextAtSize(word, fontSize);
+      const extra = w > width ? Math.ceil(w / width) - 1 : 0;
+      if (lineWidth === 0) {
+        lineWidth = Math.min(w, width);
+        lines += extra;
+      } else if (lineWidth + space + w <= width) {
+        lineWidth += space + w;
+      } else {
+        lines += 1 + extra;
+        lineWidth = Math.min(w, width);
+      }
+    }
+    total += lines;
+  }
+  return Math.max(1, total);
+}
+
+function fitFontToBox(
+  font: PDFFont,
+  text: string,
+  box: { width: number; height: number },
+  maxSize: number,
+  minSize = 5.5,
+): number {
+  let size = maxSize;
+  while (size > minSize) {
+    const maxLines = Math.max(1, Math.floor(box.height / (size * 1.2)));
+    if (estimateWrappedLines(font, text, size, box.width) <= maxLines) return size;
+    size -= 0.5;
+  }
+  return minSize;
+}
+
+/** Réduit le texte pour qu'il tienne dans la case à la taille donnée (ellipsis). */
+function truncateToBox(
+  font: PDFFont,
+  text: string,
+  box: { width: number; height: number },
+  fontSize: number,
+): string {
+  const lineHeight = fontSize * 1.2;
+  const maxLines = Math.max(1, Math.floor(box.height / lineHeight));
+  if (estimateWrappedLines(font, text, fontSize, box.width) <= maxLines) return text;
+
+  const ellipsis = "...";
+  let low = 0;
+  let high = text.length;
+  let best = ellipsis;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const candidate = `${text.slice(0, mid).trimEnd()}${ellipsis}`;
+    if (estimateWrappedLines(font, candidate, fontSize, box.width) <= maxLines) {
+      best = candidate;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return best;
+}
+
+function defaultMaxFontForField(name: string, boxHeight: number): number {
+  if (name === "course_title") return Math.min(18, Math.max(9, boxHeight * 0.7));
+  if (name.includes("item_")) return Math.min(8, Math.max(5.5, boxHeight * 0.55));
+  if (name.startsWith("objective_") || name.startsWith("criterion_")) {
+    return Math.min(9, Math.max(6, boxHeight * 0.55));
+  }
+  if (name.includes("chapter_") && name.endsWith("_title")) {
+    return Math.min(9, Math.max(6, boxHeight * 0.55));
+  }
+  if (boxHeight >= 40) return 10;
+  if (boxHeight >= 24) return 9;
+  return 8;
+}
+
+function fitAndSetTextField(field: PDFTextField, name: string, text: string, font: PDFFont) {
+  const box = fieldBox(field);
+  const maxSize = defaultMaxFontForField(name, box.height);
+  let size = fitFontToBox(font, text, box, maxSize);
+  let value = text;
+  if (estimateWrappedLines(font, value, size, box.width) > Math.max(1, Math.floor(box.height / (size * 1.2)))) {
+    value = truncateToBox(font, value, box, size);
+  }
+  field.setText(value);
+  field.setFontSize(size);
+  try {
+    if (box.height >= 28 || value.includes("\n")) field.enableMultiline();
+  } catch {
+    /* ignore */
+  }
+  field.updateAppearances(font);
 }
 
 function setText(
@@ -442,67 +545,23 @@ export async function fillVaultConventionPdf(
     { sentenceCase: false },
   );
 
-  // Titre de couverture : Inter Bold ; dates : taille adaptée à la largeur du champ
+  // Apparences : taille de police + troncature pour rester DANS la case (pas de débordement)
   try {
-    if (inter) {
-      try {
-        const titleField = form.getTextField("course_title");
-        titleField.setText(title);
-        const titleWidth = fieldMaxWidth(titleField);
-        titleField.setFontSize(fitFontSize(inter.bold, title, titleWidth, 18, 9));
-        titleField.updateAppearances(inter.bold);
-      } catch {
-        /* champ absent */
-      }
+    const { StandardFonts } = await import("pdf-lib");
+    const fallback = await pdf.embedFont(StandardFonts.Helvetica);
+    const regular = inter?.regular ?? fallback;
+    const bold = inter?.bold ?? fallback;
 
-      for (const dateFieldName of ["dates", "summary_dates", "established_date"] as const) {
-        try {
-          const dateField = form.getTextField(dateFieldName);
-          const text = dateFieldName === "established_date" ? dateStr : datesCover;
-          if (!text) continue;
-          dateField.setText(text);
-          const w = fieldMaxWidth(dateField);
-          dateField.setFontSize(fitFontSize(inter.regular, text, w, 12, 6));
-          dateField.updateAppearances(inter.regular);
-        } catch {
-          /* champ absent */
-        }
-      }
-
-      form.updateFieldAppearances(inter.regular);
-      // Ré-appliquer titre / dates après update global
+    for (const field of form.getFields()) {
       try {
-        const titleField = form.getTextField("course_title");
-        titleField.setFontSize(fitFontSize(inter.bold, title, fieldMaxWidth(titleField), 18, 9));
-        titleField.updateAppearances(inter.bold);
+        const name = field.getName();
+        const textField = form.getTextField(name);
+        const raw = textField.getText() || "";
+        if (!raw.trim()) continue;
+        const font = name === "course_title" ? bold : regular;
+        fitAndSetTextField(textField, name, raw, font);
       } catch {
-        /* ignore */
-      }
-      for (const dateFieldName of ["dates", "summary_dates", "established_date"] as const) {
-        try {
-          const dateField = form.getTextField(dateFieldName);
-          const text = dateFieldName === "established_date" ? dateStr : datesCover;
-          if (!text) continue;
-          dateField.setFontSize(fitFontSize(inter.regular, text, fieldMaxWidth(dateField), 12, 6));
-          dateField.updateAppearances(inter.regular);
-        } catch {
-          /* ignore */
-        }
-      }
-    } else {
-      const { StandardFonts } = await import("pdf-lib");
-      const helvetica = await pdf.embedFont(StandardFonts.Helvetica);
-      form.updateFieldAppearances(helvetica);
-      for (const dateFieldName of ["dates", "summary_dates", "established_date"] as const) {
-        try {
-          const dateField = form.getTextField(dateFieldName);
-          const text = dateFieldName === "established_date" ? dateStr : datesCover;
-          if (!text) continue;
-          dateField.setFontSize(fitFontSize(helvetica, text, fieldMaxWidth(dateField), 12, 6));
-          dateField.updateAppearances(helvetica);
-        } catch {
-          /* ignore */
-        }
+        /* checkbox / non-text */
       }
     }
   } catch {

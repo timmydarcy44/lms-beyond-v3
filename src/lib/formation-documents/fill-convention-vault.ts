@@ -352,47 +352,70 @@ export async function fillVaultConventionPdf(
     setText(form, `objective_${i + 1}`, obj, { sentenceCase: false });
   });
 
-  // Modules annexe : depuis program_structure (Section → Chapitre → Sous-chapitre)
+  // Annexe programme : mapping catalogue → AcroForm
+  // Section → module_N | Chapitre → module_N_chapter_M | Sous-chapitre → item_1..3
+  // (le modèle PDF affiche encore « Module / Chapitre », mais le contenu suit la nomenclature Byound)
   const dayLabels = [...new Set(ctx.slots.map((s) => formatFrDate(s.slot_date)))];
-  const sections = ctx.course?.program_structure ?? [];
-  const flatChapters = sections.flatMap((section) =>
-    section.chapters.map((chapter) => ({
-      sectionTitle: toSentenceCase(section.title),
-      chapterTitle: toSentenceCase(chapter.title),
-      subchapters: chapter.subchapters.map((s) => toSentenceCase(s.title)),
-    })),
-  );
+  const sections = (ctx.course?.program_structure ?? []).slice(0, 4);
+  const hours = hoursLine(ctx);
+  const sectionCount = sections.length;
+
   for (let m = 1; m <= 4; m++) {
-    const chapter = flatChapters[m - 1];
-    if (!chapter) continue;
-    const dayIdx = Math.min(m - 1, Math.max(dayLabels.length - 1, 0));
+    const section = sections[m - 1];
+    if (!section) continue;
+
+    const sectionTitle = toSentenceCase(section.title);
+    const sectionDesc = toSentenceCase(section.description || "");
+    const chapters = (section.chapters ?? []).slice(0, 3);
+
+    const dayIdx =
+      dayLabels.length <= 1
+        ? 0
+        : Math.min(
+            Math.floor(((m - 1) * dayLabels.length) / Math.max(sectionCount, 1)),
+            dayLabels.length - 1,
+          );
     const day = dayLabels[dayIdx] || "";
     setText(
       form,
       `module_${m}_schedule`,
-      day ? `Jour ${dayIdx + 1} · ${day} · ${hoursLine(ctx)}` : chapter.sectionTitle,
+      day ? `Jour ${dayIdx + 1} · ${day} · ${hours}` : sectionTitle,
       { sentenceCase: false },
     );
-    setText(form, `module_${m}_title`, `${chapter.sectionTitle} — ${chapter.chapterTitle}`, {
-      sentenceCase: false,
-    });
-    setText(form, `module_${m}_duration`, "3 h 30", { sentenceCase: false });
-    setText(form, `module_${m}_chapter_1_title`, chapter.chapterTitle, { sentenceCase: false });
-    chapter.subchapters.slice(0, 3).forEach((sub, i) => {
-      setText(form, `module_${m}_chapter_${i + 1}_title`, i === 0 ? chapter.chapterTitle : `Point ${i + 1}`, {
+    setText(form, `module_${m}_title`, sectionTitle, { sentenceCase: false });
+    // Durée indicative : répartir la journée sur les sections du jour
+    const durationHint =
+      chapters.length >= 3 ? "3 h 30" : chapters.length === 2 ? "2 h 30" : "1 h 45";
+    setText(form, `module_${m}_duration`, durationHint, { sentenceCase: false });
+
+    chapters.forEach((chapter, ci) => {
+      const ch = ci + 1;
+      setText(form, `module_${m}_chapter_${ch}_title`, toSentenceCase(chapter.title), {
         sentenceCase: false,
       });
-      setText(form, `module_${m}_chapter_${i + 1}_item_1`, sub, { sentenceCase: false });
+      (chapter.subchapters ?? []).slice(0, 3).forEach((sub, si) => {
+        setText(
+          form,
+          `module_${m}_chapter_${ch}_item_${si + 1}`,
+          toSentenceCase(sub.title),
+          { sentenceCase: false },
+        );
+      });
     });
-    setText(form, `module_${m}_practice`, "Atelier et cas pratiques.");
-    setText(form, `module_${m}_production`, "Livrable de la sequence.");
+
+    setText(
+      form,
+      `module_${m}_practice`,
+      sectionDesc || "Atelier pratique et mises en situation sur les acquis de la section.",
+      { sentenceCase: false },
+    );
+    setText(
+      form,
+      `module_${m}_production`,
+      "Restitution des acquis et livrable de la section.",
+    );
   }
-  setText(
-    form,
-    "annex_modules_count",
-    String(Math.max(flatChapters.length, sections.length) || 2),
-    { sentenceCase: false },
-  );
+  setText(form, "annex_modules_count", String(sectionCount || 2), { sentenceCase: false });
 
   setText(form, "lunch_break", "Pause dejeuner selon planning du jour");
   setText(

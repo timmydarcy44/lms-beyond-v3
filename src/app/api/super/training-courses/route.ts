@@ -4,8 +4,9 @@ import { catalogModuleToCourseRow } from "@/lib/training-courses/catalog-fallbac
 import { EDGE_TRAINING_MODULES } from "@/lib/edge-site/training-catalog";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
-const SELECT_COLS =
+const SELECT_COLS_BASE =
   "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,program_structure,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,badge_class_id,meta_description,seo_tags,faq,why_choose,instructors,page_blocks,sessions,benefits,case_studies,deliverables,methodology,illustrations,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
+const SELECT_COLS = `${SELECT_COLS_BASE},lms_course_id`;
 
 export async function GET() {
   const isAdmin = await isSuperAdmin();
@@ -18,10 +19,17 @@ export async function GET() {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("training_courses")
     .select(SELECT_COLS)
     .order("title", { ascending: true });
+
+  if (error && /lms_course_id/i.test(error.message)) {
+    ({ data, error } = await supabase
+      .from("training_courses")
+      .select(SELECT_COLS_BASE)
+      .order("title", { ascending: true }));
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -54,7 +62,7 @@ export async function POST(request: NextRequest) {
         .replace(/^-|-$/g, "");
       const slug = slugBase || `formation-${Date.now()}`;
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("training_courses")
         .insert({
           slug,
@@ -68,6 +76,23 @@ export async function POST(request: NextRequest) {
         })
         .select(SELECT_COLS)
         .single();
+
+      if (error && /lms_course_id/i.test(error.message)) {
+        ({ data, error } = await supabase
+          .from("training_courses")
+          .insert({
+            slug,
+            title,
+            is_active: false,
+            max_intra_participants: 12,
+            instructors: [],
+            program_structure: [],
+            sessions: [],
+            updated_at: new Date().toISOString(),
+          })
+          .select(SELECT_COLS_BASE)
+          .single());
+      }
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });

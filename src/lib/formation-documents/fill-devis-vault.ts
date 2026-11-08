@@ -1,6 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts, type PDFFont } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
 import { assembleQuote } from "@/lib/formation-documents/assemble-quote";
@@ -19,17 +20,34 @@ import {
   slotsFromDocContext,
 } from "@/lib/formation-documents/session-dates";
 
+/** Espaces fins → espace ; conserve Latin-1 + € (U+20AC) pour Inter / WinAnsi. */
 function pdfSafe(text: string): string {
   return String(text || "")
     .replace(/[\u202f\u00a0\u2009\u2007]/g, " ")
     .replace(/[…]/g, "...")
     .replace(/[–—]/g, "-")
     .replace(/[«»]/g, '"')
-    .replace(/[^\x09\x0A\x0D\x20-\x7E\u00C0-\u00FF]/g, "?")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\u00C0-\u00FF\u20AC]/g, "")
     .trim();
 }
 
-function setText(form: ReturnType<PDFDocument["getForm"]>, name: string, value: string) {
+async function loadInterFont(pdf: PDFDocument): Promise<PDFFont | null> {
+  try {
+    pdf.registerFontkit(fontkit);
+    const bytes = await readFile(path.join(process.cwd(), "public", "fonts", "Inter-Regular.ttf"));
+    return await pdf.embedFont(bytes, { subset: true });
+  } catch (err) {
+    console.warn("[fill-devis-vault] Inter unavailable, fallback Helvetica", err);
+    return null;
+  }
+}
+
+function setText(
+  form: ReturnType<PDFDocument["getForm"]>,
+  name: string,
+  value: string,
+  font?: PDFFont | null,
+) {
   const v = pdfSafe(value);
   if (!v) return;
   try {
@@ -38,6 +56,13 @@ function setText(form: ReturnType<PDFDocument["getForm"]>, name: string, value: 
       widget.getOrCreateBorderStyle().setWidth(0);
     }
     field.setText(v);
+    if (font) {
+      try {
+        field.updateAppearances(font);
+      } catch {
+        /* ignore */
+      }
+    }
   } catch {
     /* champ absent */
   }
@@ -199,6 +224,8 @@ export async function fillVaultDevisPdf(
 
   const pdf = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const form = pdf.getForm();
+  const inter = await loadInterFont(pdf);
+  const appearanceFont = inter ?? (await pdf.embedFont(StandardFonts.Helvetica));
 
   const slots = slotsFromDocContext(ctx.slots);
   const quoteDate = formatDateAdmin();
@@ -215,47 +242,50 @@ export async function fillVaultDevisPdf(
   const totalTtc = detail.totals.totalTtc;
   const totalVat = detail.totals.vatRows.map((v) => v.amount).join(" + ") || formatEuroFromCents(0);
 
-  setText(form, "quote_number", detail.quoteNumber);
-  setText(form, "course_title", title);
-  setText(form, "quote_date", quoteDate);
-  setText(form, "valid_until", validUntil);
-  setText(form, "client_reference", "");
-  setText(form, "total_ttc", totalTtc);
-  setText(form, "total_ht", totalHt);
-  setText(form, "total_vat", totalVat);
-  setText(form, "issuer_contact", "contact@byound.fr");
+  setText(form, "quote_number", detail.quoteNumber, appearanceFont);
+  setText(form, "course_title", title, appearanceFont);
+  setText(form, "quote_date", quoteDate, appearanceFont);
+  setText(form, "valid_until", validUntil, appearanceFont);
+  setText(form, "client_reference", "", appearanceFont);
+  setText(form, "total_ttc", totalTtc, appearanceFont);
+  setText(form, "total_ht", totalHt, appearanceFont);
+  setText(form, "total_vat", totalVat, appearanceFont);
+  setText(form, "issuer_contact", "contact@byound.fr", appearanceFont);
 
-  setText(form, "client_name", ctx.organization.name);
-  setText(form, "client_address", "");
-  setText(form, "client_siret", ctx.organization.siret || "");
-  setText(form, "client_vat_number", "");
-  setText(form, "client_contact_name", ctx.dossier.contact_name || "");
+  setText(form, "client_name", ctx.organization.name, appearanceFont);
+  setText(form, "client_address", "", appearanceFont);
+  setText(form, "client_siret", ctx.organization.siret || "", appearanceFont);
+  setText(form, "client_vat_number", "", appearanceFont);
+  setText(form, "client_contact_name", ctx.dossier.contact_name || "", appearanceFont);
   setText(
     form,
     "client_contact_details",
     [ctx.dossier.contact_email, ctx.dossier.contact_phone].filter(Boolean).join(" · "),
+    appearanceFont,
   );
 
-  setText(form, "session_dates", formatDatesShort(slots) || "A confirmer");
+  setText(form, "session_dates", formatDatesShort(slots) || "A confirmer", appearanceFont);
   setText(
     form,
     "session_duration",
     ctx.course?.duration?.trim() || (slots.length ? formatDuration(slots) : "A confirmer"),
+    appearanceFont,
   );
-  setText(form, "session_hours", formatHours(slots) || "Selon planning");
-  setText(form, "session_location", ctx.session?.location_label || "Selon convocation");
-  setText(form, "session_modality", modalityLabel(ctx));
-  setText(form, "trainees_count", String(ctx.participants.length || ""));
+  setText(form, "session_hours", formatHours(slots) || "Selon planning", appearanceFont);
+  setText(form, "session_location", ctx.session?.location_label || "Selon convocation", appearanceFont);
+  setText(form, "session_modality", modalityLabel(ctx), appearanceFont);
+  setText(form, "trainees_count", String(ctx.participants.length || ""), appearanceFont);
 
   setText(
     form,
     "payment_terms",
     "Reglement par virement a reception de facture, sous 30 jours.",
+    appearanceFont,
   );
-  setText(form, "deposit_amount", detail.deposit?.amount || "");
-  setText(form, "payment_method", "Virement bancaire");
-  setText(form, "bank_iban", "");
-  setText(form, "bank_bic", "");
+  setText(form, "deposit_amount", detail.deposit?.amount || "", appearanceFont);
+  setText(form, "payment_method", "Virement bancaire", appearanceFont);
+  setText(form, "bank_iban", "", appearanceFont);
+  setText(form, "bank_bic", "", appearanceFont);
 
   setCheck(form, "funding_own", funding.includes("entreprise") || funding.includes("propre") || !funding);
   setCheck(form, "funding_opco", funding.includes("opco"));
@@ -264,17 +294,17 @@ export async function fillVaultDevisPdf(
     "funding_other",
     Boolean(funding) && !funding.includes("opco") && !funding.includes("entreprise") && !funding.includes("propre"),
   );
-  setText(form, "opco_name", funding.includes("opco") ? "OPCO" : "");
-  setText(form, "funding_other_label", "");
-  setText(form, "funding_reference", "");
+  setText(form, "opco_name", funding.includes("opco") ? "OPCO" : "", appearanceFont);
+  setText(form, "funding_other_label", "", appearanceFont);
+  setText(form, "funding_reference", "", appearanceFont);
 
-  setText(form, "accept_name", ctx.dossier.contact_name || "");
-  setText(form, "accept_role", "");
-  setText(form, "accept_city", ctx.of.address_city || "Bretteville-sur-Odon");
-  setText(form, "accept_date", quoteDate);
+  setText(form, "accept_name", ctx.dossier.contact_name || "", appearanceFont);
+  setText(form, "accept_role", "", appearanceFont);
+  setText(form, "accept_city", ctx.of.address_city || "Bretteville-sur-Odon", appearanceFont);
+  setText(form, "accept_date", quoteDate, appearanceFont);
 
   try {
-    form.updateFieldAppearances();
+    form.updateFieldAppearances(appearanceFont);
   } catch {
     /* ignore */
   }

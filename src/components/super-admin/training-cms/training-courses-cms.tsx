@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { TrainingCourseRow, TrainingCourseFaqItem } from "@/lib/training-courses/types";
 import {
@@ -173,6 +174,7 @@ function stateToPayload(state: CmsState) {
 type Catalog = "business" | "online";
 
 export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog }) {
+  const router = useRouter();
   const online = catalog === "online";
   const [courses, setCourses] = useState<TrainingCourseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,6 +182,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
   const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [lmsConverting, setLmsConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -426,6 +429,54 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
       setError(e instanceof Error ? e.message : "Erreur IA");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const convertToLmsCourse = async (force = false) => {
+    if (!selected) return;
+    if (!state?.program_structure?.length) {
+      setError("Programme vide — ajoutez des sections avant de créer la formation LMS.");
+      return;
+    }
+    setLmsConverting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      // Persister le programme courant pour que l'API lise la dernière structure
+      const saveRes = await fetch(`/api/super/training-courses/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(stateToPayload(state)),
+      });
+      const saveJson = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saveJson.error ?? "Enregistrement impossible avant conversion");
+      setCourses((prev) => prev.map((c) => (c.id === selected.id ? { ...c, ...saveJson.course } : c)));
+
+      const url = `/api/super/training-courses/${selected.id}/create-lms-course${force ? "?force=1" : ""}`;
+      const res = await fetch(url, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Conversion LMS impossible");
+
+      if (json.courseId) {
+        setCourses((prev) =>
+          prev.map((c) => (c.id === selected.id ? { ...c, lms_course_id: json.courseId } : c)),
+        );
+      }
+
+      setMessage(
+        json.alreadyLinked
+          ? "Formation LMS déjà liée — ouverture du builder."
+          : "Brouillon LMS créé à partir du programme catalogue.",
+      );
+      if (json.studioUrl) {
+        router.push(json.studioUrl);
+      } else if (json.courseId) {
+        router.push(`/super/studio/formations/${json.courseId}/structure`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur conversion LMS");
+    } finally {
+      setLmsConverting(false);
     }
   };
 
@@ -718,6 +769,22 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                   onChange={(v) => patch("program_structure", v)}
                   onAiGenerate={() => void runAiProgram()}
                   aiGenerating={generating}
+                  lmsCourseId={selected.lms_course_id ?? null}
+                  lmsConverting={lmsConverting}
+                  onCreateLmsCourse={() => void convertToLmsCourse(false)}
+                  onOpenLmsCourse={() => {
+                    const id = selected.lms_course_id;
+                    if (id) router.push(`/super/studio/formations/${id}/structure`);
+                  }}
+                  onRecreateLmsCourse={() => {
+                    if (
+                      window.confirm(
+                        "Créer un nouveau brouillon LMS et remplacer le lien actuel ? L'ancienne formation LMS n'est pas supprimée.",
+                      )
+                    ) {
+                      void convertToLmsCourse(true);
+                    }
+                  }}
                 />
               )}
 

@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Copy, GripVertical, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Copy, GraduationCap, GripVertical, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import {
   createId,
   type TrainingProgramChapter,
@@ -80,6 +80,12 @@ type Props = {
   onChange: (sections: TrainingProgramSection[]) => void;
   onAiGenerate?: () => void;
   aiGenerating?: boolean;
+  /** Formation LMS déjà liée à cette fiche catalogue. */
+  lmsCourseId?: string | null;
+  onCreateLmsCourse?: () => void;
+  onOpenLmsCourse?: () => void;
+  onRecreateLmsCourse?: () => void;
+  lmsConverting?: boolean;
 };
 
 export function TrainingProgramBuilder({
@@ -87,8 +93,15 @@ export function TrainingProgramBuilder({
   onChange,
   onAiGenerate,
   aiGenerating = false,
+  lmsCourseId = null,
+  onCreateLmsCourse,
+  onOpenLmsCourse,
+  onRecreateLmsCourse,
+  lmsConverting = false,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const busy = aiGenerating || lmsConverting;
+  const hasProgram = sections.length > 0;
 
   const updateSection = (sectionId: string, patch: Partial<TrainingProgramSection>) => {
     onChange(sections.map((s) => (s.id === sectionId ? { ...s, ...patch } : s)));
@@ -270,14 +283,15 @@ export function TrainingProgramBuilder({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Programme détaillé</h3>
           <p className="text-xs text-gray-500">
-            Sections → chapitres → sous-chapitres. Structure affichée sur la page publique uniquement.
+            Sections → chapitres → sous-chapitres (page publique). Convertible en brouillon LMS — contenu
+            pédagogique à compléter ensuite.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {onAiGenerate ? (
             <button
               type="button"
-              disabled={aiGenerating}
+              disabled={busy}
               onClick={onAiGenerate}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#635BFF]/25 bg-[#635BFF]/8 px-3 py-2 text-xs font-semibold text-[#635BFF] hover:bg-[#635BFF]/12 disabled:opacity-50"
             >
@@ -289,10 +303,54 @@ export function TrainingProgramBuilder({
               Byound AI
             </button>
           ) : null}
+          {lmsCourseId && onOpenLmsCourse ? (
+            <>
+              <button
+                type="button"
+                disabled={lmsConverting}
+                onClick={onOpenLmsCourse}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+              >
+                <GraduationCap className="h-3.5 w-3.5" />
+                Ouvrir dans le LMS
+              </button>
+              {onRecreateLmsCourse ? (
+                <button
+                  type="button"
+                  disabled={!hasProgram || lmsConverting}
+                  onClick={onRecreateLmsCourse}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  title="Crée un nouveau brouillon LMS et remplace le lien"
+                >
+                  {lmsConverting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                  Recréer
+                </button>
+              ) : null}
+            </>
+          ) : onCreateLmsCourse ? (
+            <button
+              type="button"
+              disabled={!hasProgram || lmsConverting}
+              onClick={onCreateLmsCourse}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-900/10 bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+              title={
+                hasProgram
+                  ? "Créer un brouillon LMS à partir de cette structure"
+                  : "Ajoutez au moins une section"
+              }
+            >
+              {lmsConverting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <GraduationCap className="h-3.5 w-3.5" />
+              )}
+              Créer formation LMS
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={addSection}
-            disabled={aiGenerating}
+            disabled={busy}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#635BFF] px-3 py-2 text-xs font-semibold text-white hover:bg-[#7B74FF] disabled:opacity-50"
           >
             <Plus className="h-3.5 w-3.5" />

@@ -42,6 +42,8 @@ export type TrainingCourseRow = {
   instructors: TrainingInstructor[] | null;
   badge_class_id: string | null;
   program_structure: TrainingProgramSection[] | null;
+  /** Formation LMS liée (créée depuis le programme catalogue). */
+  lms_course_id?: string | null;
   page_blocks: TrainingPageBlock[] | null;
   sessions: TrainingSessionRow[] | null;
   benefits: string[] | null;

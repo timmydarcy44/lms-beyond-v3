@@ -199,26 +199,33 @@ export function AccountFormationRequestWizard({
 
   async function goToStep4() {
     if (!startDate || !endDate) {
-      setError("Indiquez les dates de session.");
+      setError("Indiquez les dates de début et de fin.");
       return;
     }
     if (modality !== "distanciel") {
-      if (locationMode === "client") {
-        if (!hasClientAddress) {
-          setError("Adresse entreprise manquante pour « chez le client ».");
-          return;
-        }
-        if (
-          addressLine !== (orgAddressProp?.addressLine ?? "") ||
-          addressZip !== (orgAddressProp?.addressZip ?? "") ||
-          addressCity !== (orgAddressProp?.addressCity ?? "")
-        ) {
-          const ok = await saveClientAddress();
-          if (!ok) return;
-        }
-      } else if (locationMode === "other" && !locationOther.trim()) {
-        setError("Précisez le lieu.");
+      if (locationMode === "client" && !hasClientAddress) {
+        setError(
+          "Pour « Chez le client », renseignez l'adresse (rue, CP, ville) ci-dessous puis continuez.",
+        );
         return;
+      }
+      if (locationMode === "other" && !locationOther.trim()) {
+        setError("Précisez le lieu (autre).");
+        return;
+      }
+    }
+    // Enregistre l'adresse si renseignée, sans bloquer la suite (ex. migration pas encore appliquée).
+    if (hasClientAddress) {
+      const dirty =
+        addressLine !== (orgAddressProp?.addressLine ?? "") ||
+        addressZip !== (orgAddressProp?.addressZip ?? "") ||
+        addressCity !== (orgAddressProp?.addressCity ?? "");
+      if (dirty) {
+        const ok = await saveClientAddress();
+        if (!ok) {
+          // On laisse passer : le lieu utilise l'adresse saisie dans le panneau.
+          setError(null);
+        }
       }
     }
     setError(null);
@@ -245,12 +252,8 @@ export function AccountFormationRequestWizard({
     setLoading(true);
     setError(null);
     try {
-      if (modality !== "distanciel" && locationMode === "client") {
-        const ok = await saveClientAddress();
-        if (!ok) {
-          setLoading(false);
-          return;
-        }
+      if (hasClientAddress) {
+        await saveClientAddress().catch(() => false);
       }
 
       const createRes = await fetch("/api/super-admin/crm/formation-dossiers", {
@@ -593,11 +596,11 @@ export function AccountFormationRequestWizard({
             </div>
           ) : null}
 
-          {(modality !== "distanciel" && locationMode === "client") || !hasClientAddress ? (
+          {modality !== "distanciel" && locationMode === "client" ? (
             <div className="space-y-2 rounded-2xl border border-[#6E5BFF]/40 bg-[#17122E] p-3">
               <p className="text-sm font-semibold text-white">Adresse postale de l&apos;entreprise</p>
               <p className="text-xs text-[#8A93AE]">
-                Obligatoire pour le devis et le lieu « chez le client ».
+                Obligatoire pour « Chez le client » (et reprise sur le devis).
               </p>
               <Field label="Adresse">
                 <input

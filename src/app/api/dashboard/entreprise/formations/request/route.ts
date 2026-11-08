@@ -157,5 +157,55 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ success: true, messageId: result.messageId, dossierId });
+  // Accusé de réception au demandeur
+  const ackHtml = buildEdgeEmailShell({
+    title: "Demande bien reçue",
+    preheader: `Votre demande — ${training.title}`,
+    bodyHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        Bonjour ${escapeEdgeEmailHtml(contactName)},
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        Nous avons bien reçu votre demande de formation
+        <strong>${escapeEdgeEmailHtml(training.title)}</strong>
+        pour <strong>${escapeEdgeEmailHtml(companyName)}</strong>.
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        Un conseiller Byound revient vers vous rapidement avec un devis et les prochaines étapes
+        (dates, participants, financement).
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="text-align:left;">
+        ${row("Formation", training.title)}
+        ${row("Participants", participants)}
+        ${preferredFormat ? row("Format souhaité", preferredFormat) : ""}
+        ${preferredPeriod ? row("Période souhaitée", preferredPeriod) : ""}
+      </table>
+      <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#8A8A8A;">
+        Besoin d'ajouter une précision ? Répondez à cet e-mail.
+      </p>`,
+    footerNote: "Byound — confirmation de demande formation",
+  });
+
+  const ack = await sendEmail({
+    to: contactEmail,
+    skipBcc: true,
+    from: EDGE_COCKPIT_FROM,
+    replyTo: CONTACT_TO,
+    subject: `Demande bien reçue — ${training.title}`,
+    html: ackHtml,
+    tags: {
+      type: "entreprise-formation-request-ack",
+      org_id: access.organizationId,
+    },
+  });
+  if (!ack.success) {
+    console.warn("[entreprise/formations/request] ack email:", ack.error);
+  }
+
+  return NextResponse.json({
+    success: true,
+    messageId: result.messageId,
+    ackMessageId: ack.messageId ?? null,
+    dossierId,
+  });
 }

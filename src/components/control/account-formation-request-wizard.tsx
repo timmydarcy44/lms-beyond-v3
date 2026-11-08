@@ -189,9 +189,12 @@ export function AccountFormationRequestWizard({
   function slotTimes(dayPart: "matin" | "apres_midi", slotDate: string) {
     const start = dayPart === "matin" ? morningStart : afternoonStart;
     const end = dayPart === "matin" ? morningEnd : afternoonEnd;
+    // start_time / end_time explicites → l’API ne retombe pas sur 09:00/17:00.
     return {
       starts_at: `${slotDate}T${start}:00`,
       ends_at: `${slotDate}T${end}:00`,
+      start_time: start,
+      end_time: end,
     };
   }
 
@@ -357,6 +360,8 @@ export function AccountFormationRequestWizard({
               modality_presence: modality,
               starts_at: times.starts_at,
               ends_at: times.ends_at,
+              start_time: times.start_time,
+              end_time: times.end_time,
             }),
           });
           if (!slotRes.ok) {

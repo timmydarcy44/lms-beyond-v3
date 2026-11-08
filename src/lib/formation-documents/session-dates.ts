@@ -31,8 +31,50 @@ function toDate(v: string | Date): Date {
   return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12)) : new Date(v);
 }
 
-/** Parties de date dans le fuseau Paris. */
-function parts(d: Date) {
+/**
+ * Horloge murale Europe/Paris.
+ * - `YYYY-MM-DD` / `YYYY-MM-DDTHH:mm[:ss]` sans Z/offset → heures saisies telles quelles (pas de décalage UTC serveur).
+ * - ISO avec Z/offset → converties en Paris.
+ */
+function wallParts(v: string | Date): {
+  y: number;
+  m: number;
+  d: number;
+  weekday: string;
+  hh: string;
+  mm: string;
+  key: string;
+  sort: number;
+  hasClock: boolean;
+} {
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    const naive = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(trimmed);
+    if (naive) {
+      const y = Number(naive[1]);
+      const m = Number(naive[2]);
+      const d = Number(naive[3]);
+      const hasClock = Boolean(naive[4]);
+      const hh = hasClock ? String(naive[4]) : "12";
+      const mm = hasClock ? String(naive[5]) : "00";
+      const weekday = new Intl.DateTimeFormat("fr-FR", {
+        weekday: "long",
+        timeZone: "UTC",
+      }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+      return {
+        y,
+        m,
+        d,
+        weekday,
+        hh,
+        mm,
+        key: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+        sort: Date.UTC(y, m - 1, d, hasClock ? Number(hh) : 12, hasClock ? Number(mm) : 0),
+        hasClock,
+      };
+    }
+  }
+  const d = toDate(v);
   const f = new Intl.DateTimeFormat("fr-FR", {
     timeZone: TZ,
     year: "numeric",
@@ -54,6 +96,22 @@ function parts(d: Date) {
     hh: String(p.hour ?? "00"),
     mm: String(p.minute ?? "00"),
     key: `${p.year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`,
+    sort: d.getTime(),
+    hasClock: true,
+  };
+}
+
+/** Parties de date dans le fuseau Paris (compat). */
+function parts(d: Date) {
+  const w = wallParts(d);
+  return {
+    y: w.y,
+    m: w.m,
+    d: w.d,
+    weekday: w.weekday,
+    hh: w.hh,
+    mm: w.mm,
+    key: w.key,
   };
 }
 
@@ -77,8 +135,8 @@ type SessionDay = {
 export function sessionDays(slots: Slot[]): SessionDay[] {
   const map = new Map<string, SessionDay>();
   for (const s of slots) {
-    const a = parts(toDate(s.start));
-    const b = s.end ? parts(toDate(s.end)) : null;
+    const a = wallParts(s.start);
+    const b = s.end ? wallParts(s.end) : null;
     const e =
       map.get(a.key) ??
       ({
@@ -87,12 +145,13 @@ export function sessionDays(slots: Slot[]): SessionDay[] {
         d: a.d,
         weekday: a.weekday,
         ranges: [],
-        sort: toDate(s.start).getTime(),
+        sort: a.sort,
       } satisfies SessionDay);
-    if (b && !(a.hh === "12" && a.mm === "00" && b.hh === "12")) {
+    // Ignore les bornes « midi » artificielles (date seule sans heure).
+    if (a.hasClock && b?.hasClock && !(a.hh === "12" && a.mm === "00" && b.hh === "12" && b.mm === "00")) {
       e.ranges.push(`${hour(a.hh, a.mm)} – ${hour(b.hh, b.mm)}`);
     }
-    e.sort = Math.min(e.sort, toDate(s.start).getTime());
+    e.sort = Math.min(e.sort, a.sort);
     map.set(a.key, e);
   }
   return [...map.values()].sort((x, y) => x.sort - y.sort);

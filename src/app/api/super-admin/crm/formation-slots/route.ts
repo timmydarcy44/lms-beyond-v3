@@ -56,14 +56,81 @@ export async function POST(req: NextRequest) {
 
   const slotDate = String(body?.slot_date ?? new Date().toISOString().slice(0, 10));
   const dayPart = body?.day_part === "apres_midi" ? "apres_midi" : "matin";
-  const startsAt =
-    body?.starts_at != null
-      ? String(body.starts_at)
-      : `${slotDate}T${dayPart === "matin" ? "09:00:00" : "13:30:00"}`;
-  const endsAt =
-    body?.ends_at != null
-      ? String(body.ends_at)
-      : `${slotDate}T${dayPart === "matin" ? "12:30:00" : "17:00:00"}`;
+
+  /** Normalise HH:mm / ISO → horloge murale `YYYY-MM-DDTHH:mm:ss` (sans Z). */
+  const wallClockLocal = (raw: unknown, fallbackHHmm: string): string => {
+    const value = String(raw ?? "").trim();
+    const fromTime = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+    if (fromTime) {
+      const hh = fromTime[1].padStart(2, "0");
+      const mm = fromTime[2];
+      const ss = fromTime[3] ?? "00";
+      return `${slotDate}T${hh}:${mm}:${ss}`;
+    }
+    const fromIso = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(value);
+    if (fromIso) {
+      return `${fromIso[1]}T${fromIso[2]}:${fromIso[3]}:${fromIso[4] ?? "00"}`;
+    }
+    const fb = /^(\d{1,2}):(\d{2})/.exec(fallbackHHmm);
+    const hh = (fb?.[1] ?? (dayPart === "matin" ? "10" : "14")).padStart(2, "0");
+    const mm = fb?.[2] ?? (dayPart === "matin" ? "00" : "30");
+    return `${slotDate}T${hh}:${mm}:00`;
+  };
+
+  /** Horloge murale Paris → ISO UTC (timestamptz). */
+  const parisWallToUtcIso = (wall: string): string => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/.exec(wall);
+    if (!m) return wall;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const hh = Number(m[4]);
+    const mi = Number(m[5]);
+    const ss = Number(m[6]);
+    let utc = Date.UTC(y, mo - 1, d, hh, mi, ss);
+    for (let i = 0; i < 4; i += 1) {
+      const fmt = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Europe/Paris",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(new Date(utc));
+      const gotH = Number(fmt.find((p) => p.type === "hour")?.value ?? "0");
+      const gotM = Number(fmt.find((p) => p.type === "minute")?.value ?? "0");
+      const deltaMin = hh * 60 + mi - (gotH * 60 + gotM);
+      if (deltaMin === 0) break;
+      utc += deltaMin * 60_000;
+    }
+    return new Date(utc).toISOString();
+  };
+
+  const hasExplicitStart =
+    (body?.starts_at != null && String(body.starts_at).trim() !== "") ||
+    (body?.start_time != null && String(body.start_time).trim() !== "");
+  const hasExplicitEnd =
+    (body?.ends_at != null && String(body.ends_at).trim() !== "") ||
+    (body?.end_time != null && String(body.end_time).trim() !== "");
+
+  const startsLocal = wallClockLocal(
+    body?.starts_at ?? body?.start_time,
+    dayPart === "matin" ? "10:00" : "14:30",
+  );
+  const endsLocal = wallClockLocal(
+    body?.ends_at ?? body?.end_time,
+    dayPart === "matin" ? "13:30" : "18:00",
+  );
+  const startsAt = parisWallToUtcIso(startsLocal);
+  const endsAt = parisWallToUtcIso(endsLocal);
+
+  const startMs = Date.parse(startsAt);
+  const endMs = Date.parse(endsAt);
+  const faceMinutes =
+    Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+      ? Math.round((endMs - startMs) / 60_000)
+      : 210;
+
+  const open = new Date(Number.isFinite(startMs) ? startMs : Date.now());
+  const close = new Date(open.getTime() + 30 * 60_000);
 
   const { data: existing } = await service
     .from("formation_slots")
@@ -74,11 +141,27 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (existing) {
+    // Toujours aligner les horaires saisis (évite de garder les 09:00/17:00 par défaut).
+    if (hasExplicitStart || hasExplicitEnd) {
+      const { data: updated, error: updErr } = await service
+        .from("formation_slots")
+        .update({
+          starts_at: startsAt,
+          ends_at: endsAt,
+          face_to_face_minutes: faceMinutes,
+          attendance_opens_at: open.toISOString(),
+          attendance_closes_at: close.toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (updErr || !updated) {
+        return NextResponse.json({ error: updErr?.message || "Mise à jour créneau impossible" }, { status: 400 });
+      }
+      return NextResponse.json({ session_id: sessionId, slot: updated });
+    }
     return NextResponse.json({ session_id: sessionId, slot: existing });
   }
-
-  const open = new Date(startsAt);
-  const close = new Date(open.getTime() + 30 * 60_000);
 
   const { data: slot, error: slotErr } = await service
     .from("formation_slots")
@@ -88,7 +171,7 @@ export async function POST(req: NextRequest) {
       day_part: dayPart,
       starts_at: startsAt,
       ends_at: endsAt,
-      face_to_face_minutes: 210,
+      face_to_face_minutes: faceMinutes,
       attendance_opens_at: open.toISOString(),
       attendance_closes_at: close.toISOString(),
       attendance_close_offset_minutes: 30,

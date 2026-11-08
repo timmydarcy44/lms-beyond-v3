@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
 import {
@@ -8,6 +9,9 @@ import {
   BUSINESS_TRAINING_ITEMS,
   type BusinessTrainingItem,
 } from "@/lib/enterprise/business-training-catalog";
+import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
+import type { EntrepriseEmployee } from "@/lib/entreprise/overview-types";
+import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
 import { cn } from "@/lib/utils";
 
 const FORMAT_OPTIONS = ["Présentiel", "Distanciel", "Blended", "À définir"] as const;
@@ -16,7 +20,7 @@ type RequestFormState = {
   contact_name: string;
   contact_email: string;
   contact_phone: string;
-  participants: string;
+  participant_ids: string[];
   preferred_format: string;
   preferred_period: string;
   funding_type: "direct" | "opco";
@@ -28,13 +32,21 @@ const EMPTY_FORM: RequestFormState = {
   contact_name: "",
   contact_email: "",
   contact_phone: "",
-  participants: "",
+  participant_ids: [],
   preferred_format: "À définir",
   preferred_period: "",
   funding_type: "direct",
   preferred_location: "Chez le client",
   notes: "",
 };
+
+function employeeName(employee: EntrepriseEmployee) {
+  return (
+    [employee.first_name, employee.last_name].filter(Boolean).join(" ").trim() ||
+    employee.email ||
+    "Collaborateur"
+  );
+}
 
 function TrainingCard({
   item,
@@ -97,7 +109,10 @@ function TrainingCard({
 function RequestModal({
   item,
   form,
+  employees,
+  employeesLoading,
   onChange,
+  onToggleParticipant,
   onClose,
   onSubmit,
   submitting,
@@ -106,13 +121,20 @@ function RequestModal({
 }: {
   item: BusinessTrainingItem;
   form: RequestFormState;
+  employees: EntrepriseEmployee[];
+  employeesLoading: boolean;
   onChange: (patch: Partial<RequestFormState>) => void;
+  onToggleParticipant: (employeeId: string) => void;
   onClose: () => void;
   onSubmit: (e: FormEvent) => void;
   submitting: boolean;
   error: string | null;
   success: boolean;
 }) {
+  const selectedCount = form.participant_ids.length;
+  const allSelected =
+    employees.length > 0 && selectedCount === employees.length;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
       <button
@@ -184,28 +206,93 @@ function RequestModal({
                 </label>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">
-                    Téléphone <span className="font-normal text-gray-400">(optionnel)</span>
-                  </span>
-                  <input
-                    value={form.contact_phone}
-                    onChange={(e) => onChange({ contact_phone: e.target.value })}
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Nombre de participants</span>
-                  <input
-                    required
-                    value={form.participants}
-                    onChange={(e) => onChange({ participants: e.target.value })}
-                    placeholder="ex. 8"
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
-                  />
-                </label>
-              </div>
+              <label className="grid gap-1.5 text-sm">
+                <span className="font-semibold text-gray-700">
+                  Téléphone <span className="font-normal text-gray-400">(optionnel)</span>
+                </span>
+                <input
+                  value={form.contact_phone}
+                  onChange={(e) => onChange({ contact_phone: e.target.value })}
+                  className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                />
+              </label>
+
+              <fieldset className="grid gap-2 rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
+                <legend className="px-1 text-sm font-semibold text-gray-700">
+                  Collaborateurs participants
+                  {selectedCount > 0 ? (
+                    <span className="ml-2 font-normal text-violet-600">
+                      {selectedCount} sélectionné{selectedCount > 1 ? "s" : ""}
+                    </span>
+                  ) : null}
+                </legend>
+
+                {employeesLoading ? (
+                  <p className="text-sm text-gray-500">Chargement de l’équipe…</p>
+                ) : employees.length === 0 ? (
+                  <p className="text-sm leading-6 text-gray-600">
+                    Aucun collaborateur dans votre espace.{" "}
+                    <Link
+                      href="/dashboard/entreprise/salaries"
+                      className="font-semibold text-violet-600 underline-offset-2 hover:underline"
+                    >
+                      Ajoutez votre équipe
+                    </Link>{" "}
+                    puis revenez faire la demande.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onChange({
+                            participant_ids: allSelected
+                              ? []
+                              : employees.map((employee) => employee.id),
+                          })
+                        }
+                        className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-700 hover:border-violet-400"
+                      >
+                        {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
+                      </button>
+                    </div>
+                    <ul className="max-h-48 space-y-1.5 overflow-y-auto pr-1">
+                      {employees.map((employee) => {
+                        const checked = form.participant_ids.includes(employee.id);
+                        return (
+                          <li key={employee.id}>
+                            <label
+                              className={cn(
+                                "flex cursor-pointer items-start gap-3 rounded-2xl border bg-white px-3 py-2.5 transition",
+                                checked
+                                  ? "border-violet-400 shadow-[0_0_0_1px_rgba(124,58,237,0.15)]"
+                                  : "border-gray-200 hover:border-violet-200",
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => onToggleParticipant(employee.id)}
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                              />
+                              <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-gray-900">
+                                  {employeeName(employee)}
+                                </span>
+                                <span className="block truncate text-xs text-gray-500">
+                                  {[employee.job_title, employee.email].filter(Boolean).join(" · ") ||
+                                    "—"}
+                                </span>
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
+              </fieldset>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
@@ -281,7 +368,7 @@ function RequestModal({
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || selectedCount === 0}
                 className="mt-2 inline-flex items-center justify-center rounded-full bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
               >
                 {submitting ? "Envoi…" : "Envoyer la demande"}
@@ -299,6 +386,7 @@ export default function EntrepriseFormationRequestPage() {
   const skillParam = (searchParams.get("skill") ?? "").trim();
   const metierParam = (searchParams.get("metier") ?? "").trim();
   const formatParam = (searchParams.get("format") ?? "").trim();
+  const { loading: overviewLoading, data: overview } = useEntrepriseOverview();
 
   const [category, setCategory] = useState<string>("Tous");
   const [selected, setSelected] = useState<BusinessTrainingItem | null>(null);
@@ -306,6 +394,11 @@ export default function EntrepriseFormationRequestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const employees = useMemo(
+    () => filterRealEntrepriseEmployees(overview?.employees ?? []),
+    [overview?.employees],
+  );
 
   useEffect(() => {
     if (!skillParam && !formatParam) return;
@@ -336,31 +429,17 @@ export default function EntrepriseFormationRequestPage() {
   }, [skillParam, metierParam, formatParam]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const viewerRes = await fetch("/api/dashboard/entreprise/viewer");
-        const viewer = viewerRes.ok ? await viewerRes.json() : null;
-        if (cancelled) return;
-
-        const prenom = String(viewer?.prenom ?? "").trim();
-        const nom = String(viewer?.nom ?? "").trim();
-        const name = [prenom, nom].filter(Boolean).join(" ");
-        const email = String(viewer?.email ?? "").trim();
-
-        setForm((prev) => ({
-          ...prev,
-          contact_name: prev.contact_name || name,
-          contact_email: prev.contact_email || email,
-        }));
-      } catch {
-        // Prefill optionnel
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    const prenom = String(overview?.viewer?.prenom ?? "").trim();
+    const nom = String(overview?.viewer?.nom ?? "").trim();
+    const name = [prenom, nom].filter(Boolean).join(" ");
+    const email = String(overview?.viewer?.email ?? "").trim();
+    if (!name && !email) return;
+    setForm((prev) => ({
+      ...prev,
+      contact_name: prev.contact_name || name,
+      contact_email: prev.contact_email || email,
+    }));
+  }, [overview?.viewer?.prenom, overview?.viewer?.nom, overview?.viewer?.email]);
 
   const filtered = useMemo(() => {
     if (category === "Tous") return BUSINESS_TRAINING_ITEMS;
@@ -386,11 +465,28 @@ export default function EntrepriseFormationRequestPage() {
     setError(null);
     setSuccess(false);
     setSubmitting(false);
+    setForm((prev) => ({ ...prev, participant_ids: [] }));
+  };
+
+  const toggleParticipant = (employeeId: string) => {
+    setForm((prev) => {
+      const has = prev.participant_ids.includes(employeeId);
+      return {
+        ...prev,
+        participant_ids: has
+          ? prev.participant_ids.filter((id) => id !== employeeId)
+          : [...prev.participant_ids, employeeId],
+      };
+    });
   };
 
   const submitRequest = async (e: FormEvent) => {
     e.preventDefault();
     if (!selected) return;
+    if (form.participant_ids.length === 0) {
+      setError("Sélectionnez au moins un collaborateur.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -482,7 +578,10 @@ export default function EntrepriseFormationRequestPage() {
         <RequestModal
           item={selected}
           form={form}
+          employees={employees}
+          employeesLoading={overviewLoading && !overview}
           onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+          onToggleParticipant={toggleParticipant}
           onClose={closeRequest}
           onSubmit={submitRequest}
           submitting={submitting}

@@ -249,10 +249,16 @@ export async function fillVaultDevisPdf(
   setText(form, "course_title", title, appearanceFont);
   setText(form, "quote_date", quoteDate, appearanceFont);
   setText(form, "valid_until", validUntil, appearanceFont);
+  const clientSiretDigits = String(ctx.organization.siret ?? "").replace(/\D/g, "");
+  const clientSiretFormatted =
+    clientSiretDigits.length === 14
+      ? clientSiretDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, "$1 $2 $3 $4")
+      : clientSiretDigits;
+
   setText(
     form,
     "client_reference",
-    ctx.organization.client_code || ctx.organization.siret || "",
+    ctx.organization.client_code || clientSiretFormatted || "",
     appearanceFont,
   );
   setText(form, "total_ttc", totalTtc, appearanceFont);
@@ -267,7 +273,7 @@ export async function fillVaultDevisPdf(
     formatPostalAddress(ctx.organization),
     appearanceFont,
   );
-  setText(form, "client_siret", ctx.organization.siret || "", appearanceFont);
+  setText(form, "client_siret", clientSiretFormatted, appearanceFont);
   setText(form, "client_vat_number", "", appearanceFont);
   setText(form, "client_contact_name", ctx.dossier.contact_name || "", appearanceFont);
   setText(

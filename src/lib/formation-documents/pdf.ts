@@ -109,7 +109,12 @@ function buildDevis(doc: jsPDF, ctx: DossierDocContext) {
   doc.text(ctx.organization.name, margin, y);
   y += 5;
   if (ctx.organization.siret) {
-    doc.text(`SIRET ${ctx.organization.siret}`, margin, y);
+    const siretDigits = String(ctx.organization.siret).replace(/\D/g, "");
+    const siretLabel =
+      siretDigits.length === 14
+        ? siretDigits.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, "$1 $2 $3 $4")
+        : siretDigits;
+    doc.text(`SIRET ${siretLabel}`, margin, y);
     y += 5;
   }
   if (ctx.dossier.contact_name) {

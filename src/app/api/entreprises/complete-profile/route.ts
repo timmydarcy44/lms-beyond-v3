@@ -101,14 +101,24 @@ export async function POST(request: NextRequest) {
 
   const { error: orgError } = await db.from("organizations").update(orgUpdate).eq("id", orgId);
   if (orgError) {
-    const reduced = { ...orgUpdate };
-    if (orgError.message?.includes("siret")) delete reduced.siret;
-    if (orgError.message?.includes("address_")) {
-      delete reduced.address_line;
-      delete reduced.address_zip;
-      delete reduced.address_city;
-      delete reduced.address_country;
+    // SIRET / adresse : ne jamais les supprimer silencieusement (devis & convention).
+    if (/siret/i.test(orgError.message ?? "")) {
+      return NextResponse.json(
+        {
+          error: /unique|duplicate|already/i.test(orgError.message ?? "")
+            ? "Ce SIRET est déjà associé à un autre compte Byound."
+            : `SIRET invalide : ${orgError.message}`,
+        },
+        { status: 400 },
+      );
     }
+    if (/address_/i.test(orgError.message ?? "")) {
+      return NextResponse.json(
+        { error: "Adresse postale non enregistrée — migration organizations.address_* requise." },
+        { status: 503 },
+      );
+    }
+    const reduced = { ...orgUpdate };
     if (orgError.message?.includes("company_size_band") || orgError.message?.includes("edge_profile_completed")) {
       delete reduced.company_size_band;
       delete reduced.edge_profile_completed;

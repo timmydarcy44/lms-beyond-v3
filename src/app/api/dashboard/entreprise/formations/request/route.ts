@@ -11,11 +11,25 @@ export const dynamic = "force-dynamic";
 const CONTACT_TO = "contact@byound.fr";
 const CONTACT_BCC = "timmydarcy44@gmail.com";
 
+type SelectedEmployee = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  job_title: string | null;
+};
+
 function row(label: string, value: string) {
   return `<tr>
     <td style="padding:8px 0;font-size:13px;color:#8A8A8A;vertical-align:top;width:160px;">${escapeEdgeEmailHtml(label)}</td>
     <td style="padding:8px 0;font-size:15px;color:#111111;font-weight:500;">${escapeEdgeEmailHtml(value).replace(/\n/g, "<br/>")}</td>
   </tr>`;
+}
+
+function employeeLabel(emp: SelectedEmployee) {
+  const name = [emp.first_name, emp.last_name].filter(Boolean).join(" ").trim();
+  if (name && emp.email) return `${name} <${emp.email}>`;
+  return name || emp.email || emp.id;
 }
 
 export async function POST(request: NextRequest) {
@@ -41,7 +55,6 @@ export async function POST(request: NextRequest) {
   const contactName = String(body.contact_name ?? "").trim();
   const contactEmail = String(body.contact_email ?? "").trim().toLowerCase();
   const contactPhone = String(body.contact_phone ?? "").trim();
-  const participants = String(body.participants ?? "").trim();
   const preferredFormat = String(body.preferred_format ?? "").trim();
   const preferredPeriod = String(body.preferred_period ?? "").trim();
   const preferredLocation = String(body.preferred_location ?? "").trim();
@@ -49,9 +62,32 @@ export async function POST(request: NextRequest) {
   const fundingType = fundingRaw === "opco" ? "opco" : "direct";
   const notes = String(body.notes ?? body.message ?? "").trim();
 
-  if (!trainingId || !contactName || !contactEmail || !participants) {
+  const rawIds = Array.isArray(body.participant_ids)
+    ? body.participant_ids
+    : Array.isArray(body.employee_ids)
+      ? body.employee_ids
+      : [];
+  const participantIds = [
+    ...new Set(
+      rawIds
+        .map((id) => String(id ?? "").trim())
+        .filter((id) => id && !id.startsWith("demo-") && !id.startsWith("demo_")),
+    ),
+  ];
+
+  // Compat ancien formulaire « nombre de participants »
+  const legacyParticipants = String(body.participants ?? "").trim();
+
+  if (!trainingId || !contactName || !contactEmail) {
     return NextResponse.json(
-      { error: "Formation, contact et nombre de participants sont requis." },
+      { error: "Formation et contact sont requis." },
+      { status: 400 },
+    );
+  }
+
+  if (!participantIds.length && !legacyParticipants) {
+    return NextResponse.json(
+      { error: "Sélectionnez au moins un collaborateur participant." },
       { status: 400 },
     );
   }
@@ -66,18 +102,50 @@ export async function POST(request: NextRequest) {
   }
 
   let companyName = "";
+  let orgSiret = "";
   const service = getServiceRoleClient();
+  let selectedEmployees: SelectedEmployee[] = [];
+
   if (service) {
     const { data: org } = await service
       .from("organizations")
-      .select("name")
+      .select("name, siret")
       .eq("id", access.organizationId)
       .maybeSingle();
     companyName = String(org?.name ?? "").trim();
+    orgSiret = String(org?.siret ?? "").replace(/\D/g, "");
+
+    if (participantIds.length) {
+      const { data: employees, error: empErr } = await service
+        .from("employees")
+        .select("id, first_name, last_name, email, job_title")
+        .eq("company_id", access.organizationId)
+        .in("id", participantIds);
+      if (empErr) {
+        return NextResponse.json({ error: empErr.message }, { status: 400 });
+      }
+      selectedEmployees = (employees ?? []) as SelectedEmployee[];
+      if (selectedEmployees.length !== participantIds.length) {
+        return NextResponse.json(
+          { error: "Un ou plusieurs collaborateurs sélectionnés sont introuvables." },
+          { status: 400 },
+        );
+      }
+    }
   }
   if (!companyName) {
     companyName = "Entreprise Byound";
   }
+
+  const qty = Math.max(
+    1,
+    selectedEmployees.length ||
+      Number.parseInt(legacyParticipants.replace(/\D/g, ""), 10) ||
+      1,
+  );
+  const participantsLabel = selectedEmployees.length
+    ? selectedEmployees.map(employeeLabel).join("\n")
+    : legacyParticipants;
 
   const viewerLabel = [access.viewer.prenom, access.viewer.nom].filter(Boolean).join(" ").trim();
 
@@ -94,10 +162,11 @@ export async function POST(request: NextRequest) {
         ${row("Durée / niveau", `${training.duration} · ${training.level}`)}
         ${row("Catalogue", `${training.format} · à partir de ${training.startingPrice}`)}
         ${row("Entreprise", companyName)}
+        ${orgSiret ? row("SIRET", orgSiret) : ""}
         ${row("Contact", contactName)}
         ${row("Email", contactEmail)}
         ${contactPhone ? row("Téléphone", contactPhone) : ""}
-        ${row("Participants", participants)}
+        ${row("Participants", `${qty} —\n${participantsLabel}`)}
         ${preferredFormat ? row("Format souhaité", preferredFormat) : ""}
         ${preferredPeriod ? row("Période souhaitée", preferredPeriod) : ""}
         ${row("Financement", fundingType === "opco" ? "OPCO" : "Fonds propres")}
@@ -138,8 +207,10 @@ export async function POST(request: NextRequest) {
       amountsFromHtCents,
       quoteHtCentsFromCatalog,
     } = await import("@/lib/formation-dossier/catalog-pricing");
+    const { ensureLearnerProfileByEmail } = await import(
+      "@/lib/formation-dossier/ensure-learner"
+    );
     if (service) {
-      const qty = Math.max(1, Number.parseInt(participants.replace(/\D/g, ""), 10) || 1);
       let trainingCourseId: string | null = null;
       let intraPrice: number | null = null;
       let interPrice: number | null = null;
@@ -191,7 +262,12 @@ export async function POST(request: NextRequest) {
           preferredPeriod ? `Période: ${preferredPeriod}` : null,
           preferredLocation ? `Lieu: ${preferredLocation}` : null,
           `Financement: ${fundingType === "opco" ? "OPCO" : "fonds propres"}`,
-          participants ? `Participants: ${participants}` : null,
+          orgSiret ? `SIRET: ${orgSiret}` : null,
+          `Participants (${qty}):`,
+          ...selectedEmployees.map((emp) => `- ${employeeLabel(emp)}`),
+          !selectedEmployees.length && legacyParticipants
+            ? `Participants: ${legacyParticipants}`
+            : null,
           notes || null,
         ]
           .filter(Boolean)
@@ -200,6 +276,34 @@ export async function POST(request: NextRequest) {
         ownerUserId: access.userId ?? null,
       });
       dossierId = dossier.id;
+
+      for (const emp of selectedEmployees) {
+        const email = String(emp.email ?? "").trim().toLowerCase();
+        if (!email.includes("@")) continue;
+        try {
+          const learner = await ensureLearnerProfileByEmail(service, {
+            email,
+            firstName: emp.first_name,
+            lastName: emp.last_name,
+            organizationId: access.organizationId,
+            jobTitle: emp.job_title,
+          });
+          await service.from("formation_participants").upsert(
+            {
+              dossier_id: dossier.id,
+              profile_id: learner.profileId,
+              job_title: emp.job_title,
+            },
+            { onConflict: "dossier_id,profile_id" },
+          );
+        } catch (err) {
+          console.warn(
+            "[entreprise/formations/request] participant:",
+            emp.email,
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
     }
   } catch (err) {
     console.warn(
@@ -227,7 +331,7 @@ export async function POST(request: NextRequest) {
       </p>
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="text-align:left;">
         ${row("Formation", training.title)}
-        ${row("Participants", participants)}
+        ${row("Participants", `${qty} —\n${participantsLabel}`)}
         ${preferredFormat ? row("Format souhaité", preferredFormat) : ""}
         ${preferredPeriod ? row("Période souhaitée", preferredPeriod) : ""}
       </table>
@@ -258,5 +362,6 @@ export async function POST(request: NextRequest) {
     messageId: result.messageId,
     ackMessageId: ack.messageId ?? null,
     dossierId,
+    participants: qty,
   });
 }

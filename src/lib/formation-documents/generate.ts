@@ -69,6 +69,16 @@ export async function generateFormationDocuments(
       : ["devis", "convention", "cgv", "reglement", "programme", "convocation", "livret"]
   ).filter(isLot4Kind);
 
+  const needsClientSiret = kinds.some((k) => k === "devis" || k === "convention");
+  const clientSiret = String(ctx.organization.siret ?? "").replace(/\D/g, "");
+  if (needsClientSiret && clientSiret.length !== 14) {
+    return {
+      results: [],
+      error:
+        "SIRET client manquant sur l'organisation — renseignez-le sur le compte client avant de générer le devis / la convention.",
+    };
+  }
+
   if (kinds.includes("convention")) {
     for (const k of CONVENTION_PACK_KINDS) {
       if (!kinds.includes(k)) kinds.push(k);

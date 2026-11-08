@@ -163,7 +163,7 @@ export async function loadDossierDocContext(
   const { data: dossier } = await service
     .from("formation_dossiers")
     .select(
-      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, session_id, status",
+      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, session_id, status, notes",
     )
     .eq("id", dossierId)
     .maybeSingle();
@@ -227,6 +227,26 @@ export async function loadDossierDocContext(
       else orgRow.client_code = code;
     } catch {
       /* colonne absente ou course */
+    }
+  }
+
+  // Backfill SIRET depuis les notes de demande si l'org ne l'a pas encore
+  const orgSiretDigits = String(orgRow.siret ?? "").replace(/\D/g, "");
+  if (orgSiretDigits.length !== 14) {
+    const fromNotes = String((dossier as { notes?: string | null }).notes ?? "").match(
+      /SIRET\s*[:：]?\s*([0-9\s]{14,20})/i,
+    );
+    const noteSiret = fromNotes?.[1]?.replace(/\D/g, "") ?? "";
+    if (noteSiret.length === 14) {
+      orgRow.siret = noteSiret;
+      void service
+        .from("organizations")
+        .update({ siret: noteSiret })
+        .eq("id", String(orgRow.id))
+        .is("siret", null)
+        .then(({ error }) => {
+          if (error) console.warn("[doc-context] backfill siret:", error.message);
+        });
     }
   }
 
@@ -380,8 +400,14 @@ export async function loadDossierDocContext(
     organization: {
       id: String(orgRow.id),
       name: String(orgRow.name),
-      siret: orgRow.siret ? String(orgRow.siret) : null,
-      siren: orgRow.siren ? String(orgRow.siren) : null,
+      siret: orgRow.siret
+        ? String(orgRow.siret).replace(/\D/g, "") || null
+        : null,
+      siren: orgRow.siren
+        ? String(orgRow.siren).replace(/\D/g, "") || null
+        : orgRow.siret
+          ? String(orgRow.siret).replace(/\D/g, "").slice(0, 9) || null
+          : null,
       client_code: orgRow.client_code ? String(orgRow.client_code) : null,
       address_line: orgRow.address_line ? String(orgRow.address_line) : null,
       address_zip: orgRow.address_zip ? String(orgRow.address_zip) : null,

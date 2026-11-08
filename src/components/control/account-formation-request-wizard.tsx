@@ -168,10 +168,20 @@ export function AccountFormationRequestWizard({
 
   const amounts = useMemo(() => {
     const qty = deferParticipants ? 1 : Math.max(1, selectedPeople.length || 1);
-    // Catalogue en euros → centimes ; intra prioritaire (demande = session entreprise)
-    const unitEuros = Number(selectedCourse?.intra_price ?? selectedCourse?.inter_price ?? 0);
+    // Intra = forfait session ; inter = × participants
+    const intra = selectedCourse?.intra_price;
+    const inter = selectedCourse?.inter_price;
+    const unitEuros =
+      intra != null && Number(intra) > 0
+        ? Number(intra)
+        : inter != null && Number(inter) > 0
+          ? Number(inter)
+          : 0;
     const unit = Math.round((Number.isFinite(unitEuros) ? unitEuros : 0) * 100);
-    const ht = unit * qty;
+    const ht =
+      intra != null && Number(intra) > 0
+        ? unit
+        : unit * qty;
     const tva = Math.round(ht * 0.2);
     return { qty, unit, unitEuros, ht, tva, ttc: ht + tva };
   }, [selectedCourse, selectedPeople.length, deferParticipants]);

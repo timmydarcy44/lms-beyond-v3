@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Linkedin, Mail, Phone, Users } from "lucide-react";
+import { AlertTriangle, Inbox, Linkedin, Mail, Phone, Users } from "lucide-react";
 import { KpiCard, SegmentedFilter } from "@/components/control/chrome";
 import { SectionCard } from "@/components/control/ui";
 import type { TodayAction, TodayChannel, TodayHome } from "@/lib/control/today";
@@ -100,49 +100,92 @@ export function TodayHome({ data }: { data: TodayHome }) {
           hint={data.revenueCents == null ? "Relié aux factures" : "Factures du mois"}
           tone="#6E5BFF"
         />
+        <KpiCard
+          label="Demandes entrantes"
+          value={String(data.incomingDemandes.length)}
+          hint="Site + dashboard · à chiffrer / devis"
+          tone="#F2CF6B"
+          icon={<Inbox className="h-4 w-4" />}
+        />
         <KpiCard label="Prospects" value={String(prospects)} icon={<Users className="h-4 w-4" />} />
         <KpiCard label="Actions en retard" value={String(late.length)} valueColor="#FF5C7A" tone="#FF5C7A" hint="À reprogrammer ou traiter" icon={<AlertTriangle className="h-4 w-4" />} />
-        <KpiCard label="E-mails ouverts" value={opens.length ? `${opened} / ${opens.length}` : "—"} hint="Catalogues envoyés" tone="#8DB8FF" icon={<Mail className="h-4 w-4" />} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
-        <SectionCard
-          color="#6E5BFF"
-          title="Mes actions"
-          subtitle="Les cinq prochaines du filtre"
-          action={<Link href="/super/crm/pipeline" className="text-sm text-[#C4BAFF]">Tout voir</Link>}
-        >
-          <SegmentedFilter
-            value={bucket}
-            onChange={(id) => setBucket(id as typeof bucket)}
-            items={[
-              { id: "late", label: "En retard", count: late.length },
-              { id: "today", label: "Aujourd'hui", count: dueToday.length },
-              { id: "week", label: "Cette semaine", count: week.length },
-            ]}
-          />
-          <ul className="mt-4 divide-y divide-[#1A2340]">
-            {shown.length === 0 ? <li className="py-6 text-sm text-[#9AA3BD]">Aucune action dans ce filtre.</li> : null}
-            {shown.map((action) => {
-              const link = actionLink(action);
-              const lateRow = action.date < todayKey;
-              return (
-                <li key={action.id} className="flex items-center gap-3 py-3">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#1A2340] text-[#C9D2E8]">{channelIcon(action.channel)}</span>
+        <div className="space-y-4">
+          <SectionCard
+            color="#F2CF6B"
+            title="Demandes entrantes"
+            subtitle="Nouvelles demandes site / dashboard entreprise"
+            action={<Link href="/super/crm/demandes" className="text-sm text-[#C4BAFF]">Tout voir</Link>}
+          >
+            <ul className="divide-y divide-[#1A2340]">
+              {data.incomingDemandes.length === 0 ? (
+                <li className="py-6 text-sm text-[#9AA3BD]">Aucune demande en attente.</li>
+              ) : null}
+              {data.incomingDemandes.slice(0, 6).map((demande) => (
+                <li key={demande.id} className="flex items-center gap-3 py-3">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold">{action.title}</span>
-                    <span className="block truncate text-[12px] text-[#9AA3BD]">{[action.company, action.contact].filter(Boolean).join(" · ")}</span>
+                    <span className="block truncate text-sm font-semibold">{demande.courseTitle}</span>
+                    <span className="block truncate text-[12px] text-[#9AA3BD]">
+                      {[demande.organizationName, demande.contactName].filter(Boolean).join(" · ")}
+                      {demande.source === "site_request" ? " · Site" : " · Dashboard"}
+                    </span>
                   </span>
-                  <span className="text-sm" style={{ color: lateRow ? "#FF5C7A" : "#C4BAFF" }}>{formatDay(action.date)}</span>
-                  <a href={link.href} className="rounded-full border border-[#26304F] px-3 py-1 text-sm">{link.label}</a>
-                  <button type="button" disabled={busy === action.id} onClick={() => void markDone(action.id)} className="grid h-8 w-8 place-items-center rounded-full bg-[#163228] text-[#6BE39B]" title="Marquer faite">
-                    ✓
-                  </button>
+                  <span className="text-sm text-[#C4BAFF]">
+                    {demande.amountHtCents != null && demande.amountHtCents > 0
+                      ? euros(demande.amountHtCents)
+                      : "À chiffrer"}
+                  </span>
+                  <Link
+                    href={`/super/crm/demandes?dossier=${demande.id}`}
+                    className="rounded-full border border-[#26304F] px-3 py-1 text-sm"
+                  >
+                    Ouvrir
+                  </Link>
                 </li>
-              );
-            })}
-          </ul>
-        </SectionCard>
+              ))}
+            </ul>
+          </SectionCard>
+
+          <SectionCard
+            color="#6E5BFF"
+            title="Mes actions"
+            subtitle="Les cinq prochaines du filtre"
+            action={<Link href="/super/crm/pipeline" className="text-sm text-[#C4BAFF]">Tout voir</Link>}
+          >
+            <SegmentedFilter
+              value={bucket}
+              onChange={(id) => setBucket(id as typeof bucket)}
+              items={[
+                { id: "late", label: "En retard", count: late.length },
+                { id: "today", label: "Aujourd'hui", count: dueToday.length },
+                { id: "week", label: "Cette semaine", count: week.length },
+              ]}
+            />
+            <ul className="mt-4 divide-y divide-[#1A2340]">
+              {shown.length === 0 ? <li className="py-6 text-sm text-[#9AA3BD]">Aucune action dans ce filtre.</li> : null}
+              {shown.map((action) => {
+                const link = actionLink(action);
+                const lateRow = action.date < todayKey;
+                return (
+                  <li key={action.id} className="flex items-center gap-3 py-3">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#1A2340] text-[#C9D2E8]">{channelIcon(action.channel)}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">{action.title}</span>
+                      <span className="block truncate text-[12px] text-[#9AA3BD]">{[action.company, action.contact].filter(Boolean).join(" · ")}</span>
+                    </span>
+                    <span className="text-sm" style={{ color: lateRow ? "#FF5C7A" : "#C4BAFF" }}>{formatDay(action.date)}</span>
+                    <a href={link.href} className="rounded-full border border-[#26304F] px-3 py-1 text-sm">{link.label}</a>
+                    <button type="button" disabled={busy === action.id} onClick={() => void markDone(action.id)} className="grid h-8 w-8 place-items-center rounded-full bg-[#163228] text-[#6BE39B]" title="Marquer faite">
+                      ✓
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </SectionCard>
+        </div>
 
         <div className="space-y-4">
           <SectionCard color="#8B7BFF" title="Pipeline B2B" subtitle="Prospects par étape" action={<Link href="/super/crm/pipeline" className="text-sm text-[#C4BAFF]">Ouvrir le pipeline</Link>}>

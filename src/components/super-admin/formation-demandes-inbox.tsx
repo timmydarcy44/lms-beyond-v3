@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Inbox } from "lucide-react";
 import { parseFetchJson } from "@/lib/api/parse-fetch-json";
@@ -12,6 +13,7 @@ import type { FormationDossierBoardCard } from "@/lib/formation-dossier/board";
 import { FormationDossierSheet } from "@/components/super-admin/formation-dossier-sheet";
 
 export function FormationDemandesInbox() {
+  const searchParams = useSearchParams();
   const [cards, setCards] = useState<FormationDossierBoardCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -35,6 +37,11 @@ export function FormationDemandesInbox() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const dossier = searchParams.get("dossier")?.trim();
+    if (dossier) setSelectedId(dossier);
+  }, [searchParams]);
 
   return (
     <div className="space-y-6">
@@ -85,7 +92,7 @@ export function FormationDemandesInbox() {
                   </div>
                   <div className="shrink-0 text-left text-xs text-[#A3A8C7] sm:text-right">
                     <p>
-                      {card.amount_ht_cents != null
+                      {card.amount_ht_cents != null && card.amount_ht_cents > 0
                         ? `${(card.amount_ht_cents / 100).toLocaleString("fr-FR")} € HT`
                         : "Montant à définir"}
                     </p>

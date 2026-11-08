@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
+import { PublicFormationRequestModal } from "@/components/edge-site/business/public-formation-request-modal";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import {
@@ -113,13 +114,11 @@ function TrainingSectionNav({ items }: { items: { id: string; label: string }[] 
 function PricingCards({
   course,
   detail,
-  conseillerHref,
   demoHref,
   compact,
 }: {
   course: TrainingCoursePublic;
   detail: TrainingCourseDetail;
-  conseillerHref: string;
   demoHref: string;
   compact?: boolean;
 }) {
@@ -145,9 +144,13 @@ function PricingCards({
           <EdgePremiumButton href={demoHref} shape="revolut" className="w-full">
             Commencer par un test Byound
           </EdgePremiumButton>
-          <EdgePremiumButton href={conseillerHref} variant="secondary-light" shape="revolut" className="w-full">
-            Réserver cette formation
-          </EdgePremiumButton>
+          <PublicFormationRequestModal
+            courseId={course.id}
+            courseTitle={course.title}
+            intraPriceLabel={intraPrice}
+            triggerVariant="secondary-light"
+            fullWidth
+          />
         </div>
       ) : null}
     </div>
@@ -158,18 +161,16 @@ function PricingSidebar({
   course,
   detail,
   demoHref,
-  conseillerHref,
 }: {
   course: TrainingCoursePublic;
   detail: TrainingCourseDetail;
   demoHref: string;
-  conseillerHref: string;
 }) {
   return (
     <aside className="sticky top-[9.5rem]">
       <div className="rounded-[24px] border border-[#050505]/8 bg-white p-6 shadow-[0_8px_32px_rgba(5,5,5,0.06)]">
         <h2 className="text-lg font-semibold tracking-[-0.02em]">Tarifs</h2>
-        <PricingCards course={course} detail={detail} conseillerHref={conseillerHref} demoHref={demoHref} />
+        <PricingCards course={course} detail={detail} demoHref={demoHref} />
         <div className="mt-5 space-y-2 border-t border-[#050505]/8 pt-4 text-xs text-[#050505]/50">
           {course.duration ? (
             <p className="flex items-center gap-2">
@@ -308,9 +309,12 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
                 <EdgePremiumButton href={links.demo} variant="white" shape="revolut">
                   Commencer par un test Byound
                 </EdgePremiumButton>
-                <EdgePremiumButton href={links.conseiller} variant="outline-white" shape="revolut">
-                  Réserver cette formation
-                </EdgePremiumButton>
+                <PublicFormationRequestModal
+                  courseId={course.id}
+                  courseTitle={course.title}
+                  intraPriceLabel={formatIntraPrice(course)}
+                  triggerVariant="outline-white"
+                />
               </div>
 
               <ul className="mt-6 flex flex-wrap gap-2">
@@ -640,12 +644,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
             {showPricing ? (
               <div className="rounded-[24px] border border-[#050505]/8 bg-white p-6 lg:hidden">
                 <h3 className="text-lg font-semibold">Tarifs</h3>
-                <PricingCards
-                  course={course}
-                  detail={detail}
-                  conseillerHref={links.conseiller}
-                  demoHref={links.demo}
-                />
+                <PricingCards course={course} detail={detail} demoHref={links.demo} />
               </div>
             ) : null}
           </section>
@@ -845,12 +844,7 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
 
         {showPricing ? (
           <div className="hidden lg:block">
-            <PricingSidebar
-              course={course}
-              detail={detail}
-              demoHref={links.demo}
-              conseillerHref={links.conseiller}
-            />
+            <PricingSidebar course={course} detail={detail} demoHref={links.demo} />
           </div>
         ) : null}
       </div>
@@ -868,9 +862,12 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
             <EdgePremiumButton href={links.demo} variant="white" shape="revolut">
               Commencer par un test Byound
             </EdgePremiumButton>
-            <EdgePremiumButton href={links.conseiller} variant="outline-white" shape="revolut">
-              Réserver cette formation
-            </EdgePremiumButton>
+            <PublicFormationRequestModal
+              courseId={course.id}
+              courseTitle={course.title}
+              intraPriceLabel={formatIntraPrice(course)}
+              triggerVariant="outline-white"
+            />
             <EdgePremiumButton href={catalogHref} variant="outline-white" shape="revolut">
               Autres formations <ChevronRight className="ml-1 h-4 w-4" />
             </EdgePremiumButton>

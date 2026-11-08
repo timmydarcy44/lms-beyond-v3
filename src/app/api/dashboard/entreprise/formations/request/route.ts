@@ -134,16 +134,37 @@ export async function POST(request: NextRequest) {
   let dossierId: string | null = null;
   try {
     const { createFormationDossier } = await import("@/lib/formation-dossier/create-dossier");
+    const {
+      amountsFromHtCents,
+      quoteHtCentsFromCatalog,
+    } = await import("@/lib/formation-dossier/catalog-pricing");
     if (service) {
       const qty = Math.max(1, Number.parseInt(participants.replace(/\D/g, ""), 10) || 1);
-      const unitEuros = Number(
-        String(training.startingPrice || "")
-          .replace(/[^\d,.]/g, "")
-          .replace(",", ".") || "0",
-      );
-      const ht = Number.isFinite(unitEuros) ? Math.round(unitEuros * 100) * qty : null;
-      const tva = ht != null ? Math.round(ht * 0.2) : null;
-      const ttc = ht != null && tva != null ? ht + tva : null;
+      let trainingCourseId: string | null = null;
+      let intraPrice: number | null = null;
+      let interPrice: number | null = null;
+      const { data: matchedCourse } = await service
+        .from("training_courses")
+        .select("id, title, intra_price, inter_price")
+        .ilike("title", training.title)
+        .limit(1)
+        .maybeSingle();
+      if (matchedCourse?.id) {
+        trainingCourseId = String(matchedCourse.id);
+        intraPrice =
+          matchedCourse.intra_price != null ? Number(matchedCourse.intra_price) : null;
+        interPrice =
+          matchedCourse.inter_price != null ? Number(matchedCourse.inter_price) : null;
+      }
+      const ht =
+        quoteHtCentsFromCatalog({
+          intraPrice,
+          interPrice,
+          startingPriceLabel: training.startingPrice,
+          modality: "intra",
+          participants: qty,
+        }) ?? null;
+      const amounts = amountsFromHtCents(ht);
       const modalityPresence =
         preferredFormat.toLowerCase().includes("distan")
           ? "distanciel"
@@ -154,13 +175,14 @@ export async function POST(request: NextRequest) {
       const dossier = await createFormationDossier(service, {
         organizationId: access.organizationId,
         source: "dashboard_request",
+        trainingCourseId,
         courseTitle: training.title,
         contactName,
         contactEmail,
         contactPhone: contactPhone || null,
-        amountHtCents: ht,
-        amountTvaCents: tva,
-        amountTtcCents: ttc,
+        amountHtCents: amounts?.ht ?? null,
+        amountTvaCents: amounts?.tva ?? null,
+        amountTtcCents: amounts?.ttc ?? null,
         modalityIntraInter: "intra",
         modalityPresence,
         fundingType,

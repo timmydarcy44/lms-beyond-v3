@@ -23,6 +23,16 @@ export type TodayStage = { slug: string; label: string; owners: string[] };
 
 export type TodayAlert = { id: string; label: string; href: string; count: number };
 
+export type TodayIncomingDemande = {
+  id: string;
+  organizationName: string;
+  courseTitle: string;
+  contactName: string;
+  amountHtCents: number | null;
+  source: string;
+  updatedAt: string;
+};
+
 export type TodayHome = {
   firstName: string;
   email: string;
@@ -32,6 +42,7 @@ export type TodayHome = {
   actions: TodayAction[];
   stages: TodayStage[];
   alerts: TodayAlert[];
+  incomingDemandes: TodayIncomingDemande[];
   cfa: {
     candidates: number;
     active: number;
@@ -97,18 +108,28 @@ export async function loadTodayHome(user: { email?: string | null; user_metadata
       owners: [],
     })),
     alerts: [],
+    incomingDemandes: [],
     cfa: { candidates: 0, active: 0, review: 0, withoutCompany: 0 },
   };
   if (!db) return empty;
 
   try {
-  const [dealRows, orgsQuery, invoicesQuery, expertsQuery, applicationsQuery, placementsQuery] = await Promise.all([
+  const [dealRows, orgsQuery, invoicesQuery, expertsQuery, applicationsQuery, placementsQuery, dossiersQuery] = await Promise.all([
     loadDealRows(db),
     db.from("organizations").select("id, slug, kind, is_test"),
     db.from("org_billing_documents").select("org_id, doc_type, status, issued_at, due_at, amount_ht_cents"),
     db.from("experts").select("id, email").or("review_status.eq.pending_review,review_status.is.null"),
     db.from("cfa_applications").select("id, status, email, first_name, last_name"),
     db.from("apprentice_placements").select("apprentice_id, status"),
+    db
+      .from("formation_dossiers")
+      .select(
+        "id, organization_id, course_title, contact_name, amount_ht_cents, source, status, updated_at",
+      )
+      .in("source", ["dashboard_request", "site_request"])
+      .eq("status", "qualification")
+      .order("updated_at", { ascending: false })
+      .limit(12),
   ]);
 
   let orgRows = (orgsQuery.error ? [] : orgsQuery.data ?? []) as Array<Record<string, unknown>>;
@@ -210,7 +231,39 @@ export async function loadTodayHome(user: { email?: string | null; user_metadata
     : (expertsQuery.data ?? []).filter((row) => !looksLikeTestAccount({ email: text((row as { email?: string }).email) })).length;
   const testAccounts = demoOrgIds.size;
 
+  const incomingRows = (dossiersQuery.error ? [] : dossiersQuery.data ?? []) as Array<
+    Record<string, unknown>
+  >;
+  const incomingOrgIds = Array.from(
+    new Set(incomingRows.map((row) => text(row.organization_id)).filter(Boolean)),
+  );
+  const incomingOrgNames = new Map<string, string>();
+  if (incomingOrgIds.length) {
+    const { data: incomingOrgs } = await db
+      .from("organizations")
+      .select("id, name")
+      .in("id", incomingOrgIds);
+    for (const org of incomingOrgs ?? []) {
+      incomingOrgNames.set(text(org.id), text(org.name) || "Entreprise");
+    }
+  }
+  const incomingDemandes: TodayIncomingDemande[] = incomingRows.map((row) => ({
+    id: text(row.id),
+    organizationName: incomingOrgNames.get(text(row.organization_id)) || "Entreprise",
+    courseTitle: text(row.course_title) || "Formation",
+    contactName: text(row.contact_name),
+    amountHtCents: row.amount_ht_cents != null ? Number(row.amount_ht_cents) : null,
+    source: text(row.source),
+    updatedAt: text(row.updated_at),
+  }));
+
   const alerts: TodayAlert[] = [
+    {
+      id: "incoming",
+      label: "demandes entrantes",
+      href: "/super/crm/demandes",
+      count: incomingDemandes.length,
+    },
     { id: "duplicates", label: "doublons à comparer", href: "/super/entreprises/doublons", count: duplicates },
     { id: "experts", label: "experts à valider", href: "/super/experts?status=pending_review", count: expertsPending },
     { id: "tests", label: "comptes de test", href: "/super/entreprises", count: testAccounts },
@@ -229,6 +282,7 @@ export async function loadTodayHome(user: { email?: string | null; user_metadata
     actions,
     stages,
     alerts,
+    incomingDemandes,
     cfa,
   };
   } catch {

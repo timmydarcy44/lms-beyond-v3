@@ -279,11 +279,40 @@ export function FormationDossierSheet({
     onChanged();
   };
 
-  const saveDevisDraft = async (): Promise<boolean> => {
-    const htEuros = Number(String(devisDraft.amount_ht_euros).replace(",", "."));
-    const htCents = Number.isFinite(htEuros) && htEuros >= 0 ? Math.round(htEuros * 100) : null;
-    const tvaCents = htCents != null ? Math.round(htCents * 0.2) : null;
-    const ttcCents = htCents != null && tvaCents != null ? htCents + tvaCents : null;
+  const saveDevisDraft = async (opts?: { requireAmount?: boolean }): Promise<boolean> => {
+    const raw = String(devisDraft.amount_ht_euros ?? "").trim().replace(",", ".");
+    // Champ vide → ne jamais écrire 0 € (Number("") === 0).
+    if (!raw) {
+      if (opts?.requireAmount) {
+        toast.error("Indiquez le montant HT du devis (catalogue ou négocié).");
+        return false;
+      }
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          course_title: devisDraft.course_title.trim() || null,
+          contact_name: devisDraft.contact_name.trim() || null,
+          contact_email: devisDraft.contact_email.trim().toLowerCase() || null,
+          notes: devisDraft.notes.trim() || null,
+          funding_type: devisDraft.funding_type,
+        }),
+      });
+      const json = await parseFetchJson<{ error?: string }>(res);
+      if (!res.ok) {
+        toast.error(json.error ?? "Enregistrement du devis impossible");
+        return false;
+      }
+      return true;
+    }
+    const htEuros = Number(raw);
+    if (!Number.isFinite(htEuros) || htEuros <= 0) {
+      toast.error("Montant HT invalide — saisissez un montant supérieur à 0 €.");
+      return false;
+    }
+    const htCents = Math.round(htEuros * 100);
+    const tvaCents = Math.round(htCents * 0.2);
+    const ttcCents = htCents + tvaCents;
     const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -309,7 +338,7 @@ export function FormationDossierSheet({
   const previewDevis = async () => {
     setDevisBusy(true);
     try {
-      const ok = await saveDevisDraft();
+      const ok = await saveDevisDraft({ requireAmount: true });
       if (!ok) return;
       await load();
       window.open(
@@ -325,7 +354,7 @@ export function FormationDossierSheet({
   const sendDevis = async () => {
     setDevisBusy(true);
     try {
-      const ok = await saveDevisDraft();
+      const ok = await saveDevisDraft({ requireAmount: true });
       if (!ok) return;
       if (!devisDraft.contact_email.includes("@")) {
         toast.error("E-mail destinataire du devis requis");

@@ -38,6 +38,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
   const course = await service.from("courses").select("id, title").eq("id", courseId).maybeSingle();
   if (!course.data) return NextResponse.json({ error: "Formation introuvable" }, { status: 404 });
+  const { grantLmsCourseToOrganization } = await import("@/lib/org/org-formations");
+  await grantLmsCourseToOrganization(id, courseId, {
+    grantedBy: data.user.id,
+    source: "assign_members",
+  });
   let created = 0;
   for (const userId of userIds) {
     const inserted = await service.from("enrollments").insert({ user_id: userId, course_id: courseId, role: "learner" });

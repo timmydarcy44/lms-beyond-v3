@@ -33,6 +33,9 @@ export type OrgFormationListItem = {
   slug: string | null;
   updatedAt: string | null;
   enrollmentsCount: number;
+  coverImage?: string | null;
+  source?: "org" | "lms_grant";
+  description?: string | null;
 };
 
 export type OrgLearnerOption = {
@@ -123,26 +126,74 @@ export async function listOrgCourses(
 
   const { data: courses, error } = await client
     .from("courses")
-    .select("id, title, status, slug, updated_at")
+    .select("id, title, status, slug, updated_at, cover_image, description")
     .eq("org_id", orgId)
     .order("updated_at", { ascending: false })
     .limit(200);
 
-  if (error || !courses?.length) {
-    if (error) console.error("[org-formations] list courses:", error.message);
-    return [];
+  if (error) {
+    console.error("[org-formations] list courses:", error.message);
   }
 
-  const ids = courses.map((c) => String((c as { id: string }).id));
-  const countByCourse = new Map<string, number>();
+  const owned = (courses ?? []) as Array<Record<string, unknown>>;
+  const byId = new Map<string, OrgFormationListItem>();
 
+  for (const row of owned) {
+    const id = String(row.id);
+    byId.set(id, {
+      id,
+      title: String(row.title ?? "Formation").trim() || "Formation",
+      status: String(row.status ?? "draft").toLowerCase(),
+      slug: row.slug ? String(row.slug) : null,
+      updatedAt: row.updated_at ? String(row.updated_at) : null,
+      enrollmentsCount: 0,
+      coverImage: row.cover_image ? String(row.cover_image) : null,
+      description: row.description ? String(row.description).slice(0, 180) : null,
+      source: "org",
+    });
+  }
+
+  // LMS mis à disposition (grant) — visibles dans Parcours
+  const { data: grants } = await client
+    .from("organization_lms_courses")
+    .select("course_id, granted_at")
+    .eq("organization_id", orgId)
+    .limit(200);
+  const grantIds = (grants ?? [])
+    .map((g) => String((g as { course_id?: string }).course_id ?? ""))
+    .filter((id) => id && !byId.has(id));
+  if (grantIds.length) {
+    const { data: grantedCourses } = await client
+      .from("courses")
+      .select("id, title, status, slug, updated_at, cover_image, description")
+      .in("id", grantIds);
+    for (const row of (grantedCourses ?? []) as Array<Record<string, unknown>>) {
+      const id = String(row.id);
+      byId.set(id, {
+        id,
+        title: String(row.title ?? "Formation").trim() || "Formation",
+        status: String(row.status ?? "published").toLowerCase(),
+        slug: row.slug ? String(row.slug) : null,
+        updatedAt: row.updated_at ? String(row.updated_at) : null,
+        enrollmentsCount: 0,
+        coverImage: row.cover_image ? String(row.cover_image) : null,
+        description: row.description ? String(row.description).slice(0, 180) : null,
+        source: "lms_grant",
+      });
+    }
+  }
+
+  const list = [...byId.values()];
+  if (!list.length) return [];
+
+  const ids = list.map((c) => c.id);
+  const countByCourse = new Map<string, number>();
   const { data: enrollments } = await client.from("enrollments").select("course_id").in("course_id", ids);
   for (const row of enrollments ?? []) {
     const cid = String((row as { course_id?: string }).course_id ?? "");
     if (!cid) continue;
     countByCourse.set(cid, (countByCourse.get(cid) ?? 0) + 1);
   }
-
   if (countByCourse.size === 0) {
     const { data: fallback } = await client.from("course_enrollments").select("course_id").in("course_id", ids);
     for (const row of fallback ?? []) {
@@ -152,23 +203,43 @@ export async function listOrgCourses(
     }
   }
 
-  return courses.map((c) => {
-    const row = c as {
-      id: string;
-      title?: string | null;
-      status?: string | null;
-      slug?: string | null;
-      updated_at?: string | null;
-    };
-    return {
-      id: row.id,
-      title: String(row.title ?? "Formation").trim() || "Formation",
-      status: String(row.status ?? "draft").toLowerCase(),
-      slug: row.slug ?? null,
-      updatedAt: row.updated_at ?? null,
-      enrollmentsCount: countByCourse.get(row.id) ?? 0,
-    };
-  });
+  return list.map((c) => ({
+    ...c,
+    enrollmentsCount: countByCourse.get(c.id) ?? 0,
+  }));
+}
+
+/** Uniquement les parcours LMS mis à disposition (hors formations créées par l’org). */
+export async function listOrgLmsParcours(
+  orgId: string,
+  preferredClient?: SupabaseClient,
+): Promise<OrgFormationListItem[]> {
+  const all = await listOrgCourses(orgId, preferredClient);
+  return all.filter((c) => c.source === "lms_grant");
+}
+
+export async function grantLmsCourseToOrganization(
+  orgId: string,
+  courseId: string,
+  opts?: { grantedBy?: string | null; source?: string },
+): Promise<{ ok: boolean; error?: string }> {
+  if (!isUuid(orgId) || !isUuid(courseId)) {
+    return { ok: false, error: "Identifiants invalides" };
+  }
+  const client = await getServiceRoleClientOrFallback();
+  if (!client) return { ok: false, error: "Service indisponible" };
+  const { error } = await client.from("organization_lms_courses").upsert(
+    {
+      organization_id: orgId,
+      course_id: courseId,
+      granted_by: opts?.grantedBy ?? null,
+      source: opts?.source ?? "super_admin",
+      granted_at: new Date().toISOString(),
+    },
+    { onConflict: "organization_id,course_id" },
+  );
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function listOrgLearners(orgId: string): Promise<OrgLearnerOption[]> {

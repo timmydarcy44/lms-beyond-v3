@@ -77,9 +77,17 @@ export function AccountFormationRequestWizard({
   const [courseId, setCourseId] = useState("");
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [deferParticipants, setDeferParticipants] = useState(false);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [locationMode, setLocationMode] = useState<LocationMode>("client");
+  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [startDate, setStartDate] = useState(todayIso);
+  const [endDate, setEndDate] = useState(todayIso);
+  const initialHasAddress = Boolean(
+    orgAddressProp?.addressLine?.trim() &&
+      orgAddressProp?.addressZip?.trim() &&
+      orgAddressProp?.addressCity?.trim(),
+  );
+  const [locationMode, setLocationMode] = useState<LocationMode>(
+    initialHasAddress ? "client" : "byound",
+  );
   const [locationOther, setLocationOther] = useState("");
   const [modality, setModality] = useState<"presentiel" | "distanciel" | "hybride">("presentiel");
   const [fundingType, setFundingType] = useState<"direct" | "opco">("direct");
@@ -213,38 +221,34 @@ export function AccountFormationRequestWizard({
     }
   }
 
-  async function goToStep4() {
-    if (!startDate || !endDate) {
-      setError("Indiquez les dates de début et de fin.");
+  function goToStep4() {
+    const start = startDate || todayIso;
+    const end = endDate || start;
+    if (!startDate) setStartDate(start);
+    if (!endDate) setEndDate(end);
+    if (end < start) {
+      setError("La date de fin doit être après la date de début.");
       return;
     }
-    if (modality !== "distanciel") {
-      if (locationMode === "client" && !hasClientAddress) {
-        setError(
-          "Pour « Chez le client », renseignez l'adresse (rue, CP, ville) ci-dessous puis continuez.",
-        );
-        return;
-      }
-      if (locationMode === "other" && !locationOther.trim()) {
-        setError("Précisez le lieu (autre).");
-        return;
-      }
+    if (modality !== "distanciel" && locationMode === "other" && !locationOther.trim()) {
+      setError("Précisez le lieu (autre), ou choisissez Chez le client / Chez Byound.");
+      return;
     }
-    // Enregistre l'adresse si renseignée, sans bloquer la suite (ex. migration pas encore appliquée).
+    // Chez le client sans adresse → bascule Byound plutôt que bloquer Continuer.
+    if (modality !== "distanciel" && locationMode === "client" && !hasClientAddress) {
+      setLocationMode("byound");
+      setError("Lieu basculé sur « Chez Byound » (adresse client manquante).");
+    } else {
+      setError(null);
+    }
+    // Ne jamais attendre l’API adresse ici — sinon Continuer reste figé.
     if (hasClientAddress) {
       const dirty =
         addressLine !== (orgAddressProp?.addressLine ?? "") ||
         addressZip !== (orgAddressProp?.addressZip ?? "") ||
         addressCity !== (orgAddressProp?.addressCity ?? "");
-      if (dirty) {
-        const ok = await saveClientAddress();
-        if (!ok) {
-          // On laisse passer : le lieu utilise l'adresse saisie dans le panneau.
-          setError(null);
-        }
-      }
+      if (dirty) void saveClientAddress().catch(() => false);
     }
-    setError(null);
     setStep(4);
   }
 
@@ -735,7 +739,8 @@ export function AccountFormationRequestWizard({
             </div>
           ) : null}
 
-          <div className="flex gap-2">
+          {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}
+          <div className="sticky bottom-0 z-10 -mx-1 flex gap-2 bg-[#111831]/95 py-3 backdrop-blur">
             <button
               type="button"
               className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
@@ -745,9 +750,8 @@ export function AccountFormationRequestWizard({
             </button>
             <button
               type="button"
-              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold disabled:opacity-50"
-              disabled={!startDate || !endDate || savingAddress}
-              onClick={() => void goToStep4()}
+              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+              onClick={goToStep4}
             >
               Continuer
             </button>

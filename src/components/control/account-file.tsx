@@ -910,27 +910,17 @@ function AssignPanel({ orgId, courses, people, onClose, onDone }: { orgId: strin
           setSaving(true);
           try {
             if (mode === "company") {
-              const grant = await fetch("/api/super-admin/catalogue/access/grant", {
+              const grantLms = await fetch(`/api/super/comptes-clients/${orgId}/grant-lms`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  organization_id: orgId,
-                  catalog_item_id: courseId,
-                  grant_reason: "Mise à disposition depuis Compte client",
-                }),
+                body: JSON.stringify({ courseId }),
               });
-              if (!grant.ok) {
-                const assign = await fetch("/api/super-admin/assign-content-to-organization", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ organizationId: orgId, contentIds: [courseId] }),
-                });
-                const json = (await assign.json()) as { error?: string };
-                onDone(assign.ok ? "Formation mise à disposition du dashboard entreprise." : json.error || "Mise à disposition impossible");
-                if (assign.ok) onClose();
+              const grantJson = (await grantLms.json().catch(() => ({}))) as { error?: string };
+              if (!grantLms.ok) {
+                onDone(grantJson.error || "Mise à disposition impossible");
                 return;
               }
-              onDone("Formation mise à disposition du dashboard entreprise.");
+              onDone("Formation disponible dans Parcours (dashboard entreprise).");
               onClose();
               return;
             }
@@ -969,7 +959,7 @@ function AssignPanel({ orgId, courses, people, onClose, onDone }: { orgId: strin
             <span>
               <span className="font-semibold">Mettre à disposition du compte</span>
               <span className="mt-0.5 block text-xs text-[#8A93AE]">
-                Le dashboard entreprise pourra ouvrir les accès ensuite.
+                Visible dans Parcours sur le dashboard entreprise, pour assignation interne.
               </span>
             </span>
           </label>

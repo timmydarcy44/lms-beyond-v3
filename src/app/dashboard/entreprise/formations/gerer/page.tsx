@@ -1,5 +1,5 @@
 import EnterpriseSidebar from "@/components/EnterpriseSidebar";
-import { OrgFormationsManageView } from "@/components/org/org-formations-manage-view";
+import { OrgFormationCards } from "@/components/org/org-formation-cards";
 import { OrgFormationsShell } from "@/components/org/org-formations-shell";
 import { getSession } from "@/lib/auth/session";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
@@ -15,9 +15,10 @@ export default async function EntrepriseFormationsGererPage() {
   const { orgId } = jade
     ? { orgId: "jade-org" }
     : await requireEntrepriseOrgId("/dashboard/entreprise/formations/gerer");
-  const [courses, learners] = jade
+  const [allCourses, learners] = jade
     ? [JADE_ORG_COURSES, JADE_ORG_LEARNERS]
     : await Promise.all([listOrgCourses(orgId), listOrgLearners(orgId)]);
+  const courses = allCourses.filter((c) => c.source !== "lms_grant");
 
   return (
     <div className="flex min-h-screen bg-[#0b0a12] text-white">
@@ -26,17 +27,17 @@ export default async function EntrepriseFormationsGererPage() {
         <OrgFormationsShell
           basePath="/dashboard/entreprise/formations"
           title="Gérer mes formations"
-          lead="Formations internes. Assignez-les aux collaborateurs de votre organisation."
+          lead="Formations créées par votre organisation. Assignez-les aux collaborateurs."
           variant="dark"
           hideTabs
         >
-          <OrgFormationsManageView
+          <OrgFormationCards
             courses={courses}
             learners={learners}
             orgId={orgId}
-            basePath="/dashboard/entreprise/formations"
-            variant="dark"
-            assigneeLabel="collaborateur"
+            emptyTitle="Aucune formation organisationnelle"
+            emptyDescription="Créez une formation pour la rendre accessible uniquement aux membres de votre organisation."
+            badgeFor={() => "Interne"}
           />
         </OrgFormationsShell>
       </main>

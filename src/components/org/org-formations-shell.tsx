@@ -12,7 +12,7 @@ const TABS: Array<{ id: OrgFormationsTab; label: string; segment: string; icon: 
   { id: "catalogue", label: "Catalogue Byound", segment: "catalogue", icon: Library },
   { id: "creer", label: "Créer une formation", segment: "creer", icon: FolderPlus },
   { id: "gerer", label: "Gérer mes formations", segment: "gerer", icon: Settings2 },
-  { id: "parcours", label: "Créer un parcours", segment: "parcours", icon: Route },
+  { id: "parcours", label: "Parcours", segment: "parcours", icon: Route },
 ];
 
 export function OrgFormationsShell({

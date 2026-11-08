@@ -35,6 +35,8 @@ import {
   TrainingAiGenerateModal,
   type TrainingAiGeneratedContent,
 } from "@/components/super-admin/training-cms/training-ai-generate-modal";
+import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
+import { TRAINING_PLATFORM_BASE_PATH } from "@/lib/training-courses/types";
 
 type CmsState = {
   slug: string;
@@ -587,7 +589,9 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                     href={
                       online
                         ? "/edge-lab/online/formations"
-                        : `/edge-lab/business/formations/${state.slug}`
+                        : edgeMarketingHref(
+                            `${TRAINING_PLATFORM_BASE_PATH}/${encodeURIComponent(state.slug || "formation")}`,
+                          )
                     }
                     target="_blank"
                     className="inline-flex items-center gap-1 rounded-xl border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"

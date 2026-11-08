@@ -50,11 +50,12 @@ export async function fetchTrainingCourseBySlug(
     }
   }
 
+  // Détail par slug : on accepte aussi les fiches inactives (aperçu CMS avant publication).
+  // Le catalogue public filtre toujours is_active = true.
   const { data, error } = await supabase
     .from("training_courses")
     .select(SELECT_COLS)
     .eq("slug", slug)
-    .eq("is_active", true)
     .maybeSingle();
 
   if (error || !data) {

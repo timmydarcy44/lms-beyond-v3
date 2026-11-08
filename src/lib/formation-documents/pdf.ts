@@ -2,9 +2,16 @@ import { jsPDF } from "jspdf";
 import type { Lot4DocumentKind } from "@/lib/formation-documents/constants";
 import {
   eurosFromCents,
-  formatFrDate,
   type DossierDocContext,
 } from "@/lib/formation-documents/context";
+import {
+  formatDateAdmin,
+  formatDatesLong,
+  formatDatesShort,
+  formatDuration,
+  formatHours,
+  slotsFromDocContext,
+} from "@/lib/formation-documents/session-dates";
 
 type BuildOpts = {
   ctx: DossierDocContext;
@@ -73,10 +80,13 @@ function moneyLines(ctx: DossierDocContext): string[] {
 
 function slotsSummary(ctx: DossierDocContext): string[] {
   if (!ctx.slots.length) return ["Dates : à confirmer"];
-  return ctx.slots.map((s) => {
-    const part = s.day_part === "matin" ? "matin" : "après-midi";
-    return `${formatFrDate(s.slot_date)} · ${part}`;
-  });
+  const slots = slotsFromDocContext(ctx.slots);
+  const short = formatDatesShort(slots);
+  const hours = formatHours(slots);
+  return [
+    short ? `Dates : ${short}` : "Dates : à confirmer",
+    hours ? `Horaires : ${hours}` : "",
+  ].filter(Boolean);
 }
 
 function buildDevis(doc: jsPDF, ctx: DossierDocContext) {
@@ -89,7 +99,7 @@ function buildDevis(doc: jsPDF, ctx: DossierDocContext) {
   doc.setTextColor(40, 40, 50);
   doc.text(`Référence : ${ref}`, margin, y);
   y += 7;
-  doc.text(`Date : ${new Date().toLocaleDateString("fr-FR")}`, margin, y);
+  doc.text(`Date : ${formatDateAdmin()}`, margin, y);
   y += 12;
 
   doc.setFont("helvetica", "bold");
@@ -207,7 +217,7 @@ function buildConvention(doc: jsPDF, ctx: DossierDocContext) {
     .join(", ");
 
   const blocks: string[] = [
-    `Référence : ${ref} — Date : ${new Date().toLocaleDateString("fr-FR")}`,
+    `Référence : ${ref} — Date : ${formatDateAdmin()}`,
     "",
     `Entre les soussignés :`,
     `${ctx.of.legal_name}, organisme de formation${ctx.of.nda ? ` déclaré sous le NDA ${ctx.of.nda}` : ""}${ctx.of.siret ? `, SIRET ${ctx.of.siret}` : ""}${ofAddr ? `, dont le siège est situé ${ofAddr}` : ""}, ci-après dénommé « l'Organisme »,`,
@@ -222,7 +232,10 @@ function buildConvention(doc: jsPDF, ctx: DossierDocContext) {
     `Article 2 — Nature et caractéristiques de l'action`,
     `Nature : action de formation professionnelle continue.`,
     `Modalité : ${modalityLabel(ctx)}.`,
-    `Durée : ${ctx.course?.duration || `${Math.max(1, Math.ceil(ctx.slots.length / 2))} jour(s)`} (${ctx.slots.length || "—"} demi-journée(s)).`,
+    `Durée : ${
+      ctx.course?.duration ||
+      (ctx.slots.length ? formatDuration(slotsFromDocContext(ctx.slots)) : "à confirmer")
+    }.`,
     ctx.course?.level ? `Niveau : ${ctx.course.level}.` : "",
     ctx.course?.prerequisites ? `Prérequis : ${ctx.course.prerequisites}` : "",
     ctx.course?.audience?.length
@@ -243,14 +256,12 @@ function buildConvention(doc: jsPDF, ctx: DossierDocContext) {
       : []),
     `Article 4 — Dates et horaires`,
     ...(ctx.slots.length
-      ? ctx.slots.map((s) => {
-          const part = s.day_part === "matin" ? "matin" : "après-midi";
-          const hours =
-            s.starts_at && s.ends_at
-              ? ` (${new Date(s.starts_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })} – ${new Date(s.ends_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })})`
-              : "";
-          return `• ${formatFrDate(s.slot_date)} — ${part}${hours}`;
-        })
+      ? [
+          formatDatesLong(slotsFromDocContext(ctx.slots)),
+          formatHours(slotsFromDocContext(ctx.slots))
+            ? `Horaires : ${formatHours(slotsFromDocContext(ctx.slots))}`
+            : "",
+        ].filter(Boolean)
       : ["Dates à confirmer d'un commun accord."]),
     "",
     `Article 5 — Lieu`,
@@ -492,7 +503,7 @@ function buildCertificat(
     y += 5.5;
   }
   y += 12;
-  doc.text(`Fait le ${new Date().toLocaleDateString("fr-FR")}`, margin, y);
+  doc.text(`Fait le ${formatDateAdmin()}`, margin, y);
   y += 16;
   doc.text("Signature de l'organisme", margin, y);
 }
@@ -525,7 +536,7 @@ function buildAttestation(doc: jsPDF, ctx: DossierDocContext, participantName?: 
     y += 5.5;
   }
   y += 12;
-  doc.text(`Délivré le ${new Date().toLocaleDateString("fr-FR")}`, margin, y);
+  doc.text(`Délivré le ${formatDateAdmin()}`, margin, y);
 }
 
 export function buildFormationDocumentPdf(opts: BuildOpts): Buffer {

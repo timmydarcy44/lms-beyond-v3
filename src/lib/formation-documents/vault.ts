@@ -5,7 +5,7 @@ import type { DossierDocContext } from "@/lib/formation-documents/context";
 /**
  * Modèles PDF du coffre Qualiopi.
  * - reglement / livret : utilisés tels quels
- * - convention : modèle rempli dynamiquement (fill-convention-vault)
+ * - convention / devis : corps AcroForm + détail/annexe HTML assemblés
  */
 export const VAULT_TEMPLATE_KINDS = ["convention", "reglement", "livret"] as const;
 export type VaultTemplateKind = (typeof VAULT_TEMPLATE_KINDS)[number];
@@ -68,6 +68,12 @@ export async function resolveFormationPdfBuffer(
       "@/lib/formation-documents/fill-convention-vault"
     );
     const filled = await fillVaultConventionPdf(service, params.ctx);
+    if (filled) return { buffer: filled, source: "vault_filled" };
+  }
+
+  if (params.kind === "devis" && params.ctx) {
+    const { fillVaultDevisPdf } = await import("@/lib/formation-documents/fill-devis-vault");
+    const filled = await fillVaultDevisPdf(service, params.ctx);
     if (filled) return { buffer: filled, source: "vault_filled" };
   }
 

@@ -4,13 +4,21 @@ import { PDFDocument, type PDFFont, type PDFTextField } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
-import { eurosFromCents, formatFrDate } from "@/lib/formation-documents/context";
+import { eurosFromCents } from "@/lib/formation-documents/context";
 import { fetchVaultTemplatePdf } from "@/lib/formation-documents/vault";
 import { assembleConventionPdf } from "@/lib/formation-documents/assemble-convention";
 import {
   buildAnnexData,
   renderAnnexPdf,
 } from "@/lib/formation-documents/convention-annex";
+import {
+  formatDateAdmin,
+  formatDatesLong,
+  formatDatesShort,
+  formatDuration,
+  formatHours,
+  slotsFromDocContext,
+} from "@/lib/formation-documents/session-dates";
 
 /** Helvetica / WinAnsi : pas d’espaces fins ni caractères hors plage. */
 function pdfSafe(text: string): string {
@@ -242,34 +250,28 @@ function conventionRef(ctx: DossierDocContext): string {
   return `BYB-${ctx.dossier.id.slice(0, 8).toUpperCase()}`;
 }
 
-function datesLine(ctx: DossierDocContext): string {
-  if (!ctx.slots.length) return "A confirmer";
-  return [...new Set(ctx.slots.map((s) => formatFrDate(s.slot_date)))].join(" / ");
+function sessionSlots(ctx: DossierDocContext) {
+  return slotsFromDocContext(ctx.slots);
+}
+
+function datesCoverLine(ctx: DossierDocContext): string {
+  const slots = sessionSlots(ctx);
+  return formatDatesShort(slots) || "A confirmer";
+}
+
+function datesArticleLine(ctx: DossierDocContext): string {
+  const slots = sessionSlots(ctx);
+  return formatDatesLong(slots) || "A confirmer";
 }
 
 function hoursLine(ctx: DossierDocContext): string {
-  const withHours = ctx.slots.filter((s) => s.starts_at && s.ends_at);
-  if (!withHours.length) return "Selon convocation";
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/Paris",
-    });
-  const morning = withHours.find((s) => s.day_part === "matin");
-  const afternoon = withHours.find(
-    (s) => s.day_part === "apres_midi" || s.day_part === "après-midi",
-  );
-  if (morning?.starts_at && morning.ends_at && afternoon?.starts_at && afternoon.ends_at) {
-    return `${fmt(morning.starts_at)}-${fmt(morning.ends_at)} / ${fmt(afternoon.starts_at)}-${fmt(afternoon.ends_at)}`;
-  }
-  const first = withHours[0];
-  const last = withHours[withHours.length - 1];
-  return `${fmt(first.starts_at!)} - ${fmt(last.ends_at!)}`;
+  return formatHours(sessionSlots(ctx)) || "Selon convocation";
 }
 
 function durationLabel(ctx: DossierDocContext): string {
-  return ctx.course?.duration || `${Math.max(1, Math.ceil(ctx.slots.length / 2))} jour(s)`;
+  if (ctx.course?.duration?.trim()) return ctx.course.duration.trim();
+  const slots = sessionSlots(ctx);
+  return slots.length ? formatDuration(slots) : "A confirmer";
 }
 
 function modalityPresence(ctx: DossierDocContext): "presentiel" | "distanciel" | "mixte" | null {
@@ -329,8 +331,7 @@ export async function fillVaultConventionPdf(
       "Developper les competences visees par le programme joint.",
   );
   const ref = conventionRef(ctx);
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("fr-FR");
+  const dateStr = formatDateAdmin();
   const orgName = toSentenceCase(ctx.organization.name);
   const orgSiret = ctx.organization.siret || "";
   const orgSiren = ctx.organization.siren || (orgSiret ? orgSiret.slice(0, 9) : "");
@@ -353,7 +354,8 @@ export async function fillVaultConventionPdf(
           ),
         )
       : "20";
-  const datesCover = datesLine(ctx);
+  const datesCover = datesCoverLine(ctx);
+  const datesArticle = datesArticleLine(ctx);
 
   // Couverture
   setText(form, "convention_number", ref, { sentenceCase: false });
@@ -385,7 +387,7 @@ export async function fillVaultConventionPdf(
   setText(form, "audience", audience, { sentenceCase: false });
   setText(form, "prerequisites", prerequisites, { sentenceCase: false });
   setText(form, "duration", durationLabel(ctx));
-  setText(form, "dates", datesCover, { sentenceCase: false });
+  setText(form, "dates", datesArticle, { sentenceCase: false });
   setText(form, "hours", hoursLine(ctx), { sentenceCase: false });
   setCheck(form, "modality_presentiel", mod === "presentiel");
   setCheck(form, "modality_distanciel", mod === "distanciel");

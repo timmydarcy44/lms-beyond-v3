@@ -1,6 +1,10 @@
 import { jsPDF } from "jspdf";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
-import { formatFrDate } from "@/lib/formation-documents/context";
+import {
+  formatDuration,
+  formatSchedule,
+  slotsFromDocContext,
+} from "@/lib/formation-documents/session-dates";
 
 export type AnnexData = {
   courseTitle: string;
@@ -14,6 +18,7 @@ export type AnnexData = {
   audience: string;
   prerequisites: string;
   objectives: string[];
+  schedule: { label: string; detail: string }[];
   sections: Array<{
     title: string;
     description?: string;
@@ -42,43 +47,25 @@ function modalityLabel(ctx: DossierDocContext): string {
   return "Présentiel";
 }
 
-function hoursLine(ctx: DossierDocContext): string {
-  const withHours = ctx.slots.filter((s) => s.starts_at && s.ends_at);
-  if (!withHours.length) return "";
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/Paris",
-    });
-  const morning = withHours.find((s) => s.day_part === "matin");
-  const afternoon = withHours.find(
-    (s) => s.day_part === "apres_midi" || s.day_part === "après-midi",
-  );
-  if (morning?.starts_at && morning.ends_at && afternoon?.starts_at && afternoon.ends_at) {
-    return `${fmt(morning.starts_at)}-${fmt(morning.ends_at)} / ${fmt(afternoon.starts_at)}-${fmt(afternoon.ends_at)}`;
-  }
-  return `${fmt(withHours[0].starts_at!)}-${fmt(withHours[withHours.length - 1].ends_at!)}`;
-}
-
 export function buildAnnexData(ctx: DossierDocContext, conventionRef: string): AnnexData {
   const title =
     ctx.course?.title || ctx.dossier.course_title || ctx.session?.title || "Formation professionnelle";
-  const dayLabels = [...new Set(ctx.slots.map((s) => formatFrDate(s.slot_date)))];
-  const hours = hoursLine(ctx);
+  const slots = slotsFromDocContext(ctx.slots);
+  const schedule = formatSchedule(slots);
   const sectionsRaw = ctx.course?.program_structure ?? [];
 
   const sections = sectionsRaw.map((section, idx) => {
-    const dayIdx =
-      dayLabels.length <= 1
-        ? 0
-        : Math.min(
-            Math.floor((idx * dayLabels.length) / Math.max(sectionsRaw.length, 1)),
-            dayLabels.length - 1,
-          );
-    const day = dayLabels[dayIdx];
+    const day =
+      schedule.length <= 1
+        ? schedule[0]
+        : schedule[
+            Math.min(
+              Math.floor((idx * schedule.length) / Math.max(sectionsRaw.length, 1)),
+              schedule.length - 1,
+            )
+          ];
     const scheduleLabel = day
-      ? `Jour ${dayIdx + 1} · ${day}${hours ? ` · ${hours}` : ""}`
+      ? `${day.label}${day.detail ? ` · ${day.detail}` : ""}`
       : undefined;
     return {
       title: section.title,
@@ -94,7 +81,9 @@ export function buildAnnexData(ctx: DossierDocContext, conventionRef: string): A
   return {
     courseTitle: title,
     presentation: ctx.course?.short_description || ctx.course?.objectives?.[0] || "",
-    duration: ctx.course?.duration || `${Math.max(1, Math.ceil(ctx.slots.length / 2))} jour(s)`,
+    duration:
+      ctx.course?.duration?.trim() ||
+      (slots.length ? formatDuration(slots) : "À confirmer"),
     format: modalityLabel(ctx),
     level: ctx.course?.level || "Intermédiaire",
     evaluation: "Cas pratiques et restitution",
@@ -106,6 +95,7 @@ export function buildAnnexData(ctx: DossierDocContext, conventionRef: string): A
     audience: (ctx.course?.audience ?? []).join(", ") || "Salariés de l'entreprise bénéficiaire",
     prerequisites: ctx.course?.prerequisites || "Aucun prérequis spécifique",
     objectives: ctx.course?.objectives ?? [],
+    schedule,
     sections,
     skills: ctx.course?.skills ?? [],
     conventionRef,
@@ -343,6 +333,19 @@ export function buildAnnexHtml(data: AnnexData): string {
     ${meta.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join("")}
   </div>
 
+  ${
+    data.schedule.length
+      ? `<div class="block"><h2>Calendrier</h2><ul class="objectives">${data.schedule
+          .map(
+            (d) =>
+              `<li><span class="obj-num">${esc(d.label.split("·")[0]?.trim() || "")}</span><span>${esc(
+                [d.label.replace(/^Jour\s+\d+\s*·\s*/i, ""), d.detail].filter(Boolean).join(" · "),
+              )}</span></li>`,
+          )
+          .join("")}</ul></div>`
+      : ""
+  }
+
   <div class="block">
     <h2>Objectif général</h2>
     <p>${esc(data.objectiveGeneral)}</p>
@@ -367,19 +370,6 @@ export function buildAnnexHtml(data: AnnexData): string {
   <p class="foot-note">Réf. ${esc(data.conventionRef)} · Structure catalogue Byound : Section → Chapitre → Sous-chapitre</p>
 </body>
 </html>`;
-}
-
-async function launchBrowser() {
-  const puppeteer = await import("puppeteer");
-  return puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-    ],
-  });
 }
 
 /** Fallback serverless / sans Chrome : reflow jsPDF (même structure Section→Chapitre→Sous-chapitre). */
@@ -451,6 +441,26 @@ export function renderAnnexPdfFallback(data: AnnexData): Buffer {
     doc.text(lines, margin, y);
     y += lines.length * 5 + 5;
   };
+
+  if (data.schedule.length) {
+    ensure(10);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(20, 21, 31);
+    doc.text("Calendrier", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(48, 54, 74);
+    data.schedule.forEach((d) => {
+      const line = `${d.label}${d.detail ? ` · ${d.detail}` : ""}`;
+      const lines = doc.splitTextToSize(line, maxW);
+      ensure(lines.length * 4.5 + 1);
+      doc.text(lines, margin, y);
+      y += lines.length * 4.5 + 1;
+    });
+    y += 3;
+  }
 
   block("Objectif général", data.objectiveGeneral);
   block("Public visé", data.audience);
@@ -559,23 +569,18 @@ export function renderAnnexPdfFallback(data: AnnexData): Buffer {
   return Buffer.from(doc.output("arraybuffer"));
 }
 
-/** HTML → PDF A4 via Puppeteer ; fallback jsPDF si Chrome indisponible (ex. Vercel). */
+/** HTML → PDF A4 via Puppeteer partagé ; fallback jsPDF si Chrome indisponible. */
 export async function renderAnnexPdf(data: AnnexData): Promise<Buffer> {
   try {
-    const html = buildAnnexHtml(data);
-    const browser = await launchBrowser();
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      const pdf = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "14mm", right: "12mm", bottom: "16mm", left: "12mm" },
-      });
-      return Buffer.from(pdf);
-    } finally {
-      await browser.close();
-    }
+    const { renderHtmlToPdf } = await import("@/lib/formation-documents/html-pdf");
+    // buildAnnexHtml returns full document — extract body inner for shared wrapper
+    const full = buildAnnexHtml(data);
+    const bodyMatch = full.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const styleMatch = full.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    const inner = `${styleMatch ? `<style>${styleMatch[1]}</style>` : ""}${bodyMatch?.[1] ?? full}`;
+    return await renderHtmlToPdf(inner, {
+      marginMm: { top: 14, right: 12, bottom: 16, left: 12 },
+    });
   } catch (err) {
     console.warn("[convention-annex] Puppeteer unavailable, jsPDF fallback", err);
     return renderAnnexPdfFallback(data);

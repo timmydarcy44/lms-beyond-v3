@@ -27,15 +27,31 @@ export async function POST(request: NextRequest) {
     .toLowerCase();
   const jobTitle = String(body?.job_title ?? body?.poste ?? "").trim();
   const companySizeBand = String(body?.company_size_band ?? "").trim();
+  const addressLine = String(body?.address_line ?? "").trim();
+  const addressZip = String(body?.address_zip ?? "").trim();
+  const addressCity = String(body?.address_city ?? "").trim();
   const siret = cleanSiret(body?.siret);
-  if (siret && !isValidSiret(siret)) {
+  if (!siret || !isValidSiret(siret)) {
     return NextResponse.json({ error: "Le SIRET doit contenir 14 chiffres valides." }, { status: 400 });
   }
   const logoUrl = String(body?.logo_url ?? "").trim() || null;
 
-  if (!companyName || !firstName || !lastName || !email || !jobTitle || !companySizeBand) {
+  if (
+    !companyName ||
+    !firstName ||
+    !lastName ||
+    !email ||
+    !jobTitle ||
+    !companySizeBand ||
+    !addressLine ||
+    !addressZip ||
+    !addressCity
+  ) {
     return NextResponse.json(
-      { error: "Nom d'entreprise, identité, poste, email et taille sont requis." },
+      {
+        error:
+          "Nom d'entreprise, SIRET, adresse postale, identité, poste, email et taille sont requis.",
+      },
       { status: 400 },
     );
   }
@@ -75,14 +91,24 @@ export async function POST(request: NextRequest) {
     company_size_band: companySizeBand,
     edge_profile_completed: true,
     onboarding_step: "account_activated",
+    siret,
+    address_line: addressLine,
+    address_zip: addressZip,
+    address_city: addressCity,
+    address_country: "FR",
   };
   if (logoUrl) orgUpdate.logo_url = logoUrl;
-  orgUpdate.siret = siret || null;
 
   const { error: orgError } = await db.from("organizations").update(orgUpdate).eq("id", orgId);
   if (orgError) {
     const reduced = { ...orgUpdate };
     if (orgError.message?.includes("siret")) delete reduced.siret;
+    if (orgError.message?.includes("address_")) {
+      delete reduced.address_line;
+      delete reduced.address_zip;
+      delete reduced.address_city;
+      delete reduced.address_country;
+    }
     if (orgError.message?.includes("company_size_band") || orgError.message?.includes("edge_profile_completed")) {
       delete reduced.company_size_band;
       delete reduced.edge_profile_completed;

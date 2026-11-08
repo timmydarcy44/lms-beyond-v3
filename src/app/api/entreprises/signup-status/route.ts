@@ -40,14 +40,22 @@ export async function GET() {
 
   const fullOrg = await db
     .from("organizations")
-    .select("id, name, logo_url, company_size_band, edge_profile_completed, siret")
+    .select(
+      "id, name, logo_url, company_size_band, edge_profile_completed, siret, address_line, address_zip, address_city",
+    )
     .eq("id", orgId)
     .maybeSingle();
-  const org = fullOrg.error?.message?.includes("siret")
-    ? (await db.from("organizations").select("id, name, logo_url, company_size_band, edge_profile_completed").eq("id", orgId).maybeSingle()).data
-    : fullOrg.data;
+  let org = fullOrg.data as Record<string, unknown> | null;
+  if (fullOrg.error) {
+    const retry = await db
+      .from("organizations")
+      .select("id, name, logo_url, company_size_band, edge_profile_completed, siret")
+      .eq("id", orgId)
+      .maybeSingle();
+    org = (retry.data as Record<string, unknown> | null) ?? null;
+  }
 
-  const edgeProfileCompleted = Boolean((org as { edge_profile_completed?: boolean } | null)?.edge_profile_completed);
+  const edgeProfileCompleted = Boolean(org?.edge_profile_completed);
   const needsProfileCompletion = isEdgeEntreprise && !edgeProfileCompleted;
 
   return NextResponse.json({
@@ -56,14 +64,17 @@ export async function GET() {
     organization_id: orgId,
     onboarding_href: `/onboarding/${orgId}`,
     prefill: {
-      company_name: String((org as { name?: string } | null)?.name ?? meta.company_name ?? "").trim(),
-      siret: String((org as { siret?: string | null } | null)?.siret ?? meta.siret ?? "").trim(),
+      company_name: String(org?.name ?? meta.company_name ?? "").trim(),
+      siret: String(org?.siret ?? meta.siret ?? "").trim(),
+      address_line: String(org?.address_line ?? "").trim(),
+      address_zip: String(org?.address_zip ?? "").trim(),
+      address_city: String(org?.address_city ?? "").trim(),
       first_name: String(profile?.first_name ?? meta.first_name ?? "").trim(),
       last_name: String(profile?.last_name ?? meta.last_name ?? "").trim(),
       email: String(profile?.email ?? user.email ?? "").trim(),
       job_title: String(profile?.poste_actuel ?? "").trim(),
-      company_size_band: String((org as { company_size_band?: string } | null)?.company_size_band ?? "").trim(),
-      logo_url: String((org as { logo_url?: string } | null)?.logo_url ?? "").trim() || null,
+      company_size_band: String(org?.company_size_band ?? "").trim(),
+      logo_url: String(org?.logo_url ?? "").trim() || null,
     },
   });
 }

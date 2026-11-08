@@ -100,10 +100,9 @@ export const entrepriseSignupSchema = z.object({
   siret: z
     .string()
     .trim()
-    .optional()
-    .default("")
+    .min(1, "Indiquez le SIRET de l'entreprise.")
     .transform((value) => value.replace(/\s/g, ""))
-    .refine((value) => !value || isValidSiret(value), "Le SIRET doit contenir 14 chiffres valides."),
+    .refine((value) => isValidSiret(value), "Le SIRET doit contenir 14 chiffres valides."),
   first_name: z
     .string()
     .trim()

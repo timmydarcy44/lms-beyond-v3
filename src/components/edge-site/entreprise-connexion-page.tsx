@@ -305,7 +305,7 @@ export function EntrepriseConnexionPage() {
                   autoComplete="organization"
                 />
                 <Field
-                  label="SIRET (facultatif)"
+                  label="SIRET"
                   name="siret"
                   value={form.siret}
                   error={fieldErrors.siret}

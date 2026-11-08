@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Building2, Loader2, Upload } from "lucide-react";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { COMPANY_SIZE_BANDS } from "@/lib/entreprise/company-size-bands";
+import { cn } from "@/lib/utils";
 
 type Prefill = {
   company_name: string;
@@ -15,6 +16,9 @@ type Prefill = {
   job_title: string;
   company_size_band: string;
   logo_url: string | null;
+  address_line?: string;
+  address_zip?: string;
+  address_city?: string;
 };
 
 type SignupStatusResponse = {
@@ -25,6 +29,9 @@ type SignupStatusResponse = {
 
 const SIGNUP_CACHE_KEY = "entreprise_signup_status_v1";
 const SIGNUP_CACHE_MS = 5 * 60 * 1000;
+
+const fieldClass =
+  "mt-1.5 w-full rounded-2xl border border-[#050505]/12 bg-[#F7F7F5] px-4 py-3 text-[15px] text-[#050505] outline-none transition placeholder:text-[#050505]/35 focus:border-[#050505]/35 focus:bg-white";
 
 function readCachedSignupStatus(): SignupStatusResponse | null {
   if (typeof window === "undefined") return null;
@@ -63,6 +70,9 @@ export function EnterpriseSignupProfileOverlay({
   const [form, setForm] = useState({
     company_name: prefill.company_name,
     siret: prefill.siret ?? "",
+    address_line: prefill.address_line ?? "",
+    address_zip: prefill.address_zip ?? "",
+    address_city: prefill.address_city ?? "",
     first_name: prefill.first_name,
     last_name: prefill.last_name,
     email: prefill.email,
@@ -74,15 +84,23 @@ export function EnterpriseSignupProfileOverlay({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const siretDigits = form.siret.replace(/\D/g, "");
+
   const canSubmit = useMemo(
     () =>
-      form.company_name.trim() &&
-      form.first_name.trim() &&
-      form.last_name.trim() &&
-      form.email.trim() &&
-      form.job_title.trim() &&
-      form.company_size_band,
-    [form],
+      Boolean(
+        form.company_name.trim() &&
+          siretDigits.length === 14 &&
+          form.address_line.trim() &&
+          form.address_zip.trim() &&
+          form.address_city.trim() &&
+          form.first_name.trim() &&
+          form.last_name.trim() &&
+          form.email.trim() &&
+          form.job_title.trim() &&
+          form.company_size_band,
+      ),
+    [form, siretDigits.length],
   );
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -121,7 +139,11 @@ export function EnterpriseSignupProfileOverlay({
       const response = await fetch("/api/entreprises/complete-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, logo_url: logoUrl }),
+        body: JSON.stringify({
+          ...form,
+          siret: siretDigits,
+          logo_url: logoUrl,
+        }),
       });
       const data = (await response.json()) as { error?: string; redirect_to?: string };
       if (!response.ok) {
@@ -136,110 +158,191 @@ export function EnterpriseSignupProfileOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0a0a]/80 px-4 py-8 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#050505]/55 p-0 backdrop-blur-md sm:items-center sm:p-6">
       <div
         role="dialog"
         aria-modal="true"
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-white/10 bg-white p-6 shadow-2xl sm:p-8"
+        aria-labelledby="entreprise-profile-title"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-white text-[#050505] shadow-[0_24px_80px_rgba(5,5,5,0.28)] sm:rounded-[28px]"
       >
-        <div className="mb-6 flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E63329]/10 text-[#E63329]">
-            <Building2 className="h-5 w-5" aria-hidden />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">Byound Entreprise</p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight text-black">Complétez votre espace RH</h2>
-            <p className="mt-1 text-sm text-black/55">
-              Diagnostic offert et utilisation pendant 30 jours. Ces informations personnalisent votre dashboard.
-            </p>
+        <div className="border-b border-[#050505]/08 px-6 pb-5 pt-6 sm:px-8">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#050505] text-white">
+              <Building2 className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#050505]/40">
+                Byound Entreprise
+              </p>
+              <h2
+                id="entreprise-profile-title"
+                className="mt-1 text-[1.35rem] font-semibold tracking-[-0.03em] sm:text-[1.5rem]"
+              >
+                Complétez votre espace
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-[#050505]/55">
+                SIRET et adresse postale sont requis pour devis et convention. Diagnostic offert ·
+                30 jours d&apos;essai.
+              </p>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            name="company_name"
-            required
-            value={form.company_name}
-            onChange={handleChange}
-            placeholder="Nom de l'entreprise"
-            className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-black/25"
-          />
-          <label className="block text-sm font-semibold text-black/70">
-            Votre entreprise · SIRET (facultatif)
-            <input
-              name="siret"
-              inputMode="numeric"
-              value={form.siret}
-              onChange={handleChange}
-              placeholder="14 chiffres"
-              className="mt-1 w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] font-normal outline-none focus:border-black/25"
-            />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input
-              name="first_name"
-              required
-              value={form.first_name}
-              onChange={handleChange}
-              placeholder="Prénom"
-              className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-black/25"
-            />
-            <input
-              name="last_name"
-              required
-              value={form.last_name}
-              onChange={handleChange}
-              placeholder="Nom"
-              className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-black/25"
-            />
-          </div>
-          <input
-            name="job_title"
-            required
-            value={form.job_title}
-            onChange={handleChange}
-            placeholder="Poste (ex. DRH, CEO, Responsable formation)"
-            className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-black/25"
-          />
-          <input
-            name="email"
-            type="email"
-            required
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Email professionnel"
-            className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] outline-none focus:border-black/25"
-          />
-          <select
-            name="company_size_band"
-            required
-            value={form.company_size_band}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-black/10 px-4 py-3 text-[15px] text-black/80 outline-none focus:border-black/25"
-          >
-            {COMPANY_SIZE_BANDS.map((band) => (
-              <option key={band.value} value={band.value}>
-                {band.label}
-              </option>
-            ))}
-          </select>
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6 sm:px-8">
+          <section className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#050505]/40">
+              Entreprise
+            </p>
+            <label className="block text-sm font-medium text-[#050505]/70">
+              Raison sociale
+              <input
+                name="company_name"
+                required
+                value={form.company_name}
+                onChange={handleChange}
+                placeholder="Nom de l'entreprise"
+                className={fieldClass}
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#050505]/70">
+              SIRET
+              <input
+                name="siret"
+                required
+                inputMode="numeric"
+                value={form.siret}
+                onChange={handleChange}
+                placeholder="14 chiffres"
+                className={fieldClass}
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#050505]/70">
+              Adresse postale
+              <input
+                name="address_line"
+                required
+                value={form.address_line}
+                onChange={handleChange}
+                placeholder="N° et rue"
+                autoComplete="street-address"
+                className={fieldClass}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-[110px_1fr]">
+              <label className="block text-sm font-medium text-[#050505]/70">
+                Code postal
+                <input
+                  name="address_zip"
+                  required
+                  value={form.address_zip}
+                  onChange={handleChange}
+                  placeholder="14000"
+                  autoComplete="postal-code"
+                  className={fieldClass}
+                />
+              </label>
+              <label className="block text-sm font-medium text-[#050505]/70">
+                Ville
+                <input
+                  name="address_city"
+                  required
+                  value={form.address_city}
+                  onChange={handleChange}
+                  placeholder="Caen"
+                  autoComplete="address-level2"
+                  className={fieldClass}
+                />
+              </label>
+            </div>
+            <label className="block text-sm font-medium text-[#050505]/70">
+              Effectif
+              <select
+                name="company_size_band"
+                required
+                value={form.company_size_band}
+                onChange={handleChange}
+                className={cn(fieldClass, "appearance-none")}
+              >
+                {COMPANY_SIZE_BANDS.map((band) => (
+                  <option key={band.value} value={band.value}>
+                    {band.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
 
-          <div className="rounded-2xl border border-dashed border-black/15 p-4">
+          <section className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#050505]/40">
+              Votre contact
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-[#050505]/70">
+                Prénom
+                <input
+                  name="first_name"
+                  required
+                  value={form.first_name}
+                  onChange={handleChange}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="block text-sm font-medium text-[#050505]/70">
+                Nom
+                <input
+                  name="last_name"
+                  required
+                  value={form.last_name}
+                  onChange={handleChange}
+                  className={fieldClass}
+                />
+              </label>
+            </div>
+            <label className="block text-sm font-medium text-[#050505]/70">
+              Poste
+              <input
+                name="job_title"
+                required
+                value={form.job_title}
+                onChange={handleChange}
+                placeholder="ex. DRH, CEO, Responsable formation"
+                className={fieldClass}
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#050505]/70">
+              E-mail professionnel
+              <input
+                name="email"
+                type="email"
+                required
+                value={form.email}
+                onChange={handleChange}
+                className={fieldClass}
+              />
+            </label>
+          </section>
+
+          <div className="rounded-2xl border border-dashed border-[#050505]/12 bg-[#F7F7F5] p-4">
             <div className="flex items-center gap-4">
               {logoPreview ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoPreview} alt="" className="h-14 w-14 rounded-xl object-cover" />
+                <img src={logoPreview} alt="" className="h-14 w-14 rounded-2xl object-cover" />
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-black/[0.04] text-black/30">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#050505]/30">
                   <Upload className="h-5 w-5" aria-hidden />
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium text-black">Logo de l&apos;entreprise</p>
-                <p className="text-xs text-black/45">Optionnel — PNG ou JPG, affiché dans votre dashboard.</p>
-                <label className="mt-2 inline-flex cursor-pointer text-sm font-semibold text-[#E63329]">
+                <p className="text-sm font-medium text-[#050505]">Logo</p>
+                <p className="text-xs text-[#050505]/45">Optionnel — PNG ou JPG</p>
+                <label className="mt-2 inline-flex cursor-pointer text-sm font-semibold text-[#050505] underline-offset-2 hover:underline">
                   Choisir un fichier
-                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleLogoChange} />
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleLogoChange}
+                  />
                 </label>
               </div>
             </div>
@@ -248,7 +351,7 @@ export function EnterpriseSignupProfileOverlay({
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[#E63329] px-6 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#050505] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-45"
           >
             {isSubmitting ? (
               <>
@@ -256,13 +359,13 @@ export function EnterpriseSignupProfileOverlay({
                 Enregistrement…
               </>
             ) : (
-              "Continuer vers la configuration"
+              "Continuer"
             )}
           </button>
         </form>
 
         {errorMessage ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="mx-6 mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:mx-8">
             {errorMessage}
           </div>
         ) : null}
@@ -305,7 +408,7 @@ export function EnterpriseSignupProfileGate({ children }: { children: React.Reac
   if (loading && !status) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#050505]/40" />
       </div>
     );
   }

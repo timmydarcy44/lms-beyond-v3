@@ -25,6 +25,7 @@ const ctx: DossierDocContext = {
     name: "Acme SAS",
     siret: "12345678900012",
     siren: "123456789",
+    client_code: "BY-100001",
     address_line: "12 rue des Lilas",
     address_zip: "75011",
     address_city: "Paris",

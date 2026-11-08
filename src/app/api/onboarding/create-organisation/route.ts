@@ -13,6 +13,11 @@ type Body = {
   drh_name?: string;
   estimated_users?: number;
   deal_id?: string;
+  siret?: string;
+  address_line?: string;
+  address_zip?: string;
+  address_city?: string;
+  address_country?: string;
 };
 
 function logEnvDiagnostics() {
@@ -78,11 +83,25 @@ export async function POST(request: NextRequest) {
         ? Number(body.estimated_users)
         : null;
 
+    const siret = String(body.siret ?? "").replace(/\D/g, "");
+    const address_line = String(body.address_line ?? "").trim();
+    const address_zip = String(body.address_zip ?? "").trim();
+    const address_city = String(body.address_city ?? "").trim();
+    const address_country = String(body.address_country ?? "FR").trim() || "FR";
+
     if (!company_name || !drh_email || !drh_name || !deal_id) {
       return errorResponse(
         "Champs requis manquants",
         "validate_body",
         "company_name, drh_email, drh_name et deal_id sont requis",
+        400,
+      );
+    }
+    if (siret.length !== 14 || !address_line || !address_zip || !address_city) {
+      return errorResponse(
+        "SIRET et adresse postale obligatoires",
+        "validate_body",
+        "siret (14 chiffres), address_line, address_zip et address_city sont requis",
         400,
       );
     }
@@ -98,6 +117,11 @@ export async function POST(request: NextRequest) {
       drh_email,
       drh_name,
       estimated_users,
+      siret,
+      address_line,
+      address_zip,
+      address_city,
+      address_country,
       deal_id,
     });
 

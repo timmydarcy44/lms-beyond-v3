@@ -249,7 +249,12 @@ export async function fillVaultDevisPdf(
   setText(form, "course_title", title, appearanceFont);
   setText(form, "quote_date", quoteDate, appearanceFont);
   setText(form, "valid_until", validUntil, appearanceFont);
-  setText(form, "client_reference", "", appearanceFont);
+  setText(
+    form,
+    "client_reference",
+    ctx.organization.client_code || ctx.organization.siret || "",
+    appearanceFont,
+  );
   setText(form, "total_ttc", totalTtc, appearanceFont);
   setText(form, "total_ht", totalHt, appearanceFont);
   setText(form, "total_vat", totalVat, appearanceFont);
@@ -295,14 +300,18 @@ export async function fillVaultDevisPdf(
   setText(form, "bank_iban", "", appearanceFont);
   setText(form, "bank_bic", "", appearanceFont);
 
-  setCheck(form, "funding_own", funding.includes("entreprise") || funding.includes("propre") || !funding);
-  setCheck(form, "funding_opco", funding.includes("opco"));
-  setCheck(
-    form,
-    "funding_other",
-    Boolean(funding) && !funding.includes("opco") && !funding.includes("entreprise") && !funding.includes("propre"),
-  );
-  setText(form, "opco_name", funding.includes("opco") ? "OPCO" : "", appearanceFont);
+  const isOpco = funding === "opco" || funding.includes("opco") || funding === "subrogation";
+  const isOwn =
+    !isOpco &&
+    (funding === "direct" ||
+      funding.includes("entreprise") ||
+      funding.includes("propre") ||
+      funding.includes("fonds") ||
+      !funding);
+  setCheck(form, "funding_own", isOwn);
+  setCheck(form, "funding_opco", isOpco);
+  setCheck(form, "funding_other", Boolean(funding) && !isOpco && !isOwn);
+  setText(form, "opco_name", isOpco ? "OPCO" : "", appearanceFont);
   setText(form, "funding_other_label", "", appearanceFont);
   setText(form, "funding_reference", "", appearanceFont);
 

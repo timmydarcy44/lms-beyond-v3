@@ -149,6 +149,7 @@ export function FormationDossierSheet({
     contact_name: "",
     contact_email: "",
     amount_ht_euros: "",
+    funding_type: "direct" as "direct" | "opco" | "subrogation",
     notes: "",
   });
   const [devisBusy, setDevisBusy] = useState(false);
@@ -169,11 +170,14 @@ export function FormationDossierSheet({
       setDossier(dJson.dossier ?? null);
       if (dJson.dossier) {
         const ht = dJson.dossier.amount_ht_cents;
+        const funding = String(dJson.dossier.funding_type ?? "direct");
         setDevisDraft({
           course_title: dJson.dossier.course_title ?? "",
           contact_name: dJson.dossier.contact_name ?? "",
           contact_email: dJson.dossier.contact_email ?? "",
-          amount_ht_euros: ht != null ? String(ht / 100) : "",
+          amount_ht_euros: ht != null && ht > 0 ? String(ht / 100) : "",
+          funding_type:
+            funding === "opco" || funding === "subrogation" ? funding : "direct",
           notes: dJson.dossier.notes ?? "",
         });
       }
@@ -288,6 +292,7 @@ export function FormationDossierSheet({
         contact_name: devisDraft.contact_name.trim() || null,
         contact_email: devisDraft.contact_email.trim().toLowerCase() || null,
         notes: devisDraft.notes.trim() || null,
+        funding_type: devisDraft.funding_type,
         amount_ht_cents: htCents,
         amount_tva_cents: tvaCents,
         amount_ttc_cents: ttcCents,
@@ -536,6 +541,23 @@ export function FormationDossierSheet({
                       className="border-[#262A4A] bg-[#0A0C1B]"
                       placeholder="1890"
                     />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">Financement</Label>
+                    <select
+                      value={devisDraft.funding_type}
+                      onChange={(e) =>
+                        setDevisDraft((d) => ({
+                          ...d,
+                          funding_type: e.target.value as "direct" | "opco" | "subrogation",
+                        }))
+                      }
+                      className="w-full rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                    >
+                      <option value="direct">Fonds propres</option>
+                      <option value="opco">OPCO</option>
+                      <option value="subrogation">Subrogation</option>
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-[11px] text-[#A3A8C7]">TTC estimé (TVA 20 %)</Label>

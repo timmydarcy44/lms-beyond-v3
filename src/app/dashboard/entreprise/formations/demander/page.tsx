@@ -19,6 +19,8 @@ type RequestFormState = {
   participants: string;
   preferred_format: string;
   preferred_period: string;
+  funding_type: "direct" | "opco";
+  preferred_location: string;
   notes: string;
 };
 
@@ -29,6 +31,8 @@ const EMPTY_FORM: RequestFormState = {
   participants: "",
   preferred_format: "À définir",
   preferred_period: "",
+  funding_type: "direct",
+  preferred_location: "Chez le client",
   notes: "",
 };
 
@@ -228,6 +232,35 @@ function RequestModal({
                     placeholder="ex. octobre 2026"
                     className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
                   />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-semibold text-gray-700">Financement</span>
+                  <select
+                    value={form.funding_type}
+                    onChange={(e) =>
+                      onChange({ funding_type: e.target.value as "direct" | "opco" })
+                    }
+                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                  >
+                    <option value="direct">Fonds propres</option>
+                    <option value="opco">Prise en charge OPCO</option>
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-semibold text-gray-700">Lieu souhaité</span>
+                  <select
+                    value={form.preferred_location}
+                    onChange={(e) => onChange({ preferred_location: e.target.value })}
+                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                  >
+                    <option value="Chez le client">Chez le client</option>
+                    <option value="Chez Byound">Chez Byound</option>
+                    <option value="Distanciel / visio">Distanciel / visio</option>
+                    <option value="Autre">Autre (à préciser)</option>
+                  </select>
                 </label>
               </div>
 

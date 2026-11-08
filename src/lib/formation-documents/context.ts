@@ -64,6 +64,7 @@ export type DossierDocContext = {
     name: string;
     siret: string | null;
     siren: string | null;
+    client_code: string | null;
     address_line: string | null;
     address_zip: string | null;
     address_city: string | null;
@@ -170,18 +171,32 @@ export async function loadDossierDocContext(
 
   let orgQuery = await service
     .from("organizations")
-    .select("id, name, siret, siren, address_line, address_zip, address_city, address_country")
+    .select(
+      "id, name, siret, siren, client_code, address_line, address_zip, address_city, address_country",
+    )
     .eq("id", dossier.organization_id)
     .maybeSingle();
   if (
     orgQuery.error &&
-    (orgQuery.error.code === "42703" || orgQuery.error.message.includes("address_"))
+    (orgQuery.error.code === "42703" ||
+      orgQuery.error.message.includes("address_") ||
+      orgQuery.error.message.includes("client_code"))
   ) {
     orgQuery = await service
       .from("organizations")
-      .select("id, name, siret, siren")
+      .select("id, name, siret, siren, address_line, address_zip, address_city, address_country")
       .eq("id", dossier.organization_id)
       .maybeSingle();
+    if (
+      orgQuery.error &&
+      (orgQuery.error.code === "42703" || orgQuery.error.message.includes("address_"))
+    ) {
+      orgQuery = await service
+        .from("organizations")
+        .select("id, name, siret, siren")
+        .eq("id", dossier.organization_id)
+        .maybeSingle();
+    }
   }
 
   const [{ data: ofRow }, { data: partRows }] = await Promise.all([
@@ -195,6 +210,25 @@ export async function loadDossierDocContext(
 
   const orgRow = (orgQuery.data ?? null) as Record<string, unknown> | null;
   if (!orgRow) return null;
+
+  // Assure une réf. client pour le devis si absente
+  if (!orgRow.client_code) {
+    try {
+      const { generateClientCode } = await import("@/lib/organizations/client-code");
+      const code = generateClientCode();
+      const upd = await service
+        .from("organizations")
+        .update({ client_code: code })
+        .eq("id", String(orgRow.id))
+        .is("client_code", null)
+        .select("client_code")
+        .maybeSingle();
+      if (upd.data?.client_code) orgRow.client_code = upd.data.client_code;
+      else orgRow.client_code = code;
+    } catch {
+      /* colonne absente ou course */
+    }
+  }
 
   const profileIds = (partRows ?? []).map((p) => String(p.profile_id));
   const { data: profiles } = profileIds.length
@@ -348,6 +382,7 @@ export async function loadDossierDocContext(
       name: String(orgRow.name),
       siret: orgRow.siret ? String(orgRow.siret) : null,
       siren: orgRow.siren ? String(orgRow.siren) : null,
+      client_code: orgRow.client_code ? String(orgRow.client_code) : null,
       address_line: orgRow.address_line ? String(orgRow.address_line) : null,
       address_zip: orgRow.address_zip ? String(orgRow.address_zip) : null,
       address_city: orgRow.address_city ? String(orgRow.address_city) : null,

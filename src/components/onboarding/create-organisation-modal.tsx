@@ -34,11 +34,23 @@ export function CreateOrganisationModal({
   const [estimatedUsers, setEstimatedUsers] = useState(
     deal.estimated_users != null ? String(deal.estimated_users) : "",
   );
+  const [siret, setSiret] = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [addressZip, setAddressZip] = useState("");
+  const [addressCity, setAddressCity] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (!companyName.trim() || !drhEmail.trim() || !drhName.trim()) {
-      toast.error("Remplissez les champs obligatoires");
+    if (
+      !companyName.trim() ||
+      !drhEmail.trim() ||
+      !drhName.trim() ||
+      siret.replace(/\D/g, "").length !== 14 ||
+      !addressLine.trim() ||
+      !addressZip.trim() ||
+      !addressCity.trim()
+    ) {
+      toast.error("Remplissez les champs obligatoires (SIRET + adresse complète)");
       return;
     }
     setLoading(true);
@@ -52,6 +64,11 @@ export function CreateOrganisationModal({
           drh_name: drhName.trim(),
           estimated_users: estimatedUsers ? Number(estimatedUsers) : null,
           deal_id: deal.id,
+          siret: siret.replace(/\D/g, ""),
+          address_line: addressLine.trim(),
+          address_zip: addressZip.trim(),
+          address_city: addressCity.trim(),
+          address_country: "FR",
         }),
       });
       const json = (await res.json()) as {
@@ -105,6 +122,32 @@ export function CreateOrganisationModal({
           <div className="space-y-2">
             <Label>Prénom et nom du DRH *</Label>
             <Input value={drhName} onChange={(e) => setDrhName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>SIRET *</Label>
+            <Input
+              value={siret}
+              onChange={(e) => setSiret(e.target.value)}
+              placeholder="14 chiffres"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Adresse (n° et rue) *</Label>
+            <Input
+              value={addressLine}
+              onChange={(e) => setAddressLine(e.target.value)}
+              placeholder="12 rue de la Paix"
+            />
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-3">
+            <div className="space-y-2">
+              <Label>CP *</Label>
+              <Input value={addressZip} onChange={(e) => setAddressZip(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Ville *</Label>
+              <Input value={addressCity} onChange={(e) => setAddressCity(e.target.value)} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Nombre de salariés estimé</Label>

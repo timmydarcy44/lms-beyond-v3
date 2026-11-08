@@ -57,7 +57,18 @@ async function fetchDeal(
 
 async function insertOrganization(
   service: SupabaseClient,
-  params: { name: string; slug: string; dealId: string; estimatedUsers: number | null },
+  params: {
+    name: string;
+    slug: string;
+    dealId: string;
+    estimatedUsers: number | null;
+    siret?: string | null;
+    address_line?: string | null;
+    address_zip?: string | null;
+    address_city?: string | null;
+    address_country?: string | null;
+    client_code?: string | null;
+  },
 ): Promise<{ id: string; name: string; slug: string }> {
   const fullPayload = {
     name: params.name,
@@ -65,6 +76,12 @@ async function insertOrganization(
     estimated_users: params.estimatedUsers,
     onboarding_step: "invite_sent",
     created_from_deal: params.dealId,
+    siret: params.siret || null,
+    address_line: params.address_line || null,
+    address_zip: params.address_zip || null,
+    address_city: params.address_city || null,
+    address_country: params.address_country || "FR",
+    client_code: params.client_code || null,
   };
 
   let result = await service.from("organizations").insert(fullPayload).select("id, name, slug").single();
@@ -73,7 +90,11 @@ async function insertOrganization(
     console.warn("[onboarding/insert_organization] colonnes onboarding absentes, fallback minimal");
     result = await service
       .from("organizations")
-      .insert({ name: params.name, slug: params.slug })
+      .insert({
+        name: params.name,
+        slug: params.slug,
+        siret: params.siret || null,
+      })
       .select("id, name, slug")
       .single();
   }
@@ -280,6 +301,11 @@ export async function createOrganizationFromDeal(
     drh_name: string;
     estimated_users: number | null;
     deal_id: string;
+    siret?: string | null;
+    address_line?: string | null;
+    address_zip?: string | null;
+    address_city?: string | null;
+    address_country?: string | null;
   },
 ) {
   let step = "fetch_deal";
@@ -298,12 +324,19 @@ export async function createOrganizationFromDeal(
     }
 
     step = "insert_organization";
+    const { generateClientCode } = await import("@/lib/organizations/client-code");
     const slug = generateOrgSlug(body.company_name);
     const organisation = await insertOrganization(service, {
       name: body.company_name,
       slug,
       dealId: body.deal_id,
       estimatedUsers: body.estimated_users,
+      siret: body.siret || null,
+      address_line: body.address_line || null,
+      address_zip: body.address_zip || null,
+      address_city: body.address_city || null,
+      address_country: body.address_country || "FR",
+      client_code: generateClientCode(),
     });
 
     const orgId = organisation.id;

@@ -3,9 +3,20 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient } from "@/lib/supabase/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
+import {
+  cleanSiretDigits,
+  generateClientCode,
+  validateOrgPostalRequired,
+} from "@/lib/organizations/client-code";
+
 type CreateOrganizationPayload = {
   name?: string;
   slug?: string;
+  siret?: string;
+  address_line?: string;
+  address_zip?: string;
+  address_city?: string;
+  address_country?: string;
 };
 
 const slugify = (value: string) =>
@@ -49,6 +60,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const siret = cleanSiretDigits(body.siret);
+    const address_line = String(body.address_line ?? "").trim();
+    const address_zip = String(body.address_zip ?? "").trim();
+    const address_city = String(body.address_city ?? "").trim();
+    const address_country = String(body.address_country ?? "FR").trim() || "FR";
+    const postalError = validateOrgPostalRequired({
+      siret,
+      address_line,
+      address_zip,
+      address_city,
+    });
+    if (postalError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "VALIDATION_ERROR",
+          fieldErrors: {
+            siret: !siret || siret.length !== 14 ? "SIRET obligatoire (14 chiffres)" : undefined,
+            address_line: !address_line ? "Adresse obligatoire" : undefined,
+            address_zip: !address_zip ? "Code postal obligatoire" : undefined,
+            address_city: !address_city ? "Ville obligatoire" : undefined,
+          },
+          details: postalError,
+        },
+        { status: 400 },
+      );
+    }
+
     const sessionClient = await getServerClient();
     const { data: authData } = sessionClient ? await sessionClient.auth.getUser() : { data: null as any };
     const currentUserId = authData?.user?.id ?? null;
@@ -75,12 +114,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Insertion Org - Colonnes autorisées : name, slug");
-    const { data: newOrg, error: orgError } = await supabase
+    const client_code = generateClientCode();
+    const insertPayload = {
+      name,
+      slug: finalSlug,
+      siret,
+      address_line,
+      address_zip,
+      address_city,
+      address_country,
+      client_code,
+    };
+    let { data: newOrg, error: orgError } = await supabase
       .from("organizations")
-      .insert([{ name, slug: finalSlug }])
+      .insert([insertPayload])
       .select()
       .single();
+    if (orgError && (orgError.message.includes("address_") || orgError.message.includes("client_code"))) {
+      ({ data: newOrg, error: orgError } = await supabase
+        .from("organizations")
+        .insert([{ name, slug: finalSlug, siret }])
+        .select()
+        .single());
+    }
 
     if (orgError || !newOrg) {
       console.error("[super-admin][organisations/create] insert failed:", orgError);

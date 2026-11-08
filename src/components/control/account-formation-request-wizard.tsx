@@ -82,6 +82,11 @@ export function AccountFormationRequestWizard({
   const [locationMode, setLocationMode] = useState<LocationMode>("client");
   const [locationOther, setLocationOther] = useState("");
   const [modality, setModality] = useState<"presentiel" | "distanciel" | "hybride">("presentiel");
+  const [fundingType, setFundingType] = useState<"direct" | "opco">("direct");
+  const [morningStart, setMorningStart] = useState("10:00");
+  const [morningEnd, setMorningEnd] = useState("13:30");
+  const [afternoonStart, setAfternoonStart] = useState("14:30");
+  const [afternoonEnd, setAfternoonEnd] = useState("18:00");
   const [devisEmail, setDevisEmail] = useState(contactEmail?.trim() || "");
   const [devisName, setDevisName] = useState(contactName?.trim() || orgName);
   const [error, setError] = useState<string | null>(null);
@@ -155,11 +160,22 @@ export function AccountFormationRequestWizard({
 
   const amounts = useMemo(() => {
     const qty = deferParticipants ? 1 : Math.max(1, selectedPeople.length || 1);
-    const unit = Math.round(Number(selectedCourse?.inter_price ?? selectedCourse?.intra_price ?? 0) * 100);
+    // Catalogue en euros → centimes ; intra prioritaire (demande = session entreprise)
+    const unitEuros = Number(selectedCourse?.intra_price ?? selectedCourse?.inter_price ?? 0);
+    const unit = Math.round((Number.isFinite(unitEuros) ? unitEuros : 0) * 100);
     const ht = unit * qty;
     const tva = Math.round(ht * 0.2);
-    return { qty, unit, ht, tva, ttc: ht + tva };
+    return { qty, unit, unitEuros, ht, tva, ttc: ht + tva };
   }, [selectedCourse, selectedPeople.length, deferParticipants]);
+
+  function slotTimes(dayPart: "matin" | "apres_midi", slotDate: string) {
+    const start = dayPart === "matin" ? morningStart : afternoonStart;
+    const end = dayPart === "matin" ? morningEnd : afternoonEnd;
+    return {
+      starts_at: `${slotDate}T${start}:00`,
+      ends_at: `${slotDate}T${end}:00`,
+    };
+  }
 
   async function saveClientAddress(): Promise<boolean> {
     if (!addressLine.trim() || !addressZip.trim() || !addressCity.trim()) {
@@ -245,6 +261,12 @@ export function AccountFormationRequestWizard({
       setError("E-mail de devis requis.");
       return;
     }
+    if (amounts.ht <= 0) {
+      setError(
+        "Montant catalogue à 0 € — renseignez le prix de la formation (intra) avant d'envoyer le devis.",
+      );
+      return;
+    }
     if (modality !== "distanciel" && locationMode === "client" && !hasClientAddress) {
       setError("Adresse entreprise requise.");
       return;
@@ -271,8 +293,15 @@ export function AccountFormationRequestWizard({
           contact_email: devisEmail.trim().toLowerCase(),
           modality_intra_inter: "intra",
           modality_presence: modality,
-          funding_type: "direct",
-          notes: `Demande créée depuis le compte client · ${amounts.qty} participant(s)`,
+          funding_type: fundingType,
+          notes: [
+            `Demande créée depuis le compte client · ${amounts.qty} participant(s)`,
+            `Financement: ${fundingType === "opco" ? "OPCO" : "fonds propres"}`,
+            `Horaires: ${morningStart}-${morningEnd} / ${afternoonStart}-${afternoonEnd}`,
+            resolvedLocation ? `Lieu: ${resolvedLocation}` : null,
+          ]
+            .filter(Boolean)
+            .join("\n"),
         }),
       });
       const createJson = (await createRes.json()) as { dossier?: { id: string }; error?: string };
@@ -284,6 +313,7 @@ export function AccountFormationRequestWizard({
       const dates = eachDateInclusive(startDate, endDate);
       for (const slotDate of dates) {
         for (const dayPart of ["matin", "apres_midi"] as const) {
+          const times = slotTimes(dayPart, slotDate);
           const slotRes = await fetch("/api/super-admin/crm/formation-slots", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -293,6 +323,8 @@ export function AccountFormationRequestWizard({
               day_part: dayPart,
               location_label: resolvedLocation || null,
               modality_presence: modality,
+              starts_at: times.starts_at,
+              ends_at: times.ends_at,
             }),
           });
           if (!slotRes.ok) {
@@ -409,9 +441,16 @@ export function AccountFormationRequestWizard({
                   <span>
                     <span className="font-semibold text-white">{course.title}</span>
                     <span className="mt-0.5 block text-xs text-[#8A93AE]">
-                      {[course.duration, course.inter_price != null ? `${course.inter_price} € HT / pax` : null]
+                      {[
+                        course.duration,
+                        course.intra_price != null
+                          ? `${course.intra_price} € HT intra`
+                          : course.inter_price != null
+                            ? `${course.inter_price} € HT inter`
+                            : "Prix à renseigner",
+                      ]
                         .filter(Boolean)
-                        .join(" · ") || "Catalogue"}
+                        .join(" · ")}
                     </span>
                   </span>
                 </label>
@@ -544,6 +583,52 @@ export function AccountFormationRequestWizard({
               <option value="hybride">Hybride</option>
             </select>
           </Field>
+
+          <Field label="Financement">
+            <select
+              value={fundingType}
+              onChange={(e) => setFundingType(e.target.value as "direct" | "opco")}
+              className={fieldClass}
+            >
+              <option value="direct">Fonds propres</option>
+              <option value="opco">Prise en charge OPCO</option>
+            </select>
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Matin (début → fin)">
+              <div className="flex gap-2">
+                <input
+                  type="time"
+                  value={morningStart}
+                  onChange={(e) => setMorningStart(e.target.value)}
+                  className={fieldClass}
+                />
+                <input
+                  type="time"
+                  value={morningEnd}
+                  onChange={(e) => setMorningEnd(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+            </Field>
+            <Field label="Après-midi (début → fin)">
+              <div className="flex gap-2">
+                <input
+                  type="time"
+                  value={afternoonStart}
+                  onChange={(e) => setAfternoonStart(e.target.value)}
+                  className={fieldClass}
+                />
+                <input
+                  type="time"
+                  value={afternoonEnd}
+                  onChange={(e) => setAfternoonEnd(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+            </Field>
+          </div>
 
           {modality !== "distanciel" ? (
             <div className="space-y-2">

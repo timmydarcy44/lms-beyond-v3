@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
   const participants = String(body.participants ?? "").trim();
   const preferredFormat = String(body.preferred_format ?? "").trim();
   const preferredPeriod = String(body.preferred_period ?? "").trim();
+  const preferredLocation = String(body.preferred_location ?? "").trim();
+  const fundingRaw = String(body.funding_type ?? "direct").trim().toLowerCase();
+  const fundingType = fundingRaw === "opco" ? "opco" : "direct";
   const notes = String(body.notes ?? body.message ?? "").trim();
 
   if (!trainingId || !contactName || !contactEmail || !participants) {
@@ -97,6 +100,8 @@ export async function POST(request: NextRequest) {
         ${row("Participants", participants)}
         ${preferredFormat ? row("Format souhaité", preferredFormat) : ""}
         ${preferredPeriod ? row("Période souhaitée", preferredPeriod) : ""}
+        ${row("Financement", fundingType === "opco" ? "OPCO" : "Fonds propres")}
+        ${preferredLocation ? row("Lieu souhaité", preferredLocation) : ""}
         ${notes ? row("Précisions", notes) : ""}
         ${row("Compte connecté", viewerLabel || access.viewer.email || "—")}
         ${row("Org ID", access.organizationId)}
@@ -130,6 +135,22 @@ export async function POST(request: NextRequest) {
   try {
     const { createFormationDossier } = await import("@/lib/formation-dossier/create-dossier");
     if (service) {
+      const qty = Math.max(1, Number.parseInt(participants.replace(/\D/g, ""), 10) || 1);
+      const unitEuros = Number(
+        String(training.startingPrice || "")
+          .replace(/[^\d,.]/g, "")
+          .replace(",", ".") || "0",
+      );
+      const ht = Number.isFinite(unitEuros) ? Math.round(unitEuros * 100) * qty : null;
+      const tva = ht != null ? Math.round(ht * 0.2) : null;
+      const ttc = ht != null && tva != null ? ht + tva : null;
+      const modalityPresence =
+        preferredFormat.toLowerCase().includes("distan")
+          ? "distanciel"
+          : preferredFormat.toLowerCase().includes("blend")
+            ? "hybride"
+            : "presentiel";
+
       const dossier = await createFormationDossier(service, {
         organizationId: access.organizationId,
         source: "dashboard_request",
@@ -137,9 +158,17 @@ export async function POST(request: NextRequest) {
         contactName,
         contactEmail,
         contactPhone: contactPhone || null,
+        amountHtCents: ht,
+        amountTvaCents: tva,
+        amountTtcCents: ttc,
+        modalityIntraInter: "intra",
+        modalityPresence,
+        fundingType,
         notes: [
           preferredFormat ? `Format: ${preferredFormat}` : null,
           preferredPeriod ? `Période: ${preferredPeriod}` : null,
+          preferredLocation ? `Lieu: ${preferredLocation}` : null,
+          `Financement: ${fundingType === "opco" ? "OPCO" : "fonds propres"}`,
           participants ? `Participants: ${participants}` : null,
           notes || null,
         ]

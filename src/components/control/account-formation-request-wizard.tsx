@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { SidePanel, Field, fieldClass } from "./chrome";
+import {
+  formatByoundPostalAddress,
+  formatPostalAddress,
+} from "@/lib/formation-documents/postal-address";
 
 type TrainingCourse = {
   id: string;
@@ -20,17 +24,27 @@ type Person = {
   invited?: boolean;
 };
 
+type OrgAddress = {
+  addressLine: string | null;
+  addressZip: string | null;
+  addressCity: string | null;
+  siret?: string | null;
+};
+
 type Props = {
   orgId: string;
   orgName: string;
   contactEmail?: string | null;
   contactName?: string | null;
+  orgAddress?: OrgAddress | null;
   people: Person[];
   onClose: () => void;
   onDone: (message: string, dossierId?: string) => void;
+  onAddressSaved?: (address: OrgAddress) => void;
 };
 
 type Step = 1 | 2 | 3 | 4;
+type LocationMode = "client" | "byound" | "other";
 
 function eachDateInclusive(start: string, end: string): string[] {
   const out: string[] = [];
@@ -43,14 +57,18 @@ function eachDateInclusive(start: string, end: string): string[] {
   return out;
 }
 
+const BYOUND_ADDRESS = formatByoundPostalAddress();
+
 export function AccountFormationRequestWizard({
   orgId,
   orgName,
   contactEmail,
   contactName,
+  orgAddress: orgAddressProp,
   people,
   onClose,
   onDone,
+  onAddressSaved,
 }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -61,16 +79,47 @@ export function AccountFormationRequestWizard({
   const [deferParticipants, setDeferParticipants] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [location, setLocation] = useState("");
+  const [locationMode, setLocationMode] = useState<LocationMode>("client");
+  const [locationOther, setLocationOther] = useState("");
   const [modality, setModality] = useState<"presentiel" | "distanciel" | "hybride">("presentiel");
   const [devisEmail, setDevisEmail] = useState(contactEmail?.trim() || "");
   const [devisName, setDevisName] = useState(contactName?.trim() || orgName);
   const [error, setError] = useState<string | null>(null);
+  const [addressLine, setAddressLine] = useState(orgAddressProp?.addressLine ?? "");
+  const [addressZip, setAddressZip] = useState(orgAddressProp?.addressZip ?? "");
+  const [addressCity, setAddressCity] = useState(orgAddressProp?.addressCity ?? "");
+  const [siret, setSiret] = useState(orgAddressProp?.siret ?? "");
+  const [savingAddress, setSavingAddress] = useState(false);
 
   const selectablePeople = useMemo(
-    () => people.filter((p) => p.email?.includes("@") && !p.userId.startsWith("employee:")),
+    () =>
+      // Membres + invités (employee:…) — on n’exclut que les fiches sans e-mail
+      people.filter((p) => p.email?.includes("@")),
     [people],
   );
+
+  const clientAddressLabel = useMemo(
+    () =>
+      formatPostalAddress({
+        address_line: addressLine,
+        address_zip: addressZip,
+        address_city: addressCity,
+      }),
+    [addressLine, addressZip, addressCity],
+  );
+
+  const hasClientAddress = Boolean(addressLine.trim() && addressZip.trim() && addressCity.trim());
+
+  const resolvedLocation = useMemo(() => {
+    if (modality === "distanciel") return "Distanciel / visio";
+    if (locationMode === "client") {
+      return clientAddressLabel
+        ? `Chez le client — ${clientAddressLabel}`
+        : "Chez le client";
+    }
+    if (locationMode === "byound") return `Chez Byound — ${BYOUND_ADDRESS}`;
+    return locationOther.trim();
+  }, [modality, locationMode, clientAddressLabel, locationOther]);
 
   const selectedCourse = courses.find((c) => c.id === courseId) ?? null;
 
@@ -99,6 +148,11 @@ export function AccountFormationRequestWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (modality === "distanciel") return;
+    if (!locationMode && modality === "presentiel") setLocationMode("client");
+  }, [modality, locationMode]);
+
   const amounts = useMemo(() => {
     const qty = deferParticipants ? 1 : Math.max(1, selectedPeople.length || 1);
     const unit = Math.round(Number(selectedCourse?.inter_price ?? selectedCourse?.intra_price ?? 0) * 100);
@@ -106,6 +160,70 @@ export function AccountFormationRequestWizard({
     const tva = Math.round(ht * 0.2);
     return { qty, unit, ht, tva, ttc: ht + tva };
   }, [selectedCourse, selectedPeople.length, deferParticipants]);
+
+  async function saveClientAddress(): Promise<boolean> {
+    if (!addressLine.trim() || !addressZip.trim() || !addressCity.trim()) {
+      setError("Renseignez l'adresse postale complète de l'entreprise.");
+      return false;
+    }
+    setSavingAddress(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/super/comptes-clients/${orgId}/address`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address_line: addressLine.trim(),
+          address_zip: addressZip.trim(),
+          address_city: addressCity.trim(),
+          address_country: "FR",
+          siret: siret.replace(/\D/g, "") || undefined,
+        }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error || "Adresse non enregistrée");
+      onAddressSaved?.({
+        addressLine: addressLine.trim(),
+        addressZip: addressZip.trim(),
+        addressCity: addressCity.trim(),
+        siret: siret.replace(/\D/g, "") || null,
+      });
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Adresse non enregistrée");
+      return false;
+    } finally {
+      setSavingAddress(false);
+    }
+  }
+
+  async function goToStep4() {
+    if (!startDate || !endDate) {
+      setError("Indiquez les dates de session.");
+      return;
+    }
+    if (modality !== "distanciel") {
+      if (locationMode === "client") {
+        if (!hasClientAddress) {
+          setError("Adresse entreprise manquante pour « chez le client ».");
+          return;
+        }
+        if (
+          addressLine !== (orgAddressProp?.addressLine ?? "") ||
+          addressZip !== (orgAddressProp?.addressZip ?? "") ||
+          addressCity !== (orgAddressProp?.addressCity ?? "")
+        ) {
+          const ok = await saveClientAddress();
+          if (!ok) return;
+        }
+      } else if (locationMode === "other" && !locationOther.trim()) {
+        setError("Précisez le lieu.");
+        return;
+      }
+    }
+    setError(null);
+    setStep(4);
+  }
 
   async function submit() {
     if (!selectedCourse) {
@@ -120,9 +238,21 @@ export function AccountFormationRequestWizard({
       setError("E-mail de devis requis.");
       return;
     }
+    if (modality !== "distanciel" && locationMode === "client" && !hasClientAddress) {
+      setError("Adresse entreprise requise.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
+      if (modality !== "distanciel" && locationMode === "client") {
+        const ok = await saveClientAddress();
+        if (!ok) {
+          setLoading(false);
+          return;
+        }
+      }
+
       const createRes = await fetch("/api/super-admin/crm/formation-dossiers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -158,7 +288,7 @@ export function AccountFormationRequestWizard({
               dossier_id: dossierId,
               slot_date: slotDate,
               day_part: dayPart,
-              location_label: location.trim() || null,
+              location_label: resolvedLocation || null,
               modality_presence: modality,
             }),
           });
@@ -311,7 +441,9 @@ export function AccountFormationRequestWizard({
           </label>
           {!deferParticipants ? (
             <>
-              <p className="text-sm text-[#8A93AE]">Collaborateurs du compte</p>
+              <p className="text-sm text-[#8A93AE]">
+                Collaborateurs &amp; invités du compte ({selectablePeople.length})
+              </p>
               <div className="max-h-56 space-y-1 overflow-auto">
                 {selectablePeople.length === 0 ? (
                   <p className="text-sm text-[#8A93AE]">
@@ -334,6 +466,11 @@ export function AccountFormationRequestWizard({
                       />
                       <span>
                         {person.name}
+                        {person.invited || person.userId.startsWith("employee:") ? (
+                          <span className="ml-1 text-[10px] uppercase tracking-wide text-[#F2CF6B]">
+                            invité
+                          </span>
+                        ) : null}
                         <span className="text-[#8A93AE]"> · {person.email}</span>
                       </span>
                     </label>
@@ -388,18 +525,15 @@ export function AccountFormationRequestWizard({
               />
             </Field>
           </div>
-          <Field label="Lieu">
-            <input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Intra — adresse / visio"
-              className={fieldClass}
-            />
-          </Field>
           <Field label="Modalité">
             <select
               value={modality}
-              onChange={(e) => setModality(e.target.value as typeof modality)}
+              onChange={(e) => {
+                const next = e.target.value as typeof modality;
+                setModality(next);
+                if (next === "distanciel") setLocationMode("other");
+                else if (locationMode === "other" && !locationOther) setLocationMode("client");
+              }}
               className={fieldClass}
             >
               <option value="presentiel">Présentiel</option>
@@ -407,6 +541,112 @@ export function AccountFormationRequestWizard({
               <option value="hybride">Hybride</option>
             </select>
           </Field>
+
+          {modality !== "distanciel" ? (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-white">Lieu de formation</p>
+              <label className="flex items-start gap-2 rounded-2xl border border-[#26304F] bg-[#111831] p-3 text-sm">
+                <input
+                  type="radio"
+                  checked={locationMode === "client"}
+                  onChange={() => setLocationMode("client")}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-semibold">Chez le client</span>
+                  <span className="mt-0.5 block text-xs text-[#8A93AE]">
+                    {hasClientAddress ? clientAddressLabel : "Adresse entreprise à renseigner"}
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 rounded-2xl border border-[#26304F] bg-[#111831] p-3 text-sm">
+                <input
+                  type="radio"
+                  checked={locationMode === "byound"}
+                  onChange={() => setLocationMode("byound")}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-semibold">Chez Byound</span>
+                  <span className="mt-0.5 block text-xs text-[#8A93AE]">{BYOUND_ADDRESS}</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 rounded-2xl border border-[#26304F] bg-[#111831] p-3 text-sm">
+                <input
+                  type="radio"
+                  checked={locationMode === "other"}
+                  onChange={() => setLocationMode("other")}
+                  className="mt-1"
+                />
+                <span className="font-semibold">Autre lieu</span>
+              </label>
+              {locationMode === "other" ? (
+                <Field label="Précisez le lieu">
+                  <input
+                    value={locationOther}
+                    onChange={(e) => setLocationOther(e.target.value)}
+                    placeholder="Adresse ou salle"
+                    className={fieldClass}
+                  />
+                </Field>
+              ) : null}
+            </div>
+          ) : null}
+
+          {(modality !== "distanciel" && locationMode === "client") || !hasClientAddress ? (
+            <div className="space-y-2 rounded-2xl border border-[#6E5BFF]/40 bg-[#17122E] p-3">
+              <p className="text-sm font-semibold text-white">Adresse postale de l&apos;entreprise</p>
+              <p className="text-xs text-[#8A93AE]">
+                Obligatoire pour le devis et le lieu « chez le client ».
+              </p>
+              <Field label="Adresse">
+                <input
+                  value={addressLine}
+                  onChange={(e) => setAddressLine(e.target.value)}
+                  placeholder="N° et rue"
+                  className={fieldClass}
+                />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-[100px_1fr]">
+                <Field label="CP">
+                  <input
+                    value={addressZip}
+                    onChange={(e) => setAddressZip(e.target.value)}
+                    className={fieldClass}
+                  />
+                </Field>
+                <Field label="Ville">
+                  <input
+                    value={addressCity}
+                    onChange={(e) => setAddressCity(e.target.value)}
+                    className={fieldClass}
+                  />
+                </Field>
+              </div>
+              <Field label="SIRET (optionnel)">
+                <input
+                  value={siret}
+                  onChange={(e) => setSiret(e.target.value)}
+                  placeholder="14 chiffres"
+                  className={fieldClass}
+                />
+              </Field>
+              {!hasClientAddress ||
+              addressLine !== (orgAddressProp?.addressLine ?? "") ||
+              addressZip !== (orgAddressProp?.addressZip ?? "") ||
+              addressCity !== (orgAddressProp?.addressCity ?? "") ? (
+                <button
+                  type="button"
+                  disabled={savingAddress}
+                  className="rounded-full border border-[#26304F] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  onClick={() => void saveClientAddress()}
+                >
+                  {savingAddress ? "Enregistrement…" : "Enregistrer l'adresse sur le compte"}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex gap-2">
             <button
               type="button"
@@ -418,8 +658,8 @@ export function AccountFormationRequestWizard({
             <button
               type="button"
               className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold disabled:opacity-50"
-              disabled={!startDate || !endDate}
-              onClick={() => setStep(4)}
+              disabled={!startDate || !endDate || savingAddress}
+              onClick={() => void goToStep4()}
             >
               Continuer
             </button>
@@ -434,7 +674,7 @@ export function AccountFormationRequestWizard({
             <p className="mt-1 text-xs">
               {startDate}
               {endDate !== startDate ? ` → ${endDate}` : ""}
-              {location ? ` · ${location}` : ""} · {modality}
+              {resolvedLocation ? ` · ${resolvedLocation}` : ""} · {modality}
             </p>
             <p className="mt-1 text-xs">
               {deferParticipants

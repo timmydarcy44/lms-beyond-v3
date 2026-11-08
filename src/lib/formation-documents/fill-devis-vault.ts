@@ -4,6 +4,7 @@ import { PDFDocument, StandardFonts, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
+import { formatPostalAddress } from "@/lib/formation-documents/postal-address";
 import { assembleQuote } from "@/lib/formation-documents/assemble-quote";
 import {
   formatEuroDiscountFromCents,
@@ -255,7 +256,12 @@ export async function fillVaultDevisPdf(
   setText(form, "issuer_contact", "contact@byound.fr", appearanceFont);
 
   setText(form, "client_name", ctx.organization.name, appearanceFont);
-  setText(form, "client_address", "", appearanceFont);
+  setText(
+    form,
+    "client_address",
+    formatPostalAddress(ctx.organization),
+    appearanceFont,
+  );
   setText(form, "client_siret", ctx.organization.siret || "", appearanceFont);
   setText(form, "client_vat_number", "", appearanceFont);
   setText(form, "client_contact_name", ctx.dossier.contact_name || "", appearanceFont);

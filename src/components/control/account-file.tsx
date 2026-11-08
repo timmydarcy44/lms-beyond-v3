@@ -164,6 +164,12 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           orgName={account.name}
           contactEmail={detail.members.find((m) => m.role === "admin" && m.email.includes("@"))?.email}
           contactName={detail.members.find((m) => m.role === "admin")?.name}
+          orgAddress={{
+            addressLine: account.addressLine,
+            addressZip: account.addressZip,
+            addressCity: account.addressCity,
+            siret: account.siret,
+          }}
           people={detail.people}
           onClose={() => setRequestWizardOpen(false)}
           onDone={(message) => {
@@ -171,6 +177,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
             openTab("dossiers");
             router.refresh();
           }}
+          onAddressSaved={() => router.refresh()}
         />
       ) : null}
     </div>
@@ -346,11 +353,104 @@ function Overview({
         <KpiCard label="CA 12 mois" value={formatEurosHt(account.revenue12HtCents)} />
       </div>
 
+      <OrgAddressCard account={account} />
+
       <div className="grid gap-4 lg:grid-cols-[1.4fr_.8fr]">
         <RevenueBlock documents={detail.documents} fallbackCents={account.revenue12HtCents} />
         <NoteForm orgId={account.id} initial={detail.note?.body ?? ""} />
       </div>
     </div>
+  );
+}
+
+function OrgAddressCard({ account }: { account: NonNullable<Detail["account"]> }) {
+  const router = useRouter();
+  const [line, setLine] = useState(account.addressLine ?? "");
+  const [zip, setZip] = useState(account.addressZip ?? "");
+  const [city, setCity] = useState(account.addressCity ?? "");
+  const [siret, setSiret] = useState(account.siret ?? "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const complete = Boolean(account.addressLine && account.addressZip && account.addressCity);
+
+  return (
+    <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold">Adresse postale</h2>
+          <p className="mt-1 text-sm text-[#8A93AE]">
+            Requise pour les devis et les sessions « chez le client ».
+          </p>
+        </div>
+        <span
+          className="rounded-full px-2 py-1 text-xs font-semibold"
+          style={{
+            background: complete ? "#163228" : "#3A3118",
+            color: complete ? "#6BE39B" : "#F2CF6B",
+          }}
+        >
+          {complete ? "Renseignée" : "À compléter"}
+        </span>
+      </div>
+      <form
+        className="mt-4 grid gap-3 md:grid-cols-[1.4fr_100px_1fr]"
+        onSubmit={async (event) => {
+          event.preventDefault();
+          setSaving(true);
+          setMsg(null);
+          try {
+            const res = await fetch(`/api/super/comptes-clients/${account.id}/address`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                address_line: line.trim(),
+                address_zip: zip.trim(),
+                address_city: city.trim(),
+                siret: siret.replace(/\D/g, "") || undefined,
+              }),
+            });
+            const json = (await res.json()) as { error?: string };
+            if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
+            setMsg("Adresse enregistrée.");
+            router.refresh();
+          } catch (error) {
+            setMsg(error instanceof Error ? error.message : "Enregistrement impossible");
+          } finally {
+            setSaving(false);
+          }
+        }}
+      >
+        <Field label="Adresse">
+          <input value={line} onChange={(e) => setLine(e.target.value)} className={fieldClass} required />
+        </Field>
+        <Field label="CP">
+          <input value={zip} onChange={(e) => setZip(e.target.value)} className={fieldClass} required />
+        </Field>
+        <Field label="Ville">
+          <input value={city} onChange={(e) => setCity(e.target.value)} className={fieldClass} required />
+        </Field>
+        <div className="md:col-span-3">
+          <Field label="SIRET">
+            <input
+              value={siret}
+              onChange={(e) => setSiret(e.target.value)}
+              className={fieldClass}
+              placeholder="14 chiffres"
+            />
+          </Field>
+        </div>
+        <div className="flex items-center gap-3 md:col-span-3">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] disabled:opacity-50"
+          >
+            {saving ? "Enregistrement…" : "Enregistrer l'adresse"}
+          </button>
+          {msg ? <p className="text-sm text-[#8A93AE]">{msg}</p> : null}
+        </div>
+      </form>
+    </section>
   );
 }
 

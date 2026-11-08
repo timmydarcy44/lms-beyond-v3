@@ -16,9 +16,15 @@ type OrgRow = {
   trial_ends_at?: string | null;
   client_since?: string | null;
   siret?: string | null;
+  address_line?: string | null;
+  address_zip?: string | null;
+  address_city?: string | null;
+  address_country?: string | null;
 };
 
 const FULL_COLUMNS =
+  "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,status,kind,account_manager_id,trial_ends_at,client_since,siret,address_line,address_zip,address_city,address_country";
+const FULL_COLUMNS_NO_ADDRESS =
   "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,status,kind,account_manager_id,trial_ends_at,client_since,siret";
 const BASE_COLUMNS =
   "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,siret";
@@ -57,6 +63,11 @@ export type ControlAccount = {
   clientSince: string | null;
   trialEndsAt: string | null;
   createdAt: string | null;
+  siret: string | null;
+  addressLine: string | null;
+  addressZip: string | null;
+  addressCity: string | null;
+  addressCountry: string | null;
 };
 
 export type ControlCockpit = {
@@ -68,10 +79,20 @@ export type ControlCockpit = {
 async function selectOrgs(db: NonNullable<ReturnType<typeof getServiceRoleClient>>) {
   const full = await db.from("organizations").select(FULL_COLUMNS).order("name");
   if (!full.error) return { rows: (full.data ?? []) as OrgRow[], schemaReady: true };
-  if (full.error.code === "42703" || full.error.message.includes("status") || full.error.message.includes("kind")) {
-    const base = await db.from("organizations").select(BASE_COLUMNS).order("name");
-    if (base.error) throw new Error(base.error.message);
-    return { rows: (base.data ?? []) as OrgRow[], schemaReady: false };
+  if (
+    full.error.code === "42703" ||
+    full.error.message.includes("address_") ||
+    full.error.message.includes("status") ||
+    full.error.message.includes("kind")
+  ) {
+    const mid = await db.from("organizations").select(FULL_COLUMNS_NO_ADDRESS).order("name");
+    if (!mid.error) return { rows: (mid.data ?? []) as OrgRow[], schemaReady: true };
+    if (mid.error.code === "42703" || mid.error.message.includes("status") || mid.error.message.includes("kind")) {
+      const base = await db.from("organizations").select(BASE_COLUMNS).order("name");
+      if (base.error) throw new Error(base.error.message);
+      return { rows: (base.data ?? []) as OrgRow[], schemaReady: false };
+    }
+    throw new Error(mid.error.message);
   }
   throw new Error(full.error.message);
 }
@@ -175,6 +196,11 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
       clientSince: row.client_since ?? (classifyOrganization(row.slug).clientSinceFromCreated ? row.created_at : null),
       trialEndsAt: row.trial_ends_at ?? null,
       createdAt: row.created_at,
+      siret: row.siret ?? null,
+      addressLine: row.address_line?.trim() || null,
+      addressZip: row.address_zip?.trim() || null,
+      addressCity: row.address_city?.trim() || null,
+      addressCountry: row.address_country?.trim() || "FR",
     } satisfies ControlAccount;
   });
 

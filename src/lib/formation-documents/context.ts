@@ -1,4 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  BYOUND_POSTAL_ADDRESS,
+  formatByoundPostalAddress,
+  formatPostalAddress,
+} from "@/lib/formation-documents/postal-address";
+
+export { formatByoundPostalAddress, formatPostalAddress };
 
 export type OfIdentity = {
   legal_name: string;
@@ -57,6 +64,10 @@ export type DossierDocContext = {
     name: string;
     siret: string | null;
     siren: string | null;
+    address_line: string | null;
+    address_zip: string | null;
+    address_city: string | null;
+    address_country: string | null;
   };
   of: OfIdentity;
   course: CourseDocInfo | null;
@@ -88,10 +99,10 @@ const DEFAULT_OF: OfIdentity = {
   siret: "13070905800015",
   siren: "130709058",
   vat_intra: "FR30130709058",
-  address_line: "134 rue Élise Deroche",
-  address_city: "Bretteville-sur-Odon",
-  address_zip: "14760",
-  address_country: "FR",
+  address_line: BYOUND_POSTAL_ADDRESS.address_line,
+  address_city: BYOUND_POSTAL_ADDRESS.address_city,
+  address_zip: BYOUND_POSTAL_ADDRESS.address_zip,
+  address_country: BYOUND_POSTAL_ADDRESS.address_country,
 };
 
 function digitsOnly(value: string | null | undefined): string {
@@ -105,6 +116,10 @@ function isUnusableSiret(value: string | null | undefined): boolean {
   if (d.startsWith("901234567")) return true;
   if (/^(\d)\1{13}$/.test(d)) return true;
   return false;
+}
+
+export function formatOfPostalAddress(of: OfIdentity = DEFAULT_OF): string {
+  return formatPostalAddress(of) || formatByoundPostalAddress();
 }
 
 function resolveOfIdentity(ofRow: Record<string, unknown> | null | undefined): OfIdentity {
@@ -153,12 +168,23 @@ export async function loadDossierDocContext(
     .maybeSingle();
   if (!dossier) return null;
 
-  const [{ data: org }, { data: ofRow }, { data: partRows }] = await Promise.all([
-    service
+  let orgQuery = await service
+    .from("organizations")
+    .select("id, name, siret, siren, address_line, address_zip, address_city, address_country")
+    .eq("id", dossier.organization_id)
+    .maybeSingle();
+  if (
+    orgQuery.error &&
+    (orgQuery.error.code === "42703" || orgQuery.error.message.includes("address_"))
+  ) {
+    orgQuery = await service
       .from("organizations")
       .select("id, name, siret, siren")
       .eq("id", dossier.organization_id)
-      .maybeSingle(),
+      .maybeSingle();
+  }
+
+  const [{ data: ofRow }, { data: partRows }] = await Promise.all([
     service.from("of_settings").select("*").limit(1).maybeSingle(),
     service
       .from("formation_participants")
@@ -167,7 +193,8 @@ export async function loadDossierDocContext(
       .order("created_at", { ascending: true }),
   ]);
 
-  if (!org) return null;
+  const orgRow = (orgQuery.data ?? null) as Record<string, unknown> | null;
+  if (!orgRow) return null;
 
   const profileIds = (partRows ?? []).map((p) => String(p.profile_id));
   const { data: profiles } = profileIds.length
@@ -317,10 +344,14 @@ export async function loadDossierDocContext(
       status: String(dossier.status),
     },
     organization: {
-      id: String(org.id),
-      name: String(org.name),
-      siret: org.siret ? String(org.siret) : null,
-      siren: org.siren ? String(org.siren) : null,
+      id: String(orgRow.id),
+      name: String(orgRow.name),
+      siret: orgRow.siret ? String(orgRow.siret) : null,
+      siren: orgRow.siren ? String(orgRow.siren) : null,
+      address_line: orgRow.address_line ? String(orgRow.address_line) : null,
+      address_zip: orgRow.address_zip ? String(orgRow.address_zip) : null,
+      address_city: orgRow.address_city ? String(orgRow.address_city) : null,
+      address_country: orgRow.address_country ? String(orgRow.address_country) : "FR",
     },
     of,
     course,

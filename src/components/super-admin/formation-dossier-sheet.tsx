@@ -67,6 +67,8 @@ type DossierDetail = {
   partner_of_name: string | null;
   contact_name: string | null;
   contact_email: string | null;
+  contact_phone: string | null;
+  notes: string | null;
   pending_confirm_fields: string[] | null;
   deal_regressed: boolean;
   identity_check_first_attendance: boolean;
@@ -142,6 +144,14 @@ export function FormationDossierSheet({
   });
   const [meta, setMeta] = useState<Lot5Meta | null>(null);
   const [trainerId, setTrainerId] = useState("");
+  const [devisDraft, setDevisDraft] = useState({
+    course_title: "",
+    contact_name: "",
+    contact_email: "",
+    amount_ht_euros: "",
+    notes: "",
+  });
+  const [devisBusy, setDevisBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!dossierId) return;
@@ -157,6 +167,16 @@ export function FormationDossierSheet({
       const mJson = await parseFetchJson<Lot5Meta & { error?: string }>(mRes);
       if (!dRes.ok) throw new Error(dJson.error);
       setDossier(dJson.dossier ?? null);
+      if (dJson.dossier) {
+        const ht = dJson.dossier.amount_ht_cents;
+        setDevisDraft({
+          course_title: dJson.dossier.course_title ?? "",
+          contact_name: dJson.dossier.contact_name ?? "",
+          contact_email: dJson.dossier.contact_email ?? "",
+          amount_ht_euros: ht != null ? String(ht / 100) : "",
+          notes: dJson.dossier.notes ?? "",
+        });
+      }
       setParticipants(pJson.participants ?? []);
       if (mRes.ok) {
         setMeta(mJson);
@@ -255,22 +275,75 @@ export function FormationDossierSheet({
     onChanged();
   };
 
-  const sendDevis = async () => {
-    const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/validate`, {
-      method: "POST",
+  const saveDevisDraft = async (): Promise<boolean> => {
+    const htEuros = Number(String(devisDraft.amount_ht_euros).replace(",", "."));
+    const htCents = Number.isFinite(htEuros) && htEuros >= 0 ? Math.round(htEuros * 100) : null;
+    const tvaCents = htCents != null ? Math.round(htCents * 0.2) : null;
+    const ttcCents = htCents != null && tvaCents != null ? htCents + tvaCents : null;
+    const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "devis" }),
+      body: JSON.stringify({
+        course_title: devisDraft.course_title.trim() || null,
+        contact_name: devisDraft.contact_name.trim() || null,
+        contact_email: devisDraft.contact_email.trim().toLowerCase() || null,
+        notes: devisDraft.notes.trim() || null,
+        amount_ht_cents: htCents,
+        amount_tva_cents: tvaCents,
+        amount_ttc_cents: ttcCents,
+      }),
     });
-    const json = await parseFetchJson<{ error?: string; sent_to?: string[] }>(res);
+    const json = await parseFetchJson<{ error?: string }>(res);
     if (!res.ok) {
-      toast.error(json.error || "Envoi du devis impossible");
-      return;
+      toast.error(json.error ?? "Enregistrement du devis impossible");
+      return false;
     }
-    toast.success(
-      json.sent_to?.length ? `Devis envoyé à ${json.sent_to.join(", ")}` : "Devis envoyé",
-    );
-    await load();
-    onChanged();
+    return true;
+  };
+
+  const previewDevis = async () => {
+    setDevisBusy(true);
+    try {
+      const ok = await saveDevisDraft();
+      if (!ok) return;
+      await load();
+      window.open(
+        `/api/super-admin/crm/formation-dossiers/${dossierId}/documents/devis/pdf`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+    } finally {
+      setDevisBusy(false);
+    }
+  };
+
+  const sendDevis = async () => {
+    setDevisBusy(true);
+    try {
+      const ok = await saveDevisDraft();
+      if (!ok) return;
+      if (!devisDraft.contact_email.includes("@")) {
+        toast.error("E-mail destinataire du devis requis");
+        return;
+      }
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "devis" }),
+      });
+      const json = await parseFetchJson<{ error?: string; sent_to?: string[] }>(res);
+      if (!res.ok) {
+        toast.error(json.error || "Envoi du devis impossible");
+        return;
+      }
+      toast.success(
+        json.sent_to?.length ? `Devis envoyé à ${json.sent_to.join(", ")}` : "Devis envoyé",
+      );
+      await load();
+      onChanged();
+    } finally {
+      setDevisBusy(false);
+    }
   };
 
   const assignTrainer = async () => {
@@ -411,17 +484,122 @@ export function FormationDossierSheet({
               </div>
             ) : null}
 
+            {/* Devis : voir / modifier puis envoyer */}
+            {dossier.status === "devis" || dossier.status === "qualification" ? (
+              <div className="space-y-3 rounded-xl border border-[#6C5CF5]/40 bg-[#141731] p-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#F3F4FA]">Devis</p>
+                  <p className="mt-0.5 text-[11px] text-[#A3A8C7]">
+                    Ajustez le contenu, prévisualisez le PDF, puis envoyez.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="sm:col-span-2 space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">Formation</Label>
+                    <Input
+                      value={devisDraft.course_title}
+                      onChange={(e) =>
+                        setDevisDraft((d) => ({ ...d, course_title: e.target.value }))
+                      }
+                      className="border-[#262A4A] bg-[#0A0C1B]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">Contact devis</Label>
+                    <Input
+                      value={devisDraft.contact_name}
+                      onChange={(e) =>
+                        setDevisDraft((d) => ({ ...d, contact_name: e.target.value }))
+                      }
+                      className="border-[#262A4A] bg-[#0A0C1B]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">E-mail devis</Label>
+                    <Input
+                      type="email"
+                      value={devisDraft.contact_email}
+                      onChange={(e) =>
+                        setDevisDraft((d) => ({ ...d, contact_email: e.target.value }))
+                      }
+                      className="border-[#262A4A] bg-[#0A0C1B]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">Montant HT (€)</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={devisDraft.amount_ht_euros}
+                      onChange={(e) =>
+                        setDevisDraft((d) => ({ ...d, amount_ht_euros: e.target.value }))
+                      }
+                      className="border-[#262A4A] bg-[#0A0C1B]"
+                      placeholder="1890"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">TTC estimé (TVA 20 %)</Label>
+                    <p className="rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#B7AEFF]">
+                      {(() => {
+                        const ht = Number(String(devisDraft.amount_ht_euros).replace(",", "."));
+                        if (!Number.isFinite(ht) || ht < 0) return "—";
+                        return `${(ht * 1.2).toLocaleString("fr-FR", {
+                          style: "currency",
+                          currency: "EUR",
+                        })}`;
+                      })()}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <Label className="text-[11px] text-[#A3A8C7]">Notes internes</Label>
+                    <textarea
+                      value={devisDraft.notes}
+                      onChange={(e) => setDevisDraft((d) => ({ ...d, notes: e.target.value }))}
+                      rows={3}
+                      className="w-full rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#F3F4FA]"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-[#262A4A] bg-transparent text-[#B7AEFF]"
+                    disabled={devisBusy}
+                    onClick={() => void previewDevis()}
+                  >
+                    Voir le devis (PDF)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-[#262A4A] bg-transparent text-[#A3A8C7]"
+                    disabled={devisBusy}
+                    onClick={() =>
+                      void saveDevisDraft().then(async (ok) => {
+                        if (!ok) return;
+                        toast.success("Devis enregistré");
+                        await load();
+                        onChanged();
+                      })
+                    }
+                  >
+                    Enregistrer
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]"
+                    disabled={devisBusy}
+                    onClick={() => void sendDevis()}
+                  >
+                    Valider et envoyer le devis
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             {/* Validations humaines Lot 5 */}
             <div className="flex flex-wrap gap-2">
-              {dossier.status === "devis" || dossier.status === "qualification" ? (
-                <Button
-                  type="button"
-                  className="bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]"
-                  onClick={() => void sendDevis()}
-                >
-                  Valider et envoyer le devis
-                </Button>
-              ) : null}
               {dossier.status === "convention" || dossier.status === "devis" ? (
                 <Button
                   type="button"

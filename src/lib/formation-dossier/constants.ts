@@ -41,6 +41,29 @@ export const FORMATION_DOSSIER_SOURCES = [
 
 export type FormationDossierSource = (typeof FORMATION_DOSSIER_SOURCES)[number];
 
+/** Demandes clients (dashboard / site) encore en qualification → inbox « Demandes entrantes ». */
+export const INCOMING_DOSSIER_SOURCES: FormationDossierSource[] = [
+  "dashboard_request",
+  "site_request",
+];
+
+export const FORMATION_DOSSIER_SOURCE_LABELS: Record<FormationDossierSource, string> = {
+  deal_won: "Deal gagné",
+  manual: "Création manuelle",
+  site_request: "Site web",
+  dashboard_request: "Dashboard entreprise",
+};
+
+export function isIncomingInboxDossier(row: {
+  source?: string | null;
+  status?: string | null;
+}): boolean {
+  return (
+    INCOMING_DOSSIER_SOURCES.includes(String(row.source ?? "") as FormationDossierSource) &&
+    String(row.status ?? "") === "qualification"
+  );
+}
+
 export const BPF_FUNDER_TYPES = [
   "entreprises_salaries",
   "opco",

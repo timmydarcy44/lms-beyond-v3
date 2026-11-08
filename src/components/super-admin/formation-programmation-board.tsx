@@ -8,6 +8,7 @@ import { parseFetchJson } from "@/lib/api/parse-fetch-json";
 import {
   FORMATION_DOSSIER_STATUSES,
   FORMATION_DOSSIER_STATUS_LABELS,
+  isIncomingInboxDossier,
   type FormationDossierStatus,
 } from "@/lib/formation-dossier/constants";
 import type { FormationDossierBoardCard } from "@/lib/formation-dossier/board";
@@ -31,7 +32,8 @@ export function FormationProgrammationBoard() {
         res,
       );
       if (!res.ok) throw new Error(json.error);
-      setCards(json.dossiers ?? []);
+      // Les demandes dashboard/site en qualification vivent dans « Demandes entrantes ».
+      setCards((json.dossiers ?? []).filter((d) => !isIncomingInboxDossier(d)));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Chargement impossible");
     } finally {

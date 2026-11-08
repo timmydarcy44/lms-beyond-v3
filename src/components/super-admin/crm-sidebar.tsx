@@ -20,6 +20,7 @@ import {
   Newspaper,
   ClipboardList,
   ChevronDown,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -134,6 +135,7 @@ const CRM_LINKS: CrmNavLink[] = [
   { href: "/super/crm/onboarding", label: "Onboarding clients", icon: Rocket, section: "commercial" },
   { href: "/super/organisations", label: "Comptes clients", icon: Building2, section: "clients" },
   { href: "/super/utilisateurs?role=btoc", label: "Clients particuliers", icon: ShoppingBag, section: "clients" },
+  { href: "/super/crm/demandes", label: "Demandes entrantes", icon: Inbox, section: "formation" },
   { href: "/super/crm/programmation", label: "Programmation", icon: ClipboardList, section: "formation" },
   { href: "/super/crm/formations", label: "Legacy Qualiopi", icon: ClipboardList, section: "formation" },
   { href: "/super/utilisateurs?role=learner", label: "Apprenants", icon: UserCircle, section: "formation" },
@@ -192,6 +194,9 @@ function isLinkActive(
   if (item.href === "/super/experts") {
     return pathname.startsWith("/super/experts");
   }
+  if (item.href === "/super/crm/demandes") {
+    return pathname.startsWith("/super/crm/demandes");
+  }
   if (item.href === "/super/crm/programmation") {
     return pathname.startsWith("/super/crm/programmation");
   }
@@ -232,6 +237,7 @@ export function CrmSidebar() {
   const supabase = useSupabase();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [accountCount, setAccountCount] = useState<number | null>(null);
+  const [incomingCount, setIncomingCount] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState<Partial<Record<SectionKey, boolean>>>({});
 
   useEffect(() => {
@@ -261,6 +267,20 @@ export function CrmSidebar() {
         if (typeof json?.count === "number") setAccountCount(json.count);
       })
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const loadIncoming = () => {
+      void fetch("/api/super-admin/crm/formation-dossiers?count=1")
+        .then((response) => (response.ok ? response.json() : null))
+        .then((json: { count?: number } | null) => {
+          if (typeof json?.count === "number") setIncomingCount(json.count);
+        })
+        .catch(() => undefined);
+    };
+    loadIncoming();
+    const timer = window.setInterval(loadIncoming, 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const isJerome = userEmail === "jerome.picot@edgebs.fr";
@@ -370,6 +390,11 @@ export function CrmSidebar() {
                           {item.label}
                           {item.href === "/super/organisations" && accountCount != null ? ` · ${accountCount}` : ""}
                         </span>
+                        {item.href === "/super/crm/demandes" && incomingCount != null && incomingCount > 0 ? (
+                          <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6C5CF5] px-1.5 text-[11px] font-bold text-white">
+                            {incomingCount > 99 ? "99+" : incomingCount}
+                          </span>
+                        ) : null}
                       </Link>
                     );
                   })}

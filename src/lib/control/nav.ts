@@ -171,6 +171,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     dot: "#9AA3BD",
     items: [
       {
+        id: "demandes",
+        label: "Demandes entrantes",
+        href: "/super/crm/demandes",
+        match: under("/super/crm/demandes"),
+      },
+      {
         id: "programmation",
         label: "Programmation",
         href: "/super/crm/programmation",

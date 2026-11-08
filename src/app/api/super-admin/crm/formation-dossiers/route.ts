@@ -4,6 +4,7 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { createFormationDossier } from "@/lib/formation-dossier/create-dossier";
 import {
   FORMATION_DOSSIER_SOURCES,
+  isIncomingInboxDossier,
   type FormationDossierSource,
   type FormationDossierStatus,
 } from "@/lib/formation-dossier/constants";
@@ -24,6 +25,8 @@ export async function GET(req: NextRequest) {
   const orgId = req.nextUrl.searchParams.get("organization_id")?.trim() || "";
   const dealId = req.nextUrl.searchParams.get("deal_id")?.trim() || "";
   const enriched = req.nextUrl.searchParams.get("enriched") === "1";
+  const inbox = req.nextUrl.searchParams.get("inbox") === "1";
+  const countOnly = req.nextUrl.searchParams.get("count") === "1";
 
   let query = service
     .from("formation_dossiers")
@@ -36,7 +39,15 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  const dossiers = data ?? [];
+  let dossiers = data ?? [];
+  if (inbox) {
+    dossiers = dossiers.filter((d) => isIncomingInboxDossier(d));
+  }
+  if (countOnly) {
+    return NextResponse.json({
+      count: dossiers.filter((d) => isIncomingInboxDossier(d)).length,
+    });
+  }
   if (!enriched) {
     return NextResponse.json({ dossiers });
   }

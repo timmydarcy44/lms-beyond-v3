@@ -56,11 +56,17 @@ export function FormationProgrammationBoard() {
     return map;
   }, [cards]);
 
-  const devisStats = useMemo(() => {
-    const devis = byStatus.get("devis") ?? [];
-    const totalHtCents = devis.reduce((sum, c) => sum + (c.amount_ht_cents ?? 0), 0);
-    return { count: devis.length, totalHtCents };
-  }, [byStatus]);
+  /** Pipeline commercial : tout sauf clôturé (= payé → CA). */
+  const pipelineStats = useMemo(() => {
+    const open = cards.filter((c) => c.status !== "cloture");
+    const closed = cards.filter((c) => c.status === "cloture");
+    return {
+      openCount: open.length,
+      openHtCents: open.reduce((sum, c) => sum + (c.amount_ht_cents ?? 0), 0),
+      caCount: closed.length,
+      caHtCents: closed.reduce((sum, c) => sum + (c.amount_ht_cents ?? 0), 0),
+    };
+  }, [cards]);
 
   const formatHt = (cents: number) =>
     new Intl.NumberFormat("fr-FR", {
@@ -122,20 +128,39 @@ export function FormationProgrammationBoard() {
       </div>
 
       {!loading ? (
-        <section className="rounded-2xl border border-[#262A4A] bg-gradient-to-br from-[#1A1440] via-[#141731] to-[#141731] px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#B7AEFF]">
-            Devis en cours
-          </p>
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <p className="text-3xl font-extrabold tracking-tight text-white">
-              {formatHt(devisStats.totalHtCents)}
-              <span className="ml-2 text-sm font-semibold text-[#A3A8C7]">HT</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <section className="rounded-2xl border border-[#262A4A] bg-gradient-to-br from-[#1A1440] via-[#141731] to-[#141731] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#B7AEFF]">
+              Pipeline en cours
             </p>
-            <p className="text-sm text-[#A3A8C7]">
-              {devisStats.count} dossier{devisStats.count === 1 ? "" : "s"} en colonne Devis
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+              <p className="text-3xl font-extrabold tracking-tight text-white">
+                {formatHt(pipelineStats.openHtCents)}
+                <span className="ml-2 text-sm font-semibold text-[#A3A8C7]">HT</span>
+              </p>
+              <p className="text-sm text-[#A3A8C7]">
+                {pipelineStats.openCount} dossier
+                {pipelineStats.openCount === 1 ? "" : "s"} · devis → fin
+              </p>
+            </div>
+          </section>
+          <section className="rounded-2xl border border-[#262A4A] bg-[#141731] px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6BE39B]">
+              CA clôturé
             </p>
-          </div>
-        </section>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+              <p className="text-3xl font-extrabold tracking-tight text-white">
+                {formatHt(pipelineStats.caHtCents)}
+                <span className="ml-2 text-sm font-semibold text-[#A3A8C7]">HT</span>
+              </p>
+              <p className="text-sm text-[#A3A8C7]">
+                {pipelineStats.caCount} dossier
+                {pipelineStats.caCount === 1 ? "" : "s"} payé
+                {pipelineStats.caCount === 1 ? "" : "s"}
+              </p>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {loading ? (

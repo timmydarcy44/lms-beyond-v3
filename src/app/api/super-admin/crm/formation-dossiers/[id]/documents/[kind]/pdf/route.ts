@@ -21,25 +21,40 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Type non supporté" }, { status: 400 });
   }
 
-  const persist = req.nextUrl.searchParams.get("persist") === "1";
-  if (persist) {
-    await generateFormationDocuments(service, { dossierId: id, kinds: [kind] });
+  try {
+    const persist = req.nextUrl.searchParams.get("persist") === "1";
+    if (persist) {
+      await generateFormationDocuments(service, { dossierId: id, kinds: [kind] });
+    }
+
+    const docCtx = await loadDossierDocContext(service, id);
+    if (!docCtx) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
+
+    const { buffer } = await resolveFormationPdfBuffer(service, {
+      kind,
+      ctx: docCtx,
+      buildFallback: () => buildFormationDocumentPdf({ ctx: docCtx, kind }),
+    });
+    if (!buffer?.length) {
+      return NextResponse.json(
+        {
+          error:
+            "PDF vide — vérifiez le montant HT, le SIRET client et l'identité OF (of_settings).",
+        },
+        { status: 500 },
+      );
+    }
+    return new NextResponse(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${kind}-${id.slice(0, 8)}.pdf"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Génération PDF impossible";
+    console.error("[formation-dossiers/pdf]", kind, id, message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const docCtx = await loadDossierDocContext(service, id);
-  if (!docCtx) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
-
-  const { buffer } = await resolveFormationPdfBuffer(service, {
-    kind,
-    ctx: docCtx,
-    buildFallback: () => buildFormationDocumentPdf({ ctx: docCtx, kind }),
-  });
-  return new NextResponse(new Uint8Array(buffer), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${kind}-${id.slice(0, 8)}.pdf"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
 }

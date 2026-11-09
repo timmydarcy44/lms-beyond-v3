@@ -3,6 +3,7 @@ export type ControlNavCounts = {
   admissionsReview: number;
   expertsPending: number;
   opcoToFile: number;
+  incomingDemandes: number;
 };
 
 export type ControlNavTone = "late" | "queue";
@@ -175,6 +176,8 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         label: "Demandes entrantes",
         href: "/super/crm/demandes",
         match: under("/super/crm/demandes"),
+        countKey: "incomingDemandes",
+        countTone: "queue",
       },
       {
         id: "programmation",

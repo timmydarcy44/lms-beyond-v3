@@ -8,6 +8,7 @@ const EMPTY: ControlNavCounts = {
   admissionsReview: 0,
   expertsPending: 0,
   opcoToFile: 0,
+  incomingDemandes: 0,
 };
 
 async function loadControlNavCounts(): Promise<ControlNavCounts> {
@@ -16,7 +17,7 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
   if (!db) return EMPTY;
   const today = new Date().toISOString().slice(0, 10);
 
-  const [pipeline, admissions, experts] = await Promise.all([
+  const [pipeline, admissions, experts, incoming] = await Promise.all([
     db
       .from("crm_pipeline_deals")
       .select("company_name, email, is_test")
@@ -27,6 +28,11 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
       .from("experts")
       .select("email")
       .or("review_status.eq.pending_review,review_status.is.null"),
+    db
+      .from("formation_dossiers")
+      .select("id, source, status")
+      .eq("status", "qualification")
+      .in("source", ["dashboard_request", "site_request"]),
   ]);
 
   let pipelineRows = pipeline.error ? [] : pipeline.data ?? [];
@@ -40,6 +46,7 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
   }
   const admissionRows = admissions.error ? [] : admissions.data ?? [];
   const expertRows = experts.error ? [] : experts.data ?? [];
+  const incomingCount = incoming.error ? 0 : (incoming.data ?? []).length;
 
   return {
     pipelineLate: pipelineRows.filter((row) => !looksLikeTestDeal(row)).length,
@@ -50,6 +57,7 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
       ? 0
       : expertRows.filter((row) => !looksLikeTestAccount({ email: row.email })).length,
     opcoToFile: 0,
+    incomingDemandes: incomingCount,
   };
   } catch {
     return EMPTY;

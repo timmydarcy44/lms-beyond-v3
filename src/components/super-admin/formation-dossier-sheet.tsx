@@ -136,6 +136,12 @@ type Lot5Meta = {
     suggested_ht_cents: number | null;
     label: string | null;
   };
+  organization?: {
+    id: string | null;
+    name: string | null;
+    siret: string | null;
+    siret_ok: boolean;
+  };
 };
 
 export function FormationDossierSheet({
@@ -369,16 +375,25 @@ export function FormationDossierSheet({
   };
 
   const previewDevis = async () => {
+    // Ouvrir l'onglet synchrone (sinon le navigateur bloque après les await).
+    const pdfUrl = `/api/super-admin/crm/formation-dossiers/${dossierId}/documents/devis/pdf`;
+    const previewTab = window.open("about:blank", "_blank");
     setDevisBusy(true);
     try {
       const ok = await saveDevisDraft({ requireAmount: true });
-      if (!ok) return;
-      await load();
-      window.open(
-        `/api/super-admin/crm/formation-dossiers/${dossierId}/documents/devis/pdf`,
-        "_blank",
-        "noopener,noreferrer",
-      );
+      if (!ok) {
+        previewTab?.close();
+        return;
+      }
+      if (previewTab) {
+        previewTab.location.href = pdfUrl;
+      } else {
+        window.open(pdfUrl, "_blank", "noopener,noreferrer");
+        toast.message("Autorisez les pop-ups pour prévisualiser le PDF.");
+      }
+    } catch (error) {
+      previewTab?.close();
+      toast.error(error instanceof Error ? error.message : "Prévisualisation impossible");
     } finally {
       setDevisBusy(false);
     }
@@ -387,6 +402,12 @@ export function FormationDossierSheet({
   const sendDevis = async () => {
     setDevisBusy(true);
     try {
+      if (meta?.organization && !meta.organization.siret_ok) {
+        toast.error(
+          "SIRET client manquant ou invalide — renseignez-le sur le compte client avant d'envoyer le devis.",
+        );
+        return;
+      }
       const ok = await saveDevisDraft({ requireAmount: true });
       if (!ok) return;
       if (!devisDraft.contact_email.includes("@")) {
@@ -398,7 +419,7 @@ export function FormationDossierSheet({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "devis" }),
       });
-      const json = await parseFetchJson<{ error?: string; sent_to?: string[] }>(res);
+      const json = await parseFetchJson<{ error?: string; sent_to?: string[]; code?: string }>(res);
       if (!res.ok) {
         toast.error(json.error || "Envoi du devis impossible");
         return;
@@ -688,6 +709,26 @@ export function FormationDossierSheet({
                     />
                   </div>
                 </div>
+                {meta?.organization && !meta.organization.siret_ok ? (
+                  <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    SIRET client manquant — l&apos;envoi du devis est bloqué. Complétez le SIRET
+                    sur le compte entreprise
+                    {meta.organization.id ? (
+                      <>
+                        {" "}
+                        (
+                        <a
+                          href={`/super/organisations/${meta.organization.id}`}
+                          className="underline underline-offset-2"
+                        >
+                          ouvrir le compte
+                        </a>
+                        )
+                      </>
+                    ) : null}
+                    .
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -696,7 +737,7 @@ export function FormationDossierSheet({
                     disabled={devisBusy}
                     onClick={() => void previewDevis()}
                   >
-                    Voir le devis (PDF)
+                    {devisBusy ? "Préparation…" : "Voir le devis (PDF)"}
                   </Button>
                   <Button
                     type="button"
@@ -717,10 +758,10 @@ export function FormationDossierSheet({
                   <Button
                     type="button"
                     className="bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]"
-                    disabled={devisBusy}
+                    disabled={devisBusy || Boolean(meta?.organization && !meta.organization.siret_ok)}
                     onClick={() => void sendDevis()}
                   >
-                    Valider et envoyer le devis
+                    {devisBusy ? "Envoi…" : "Valider et envoyer le devis"}
                   </Button>
                 </div>
               </div>

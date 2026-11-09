@@ -16,11 +16,21 @@ export async function GET(_req: Request, ctx: Ctx) {
   const { data: dossier } = await service
     .from("formation_dossiers")
     .select(
-      "id, status, session_id, trainer_user_id, trainer_assigned_at, invoice_validated_at, amount_ht_cents, amount_tva_cents, amount_ttc_cents, bpf_funder_type, contact_email, contact_name, course_title, training_course_id, modality_intra_inter, notes",
+      "id, status, organization_id, session_id, trainer_user_id, trainer_assigned_at, invoice_validated_at, amount_ht_cents, amount_tva_cents, amount_ttc_cents, bpf_funder_type, contact_email, contact_name, course_title, training_course_id, modality_intra_inter, notes",
     )
     .eq("id", id)
     .maybeSingle();
   if (!dossier) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
+
+  const orgId = String(dossier.organization_id ?? "").trim();
+  const { data: orgRow } = orgId
+    ? await service
+        .from("organizations")
+        .select("id, name, siret")
+        .eq("id", orgId)
+        .maybeSingle()
+    : { data: null };
+  const orgSiretDigits = String(orgRow?.siret ?? "").replace(/\D/g, "");
 
   const { quoteHtCentsFromCatalog } = await import("@/lib/formation-dossier/catalog-pricing");
   let catalogSuggestedHtCents: number | null = null;
@@ -134,6 +144,12 @@ export async function GET(_req: Request, ctx: Ctx) {
       training_course_id: catalogCourseId,
       suggested_ht_cents: catalogSuggestedHtCents,
       label: catalogLabel,
+    },
+    organization: {
+      id: orgId || null,
+      name: orgRow?.name ? String(orgRow.name) : null,
+      siret: orgSiretDigits || null,
+      siret_ok: orgSiretDigits.length === 14,
     },
   });
 }

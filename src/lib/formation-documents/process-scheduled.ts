@@ -30,15 +30,15 @@ function relanceCopy(kind: string): { title: string; body: string; cta: string }
   if (kind.startsWith("devis_")) {
     return {
       title: "Rappel — votre devis",
-      body: "Nous n'avons pas encore reçu votre retour sur le devis de formation. Souhaitez-vous l'accepter ?",
-      cta: "Voir le devis",
+      body: "Nous n'avons pas encore reçu votre retour sur le devis de formation. Consultez-le, puis acceptez et signez-le en ligne.",
+      cta: "Accepter et signer le devis",
     };
   }
   if (kind.startsWith("convention_")) {
     return {
       title: "Rappel — votre convention",
-      body: "La convention de formation attend toujours votre acceptation.",
-      cta: "Voir la convention",
+      body: "La convention de formation attend toujours votre acceptation. Consultez-la, puis acceptez et signez-la en ligne.",
+      cta: "Accepter et signer la convention",
     };
   }
   if (kind === "absent_relance") {
@@ -310,22 +310,44 @@ export async function processDueFormationMails(
 
     const name =
       row.payload && typeof row.payload.name === "string" ? row.payload.name : null;
-    const greeting = name
-      ? `Bonjour ${escapeEdgeEmailHtml(name)},`
-      : "Bonjour,";
 
-    const html = buildEdgeEmailShell({
-      title: copy.title,
-      preheader: copy.body,
-      bodyHtml: `${edgeEmailParagraph(greeting)}${edgeEmailParagraph(copy.body)}`,
-      cta: { label: copy.cta, href: viewUrl || `${appOrigin()}/` },
-      footerNote: "Byound — message automatique lié à votre dossier formation.",
-    });
+    let html: string;
+    let subject = `${copy.title} — Byound`;
+
+    if (row.kind.startsWith("devis_") || row.kind.startsWith("convention_")) {
+      const { buildFormationDocMail } = await import("@/lib/formation-documents/mail");
+      const { loadDossierDocContext } = await import("@/lib/formation-documents/context");
+      const ctx = await loadDossierDocContext(service, row.dossier_id);
+      const mail = buildFormationDocMail({
+        kind: row.kind.startsWith("devis_") ? "devis" : "convention",
+        recipientName: name || ctx?.dossier.contact_name,
+        courseTitle: ctx?.dossier.course_title || ctx?.session?.title,
+        viewUrl: viewUrl || `${appOrigin()}/`,
+        organizationName: ctx?.organization.name,
+        amountHtCents: ctx?.dossier.amount_ht_cents,
+        amountTvaCents: ctx?.dossier.amount_tva_cents,
+        amountTtcCents: ctx?.dossier.amount_ttc_cents,
+        extraParagraphs: [copy.body],
+      });
+      html = mail.html;
+      subject = mail.subject.replace("Votre", "Rappel — votre");
+    } else {
+      const greeting = name
+        ? `Bonjour ${escapeEdgeEmailHtml(name)},`
+        : "Bonjour,";
+      html = buildEdgeEmailShell({
+        title: copy.title,
+        preheader: copy.body,
+        bodyHtml: `${edgeEmailParagraph(greeting)}${edgeEmailParagraph(copy.body)}`,
+        cta: { label: copy.cta, href: viewUrl || `${appOrigin()}/` },
+        footerNote: "Byound — message automatique lié à votre dossier formation.",
+      });
+    }
 
     const result = await sendEmail({
       to: row.to_email,
       from: EDGE_COCKPIT_FROM,
-      subject: `${copy.title} — Byound`,
+      subject,
       html,
       tags: { type: `formation-${row.kind}`, dossier_id: row.dossier_id },
     });

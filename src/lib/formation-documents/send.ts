@@ -235,6 +235,16 @@ export async function sendFormationDocument(
       recipientName: ctx.dossier.contact_name,
       courseTitle,
       viewUrl,
+      organizationName: ctx.organization.name,
+      amountHtCents: ctx.dossier.amount_ht_cents,
+      amountTvaCents: ctx.dossier.amount_tva_cents,
+      amountTtcCents: ctx.dossier.amount_ttc_cents,
+      quoteNumber:
+        (doc as { quote_number?: string | null }).quote_number ||
+        (params.kind === "devis"
+          ? `DEV-${String(params.dossierId).replace(/-/g, "").slice(0, 6).toUpperCase()}`
+          : null),
+      issuedAt: doc.generated_at || doc.sent_at || new Date().toISOString(),
     });
     const result = await sendEmail({
       to,

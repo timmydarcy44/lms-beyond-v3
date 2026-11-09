@@ -21,6 +21,8 @@ type RequestFormState = {
   contact_email: string;
   contact_phone: string;
   participant_ids: string[];
+  /** Nombre / noms hors plateforme (optionnel). */
+  participants: string;
   preferred_format: string;
   preferred_period: string;
   funding_type: "direct" | "opco";
@@ -33,12 +35,28 @@ const EMPTY_FORM: RequestFormState = {
   contact_email: "",
   contact_phone: "",
   participant_ids: [],
+  participants: "",
   preferred_format: "À définir",
   preferred_period: "",
   funding_type: "direct",
   preferred_location: "Chez le client",
   notes: "",
 };
+
+function matchTrainingFromIntent(courseId: string, courseTitle?: string): BusinessTrainingItem | null {
+  const byId = BUSINESS_TRAINING_ITEMS.find((item) => item.id === courseId);
+  if (byId) return byId;
+  const title = (courseTitle ?? "").trim().toLowerCase();
+  if (!title) return null;
+  return (
+    BUSINESS_TRAINING_ITEMS.find((item) => item.title.toLowerCase() === title) ??
+    BUSINESS_TRAINING_ITEMS.find(
+      (item) =>
+        item.title.toLowerCase().includes(title) || title.includes(item.title.toLowerCase()),
+    ) ??
+    null
+  );
+}
 
 function employeeName(employee: EntrepriseEmployee) {
   return (
@@ -221,7 +239,8 @@ function RequestModal({
 
               <fieldset className="grid gap-2 rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
                 <legend className="px-1 text-sm font-semibold text-gray-700">
-                  Collaborateurs participants
+                  Participants{" "}
+                  <span className="font-normal text-gray-400">(optionnel)</span>
                   {selectedCount > 0 ? (
                     <span className="ml-2 font-normal text-violet-600">
                       {selectedCount} sélectionné{selectedCount > 1 ? "s" : ""}
@@ -232,16 +251,25 @@ function RequestModal({
                 {employeesLoading ? (
                   <p className="text-sm text-gray-500">Chargement de l’équipe…</p>
                 ) : employees.length === 0 ? (
-                  <p className="text-sm leading-6 text-gray-600">
-                    Aucun collaborateur dans votre espace.{" "}
-                    <Link
-                      href="/dashboard/entreprise/salaries"
-                      className="font-semibold text-violet-600 underline-offset-2 hover:underline"
-                    >
-                      Ajoutez votre équipe
-                    </Link>{" "}
-                    puis revenez faire la demande.
-                  </p>
+                  <div className="grid gap-2">
+                    <p className="text-sm leading-6 text-gray-600">
+                      Pas besoin d’inviter vos collaborateurs sur Byound pour un devis. Indiquez
+                      le public ci-dessous, ou{" "}
+                      <Link
+                        href="/dashboard/entreprise/salaries"
+                        className="font-semibold text-violet-600 underline-offset-2 hover:underline"
+                      >
+                        ajoutez-les plus tard
+                      </Link>
+                      .
+                    </p>
+                    <input
+                      value={form.participants}
+                      onChange={(e) => onChange({ participants: e.target.value })}
+                      placeholder="ex. 8 commerciaux · équipe RH"
+                      className="rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-violet-400"
+                    />
+                  </div>
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-2">
@@ -292,6 +320,17 @@ function RequestModal({
                         );
                       })}
                     </ul>
+                    <label className="mt-1 grid gap-1.5 text-sm">
+                      <span className="text-xs font-medium text-gray-500">
+                        Autres participants hors plateforme (optionnel)
+                      </span>
+                      <input
+                        value={form.participants}
+                        onChange={(e) => onChange({ participants: e.target.value })}
+                        placeholder="ex. 3 managers non encore invités"
+                        className="rounded-2xl border border-gray-200 bg-white px-4 py-2.5 outline-none focus:border-violet-400"
+                      />
+                    </label>
                   </>
                 )}
               </fieldset>
@@ -379,7 +418,7 @@ function RequestModal({
 
               <button
                 type="submit"
-                disabled={submitting || selectedCount === 0}
+                disabled={submitting}
                 className="mt-2 inline-flex items-center justify-center rounded-full bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
               >
                 {submitting ? "Envoi…" : "Envoyer la demande"}
@@ -397,6 +436,7 @@ export default function EntrepriseFormationRequestPage() {
   const skillParam = (searchParams.get("skill") ?? "").trim();
   const metierParam = (searchParams.get("metier") ?? "").trim();
   const formatParam = (searchParams.get("format") ?? "").trim();
+  const fromSignup = searchParams.get("from") === "signup";
   const { loading: overviewLoading, data: overview } = useEntrepriseOverview();
 
   const [category, setCategory] = useState<string>("Tous");
@@ -406,6 +446,7 @@ export default function EntrepriseFormationRequestPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [opcoName, setOpcoName] = useState<string | null>(null);
+  const [intentBanner, setIntentBanner] = useState<string | null>(null);
 
   const employees = useMemo(
     () => filterRealEntrepriseEmployees(overview?.employees ?? []),
@@ -470,6 +511,54 @@ export default function EntrepriseFormationRequestPage() {
     }));
   }, [overview?.viewer?.prenom, overview?.viewer?.nom, overview?.viewer?.email]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { readFormationIntent, clearFormationIntent } = await import(
+          "@/lib/entreprise/formation-intent"
+        );
+        const intent = readFormationIntent();
+        if (!intent?.courseId || cancelled) return;
+
+        const matched = matchTrainingFromIntent(intent.courseId, intent.courseTitle);
+        const noteBits = [
+          intent.courseTitle && !matched ? `Formation demandée (site) : ${intent.courseTitle}` : "",
+          intent.notes ?? "",
+        ].filter(Boolean);
+
+        setForm((prev) => ({
+          ...prev,
+          contact_name: prev.contact_name || intent.contactName || "",
+          contact_email: prev.contact_email || intent.contactEmail || "",
+          contact_phone: prev.contact_phone || intent.contactPhone || "",
+          participants: prev.participants || intent.participants || "",
+          preferred_period: prev.preferred_period || intent.preferredPeriod || "",
+          preferred_location: prev.preferred_location || intent.preferredLocation || prev.preferred_location,
+          funding_type: intent.fundingType === "opco" ? "opco" : prev.funding_type,
+          notes: prev.notes || noteBits.join("\n"),
+        }));
+
+        if (matched) {
+          setCategory(matched.category);
+          setSelected(matched);
+          setIntentBanner(null);
+        } else if (intent.courseTitle) {
+          setIntentBanner(
+            `Reprise de votre demande « ${intent.courseTitle} » — choisissez la formation la plus proche dans le catalogue.`,
+          );
+        }
+
+        if (fromSignup || matched) clearFormationIntent();
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fromSignup]);
+
   const filtered = useMemo(() => {
     if (category === "Tous") return BUSINESS_TRAINING_ITEMS;
     return BUSINESS_TRAINING_ITEMS.filter((item) => item.category === category);
@@ -494,7 +583,7 @@ export default function EntrepriseFormationRequestPage() {
     setError(null);
     setSuccess(false);
     setSubmitting(false);
-    setForm((prev) => ({ ...prev, participant_ids: [] }));
+    setForm((prev) => ({ ...prev, participant_ids: [], participants: prev.participants }));
   };
 
   const toggleParticipant = (employeeId: string) => {
@@ -512,10 +601,6 @@ export default function EntrepriseFormationRequestPage() {
   const submitRequest = async (e: FormEvent) => {
     e.preventDefault();
     if (!selected) return;
-    if (form.participant_ids.length === 0) {
-      setError("Sélectionnez au moins un collaborateur.");
-      return;
-    }
     setSubmitting(true);
     setError(null);
     try {
@@ -554,7 +639,13 @@ export default function EntrepriseFormationRequestPage() {
           <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600">
             Catalogue business Byound ({BUSINESS_TRAINING_ITEMS.length} formations) — filtrer par
             thématique puis envoyer une demande : l’équipe Byound reçoit votre besoin par email.
+            Collaborateurs optionnels.
           </p>
+          {intentBanner ? (
+            <p className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
+              {intentBanner}
+            </p>
+          ) : null}
         </header>
 
         <section className="mx-auto max-w-6xl">

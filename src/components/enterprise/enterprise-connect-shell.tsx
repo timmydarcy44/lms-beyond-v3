@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { EnterpriseMobileNav } from "@/components/EnterpriseSidebar";
 import { EnterpriseOverviewProvider } from "@/components/enterprise/enterprise-overview-provider";
+import { FormationOnlyGate } from "@/components/enterprise/formation-only-gate";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function EnterpriseConnectShell({ children }: { children: ReactNode }) {
@@ -23,10 +24,12 @@ export function EnterpriseConnectShell({ children }: { children: ReactNode }) {
 
   return (
     <EnterpriseOverviewProvider>
-      <div className="min-w-0 max-w-full overflow-x-hidden">
-        <EnterpriseMobileNav />
-        {children}
-      </div>
+      <FormationOnlyGate>
+        <div className="min-w-0 max-w-full overflow-x-hidden">
+          <EnterpriseMobileNav />
+          {children}
+        </div>
+      </FormationOnlyGate>
     </EnterpriseOverviewProvider>
   );
 }

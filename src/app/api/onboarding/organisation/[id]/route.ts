@@ -15,11 +15,19 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
-  const { data, error } = await service
+  let orgQuery = await service
     .from("organizations")
-    .select("id, name, slug, onboarding_step, estimated_users")
+    .select("id, name, slug, onboarding_step, estimated_users, formation_only")
     .eq("id", id)
     .maybeSingle();
+  if (orgQuery.error && /formation_only/i.test(orgQuery.error.message)) {
+    orgQuery = await service
+      .from("organizations")
+      .select("id, name, slug, onboarding_step, estimated_users")
+      .eq("id", id)
+      .maybeSingle();
+  }
+  const { data, error } = orgQuery;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
@@ -33,8 +41,11 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     .select("id", { count: "exact", head: true })
     .eq("company_id", id);
 
+  const formationOnly = Boolean((data as { formation_only?: boolean }).formation_only);
+
   return NextResponse.json({
     ...data,
+    formation_only: formationOnly,
     employee_count: count ?? 0,
     viewer_name: String(profile?.full_name ?? "").trim(),
     viewer_email: String(profile?.email ?? "").trim(),

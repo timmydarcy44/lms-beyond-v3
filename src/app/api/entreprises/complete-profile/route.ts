@@ -86,17 +86,22 @@ export async function POST(request: NextRequest) {
 
   const fullName = `${firstName} ${lastName}`.trim();
 
+  const formationOnly =
+    body?.formation_only === true ||
+    String(body?.intent ?? "").trim().toLowerCase() === "formation";
+
   const orgUpdate: Record<string, unknown> = {
     name: companyName,
     company_size_band: companySizeBand,
     edge_profile_completed: true,
-    onboarding_step: "account_activated",
+    onboarding_step: formationOnly ? "active" : "account_activated",
     siret,
     address_line: addressLine,
     address_zip: addressZip,
     address_city: addressCity,
     address_country: "FR",
   };
+  if (formationOnly) orgUpdate.formation_only = true;
   if (logoUrl) orgUpdate.logo_url = logoUrl;
 
   const { error: orgError } = await db.from("organizations").update(orgUpdate).eq("id", orgId);
@@ -123,6 +128,9 @@ export async function POST(request: NextRequest) {
       delete reduced.company_size_band;
       delete reduced.edge_profile_completed;
       delete reduced.onboarding_step;
+    }
+    if (/formation_only/i.test(orgError.message ?? "")) {
+      delete reduced.formation_only;
     }
     const retry = await db.from("organizations").update(reduced).eq("id", orgId);
     if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
@@ -154,12 +162,18 @@ export async function POST(request: NextRequest) {
       company_name: companyName,
       role_type: "entreprise",
       account_type: "entreprise",
+      ...(formationOnly ? { formation_only: true } : {}),
     },
   });
+
+  const redirectTo = formationOnly
+    ? "/dashboard/entreprise/formations/demander?from=signup"
+    : `/onboarding/${orgId}`;
 
   return NextResponse.json({
     success: true,
     organization_id: orgId,
-    redirect_to: `/onboarding/${orgId}`,
+    formation_only: formationOnly,
+    redirect_to: redirectTo,
   });
 }

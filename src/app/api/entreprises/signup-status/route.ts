@@ -41,7 +41,7 @@ export async function GET() {
   const fullOrg = await db
     .from("organizations")
     .select(
-      "id, name, logo_url, company_size_band, edge_profile_completed, siret, address_line, address_zip, address_city",
+      "id, name, logo_url, company_size_band, edge_profile_completed, siret, address_line, address_zip, address_city, formation_only",
     )
     .eq("id", orgId)
     .maybeSingle();
@@ -57,12 +57,16 @@ export async function GET() {
 
   const edgeProfileCompleted = Boolean(org?.edge_profile_completed);
   const needsProfileCompletion = isEdgeEntreprise && !edgeProfileCompleted;
+  const formationOnly = Boolean(org?.formation_only);
 
   return NextResponse.json({
     needs_profile_completion: needsProfileCompletion,
     is_edge_entreprise_signup: isEdgeEntreprise,
+    formation_only: formationOnly,
     organization_id: orgId,
-    onboarding_href: `/onboarding/${orgId}`,
+    onboarding_href: formationOnly
+      ? "/dashboard/entreprise/formations/demander?from=signup"
+      : `/onboarding/${orgId}`,
     prefill: {
       company_name: String(org?.name ?? meta.company_name ?? "").trim(),
       siret: String(org?.siret ?? meta.siret ?? "").trim(),

@@ -25,7 +25,12 @@ export type EntrepriseOverviewData = {
   needsOnboarding?: boolean;
   onboarding_href?: string;
   viewer: { email: string | null; prenom: string | null; nom: string | null };
-  organisation?: { id: string; name: string; logo_url?: string | null };
+  organisation?: {
+    id: string;
+    name: string;
+    logo_url?: string | null;
+    formation_only?: boolean;
+  };
   kpis?: {
     employees_total: number;
     diagnostics_completed: number;

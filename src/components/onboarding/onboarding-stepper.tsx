@@ -35,7 +35,12 @@ export function OnboardingStepper({ organisationId }: Props) {
           employee_count?: number;
           viewer_name?: string;
           viewer_email?: string;
+          formation_only?: boolean;
         };
+        if (json.formation_only) {
+          router.replace("/dashboard/entreprise/formations/demander?from=signup");
+          return;
+        }
         if (json.name) setOrgName(json.name);
         if (json.viewer_name) setViewerName(json.viewer_name);
         if (json.viewer_email) setViewerEmail(json.viewer_email);
@@ -48,7 +53,7 @@ export function OnboardingStepper({ organisationId }: Props) {
         setStep(0);
       }
     })();
-  }, [organisationId]);
+  }, [organisationId, router]);
 
   const onImportComplete = useCallback((stats: { total: number; departments: string[]; sansEmail: number }) => {
     setImportStats(stats);

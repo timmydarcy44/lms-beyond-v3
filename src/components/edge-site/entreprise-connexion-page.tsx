@@ -54,8 +54,22 @@ export function EntrepriseConnexionPage() {
   const planLabel = PLAN_LABELS[searchParams.get("plan") ?? ""] ?? null;
   const seats = searchParams.get("seats");
   const returnTo = badgePageReturn(searchParams.get("next"));
+  const formationIntent = searchParams.get("intent") === "formation";
   const [mode, setMode] = useState<Mode>(searchParams.get("mode") === "login" ? "login" : "signup");
-  const [form, setForm] = useState<SignupForm>(EMPTY_FORM);
+  const [form, setForm] = useState<SignupForm>(() => {
+    const company = (searchParams.get("company") || "").trim();
+    const email = (searchParams.get("email") || "").trim();
+    const first = (searchParams.get("first_name") || "").trim();
+    const last = (searchParams.get("last_name") || "").trim();
+    if (!company && !email && !first && !last) return EMPTY_FORM;
+    return {
+      company_name: company,
+      siret: "",
+      first_name: first,
+      last_name: last,
+      email,
+    };
+  });
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<SignupField, string>>>({});
@@ -199,13 +213,17 @@ export function EntrepriseConnexionPage() {
             <span className="text-[15px] font-extrabold">Byound Business</span>
           </div>
           <p className="mt-10 inline-flex rounded-full bg-[#6E5BFF] px-3 py-1.5 text-[13px] font-extrabold text-white">
-            Essai gratuit de 30 jours
+            {formationIntent ? "Compte gratuit · devis formation" : "Essai gratuit de 30 jours"}
           </p>
           <h1 className="mt-6 max-w-[560px] text-[54px] font-extrabold leading-[1.02] tracking-[-2px]">
-            Pilotez la montée en compétences de vos équipes.
+            {formationIntent
+              ? "Créez votre espace pour recevoir un devis conforme."
+              : "Pilotez la montée en compétences de vos équipes."}
           </h1>
           <p className="mt-5 max-w-[460px] text-[16px] leading-relaxed text-[#B5BAC6]">
-            Tests, formations et invitations de vos collaborateurs, dans un seul espace. Sans carte bancaire.
+            {formationIntent
+              ? "SIRET et adresse pour le devis et la convention. Aucun abonnement SaaS. Collaborateurs optionnels."
+              : "Tests, formations et invitations de vos collaborateurs, dans un seul espace. Sans carte bancaire."}
           </p>
         </div>
         <div className="flex items-end gap-8 pb-4">
@@ -225,7 +243,10 @@ export function EntrepriseConnexionPage() {
             <p className="mt-1 text-[13px] text-white/80">3 licences RH · collaborateurs illimités</p>
           </div>
           <ul className="mb-6 space-y-3 text-[14px] font-semibold">
-            {["3 licences RH incluses", "Invitations en quelques clics", "Accès à Byound Online"].map((item) => (
+            {(formationIntent
+              ? ["Devis & convention Qualiopi", "SIRET et adresse entreprise", "Collaborateurs 100 % optionnels"]
+              : ["3 licences RH incluses", "Invitations en quelques clics", "Accès à Byound Online"]
+            ).map((item) => (
               <li key={item} className="flex items-center gap-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#FFFFFF1A]" aria-hidden>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -248,7 +269,7 @@ export function EntrepriseConnexionPage() {
             <span className="text-[14px] font-extrabold">Byound Business</span>
           </div>
           <span className="rounded-full bg-[#EEEBFF] px-3 py-1 text-[12px] font-extrabold text-[#4B3BD1]">
-            Essai gratuit de 30 jours
+            {formationIntent ? "Compte devis gratuit" : "Essai gratuit de 30 jours"}
           </span>
         </div>
 

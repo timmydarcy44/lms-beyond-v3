@@ -136,6 +136,13 @@ export function EnterpriseSignupProfileOverlay({
 
     try {
       const logoUrl = await uploadLogo();
+      let formationOnly = false;
+      try {
+        const { readFormationIntent } = await import("@/lib/entreprise/formation-intent");
+        formationOnly = Boolean(readFormationIntent()?.courseId);
+      } catch {
+        formationOnly = false;
+      }
       const response = await fetch("/api/entreprises/complete-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,11 +150,25 @@ export function EnterpriseSignupProfileOverlay({
           ...form,
           siret: siretDigits,
           logo_url: logoUrl,
+          formation_only: formationOnly,
+          intent: formationOnly ? "formation" : undefined,
         }),
       });
-      const data = (await response.json()) as { error?: string; redirect_to?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        redirect_to?: string;
+        formation_only?: boolean;
+      };
       if (!response.ok) {
         throw new Error(data.error || "Enregistrement impossible.");
+      }
+      if (formationOnly || data.formation_only) {
+        try {
+          const { markFormationOnlySession } = await import("@/lib/entreprise/formation-intent");
+          markFormationOnlySession();
+        } catch {
+          /* ignore */
+        }
       }
       onCompleted(data.redirect_to ?? `/onboarding/${organizationId}`);
     } catch (error) {

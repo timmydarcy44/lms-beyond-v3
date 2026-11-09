@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Menu } from "lucide-react";
 import { useOptionalEnterpriseOverviewContext } from "@/components/enterprise/enterprise-overview-provider";
+import { readFormationOnlySession } from "@/lib/entreprise/formation-intent";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -74,6 +75,22 @@ const NAV_ITEMS: NavItem[] = [
   { type: "link", label: "Badges", href: "/dashboard/entreprise/badges/delivrer", icon: Award },
 ];
 
+/** Compte light : devis / convention, sans SaaS. */
+const FORMATION_ONLY_NAV: NavItem[] = [
+  {
+    type: "link",
+    label: "Demander une formation",
+    href: "/dashboard/entreprise/formations/demander",
+    icon: BookOpen,
+  },
+  {
+    type: "link",
+    label: "Collaborateurs",
+    href: "/dashboard/entreprise/salaries",
+    icon: Users,
+  },
+];
+
 const ACCOUNT_SUBMENU = [
   { label: "Messages", href: "/dashboard/entreprise/messages", icon: MessageCircle },
   { label: "Tarifs", href: "/dashboard/entreprise/abonnement", icon: CreditCard },
@@ -81,6 +98,8 @@ const ACCOUNT_SUBMENU = [
   { label: "Réclamation", href: "/dashboard/entreprise/reclamation", icon: MessageSquareWarning },
   { label: "Paramètres", href: "/dashboard/entreprise/parametres", icon: Settings },
 ] as const;
+
+const FORMATION_ONLY_ACCOUNT = ACCOUNT_SUBMENU.filter((item) => item.label !== "Tarifs");
 
 type ViewerState = {
   prenom: string | null;
@@ -187,16 +206,19 @@ function AccountMenuFooter({
   pathname,
   onNavigate,
   mobile,
+  formationOnly = false,
 }: {
   pathname: string;
   onNavigate?: () => void;
   mobile?: boolean;
+  formationOnly?: boolean;
 }) {
   const [hoverOpen, setHoverOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const submenu = formationOnly ? FORMATION_ONLY_ACCOUNT : ACCOUNT_SUBMENU;
   const accountActive =
     isPathActive(pathname, "/dashboard/entreprise/compte") ||
-    ACCOUNT_SUBMENU.some((item) => isPathActive(pathname, item.href));
+    submenu.some((item) => isPathActive(pathname, item.href));
 
   if (mobile) {
     return (
@@ -234,7 +256,7 @@ function AccountMenuFooter({
             >
               Voir mon compte
             </Link>
-            {ACCOUNT_SUBMENU.map((item) => {
+            {submenu.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
@@ -268,7 +290,7 @@ function AccountMenuFooter({
     >
       {hoverOpen ? (
         <div className="absolute bottom-full left-3 right-3 z-20 mb-2 overflow-hidden rounded-2xl border border-white/10 bg-[#16132a] shadow-[0_-12px_40px_rgba(0,0,0,0.45)]">
-          {ACCOUNT_SUBMENU.map((item) => {
+          {submenu.map((item) => {
             const Icon = item.icon;
             const active = isPathActive(pathname, item.href);
             return (
@@ -318,16 +340,19 @@ function NavLinks({
   openGroups,
   toggleGroup,
   extraItems = [],
+  items,
 }: {
   pathname: string;
   onNavigate?: () => void;
   openGroups: Record<string, boolean>;
   toggleGroup: (label: string) => void;
   extraItems?: NavItem[];
+  items?: NavItem[];
 }) {
+  const base = items ?? NAV_ITEMS;
   return (
     <>
-      {[...NAV_ITEMS, ...extraItems].map((item) => {
+      {[...base, ...extraItems].map((item) => {
         const Icon = item.icon;
         if (item.type === "link") {
           const active = isPathActive(pathname, item.href);
@@ -403,12 +428,22 @@ export function EnterpriseMobileNav() {
   const overviewCtx = useOptionalEnterpriseOverviewContext();
   const orgName = overviewCtx?.data?.organisation?.name || "Beyond Enterprise";
   const orgLogo = overviewCtx?.data?.organisation?.logo_url || null;
+  const [sessionOnly, setSessionOnly] = useState(false);
+  useEffect(() => {
+    setSessionOnly(readFormationOnlySession());
+  }, []);
+  const formationOnly =
+    Boolean(overviewCtx?.data?.organisation?.formation_only) || sessionOnly;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [tutorItem, setTutorItem] = useState<NavItem | null>(null);
 
   useEffect(() => {
+    if (formationOnly) {
+      setTutorItem(null);
+      return;
+    }
     void loadTutorNav().then((nav) => setTutorItem(nav.show ? tutorNavItem(nav.tutors) : null));
-  }, []);
+  }, [formationOnly]);
 
   useEffect(() => {
     setOpenGroups((prev) => ({
@@ -462,12 +497,14 @@ export function EnterpriseMobileNav() {
                 onNavigate={() => setOpen(false)}
                 openGroups={openGroups}
                 toggleGroup={toggleGroup}
-                extraItems={tutorItem ? [tutorItem] : []}
+                items={formationOnly ? FORMATION_ONLY_NAV : undefined}
+                extraItems={formationOnly ? [] : tutorItem ? [tutorItem] : []}
               />
               <AccountMenuFooter
                 pathname={pathname}
                 onNavigate={() => setOpen(false)}
                 mobile
+                formationOnly={formationOnly}
               />
             </nav>
           </SheetContent>
@@ -490,6 +527,12 @@ export default function EnterpriseSidebar() {
   const pathname = usePathname();
   const overviewCtx = useOptionalEnterpriseOverviewContext();
   const overviewData = overviewCtx?.data;
+  const [sessionOnly, setSessionOnly] = useState(false);
+  useEffect(() => {
+    setSessionOnly(readFormationOnlySession());
+  }, []);
+  const formationOnly =
+    Boolean(overviewData?.organisation?.formation_only) || sessionOnly;
   const [viewer, setViewer] = useState<ViewerState>({ prenom: null, nom: null, email: null });
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     Formations: true,
@@ -498,8 +541,12 @@ export default function EnterpriseSidebar() {
   const [tutorItem, setTutorItem] = useState<NavItem | null>(null);
 
   useEffect(() => {
+    if (formationOnly) {
+      setTutorItem(null);
+      return;
+    }
     void loadTutorNav().then((nav) => setTutorItem(nav.show ? tutorNavItem(nav.tutors) : null));
-  }, []);
+  }, [formationOnly]);
 
   useEffect(() => {
     invalidateEnterpriseViewerCache();
@@ -584,9 +631,15 @@ export default function EnterpriseSidebar() {
         className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-1 [scrollbar-color:#FFFFFF1A_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10"
         aria-label="Navigation entreprise"
       >
-        <NavLinks pathname={pathname} openGroups={openGroups} toggleGroup={toggleGroup} extraItems={tutorItem ? [tutorItem] : []} />
+        <NavLinks
+          pathname={pathname}
+          openGroups={openGroups}
+          toggleGroup={toggleGroup}
+          items={formationOnly ? FORMATION_ONLY_NAV : undefined}
+          extraItems={formationOnly ? [] : tutorItem ? [tutorItem] : []}
+        />
         <div className="mt-auto pt-3">
-          <AccountMenuFooter pathname={pathname} />
+          <AccountMenuFooter pathname={pathname} formationOnly={formationOnly} />
         </div>
       </nav>
     </aside>

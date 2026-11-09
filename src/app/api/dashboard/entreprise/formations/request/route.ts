@@ -86,12 +86,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!participantIds.length && !legacyParticipants) {
-    return NextResponse.json(
-      { error: "Sélectionnez au moins un collaborateur participant." },
-      { status: 400 },
-    );
-  }
+  // Collaborateurs optionnels : devis possible sans invite LMS (compte light / site public).
 
   if (!contactEmail.includes("@")) {
     return NextResponse.json({ error: "Email invalide." }, { status: 400 });

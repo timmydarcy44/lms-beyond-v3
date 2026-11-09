@@ -314,10 +314,14 @@ export async function fillVaultDevisPdf(
       funding.includes("propre") ||
       funding.includes("fonds") ||
       !funding);
+  const opcoLabel =
+    ctx.dossier.opco_name?.trim() ||
+    ctx.organization.opco_name?.trim() ||
+    "";
   setCheck(form, "funding_own", isOwn);
   setCheck(form, "funding_opco", isOpco);
   setCheck(form, "funding_other", Boolean(funding) && !isOpco && !isOwn);
-  setText(form, "opco_name", isOpco ? "OPCO" : "", appearanceFont);
+  setText(form, "opco_name", isOpco ? opcoLabel || "OPCO" : "", appearanceFont);
   setText(form, "funding_other_label", "", appearanceFont);
   setText(form, "funding_reference", "", appearanceFont);
 

@@ -21,6 +21,7 @@ export type CreateDossierInput = {
   modalityIntraInter?: "intra" | "inter" | null;
   modalityPresence?: "presentiel" | "distanciel" | "hybride" | null;
   fundingType?: "direct" | "opco" | "subrogation" | null;
+  opcoName?: string | null;
   notes?: string | null;
   ownerUserId?: string | null;
   createdBy?: string | null;
@@ -98,32 +99,44 @@ export async function createFormationDossier(
         )
       : []);
 
-  const { data, error } = await service
+  const insertRow: Record<string, unknown> = {
+    organization_id: input.organizationId,
+    deal_id: input.dealId ?? null,
+    training_course_id: input.trainingCourseId ?? null,
+    course_title: input.courseTitle ?? null,
+    amount_ht_cents: input.amountHtCents ?? null,
+    amount_tva_cents: input.amountTvaCents ?? null,
+    amount_ttc_cents: input.amountTtcCents ?? null,
+    contact_name: input.contactName ?? null,
+    contact_email: input.contactEmail ?? null,
+    contact_phone: input.contactPhone ?? null,
+    modality_intra_inter: input.modalityIntraInter ?? null,
+    modality_presence: input.modalityPresence ?? null,
+    funding_type: input.fundingType ?? null,
+    notes: input.notes ?? null,
+    owner_user_id: input.ownerUserId ?? null,
+    created_by: input.createdBy ?? null,
+    source: input.source,
+    status: "qualification",
+    pending_confirm_fields: pending,
+    subcontracting: "aucune",
+  };
+  if (input.opcoName) insertRow.opco_name = input.opcoName;
+
+  let { data, error } = await service
     .from("formation_dossiers")
-    .insert({
-      organization_id: input.organizationId,
-      deal_id: input.dealId ?? null,
-      training_course_id: input.trainingCourseId ?? null,
-      course_title: input.courseTitle ?? null,
-      amount_ht_cents: input.amountHtCents ?? null,
-      amount_tva_cents: input.amountTvaCents ?? null,
-      amount_ttc_cents: input.amountTtcCents ?? null,
-      contact_name: input.contactName ?? null,
-      contact_email: input.contactEmail ?? null,
-      contact_phone: input.contactPhone ?? null,
-      modality_intra_inter: input.modalityIntraInter ?? null,
-      modality_presence: input.modalityPresence ?? null,
-      funding_type: input.fundingType ?? null,
-      notes: input.notes ?? null,
-      owner_user_id: input.ownerUserId ?? null,
-      created_by: input.createdBy ?? null,
-      source: input.source,
-      status: "qualification",
-      pending_confirm_fields: pending,
-      subcontracting: "aucune",
-    })
+    .insert(insertRow)
     .select("*")
     .single();
+
+  if (error && /opco_name/i.test(error.message) && insertRow.opco_name) {
+    delete insertRow.opco_name;
+    ({ data, error } = await service
+      .from("formation_dossiers")
+      .insert(insertRow)
+      .select("*")
+      .single());
+  }
 
   if (error || !data) {
     // Course unique deal_won

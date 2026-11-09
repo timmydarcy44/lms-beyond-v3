@@ -25,6 +25,7 @@ type AccountData = {
   address_zip?: string | null;
   address_city?: string | null;
   address_country?: string | null;
+  opco_name?: string | null;
   hasPassword?: boolean;
 };
 
@@ -43,6 +44,7 @@ export default function EntrepriseComptePage() {
   const [addressLine, setAddressLine] = useState("");
   const [addressZip, setAddressZip] = useState("");
   const [addressCity, setAddressCity] = useState("");
+  const [opcoName, setOpcoName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -76,6 +78,7 @@ export default function EntrepriseComptePage() {
         setAddressLine(String(account.address_line ?? ""));
         setAddressZip(String(account.address_zip ?? ""));
         setAddressCity(String(account.address_city ?? ""));
+        setOpcoName(String(account.opco_name ?? "").trim() || null);
       } catch {
         if (!cancelled) setError("Erreur réseau.");
       } finally {
@@ -128,6 +131,7 @@ export default function EntrepriseComptePage() {
           : prev,
       );
       setSiret(String(json.siret ?? siret.replace(/\D/g, "")));
+      setOpcoName(String(json.opco_name ?? "").trim() || null);
       toast.success("Compte mis à jour — ces infos alimentent devis et convention.");
     } catch {
       toast.error("Erreur réseau.");
@@ -243,6 +247,16 @@ export default function EntrepriseComptePage() {
                     className={fieldClass}
                   />
                 </label>
+                {opcoName ? (
+                  <p className="rounded-2xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs leading-5 text-violet-800">
+                    OPCO détecté : <strong>{opcoName}</strong> — reporté automatiquement sur les
+                    devis en prise en charge OPCO.
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    L’OPCO sera détecté automatiquement à l’enregistrement du SIRET (CFADock / IDCC).
+                  </p>
+                )}
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-semibold text-gray-700">Adresse postale</span>
                   <input

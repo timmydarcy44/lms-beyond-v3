@@ -17,6 +17,7 @@ const ctx: DossierDocContext = {
     modality_intra_inter: "intra",
     modality_presence: "presentiel",
     funding_type: "opco",
+    opco_name: "Akto",
     session_id: null,
     status: "devis",
   },
@@ -30,6 +31,7 @@ const ctx: DossierDocContext = {
     address_zip: "75011",
     address_city: "Paris",
     address_country: "FR",
+    opco_name: "Akto",
   },
   of: {
     legal_name: "Byound",

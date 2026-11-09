@@ -62,6 +62,7 @@ type DossierDetail = {
   amount_tva_cents: number | null;
   amount_ttc_cents: number | null;
   funding_type: string | null;
+  opco_name?: string | null;
   bpf_funder_type: string | null;
   subcontracting: string;
   partner_of_name: string | null;
@@ -155,6 +156,7 @@ export function FormationDossierSheet({
     contact_email: "",
     amount_ht_euros: "",
     funding_type: "direct" as "direct" | "opco" | "subrogation",
+    opco_name: "",
     notes: "",
   });
   const [devisBusy, setDevisBusy] = useState(false);
@@ -189,6 +191,7 @@ export function FormationDossierSheet({
           amount_ht_euros: resolvedHt != null ? String(resolvedHt / 100) : "",
           funding_type:
             funding === "opco" || funding === "subrogation" ? funding : "direct",
+          opco_name: String(dJson.dossier.opco_name ?? "").trim(),
           notes: dJson.dossier.notes ?? "",
         });
       }
@@ -307,6 +310,10 @@ export function FormationDossierSheet({
           contact_email: devisDraft.contact_email.trim().toLowerCase() || null,
           notes: devisDraft.notes.trim() || null,
           funding_type: devisDraft.funding_type,
+          opco_name:
+            devisDraft.funding_type === "opco" || devisDraft.funding_type === "subrogation"
+              ? devisDraft.opco_name.trim() || null
+              : null,
         }),
       });
       const json = await parseFetchJson<{ error?: string }>(res);
@@ -333,6 +340,10 @@ export function FormationDossierSheet({
         contact_email: devisDraft.contact_email.trim().toLowerCase() || null,
         notes: devisDraft.notes.trim() || null,
         funding_type: devisDraft.funding_type,
+        opco_name:
+          devisDraft.funding_type === "opco" || devisDraft.funding_type === "subrogation"
+            ? devisDraft.opco_name.trim() || null
+            : null,
         amount_ht_cents: htCents,
         amount_tva_cents: tvaCents,
         amount_ttc_cents: ttcCents,
@@ -626,6 +637,23 @@ export function FormationDossierSheet({
                       <option value="subrogation">Subrogation</option>
                     </select>
                   </div>
+                  {devisDraft.funding_type === "opco" ||
+                  devisDraft.funding_type === "subrogation" ? (
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label className="text-[11px] text-[#A3A8C7]">Nom de l’OPCO</Label>
+                      <Input
+                        value={devisDraft.opco_name}
+                        onChange={(e) =>
+                          setDevisDraft((d) => ({ ...d, opco_name: e.target.value }))
+                        }
+                        placeholder="ex. Akto, Atlas, Opco EP…"
+                        className="border-[#262A4A] bg-[#0A0C1B]"
+                      />
+                      <p className="text-[11px] text-[#A3A8C7]">
+                        Détecté via SIRET à la demande — modifiable avant génération du devis.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="space-y-1">
                     <Label className="text-[11px] text-[#A3A8C7]">TTC estimé (TVA 20 %)</Label>
                     <p className="rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#B7AEFF]">

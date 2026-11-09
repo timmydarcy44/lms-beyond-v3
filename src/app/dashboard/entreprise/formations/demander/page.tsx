@@ -111,6 +111,7 @@ function RequestModal({
   form,
   employees,
   employeesLoading,
+  opcoName,
   onChange,
   onToggleParticipant,
   onClose,
@@ -123,6 +124,7 @@ function RequestModal({
   form: RequestFormState;
   employees: EntrepriseEmployee[];
   employeesLoading: boolean;
+  opcoName: string | null;
   onChange: (patch: Partial<RequestFormState>) => void;
   onToggleParticipant: (employeeId: string) => void;
   onClose: () => void;
@@ -323,19 +325,28 @@ function RequestModal({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Financement</span>
-                  <select
-                    value={form.funding_type}
-                    onChange={(e) =>
-                      onChange({ funding_type: e.target.value as "direct" | "opco" })
-                    }
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
-                  >
-                    <option value="direct">Fonds propres</option>
-                    <option value="opco">Prise en charge OPCO</option>
-                  </select>
-                </label>
+                <div className="grid gap-1.5 text-sm">
+                  <label className="grid gap-1.5">
+                    <span className="font-semibold text-gray-700">Financement</span>
+                    <select
+                      value={form.funding_type}
+                      onChange={(e) =>
+                        onChange({ funding_type: e.target.value as "direct" | "opco" })
+                      }
+                      className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                    >
+                      <option value="direct">Fonds propres</option>
+                      <option value="opco">Prise en charge OPCO</option>
+                    </select>
+                  </label>
+                  {form.funding_type === "opco" ? (
+                    <p className="rounded-2xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs leading-5 text-violet-800">
+                      {opcoName
+                        ? <>OPCO détecté pour votre entreprise : <strong>{opcoName}</strong></>
+                        : "L’OPCO sera détecté automatiquement via votre SIRET (Mon compte) et reporté sur le devis."}
+                    </p>
+                  ) : null}
+                </div>
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-semibold text-gray-700">Lieu souhaité</span>
                   <select
@@ -394,11 +405,29 @@ export default function EntrepriseFormationRequestPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [opcoName, setOpcoName] = useState<string | null>(null);
 
   const employees = useMemo(
     () => filterRealEntrepriseEmployees(overview?.employees ?? []),
     [overview?.employees],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard/entreprise/account");
+        if (!res.ok) return;
+        const json = (await res.json()) as { opco_name?: string | null };
+        if (!cancelled) setOpcoName(String(json.opco_name ?? "").trim() || null);
+      } catch {
+        /* optionnel */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!skillParam && !formatParam) return;
@@ -580,6 +609,7 @@ export default function EntrepriseFormationRequestPage() {
           form={form}
           employees={employees}
           employeesLoading={overviewLoading && !overview}
+          opcoName={opcoName}
           onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
           onToggleParticipant={toggleParticipant}
           onClose={closeRequest}

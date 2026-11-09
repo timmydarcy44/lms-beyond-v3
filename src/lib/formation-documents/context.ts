@@ -56,6 +56,7 @@ export type DossierDocContext = {
     modality_intra_inter: string | null;
     modality_presence: string | null;
     funding_type: string | null;
+    opco_name: string | null;
     session_id: string | null;
     status: string;
   };
@@ -69,6 +70,7 @@ export type DossierDocContext = {
     address_zip: string | null;
     address_city: string | null;
     address_country: string | null;
+    opco_name: string | null;
   };
   of: OfIdentity;
   course: CourseDocInfo | null;
@@ -160,19 +162,47 @@ export async function loadDossierDocContext(
   service: SupabaseClient,
   dossierId: string,
 ): Promise<DossierDocContext | null> {
-  const { data: dossier } = await service
+  let dossierQuery = await service
     .from("formation_dossiers")
     .select(
-      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, session_id, status, notes",
+      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, opco_name, session_id, status, notes",
     )
     .eq("id", dossierId)
     .maybeSingle();
+  if (dossierQuery.error && /opco_name/i.test(dossierQuery.error.message)) {
+    dossierQuery = await service
+      .from("formation_dossiers")
+      .select(
+        "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, session_id, status, notes",
+      )
+      .eq("id", dossierId)
+      .maybeSingle();
+  }
+  const dossier = dossierQuery.data as (Record<string, unknown> & {
+    id: string;
+    organization_id: string;
+    session_id?: string | null;
+    contact_name?: string | null;
+    contact_email?: string | null;
+    contact_phone?: string | null;
+    course_title?: string | null;
+    training_course_id?: string | null;
+    amount_ht_cents?: number | null;
+    amount_tva_cents?: number | null;
+    amount_ttc_cents?: number | null;
+    modality_intra_inter?: string | null;
+    modality_presence?: string | null;
+    funding_type?: string | null;
+    opco_name?: string | null;
+    status?: string;
+    notes?: string | null;
+  }) | null;
   if (!dossier) return null;
 
   let orgQuery = await service
     .from("organizations")
     .select(
-      "id, name, siret, siren, client_code, address_line, address_zip, address_city, address_country",
+      "id, name, siret, siren, client_code, address_line, address_zip, address_city, address_country, opco_name",
     )
     .eq("id", dossier.organization_id)
     .maybeSingle();
@@ -180,7 +210,8 @@ export async function loadDossierDocContext(
     orgQuery.error &&
     (orgQuery.error.code === "42703" ||
       orgQuery.error.message.includes("address_") ||
-      orgQuery.error.message.includes("client_code"))
+      orgQuery.error.message.includes("client_code") ||
+      /opco_/i.test(orgQuery.error.message))
   ) {
     orgQuery = await service
       .from("organizations")
@@ -402,6 +433,50 @@ export async function loadDossierDocContext(
     }
   }
 
+  const notesText = String(dossier.notes ?? "");
+  const opcoFromNotes = notesText.match(/OPCO\s*[:—–-]\s*(.+)$/im)?.[1]?.trim() || null;
+  const opcoName =
+    String(dossier.opco_name ?? "").trim() ||
+    String(orgRow.opco_name ?? "").trim() ||
+    opcoFromNotes ||
+    null;
+
+  // Résolution OPCO à la volée pour un devis OPCO sans nom figé
+  const fundingType = dossier.funding_type ? String(dossier.funding_type) : null;
+  let resolvedOpco = opcoName;
+  if (
+    !resolvedOpco &&
+    fundingType &&
+    (fundingType === "opco" || fundingType.includes("opco")) &&
+    String(orgRow.siret ?? "").replace(/\D/g, "").length === 14
+  ) {
+    try {
+      const { resolveAndStoreOrganizationOpco } = await import(
+        "@/lib/entreprise/resolve-organization-opco"
+      );
+      const found = await resolveAndStoreOrganizationOpco(
+        service,
+        String(orgRow.id),
+        String(orgRow.siret),
+        { force: true },
+      );
+      resolvedOpco = found.opco_name;
+      if (resolvedOpco) {
+        void service
+          .from("formation_dossiers")
+          .update({ opco_name: resolvedOpco })
+          .eq("id", dossier.id)
+          .then(({ error }) => {
+            if (error && !/opco_name/i.test(error.message)) {
+              console.warn("[doc-context] persist opco:", error.message);
+            }
+          });
+      }
+    } catch (err) {
+      console.warn("[doc-context] opco lookup:", err instanceof Error ? err.message : err);
+    }
+  }
+
   return {
     dossier: {
       id: String(dossier.id),
@@ -418,7 +493,8 @@ export async function loadDossierDocContext(
         ? String(dossier.modality_intra_inter)
         : null,
       modality_presence: dossier.modality_presence ? String(dossier.modality_presence) : null,
-      funding_type: dossier.funding_type ? String(dossier.funding_type) : null,
+      funding_type: fundingType,
+      opco_name: resolvedOpco,
       session_id: dossier.session_id ? String(dossier.session_id) : null,
       status: String(dossier.status),
     },
@@ -438,6 +514,7 @@ export async function loadDossierDocContext(
       address_zip: orgRow.address_zip ? String(orgRow.address_zip) : null,
       address_city: orgRow.address_city ? String(orgRow.address_city) : null,
       address_country: orgRow.address_country ? String(orgRow.address_country) : "FR",
+      opco_name: resolvedOpco || (orgRow.opco_name ? String(orgRow.opco_name) : null),
     },
     of,
     course,

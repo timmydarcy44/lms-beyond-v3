@@ -18,20 +18,30 @@ type OrgAccountFields = {
 async function loadOrganization(service: NonNullable<ReturnType<typeof getServiceRoleClient>>, companyId: string) {
   let query = await service
     .from("organizations")
-    .select("name, siret, address_line, address_zip, address_city, address_country")
+    .select("name, siret, address_line, address_zip, address_city, address_country, opco_name, opco_source")
     .eq("id", companyId)
     .maybeSingle();
   if (
     query.error &&
-    (query.error.code === "42703" || /address_|siret/i.test(query.error.message))
+    (query.error.code === "42703" || /address_|siret|opco_/i.test(query.error.message))
   ) {
     query = await service
       .from("organizations")
-      .select("name, siret")
+      .select("name, siret, address_line, address_zip, address_city, address_country")
       .eq("id", companyId)
       .maybeSingle();
+    if (query.error && (query.error.code === "42703" || /address_/i.test(query.error.message))) {
+      query = await service
+        .from("organizations")
+        .select("name, siret")
+        .eq("id", companyId)
+        .maybeSingle();
+    }
   }
-  const row = (query.data ?? null) as Partial<OrgAccountFields> | null;
+  const row = (query.data ?? null) as (Partial<OrgAccountFields> & {
+    opco_name?: string | null;
+    opco_source?: string | null;
+  }) | null;
   return {
     organisationName: row?.name ? String(row.name) : null,
     siret: row?.siret ? String(row.siret).replace(/\D/g, "") : null,
@@ -39,6 +49,8 @@ async function loadOrganization(service: NonNullable<ReturnType<typeof getServic
     address_zip: row?.address_zip ? String(row.address_zip) : null,
     address_city: row?.address_city ? String(row.address_city) : null,
     address_country: row?.address_country ? String(row.address_country) : "FR",
+    opco_name: row?.opco_name ? String(row.opco_name) : null,
+    opco_source: row?.opco_source ? String(row.opco_source) : null,
   };
 }
 
@@ -92,6 +104,8 @@ export async function GET() {
           address_zip: null,
           address_city: null,
           address_country: "FR",
+          opco_name: null,
+          opco_source: null,
         };
 
   return NextResponse.json({
@@ -107,6 +121,8 @@ export async function GET() {
     address_zip: org.address_zip,
     address_city: org.address_city,
     address_country: org.address_country,
+    opco_name: org.opco_name,
+    opco_source: org.opco_source,
     hasPassword: user.user_metadata?.needs_password_setup !== true,
   });
 }
@@ -251,6 +267,28 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: orgError.message }, { status: 500 });
   }
 
+  // Résout / rafraîchit l’OPCO dès qu’un SIRET est enregistré
+  let opcoName: string | null = null;
+  try {
+    const { resolveAndStoreOrganizationOpco } = await import(
+      "@/lib/entreprise/resolve-organization-opco"
+    );
+    const current = await loadOrganization(service, access.organizationId);
+    const resolved = await resolveAndStoreOrganizationOpco(
+      service,
+      access.organizationId,
+      siret,
+      {
+        force: true,
+        existingName: current.opco_name,
+        existingSource: current.opco_source,
+      },
+    );
+    opcoName = resolved.opco_name;
+  } catch (err) {
+    console.warn("[account] opco:", err instanceof Error ? err.message : err);
+  }
+
   // Aligne le contact des dossiers ouverts (contact vide ou même email gestionnaire)
   const contactName = fullName;
   const contactEmail =
@@ -292,5 +330,6 @@ export async function PATCH(request: NextRequest) {
     address_zip: addressZip,
     address_city: addressCity,
     address_country: addressCountry,
+    opco_name: opcoName,
   });
 }

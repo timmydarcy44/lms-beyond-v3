@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/resend-client";
 import { buildEdgeEmailShell, escapeEdgeEmailHtml } from "@/lib/emails/edge-email-shell";
 import { BUSINESS_TRAINING_ITEMS } from "@/lib/enterprise/business-training-catalog";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
+import { resolveAndStoreOrganizationOpco } from "@/lib/entreprise/resolve-organization-opco";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -103,17 +104,45 @@ export async function POST(request: NextRequest) {
 
   let companyName = "";
   let orgSiret = "";
+  let opcoName: string | null = null;
   const service = getServiceRoleClient();
   let selectedEmployees: SelectedEmployee[] = [];
 
   if (service) {
-    const { data: org } = await service
+    let orgQuery = await service
       .from("organizations")
-      .select("name, siret")
+      .select("name, siret, opco_name, opco_source")
       .eq("id", access.organizationId)
       .maybeSingle();
+    if (orgQuery.error && /opco_/i.test(orgQuery.error.message)) {
+      orgQuery = await service
+        .from("organizations")
+        .select("name, siret")
+        .eq("id", access.organizationId)
+        .maybeSingle();
+    }
+    const org = orgQuery.data as {
+      name?: string | null;
+      siret?: string | null;
+      opco_name?: string | null;
+      opco_source?: string | null;
+    } | null;
     companyName = String(org?.name ?? "").trim();
     orgSiret = String(org?.siret ?? "").replace(/\D/g, "");
+    opcoName = String(org?.opco_name ?? "").trim() || null;
+
+    if (fundingType === "opco" && orgSiret.length === 14) {
+      const resolved = await resolveAndStoreOrganizationOpco(
+        service,
+        access.organizationId,
+        orgSiret,
+        {
+          existingName: org?.opco_name,
+          existingSource: org?.opco_source,
+        },
+      );
+      opcoName = resolved.opco_name;
+    }
 
     if (participantIds.length) {
       const { data: employees, error: empErr } = await service
@@ -169,7 +198,14 @@ export async function POST(request: NextRequest) {
         ${row("Participants", `${qty} —\n${participantsLabel}`)}
         ${preferredFormat ? row("Format souhaité", preferredFormat) : ""}
         ${preferredPeriod ? row("Période souhaitée", preferredPeriod) : ""}
-        ${row("Financement", fundingType === "opco" ? "OPCO" : "Fonds propres")}
+        ${row(
+          "Financement",
+          fundingType === "opco"
+            ? opcoName
+              ? `OPCO — ${opcoName}`
+              : "OPCO"
+            : "Fonds propres",
+        )}
         ${preferredLocation ? row("Lieu souhaité", preferredLocation) : ""}
         ${notes ? row("Précisions", notes) : ""}
         ${row("Compte connecté", viewerLabel || access.viewer.email || "—")}
@@ -257,11 +293,19 @@ export async function POST(request: NextRequest) {
         modalityIntraInter: "intra",
         modalityPresence,
         fundingType,
+        opcoName: fundingType === "opco" ? opcoName : null,
         notes: [
           preferredFormat ? `Format: ${preferredFormat}` : null,
           preferredPeriod ? `Période: ${preferredPeriod}` : null,
           preferredLocation ? `Lieu: ${preferredLocation}` : null,
-          `Financement: ${fundingType === "opco" ? "OPCO" : "fonds propres"}`,
+          `Financement: ${
+            fundingType === "opco"
+              ? opcoName
+                ? `OPCO — ${opcoName}`
+                : "OPCO"
+              : "fonds propres"
+          }`,
+          fundingType === "opco" && opcoName ? `OPCO: ${opcoName}` : null,
           orgSiret ? `SIRET: ${orgSiret}` : null,
           `Participants (${qty}):`,
           ...selectedEmployees.map((emp) => `- ${employeeLabel(emp)}`),

@@ -76,6 +76,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     "training_course_id",
     "session_id",
     "owner_user_id",
+    "opco_name",
   ] as const;
 
   for (const key of stringFields) {
@@ -153,12 +154,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     patch.pending_confirm_fields = [];
   }
 
-  const { data, error } = await service
+  let { data, error } = await service
     .from("formation_dossiers")
     .update(patch)
     .eq("id", id)
     .select("*")
     .single();
+
+  if (error && /opco_name/i.test(error.message) && "opco_name" in patch) {
+    delete patch.opco_name;
+    ({ data, error } = await service
+      .from("formation_dossiers")
+      .update(patch)
+      .eq("id", id)
+      .select("*")
+      .single());
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 

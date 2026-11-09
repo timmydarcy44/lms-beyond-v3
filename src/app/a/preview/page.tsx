@@ -32,14 +32,14 @@ function PreviewInner() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-[#0B0D12] px-4 py-10 text-red-300">
+      <main className="min-h-screen bg-[#0A0618] px-4 py-10 text-red-300">
         <p className="text-sm">{error}</p>
       </main>
     );
   }
   if (!questions.length) {
     return (
-      <main className="min-h-screen bg-[#0B0D12] px-4 py-10 text-[#8B90A0]">Chargement…</main>
+      <main className="min-h-screen bg-[#0A0618] px-4 py-10 text-[#B7A9D9]">Chargement…</main>
     );
   }
 
@@ -47,6 +47,8 @@ function PreviewInner() {
     <RevolutAssessment
       title={title}
       courseTitle={courseTitle}
+      kind={kind}
+      firstName="Camille"
       questions={questions}
       preview
     />
@@ -57,7 +59,7 @@ export default function AssessmentPreviewPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[#0B0D12] px-4 py-10 text-[#8B90A0]">Chargement…</main>
+        <main className="min-h-screen bg-[#0A0618] px-4 py-10 text-[#B7A9D9]">Chargement…</main>
       }
     >
       <PreviewInner />

@@ -31,6 +31,29 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     .eq("id", attempt.dossier_id)
     .maybeSingle();
 
+  let firstName: string | null = null;
+  let resolvedProfileId = attempt.profile_id ? String(attempt.profile_id) : null;
+  if (!resolvedProfileId && attempt.participant_id) {
+    const { data: part } = await service
+      .from("formation_participants")
+      .select("profile_id")
+      .eq("id", attempt.participant_id)
+      .maybeSingle();
+    resolvedProfileId = part?.profile_id ? String(part.profile_id) : null;
+  }
+  if (resolvedProfileId) {
+    const { data: profile } = await service
+      .from("profiles")
+      .select("first_name, full_name")
+      .eq("id", resolvedProfileId)
+      .maybeSingle();
+    const rawFirst = String(profile?.first_name || "").trim();
+    const fromFull = String(profile?.full_name || "")
+      .trim()
+      .split(/\s+/)[0];
+    firstName = rawFirst || fromFull || null;
+  }
+
   const questions = (template?.questions ?? []) as AssessmentQuestion[];
 
   return NextResponse.json({
@@ -39,6 +62,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     status: attempt.status,
     score_pct: attempt.score_pct,
     course_title: dossier?.course_title ?? null,
+    first_name: firstName,
     questions,
     answers: attempt.answers ?? {},
     completed_at: attempt.completed_at,

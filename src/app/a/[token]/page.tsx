@@ -11,6 +11,7 @@ type Payload = {
   status: string;
   score_pct: number | null;
   course_title: string | null;
+  first_name: string | null;
   questions: AssessmentQuestion[];
   answers: Record<string, unknown>;
 };
@@ -37,7 +38,7 @@ export default function AssessmentPublicPage() {
 
   if (error && !data) {
     return (
-      <main className="min-h-screen bg-[#0B0D12] px-4 py-10 text-red-300">
+      <main className="min-h-screen bg-[#0A0618] px-4 py-10 text-red-300">
         <p className="text-sm">{error}</p>
       </main>
     );
@@ -45,7 +46,7 @@ export default function AssessmentPublicPage() {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-[#0B0D12] px-4 py-10 text-[#8B90A0]">Chargement…</main>
+      <main className="min-h-screen bg-[#0A0618] px-4 py-10 text-[#B7A9D9]">Chargement…</main>
     );
   }
 
@@ -54,6 +55,8 @@ export default function AssessmentPublicPage() {
       key={token}
       title={data.title}
       courseTitle={data.course_title}
+      kind={data.kind}
+      firstName={data.first_name}
       questions={data.questions}
       initialAnswers={data.answers || {}}
       alreadyDone={data.status === "completed"}

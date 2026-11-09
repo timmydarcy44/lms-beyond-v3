@@ -406,3 +406,198 @@ export async function exportCoffreZip(
     filename: `coffre-qualiopi-${slug}-${dossierId.slice(0, 8)}.zip`,
   };
 }
+
+export type OrgCoffreDoc = {
+  id: string;
+  dossier_id: string;
+  kind: string;
+  title: string;
+  status: string;
+  has_file: boolean;
+  signed_at: string | null;
+  sent_at: string | null;
+  generated_at: string | null;
+  course_title: string | null;
+};
+
+export type OrgCoffreDossier = {
+  dossier_id: string;
+  course_title: string | null;
+  status: string;
+  ready_count: number;
+  total_count: number;
+  items: CoffreItem[];
+  documents: OrgCoffreDoc[];
+};
+
+export type OrgCoffreSnapshot = {
+  organization_id: string;
+  dossiers: OrgCoffreDossier[];
+  document_count: number;
+  ready_count: number;
+  total_count: number;
+};
+
+/** Agrège le coffre Qualiopi de tous les dossiers formation d'un compte client. */
+export async function buildOrgCoffreSnapshot(
+  service: SupabaseClient,
+  organizationId: string,
+): Promise<OrgCoffreSnapshot> {
+  const { data: dossiers } = await service
+    .from("formation_dossiers")
+    .select("id, course_title, status, created_at")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  const dossierRows = dossiers ?? [];
+  const dossierIds = dossierRows.map((d) => String(d.id));
+
+  const { data: docsRaw } =
+    dossierIds.length > 0
+      ? await service
+          .from("formation_documents")
+          .select(
+            "id, dossier_id, kind, title, status, file_url, storage_path, signed_at, sent_at, generated_at, participant_id, slot_id",
+          )
+          .in("dossier_id", dossierIds)
+          .order("kind")
+      : { data: [] as Array<Record<string, unknown>> };
+
+  const docsByDossier = new Map<string, OrgCoffreDoc[]>();
+  for (const raw of docsRaw ?? []) {
+    const dossierId = String(raw.dossier_id);
+    const courseTitle =
+      dossierRows.find((d) => String(d.id) === dossierId)?.course_title ?? null;
+    const entry: OrgCoffreDoc = {
+      id: String(raw.id),
+      dossier_id: dossierId,
+      kind: String(raw.kind),
+      title: String(raw.title || raw.kind),
+      status: String(raw.status || "to_generate"),
+      has_file: Boolean(raw.file_url || raw.storage_path || raw.generated_at || raw.signed_at),
+      signed_at: raw.signed_at ? String(raw.signed_at) : null,
+      sent_at: raw.sent_at ? String(raw.sent_at) : null,
+      generated_at: raw.generated_at ? String(raw.generated_at) : null,
+      course_title: courseTitle ? String(courseTitle) : null,
+    };
+    const list = docsByDossier.get(dossierId) ?? [];
+    list.push(entry);
+    docsByDossier.set(dossierId, list);
+  }
+
+  const out: OrgCoffreDossier[] = [];
+  let ready_count = 0;
+  let total_count = 0;
+  let document_count = 0;
+
+  for (const d of dossierRows) {
+    const id = String(d.id);
+    const snap = await buildCoffreSnapshot(service, id);
+    const documents = docsByDossier.get(id) ?? [];
+    document_count += documents.length;
+    if (snap) {
+      ready_count += snap.ready_count;
+      total_count += snap.total_count;
+      out.push({
+        dossier_id: id,
+        course_title: snap.course_title,
+        status: snap.status,
+        ready_count: snap.ready_count,
+        total_count: snap.total_count,
+        items: snap.items,
+        documents,
+      });
+    } else {
+      out.push({
+        dossier_id: id,
+        course_title: d.course_title ? String(d.course_title) : null,
+        status: String(d.status),
+        ready_count: 0,
+        total_count: 0,
+        items: [],
+        documents,
+      });
+    }
+  }
+
+  return {
+    organization_id: organizationId,
+    dossiers: out,
+    document_count,
+    ready_count,
+    total_count,
+  };
+}
+
+/** ZIP multi-dossiers pour le coffre compte client. */
+export async function exportOrgCoffreZip(
+  service: SupabaseClient,
+  organizationId: string,
+): Promise<{ ok: true; buffer: Buffer; filename: string } | { ok: false; error: string }> {
+  const snap = await buildOrgCoffreSnapshot(service, organizationId);
+  if (!snap.dossiers.length) {
+    return { ok: false, error: "Aucun dossier formation pour ce compte" };
+  }
+
+  const entries: Array<{ name: string; data: Buffer }> = [];
+  const usedNames = new Set<string>();
+
+  for (const dossier of snap.dossiers) {
+    const folder = `${(dossier.course_title || "formation")
+      .replace(/[^\w\-àâäéèêëïîôùûüç\s]+/gi, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .slice(0, 40)}-${dossier.dossier_id.slice(0, 8)}`;
+
+    const { data: docs } = await service
+      .from("formation_documents")
+      .select("id, kind, title, file_url, storage_bucket, storage_path")
+      .eq("dossier_id", dossier.dossier_id);
+
+    for (const doc of docs ?? []) {
+      if (!doc.file_url && !doc.storage_path) continue;
+      let buffer = await downloadFormationPdf(service, {
+        bucket: doc.storage_bucket,
+        path: doc.storage_path,
+        fileUrl: doc.file_url,
+      });
+      if (!buffer && doc.file_url && /^https?:\/\//i.test(String(doc.file_url))) {
+        try {
+          const res = await fetch(String(doc.file_url));
+          if (res.ok) buffer = Buffer.from(await res.arrayBuffer());
+        } catch {
+          /* ignore */
+        }
+      }
+      if (!buffer) continue;
+      const base = `${folder}/${doc.kind}/${String(doc.title || doc.kind)
+        .replace(/[^\w\-àâäéèêëïîôùûüç\s]+/gi, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .slice(0, 50)}`;
+      let name = `${base}.pdf`;
+      let i = 2;
+      while (usedNames.has(name)) {
+        name = `${base}-${i}.pdf`;
+        i += 1;
+      }
+      usedNames.add(name);
+      entries.push({ name, data: buffer });
+    }
+  }
+
+  entries.unshift({
+    name: "coffre-manifest.json",
+    data: Buffer.from(JSON.stringify(snap, null, 2), "utf8"),
+  });
+
+  if (entries.length <= 1) {
+    return { ok: false, error: "Aucun fichier PDF à exporter dans le coffre" };
+  }
+
+  return {
+    ok: true,
+    buffer: buildStoreZip(entries),
+    filename: `coffre-qualiopi-compte-${organizationId.slice(0, 8)}.zip`,
+  };
+}

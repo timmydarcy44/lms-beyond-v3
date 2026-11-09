@@ -11,6 +11,7 @@ import type { loadAccountDetail } from "@/lib/control/load";
 import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
+import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
 import { PIPELINE_PRODUCT_CATALOG } from "@/lib/crm/pipeline-quoted-products";
 
@@ -38,7 +39,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "tests", label: "Tests" },
   { id: "revenue", label: "Chiffre d'affaires" },
   { id: "funding", label: "Financement" },
-  { id: "documents", label: "Documents" },
+  { id: "documents", label: "Coffre Qualiopi" },
   { id: "journal", label: "Journal" },
 ];
 
@@ -149,7 +150,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {tab === "tests" ? <EmptyState title="Aucun test envoyé pour ce compte." /> : null}
       {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
       {tab === "funding" ? <EmptyState title="Aucun dossier de financement pour ce compte." /> : null}
-      {tab === "documents" ? <EmptyState title="Aucun document pour ce compte." /> : null}
+      {tab === "documents" ? <AccountQualiopiCoffre organizationId={account.id} /> : null}
       {tab === "modules" ? <SaasOffersTab orgId={account.id} modules={account.modules} /> : null}
       {tab === "journal" ? <JournalTab detail={detail} name={account.name} /> : null}
 

@@ -62,8 +62,10 @@ function buildNeoBanqueSignableMail(params: {
 }): { subject: string; html: string } {
   const isDevis = params.kind === "devis";
   const copy = MAIL_COPY[params.kind as Lot4DocumentKind];
-  const name = escapeEdgeEmailHtml(params.recipientName?.trim() || "");
-  const org = escapeEdgeEmailHtml(params.organizationName?.trim() || "Client");
+  const contactName = (params.recipientName || "").trim();
+  const orgName = (params.organizationName || "").trim();
+  const name = escapeEdgeEmailHtml(contactName);
+  const org = escapeEdgeEmailHtml(orgName || "Client");
   const course = escapeEdgeEmailHtml(params.courseTitle?.trim() || "Formation");
   const quote = escapeEdgeEmailHtml(
     params.quoteNumber?.trim() || (isDevis ? "Devis" : "Convention"),
@@ -80,29 +82,53 @@ function buildNeoBanqueSignableMail(params: {
         year: "numeric",
       });
 
-  const ht = params.amountHtCents != null ? formatEuro(params.amountHtCents) : null;
-  const tva = params.amountTvaCents != null ? formatEuro(params.amountTvaCents) : null;
-  const ttc =
-    params.amountTtcCents != null
-      ? formatEuro(params.amountTtcCents)
-      : ht;
-
-  const initials = org
+  // Contact = personne (prénom/nom), jamais la raison sociale en titre.
+  const displayContact = contactName || orgName || "Client";
+  const displayContactEsc = escapeEdgeEmailHtml(displayContact);
+  const initials = displayContact
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() || "")
     .join("") || "BY";
 
-  const breakdown =
-    ht && tva && ttc
-      ? `TTC · soit ${escapeEdgeEmailHtml(ht)} HT + ${escapeEdgeEmailHtml(tva)} de TVA`
-      : ttc
-        ? "Montant TTC"
-        : "";
+  const contactCard = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px;">
+    <tr><td style="padding:12px 14px;border-radius:16px;background:rgba(255,255,255,0.12);">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td style="width:36px;height:36px;border-radius:999px;background:#FFFFFF;color:#0A0B12;font-size:12px;font-weight:800;text-align:center;line-height:36px;">
+            ${escapeEdgeEmailHtml(initials)}
+          </td>
+          <td style="padding-left:10px;">
+            <p style="margin:0;font-size:14px;font-weight:700;color:#FFFFFF;">${displayContactEsc}</p>
+            <p style="margin:2px 0 0;font-size:12px;color:rgba(255,255,255,0.75);">
+              ${
+                contactName && orgName && contactName.toLowerCase() !== orgName.toLowerCase()
+                  ? `${org} · `
+                  : ""
+              }Proposé par SAS Byound Business
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>`;
 
-  const amountBlock = ttc
-    ? `<tr><td style="padding:0 0 16px;">
+  let heroBlock = "";
+  if (isDevis) {
+    const ht = params.amountHtCents != null ? formatEuro(params.amountHtCents) : null;
+    const tva = params.amountTvaCents != null ? formatEuro(params.amountTvaCents) : null;
+    const ttc =
+      params.amountTtcCents != null ? formatEuro(params.amountTtcCents) : ht;
+    const breakdown =
+      ht && tva && ttc
+        ? `TTC · soit ${escapeEdgeEmailHtml(ht)} HT + ${escapeEdgeEmailHtml(tva)} de TVA`
+        : ttc
+          ? "Montant TTC"
+          : "";
+
+    heroBlock = ttc
+      ? `<tr><td style="padding:0 0 16px;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
           style="border-radius:28px;background:linear-gradient(135deg,#1A1440 0%,#3A2BA0 45%,#6E5BFF 100%);">
           <tr><td style="padding:22px 22px 20px;">
@@ -110,7 +136,7 @@ function buildNeoBanqueSignableMail(params: {
               ● En attente de votre accord
             </span>
             <p style="margin:14px 0 0;font-size:13px;line-height:1.4;color:rgba(255,255,255,0.85);">
-              ${isDevis ? "Devis" : "Convention"} n° ${quote} · émis le ${escapeEdgeEmailHtml(issued)}
+              Devis n° ${quote} · émis le ${escapeEdgeEmailHtml(issued)}
             </p>
             <p style="margin:10px 0 0;font-size:36px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;color:#FFFFFF;">
               ${escapeEdgeEmailHtml(ttc)}
@@ -120,25 +146,34 @@ function buildNeoBanqueSignableMail(params: {
                 ? `<p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.8);">${breakdown}</p>`
                 : ""
             }
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px;">
-              <tr><td style="padding:12px 14px;border-radius:16px;background:rgba(255,255,255,0.12);">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                  <tr>
-                    <td style="width:36px;height:36px;border-radius:999px;background:#FFFFFF;color:#0A0B12;font-size:12px;font-weight:800;text-align:center;line-height:36px;">
-                      ${escapeEdgeEmailHtml(initials)}
-                    </td>
-                    <td style="padding-left:10px;">
-                      <p style="margin:0;font-size:14px;font-weight:700;color:#FFFFFF;">${org}</p>
-                      <p style="margin:2px 0 0;font-size:12px;color:rgba(255,255,255,0.75);">Proposé par SAS Byound Business</p>
-                    </td>
-                  </tr>
-                </table>
-              </td></tr>
-            </table>
+            ${contactCard}
           </td></tr>
         </table>
       </td></tr>`
-    : "";
+      : "";
+  } else {
+    // Convention : pas de tarif en tête
+    heroBlock = `<tr><td style="padding:0 0 16px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+        style="border-radius:28px;background:linear-gradient(135deg,#1A1440 0%,#3A2BA0 45%,#6E5BFF 100%);">
+        <tr><td style="padding:22px 22px 20px;">
+          <span style="display:inline-block;padding:5px 10px;border-radius:999px;background:rgba(245,200,92,0.2);color:#F5C85C;font-size:12px;font-weight:700;">
+            ● À signer
+          </span>
+          <p style="margin:14px 0 0;font-size:13px;line-height:1.4;color:rgba(255,255,255,0.85);">
+            Convention · émise le ${escapeEdgeEmailHtml(issued)}
+          </p>
+          <p style="margin:10px 0 0;font-size:24px;line-height:1.2;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">
+            ${course}
+          </p>
+          <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.8);">
+            CGV et règlement intérieur joints en pièces jointes.
+          </p>
+          ${contactCard}
+        </td></tr>
+      </table>
+    </td></tr>`;
+  }
 
   const extras = (params.extraParagraphs ?? [])
     .map(
@@ -168,7 +203,7 @@ function buildNeoBanqueSignableMail(params: {
           </table>
         </td></tr>
 
-        ${amountBlock}
+        ${heroBlock}
 
         <tr><td style="padding:0 0 16px;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#15171E;border-radius:24px;">
@@ -182,6 +217,15 @@ function buildNeoBanqueSignableMail(params: {
               <p style="margin:10px 0 0;font-size:13px;color:#9AA0B5;">
                 Formation : <span style="color:#F3F4FA;font-weight:600;">${course}</span>
               </p>
+              ${
+                isDevis
+                  ? `<p style="margin:10px 0 0;font-size:13px;color:#9AA0B5;">
+                Les <a href="https://www.byound.fr/cgv" style="color:#B7AEFF;text-decoration:underline;">conditions générales de vente</a> s’appliquent à ce devis.
+              </p>`
+                  : `<p style="margin:10px 0 0;font-size:13px;color:#9AA0B5;">
+                Les CGV et le règlement intérieur sont en pièces jointes de cet e-mail.
+              </p>`
+              }
               ${extras}
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:20px;">
                 <tr><td align="center" style="background:#6E5BFF;border-radius:999px;">

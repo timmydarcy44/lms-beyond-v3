@@ -96,7 +96,7 @@ export function AccountFormationRequestWizard({
   const [afternoonStart, setAfternoonStart] = useState("14:30");
   const [afternoonEnd, setAfternoonEnd] = useState("18:00");
   const [devisEmail, setDevisEmail] = useState(contactEmail?.trim() || "");
-  const [devisName, setDevisName] = useState(contactName?.trim() || orgName);
+  const [devisName, setDevisName] = useState(contactName?.trim() || "");
   const [error, setError] = useState<string | null>(null);
   const [addressLine, setAddressLine] = useState(orgAddressProp?.addressLine ?? "");
   const [addressZip, setAddressZip] = useState(orgAddressProp?.addressZip ?? "");
@@ -284,6 +284,10 @@ export function AccountFormationRequestWizard({
       setError("Indiquez les dates de session.");
       return;
     }
+    if (!devisName.trim() || devisName.trim().split(/\s+/).length < 2) {
+      setError("Indiquez le prénom et le nom du destinataire du devis.");
+      return;
+    }
     if (!devisEmail.includes("@")) {
       setError("E-mail de devis requis.");
       return;
@@ -324,7 +328,7 @@ export function AccountFormationRequestWizard({
           amount_ht_cents: amounts.ht,
           amount_tva_cents: amounts.tva,
           amount_ttc_cents: amounts.ttc,
-          contact_name: devisName || orgName,
+          contact_name: devisName.trim(),
           contact_email: devisEmail.trim().toLowerCase(),
           modality_intra_inter: "intra",
           modality_presence: modality,
@@ -835,12 +839,12 @@ export function AccountFormationRequestWizard({
               </li>
             </ul>
           </div>
-          <Field label="Destinataire du devis">
+          <Field label="Destinataire du devis (prénom et nom)">
             <input
               value={devisName}
               onChange={(e) => setDevisName(e.target.value)}
               className={fieldClass}
-              placeholder="Nom"
+              placeholder="Camille Martin"
             />
           </Field>
           <Field label="E-mail devis">

@@ -25,6 +25,8 @@ import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export type SalarieHomePayload = {
   profile: { firstName: string; lastName: string; initials: string };
+  /** Collaborateur aussi tuteur d'alternant → accès /dashboard/tuteur. */
+  isTutor: boolean;
   notifications: number | null;
   formation: {
     id: string;
@@ -387,8 +389,28 @@ export async function loadSalarieHome(userId: string, email: string | null): Pro
     ...(softCard ? [{ label: "Bilan soft skills", href: "/soft-skills/resultats?from=salarie" }] : []),
   ];
 
+  const { listUserRoles, hasTutorRole } = await import("@/lib/auth/user-roles");
+  const rolesByUser = await listUserRoles(db, [userId]);
+  const { data: membership } = await db
+    .from("org_memberships")
+    .select("role")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  const { data: profileRow } = await db
+    .from("profiles")
+    .select("role, role_type")
+    .eq("id", userId)
+    .maybeSingle();
+  const isTutor = hasTutorRole(
+    rolesByUser.get(userId),
+    membership?.role,
+    profileRow?.role || profileRow?.role_type,
+  );
+
   return {
     profile: { firstName, lastName, initials: initials(firstName, lastName) },
+    isTutor,
     notifications,
     formation,
     bilans: { completed: completedBilans, expected: 3, disc: discCard, idmc: idmcCard, soft: softCard },
@@ -405,6 +427,7 @@ export async function loadSalarieHome(userId: string, email: string | null): Pro
 function blankHome(): SalarieHomePayload {
   return {
     profile: { firstName: "", lastName: "", initials: "—" },
+    isTutor: false,
     notifications: null,
     formation: null,
     bilans: { completed: 0, expected: 3, disc: null, idmc: null, soft: null },

@@ -35,6 +35,7 @@ export function buildJadeSalarieHome(): SalarieHomePayload {
 
   return {
     profile: { firstName: "Jade", lastName: "Martin", initials: "JM" },
+    isTutor: false,
     notifications: 2,
     formation: {
       id: "jade-course-ccp1",

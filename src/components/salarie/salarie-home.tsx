@@ -24,6 +24,7 @@ const manrope = Manrope({ subsets: ["latin"] });
 
 type Home = {
   profile: { firstName: string; lastName: string; initials: string };
+  isTutor?: boolean;
   notifications: number | null;
   formation: {
     title: string;
@@ -273,6 +274,22 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
               ? "Aucune notification."
               : `${home.notifications} notification${home.notifications > 1 ? "s" : ""} non lue${home.notifications > 1 ? "s" : ""}.`}
         </p>
+      ) : null}
+
+      {home.isTutor ? (
+        <Link
+          href="/dashboard/tuteur"
+          className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-[#6E5BFF]/40 bg-[#6E5BFF]/12 px-4 py-3"
+        >
+          <span>
+            <span className="inline-flex rounded-full bg-[#6E5BFF] px-2 py-0.5 text-[11px] font-bold text-white">
+              Tuteur
+            </span>
+            <p className="mt-1 text-sm font-semibold text-white">Espace tuteur d&apos;alternance</p>
+            <p className="text-xs text-[#B5BAC6]">Suivi des alternants, missions et évaluations.</p>
+          </span>
+          <span className="text-sm font-bold text-[#C9C2FF]">Ouvrir →</span>
+        </Link>
       ) : null}
 
       <section className="relative overflow-hidden rounded-[36px] bg-[#0C0D12] px-5 py-8 text-center sm:px-8">

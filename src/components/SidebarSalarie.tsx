@@ -1,21 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { GraduationCap, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SALARIE_NAV_ITEMS } from "@/lib/salarie/connect-nav";
+import { SALARIE_NAV_ITEMS, type SalarieNavItem } from "@/lib/salarie/connect-nav";
 
 export default function SidebarSalarie() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [isTutor, setIsTutor] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/dashboard/salarie/home", { credentials: "include", cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { isTutor?: boolean } | null) => {
+        if (!cancelled) setIsTutor(Boolean(json?.isTutor));
+      })
+      .catch(() => {
+        if (!cancelled) setIsTutor(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const items = useMemo(() => {
+    const list: SalarieNavItem[] = [...SALARIE_NAV_ITEMS];
+    if (isTutor) {
+      list.splice(1, 0, {
+        label: "Espace tuteur",
+        href: "/dashboard/tuteur",
+        icon: GraduationCap,
+      });
+    }
+    return list;
+  }, [isTutor]);
 
   const nav = (
     <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Navigation salarié">
-      {SALARIE_NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const hrefPath = item.href.split("#")[0];
-        const active = hrefPath === "/dashboard/salarie" ? pathname === hrefPath : pathname.startsWith(hrefPath);
+        const active =
+          hrefPath === "/dashboard/salarie"
+            ? pathname === hrefPath
+            : pathname.startsWith(hrefPath);
         const Icon = item.icon;
         return (
           <Link
@@ -46,7 +77,12 @@ export default function SidebarSalarie() {
         <Menu className="h-4 w-4" />
       </button>
       {open ? (
-        <button type="button" aria-label="Fermer le menu" className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
+        <button
+          type="button"
+          aria-label="Fermer le menu"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
       ) : null}
       <aside
         className={cn(
@@ -56,7 +92,9 @@ export default function SidebarSalarie() {
       >
         <div className="mb-4 flex items-center justify-between px-4">
           <Link href="/dashboard/salarie" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[11px] font-extrabold text-[#07080B]">BY</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[11px] font-extrabold text-[#07080B]">
+              BY
+            </span>
             <span className="text-[15px] font-extrabold text-white">Byound</span>
           </Link>
           <button type="button" className="lg:hidden" aria-label="Fermer" onClick={() => setOpen(false)}>

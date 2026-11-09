@@ -49,13 +49,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     organizationId: id,
     employeeId: inserted.data.id as string,
   });
-  const role = ["admin", "learner", "tutor", "instructor"].includes(String(body.role)) ? String(body.role) : "learner";
+  const requested = ["admin", "learner", "tutor", "instructor"].includes(String(body.role))
+    ? String(body.role)
+    : "learner";
+  // Tuteur est cumulable avec collaborateur — membership reste learner (+ user_roles.tuteur).
+  const membershipRole = requested === "tutor" ? "learner" : requested;
   const profile = await service.from("profiles").select("id").ilike("email", email).maybeSingle();
   if (profile.data?.id) {
     await service.from("org_memberships").upsert(
-      { org_id: id, user_id: profile.data.id, role },
+      { org_id: id, user_id: profile.data.id, role: membershipRole },
       { onConflict: "org_id,user_id" },
     );
+    if (requested === "tutor") {
+      const { grantUserRole } = await import("@/lib/auth/user-roles");
+      await grantUserRole(service, String(profile.data.id), "tuteur");
+    }
     if (body.courseId) {
       await service.from("enrollments").insert({ user_id: profile.data.id, course_id: body.courseId, role: "learner" });
     }

@@ -461,9 +461,9 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
   const [menu, setMenu] = useState<string | null>(null);
   const people = detail.people.filter((person) => {
     if (filter === "admins" && roleTone(person.role) !== "admin") return false;
-    if (filter === "tutors" && roleTone(person.role) !== "tutor") return false;
+    if (filter === "tutors" && !person.isTutor) return false;
     if (filter === "invites" && !person.invited) return false;
-    if (filter === "staff" && (person.invited || roleTone(person.role) === "admin" || roleTone(person.role) === "tutor")) return false;
+    if (filter === "staff" && (person.invited || roleTone(person.role) === "admin")) return false;
     return `${person.name} ${person.email}`.toLowerCase().includes(query.toLowerCase());
   });
   const shown = expanded ? people : people.slice(0, 8);
@@ -482,7 +482,7 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
             { id: "all", label: "Tous", count: detail.people.length },
             { id: "staff", label: "Collaborateurs", count: detail.people.filter((person) => !person.invited && roleTone(person.role) === "member").length },
             { id: "admins", label: "Administrateurs", count: detail.people.filter((person) => roleTone(person.role) === "admin").length },
-            { id: "tutors", label: "Tuteurs", count: detail.people.filter((person) => roleTone(person.role) === "tutor").length },
+            { id: "tutors", label: "Tuteurs", count: detail.people.filter((person) => person.isTutor).length },
             { id: "invites", label: "Invitations", count: pending },
           ]}
         />
@@ -503,6 +503,7 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
           </div>
           {shown.map((person) => {
             const tone = person.invited ? ROLE_COLORS.invited : ROLE_COLORS[roleTone(person.role)];
+            const tutorTone = ROLE_COLORS.tutor;
             const ratio = person.formationsTotal ? Math.round((person.formationsDone / person.formationsTotal) * 100) : 0;
             return (
               <div key={person.userId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.9fr)_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm">
@@ -511,7 +512,16 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
                   <span className="font-semibold">{person.name}</span>
                   <span className="block truncate pl-11 text-xs text-[#8A93AE]">{person.email}</span>
                 </span>
-                <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: tone.bg, color: tone.fg }}>{person.invited ? "Invité" : roleLabel(person.role)}</span>
+                <span className="flex flex-wrap gap-1">
+                  <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: tone.bg, color: tone.fg }}>
+                    {person.invited ? "Invité" : roleLabel(person.role)}
+                  </span>
+                  {person.isTutor ? (
+                    <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: tutorTone.bg, color: tutorTone.fg }}>
+                      Tuteur
+                    </span>
+                  ) : null}
+                </span>
                 <span>{person.formationsTotal ? <>{person.formationsDone} / {person.formationsTotal} terminées<span className="mt-1 block h-1.5 rounded-full bg-[#1A2340]"><span className="block h-1.5 rounded-full bg-[#6E5BFF]" style={{ width: `${ratio}%` }} /></span></> : "Aucune"}</span>
                 <span>{person.badges ? `${person.badges} badge${person.badges > 1 ? "s" : ""}` : "—"}</span>
                 <span className="text-xs" style={{ color: person.invited ? "#F2CF6B" : "#C9D2E8" }}>{person.invited && person.createdAt ? `Invité le ${new Date(person.createdAt).toLocaleDateString("fr-FR")}` : "—"}</span>
@@ -519,10 +529,31 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
                   {person.invited ? <button type="button" className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0A0F1E]" onClick={() => void memberAction(detail.account?.id, { action: "remind", email: person.email, employeeId: person.employeeId }, onNotice)}>Relancer</button> : <span className="rounded-full border border-[#26304F] px-3 py-1 text-xs">Voir</span>}
                   <button type="button" aria-label="Actions" onClick={() => setMenu(menu === person.userId ? null : person.userId)}>⋯</button>
                   {menu === person.userId ? (
-                    <span className="absolute right-0 top-8 z-10 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
-                      {person.userId.startsWith("employee:") ? null : (["admin", "learner", "tutor"] as const).map((role) => (
-                        <button key={role} type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "role", userId: person.userId, role }, onNotice)}>{roleLabel(role)}</button>
-                      ))}
+                    <span className="absolute right-0 top-8 z-10 w-48 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
+                      {person.userId.startsWith("employee:") ? null : (
+                        <>
+                          {(["admin", "learner"] as const).map((role) => (
+                            <button key={role} type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "role", userId: person.userId, role }, onNotice)}>{roleLabel(role)}</button>
+                          ))}
+                          <button
+                            type="button"
+                            className="block w-full rounded-xl px-2 py-1 text-left"
+                            onClick={() =>
+                              void memberAction(
+                                detail.account?.id,
+                                {
+                                  action: "toggle_tutor",
+                                  userId: person.userId,
+                                  enabled: person.isTutor ? "false" : "true",
+                                },
+                                onNotice,
+                              )
+                            }
+                          >
+                            {person.isTutor ? "Retirer le rôle tuteur" : "Ajouter le rôle tuteur"}
+                          </button>
+                        </>
+                      )}
                       <button type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "deactivate", employeeId: person.employeeId }, onNotice)}>Désactiver</button>
                     </span>
                   ) : null}
@@ -540,11 +571,25 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
   );
 }
 
-async function memberAction(orgId: string | undefined, body: Record<string, string | null>, onNotice: (message: string) => void) {
+async function memberAction(
+  orgId: string | undefined,
+  body: Record<string, string | boolean | null>,
+  onNotice: (message: string) => void,
+) {
   if (!orgId) return;
-  const response = await fetch(`/api/super/comptes-clients/${orgId}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const payload = { ...body };
+  if (payload.enabled === "true") payload.enabled = true;
+  if (payload.enabled === "false") payload.enabled = false;
+  const response = await fetch(`/api/super/comptes-clients/${orgId}/members`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
   const json = (await response.json()) as { error?: string };
   onNotice(response.ok ? "Membre mis à jour." : json.error || "Action impossible");
+  if (response.ok && typeof window !== "undefined") {
+    window.location.reload();
+  }
 }
 
 function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void }) {

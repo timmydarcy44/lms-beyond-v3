@@ -253,6 +253,8 @@ export async function loadAccountDetail(orgId: string) {
     ? await db.from("profiles").select("id, full_name, email, role, role_type").in("id", userIds)
     : { data: [] };
   const profileMap = new Map(((profiles.data ?? []) as Array<{ id: string }>).map((profile) => [profile.id, profile]));
+  const { listUserRoles, hasTutorRole } = await import("@/lib/auth/user-roles");
+  const rolesByUser = await listUserRoles(db, userIds);
   const enrollments = userIds.length
     ? await db.from("enrollments").select("user_id, course_id").in("user_id", userIds)
     : { data: [] as Array<{ user_id: string; course_id: string }> };
@@ -285,10 +287,18 @@ export async function loadAccountDetail(orgId: string) {
     const profile = profileMap.get(member.user_id) as { full_name?: string; email?: string; role?: string; role_type?: string } | undefined;
     const mine = enrollmentRows.filter((row) => row.user_id === member.user_id);
     const delivered = assertionRows.filter((row) => row.recipient_profile_id === member.user_id && !row.revoked_at);
+    const isTutor = hasTutorRole(
+      rolesByUser.get(member.user_id),
+      member.role,
+      profile?.role || profile?.role_type,
+    );
+    // Affichage : membership tutor legacy → traité comme collaborateur + tuteur
+    const displayRole = member.role === "tutor" ? "learner" : member.role;
     return {
       userId: member.user_id,
       employeeId: null as string | null,
-      role: member.role,
+      role: displayRole,
+      isTutor,
       name: profile?.full_name || "Sans nom",
       email: profile?.email || "",
       profileRole: profile?.role_type || profile?.role || member.role,
@@ -308,6 +318,7 @@ export async function loadAccountDetail(orgId: string) {
       userId: `employee:${employee.id}`,
       employeeId: String(employee.id),
       role: employee.status === "inactive" ? "inactive" : "invited",
+      isTutor: false,
       name: [employee.first_name, employee.last_name].filter(Boolean).join(" ") || "Invitation",
       email: String(employee.email ?? ""),
       profileRole: "invited",

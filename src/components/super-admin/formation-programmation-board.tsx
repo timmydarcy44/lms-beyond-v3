@@ -56,6 +56,21 @@ export function FormationProgrammationBoard() {
     return map;
   }, [cards]);
 
+  const devisStats = useMemo(() => {
+    const devis = byStatus.get("devis") ?? [];
+    const totalHtCents = devis.reduce((sum, c) => sum + (c.amount_ht_cents ?? 0), 0);
+    return { count: devis.length, totalHtCents };
+  }, [byStatus]);
+
+  const formatHt = (cents: number) =>
+    new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0,
+    })
+      .format(cents / 100)
+      .replace(/[\u202f\u00a0]/g, " ");
+
   const transition = async (
     id: string,
     toStatus: FormationDossierStatus,
@@ -105,6 +120,23 @@ export function FormationProgrammationBoard() {
           Nouveau dossier
         </Button>
       </div>
+
+      {!loading ? (
+        <section className="rounded-2xl border border-[#262A4A] bg-gradient-to-br from-[#1A1440] via-[#141731] to-[#141731] px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#B7AEFF]">
+            Devis en cours
+          </p>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <p className="text-3xl font-extrabold tracking-tight text-white">
+              {formatHt(devisStats.totalHtCents)}
+              <span className="ml-2 text-sm font-semibold text-[#A3A8C7]">HT</span>
+            </p>
+            <p className="text-sm text-[#A3A8C7]">
+              {devisStats.count} dossier{devisStats.count === 1 ? "" : "s"} en colonne Devis
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-[#A3A8C7]">Chargement…</p>

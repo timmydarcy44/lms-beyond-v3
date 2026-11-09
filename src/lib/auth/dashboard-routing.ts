@@ -242,13 +242,23 @@ export async function resolveDashboardSpaces(
     }
   }
 
-  const [{ data: expertRow }, { data: praticienRow }] = await Promise.all([
+  const [{ data: expertRow }, { data: praticienRow }, { data: userRoleRows }] = await Promise.all([
     service.from("experts").select("id").eq("id", userId).maybeSingle(),
     service.from("praticiens_bct").select("id").eq("user_id", userId).maybeSingle(),
+    service.from("user_roles").select("role").eq("user_id", userId),
   ]);
 
   if (expertRow) addSpace(spaces, seen, "expert");
   if (praticienRow) addSpace(spaces, seen, "praticien_bct");
+
+  // Rôles cumulatifs (ex. collaborateur + tuteur)
+  for (const row of userRoleRows ?? []) {
+    const rk = String((row as { role?: string }).role ?? "")
+      .trim()
+      .toLowerCase();
+    const spaceKey = ROLE_TO_SPACE_KEY[rk];
+    if (spaceKey) addSpace(spaces, seen, spaceKey);
+  }
 
   return { spaces, isDemo };
 }

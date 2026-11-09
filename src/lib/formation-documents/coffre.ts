@@ -24,11 +24,13 @@ export type CoffreSnapshot = {
 
 type DocRow = {
   id: string;
+  dossier_id?: string;
   kind: string;
   title: string;
   status: string;
   file_url: string | null;
-  storage_path: string | null;
+  storage_path?: string | null;
+  storage_bucket?: string | null;
   signed_at: string | null;
   sent_at: string | null;
   generated_at: string | null;
@@ -44,12 +46,49 @@ function hasFile(d: DocRow | undefined): boolean {
   return Boolean(d && (d.file_url || d.storage_path || d.generated_at || d.signed_at));
 }
 
+function isSignedDoc(d: DocRow | undefined): boolean {
+  if (!d) return false;
+  return d.status === "signed" || Boolean(d.signed_at);
+}
+
 function pick(docs: DocRow[], kind: string, scoped = false): DocRow[] {
   return docs.filter((d) => {
     if (d.kind !== kind) return false;
     if (scoped) return Boolean(d.participant_id || d.slot_id);
     return !d.participant_id && !d.slot_id;
   });
+}
+
+const DOCS_SELECT_FULL =
+  "id, dossier_id, kind, title, status, file_url, storage_path, storage_bucket, signed_at, sent_at, generated_at, participant_id, slot_id, acceptance_method, signer_name, accept_otp_sent_to, meta";
+const DOCS_SELECT_COMPAT =
+  "id, dossier_id, kind, title, status, file_url, signed_at, sent_at, generated_at, participant_id, slot_id, acceptance_method, signer_name, accept_otp_sent_to, meta";
+
+/** Charge les docs coffre même si storage_path / storage_bucket absents en prod. */
+async function loadCoffreDocs(
+  service: SupabaseClient,
+  params: { dossierId?: string; dossierIds?: string[] },
+): Promise<DocRow[]> {
+  let query = service.from("formation_documents").select(DOCS_SELECT_FULL).order("kind");
+  if (params.dossierId) query = query.eq("dossier_id", params.dossierId);
+  if (params.dossierIds?.length) query = query.in("dossier_id", params.dossierIds);
+  const first = await query;
+  if (!first.error) return (first.data ?? []) as DocRow[];
+
+  if (/storage_(path|bucket)/i.test(first.error.message)) {
+    let fallback = service.from("formation_documents").select(DOCS_SELECT_COMPAT).order("kind");
+    if (params.dossierId) fallback = fallback.eq("dossier_id", params.dossierId);
+    if (params.dossierIds?.length) fallback = fallback.in("dossier_id", params.dossierIds);
+    const second = await fallback;
+    if (second.error) {
+      console.warn("[coffre] load docs:", second.error.message);
+      return [];
+    }
+    return (second.data ?? []) as DocRow[];
+  }
+
+  console.warn("[coffre] load docs:", first.error.message);
+  return [];
 }
 
 /** Checklist coffre Qualiopi pour un dossier formation. */
@@ -64,15 +103,7 @@ export async function buildCoffreSnapshot(
     .maybeSingle();
   if (!dossier) return null;
 
-  const { data: docsRaw } = await service
-    .from("formation_documents")
-    .select(
-      "id, kind, title, status, file_url, storage_path, signed_at, sent_at, generated_at, participant_id, slot_id, acceptance_method, signer_name, accept_otp_sent_to, meta",
-    )
-    .eq("dossier_id", dossierId)
-    .order("kind");
-
-  const docs = (docsRaw ?? []) as DocRow[];
+  const docs = await loadCoffreDocs(service, { dossierId });
 
   const { count: participantCount } = await service
     .from("formation_participants")
@@ -129,16 +160,28 @@ export async function buildCoffreSnapshot(
   const pastSession = ["session", "fin", "cloture"].includes(dossierStatus);
   const pastFin = ["fin", "cloture"].includes(dossierStatus);
 
+  const devisSigned = isSignedDoc(devis);
+  const conventionSigned = isSignedDoc(convention);
+  const preuveDevis = preuves.filter((p) => p.kind === "preuve_devis");
+  const preuveConvention = preuves.filter((p) => p.kind === "preuve_convention");
+
   const items: CoffreItem[] = [
     {
       key: "devis",
       label: "Devis signé",
-      status: devis?.status === "signed" ? "ready" : hasFile(devis) ? "partial" : "missing",
-      detail:
-        devis?.status === "signed"
-          ? `Signé${devis.signer_name ? ` · ${devis.signer_name}` : ""}${
-              devis.acceptance_method ? ` · ${devis.acceptance_method}` : ""
-            }`
+      status: devisSigned
+        ? "ready"
+        : preuveDevis.length
+          ? "partial"
+          : hasFile(devis)
+            ? "partial"
+            : "missing",
+      detail: devisSigned
+        ? `Signé${devis?.signer_name ? ` · ${devis.signer_name}` : ""}${
+            devis?.acceptance_method ? ` · ${devis.acceptance_method}` : ""
+          }${devis?.signed_at ? ` · ${new Date(String(devis.signed_at)).toLocaleDateString("fr-FR")}` : ""}`
+        : hasFile(devis)
+          ? `Statut ${devis?.status || "—"}`
           : null,
       document_ids: devis ? [devis.id] : [],
       kind: "devis",
@@ -146,10 +189,21 @@ export async function buildCoffreSnapshot(
     {
       key: "convention",
       label: "Convention signée",
-      status: convention?.status === "signed" ? "ready" : hasFile(convention) ? "partial" : "missing",
-      detail:
-        convention?.status === "signed"
-          ? `Signée${convention.signer_name ? ` · ${convention.signer_name}` : ""}`
+      status: conventionSigned
+        ? "ready"
+        : preuveConvention.length
+          ? "partial"
+          : hasFile(convention)
+            ? "partial"
+            : "missing",
+      detail: conventionSigned
+        ? `Signée${convention?.signer_name ? ` · ${convention.signer_name}` : ""}${
+            convention?.signed_at
+              ? ` · ${new Date(String(convention.signed_at)).toLocaleDateString("fr-FR")}`
+              : ""
+          }`
+        : hasFile(convention)
+          ? `Statut ${convention?.status || "—"}`
           : null,
       document_ids: convention ? [convention.id] : [],
       kind: "convention",
@@ -162,7 +216,7 @@ export async function buildCoffreSnapshot(
           ? "ready"
           : preuves.length === 1
             ? "partial"
-            : devis?.status === "signed" || convention?.status === "signed"
+            : devisSigned || conventionSigned
               ? "partial"
               : "missing",
       detail: `${preuves.length} preuve(s) archivée(s)`,
@@ -330,15 +384,12 @@ export async function exportCoffreZip(
   const snap = await buildCoffreSnapshot(service, dossierId);
   if (!snap) return { ok: false, error: "Dossier introuvable" };
 
-  const { data: docs } = await service
-    .from("formation_documents")
-    .select("id, kind, title, file_url, storage_bucket, storage_path, participant_id, slot_id, meta")
-    .eq("dossier_id", dossierId);
+  const docs = await loadCoffreDocs(service, { dossierId });
 
   const entries: Array<{ name: string; data: Buffer }> = [];
   const usedNames = new Set<string>();
 
-  for (const doc of docs ?? []) {
+  for (const doc of docs) {
     if (!doc.file_url && !doc.storage_path) continue;
     let buffer = await downloadFormationPdf(service, {
       bucket: doc.storage_bucket,
@@ -452,20 +503,15 @@ export async function buildOrgCoffreSnapshot(
   const dossierRows = dossiers ?? [];
   const dossierIds = dossierRows.map((d) => String(d.id));
 
-  const { data: docsRaw } =
+  const docsRaw =
     dossierIds.length > 0
-      ? await service
-          .from("formation_documents")
-          .select(
-            "id, dossier_id, kind, title, status, file_url, storage_path, signed_at, sent_at, generated_at, participant_id, slot_id",
-          )
-          .in("dossier_id", dossierIds)
-          .order("kind")
-      : { data: [] as Array<Record<string, unknown>> };
+      ? await loadCoffreDocs(service, { dossierIds })
+      : [];
 
   const docsByDossier = new Map<string, OrgCoffreDoc[]>();
-  for (const raw of docsRaw ?? []) {
-    const dossierId = String(raw.dossier_id);
+  for (const raw of docsRaw) {
+    const dossierId = String(raw.dossier_id || "");
+    if (!dossierId) continue;
     const courseTitle =
       dossierRows.find((d) => String(d.id) === dossierId)?.course_title ?? null;
     const entry: OrgCoffreDoc = {
@@ -549,12 +595,9 @@ export async function exportOrgCoffreZip(
       .replace(/\s+/g, "-")
       .slice(0, 40)}-${dossier.dossier_id.slice(0, 8)}`;
 
-    const { data: docs } = await service
-      .from("formation_documents")
-      .select("id, kind, title, file_url, storage_bucket, storage_path")
-      .eq("dossier_id", dossier.dossier_id);
+    const docs = await loadCoffreDocs(service, { dossierId: dossier.dossier_id });
 
-    for (const doc of docs ?? []) {
+    for (const doc of docs) {
       if (!doc.file_url && !doc.storage_path) continue;
       let buffer = await downloadFormationPdf(service, {
         bucket: doc.storage_bucket,

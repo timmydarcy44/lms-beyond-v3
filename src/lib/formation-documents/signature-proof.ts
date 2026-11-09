@@ -17,6 +17,8 @@ export async function archiveSignatureProof(
     acceptedIp?: string | null;
     acceptedUserAgent?: string | null;
     pdfContentHash?: string | null;
+    trackingId?: string | null;
+    sealShort?: string | null;
   },
 ): Promise<{ ok: true; documentId: string } | { ok: false; error: string }> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -33,6 +35,8 @@ export async function archiveSignatureProof(
     `Signe le : ${new Date(params.signedAt).toLocaleString("fr-FR")}`,
     `Signataire : ${params.signerName}${params.signerRole ? ` (${params.signerRole})` : ""}`,
     `Methode : ${params.acceptanceMethod}`,
+    params.trackingId ? `N suivi : ${params.trackingId}` : null,
+    params.sealShort ? `Sceau : ${params.sealShort}` : null,
     params.emailedTo ? `Code envoye a : ${params.emailedTo}` : null,
     params.acceptedIp ? `IP : ${params.acceptedIp}` : null,
     params.pdfContentHash ? `Hash PDF : ${params.pdfContentHash}` : null,
@@ -101,13 +105,26 @@ export async function archiveSignatureProof(
     patch.storage_path = uploaded.path;
   }
 
+  const stripStorageCols = (row: Record<string, unknown>) => {
+    const next = { ...row };
+    delete next.storage_bucket;
+    delete next.storage_path;
+    return next;
+  };
+
   if (existingId) {
-    const { error } = await service.from("formation_documents").update(patch).eq("id", existingId);
+    let { error } = await service.from("formation_documents").update(patch).eq("id", existingId);
+    if (error && /storage_(bucket|path)/i.test(error.message)) {
+      ({ error } = await service
+        .from("formation_documents")
+        .update(stripStorageCols(patch))
+        .eq("id", existingId));
+    }
     if (error) return { ok: false, error: error.message };
     return { ok: true, documentId: existingId };
   }
 
-  const { data, error } = await service
+  let { data, error } = await service
     .from("formation_documents")
     .insert({
       dossier_id: params.dossierId,
@@ -118,6 +135,20 @@ export async function archiveSignatureProof(
     })
     .select("id")
     .single();
+
+  if (error && /storage_(bucket|path)/i.test(error.message)) {
+    ({ data, error } = await service
+      .from("formation_documents")
+      .insert({
+        dossier_id: params.dossierId,
+        kind,
+        title,
+        access_token: newDocToken(),
+        ...stripStorageCols(patch),
+      })
+      .select("id")
+      .single());
+  }
 
   if (error || !data) return { ok: false, error: error?.message || "Preuve non archivée" };
   return { ok: true, documentId: String(data.id) };

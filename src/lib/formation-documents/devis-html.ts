@@ -54,6 +54,10 @@ export type DevisHtmlAcceptance = {
   signedAt: string;
   signerName: string;
   signerRole?: string | null;
+  method?: string | null;
+  emailedTo?: string | null;
+  trackingId?: string | null;
+  sealShort?: string | null;
 };
 
 export type DevisHtmlMeta = {
@@ -119,9 +123,12 @@ export function buildDevisHtmlDocument(
 
   const acceptanceBox = opts?.acceptance
     ? `<div class="accepted-banner">
-        <strong>Accepté le ${esc(formatDateAdmin(new Date(opts.acceptance.signedAt)))}</strong>
-        par ${esc(opts.acceptance.signerName)}
-        ${opts.acceptance.signerRole ? ` · ${esc(opts.acceptance.signerRole)}` : ""}
+        <div class="accepted-badge">SIGNÉ</div>
+        <strong>Devis accepté le ${esc(formatDateAdmin(new Date(opts.acceptance.signedAt)))}</strong>
+        <div>Par ${esc(opts.acceptance.signerName)}${opts.acceptance.signerRole ? ` · ${esc(opts.acceptance.signerRole)}` : ""}</div>
+        <div class="accepted-meta">Signature électronique${opts.acceptance.method ? ` · ${esc(opts.acceptance.method)}` : " · code e-mail OTP"}${opts.acceptance.emailedTo ? ` · ${esc(opts.acceptance.emailedTo)}` : ""}</div>
+        ${opts.acceptance.trackingId ? `<div class="accepted-track">N° suivi ${esc(opts.acceptance.trackingId)}</div>` : ""}
+        ${opts.acceptance.sealShort ? `<div class="accepted-meta">Sceau ${esc(opts.acceptance.sealShort)}</div>` : ""}
       </div>`
     : `<div class="bpa">
         <div class="bpa-title">Bon pour accord</div>
@@ -205,7 +212,10 @@ export function buildDevisHtmlDocument(
   .online { flex: 0.8; background: #0A0B12; color: #fff; border-radius: 14px; padding: 12px; text-align: center; }
   .online-title { font-weight: 800; margin-bottom: 8px; }
   .qr { width: 96px; height: 96px; background: #fff; border-radius: 8px; padding: 4px; }
-  .accepted-banner { flex: 1; background: #E8FFF3; border: 1px solid #6BE39B; border-radius: 14px; padding: 14px; color: #0A0B12; }
+  .accepted-banner { flex: 1; background: #F3F0FF; border: 1.5px solid #7B61FF; border-radius: 14px; padding: 14px; color: #0A0B12; }
+  .accepted-badge { display: inline-block; background: #7B61FF; color: #fff; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 999px; margin-bottom: 8px; }
+  .accepted-meta { margin-top: 6px; color: #5B6178; font-size: 10px; }
+  .accepted-track { margin-top: 8px; font-weight: 800; font-size: 11px; letter-spacing: 0.04em; color: #4C3FE0; }
   .footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #E4E6EF; display: flex; justify-content: space-between; color: #8A90A5; font-size: 8.5px; }
 </style>
 <div class="page">

@@ -77,6 +77,31 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       .eq("id", doc.id);
   }
 
+  if (doc.kind === "devis" || doc.kind === "convention") {
+    const { ensureSignedPdfBuffer } = await import(
+      "@/lib/formation-documents/ensure-signed-pdf"
+    );
+    const stamped = await ensureSignedPdfBuffer(service, {
+      id: String(doc.id),
+      dossier_id: String(doc.dossier_id),
+      kind: String(doc.kind),
+      status: doc.status,
+      signed_at: doc.signed_at,
+      signer_name: doc.signer_name,
+      signer_role: doc.signer_role,
+      acceptance_method: doc.acceptance_method,
+      accept_otp_sent_to: doc.accept_otp_sent_to,
+      pdf_content_hash: doc.pdf_content_hash,
+      file_url: doc.file_url,
+      storage_bucket: doc.storage_bucket,
+      storage_path: doc.storage_path,
+      meta: (doc.meta as Record<string, unknown> | null) ?? null,
+    });
+    if (stamped?.length) {
+      return pdfResponse(stamped, `${doc.kind}.pdf`);
+    }
+  }
+
   const fromPrivate = await downloadFormationPdf(service, {
     bucket: doc.storage_bucket,
     path: doc.storage_path,
@@ -211,6 +236,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       { status: 400 },
     );
   }
+  const { resolveAcceptanceSeal } = await import(
+    "@/lib/formation-documents/acceptance-seal"
+  );
+  const prevMeta =
+    doc.meta && typeof doc.meta === "object"
+      ? (doc.meta as Record<string, unknown>)
+      : {};
+  const seal = resolveAcceptanceSeal(prevMeta, {
+    documentId: String(doc.id),
+    dossierId: String(doc.dossier_id),
+    kind: String(doc.kind),
+    signedAt: now,
+    signerName: evidence.signer_name,
+    pdfContentHash: doc.pdf_content_hash ? String(doc.pdf_content_hash) : null,
+  });
+
   const patch: Record<string, unknown> = {
     status: "signed",
     signed_at: now,
@@ -226,6 +267,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     accept_otp_hash: null,
     accept_otp_expires_at: null,
     accept_otp_attempts: 0,
+    meta: {
+      ...prevMeta,
+      acceptance_tracking_id: seal.trackingId,
+      acceptance_seal_short: seal.sealShort,
+      acceptance_seal_hash: seal.sealHash,
+    },
   };
 
   let { error: updErr } = await service
@@ -236,7 +283,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   if (
     updErr &&
-    /signer_|accepted_|cgv_version|acceptance_method|pdf_content_hash|accept_otp_/i.test(
+    /signer_|accepted_|cgv_version|acceptance_method|pdf_content_hash|accept_otp_|meta/i.test(
       updErr.message,
     )
   ) {
@@ -251,6 +298,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     delete reduced.accept_otp_hash;
     delete reduced.accept_otp_expires_at;
     delete reduced.accept_otp_attempts;
+    if (/meta/i.test(updErr.message)) delete reduced.meta;
     ({ error: updErr } = await service
       .from("formation_documents")
       .update(reduced)
@@ -278,6 +326,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         acceptedIp: evidence.accepted_ip,
         acceptedUserAgent: evidence.accepted_user_agent,
         pdfContentHash: doc.pdf_content_hash ? String(doc.pdf_content_hash) : null,
+        trackingId: seal.trackingId,
+        sealShort: seal.sealShort,
       });
     } catch (err) {
       console.warn("[formation-documents/accept] signature proof:", err);

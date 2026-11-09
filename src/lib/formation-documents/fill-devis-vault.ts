@@ -232,19 +232,49 @@ export async function fillVaultDevisPdf(
     try {
       const { data: docRow } = await service
         .from("formation_documents")
-        .select("access_token, accept_token, status, signed_at, signer_name, signer_role")
+        .select(
+          "id, access_token, accept_token, status, signed_at, signer_name, signer_role, acceptance_method, accept_otp_sent_to, pdf_content_hash, meta",
+        )
         .eq("dossier_id", ctx.dossier.id)
         .eq("kind", "devis")
         .maybeSingle();
       const { renderNeoBanqueDevisPdf } = await import("@/lib/formation-documents/devis-html");
-      const acceptance =
-        docRow?.status === "signed" && docRow.signed_at
-          ? {
-              signedAt: String(docRow.signed_at),
-              signerName: String(docRow.signer_name || ctx.dossier.contact_name || "Client"),
-              signerRole: docRow.signer_role ? String(docRow.signer_role) : null,
-            }
-          : null;
+      let acceptance: import("@/lib/formation-documents/devis-html").DevisHtmlAcceptance | null =
+        null;
+      if ((docRow?.status === "signed" || docRow?.signed_at) && docRow.signed_at) {
+        const { resolveAcceptanceSeal } = await import(
+          "@/lib/formation-documents/acceptance-seal"
+        );
+        const signerName = String(
+          docRow.signer_name || ctx.dossier.contact_name || "Client",
+        );
+        const seal = resolveAcceptanceSeal(
+          (docRow.meta as Record<string, unknown> | null) ?? null,
+          {
+            documentId: String(docRow.id),
+            dossierId: String(ctx.dossier.id),
+            kind: "devis",
+            signedAt: String(docRow.signed_at),
+            signerName,
+            pdfContentHash: docRow.pdf_content_hash
+              ? String(docRow.pdf_content_hash)
+              : null,
+          },
+        );
+        acceptance = {
+          signedAt: String(docRow.signed_at),
+          signerName,
+          signerRole: docRow.signer_role ? String(docRow.signer_role) : null,
+          method: docRow.acceptance_method
+            ? String(docRow.acceptance_method)
+            : "email_otp",
+          emailedTo: docRow.accept_otp_sent_to
+            ? String(docRow.accept_otp_sent_to)
+            : null,
+          trackingId: seal.trackingId,
+          sealShort: seal.sealShort,
+        };
+      }
       const rendered = await renderNeoBanqueDevisPdf(service, ctx, {
         acceptance,
         accessToken: docRow?.access_token ? String(docRow.access_token) : null,

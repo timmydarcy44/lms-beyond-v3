@@ -102,7 +102,7 @@ export async function generateFormationDocuments(
   for (const kind of kinds) {
     const row = await ensureDocRow(service, params.dossierId, kind, DOC_TITLES[kind]);
     // Coffre Qualiopi pour convention / règlement / livret ; CGV reste générée (absente du coffre)
-    const { buffer } = await resolveFormationPdfBuffer(service, {
+    let { buffer } = await resolveFormationPdfBuffer(service, {
       kind,
       ctx,
       buildFallback: () =>
@@ -117,6 +117,66 @@ export async function generateFormationDocuments(
           plannedHalfDays: params.plannedHalfDays,
         }),
     });
+
+    const isSignedRow =
+      (kind === "devis" || kind === "convention") &&
+      (row.status === "signed" || Boolean(row.signed_at));
+
+    let acceptanceSeal: {
+      trackingId: string;
+      sealShort: string;
+      sealHash: string;
+    } | null = null;
+
+    // Cachet signature visible sur devis / convention déjà acceptés
+    if (isSignedRow) {
+      try {
+        const { resolveAcceptanceSeal } = await import(
+          "@/lib/formation-documents/acceptance-seal"
+        );
+        const { stampAcceptanceOnPdf } = await import(
+          "@/lib/formation-documents/stamp-acceptance"
+        );
+        const signerName = String(
+          row.signer_name || ctx.dossier.contact_name || "Client",
+        );
+        const signedAt = String(row.signed_at || new Date().toISOString());
+        const prevMeta =
+          row.meta && typeof row.meta === "object"
+            ? (row.meta as Record<string, unknown>)
+            : {};
+        acceptanceSeal = resolveAcceptanceSeal(prevMeta, {
+          documentId: String(row.id),
+          dossierId: params.dossierId,
+          kind,
+          signedAt,
+          signerName,
+          pdfContentHash: row.pdf_content_hash
+            ? String(row.pdf_content_hash)
+            : null,
+        });
+        buffer = await stampAcceptanceOnPdf(buffer, {
+          documentLabel: kind === "devis" ? "Devis" : "Convention",
+          signerName,
+          signerRole: row.signer_role ? String(row.signer_role) : null,
+          signedAt,
+          method: row.acceptance_method
+            ? String(row.acceptance_method)
+            : "email_otp",
+          emailedTo: row.accept_otp_sent_to
+            ? String(row.accept_otp_sent_to)
+            : null,
+          trackingId: acceptanceSeal.trackingId,
+          sealShort: acceptanceSeal.sealShort,
+        });
+      } catch (err) {
+        console.warn(
+          "[generate] stamp acceptance:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+
     const uploaded = await uploadFormationPdf(service, {
       dossierId: params.dossierId,
       kind,
@@ -129,6 +189,10 @@ export async function generateFormationDocuments(
         ? row.accept_token || newDocToken()
         : row.accept_token;
 
+    const prevMeta =
+      row.meta && typeof row.meta === "object"
+        ? (row.meta as Record<string, unknown>)
+        : {};
     const patch: Record<string, unknown> = {
       // Réf privée (private://…) ou null — jamais d'URL publique
       file_url: uploaded?.fileUrl ?? (isPublicStorageUrl(row.file_url) ? null : row.file_url),
@@ -138,6 +202,19 @@ export async function generateFormationDocuments(
       updated_at: new Date().toISOString(),
       status: row.status === "to_generate" ? "to_generate" : row.status,
     };
+    if (isSignedRow) {
+      patch.meta = {
+        ...prevMeta,
+        acceptance_stamped_at: new Date().toISOString(),
+        ...(acceptanceSeal
+          ? {
+              acceptance_tracking_id: acceptanceSeal.trackingId,
+              acceptance_seal_short: acceptanceSeal.sealShort,
+              acceptance_seal_hash: acceptanceSeal.sealHash,
+            }
+          : {}),
+      };
+    }
     if (uploaded) {
       patch.storage_bucket = uploaded.bucket;
       patch.storage_path = uploaded.path;
@@ -164,7 +241,7 @@ export async function generateFormationDocuments(
     // Colonnes absentes tant que la migration n'est pas appliquée
     if (
       error &&
-      /storage_(bucket|path)|quote_number|valid_until|pdf_content_hash|cgv_version|signer_/i.test(
+      /storage_(bucket|path)|quote_number|valid_until|pdf_content_hash|cgv_version|signer_|meta/i.test(
         error.message,
       )
     ) {
@@ -174,6 +251,7 @@ export async function generateFormationDocuments(
       delete patch.valid_until;
       delete patch.pdf_content_hash;
       delete patch.cgv_version;
+      if (/meta/i.test(error.message)) delete patch.meta;
       ({ data: updated, error } = await service
         .from("formation_documents")
         .update(patch)

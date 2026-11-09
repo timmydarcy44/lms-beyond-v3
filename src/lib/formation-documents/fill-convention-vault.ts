@@ -476,11 +476,12 @@ export async function fillVaultConventionPdf(
   // Signature client — vide tant que non acceptée via le CTA public
   const { data: conventionDoc } = await service
     .from("formation_documents")
-    .select("status, signed_at")
+    .select("status, signed_at, signer_name, signer_role, acceptance_method")
     .eq("dossier_id", ctx.dossier.id)
     .eq("kind", "convention")
     .maybeSingle();
-  const isAccepted = conventionDoc?.status === "signed";
+  const isAccepted =
+    conventionDoc?.status === "signed" || Boolean(conventionDoc?.signed_at);
   const acceptedDate = conventionDoc?.signed_at
     ? formatDateAdmin(new Date(String(conventionDoc.signed_at)))
     : dateStr;
@@ -490,6 +491,23 @@ export async function fillVaultConventionPdf(
   setText(form, "signed_at_date", isAccepted ? acceptedDate : "", {
     sentenceCase: false,
   });
+  // Champs optionnels selon template coffre
+  if (isAccepted) {
+    setText(
+      form,
+      "signer_name",
+      String(conventionDoc?.signer_name || ctx.dossier.contact_name || "Client"),
+      { sentenceCase: false },
+    );
+    setText(
+      form,
+      "signature_method",
+      conventionDoc?.acceptance_method
+        ? String(conventionDoc.acceptance_method)
+        : "email_otp",
+      { sentenceCase: false },
+    );
+  }
 
   // Apparences corps (fit dans les cases)
   try {

@@ -4,6 +4,10 @@ import {
   formatByoundPostalAddress,
   formatPostalAddress,
 } from "@/lib/formation-documents/postal-address";
+import {
+  locationFromDossierNotes,
+  resolveTrainingLocationLabel,
+} from "@/lib/formation-documents/resolve-location";
 
 export { formatByoundPostalAddress, formatPostalAddress };
 
@@ -139,19 +143,29 @@ function resolveOfIdentity(ofRow: Record<string, unknown> | null | undefined): O
   const vat_intra = ofRow?.vat_intra
     ? String(ofRow.vat_intra).trim()
     : DEFAULT_OF.vat_intra;
+  // Siège OF = toujours Bretteville-sur-Odon (évite un of_settings « Rouen » erroné).
+  const cityRaw = ofRow?.address_city ? String(ofRow.address_city).trim() : "";
+  const cityLooksWrong =
+    !cityRaw ||
+    /rouen/i.test(cityRaw) ||
+    /caen/i.test(cityRaw) ||
+    cityRaw.toLowerCase() === "paris";
+
   return {
     legal_name,
     nda: ofRow?.nda ? String(ofRow.nda) : null,
     siret,
     siren,
     vat_intra: vat_intra || DEFAULT_OF.vat_intra,
-    address_line: ofRow?.address_line
-      ? String(ofRow.address_line)
-      : DEFAULT_OF.address_line,
-    address_city: ofRow?.address_city
-      ? String(ofRow.address_city)
-      : DEFAULT_OF.address_city,
-    address_zip: ofRow?.address_zip ? String(ofRow.address_zip) : DEFAULT_OF.address_zip,
+    address_line:
+      cityLooksWrong || !ofRow?.address_line
+        ? DEFAULT_OF.address_line
+        : String(ofRow.address_line),
+    address_city: cityLooksWrong ? DEFAULT_OF.address_city : cityRaw,
+    address_zip:
+      cityLooksWrong || !ofRow?.address_zip
+        ? DEFAULT_OF.address_zip
+        : String(ofRow.address_zip),
     address_country: ofRow?.address_country
       ? String(ofRow.address_country)
       : DEFAULT_OF.address_country,
@@ -320,6 +334,40 @@ export async function loadDossierDocContext(
       ends_at: s.ends_at ? String(s.ends_at) : null,
       location_label: session?.location_label ?? null,
     }));
+  }
+
+  // Lieu demandé (notes) → devis / convention même sans créneaux encore
+  const resolvedLocation = resolveTrainingLocationLabel({
+    sessionLocation: session?.location_label,
+    notesLocation: locationFromDossierNotes(dossier.notes),
+    modalityPresence: dossier.modality_presence ? String(dossier.modality_presence) : null,
+    organization: {
+      address_line: orgRow.address_line ? String(orgRow.address_line) : null,
+      address_zip: orgRow.address_zip ? String(orgRow.address_zip) : null,
+      address_city: orgRow.address_city ? String(orgRow.address_city) : null,
+    },
+  });
+  if (resolvedLocation) {
+    if (session) {
+      if (!session.location_label) session.location_label = resolvedLocation;
+    } else {
+      session = {
+        id: "preferred-location",
+        title: dossier.course_title ? String(dossier.course_title) : null,
+        location_label: resolvedLocation,
+      };
+    }
+    // Persiste sur la vraie session si elle existe encore vide
+    if (dossier.session_id && !slots.length) {
+      void service
+        .from("formation_sessions")
+        .update({ location_label: resolvedLocation })
+        .eq("id", dossier.session_id)
+        .is("location_label", null)
+        .then(({ error }) => {
+          if (error) console.warn("[doc-context] persist location:", error.message);
+        });
+    }
   }
 
   const of = resolveOfIdentity((ofRow ?? null) as Record<string, unknown> | null);

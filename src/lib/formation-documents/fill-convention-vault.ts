@@ -339,7 +339,9 @@ export async function fillVaultConventionPdf(
   const contactLine = [ctx.dossier.contact_email, ctx.dossier.contact_phone]
     .filter(Boolean)
     .join(" · ");
-  const location = toSentenceCase(ctx.session?.location_label || "Selon convocation");
+  const location = toSentenceCase(
+    ctx.session?.location_label || "Lieu selon demande (dates a confirmer)",
+  );
   const audience = toSentenceCase(
     ctx.course?.audience?.join(", ") || "Salaries de l'entreprise beneficiaire",
   );
@@ -455,7 +457,7 @@ export async function fillVaultConventionPdf(
   );
 
   // Signature
-  setText(form, "signed_at_city", ctx.of.address_city || "Bretteville-sur-Odon");
+  setText(form, "signed_at_city", "Bretteville-sur-Odon", { sentenceCase: false });
   setText(form, "signed_at_date", dateStr, { sentenceCase: false });
 
   // Apparences corps (fit dans les cases)

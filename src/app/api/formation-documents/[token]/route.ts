@@ -136,5 +136,37 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     payload: { kind: doc.kind, via: "public_accept" },
   });
 
+  // Passe le dossier au statut suivant
+  if (doc.kind === "devis") {
+    await service
+      .from("formation_dossiers")
+      .update({ status: "convention", updated_at: now })
+      .eq("id", doc.dossier_id)
+      .in("status", ["qualification", "devis"]);
+  }
+  if (doc.kind === "convention") {
+    await service
+      .from("formation_dossiers")
+      .update({ status: "mise_en_place", updated_at: now })
+      .eq("id", doc.dossier_id)
+      .in("status", ["convention", "devis"]);
+  }
+
+  try {
+    const { notifyStaffDocumentAccepted } = await import(
+      "@/lib/formation-documents/notify-acceptance"
+    );
+    await notifyStaffDocumentAccepted(service, {
+      dossierId: String(doc.dossier_id),
+      kind: doc.kind as "devis" | "convention",
+      signedAt: now,
+    });
+  } catch (err) {
+    console.warn(
+      "[formation-documents/accept] notify:",
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   return NextResponse.json({ ok: true, signed_at: now });
 }

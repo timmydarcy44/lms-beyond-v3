@@ -291,7 +291,12 @@ export async function fillVaultDevisPdf(
     appearanceFont,
   );
   setText(form, "session_hours", formatHours(slots) || "Selon planning", appearanceFont);
-  setText(form, "session_location", ctx.session?.location_label || "Selon convocation", appearanceFont);
+  setText(
+    form,
+    "session_location",
+    ctx.session?.location_label || "Lieu selon demande (dates à confirmer)",
+    appearanceFont,
+  );
   setText(form, "session_modality", modalityLabel(ctx), appearanceFont);
   setText(form, "trainees_count", String(ctx.participants.length || ""), appearanceFont);
 
@@ -327,7 +332,7 @@ export async function fillVaultDevisPdf(
 
   setText(form, "accept_name", ctx.dossier.contact_name || "", appearanceFont);
   setText(form, "accept_role", "", appearanceFont);
-  setText(form, "accept_city", ctx.of.address_city || "Bretteville-sur-Odon", appearanceFont);
+  setText(form, "accept_city", "Bretteville-sur-Odon", appearanceFont);
   setText(form, "accept_date", quoteDate, appearanceFont);
 
   try {

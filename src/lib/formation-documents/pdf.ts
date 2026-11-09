@@ -270,7 +270,7 @@ function buildConvention(doc: jsPDF, ctx: DossierDocContext) {
       : ["Dates à confirmer d'un commun accord."]),
     "",
     `Article 5 — Lieu`,
-    ctx.session?.location_label || "Lieu communiqué sur la convocation.",
+    ctx.session?.location_label || "Lieu selon demande (dates à confirmer).",
     "",
     `Article 6 — Stagiaires`,
     ctx.participants.length

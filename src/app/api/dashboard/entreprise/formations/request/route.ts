@@ -321,6 +321,46 @@ export async function POST(request: NextRequest) {
       });
       dossierId = dossier.id;
 
+      // Session brouillon avec le lieu choisi (dates à caler ensuite)
+      if (preferredLocation || modalityPresence === "distanciel") {
+        try {
+          const { resolveTrainingLocationLabel } = await import(
+            "@/lib/formation-documents/resolve-location"
+          );
+          const { data: orgAddr } = await service
+            .from("organizations")
+            .select("address_line, address_zip, address_city")
+            .eq("id", access.organizationId)
+            .maybeSingle();
+          const locationLabel = resolveTrainingLocationLabel({
+            notesLocation: preferredLocation || null,
+            modalityPresence,
+            organization: orgAddr,
+          });
+          const { data: sess } = await service
+            .from("formation_sessions")
+            .insert({
+              title: training.title,
+              modality_presence: modalityPresence,
+              location_label: locationLabel,
+              status: "draft",
+            })
+            .select("id")
+            .single();
+          if (sess?.id) {
+            await service
+              .from("formation_dossiers")
+              .update({ session_id: sess.id, updated_at: new Date().toISOString() })
+              .eq("id", dossier.id);
+          }
+        } catch (err) {
+          console.warn(
+            "[entreprise/formations/request] session lieu:",
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
+
       for (const emp of selectedEmployees) {
         const email = String(emp.email ?? "").trim().toLowerCase();
         if (!email.includes("@")) continue;

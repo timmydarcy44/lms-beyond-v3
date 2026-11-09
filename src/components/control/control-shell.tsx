@@ -65,11 +65,39 @@ function ControlFrame({
   const [searchOpen, setSearchOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [liveIncoming, setLiveIncoming] = useState<number | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setOpenSections(readOpen());
   }, []);
+
+  useEffect(() => {
+    const refreshIncoming = () => {
+      void fetch("/api/super-admin/crm/formation-dossiers?count=1")
+        .then((response) => (response.ok ? response.json() : null))
+        .then((json: { count?: number } | null) => {
+          if (typeof json?.count === "number") setLiveIncoming(json.count);
+        })
+        .catch(() => undefined);
+    };
+    refreshIncoming();
+    const onFocus = () => refreshIncoming();
+    const onChanged = () => refreshIncoming();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("formation-incoming-changed", onChanged);
+    const timer = window.setInterval(refreshIncoming, 20_000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("formation-incoming-changed", onChanged);
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const navCounts: ControlNavCounts = {
+    ...counts,
+    incomingDemandes: liveIncoming ?? counts.incomingDemandes,
+  };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -159,7 +187,7 @@ function ControlFrame({
               {expanded ? (
                 <div className="mt-1 space-y-0.5">
                   {section.items.map((item) => {
-                    const count = item.countKey ? counts[item.countKey] : 0;
+                    const count = item.countKey ? navCounts[item.countKey] : 0;
                     const active = item.match(pathname, role);
                     if (item.soon || !item.href) {
                       return (

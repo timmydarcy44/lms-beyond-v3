@@ -429,6 +429,9 @@ export function FormationDossierSheet({
       );
       await load();
       onChanged();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("formation-incoming-changed"));
+      }
     } finally {
       setDevisBusy(false);
     }

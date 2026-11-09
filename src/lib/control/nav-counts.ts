@@ -65,5 +65,6 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
 }
 
 export const getControlNavCounts = unstable_cache(loadControlNavCounts, ["control-nav-counts"], {
-  revalidate: 60,
+  // Pastille demandes : aussi rafraîchie côté client (formation-incoming-changed).
+  revalidate: 15,
 });

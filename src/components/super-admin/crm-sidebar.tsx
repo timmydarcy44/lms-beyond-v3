@@ -279,8 +279,15 @@ export function CrmSidebar() {
         .catch(() => undefined);
     };
     loadIncoming();
-    const timer = window.setInterval(loadIncoming, 60_000);
-    return () => window.clearInterval(timer);
+    const onChanged = () => loadIncoming();
+    window.addEventListener("focus", loadIncoming);
+    window.addEventListener("formation-incoming-changed", onChanged);
+    const timer = window.setInterval(loadIncoming, 20_000);
+    return () => {
+      window.removeEventListener("focus", loadIncoming);
+      window.removeEventListener("formation-incoming-changed", onChanged);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const isJerome = userEmail === "jerome.picot@edgebs.fr";

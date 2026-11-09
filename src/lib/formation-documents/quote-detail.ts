@@ -40,11 +40,12 @@ function esc(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
+import { formatEuro, normalizeMoneyText } from "@/lib/money/format-euro";
+
 export {
   formatEuro as formatEuroFromCents,
   normalizeMoneyText as normalizePdfMoneyText,
 } from "@/lib/money/format-euro";
-import { formatEuro } from "@/lib/money/format-euro";
 
 /** Remise en montant négatif typographique : « - 498,00 € » */
 export function formatEuroDiscountFromCents(cents: number): string {
@@ -224,7 +225,7 @@ ${data.notes ? `<div class="notes"><strong>Notes.</strong> ${esc(data.notes)}</d
 
 /** Helvetica / WinAnsi : montants et libellés sans espaces fins ni glyphes hors plage. */
 function jsPdfSafe(text: string): string {
-  return normalizePdfMoneyText(text)
+  return normalizeMoneyText(text)
     .replace(/×/g, "x")
     .replace(/·/g, "-")
     .replace(/[^\x09\x0A\x0D\x20-\x7E\u00C0-\u00FF\u20AC]/g, "");

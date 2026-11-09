@@ -27,6 +27,9 @@ export function FormationDemandesInbox() {
       );
       if (!res.ok) throw new Error(json.error);
       setCards(json.dossiers ?? []);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("formation-incoming-changed"));
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Chargement impossible");
     } finally {

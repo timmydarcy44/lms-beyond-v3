@@ -41,6 +41,8 @@ type Meta = {
   valid_until: string | null;
   issued_at: string | null;
   contact_name: string | null;
+  contact_email_masked: string | null;
+  requires_email_otp: boolean;
   signer_name: string | null;
   signer_role: string | null;
   cgv_version: string | null;
@@ -101,6 +103,9 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
   const [cgvOk, setCgvOk] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
+  const [otpBusy, setOtpBusy] = useState(false);
   const [modifOpen, setModifOpen] = useState(false);
   const [modifMessage, setModifMessage] = useState("");
   const [modifBusy, setModifBusy] = useState(false);
@@ -128,11 +133,13 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
 
   const pageState = meta?.page_state ?? "pending";
   const signed = pageState === "accepted";
+  const isConvention = meta?.kind === "convention";
+  const isDevis = meta?.kind === "devis";
   const canAccept =
     Boolean(acceptToken) &&
     Boolean(meta?.signable) &&
     pageState === "pending" &&
-    meta?.kind === "devis";
+    (isDevis || isConvention);
 
   const ht = meta?.amount_ht_cents ?? null;
   const tva = meta?.amount_tva_cents ?? null;
@@ -142,7 +149,11 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
 
   const statusPill = useMemo(() => {
     if (pageState === "accepted") {
-      return { bg: "rgba(107,227,155,0.18)", color: GREEN, label: "● Accepté" };
+      return {
+        bg: "rgba(107,227,155,0.18)",
+        color: GREEN,
+        label: isConvention ? "● Signée" : "● Accepté",
+      };
     }
     if (pageState === "expired") {
       return { bg: "rgba(154,160,181,0.18)", color: MUTED, label: "● Expiré" };
@@ -157,11 +168,38 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
     return {
       bg: "rgba(245,200,92,0.18)",
       color: YELLOW,
-      label: "● En attente de votre accord",
+      label: isConvention ? "● À signer" : "● En attente de votre accord",
     };
-  }, [pageState]);
+  }, [pageState, isConvention]);
 
-  const acceptDisabled = busy || !cgvOk || !signerName.trim();
+  const otpReady = otpCode.replace(/\D/g, "").length === 6;
+  const acceptDisabled = busy || !cgvOk || !signerName.trim() || !otpReady;
+
+  const sendOtp = async () => {
+    if (!acceptToken.trim() || !cgvOk || !signerName.trim() || otpBusy) return;
+    setOtpBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/formation-documents/${encodeURIComponent(token)}/otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept_token: acceptToken.trim() }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        emailed_to?: string;
+      };
+      if (!res.ok) throw new Error(json.error || "Envoi du code impossible");
+      setOtpSentTo(json.emailed_to || meta?.contact_email_masked || null);
+      setMessage(
+        `Code envoyé${json.emailed_to ? ` à ${json.emailed_to}` : ""}. Saisissez-le ci-dessous.`,
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setOtpBusy(false);
+    }
+  };
 
   const accept = async () => {
     if (!acceptToken.trim() || acceptDisabled) return;
@@ -176,11 +214,16 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
           signer_name: signerName.trim(),
           signer_role: signerRole.trim() || null,
           cgv_accepted: true,
+          otp_code: otpCode.replace(/\D/g, ""),
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Acceptation impossible");
-      setMessage("Document accepté. Merci.");
+      setMessage(
+        isConvention
+          ? "Convention signée. Merci — Byound prépare la mise en place."
+          : "Devis accepté. Merci.",
+      );
       setMeta((m) =>
         m
           ? {
@@ -256,13 +299,15 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
     );
   }
 
-  const quoteLabel = meta?.quote_number || "Devis";
+  const docLabel = isConvention ? "Convention" : "Devis";
+  const quoteLabel =
+    meta?.quote_number || (isConvention ? "Convention" : "Devis");
   const orgName = meta?.organization_name || "Client";
   const contactPerson = (meta?.contact_name || "").trim() || orgName;
   const course = meta?.course_title || meta?.title || "Formation";
   const manager = meta?.account_manager;
   const mailto = manager?.email
-    ? `mailto:${manager.email}?subject=${encodeURIComponent(`Devis ${quoteLabel}`)}`
+    ? `mailto:${manager.email}?subject=${encodeURIComponent(`${docLabel} ${quoteLabel} — ${course}`)}`
     : null;
   const tel = manager?.phone ? `tel:${manager.phone.replace(/\s+/g, "")}` : null;
 
@@ -294,22 +339,42 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
           >
             {statusPill.label}
           </span>
-          <p className="mt-3 text-sm text-white/85">
-            {signed
-              ? `Devis n° ${quoteLabel} · accepté le ${formatShortDate(meta?.signed_at)} par ${
-                  meta?.signer_name || "—"
-                }`
-              : `Devis n° ${quoteLabel} · émis le ${formatShortDate(meta?.issued_at)}`}
-          </p>
-          <p className="mt-2 text-[44px] font-extrabold leading-none tracking-tight text-white">
-            {ttc != null ? formatEuro(ttc) : "—"}
-          </p>
-          <p className="mt-2 text-sm text-white/80">
-            TTC
-            {ht != null
-              ? ` · soit ${formatEuro(ht)} HT${tva != null ? ` + ${formatEuro(tva)} de TVA` : ""}`
-              : ""}
-          </p>
+          {isConvention ? (
+            <>
+              <p className="mt-3 text-sm text-white/85">
+                {signed
+                  ? `Convention · signée le ${formatShortDate(meta?.signed_at)} par ${
+                      meta?.signer_name || "—"
+                    }`
+                  : `Convention · émise le ${formatShortDate(meta?.issued_at)}`}
+              </p>
+              <p className="mt-2 text-[28px] font-extrabold leading-tight tracking-tight text-white">
+                {course}
+              </p>
+              <p className="mt-2 text-sm text-white/80">
+                CGV et règlement intérieur joints à la convention.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-sm text-white/85">
+                {signed
+                  ? `Devis n° ${quoteLabel} · accepté le ${formatShortDate(meta?.signed_at)} par ${
+                      meta?.signer_name || "—"
+                    }`
+                  : `Devis n° ${quoteLabel} · émis le ${formatShortDate(meta?.issued_at)}`}
+              </p>
+              <p className="mt-2 text-[44px] font-extrabold leading-none tracking-tight text-white">
+                {ttc != null ? formatEuro(ttc) : "—"}
+              </p>
+              <p className="mt-2 text-sm text-white/80">
+                TTC
+                {ht != null
+                  ? ` · soit ${formatEuro(ht)} HT${tva != null ? ` + ${formatEuro(tva)} de TVA` : ""}`
+                  : ""}
+              </p>
+            </>
+          )}
           <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/10 px-3 py-3 backdrop-blur">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-[#1A1440]">
               {initials(contactPerson)}
@@ -387,12 +452,14 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">
-                {signed ? `Devis signé ${quoteLabel}.pdf` : `Devis ${quoteLabel}.pdf`}
+                {signed
+                  ? `${docLabel} signé${isConvention ? "e" : ""} ${quoteLabel}.pdf`
+                  : `${docLabel} ${quoteLabel}.pdf`}
               </p>
               <p className="truncate text-xs" style={{ color: MUTED }}>
                 {signed
-                  ? `Accepté le ${formatShortDate(meta?.signed_at)} · avec mention de l'acceptation`
-                  : `1 page · ${course}`}
+                  ? `${isConvention ? "Signée" : "Accepté"} le ${formatShortDate(meta?.signed_at)} · avec mention de l'acceptation`
+                  : `${course}`}
               </p>
             </div>
           </div>
@@ -403,16 +470,20 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
             className="mt-4 block w-full rounded-full py-3.5 text-center text-sm font-bold text-white"
             style={{ background: VIOLET, minHeight: 48 }}
           >
-            Voir le devis →
+            {isConvention ? "Voir la convention →" : "Voir le devis →"}
           </a>
         </section>
 
         {canAccept ? (
           <section className="space-y-3 rounded-3xl p-4" style={{ background: CARD }}>
             <div>
-              <p className="text-base font-bold">Accepter le devis</p>
+              <p className="text-base font-bold">
+                {isConvention ? "Signer la convention" : "Accepter le devis"}
+              </p>
               <p className="mt-1 text-xs" style={{ color: MUTED }}>
-                Après l&apos;avoir consulté, validez-le ici.
+                {isConvention
+                  ? "Après l'avoir consultée, signez-la ici pour lancer la mise en place."
+                  : "Après l'avoir consulté, validez-le ici."}
               </p>
             </div>
             <label className="block space-y-1.5">
@@ -444,7 +515,9 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
                 className="mt-1 h-4 w-4 accent-[#6E5BFF]"
               />
               <span>
-                J&apos;accepte le devis et les{" "}
+                {isConvention
+                  ? "Je signe la convention et j'accepte les "
+                  : "J'accepte le devis et les "}
                 <a
                   href={meta?.cgv_path || "/cgv"}
                   target="_blank"
@@ -457,6 +530,45 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
                 .
               </span>
             </label>
+
+            <div className="rounded-2xl border border-white/10 p-3">
+              <p className="text-xs" style={{ color: MUTED }}>
+                Pour confirmer votre identité, un code est envoyé à{" "}
+                <span className="font-semibold text-white/90">
+                  {otpSentTo || meta?.contact_email_masked || "l'e-mail contact du dossier"}
+                </span>
+                .
+              </p>
+              <button
+                type="button"
+                disabled={otpBusy || !cgvOk || !signerName.trim()}
+                onClick={() => void sendOtp()}
+                className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+                style={{ background: "rgba(110,91,255,0.35)" }}
+              >
+                {otpBusy
+                  ? "Envoi…"
+                  : otpSentTo
+                    ? "Renvoyer le code"
+                    : "Recevoir le code par e-mail"}
+              </button>
+              <label className="mt-3 block space-y-1.5">
+                <span className="text-xs font-medium" style={{ color: MUTED }}>
+                  Code à 6 chiffres
+                </span>
+                <input
+                  value={otpCode}
+                  onChange={(e) =>
+                    setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="••••••"
+                  className="w-full rounded-xl border border-white/15 bg-transparent px-3 py-3 text-center text-lg font-bold tracking-[0.35em] outline-none focus:border-[#6E5BFF]"
+                />
+              </label>
+            </div>
+
             <button
               type="button"
               disabled={acceptDisabled}
@@ -464,7 +576,11 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
               className="w-full rounded-full bg-white py-3.5 text-sm font-extrabold text-black disabled:opacity-40"
               style={{ minHeight: 48 }}
             >
-              {busy ? "Signature en cours…" : "Accepter et signer"}
+              {busy
+                ? "Signature en cours…"
+                : isConvention
+                  ? "Signer la convention"
+                  : "Accepter et signer"}
             </button>
             <button
               type="button"
@@ -547,7 +663,12 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
 
         <footer className="pb-6 text-center text-[11px] leading-relaxed" style={{ color: MUTED }}>
           <p>SAS Byound Business · TVA FR30130709058</p>
-          {meta?.valid_until ? (
+          {isConvention ? (
+            <p className="mt-1">
+              La signature de cette convention vaut engagement contractuel pour la formation
+              indiquée. Preuve conservée (e-mail OTP, identité, date, adresse IP).
+            </p>
+          ) : meta?.valid_until ? (
             <p className="mt-1">
               Devis valable jusqu&apos;au {formatLongDate(meta.valid_until)}. Son acceptation vaut
               commande, sous réserve de la convention de formation.

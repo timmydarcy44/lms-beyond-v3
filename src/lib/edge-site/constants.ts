@@ -6,9 +6,9 @@ export const EDGE_COHORTE_LABEL = "Rentrée septembre 2026";
 /** Badge hero homepage — sans répéter l’année en tête de page. */
 export const EDGE_COHORTE_HERO_BADGE = "Normandie · Rentrée septembre · inscriptions ouvertes";
 
-/** Hero homepage — lifestyle apprenante (Supabase Byound Lab). */
+/** Hero homepage — image marketing (Supabase App). */
 export const EDGE_HERO_IMAGE_URL =
-  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/EDGE%20Lab/product%20builder%20formation%20edge.jpeg";
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/image%20hero.png";
 
 /** Assets marketing homepage Byound. */
 export const EDGE_OPEN_BADGE_IMAGE_PATH = "/edge-lab/open-badge-modern-prospecting.png";

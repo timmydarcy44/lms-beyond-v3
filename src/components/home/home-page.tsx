@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
@@ -40,12 +38,14 @@ export async function HomePage() {
       order: null,
     }];
   });
-  const localHero = path.join(process.cwd(), "public", "images", "hero-byound.jpg");
-  const heroSrc = fs.existsSync(localHero) ? "/images/hero-byound.jpg" : EDGE_HERO_IMAGE_URL;
 
   return (
     <div className={`${manrope.className} byound-home`}>
-      <HomeHero schoolHref={content.hero.school} businessHref={content.hero.business} imageSrc={heroSrc} />
+      <HomeHero
+        schoolHref={content.hero.school}
+        businessHref={content.hero.business}
+        imageSrc={EDGE_HERO_IMAGE_URL}
+      />
       <HomeSocialProof />
       <HomeUniverses
         more={content.moreFormations}

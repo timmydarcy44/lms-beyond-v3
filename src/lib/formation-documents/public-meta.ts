@@ -172,6 +172,15 @@ export function buildPublicDocMeta(
   const dossierStatus = docCtx?.dossier.status || "qualification";
   const signableKinds = doc.kind === "devis" || doc.kind === "convention";
 
+  const contactEmail = String(docCtx?.dossier.contact_email ?? "").trim().toLowerCase();
+  const maskEmail = (email: string) => {
+    const at = email.indexOf("@");
+    if (at < 1) return null;
+    const local = email.slice(0, at);
+    const domain = email.slice(at + 1);
+    return `${local.slice(0, Math.min(2, local.length))}***@${domain}`;
+  };
+
   return {
     kind: doc.kind,
     title: doc.title,
@@ -188,6 +197,8 @@ export function buildPublicDocMeta(
     valid_until: doc.valid_until ?? null,
     issued_at: doc.generated_at ?? doc.sent_at ?? null,
     contact_name: docCtx?.dossier.contact_name ?? null,
+    contact_email_masked: contactEmail.includes("@") ? maskEmail(contactEmail) : null,
+    requires_email_otp: Boolean(signableKinds) && pageState === "pending",
     signer_name: doc.signer_name ?? null,
     signer_role: doc.signer_role ?? null,
     cgv_version: doc.cgv_version ?? BYOUND_COMPANY.cgv_version,

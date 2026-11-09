@@ -3,7 +3,7 @@
  * Brancher Yousign (ou équivalent) plus tard sans refaire le flux métier.
  */
 
-export type SignatureMethod = "simple_checkbox" | "yousign";
+export type SignatureMethod = "simple_checkbox" | "email_otp" | "yousign";
 
 export type SignatureAcceptanceInput = {
   documentId: string;

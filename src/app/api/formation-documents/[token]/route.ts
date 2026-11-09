@@ -8,6 +8,7 @@ import {
   loadAccountManager,
 } from "@/lib/formation-documents/public-meta";
 import { cancelDocRelances } from "@/lib/formation-documents/schedule";
+import { clearAcceptOtp, verifyAcceptOtp } from "@/lib/formation-documents/accept-otp";
 import { getDefaultSignatureProvider } from "@/lib/formation-documents/signature-provider";
 import { downloadFormationPdf } from "@/lib/formation-documents/storage";
 import { resolveFormationPdfBuffer } from "@/lib/formation-documents/vault";
@@ -115,8 +116,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     signer_name?: string;
     signer_role?: string | null;
     cgv_accepted?: boolean;
+    otp_code?: string;
   } | null;
   const acceptToken = String(body?.accept_token ?? "").trim();
+  const otpCode = String(body?.otp_code ?? "").trim();
 
   const { data: doc } = await service
     .from("formation_documents")
@@ -143,12 +146,41 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   if (doc.superseded_by) {
     return NextResponse.json(
-      { error: "Ce devis a été remplacé par une nouvelle version" },
+      {
+        error:
+          doc.kind === "convention"
+            ? "Cette convention a été remplacée par une nouvelle version"
+            : "Ce devis a été remplacé par une nouvelle version",
+      },
       { status: 409 },
     );
   }
   if (doc.valid_until && new Date(String(doc.valid_until)).getTime() < Date.now()) {
-    return NextResponse.json({ error: "Ce devis a expiré" }, { status: 410 });
+    return NextResponse.json(
+      {
+        error:
+          doc.kind === "convention" ? "Cette convention a expiré" : "Ce devis a expiré",
+      },
+      { status: 410 },
+    );
+  }
+
+  const otpCheck = await verifyAcceptOtp({
+    service,
+    documentId: String(doc.id),
+    otpCode,
+  });
+  if (!otpCheck.ok) {
+    const status =
+      otpCheck.code === "otp_locked"
+        ? 429
+        : otpCheck.code === "otp_schema_missing"
+          ? 503
+          : 400;
+    return NextResponse.json(
+      { error: otpCheck.error, code: otpCheck.code },
+      { status },
+    );
   }
 
   let evidence: {
@@ -189,8 +221,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     accepted_ip: evidence.accepted_ip,
     accepted_user_agent: evidence.accepted_user_agent,
     cgv_version: evidence.cgv_version,
-    acceptance_method: "simple_checkbox",
+    acceptance_method: "email_otp",
     pdf_content_hash: doc.pdf_content_hash || null,
+    accept_otp_hash: null,
+    accept_otp_expires_at: null,
+    accept_otp_attempts: 0,
   };
 
   let { error: updErr } = await service
@@ -199,17 +234,30 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     .eq("id", doc.id)
     .neq("status", "signed");
 
-  if (updErr && /signer_|accepted_|cgv_version|acceptance_method|pdf_content_hash/i.test(updErr.message)) {
+  if (
+    updErr &&
+    /signer_|accepted_|cgv_version|acceptance_method|pdf_content_hash|accept_otp_/i.test(
+      updErr.message,
+    )
+  ) {
+    const reduced = { ...patch };
+    delete reduced.signer_name;
+    delete reduced.signer_role;
+    delete reduced.accepted_ip;
+    delete reduced.accepted_user_agent;
+    delete reduced.cgv_version;
+    delete reduced.acceptance_method;
+    delete reduced.pdf_content_hash;
+    delete reduced.accept_otp_hash;
+    delete reduced.accept_otp_expires_at;
+    delete reduced.accept_otp_attempts;
     ({ error: updErr } = await service
       .from("formation_documents")
-      .update({
-        status: "signed",
-        signed_at: now,
-        opened_at: doc.opened_at || now,
-        updated_at: now,
-      })
+      .update(reduced)
       .eq("id", doc.id)
       .neq("status", "signed"));
+    // Best-effort clear OTP même si colonnes evidence absentes
+    await clearAcceptOtp(service, String(doc.id)).catch(() => undefined);
   }
 
   if (doc.kind === "devis" || doc.kind === "convention") {
@@ -222,7 +270,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     payload: {
       kind: doc.kind,
       via: "public_accept",
-      method: "simple_checkbox",
+      method: "email_otp",
       signer_name: evidence.signer_name,
     },
   });

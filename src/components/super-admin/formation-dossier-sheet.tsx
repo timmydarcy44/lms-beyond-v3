@@ -101,6 +101,20 @@ function docStatusLabel(doc: DocRow): string {
   return DOC_STATUS_LABEL[doc.status] ?? doc.status;
 }
 
+function docStatusBadgeClass(doc: DocRow): string {
+  const status = String(doc.status ?? "");
+  const done =
+    status === "sent" ||
+    status === "signed" ||
+    status === "opened" ||
+    Boolean(doc.sent_at) ||
+    Boolean(doc.signed_at);
+  if (done) {
+    return "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 ring-1 ring-emerald-500/40";
+  }
+  return "rounded-full bg-[#0A0C1B] px-2 py-0.5 text-[11px] text-[#B7AEFF]";
+}
+
 const LOCK_HINTS: Partial<Record<FormationDossierStatus, string>> = {
   mise_en_place: "Convention signée + BPF requis.",
   session: "Formateur requis.",
@@ -870,7 +884,7 @@ export function FormationDossierSheet({
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[#0A0C1B] px-2 py-0.5 text-[11px] text-[#B7AEFF]">
+                      <span className={docStatusBadgeClass(doc)}>
                         {docStatusLabel(doc)}
                       </span>
                       <Button

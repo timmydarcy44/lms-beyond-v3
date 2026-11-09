@@ -377,6 +377,31 @@ export async function loadDossierDocContext(
     if (tc) course = mapCourseRow(tc as Record<string, unknown>);
   }
 
+  // Fallback contact = gestionnaire du compte (Mon compte) si le dossier n'en a pas
+  let contactName = dossier.contact_name ? String(dossier.contact_name) : null;
+  let contactEmail = dossier.contact_email ? String(dossier.contact_email) : null;
+  let contactPhone = dossier.contact_phone ? String(dossier.contact_phone) : null;
+  if (!contactName || !contactEmail) {
+    const { data: manager } = await service
+      .from("profiles")
+      .select("first_name, last_name, full_name, email, phone")
+      .eq("company_id", dossier.organization_id)
+      .in("role", ["entreprise", "admin", "admin_hr"])
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (manager) {
+      const name =
+        String(manager.full_name ?? "").trim() ||
+        [manager.first_name, manager.last_name].filter(Boolean).join(" ").trim();
+      if (!contactName && name) contactName = name;
+      if (!contactEmail && manager.email) contactEmail = String(manager.email);
+      if (!contactPhone && (manager as { phone?: string | null }).phone) {
+        contactPhone = String((manager as { phone?: string | null }).phone);
+      }
+    }
+  }
+
   return {
     dossier: {
       id: String(dossier.id),
@@ -386,9 +411,9 @@ export async function loadDossierDocContext(
       amount_ht_cents: dossier.amount_ht_cents != null ? Number(dossier.amount_ht_cents) : null,
       amount_tva_cents: dossier.amount_tva_cents != null ? Number(dossier.amount_tva_cents) : null,
       amount_ttc_cents: dossier.amount_ttc_cents != null ? Number(dossier.amount_ttc_cents) : null,
-      contact_name: dossier.contact_name ? String(dossier.contact_name) : null,
-      contact_email: dossier.contact_email ? String(dossier.contact_email) : null,
-      contact_phone: dossier.contact_phone ? String(dossier.contact_phone) : null,
+      contact_name: contactName,
+      contact_email: contactEmail,
+      contact_phone: contactPhone,
       modality_intra_inter: dossier.modality_intra_inter
         ? String(dossier.modality_intra_inter)
         : null,

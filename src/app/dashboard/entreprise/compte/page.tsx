@@ -20,14 +20,29 @@ type AccountData = {
   role?: string | null;
   role_type?: string | null;
   organisationName?: string | null;
+  siret?: string | null;
+  address_line?: string | null;
+  address_zip?: string | null;
+  address_city?: string | null;
+  address_country?: string | null;
   hasPassword?: boolean;
 };
+
+const fieldClass =
+  "rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400";
+const disabledClass =
+  "rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-gray-500";
 
 export default function EntrepriseComptePage() {
   const [data, setData] = useState<AccountData | null>(null);
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [phone, setPhone] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [siret, setSiret] = useState("");
+  const [addressLine, setAddressLine] = useState("");
+  const [addressZip, setAddressZip] = useState("");
+  const [addressCity, setAddressCity] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -51,10 +66,16 @@ export default function EntrepriseComptePage() {
           setError(String(json.error ?? "Impossible de charger votre compte."));
           return;
         }
-        setData(json as AccountData);
-        setPrenom(String(json.prenom ?? ""));
-        setNom(String(json.nom ?? ""));
-        setPhone(String(json.phone ?? ""));
+        const account = json as AccountData;
+        setData(account);
+        setPrenom(String(account.prenom ?? ""));
+        setNom(String(account.nom ?? ""));
+        setPhone(String(account.phone ?? ""));
+        setCompanyName(String(account.organisationName ?? ""));
+        setSiret(String(account.siret ?? ""));
+        setAddressLine(String(account.address_line ?? ""));
+        setAddressZip(String(account.address_zip ?? ""));
+        setAddressCity(String(account.address_city ?? ""));
       } catch {
         if (!cancelled) setError("Erreur réseau.");
       } finally {
@@ -77,6 +98,12 @@ export default function EntrepriseComptePage() {
           first_name: prenom,
           last_name: nom,
           phone,
+          company_name: companyName,
+          siret,
+          address_line: addressLine,
+          address_zip: addressZip,
+          address_city: addressCity,
+          address_country: "FR",
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -92,10 +119,16 @@ export default function EntrepriseComptePage() {
               prenom: json.prenom ?? prenom,
               nom: json.nom ?? nom,
               phone: json.phone ?? phone,
+              organisationName: json.organisationName ?? companyName,
+              siret: json.siret ?? siret.replace(/\D/g, ""),
+              address_line: json.address_line ?? addressLine,
+              address_zip: json.address_zip ?? addressZip,
+              address_city: json.address_city ?? addressCity,
             }
           : prev,
       );
-      toast.success("Profil mis à jour.");
+      setSiret(String(json.siret ?? siret.replace(/\D/g, "")));
+      toast.success("Compte mis à jour — ces infos alimentent devis et convention.");
     } catch {
       toast.error("Erreur réseau.");
     } finally {
@@ -164,7 +197,8 @@ export default function EntrepriseComptePage() {
           </p>
           <h1 className={`mt-2 text-left ${ENTREPRISE_H1_CLASS}`}>Mon compte</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Modifiez votre profil. L’adresse email n’est pas modifiable ici.
+            Identité du gestionnaire, SIRET et adresse postale — repris sur devis, convention et
+            documents de formation. L’email n’est pas modifiable ici.
           </p>
         </header>
 
@@ -180,61 +214,121 @@ export default function EntrepriseComptePage() {
               onSubmit={save}
               className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-sm sm:p-8"
             >
-              <div className="grid gap-4 sm:grid-cols-2">
+              <section className="space-y-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">
+                    Entreprise
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Ces informations apparaissent sur le devis et la convention.
+                  </p>
+                </div>
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Prénom</span>
+                  <span className="font-semibold text-gray-700">Raison sociale</span>
                   <input
                     required
-                    value={prenom}
-                    onChange={(e) => setPrenom(e.target.value)}
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className={fieldClass}
                   />
                 </label>
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Nom</span>
+                  <span className="font-semibold text-gray-700">SIRET</span>
                   <input
                     required
-                    value={nom}
-                    onChange={(e) => setNom(e.target.value)}
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm sm:col-span-2">
-                  <span className="font-semibold text-gray-700">
-                    Email <span className="font-normal text-gray-400">(non modifiable)</span>
-                  </span>
-                  <input
-                    value={data?.email ?? ""}
-                    disabled
-                    className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-gray-500"
+                    inputMode="numeric"
+                    value={siret}
+                    onChange={(e) => setSiret(e.target.value.replace(/[^\d\s]/g, ""))}
+                    placeholder="14 chiffres"
+                    className={fieldClass}
                   />
                 </label>
                 <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Téléphone</span>
+                  <span className="font-semibold text-gray-700">Adresse postale</span>
                   <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="06…"
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                    required
+                    value={addressLine}
+                    onChange={(e) => setAddressLine(e.target.value)}
+                    placeholder="N° et rue"
+                    autoComplete="street-address"
+                    className={fieldClass}
                   />
                 </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-semibold text-gray-700">Rôle</span>
-                  <input
-                    value={String(roleLabel)}
-                    disabled
-                    className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-gray-500"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm sm:col-span-2">
-                  <span className="font-semibold text-gray-700">Organisation</span>
-                  <input
-                    value={data?.organisationName ?? ""}
-                    disabled
-                    className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-gray-500"
-                  />
-                </label>
-              </div>
+                <div className="grid gap-4 sm:grid-cols-[120px_1fr]">
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Code postal</span>
+                    <input
+                      required
+                      value={addressZip}
+                      onChange={(e) => setAddressZip(e.target.value)}
+                      placeholder="14000"
+                      autoComplete="postal-code"
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Ville</span>
+                    <input
+                      required
+                      value={addressCity}
+                      onChange={(e) => setAddressCity(e.target.value)}
+                      placeholder="Caen"
+                      autoComplete="address-level2"
+                      className={fieldClass}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="mt-8 space-y-4 border-t border-gray-100 pt-8">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">
+                    Gestionnaire du compte
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Contact signataire repris sur les documents (représentant de l’entreprise).
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Prénom</span>
+                    <input
+                      required
+                      value={prenom}
+                      onChange={(e) => setPrenom(e.target.value)}
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Nom</span>
+                    <input
+                      required
+                      value={nom}
+                      onChange={(e) => setNom(e.target.value)}
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm sm:col-span-2">
+                    <span className="font-semibold text-gray-700">
+                      Email <span className="font-normal text-gray-400">(non modifiable)</span>
+                    </span>
+                    <input value={data?.email ?? ""} disabled className={disabledClass} />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Téléphone</span>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="06…"
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-semibold text-gray-700">Rôle</span>
+                    <input value={String(roleLabel)} disabled className={disabledClass} />
+                  </label>
+                </div>
+              </section>
 
               <button
                 type="submit"
@@ -284,7 +378,9 @@ export default function EntrepriseComptePage() {
                   setPassword("");
                   setCurrentPassword("");
                   setData((current) => (current ? { ...current, hasPassword: true } : current));
-                  toast.success(data?.hasPassword ? "Mot de passe modifié." : "Mot de passe défini.");
+                  toast.success(
+                    data?.hasPassword ? "Mot de passe modifié." : "Mot de passe défini.",
+                  );
                 })();
               }}
               className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-sm sm:p-8"
@@ -292,7 +388,9 @@ export default function EntrepriseComptePage() {
               <h2 className="text-lg font-bold text-gray-950">
                 {data?.hasPassword ? "Modifier mon mot de passe" : "Définir un mot de passe"}
               </h2>
-              <p className="mt-1 text-sm text-gray-500">Facultatif. Vous pouvez continuer à vous connecter avec un code.</p>
+              <p className="mt-1 text-sm text-gray-500">
+                Facultatif. Vous pouvez continuer à vous connecter avec un code.
+              </p>
               <div className="mt-4 grid gap-4">
                 {data?.hasPassword ? (
                   <label className="grid gap-1.5 text-sm">
@@ -301,7 +399,7 @@ export default function EntrepriseComptePage() {
                       type="password"
                       value={currentPassword}
                       onChange={(event) => setCurrentPassword(event.target.value)}
-                      className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                      className={fieldClass}
                     />
                   </label>
                 ) : null}
@@ -313,7 +411,7 @@ export default function EntrepriseComptePage() {
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
+                    className={fieldClass}
                   />
                 </label>
               </div>
@@ -322,7 +420,11 @@ export default function EntrepriseComptePage() {
                 disabled={savingPassword}
                 className="mt-5 inline-flex rounded-full bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-60"
               >
-                {savingPassword ? "Enregistrement…" : data?.hasPassword ? "Modifier mon mot de passe" : "Définir un mot de passe"}
+                {savingPassword
+                  ? "Enregistrement…"
+                  : data?.hasPassword
+                    ? "Modifier mon mot de passe"
+                    : "Définir un mot de passe"}
               </button>
             </form>
 

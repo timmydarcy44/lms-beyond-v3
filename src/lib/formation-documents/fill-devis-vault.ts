@@ -217,7 +217,6 @@ export async function fillVaultDevisPdf(
   ctx: DossierDocContext,
   opts?: BuildQuoteOptions & { templateBuffer?: Buffer | null },
 ): Promise<Buffer | null> {
-  void service;
   const bytes = await loadDevisCorpsTemplate(opts?.templateBuffer);
   if (!bytes) return null;
 
@@ -330,10 +329,32 @@ export async function fillVaultDevisPdf(
   setText(form, "funding_other_label", "", appearanceFont);
   setText(form, "funding_reference", "", appearanceFont);
 
-  setText(form, "accept_name", ctx.dossier.contact_name || "", appearanceFont);
+  // Ne pas préremplir la zone « bon pour accord » : le client doit
+  // accepter via le CTA public, puis on régénère le PDF signé.
+  const { data: devisDoc } = await service
+    .from("formation_documents")
+    .select("status, signed_at")
+    .eq("dossier_id", ctx.dossier.id)
+    .eq("kind", "devis")
+    .maybeSingle();
+  const isAccepted = devisDoc?.status === "signed";
+  const acceptedDate = devisDoc?.signed_at
+    ? formatDateAdmin(new Date(String(devisDoc.signed_at)))
+    : quoteDate;
+  setText(
+    form,
+    "accept_name",
+    isAccepted ? ctx.dossier.contact_name || "" : "",
+    appearanceFont,
+  );
   setText(form, "accept_role", "", appearanceFont);
-  setText(form, "accept_city", "Bretteville-sur-Odon", appearanceFont);
-  setText(form, "accept_date", quoteDate, appearanceFont);
+  setText(
+    form,
+    "accept_city",
+    isAccepted ? "Bretteville-sur-Odon" : "",
+    appearanceFont,
+  );
+  setText(form, "accept_date", isAccepted ? acceptedDate : "", appearanceFont);
 
   try {
     form.updateFieldAppearances(appearanceFont);

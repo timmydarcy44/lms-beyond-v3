@@ -103,16 +103,13 @@ function docStatusLabel(doc: DocRow): string {
 
 function docStatusBadgeClass(doc: DocRow): string {
   const status = String(doc.status ?? "");
-  const done =
-    status === "sent" ||
-    status === "signed" ||
-    status === "opened" ||
-    Boolean(doc.sent_at) ||
-    Boolean(doc.signed_at);
-  if (done) {
-    return "rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 ring-1 ring-emerald-500/40";
+  if (status === "signed" || Boolean(doc.signed_at)) {
+    return "rounded-full bg-[#16A34A] px-2.5 py-0.5 text-[11px] font-bold text-white";
   }
-  return "rounded-full bg-[#0A0C1B] px-2 py-0.5 text-[11px] text-[#B7AEFF]";
+  if (status === "sent" || status === "opened" || Boolean(doc.sent_at)) {
+    return "rounded-full bg-[#15803D] px-2.5 py-0.5 text-[11px] font-bold text-white";
+  }
+  return "rounded-full bg-[#0A0C1B] px-2.5 py-0.5 text-[11px] text-[#B7AEFF]";
 }
 
 const LOCK_HINTS: Partial<Record<FormationDossierStatus, string>> = {

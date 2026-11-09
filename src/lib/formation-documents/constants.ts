@@ -45,14 +45,14 @@ export const MAIL_COPY: Record<
   devis: {
     subject: "Votre devis de formation — Byound",
     title: "Votre devis",
-    body: "Voici le devis pour la formation prévue. Vous pouvez le consulter et l'accepter en ligne.",
-    cta: "Voir le devis",
+    body: "Voici le devis pour la formation prévue. Consultez-le, puis acceptez et signez-le en ligne pour confirmer.",
+    cta: "Accepter et signer le devis",
   },
   convention: {
     subject: "Votre convention de formation — Byound",
     title: "Convention de formation",
-    body: "La convention de formation est prête. Les CGV et le règlement intérieur sont joints.",
-    cta: "Voir la convention",
+    body: "La convention de formation est prête. Les CGV et le règlement intérieur sont joints. Consultez-la, puis acceptez et signez-la en ligne.",
+    cta: "Accepter et signer la convention",
   },
   cgv: {
     subject: "Conditions générales de vente — Byound",

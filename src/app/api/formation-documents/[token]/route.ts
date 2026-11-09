@@ -47,7 +47,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       of_name: docCtx?.of.legal_name ?? "Byound",
       amount_ht_cents: docCtx?.dossier.amount_ht_cents ?? null,
       amount_ttc_cents: docCtx?.dossier.amount_ttc_cents ?? null,
-      signable: doc.kind === "devis" || doc.kind === "convention",
+      signable:
+        (doc.kind === "devis" || doc.kind === "convention") && doc.status !== "signed",
     });
   }
 
@@ -150,6 +151,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       .update({ status: "mise_en_place", updated_at: now })
       .eq("id", doc.dossier_id)
       .in("status", ["convention", "devis"]);
+  }
+
+  // Régénère le PDF avec la zone d'acceptation remplie
+  try {
+    const { generateFormationDocuments } = await import(
+      "@/lib/formation-documents/generate"
+    );
+    await generateFormationDocuments(service, {
+      dossierId: String(doc.dossier_id),
+      kinds: [doc.kind],
+    });
+  } catch (err) {
+    console.warn(
+      "[formation-documents/accept] regenerate:",
+      err instanceof Error ? err.message : err,
+    );
   }
 
   try {

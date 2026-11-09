@@ -456,9 +456,23 @@ export async function fillVaultConventionPdf(
     funding.includes("opco") || funding.includes("entreprise") ? "" : funding,
   );
 
-  // Signature
-  setText(form, "signed_at_city", "Bretteville-sur-Odon", { sentenceCase: false });
-  setText(form, "signed_at_date", dateStr, { sentenceCase: false });
+  // Signature client — vide tant que non acceptée via le CTA public
+  const { data: conventionDoc } = await service
+    .from("formation_documents")
+    .select("status, signed_at")
+    .eq("dossier_id", ctx.dossier.id)
+    .eq("kind", "convention")
+    .maybeSingle();
+  const isAccepted = conventionDoc?.status === "signed";
+  const acceptedDate = conventionDoc?.signed_at
+    ? formatDateAdmin(new Date(String(conventionDoc.signed_at)))
+    : dateStr;
+  setText(form, "signed_at_city", isAccepted ? "Bretteville-sur-Odon" : "", {
+    sentenceCase: false,
+  });
+  setText(form, "signed_at_date", isAccepted ? acceptedDate : "", {
+    sentenceCase: false,
+  });
 
   // Apparences corps (fit dans les cases)
   try {

@@ -131,15 +131,20 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
         >
           <p className="text-sm" style={{ color: MUTED }}>
             {signed
-              ? "Ce document a été accepté."
-              : "Consultez le PDF, puis validez-le si une acceptation vous est demandée."}
+              ? "Ce document a été accepté et signé."
+              : "Consultez le PDF, puis acceptez et signez pour confirmer."}
           </p>
           <a
             href={`/api/formation-documents/${encodeURIComponent(token)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 block w-full rounded-2xl py-3.5 text-center font-semibold text-white"
-            style={{ background: ACCENT, minHeight: 44 }}
+            className="mt-4 block w-full rounded-2xl py-3.5 text-center font-semibold"
+            style={{
+              background: canAccept ? "transparent" : ACCENT,
+              color: canAccept ? TEXT : "#fff",
+              border: canAccept ? `1px solid ${BORDER}` : "none",
+              minHeight: 44,
+            }}
           >
             Ouvrir le PDF
           </a>
@@ -150,7 +155,11 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
             className="space-y-3 rounded-2xl p-4"
             style={{ background: SURFACE, border: `1px solid ${BORDER}` }}
           >
-            <p className="text-sm font-semibold">J&apos;accepte ce document</p>
+            <p className="text-sm font-semibold">
+              {meta?.kind === "devis"
+                ? "Accepter et signer le devis"
+                : "Accepter et signer la convention"}
+            </p>
             <p className="text-xs" style={{ color: MUTED }}>
               En acceptant, vous confirmez avoir pris connaissance du contenu et validez{" "}
               {meta?.kind === "devis" ? "ce devis" : "cette convention"}.
@@ -162,7 +171,11 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
               className="w-full rounded-2xl py-3 font-semibold text-white disabled:opacity-40"
               style={{ background: signed ? OK : ACCENT, minHeight: 44 }}
             >
-              {signed ? "Accepté" : "J'accepte"}
+              {busy
+                ? "Signature en cours…"
+                : meta?.kind === "devis"
+                  ? "Accepter et signer le devis"
+                  : "Accepter et signer la convention"}
             </button>
           </section>
         ) : null}

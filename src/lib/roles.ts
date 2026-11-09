@@ -1,11 +1,11 @@
 export type RoleContext = "entreprise" | "cfa";
 
 const LABELS: Record<string, string> = {
-  admin: "Administrateur",
-  admin_hr: "Administrateur",
-  entreprise: "Administrateur",
-  rh: "Administrateur",
-  manager: "Administrateur",
+  admin: "Responsable RH",
+  admin_hr: "Responsable RH",
+  entreprise: "Responsable RH",
+  rh: "Responsable RH",
+  manager: "Responsable RH",
   trainer: "Formateur",
   instructor: "Formateur",
   formateur: "Formateur",

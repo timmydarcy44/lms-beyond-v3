@@ -31,6 +31,21 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     }
     const updated = await service.from("org_memberships").update({ role: body.role }).eq("org_id", id).eq("user_id", body.userId);
     if (updated.error) return NextResponse.json({ error: updated.error.message }, { status: 400 });
+
+    // Aligne profiles.role : admin org → responsable entreprise, sinon collaborateur.
+    if (body.role === "admin") {
+      await service
+        .from("profiles")
+        .update({ role: "entreprise", role_type: "entreprise" })
+        .eq("id", body.userId);
+    } else if (body.role === "learner") {
+      await service
+        .from("profiles")
+        .update({ role: "learner", role_type: "salarie" })
+        .eq("id", body.userId)
+        .neq("role", "super_admin");
+    }
+
     await service.from("org_activity").insert(buildActivityRow({
       orgId: id,
       actorUserId: data.user.id,

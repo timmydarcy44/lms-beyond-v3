@@ -77,16 +77,44 @@ export async function ensureLearnerProfileByEmail(
     }
   }
 
+  // Ne jamais rétrograder un responsable RH / admin entreprise en « collaborateur ».
+  const { data: existingProfile } = await service
+    .from("profiles")
+    .select("role, role_type, full_name, first_name, last_name")
+    .eq("id", profileId)
+    .maybeSingle();
+  const { data: existingMembership } = await service
+    .from("org_memberships")
+    .select("role")
+    .eq("org_id", input.organizationId)
+    .eq("user_id", profileId)
+    .maybeSingle();
+
+  const privilegedProfileRoles = new Set([
+    "entreprise",
+    "admin",
+    "admin_hr",
+    "rh",
+    "manager",
+    "super_admin",
+  ]);
+  const keepProfileRole =
+    privilegedProfileRoles.has(String(existingProfile?.role || "")) ||
+    privilegedProfileRoles.has(String(existingProfile?.role_type || "")) ||
+    String(existingMembership?.role || "") === "admin";
+
   const profilePatch: Record<string, unknown> = {
     id: profileId,
     email,
     reference_email: email,
-    role: "learner",
-    first_name: firstName || undefined,
-    last_name: lastName || undefined,
-    full_name: fullName,
+    first_name: firstName || existingProfile?.first_name || undefined,
+    last_name: lastName || existingProfile?.last_name || undefined,
+    full_name: fullName || existingProfile?.full_name || email,
     needs_specific_support: Boolean(input.needsSpecificSupport),
   };
+  if (!keepProfileRole) {
+    profilePatch.role = "learner";
+  }
   if (input.bpfLearnerStatus) {
     profilePatch.bpf_learner_status = input.bpfLearnerStatus;
   }
@@ -96,25 +124,30 @@ export async function ensureLearnerProfileByEmail(
   });
   if (profileErr) {
     // Colonnes BPF peuvent manquer avant migration — retry minimal
-    await service.from("profiles").upsert(
-      {
-        id: profileId,
-        email,
-        role: "learner",
-        full_name: fullName,
-      },
-      { onConflict: "id" },
-    );
+    const minimal: Record<string, unknown> = {
+      id: profileId,
+      email,
+      full_name: fullName,
+    };
+    if (!keepProfileRole) minimal.role = "learner";
+    await service.from("profiles").upsert(minimal, { onConflict: "id" });
   }
 
-  await service.from("org_memberships").upsert(
-    {
+  if (String(existingMembership?.role || "") === "admin") {
+    // Garde le siège admin (créateur / RH) — participation formation ≠ rétrogradation.
+  } else if (!existingMembership) {
+    await service.from("org_memberships").insert({
       org_id: input.organizationId,
       user_id: profileId,
       role: "learner",
-    },
-    { onConflict: "org_id,user_id" },
-  );
+    });
+  } else if (String(existingMembership.role) !== "tutor" && String(existingMembership.role) !== "instructor") {
+    await service
+      .from("org_memberships")
+      .update({ role: "learner" })
+      .eq("org_id", input.organizationId)
+      .eq("user_id", profileId);
+  }
 
   let mirroredEmployeeId: string | null = null;
   const { data: employee } = await service

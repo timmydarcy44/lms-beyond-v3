@@ -7,8 +7,7 @@ import {
 } from "@/lib/emails/edge-email-shell";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 
-const STAFF_TO = "contact@byound.fr";
-const STAFF_BCC = "timmydarcy44@gmail.com";
+const TIMMY_EMAIL = "timmydarcy44@gmail.com";
 
 function row(label: string, value: string) {
   return `<tr>
@@ -17,7 +16,57 @@ function row(label: string, value: string) {
   </tr>`;
 }
 
-/** Informe l’équipe Byound qu’un devis ou une convention a été accepté(e) en ligne. */
+async function resolveStaffRecipients(
+  service: SupabaseClient,
+  dossierId: string,
+): Promise<{ emails: string[]; managerLabel: string | null }> {
+  const { data: dossier } = await service
+    .from("formation_dossiers")
+    .select("organization_id, owner_user_id")
+    .eq("id", dossierId)
+    .maybeSingle();
+
+  const userIds = new Set<string>();
+  if (dossier?.owner_user_id) userIds.add(String(dossier.owner_user_id));
+
+  let managerId: string | null = null;
+  if (dossier?.organization_id) {
+    const { data: org } = await service
+      .from("organizations")
+      .select("account_manager_id")
+      .eq("id", dossier.organization_id)
+      .maybeSingle();
+    managerId = org?.account_manager_id ? String(org.account_manager_id) : null;
+    if (managerId) userIds.add(managerId);
+  }
+
+  const emails = new Set<string>([TIMMY_EMAIL]);
+  let managerLabel: string | null = null;
+
+  if (userIds.size) {
+    const { data: profiles } = await service
+      .from("profiles")
+      .select("id, email, full_name, first_name, last_name")
+      .in("id", [...userIds]);
+    for (const profile of profiles ?? []) {
+      const email = String(profile.email ?? "")
+        .trim()
+        .toLowerCase();
+      if (email.includes("@")) emails.add(email);
+      if (managerId && String(profile.id) === managerId) {
+        managerLabel =
+          String(profile.full_name ?? "").trim() ||
+          [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+          email ||
+          null;
+      }
+    }
+  }
+
+  return { emails: [...emails], managerLabel };
+}
+
+/** Informe Timmy + le gestionnaire du compte qu’un devis / une convention a été accepté(e). */
 export async function notifyStaffDocumentAccepted(
   service: SupabaseClient,
   params: {
@@ -27,6 +76,8 @@ export async function notifyStaffDocumentAccepted(
   },
 ): Promise<void> {
   const ctx = await loadDossierDocContext(service, params.dossierId);
+  const { emails, managerLabel } = await resolveStaffRecipients(service, params.dossierId);
+
   const kindLabel = params.kind === "devis" ? "Devis" : "Convention";
   const company = ctx?.organization.name || "Entreprise";
   const course =
@@ -57,6 +108,7 @@ export async function notifyStaffDocumentAccepted(
         ${row("Document", kindLabel)}
         ${row("Entreprise", company)}
         ${ctx?.organization.siret ? row("SIRET", ctx.organization.siret) : ""}
+        ${managerLabel ? row("Gestionnaire", managerLabel) : ""}
         ${row("Formation", course)}
         ${row("Montant", amount)}
         ${row("Lieu", location)}
@@ -68,8 +120,7 @@ export async function notifyStaffDocumentAccepted(
   });
 
   const result = await sendEmail({
-    to: STAFF_TO,
-    bcc: STAFF_BCC,
+    to: emails,
     skipBcc: true,
     from: EDGE_COCKPIT_FROM,
     subject: `[Byound] ${kindLabel} accepté — ${company} · ${course}`,

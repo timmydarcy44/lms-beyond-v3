@@ -143,7 +143,7 @@ describe("evaluateFormationDossierTransition", () => {
     ).toBeNull();
   });
 
-  it("exige le statut BPF de chaque participant", () => {
+  it("ne bloque plus la mise en place sur le statut BPF apprenant", () => {
     const result = evaluateFormationDossierTransition({
       currentStatus: "convention",
       toStatus: "mise_en_place",
@@ -151,9 +151,10 @@ describe("evaluateFormationDossierTransition", () => {
         ...baseDossier,
         participantCount: 2,
         participantBpfStatuses: ["salarie_prive", null],
+        conventionSigned: true,
       },
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("bpf_incomplete");
+    expect(result.ok).toBe(true);
   });
 });
+

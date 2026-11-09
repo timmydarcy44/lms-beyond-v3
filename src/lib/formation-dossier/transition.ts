@@ -97,18 +97,7 @@ export function assertBpfReadyForMiseEnPlace(dossier: TransitionDossierInput["do
     };
   }
 
-  const count = dossier.participantCount ?? 0;
-  if (count > 0) {
-    const statuses = dossier.participantBpfStatuses ?? [];
-    const missing = statuses.some((s) => !s || !String(s).trim());
-    if (missing || statuses.length < count) {
-      return {
-        ok: false,
-        code: "bpf_incomplete",
-        message: "Statut BPF de chaque apprenant requis avant Mise en place.",
-      };
-    }
-  }
+  // Statuts BPF apprenants : saisis plus tard (émargement / clôture), pas un frein à la mise en place.
 
   return null;
 }

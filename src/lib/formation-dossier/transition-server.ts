@@ -89,13 +89,38 @@ export async function transitionFormationDossier(
     dossier.session_id ? String(dossier.session_id) : null,
   );
 
+  // BPF allégé : valeurs par défaut si absentes, pour ne pas bloquer Convention → Mise en place
+  let bpfFunder = dossier.bpf_funder_type ? String(dossier.bpf_funder_type) : null;
+  let subcontracting = dossier.subcontracting ? String(dossier.subcontracting) : null;
+  if (!bpfFunder || !subcontracting) {
+    const { data: fundingRow } = await service
+      .from("formation_dossiers")
+      .select("funding_type")
+      .eq("id", params.dossierId)
+      .maybeSingle();
+    const funding = String(fundingRow?.funding_type ?? "").toLowerCase();
+    if (!bpfFunder) {
+      bpfFunder =
+        funding === "opco" || funding.includes("opco") ? "opco" : "entreprises_salaries";
+    }
+    if (!subcontracting) subcontracting = "aucune";
+    await service
+      .from("formation_dossiers")
+      .update({
+        bpf_funder_type: bpfFunder,
+        subcontracting,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.dossierId);
+  }
+
   const evaluation = evaluateFormationDossierTransition({
     currentStatus: String(dossier.status) as FormationDossierStatus,
     toStatus: params.toStatus,
     motif: params.motif,
     dossier: {
-      bpf_funder_type: dossier.bpf_funder_type,
-      subcontracting: dossier.subcontracting,
+      bpf_funder_type: bpfFunder,
+      subcontracting,
       partner_of_name: dossier.partner_of_name,
       training_course_id: dossier.training_course_id,
       participantCount: participants?.length ?? 0,

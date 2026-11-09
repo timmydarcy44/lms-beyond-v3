@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   ClipboardList,
+  Download,
   ExternalLink,
   Loader2,
   Plus,
@@ -203,6 +204,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
     [],
   );
   const [editingPositionnement, setEditingPositionnement] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -280,6 +282,30 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
       setEditingPositionnement(false);
     }
   }, [selectedId, loadPositionnement]);
+
+  const handleExportCatalog = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/super/training-courses/export");
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Export impossible");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `catalogue-formations-byound-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMessage(`Catalogue exporté · ${courses.length} formation(s).`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export impossible");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleCreatePositionnement = async () => {
     if (!selected) return;
@@ -631,6 +657,15 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
           >
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Nouvelle formation
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExportCatalog()}
+            disabled={exporting || loading || !courses.length}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Exporter catalogue
           </button>
           <button
             type="button"

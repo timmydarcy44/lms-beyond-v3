@@ -136,3 +136,116 @@ export async function notifyStaffDocumentAccepted(
     console.warn("[notify-acceptance]", result.error);
   }
 }
+
+/** Confirmation client après acceptation devis + lien vers PDF signé. */
+export async function notifyClientDevisAccepted(
+  service: SupabaseClient,
+  params: {
+    dossierId: string;
+    signedAt: string;
+    signerName: string;
+    accessToken: string;
+  },
+): Promise<void> {
+  const ctx = await loadDossierDocContext(service, params.dossierId);
+  const to = ctx?.dossier.contact_email?.trim().toLowerCase();
+  if (!to || !to.includes("@")) return;
+
+  const { formationDocumentPublicUrl } = await import(
+    "@/lib/formation-documents/public-url"
+  );
+  const viewUrl = formationDocumentPublicUrl(params.accessToken);
+  const company = ctx?.organization.name || "votre entreprise";
+  const course =
+    ctx?.dossier.course_title || ctx?.session?.title || "votre formation";
+  const signedLabel = new Date(params.signedAt).toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+  });
+
+  const html = buildEdgeEmailShell({
+    title: "Devis accepté",
+    preheader: `Confirmation — ${course}`,
+    bodyHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        Bonjour ${escapeEdgeEmailHtml(params.signerName)},
+      </p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        Nous avons bien enregistré votre acceptation du devis pour
+        <strong>${escapeEdgeEmailHtml(course)}</strong>
+        (${escapeEdgeEmailHtml(company)}) le ${escapeEdgeEmailHtml(signedLabel)}.
+      </p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        La convention de formation vous sera adressée sous peu. Vous pouvez
+        télécharger le devis signé via le bouton ci-dessous.
+      </p>`,
+    cta: { label: "Voir le devis signé", href: viewUrl },
+    footerNote: "Byound — confirmation d'acceptation de devis",
+  });
+
+  const result = await sendEmail({
+    to,
+    from: EDGE_COCKPIT_FROM,
+    subject: `Confirmation — devis accepté · ${course}`,
+    html,
+    tags: {
+      type: "formation-devis-client-accepted",
+      dossier_id: params.dossierId,
+    },
+  });
+  if (!result.success) {
+    console.warn("[notify-client-acceptance]", result.error);
+  }
+}
+
+/** Demande de modification devis → chargé de compte. */
+export async function notifyStaffDevisChangeRequest(
+  service: SupabaseClient,
+  params: {
+    dossierId: string;
+    message: string;
+    contactName?: string | null;
+  },
+): Promise<{ emails: string[] }> {
+  const ctx = await loadDossierDocContext(service, params.dossierId);
+  const { emails, managerLabel } = await resolveStaffRecipients(
+    service,
+    params.dossierId,
+  );
+  const company = ctx?.organization.name || "Entreprise";
+  const course =
+    ctx?.dossier.course_title || ctx?.session?.title || "Formation";
+
+  const html = buildEdgeEmailShell({
+    title: "Demande de modification — devis",
+    preheader: `${company} — ${course}`,
+    bodyHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+        Un client demande une modification sur le devis.
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        ${row("Entreprise", company)}
+        ${row("Formation", course)}
+        ${params.contactName ? row("Contact", params.contactName) : ""}
+        ${managerLabel ? row("Gestionnaire", managerLabel) : ""}
+        ${row("Dossier", params.dossierId)}
+      </table>
+      <p style="margin:20px 0 0;font-size:15px;line-height:1.6;color:#111;">
+        ${escapeEdgeEmailHtml(params.message)}
+      </p>`,
+    footerNote: "Notification — demande de modification /doc",
+  });
+
+  await sendEmail({
+    to: emails,
+    skipBcc: true,
+    from: EDGE_COCKPIT_FROM,
+    subject: `[Byound] Modification devis — ${company} · ${course}`,
+    html,
+    tags: {
+      type: "formation-devis-change-request",
+      dossier_id: params.dossierId,
+    },
+  });
+
+  return { emails };
+}

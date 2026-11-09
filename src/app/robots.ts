@@ -8,7 +8,11 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   }
   return {
     rules: [
-      { userAgent: "*", allow: "/", disallow: ["/dashboard/", "/super/", "/api/", "/login"] },
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/dashboard/", "/super/", "/api/", "/login", "/doc", "/d/"],
+      },
       { userAgent: "GPTBot", allow: "/" },
       { userAgent: "PerplexityBot", allow: "/" },
       { userAgent: "ClaudeBot", allow: "/" },

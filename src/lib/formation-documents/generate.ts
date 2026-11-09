@@ -1,4 +1,6 @@
+import { createHash } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BYOUND_COMPANY } from "@/lib/company";
 import {
   CONVENTION_PACK_KINDS,
   DOC_TITLES,
@@ -130,6 +132,17 @@ export async function generateFormationDocuments(
       patch.storage_bucket = uploaded.bucket;
       patch.storage_path = uploaded.path;
     }
+    if (kind === "devis") {
+      const quoteNumber =
+        row.quote_number || `DEV-${params.dossierId.slice(0, 8).toUpperCase()}`;
+      const validUntil =
+        row.valid_until ||
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      patch.quote_number = quoteNumber;
+      patch.valid_until = validUntil;
+      patch.cgv_version = row.cgv_version || BYOUND_COMPANY.cgv_version;
+      patch.pdf_content_hash = createHash("sha256").update(buffer).digest("hex");
+    }
 
     let { data: updated, error } = await service
       .from("formation_documents")
@@ -138,10 +151,19 @@ export async function generateFormationDocuments(
       .select("id, file_url, access_token")
       .single();
 
-    // Colonnes storage_* absentes tant que la migration n'est pas appliquée
-    if (error && /storage_(bucket|path)/i.test(error.message)) {
+    // Colonnes absentes tant que la migration n'est pas appliquée
+    if (
+      error &&
+      /storage_(bucket|path)|quote_number|valid_until|pdf_content_hash|cgv_version|signer_/i.test(
+        error.message,
+      )
+    ) {
       delete patch.storage_bucket;
       delete patch.storage_path;
+      delete patch.quote_number;
+      delete patch.valid_until;
+      delete patch.pdf_content_hash;
+      delete patch.cgv_version;
       ({ data: updated, error } = await service
         .from("formation_documents")
         .update(patch)

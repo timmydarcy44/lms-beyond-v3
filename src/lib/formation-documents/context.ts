@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BYOUND_COMPANY } from "@/lib/company";
 import {
   BYOUND_POSTAL_ADDRESS,
   formatByoundPostalAddress,
@@ -8,6 +9,7 @@ import {
   locationFromDossierNotes,
   resolveTrainingLocationLabel,
 } from "@/lib/formation-documents/resolve-location";
+import { formatEuroOrDash } from "@/lib/money/format-euro";
 
 export { formatByoundPostalAddress, formatPostalAddress };
 
@@ -99,13 +101,13 @@ export type DossierDocContext = {
   } | null;
 };
 
-/** Identité OF réelle (corps PDF AcroForm) — utilisée si of_settings est vide / placeholder. */
+/** Identité OF réelle — alignée sur lib/company.ts. */
 const DEFAULT_OF: OfIdentity = {
-  legal_name: "SAS Byound Business",
-  nda: null,
-  siret: "13070905800015",
-  siren: "130709058",
-  vat_intra: "FR30130709058",
+  legal_name: BYOUND_COMPANY.legal_name,
+  nda: BYOUND_COMPANY.nda,
+  siret: BYOUND_COMPANY.siret,
+  siren: BYOUND_COMPANY.siren,
+  vat_intra: BYOUND_COMPANY.vat_intra,
   address_line: BYOUND_POSTAL_ADDRESS.address_line,
   address_city: BYOUND_POSTAL_ADDRESS.address_city,
   address_zip: BYOUND_POSTAL_ADDRESS.address_zip,
@@ -587,11 +589,7 @@ export async function loadDossierDocContext(
 }
 
 export function eurosFromCents(cents: number | null | undefined): string {
-  if (cents == null || Number.isNaN(Number(cents))) return "—";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(cents) / 100);
+  return formatEuroOrDash(cents);
 }
 
 export function formatFrDate(isoDate: string): string {

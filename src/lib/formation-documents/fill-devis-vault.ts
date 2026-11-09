@@ -210,13 +210,57 @@ export function buildQuoteDetailFromContext(
 }
 
 /**
- * Remplit le corps AcroForm devis (36 champs) puis assemble le détail HTML.
+ * Devis PDF : gabarit HTML néo-banque (prioritaire), sinon corps AcroForm legacy.
  */
 export async function fillVaultDevisPdf(
   service: SupabaseClient,
   ctx: DossierDocContext,
   opts?: BuildQuoteOptions & { templateBuffer?: Buffer | null },
 ): Promise<Buffer | null> {
+  try {
+    const { assertCompanyReadyForQuote, mergeOfSettingsIntoCompany } = await import(
+      "@/lib/company"
+    );
+    const { data: ofRow } = await service.from("of_settings").select("*").limit(1).maybeSingle();
+    assertCompanyReadyForQuote(mergeOfSettingsIntoCompany(ofRow as Record<string, unknown> | null));
+  } catch (err) {
+    throw err instanceof Error ? err : new Error("Identité émetteur incomplète");
+  }
+
+  // Prefer neo-banque HTML (sauf si un template AcroForm est forcé en test)
+  if (!opts?.templateBuffer) {
+    try {
+      const { data: docRow } = await service
+        .from("formation_documents")
+        .select("access_token, accept_token, status, signed_at, signer_name, signer_role")
+        .eq("dossier_id", ctx.dossier.id)
+        .eq("kind", "devis")
+        .maybeSingle();
+      const { renderNeoBanqueDevisPdf } = await import("@/lib/formation-documents/devis-html");
+      const acceptance =
+        docRow?.status === "signed" && docRow.signed_at
+          ? {
+              signedAt: String(docRow.signed_at),
+              signerName: String(docRow.signer_name || ctx.dossier.contact_name || "Client"),
+              signerRole: docRow.signer_role ? String(docRow.signer_role) : null,
+            }
+          : null;
+      const rendered = await renderNeoBanqueDevisPdf(service, ctx, {
+        acceptance,
+        accessToken: docRow?.access_token ? String(docRow.access_token) : null,
+        acceptToken: docRow?.accept_token ? String(docRow.accept_token) : null,
+        validityDays: opts?.validityDays,
+      });
+      if (rendered?.buffer?.length) return rendered.buffer;
+    } catch (err) {
+      console.warn(
+        "[fill-devis-vault] neo-banque HTML failed, AcroForm fallback:",
+        err instanceof Error ? err.message : err,
+      );
+      if (err instanceof Error && /émetteur incomplet/i.test(err.message)) throw err;
+    }
+  }
+
   const bytes = await loadDevisCorpsTemplate(opts?.templateBuffer);
   if (!bytes) return null;
 

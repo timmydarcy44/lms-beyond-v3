@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceRoleClient } from "@/lib/supabase/server";
+import { BYOUND_COMPANY } from "@/lib/company";
 import { isLot4Kind } from "@/lib/formation-documents/constants";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 import { buildFormationDocumentPdf } from "@/lib/formation-documents/pdf";
+import {
+  buildPublicDocMeta,
+  loadAccountManager,
+} from "@/lib/formation-documents/public-meta";
 import { cancelDocRelances } from "@/lib/formation-documents/schedule";
+import { getDefaultSignatureProvider } from "@/lib/formation-documents/signature-provider";
 import { downloadFormationPdf } from "@/lib/formation-documents/storage";
 import { resolveFormationPdfBuffer } from "@/lib/formation-documents/vault";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ token: string }> };
+
+function clientIp(req: NextRequest): string | null {
+  const xf = req.headers.get("x-forwarded-for");
+  if (xf) return xf.split(",")[0]?.trim() || null;
+  return req.headers.get("x-real-ip");
+}
 
 function pdfResponse(buffer: Buffer, filename: string) {
   return new NextResponse(new Uint8Array(buffer), {
@@ -34,22 +46,22 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
   if (!doc) return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
 
-  // Métadonnées pour la page publique enrichie (Lot 5)
   if (req.nextUrl.searchParams.get("meta") === "1") {
     const docCtx = await loadDossierDocContext(service, String(doc.dossier_id));
-    return NextResponse.json({
-      kind: doc.kind,
-      title: doc.title,
-      status: doc.status,
-      signed_at: doc.signed_at,
-      course_title: docCtx?.dossier.course_title ?? docCtx?.session?.title ?? null,
-      organization_name: docCtx?.organization.name ?? null,
-      of_name: docCtx?.of.legal_name ?? "Byound",
-      amount_ht_cents: docCtx?.dossier.amount_ht_cents ?? null,
-      amount_ttc_cents: docCtx?.dossier.amount_ttc_cents ?? null,
-      signable:
-        (doc.kind === "devis" || doc.kind === "convention") && doc.status !== "signed",
-    });
+    const accountManager = await loadAccountManager(
+      service,
+      docCtx?.organization.id ?? null,
+    );
+    return NextResponse.json(buildPublicDocMeta(doc, docCtx, accountManager));
+  }
+
+  // Consultation après expiration : PDF encore lisible si déjà accepté (+ marge)
+  const expired =
+    doc.valid_until &&
+    new Date(String(doc.valid_until)).getTime() < Date.now() &&
+    doc.status !== "signed";
+  if (expired && req.nextUrl.searchParams.get("force") !== "1") {
+    // Toujours servir le PDF en lecture ; l'UI bloque l'acceptation via meta.
   }
 
   const now = new Date().toISOString();
@@ -64,7 +76,6 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       .eq("id", doc.id);
   }
 
-  // Jamais de redirect vers une URL storage publique (énumérable).
   const fromPrivate = await downloadFormationPdf(service, {
     bucket: doc.storage_bucket,
     path: doc.storage_path,
@@ -93,13 +104,18 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   return pdfResponse(buffer, `${doc.kind}.pdf`);
 }
 
-/** Acceptation devis / convention (signature légère Lot 4a ; UI enrichie Lot 5). */
+/** Acceptation devis / convention — preuve simple + idempotence. */
 export async function POST(req: NextRequest, ctx: Ctx) {
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
   const { token } = await ctx.params;
-  const body = (await req.json().catch(() => null)) as { accept_token?: string } | null;
+  const body = (await req.json().catch(() => null)) as {
+    accept_token?: string;
+    signer_name?: string;
+    signer_role?: string | null;
+    cgv_accepted?: boolean;
+  } | null;
   const acceptToken = String(body?.accept_token ?? "").trim();
 
   const { data: doc } = await service
@@ -116,16 +132,85 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Jeton d'acceptation invalide" }, { status: 403 });
   }
 
-  const now = new Date().toISOString();
-  await service
+  // Idempotent : déjà signé → OK sans double effet
+  if (doc.status === "signed" && doc.signed_at) {
+    return NextResponse.json({
+      ok: true,
+      signed_at: doc.signed_at,
+      already_signed: true,
+    });
+  }
+
+  if (doc.superseded_by) {
+    return NextResponse.json(
+      { error: "Ce devis a été remplacé par une nouvelle version" },
+      { status: 409 },
+    );
+  }
+  if (doc.valid_until && new Date(String(doc.valid_until)).getTime() < Date.now()) {
+    return NextResponse.json({ error: "Ce devis a expiré" }, { status: 410 });
+  }
+
+  let evidence: {
+    signer_name: string;
+    signer_role: string | null;
+    accepted_ip: string | null;
+    accepted_user_agent: string | null;
+    cgv_version: string;
+  };
+  let now: string;
+  try {
+    const provider = getDefaultSignatureProvider();
+    const result = await provider.accept({
+      documentId: String(doc.id),
+      acceptToken,
+      signerName: String(body?.signer_name || "").trim(),
+      signerRole: body?.signer_role,
+      cgvAccepted: Boolean(body?.cgv_accepted),
+      cgvVersion: String(doc.cgv_version || BYOUND_COMPANY.cgv_version),
+      ip: clientIp(req),
+      userAgent: req.headers.get("user-agent"),
+    });
+    evidence = result.evidence;
+    now = result.signedAt;
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Acceptation impossible" },
+      { status: 400 },
+    );
+  }
+  const patch: Record<string, unknown> = {
+    status: "signed",
+    signed_at: now,
+    opened_at: doc.opened_at || now,
+    updated_at: now,
+    signer_name: evidence.signer_name,
+    signer_role: evidence.signer_role,
+    accepted_ip: evidence.accepted_ip,
+    accepted_user_agent: evidence.accepted_user_agent,
+    cgv_version: evidence.cgv_version,
+    acceptance_method: "simple_checkbox",
+    pdf_content_hash: doc.pdf_content_hash || null,
+  };
+
+  let { error: updErr } = await service
     .from("formation_documents")
-    .update({
-      status: "signed",
-      signed_at: now,
-      opened_at: doc.opened_at || now,
-      updated_at: now,
-    })
-    .eq("id", doc.id);
+    .update(patch)
+    .eq("id", doc.id)
+    .neq("status", "signed");
+
+  if (updErr && /signer_|accepted_|cgv_version|acceptance_method|pdf_content_hash/i.test(updErr.message)) {
+    ({ error: updErr } = await service
+      .from("formation_documents")
+      .update({
+        status: "signed",
+        signed_at: now,
+        opened_at: doc.opened_at || now,
+        updated_at: now,
+      })
+      .eq("id", doc.id)
+      .neq("status", "signed"));
+  }
 
   if (doc.kind === "devis" || doc.kind === "convention") {
     await cancelDocRelances(service, String(doc.dossier_id), doc.kind);
@@ -134,17 +219,59 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   await service.from("formation_events").insert({
     dossier_id: doc.dossier_id,
     event_type: "document_signed",
-    payload: { kind: doc.kind, via: "public_accept" },
+    payload: {
+      kind: doc.kind,
+      via: "public_accept",
+      method: "simple_checkbox",
+      signer_name: evidence.signer_name,
+    },
   });
 
-  // Passe le dossier au statut suivant
   if (doc.kind === "devis") {
-    await service
+    try {
+      const { transitionFormationDossier } = await import(
+        "@/lib/formation-dossier/transition-server"
+      );
+      await transitionFormationDossier(service, {
+        dossierId: String(doc.dossier_id),
+        toStatus: "convention",
+        actorUserId: null,
+      });
+    } catch {
+      await service
+        .from("formation_dossiers")
+        .update({ status: "convention", updated_at: now })
+        .eq("id", doc.dossier_id)
+        .in("status", ["qualification", "devis"]);
+    }
+
+    // Deal CRM → gagné si lié
+    const { data: dossier } = await service
       .from("formation_dossiers")
-      .update({ status: "convention", updated_at: now })
+      .select("deal_id")
       .eq("id", doc.dossier_id)
-      .in("status", ["qualification", "devis"]);
+      .maybeSingle();
+    if (dossier?.deal_id) {
+      const { data: deal } = await service
+        .from("crm_pipeline_deals")
+        .select("id, stage_slug")
+        .eq("id", dossier.deal_id)
+        .maybeSingle();
+      const won = new Set([
+        "gagne",
+        "reussi",
+        "proposition_signee",
+        "client_actif",
+      ]);
+      if (deal && !won.has(String(deal.stage_slug || ""))) {
+        await service
+          .from("crm_pipeline_deals")
+          .update({ stage_slug: "gagne", updated_at: now })
+          .eq("id", deal.id);
+      }
+    }
   }
+
   if (doc.kind === "convention") {
     await service
       .from("formation_dossiers")
@@ -153,7 +280,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       .in("status", ["convention", "devis"]);
   }
 
-  // Régénère le PDF avec la zone d'acceptation remplie
   try {
     const { generateFormationDocuments } = await import(
       "@/lib/formation-documents/generate"
@@ -180,9 +306,28 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     });
   } catch (err) {
     console.warn(
-      "[formation-documents/accept] notify:",
+      "[formation-documents/accept] notify staff:",
       err instanceof Error ? err.message : err,
     );
+  }
+
+  if (doc.kind === "devis") {
+    try {
+      const { notifyClientDevisAccepted } = await import(
+        "@/lib/formation-documents/notify-acceptance"
+      );
+      await notifyClientDevisAccepted(service, {
+        dossierId: String(doc.dossier_id),
+        signedAt: now,
+        signerName: evidence.signer_name,
+        accessToken: String(doc.access_token),
+      });
+    } catch (err) {
+      console.warn(
+        "[formation-documents/accept] notify client:",
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 
   return NextResponse.json({ ok: true, signed_at: now });

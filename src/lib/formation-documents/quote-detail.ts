@@ -40,27 +40,15 @@ function esc(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Espaces fins / insécables → espace normal (jsPDF Helvetica casse U+202F en « / »). */
-export function normalizePdfMoneyText(text: string): string {
-  return String(text || "")
-    .replace(/[\u202f\u00a0\u2009\u2007]/g, " ")
-    .replace(/\u2212/g, "-")
-    .replace(/–|—/g, "-");
-}
-
-/** Montant centimes → « 5 378,40 € » (espaces ASCII, € conservé). */
-export function formatEuroFromCents(cents: number): string {
-  return normalizePdfMoneyText(
-    new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-    }).format(cents / 100),
-  );
-}
+export {
+  formatEuro as formatEuroFromCents,
+  normalizeMoneyText as normalizePdfMoneyText,
+} from "@/lib/money/format-euro";
+import { formatEuro } from "@/lib/money/format-euro";
 
 /** Remise en montant négatif typographique : « - 498,00 € » */
 export function formatEuroDiscountFromCents(cents: number): string {
-  const abs = formatEuroFromCents(Math.abs(cents));
+  const abs = formatEuro(Math.abs(cents));
   return `- ${abs}`;
 }
 

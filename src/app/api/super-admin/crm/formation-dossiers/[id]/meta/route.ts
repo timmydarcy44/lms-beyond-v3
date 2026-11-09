@@ -122,12 +122,23 @@ export async function GET(_req: Request, ctx: Ctx) {
       String(p.email ?? p.id),
   }));
 
+  let trainerCvReady = false;
+  if (dossier.trainer_user_id) {
+    const { dossierHasTrainerCv, resolveExpertCv } = await import(
+      "@/lib/formation-documents/trainer-cv"
+    );
+    trainerCvReady =
+      (await dossierHasTrainerCv(service, id)) ||
+      Boolean(await resolveExpertCv(service, String(dossier.trainer_user_id)));
+  }
+
   return NextResponse.json({
     locks: {
       convention_signed: convention?.status === "signed",
       convention_signed_at: convention?.signed_at ?? null,
       trainer_assigned: Boolean(dossier.trainer_user_id),
       trainer_user_id: dossier.trainer_user_id,
+      trainer_cv_ready: trainerCvReady,
       slots_total: slotCount,
       slots_closed: closedCount,
       attendance_complete: slotCount === 0 ? false : closedCount >= slotCount,

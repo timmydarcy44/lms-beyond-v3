@@ -262,6 +262,26 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   if (doc.kind === "devis" || doc.kind === "convention") {
     await cancelDocRelances(service, String(doc.dossier_id), doc.kind);
+    try {
+      const { archiveSignatureProof } = await import(
+        "@/lib/formation-documents/signature-proof"
+      );
+      await archiveSignatureProof(service, {
+        dossierId: String(doc.dossier_id),
+        parentKind: doc.kind,
+        parentDocumentId: String(doc.id),
+        signerName: evidence.signer_name,
+        signerRole: evidence.signer_role,
+        acceptanceMethod: "email_otp",
+        signedAt: now,
+        emailedTo: doc.accept_otp_sent_to ? String(doc.accept_otp_sent_to) : null,
+        acceptedIp: evidence.accepted_ip,
+        acceptedUserAgent: evidence.accepted_user_agent,
+        pdfContentHash: doc.pdf_content_hash ? String(doc.pdf_content_hash) : null,
+      });
+    } catch (err) {
+      console.warn("[formation-documents/accept] signature proof:", err);
+    }
   }
 
   await service.from("formation_events").insert({

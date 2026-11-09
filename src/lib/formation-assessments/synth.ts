@@ -42,11 +42,13 @@ export async function buildPositionnementSynthHtml(
     .maybeSingle();
   const courseTitle = String(dossier?.course_title || "Formation");
 
-  const { data: template } = await service
-    .from("formation_assessment_templates")
-    .select("questions")
-    .eq("kind", "positionnement")
-    .maybeSingle();
+  const { resolveTemplateForDossier } = await import(
+    "@/lib/formation-assessments/resolve-template"
+  );
+  const template = await resolveTemplateForDossier(service, {
+    dossierId,
+    kind: "positionnement",
+  });
   const questions = (template?.questions ?? []) as AssessmentQuestion[];
 
   const { data: participants } = await service
@@ -109,9 +111,11 @@ export async function buildPositionnementSynthHtml(
       const answers = (a.answers || {}) as Record<string, unknown>;
       const details = questions
         .map((q) => {
+          if (q.type === "section") return null;
           const raw = answers[q.id];
           if (raw == null || raw === "") return null;
-          return `• ${escapeEdgeEmailHtml(q.prompt)} → <strong>${escapeEdgeEmailHtml(String(raw))}</strong>`;
+          const display = Array.isArray(raw) ? raw.map(String).join(", ") : String(raw);
+          return `• ${escapeEdgeEmailHtml(q.prompt)} → <strong>${escapeEdgeEmailHtml(display)}</strong>`;
         })
         .filter(Boolean)
         .join("<br/>");

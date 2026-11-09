@@ -4,7 +4,8 @@ import { PDFDocument, type PDFFont, type PDFTextField } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DossierDocContext } from "@/lib/formation-documents/context";
-import { eurosFromCents, formatPostalAddress } from "@/lib/formation-documents/context";
+import { eurosFromCents } from "@/lib/formation-documents/context";
+import { formatPostalAddressMultiline } from "@/lib/formation-documents/postal-address";
 import { fetchVaultTemplatePdf } from "@/lib/formation-documents/vault";
 import { assembleConventionPdf } from "@/lib/formation-documents/assemble-convention";
 import {
@@ -178,21 +179,37 @@ function defaultMaxFontForField(name: string, boxHeight: number): number {
   return 8;
 }
 
+const MULTILINE_FIELDS = new Set([
+  "beneficiary_address",
+  "location",
+  "summary_location",
+  "methods_text",
+  "technical_means",
+  "intermediate_evaluation",
+  "final_evaluation",
+  "general_objective",
+  "objective_general",
+]);
+
 function fitAndSetTextField(field: PDFTextField, name: string, text: string, font: PDFFont) {
   const box = fieldBox(field);
+  const forceMultiline = MULTILINE_FIELDS.has(name) || text.includes("\n");
   const maxSize = defaultMaxFontForField(name, box.height);
   const size = fitFontToBox(font, text, box, maxSize);
   let value = text;
-  if (estimateWrappedLines(font, value, size, box.width) > Math.max(1, Math.floor(box.height / (size * 1.2)))) {
+  if (
+    estimateWrappedLines(font, value, size, box.width) >
+    Math.max(1, Math.floor(box.height / (size * 1.2)))
+  ) {
     value = truncateToBox(font, value, box, size);
   }
-  field.setText(value);
-  field.setFontSize(size);
   try {
-    if (box.height >= 28 || value.includes("\n")) field.enableMultiline();
+    if (forceMultiline || box.height >= 28) field.enableMultiline();
   } catch {
     /* ignore */
   }
+  field.setText(value);
+  field.setFontSize(size);
   field.updateAppearances(font);
 }
 
@@ -377,7 +394,7 @@ export async function fillVaultConventionPdf(
     form,
     "beneficiary_address",
     pdfSafe(
-      formatPostalAddress({
+      formatPostalAddressMultiline({
         address_line: ctx.organization.address_line,
         address_zip: ctx.organization.address_zip,
         address_city: ctx.organization.address_city,

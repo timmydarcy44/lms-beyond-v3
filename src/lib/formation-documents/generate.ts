@@ -29,12 +29,22 @@ async function ensureDocRow(
   kind: Lot4DocumentKind,
   title: string,
 ) {
-  const { data: existing } = await service
+  let { data: existing, error: existingErr } = await service
     .from("formation_documents")
     .select("*")
     .eq("dossier_id", dossierId)
     .eq("kind", kind)
+    .is("participant_id", null)
+    .is("slot_id", null)
     .maybeSingle();
+  if (existingErr && /participant_id|slot_id/i.test(existingErr.message)) {
+    ({ data: existing } = await service
+      .from("formation_documents")
+      .select("*")
+      .eq("dossier_id", dossierId)
+      .eq("kind", kind)
+      .maybeSingle());
+  }
   if (existing) return existing;
 
   const { data, error } = await service

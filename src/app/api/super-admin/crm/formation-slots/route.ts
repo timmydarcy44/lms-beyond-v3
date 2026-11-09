@@ -129,8 +129,11 @@ export async function POST(req: NextRequest) {
       ? Math.round((endMs - startMs) / 60_000)
       : 210;
 
+  // Fenêtre d’émargement = du début jusqu’à la fin du créneau + 30 min (pas début+30)
   const open = new Date(Number.isFinite(startMs) ? startMs : Date.now());
-  const close = new Date(open.getTime() + 30 * 60_000);
+  const close = new Date(
+    (Number.isFinite(endMs) ? endMs : open.getTime() + 210 * 60_000) + 30 * 60_000,
+  );
 
   const { data: existing } = await service
     .from("formation_slots")

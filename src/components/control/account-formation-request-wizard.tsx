@@ -127,10 +127,12 @@ export function AccountFormationRequestWizard({
     if (modality === "distanciel") return "Distanciel / visio";
     if (locationMode === "client") {
       return clientAddressLabel
-        ? `Chez le client — ${clientAddressLabel}`
-        : "Chez le client";
+        ? `Au sein des locaux du client — ${clientAddressLabel}`
+        : "Au sein des locaux du client";
     }
-    if (locationMode === "byound") return `Chez Byound — ${BYOUND_ADDRESS}`;
+    if (locationMode === "byound") {
+      return `Au sein des locaux Byound — ${BYOUND_ADDRESS}`;
+    }
     return locationOther.trim();
   }, [modality, locationMode, clientAddressLabel, locationOther]);
 
@@ -257,7 +259,9 @@ export function AccountFormationRequestWizard({
       return;
     }
     if (modality !== "distanciel" && locationMode === "other" && !locationOther.trim()) {
-      setError("Précisez le lieu (autre), ou choisissez Chez le client / Chez Byound.");
+      setError(
+        "Précisez le lieu (autre), ou choisissez locaux client / locaux Byound.",
+      );
       return;
     }
     // Adresse + SIRET toujours requis pour la convention (bénéficiaire).
@@ -692,7 +696,7 @@ export function AccountFormationRequestWizard({
                   className="mt-1"
                 />
                 <span>
-                  <span className="font-semibold">Chez le client</span>
+                  <span className="font-semibold">Au sein des locaux du client</span>
                   <span className="mt-0.5 block text-xs text-[#8A93AE]">
                     {hasClientAddress ? clientAddressLabel : "Adresse entreprise à renseigner"}
                   </span>
@@ -706,7 +710,7 @@ export function AccountFormationRequestWizard({
                   className="mt-1"
                 />
                 <span>
-                  <span className="font-semibold">Chez Byound</span>
+                  <span className="font-semibold">Au sein des locaux Byound</span>
                   <span className="mt-0.5 block text-xs text-[#8A93AE]">{BYOUND_ADDRESS}</span>
                 </span>
               </label>

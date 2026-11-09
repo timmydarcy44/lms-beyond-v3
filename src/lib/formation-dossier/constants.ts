@@ -94,6 +94,7 @@ export const DEFAULT_DOCUMENT_KINDS: Array<{ kind: string; title: string }> = [
   { kind: "programme", title: "Programme" },
   { kind: "convocation", title: "Convocation" },
   { kind: "livret", title: "Livret d'accueil" },
+  { kind: "formateur_cv", title: "CV formateur" },
   { kind: "emargement", title: "Feuille d'émargement" },
   { kind: "certificat", title: "Certificat de réalisation" },
   { kind: "attestation", title: "Attestation de fin" },

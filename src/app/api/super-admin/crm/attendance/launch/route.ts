@@ -7,7 +7,10 @@ import {
   newSlotNonce,
   secondsUntilRefresh,
 } from "@/lib/formation-attendance/token";
-import { loadSlotContext } from "@/lib/formation-attendance/slot-context";
+import {
+  loadSlotContext,
+  resolveAttendanceCloseAt,
+} from "@/lib/formation-attendance/slot-context";
 
 export async function POST(req: NextRequest) {
   if (!(await isSuperAdmin())) {
@@ -41,10 +44,25 @@ export async function POST(req: NextRequest) {
     .is("revoked_at", null);
 
   const nonce = newSlotNonce();
-  const openAt = ctx.slot.starts_at ? Date.parse(ctx.slot.starts_at) : Date.now();
-  const closesAt = Number.isFinite(openAt)
-    ? new Date(openAt + ctx.slot.attendance_close_offset_minutes * 60_000).toISOString()
-    : null;
+  const now = Date.now();
+  const closesAt = resolveAttendanceCloseAt(ctx.slot, now).toISOString();
+  // Ouvre / prolonge la fenêtre slot tant que le formateur lance l’émargement
+  await service
+    .from("formation_slots")
+    .update({
+      attendance_opens_at: new Date(
+        Math.min(
+          now,
+          ctx.slot.attendance_opens_at
+            ? Date.parse(ctx.slot.attendance_opens_at)
+            : ctx.slot.starts_at
+              ? Date.parse(ctx.slot.starts_at)
+              : now,
+        ),
+      ).toISOString(),
+      attendance_closes_at: closesAt,
+    })
+    .eq("id", slotId);
 
   const { data: launch, error } = await service
     .from("attendance_slot_launches")

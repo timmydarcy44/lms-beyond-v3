@@ -513,7 +513,13 @@ function buildCertificat(
   doc.text("Signature de l'organisme", margin, y);
 }
 
-function buildAttestation(doc: jsPDF, ctx: DossierDocContext, participantName?: string | null) {
+function buildAttestation(
+  doc: jsPDF,
+  ctx: DossierDocContext,
+  participantName?: string | null,
+  attended?: number | null,
+  planned?: number | null,
+) {
   let y = drawHeader(doc, ctx, "Attestation de fin de formation");
   const margin = 18;
   doc.setFont("helvetica", "normal");
@@ -534,6 +540,10 @@ function buildAttestation(doc: jsPDF, ctx: DossierDocContext, participantName?: 
     { maxWidth: 174 },
   );
   y += 12;
+  const a = attended ?? 0;
+  const p = planned ?? (ctx.slots.length || 0);
+  doc.text(`Présence : ${a} demi-journée(s) sur ${p} planifiée(s).`, margin, y);
+  y += 8;
   doc.text(`Client : ${ctx.organization.name}`, margin, y);
   y += 8;
   for (const line of slotsSummary(ctx)) {
@@ -578,7 +588,13 @@ export function buildFormationDocumentPdf(opts: BuildOpts): Buffer {
       );
       break;
     case "attestation":
-      buildAttestation(doc, opts.ctx, opts.participantName);
+      buildAttestation(
+        doc,
+        opts.ctx,
+        opts.participantName,
+        opts.attendedHalfDays,
+        opts.plannedHalfDays,
+      );
       break;
   }
   drawFooter(doc);

@@ -140,5 +140,20 @@ export async function POST(req: NextRequest) {
     console.warn("[attendance/close] absent relances:", error);
   }
 
+  // Archive feuille d’émargement PDF dans le coffre de chaque dossier lié
+  try {
+    const { archiveEmargementPdf } = await import(
+      "@/lib/formation-documents/emargement-pdf"
+    );
+    await archiveEmargementPdf(service, {
+      slotId,
+      physicalCount,
+      closedAt: closure.closed_at ? String(closure.closed_at) : null,
+      actorUserId: trainerUserId,
+    });
+  } catch (error) {
+    console.warn("[attendance/close] emargement pdf:", error);
+  }
+
   return NextResponse.json({ closure, complete: true });
 }

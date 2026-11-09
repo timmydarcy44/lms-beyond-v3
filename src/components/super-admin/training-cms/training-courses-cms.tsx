@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
+  ClipboardList,
   ExternalLink,
   Loader2,
   Plus,
@@ -10,6 +11,7 @@ import {
   Save,
   Search,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,6 +28,8 @@ import {
 import { normalizeAiProgramStructure } from "@/lib/training-courses/normalize-ai-program";
 import { TrainingProgramBuilder } from "@/components/super-admin/training-cms/training-program-builder";
 import { TrainingInstructorsPicker } from "@/components/super-admin/training-cms/training-instructors-picker";
+import { PositionnementQuestionsEditor } from "@/components/super-admin/training-cms/positionnement-questions-editor";
+import type { AssessmentQuestion } from "@/lib/formation-assessments/types";
 import { TrainingOpenBadgePicker } from "@/components/super-admin/training-cms/training-open-badge-picker";
 import { TrainingPageBlocksEditor } from "@/components/super-admin/training-cms/training-page-blocks-editor";
 import { TrainingLinesEditor } from "@/components/super-admin/training-cms/training-lines-editor";
@@ -191,6 +195,14 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
   const [tab, setTab] = useState<TabId>("general");
   const [state, setState] = useState<CmsState | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [positionnementBusy, setPositionnementBusy] = useState(false);
+  const [hasCoursePositionnement, setHasCoursePositionnement] = useState(false);
+  const [positionnementTitle, setPositionnementTitle] = useState<string | null>(null);
+  const [positionnementQuestions, setPositionnementQuestions] = useState<AssessmentQuestion[]>(
+    [],
+  );
+  const [editingPositionnement, setEditingPositionnement] = useState(false);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -236,6 +248,95 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
     else setState(null);
   }, [selected]);
 
+  const loadPositionnement = useCallback(async (courseId: string) => {
+    try {
+      const res = await fetch(`/api/super/training-courses/${courseId}/positionnement`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Positionnement");
+      setHasCoursePositionnement(Boolean(json.has_course_template));
+      setPositionnementTitle(
+        json.has_course_template ? String(json.template?.title || "Test de positionnement") : null,
+      );
+      setPositionnementQuestions(
+        Array.isArray(json.template?.questions)
+          ? (json.template.questions as AssessmentQuestion[])
+          : [],
+      );
+    } catch {
+      setHasCoursePositionnement(false);
+      setPositionnementTitle(null);
+      setPositionnementQuestions([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedId) {
+      setEditingPositionnement(false);
+      void loadPositionnement(selectedId);
+    } else {
+      setHasCoursePositionnement(false);
+      setPositionnementTitle(null);
+      setPositionnementQuestions([]);
+      setEditingPositionnement(false);
+    }
+  }, [selectedId, loadPositionnement]);
+
+  const handleCreatePositionnement = async () => {
+    if (!selected) return;
+    setPositionnementBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/super/training-courses/${selected.id}/positionnement`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Création impossible");
+      setHasCoursePositionnement(true);
+      setPositionnementTitle(String(json.template?.title || "Test de positionnement"));
+      setPositionnementQuestions(
+        Array.isArray(json.template?.questions)
+          ? (json.template.questions as AssessmentQuestion[])
+          : [],
+      );
+      setMessage(
+        json.created
+          ? "Test de positionnement créé à partir des objectifs de la formation."
+          : "Test de positionnement déjà en place — mis à jour.",
+      );
+      setTab("content");
+      setEditingPositionnement(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Création positionnement impossible");
+    } finally {
+      setPositionnementBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selected) return;
+    const ok = window.confirm(
+      `Supprimer définitivement « ${selected.title} » du catalogue ? Cette action est irréversible.`,
+    );
+    if (!ok) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/super/training-courses/${selected.id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Suppression impossible");
+      setCourses((prev) => prev.filter((c) => c.id !== selected.id));
+      setSelectedId(null);
+      setState(null);
+      setMessage("Formation supprimée du catalogue.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Suppression impossible");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const patch = <K extends keyof CmsState>(key: K, value: CmsState[K]) => {
     setState((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
@@ -278,7 +379,10 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
       if (!res.ok) throw new Error(json.error ?? "Erreur");
       setCourses((prev) => [...prev, json.course]);
       setSelectedId(json.course.id);
-      setMessage("Formation créée.");
+      setMessage(
+        "Formation créée. Pensez à créer un test de positionnement (bouton dans Contenu).",
+      );
+      setTab("content");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -657,6 +761,15 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                     Enregistrer
                   </button>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => void handleDelete()}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    Supprimer
+                  </button>
                 </div>
               </div>
 
@@ -698,6 +811,94 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
 
               {tab === "content" && (
                 <div className="space-y-6">
+                  <div className="rounded-2xl border border-[#635BFF]/20 bg-[#635BFF]/5 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 text-sm font-semibold text-[#635BFF]">
+                          <ClipboardList className="h-4 w-4" />
+                          Test de positionnement
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {hasCoursePositionnement
+                            ? `Actif pour cette formation${positionnementTitle ? ` — ${positionnementTitle}` : ""}. Les apprenants le reçoivent à J-3.`
+                            : "Recommandé Qualiopi : créez un test adapté aux objectifs de cette formation (sinon gabarit global)."}
+                        </p>
+                        <p className="mt-2 text-[11px] text-gray-500">
+                          Éval. à chaud / à froid : gabarit unique pour toutes les formations — pas besoin d&apos;en
+                          créer un par fiche.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={positionnementBusy}
+                          onClick={() => void handleCreatePositionnement()}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#635BFF] px-3 py-2 text-xs font-semibold text-white hover:bg-[#7B74FF] disabled:opacity-50"
+                        >
+                          {positionnementBusy ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <ClipboardList className="h-3.5 w-3.5" />
+                          )}
+                          {hasCoursePositionnement
+                            ? "Régénérer le positionnement"
+                            : "Créer un test de positionnement"}
+                        </button>
+                        {selected ? (
+                          <a
+                            href={`/a/preview?kind=positionnement&courseId=${encodeURIComponent(selected.id)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 hover:bg-gray-50"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Voir comme l&apos;apprenant
+                          </a>
+                        ) : null}
+                        {hasCoursePositionnement ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditingPositionnement((v) => !v)}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 hover:bg-gray-50"
+                          >
+                            {editingPositionnement ? "Fermer l'éditeur" : "Modifier"}
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    {editingPositionnement && selected && hasCoursePositionnement ? (
+                      <PositionnementQuestionsEditor
+                        courseId={selected.id}
+                        initialTitle={positionnementTitle || "Test de positionnement"}
+                        initialQuestions={positionnementQuestions}
+                        onCancel={() => setEditingPositionnement(false)}
+                        onSaved={(title) => {
+                          setPositionnementTitle(title);
+                          setEditingPositionnement(false);
+                          setMessage("Test de positionnement mis à jour.");
+                          void loadPositionnement(selected.id);
+                        }}
+                      />
+                    ) : null}
+                    <p className="mt-3 flex flex-wrap gap-3 text-[11px] text-gray-500">
+                      <a
+                        href="/a/preview?kind=eval_chaud"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline hover:text-gray-800"
+                      >
+                        Aperçu éval. à chaud
+                      </a>
+                      <a
+                        href="/a/preview?kind=eval_froid"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline hover:text-gray-800"
+                      >
+                        Aperçu éval. à froid
+                      </a>
+                    </p>
+                  </div>
                   <label className="block text-sm">
                     <span className="mb-1 block font-medium text-gray-700">Description courte</span>
                     <textarea className={TEXTAREA} value={state.short_description} onChange={(e) => patch("short_description", e.target.value)} />

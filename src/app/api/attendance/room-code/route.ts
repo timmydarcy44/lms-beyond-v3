@@ -12,7 +12,10 @@ import {
   setEmargeSession,
 } from "@/lib/formation-attendance/cookies";
 import { hitRateLimit } from "@/lib/formation-attendance/rate-limit";
-import { isAttendanceWindowOpen, loadSlotContext } from "@/lib/formation-attendance/slot-context";
+import {
+  isActiveLaunchOpen,
+  loadSlotContext,
+} from "@/lib/formation-attendance/slot-context";
 
 export async function POST(req: NextRequest) {
   const service = getServiceRoleClient();
@@ -91,8 +94,12 @@ export async function POST(req: NextRequest) {
   if (!ctx) {
     return NextResponse.json({ error: "Créneau introuvable" }, { status: 404 });
   }
-  if (!isAttendanceWindowOpen(ctx.slot, now)) {
-    return NextResponse.json({ error: "Émargement fermé pour ce créneau.", code: "closed" }, { status: 400 });
+  // Lancement formateur actif = session ouverte (évite « fermée » si fenêtre slot trop courte)
+  if (!isActiveLaunchOpen(matched, now)) {
+    return NextResponse.json(
+      { error: "Émargement fermé pour ce créneau.", code: "closed" },
+      { status: 400 },
+    );
   }
 
   const source = matched.mode === "qr" ? "qr" : "code_oral";

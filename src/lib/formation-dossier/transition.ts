@@ -20,6 +20,8 @@ export type TransitionDossierInput = {
     conventionSigned?: boolean;
     /** Formateur choisi (validation humaine). */
     trainerAssigned?: boolean;
+    /** CV formateur snapshoté dans le coffre (ou déposé côté expert). */
+    trainerCvReady?: boolean;
     /** Tous les créneaux de la session ont une clôture formateur. */
     allSlotsClosed?: boolean;
     /** Pas de créneau (session non programmée) — allSlotsClosed ignoré si true et count=0. */
@@ -48,6 +50,7 @@ export type TransitionDossierErr = {
     | "subcontracting_incomplete"
     | "convention_required"
     | "trainer_required"
+    | "trainer_cv_required"
     | "attendance_incomplete"
     | "invoice_required"
     | "qualiopi_incomplete";
@@ -157,7 +160,7 @@ export function evaluateFormationDossierTransition(
     }
   }
 
-  // Mise en place → Session : formateur choisi
+  // Mise en place → Session : formateur choisi + CV
   if (from === "mise_en_place" && to === "session") {
     if (!input.dossier.trainerAssigned) {
       return {
@@ -171,6 +174,14 @@ export function evaluateFormationDossierTransition(
         ok: false,
         code: "convention_required",
         message: "Convention signée requise.",
+      };
+    }
+    if (input.dossier.trainerCvReady === false) {
+      return {
+        ok: false,
+        code: "trainer_cv_required",
+        message:
+          "CV formateur requis : le formateur doit déposer son CV dans /dashboard/expert/documents avant Session.",
       };
     }
   }

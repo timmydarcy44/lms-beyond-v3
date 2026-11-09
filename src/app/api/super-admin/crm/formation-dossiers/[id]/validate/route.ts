@@ -81,6 +81,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: "Formateur non reconnu (staff Byound)" }, { status: 400 });
     }
 
+    const { snapshotTrainerCvToDossier } = await import(
+      "@/lib/formation-documents/trainer-cv"
+    );
+    const cvSnap = await snapshotTrainerCvToDossier(service, {
+      dossierId: id,
+      trainerUserId,
+      actorUserId,
+    });
+    if (!cvSnap.ok) {
+      return NextResponse.json(
+        { error: cvSnap.error, code: cvSnap.code },
+        { status: 400 },
+      );
+    }
+
     const { error } = await service
       .from("formation_dossiers")
       .update({
@@ -106,10 +121,48 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       dossier_id: id,
       event_type: "trainer_assigned",
       actor_user_id: actorUserId,
-      payload: { trainer_user_id: trainerUserId },
+      payload: { trainer_user_id: trainerUserId, cv_document_id: cvSnap.documentId },
     });
 
-    return NextResponse.json({ ok: true, action: "formateur", trainer_user_id: trainerUserId });
+    // Si tous les positionnements sont faits, envoyer la synthèse au formateur
+    try {
+      const { resolveTrainerEmail, sendPositionnementSynthToTrainer } = await import(
+        "@/lib/formation-assessments/synth"
+      );
+      const trainerEmail = await resolveTrainerEmail(service, id);
+      if (trainerEmail) {
+        const { data: parts } = await service
+          .from("formation_participants")
+          .select("id")
+          .eq("dossier_id", id);
+        const { data: done } = await service
+          .from("formation_assessment_attempts")
+          .select("participant_id")
+          .eq("dossier_id", id)
+          .eq("kind", "positionnement")
+          .eq("status", "completed");
+        const partIds = new Set((parts ?? []).map((p) => String(p.id)));
+        const doneIds = new Set(
+          (done ?? []).map((d) => String(d.participant_id || "")).filter(Boolean),
+        );
+        const allDone = partIds.size > 0 && [...partIds].every((pid) => doneIds.has(pid));
+        if (allDone) {
+          await sendPositionnementSynthToTrainer(service, {
+            dossierId: id,
+            toEmail: trainerEmail,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[validate/formateur] synth positionnement:", e);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      action: "formateur",
+      trainer_user_id: trainerUserId,
+      cv_document_id: cvSnap.documentId,
+    });
   }
 
   if (action === "facture") {

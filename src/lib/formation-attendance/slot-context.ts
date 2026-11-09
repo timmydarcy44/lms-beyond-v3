@@ -147,6 +147,30 @@ export async function loadSlotContext(
   };
 }
 
+/**
+ * Calcule une fin de fenêtre d’émargement saine (lancement formateur).
+ * Base = fin de créneau + offset, jamais début + 30 min.
+ */
+export function resolveAttendanceCloseAt(
+  slot: Pick<
+    SlotContext["slot"],
+    "ends_at" | "starts_at" | "attendance_close_offset_minutes"
+  >,
+  now = Date.now(),
+): Date {
+  const offsetMs = Math.max(0, Number(slot.attendance_close_offset_minutes ?? 30)) * 60_000;
+  const ends = slot.ends_at ? Date.parse(slot.ends_at) : NaN;
+  if (Number.isFinite(ends)) {
+    return new Date(Math.max(ends + offsetMs, now + 60 * 60_000));
+  }
+  const starts = slot.starts_at ? Date.parse(slot.starts_at) : NaN;
+  if (Number.isFinite(starts)) {
+    // Fallback : demi-journée typique (~3h30) + offset
+    return new Date(Math.max(starts + 210 * 60_000 + offsetMs, now + 60 * 60_000));
+  }
+  return new Date(now + 4 * 60 * 60_000);
+}
+
 export function isAttendanceWindowOpen(
   slot: SlotContext["slot"],
   now = Date.now(),
@@ -158,13 +182,27 @@ export function isAttendanceWindowOpen(
       : null;
   const closeAt = slot.attendance_closes_at
     ? Date.parse(slot.attendance_closes_at)
-    : openAt != null && Number.isFinite(openAt)
-      ? openAt + slot.attendance_close_offset_minutes * 60_000
+    : slot.ends_at
+      ? Date.parse(slot.ends_at) +
+        Math.max(0, Number(slot.attendance_close_offset_minutes ?? 30)) * 60_000
       : null;
 
   // Si pas d'horaires : fenêtre ouverte dès lancement formateur (contrôle via launch.revoked)
   if (openAt == null || !Number.isFinite(openAt)) return true;
   if (now < openAt) return false;
   if (closeAt != null && Number.isFinite(closeAt) && now > closeAt) return false;
+  return true;
+}
+
+/** Lancement formateur actif = émargement ouvert (ignore une ancienne fenêtre slot trop courte). */
+export function isActiveLaunchOpen(
+  launch: { revoked_at?: string | null; closes_at?: string | null },
+  now = Date.now(),
+): boolean {
+  if (launch.revoked_at) return false;
+  if (launch.closes_at) {
+    const t = Date.parse(String(launch.closes_at));
+    if (Number.isFinite(t) && now > t) return false;
+  }
   return true;
 }

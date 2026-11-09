@@ -12,9 +12,9 @@ export function scoreAssessmentAnswers(
     const raw = answers[q.id];
     if (raw == null || raw === "") continue;
 
-    if (q.type === "scale") {
-      const min = q.min ?? 1;
-      const high = q.max ?? 5;
+    if (q.type === "scale" || q.type === "nps") {
+      const min = q.min ?? (q.type === "nps" ? 0 : 1);
+      const high = q.max ?? (q.type === "nps" ? 10 : 5);
       const value = Number(raw);
       if (!Number.isFinite(value)) continue;
       max += high - min;
@@ -23,6 +23,11 @@ export function scoreAssessmentAnswers(
       max += q.options.length - 1;
       const idx = q.options.indexOf(String(raw));
       if (idx >= 0) earned += idx;
+    } else if (q.type === "multi" && q.options?.length && Array.isArray(raw)) {
+      max += q.options.length;
+      earned += raw.filter((v) => q.options!.includes(String(v))).length;
+    } else if (q.type === "section") {
+      continue;
     }
   }
 

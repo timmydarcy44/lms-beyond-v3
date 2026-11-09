@@ -124,6 +124,7 @@ type Lot5Meta = {
     convention_signed: boolean;
     trainer_assigned: boolean;
     trainer_user_id: string | null;
+    trainer_cv_ready?: boolean;
     slots_total: number;
     slots_closed: number;
     attendance_complete: boolean;
@@ -156,7 +157,20 @@ export function FormationDossierSheet({
   const [dossier, setDossier] = useState<DossierDetail | null>(null);
   const [orgName, setOrgName] = useState("");
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
-  const [tab, setTab] = useState<"docs" | "participants" | "bpf" | "historique">("docs");
+  const [tab, setTab] = useState<"docs" | "coffre" | "participants" | "bpf" | "historique">(
+    "docs",
+  );
+  const [coffre, setCoffre] = useState<{
+    items: Array<{
+      key: string;
+      label: string;
+      status: "ready" | "partial" | "missing" | "not_due";
+      detail?: string | null;
+    }>;
+    ready_count: number;
+    total_count: number;
+  } | null>(null);
+  const [coffreBusy, setCoffreBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [participantForm, setParticipantForm] = useState({
     first_name: "",
@@ -240,8 +254,65 @@ export function FormationDossierSheet({
     else {
       setDossier(null);
       setParticipants([]);
+      setCoffre(null);
     }
   }, [dossierId, load]);
+
+  const loadCoffre = useCallback(async () => {
+    if (!dossierId) return;
+    try {
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/coffre`);
+      const json = await parseFetchJson<{
+        items?: Array<{
+          key: string;
+          label: string;
+          status: "ready" | "partial" | "missing" | "not_due";
+          detail?: string | null;
+        }>;
+        ready_count?: number;
+        total_count?: number;
+        error?: string;
+      }>(res);
+      if (!res.ok) throw new Error(json.error);
+      setCoffre({
+        items: json.items ?? [],
+        ready_count: json.ready_count ?? 0,
+        total_count: json.total_count ?? 0,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Coffre indisponible");
+    }
+  }, [dossierId]);
+
+  useEffect(() => {
+    if (tab === "coffre" && dossierId) void loadCoffre();
+  }, [tab, dossierId, loadCoffre]);
+
+  const exportCoffreZip = async () => {
+    if (!dossierId) return;
+    setCoffreBusy(true);
+    try {
+      const res = await fetch(
+        `/api/super-admin/crm/formation-dossiers/${dossierId}/coffre?format=zip`,
+      );
+      if (!res.ok) {
+        const json = await parseFetchJson<{ error?: string }>(res);
+        throw new Error(json.error || "Export impossible");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `coffre-qualiopi-${dossierId.slice(0, 8)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Coffre exporté");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Export refusé");
+    } finally {
+      setCoffreBusy(false);
+    }
+  };
 
   if (!dossierId) return null;
 
@@ -457,6 +528,23 @@ export function FormationDossierSheet({
     onChanged();
   };
 
+  const passToSession = async () => {
+    if (!dossierId) return;
+    const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/transition`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to_status: "session" }),
+    });
+    const json = await parseFetchJson<{ error?: string }>(res);
+    if (!res.ok) {
+      toast.error(json.error || "Passage en Session impossible");
+      return;
+    }
+    toast.success("Dossier passé en Session");
+    await load();
+    onChanged();
+  };
+
   const validateInvoice = async () => {
     const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/validate`, {
       method: "POST",
@@ -565,6 +653,13 @@ export function FormationDossierSheet({
                 Convention {meta.locks.convention_signed ? "signée" : "en attente"}
                 {" · "}
                 Formateur {meta.locks.trainer_assigned ? "ok" : "à choisir"}
+                {" · "}
+                CV{" "}
+                {meta.locks.trainer_cv_ready
+                  ? "ok"
+                  : meta.locks.trainer_assigned
+                    ? "manquant"
+                    : "—"}
                 {" · "}
                 Émargements {meta.locks.slots_closed}/{meta.locks.slots_total}
                 {" · "}
@@ -835,6 +930,10 @@ export function FormationDossierSheet({
             {dossier.status === "convention" || dossier.status === "mise_en_place" ? (
               <div className="space-y-2 rounded-xl border border-[#262A4A] bg-[#141731] p-3">
                 <p className="text-sm font-semibold">Choisir le formateur</p>
+                <p className="text-xs text-[#A3A8C7]">
+                  CV obligatoire (espace expert). Sans CV, l&apos;affectation et le passage en
+                  Session sont bloqués.
+                </p>
                 <select
                   value={trainerId}
                   onChange={(e) => setTrainerId(e.target.value)}
@@ -853,6 +952,33 @@ export function FormationDossierSheet({
                   onClick={() => void assignTrainer()}
                 >
                   {meta?.locks.trainer_assigned ? "Mettre à jour le formateur" : "Valider le formateur"}
+                </Button>
+              </div>
+            ) : null}
+
+            {dossier.status === "mise_en_place" ? (
+              <div className="space-y-2 rounded-xl border border-[#262A4A] bg-[#141731] p-3">
+                <p className="text-sm font-semibold">Passer en Session</p>
+                <p className="text-xs text-[#A3A8C7]">
+                  Requis : convention signée + formateur choisi. Ou glissez la carte vers Session sur
+                  le board.
+                </p>
+                <Button
+                  type="button"
+                  className="w-full bg-[#6C5CF5] text-white"
+                  disabled={
+                    meta
+                      ? !(meta.locks.convention_signed && meta.locks.trainer_assigned)
+                      : true
+                  }
+                  title={
+                    meta && !(meta.locks.convention_signed && meta.locks.trainer_assigned)
+                      ? "Convention signée et formateur requis"
+                      : undefined
+                  }
+                  onClick={() => void passToSession()}
+                >
+                  Passer en Session
                 </Button>
               </div>
             ) : null}
@@ -885,6 +1011,7 @@ export function FormationDossierSheet({
               {(
                 [
                   ["docs", "Documents"],
+                  ["coffre", "Coffre"],
                   ["participants", "Participants"],
                   ["bpf", "Données BPF"],
                   ["historique", "Historique"],
@@ -902,6 +1029,65 @@ export function FormationDossierSheet({
                 </button>
               ))}
             </div>
+
+            {tab === "coffre" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-[#A3A8C7]">
+                    {coffre
+                      ? `${coffre.ready_count}/${coffre.total_count} preuves prêtes`
+                      : "Chargement du coffre Qualiopi…"}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-[#6C5CF5] text-white"
+                    disabled={coffreBusy}
+                    onClick={() => void exportCoffreZip()}
+                  >
+                    {coffreBusy ? "Export…" : "Exporter ZIP"}
+                  </Button>
+                </div>
+                <ul className="space-y-2">
+                  {(coffre?.items ?? []).map((item) => {
+                    const tone =
+                      item.status === "ready"
+                        ? "bg-[#16A34A] text-white"
+                        : item.status === "partial"
+                          ? "bg-[#CA8A04] text-white"
+                          : item.status === "not_due"
+                            ? "bg-[#0A0C1B] text-[#A3A8C7]"
+                            : "bg-[#7F1D1D] text-white";
+                    const label =
+                      item.status === "ready"
+                        ? "Prêt"
+                        : item.status === "partial"
+                          ? "Partiel"
+                          : item.status === "not_due"
+                            ? "Pas dû"
+                            : "Manquant";
+                    return (
+                      <li
+                        key={item.key}
+                        className="flex items-center justify-between gap-2 rounded-xl border border-[#262A4A] bg-[#141731] px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{item.label}</p>
+                          {item.detail ? (
+                            <p className="truncate text-[11px] text-[#A3A8C7]">{item.detail}</p>
+                          ) : null}
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${tone}`}
+                        >
+                          {label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
 
             {tab === "docs" ? (
               <ul className="space-y-2">

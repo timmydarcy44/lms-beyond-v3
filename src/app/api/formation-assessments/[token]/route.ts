@@ -17,11 +17,13 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     .maybeSingle();
   if (!attempt) return NextResponse.json({ error: "Lien invalide" }, { status: 404 });
 
-  const { data: template } = await service
-    .from("formation_assessment_templates")
-    .select("title, questions")
-    .eq("kind", attempt.kind)
-    .maybeSingle();
+  const { resolveTemplateForDossier } = await import(
+    "@/lib/formation-assessments/resolve-template"
+  );
+  const template = await resolveTemplateForDossier(service, {
+    dossierId: String(attempt.dossier_id),
+    kind: String(attempt.kind),
+  });
 
   const { data: dossier } = await service
     .from("formation_dossiers")
@@ -63,11 +65,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Déjà complété", code: "already_completed" }, { status: 409 });
   }
 
-  const { data: template } = await service
-    .from("formation_assessment_templates")
-    .select("questions")
-    .eq("kind", attempt.kind)
-    .maybeSingle();
+  const { resolveTemplateForDossier } = await import(
+    "@/lib/formation-assessments/resolve-template"
+  );
+  const template = await resolveTemplateForDossier(service, {
+    dossierId: String(attempt.dossier_id),
+    kind: String(attempt.kind),
+  });
   const questions = (template?.questions ?? []) as AssessmentQuestion[];
 
   const merged = {
@@ -95,6 +99,28 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   if (error || !updated) {
     return NextResponse.json({ error: error?.message || "Enregistrement impossible" }, { status: 400 });
+  }
+
+  // Archive réponses dans le coffre dossier (compte client / Qualiopi)
+  if (complete) {
+    try {
+      const { archiveAssessmentAttemptToCoffre } = await import(
+        "@/lib/formation-assessments/archive-attempt"
+      );
+      await archiveAssessmentAttemptToCoffre(service, {
+        dossierId: String(attempt.dossier_id),
+        attemptId: String(attempt.id),
+        kind: String(attempt.kind),
+        participantId: attempt.participant_id ? String(attempt.participant_id) : null,
+        title: template?.title || String(attempt.kind),
+        questions,
+        answers: merged,
+        scorePct: score,
+        completedAt: now,
+      });
+    } catch (e) {
+      console.warn("[formation-assessments] archive coffre:", e);
+    }
   }
 
   // Positionnement : si tout le monde a répondu, envoyer la synthèse formateur tout de suite.

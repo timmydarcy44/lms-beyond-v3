@@ -350,8 +350,9 @@ export async function loadDossierDocContext(
     },
   });
   if (resolvedLocation) {
+    const previous = session?.location_label ?? null;
     if (session) {
-      if (!session.location_label) session.location_label = resolvedLocation;
+      session.location_label = resolvedLocation;
     } else {
       session = {
         id: "preferred-location",
@@ -359,13 +360,12 @@ export async function loadDossierDocContext(
         location_label: resolvedLocation,
       };
     }
-    // Persiste sur la vraie session si elle existe encore vide
-    if (dossier.session_id && !slots.length) {
+    // Persiste le libellé normalisé (POV docs) dès qu'il change
+    if (dossier.session_id && previous !== resolvedLocation) {
       void service
         .from("formation_sessions")
         .update({ location_label: resolvedLocation })
         .eq("id", dossier.session_id)
-        .is("location_label", null)
         .then(({ error }) => {
           if (error) console.warn("[doc-context] persist location:", error.message);
         });

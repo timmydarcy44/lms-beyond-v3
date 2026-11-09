@@ -39,7 +39,7 @@ const EMPTY_FORM: RequestFormState = {
   preferred_format: "À définir",
   preferred_period: "",
   funding_type: "direct",
-  preferred_location: "Chez le client",
+  preferred_location: "Au sein de nos locaux",
   notes: "",
 };
 
@@ -393,8 +393,10 @@ function RequestModal({
                     onChange={(e) => onChange({ preferred_location: e.target.value })}
                     className="rounded-2xl border border-gray-200 px-4 py-2.5 outline-none focus:border-violet-400"
                   >
-                    <option value="Chez le client">Chez le client</option>
-                    <option value="Chez Byound">Chez Byound</option>
+                    <option value="Au sein de nos locaux">Au sein de nos locaux</option>
+                    <option value="Au sein de vos locaux (Byound)">
+                      Au sein de vos locaux (Byound)
+                    </option>
                     <option value="Distanciel / visio">Distanciel / visio</option>
                     <option value="Autre">Autre (à préciser)</option>
                   </select>

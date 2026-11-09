@@ -10,11 +10,13 @@ export type AssessmentKind = (typeof ASSESSMENT_KINDS)[number];
 export type AssessmentQuestion = {
   id: string;
   prompt: string;
-  type: "scale" | "single" | "text";
+  /** section = écran d'intro ; nps = 0–10 ; multi = choix multiples */
+  type: "scale" | "single" | "text" | "section" | "nps" | "multi";
   min?: number;
   max?: number;
   labels?: [string, string];
   options?: string[];
+  sectionLabel?: string;
 };
 
 export const ASSESSMENT_LABELS: Record<AssessmentKind, string> = {

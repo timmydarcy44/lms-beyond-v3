@@ -103,6 +103,21 @@ describe("evaluateFormationDossierTransition", () => {
     if (!result.ok) expect(result.code).toBe("trainer_required");
   });
 
+  it("exige un CV formateur avant Session", () => {
+    const result = evaluateFormationDossierTransition({
+      currentStatus: "mise_en_place",
+      toStatus: "session",
+      dossier: {
+        ...baseDossier,
+        conventionSigned: true,
+        trainerAssigned: true,
+        trainerCvReady: false,
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("trainer_cv_required");
+  });
+
   it("bloque Fin → Clôturé sans facture", () => {
     const result = evaluateFormationDossierTransition({
       currentStatus: "fin",

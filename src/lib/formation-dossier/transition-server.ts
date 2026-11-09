@@ -89,6 +89,22 @@ export async function transitionFormationDossier(
     dossier.session_id ? String(dossier.session_id) : null,
   );
 
+  let trainerCvReady = true;
+  if (dossier.trainer_user_id) {
+    const { dossierHasTrainerCv, resolveExpertCv } = await import(
+      "@/lib/formation-documents/trainer-cv"
+    );
+    const snapshotted = await dossierHasTrainerCv(service, params.dossierId);
+    if (snapshotted) {
+      trainerCvReady = true;
+    } else {
+      const cv = await resolveExpertCv(service, String(dossier.trainer_user_id));
+      trainerCvReady = Boolean(cv);
+    }
+  } else if (params.toStatus === "session") {
+    trainerCvReady = false;
+  }
+
   // BPF allégé : valeurs par défaut si absentes, pour ne pas bloquer Convention → Mise en place
   let bpfFunder = dossier.bpf_funder_type ? String(dossier.bpf_funder_type) : null;
   let subcontracting = dossier.subcontracting ? String(dossier.subcontracting) : null;
@@ -127,6 +143,7 @@ export async function transitionFormationDossier(
       participantBpfStatuses: (participants ?? []).map((p) => p.bpf_learner_status),
       conventionSigned: locks.conventionSigned,
       trainerAssigned: Boolean(dossier.trainer_user_id),
+      trainerCvReady,
       allSlotsClosed: locks.allSlotsClosed,
       slotCount: locks.slotCount,
       invoiceValidated: Boolean(dossier.invoice_validated_at),
@@ -241,10 +258,74 @@ export async function transitionFormationDossier(
           });
         }
       }
+    } else if (params.toStatus === "session") {
+      // Pack formateur immédiat dès l’entrée en Session
+      const trainerEmail = await resolveTrainerEmail(service, params.dossierId);
+      if (trainerEmail) {
+        const ctx = await loadDossierDocContext(service, params.dossierId);
+        const { sendPackFormateurEmail } = await import(
+          "@/lib/formation-documents/pack-formateur"
+        );
+        let slotId: string | null = null;
+        if (ctx?.dossier.session_id) {
+          const { data: nextSlot } = await service
+            .from("formation_slots")
+            .select("id")
+            .eq("session_id", ctx.dossier.session_id)
+            .order("slot_date", { ascending: true })
+            .order("day_part", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          slotId = nextSlot?.id ? String(nextSlot.id) : null;
+        }
+        const sent = await sendPackFormateurEmail(service, {
+          dossierId: params.dossierId,
+          toEmail: trainerEmail,
+          slotId,
+          payload: {
+            course_title: ctx?.dossier.course_title ?? null,
+            location: ctx?.session?.location_label ?? null,
+          },
+        });
+        if (!sent.ok) {
+          console.warn("[formation-dossier] pack formateur:", sent.error);
+        } else {
+          await service.from("formation_events").insert({
+            dossier_id: params.dossierId,
+            event_type: "pack_formateur_sent",
+            actor_user_id: params.actorUserId ?? null,
+            payload: { to: trainerEmail, slot_id: slotId, trigger: "status_session" },
+          });
+        }
+        // Garde aussi le planning J-1 pour les jours suivants
+        if (ctx?.dossier.session_id) {
+          const { schedulePackFormateurMails } = await import(
+            "@/lib/formation-documents/schedule"
+          );
+          const { data: allSlots } = await service
+            .from("formation_slots")
+            .select("id, slot_date, day_part")
+            .eq("session_id", ctx.dossier.session_id)
+            .order("slot_date", { ascending: true });
+          await schedulePackFormateurMails(service, {
+            dossierId: params.dossierId,
+            trainerEmail,
+            courseTitle: ctx.dossier.course_title,
+            location: ctx.session?.location_label ?? null,
+            slots: (allSlots ?? []).map((s) => ({
+              id: String(s.id),
+              slot_date: String(s.slot_date),
+              day_part: String(s.day_part),
+            })),
+          });
+        }
+      }
     } else if (params.toStatus === "fin") {
-      await generateFormationDocuments(service, {
+      const { archiveLearnerCertificates } = await import(
+        "@/lib/formation-documents/learner-certificates"
+      );
+      await archiveLearnerCertificates(service, {
         dossierId: params.dossierId,
-        kinds: ["certificat", "attestation"],
         actorUserId: params.actorUserId,
       });
       const ctx = await loadDossierDocContext(service, params.dossierId);

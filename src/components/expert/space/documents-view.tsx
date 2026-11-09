@@ -26,6 +26,7 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
   const toSign = documents.filter((document) => document.status === "to_sign").sort((a, b) => +new Date(a.uploadedAt) - +new Date(b.uploadedAt));
   const oldest = toSign[0];
   const rows = documents.filter((document) => active === "tous" || document.folder === active);
+  const hasCv = documents.some((document) => document.folder === "cv" && Boolean(document.url));
 
   const upload = async (file: File) => {
     setPending(true);
@@ -51,8 +52,28 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
 
   return (
     <ExpertPageFrame>
-      <ExpertPageHeader title="Documents" subtitle="Déposez l'exemple de facture ici : il servira de modèle pour les factures nominatives." action={<ExpertPrimaryButton onClick={() => inputRef.current?.click()}>{pending ? "Dépôt…" : "Déposer un document"}</ExpertPrimaryButton>} />
+      <ExpertPageHeader title="Documents" subtitle="Déposez votre CV (obligatoire pour animer une session) et l'exemple de facture." action={<ExpertPrimaryButton onClick={() => inputRef.current?.click()}>{pending ? "Dépôt…" : "Déposer un document"}</ExpertPrimaryButton>} />
       <input ref={inputRef} type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }} />
+      {!hasCv ? (
+        <article className="mb-4 rounded-[28px] border-2 border-[#FFB4B8] bg-[#1E2130] p-5 text-[#F4F5F7]">
+          <p className="text-sm font-bold text-[#FFB4B8]">CV requis — Qualiopi</p>
+          <h2 className="mt-1 text-[22px] font-extrabold tracking-[-0.03em]">Déposez votre CV</h2>
+          <p className="mt-2 text-sm text-[#B5BAC6]">
+            Sans CV, vous ne pourrez pas être affecté·e à une session formation. Ouvrez le dossier CV
+            puis déposez un PDF à jour.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ExpertPrimaryButton
+              onClick={() => {
+                router.push("/dashboard/expert/documents?folder=cv");
+                window.setTimeout(() => inputRef.current?.click(), 200);
+              }}
+            >
+              Déposer mon CV
+            </ExpertPrimaryButton>
+          </div>
+        </article>
+      ) : null}
       {oldest ? (
         <article className="rounded-[28px] bg-[#FF4B4B] p-5 text-[#04140C]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

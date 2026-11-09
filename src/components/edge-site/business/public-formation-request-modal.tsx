@@ -184,11 +184,11 @@ export function PublicFormationRequestModal({
                   <select
                     name="preferred_location"
                     className={fieldClass}
-                    defaultValue="Chez le client"
+                    defaultValue="Au sein de nos locaux"
                     disabled={loading}
                   >
-                    <option>Chez le client</option>
-                    <option>Chez Byound</option>
+                    <option>Au sein de nos locaux</option>
+                    <option>Au sein de vos locaux (Byound)</option>
                     <option>Distanciel / visio</option>
                   </select>
                 </label>

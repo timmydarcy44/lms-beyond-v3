@@ -15,20 +15,25 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
+  const verifyingRef = useRef(false);
+  const requestedRef = useRef(false);
 
-  const requestCode = async () => {
+  const requestCode = async (force = false) => {
+    if (!force && requestedRef.current) return;
+    requestedRef.current = true;
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/ready/${encodeURIComponent(token)}/otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "request" }),
+        body: JSON.stringify({ action: "request", force }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Envoi impossible");
       setSent(true);
     } catch (e) {
+      requestedRef.current = false;
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
       setBusy(false);
@@ -36,11 +41,14 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
   };
 
   useEffect(() => {
-    void requestCode();
+    void requestCode(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const verify = async (code: string) => {
+    if (verifyingRef.current) return;
+    if (code.length !== 6) return;
+    verifyingRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -56,6 +64,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
       setError(e instanceof Error ? e.message : "Erreur");
       setDigits(["", "", "", "", "", ""]);
       inputs.current[0]?.focus();
+      verifyingRef.current = false;
     } finally {
       setBusy(false);
     }
@@ -127,10 +136,8 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
                 style={{
                   background: "var(--ready-tile)",
                   border:
-                    digits[i] || (i === digits.findIndex((x) => !x) && i >= 0)
-                      ? i === digits.findIndex((x) => !x)
-                        ? "1px solid #FF0A30"
-                        : "1px solid transparent"
+                    i === digits.findIndex((x) => !x)
+                      ? "1px solid #FF0A30"
                       : "1px solid transparent",
                 }}
               />
@@ -145,7 +152,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
 
           <button
             type="button"
-            disabled={busy || digits.join("").length !== 6}
+            disabled={busy || digits.join("").length !== 6 || verifyingRef.current}
             onClick={() => void verify(digits.join(""))}
             className="mt-6 w-full rounded-full bg-white py-3.5 text-[15px] font-extrabold text-black disabled:opacity-50"
           >
@@ -157,7 +164,10 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
             <button
               type="button"
               disabled={busy}
-              onClick={() => void requestCode()}
+              onClick={() => {
+                requestedRef.current = false;
+                void requestCode(true);
+              }}
               className="font-semibold underline-offset-2"
               style={{ color: "#FF5A00" }}
             >

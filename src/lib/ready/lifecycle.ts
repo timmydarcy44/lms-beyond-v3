@@ -193,6 +193,13 @@ export async function ensureReadyLink(
           recipient_name: params.recipientName ?? null,
           expires_at: expiresAt.toISOString(),
           progress_total: Math.max(learnerCount, 1),
+          // Nouveau lien e-mail → reset OTP (évite « trop d'envois » après un renvoi).
+          otp_hash: null,
+          otp_expires_at: null,
+          otp_attempts: 0,
+          otp_sent_count_window: 0,
+          otp_window_started_at: null,
+          blocked_until: null,
           updated_at: now.toISOString(),
         })
         .eq("id", existing.id);

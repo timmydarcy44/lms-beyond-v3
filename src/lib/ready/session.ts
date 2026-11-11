@@ -82,8 +82,9 @@ export async function setReadySessionCookie(params: {
   jar.set(READY_SESSION_COOKIE, session.value, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/ready",
+    sameSite: "lax",
+    // Path=/ : le cookie doit aussi partir vers /api/ready/* (sinon fiche → 401).
+    path: "/",
     maxAge: session.maxAgeSec,
   });
 }
@@ -93,8 +94,8 @@ export async function clearReadySessionCookie(): Promise<void> {
   jar.set(READY_SESSION_COOKIE, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/ready",
+    sameSite: "lax",
+    path: "/",
     maxAge: 0,
   });
 }
@@ -123,5 +124,6 @@ export function readySessionSetCookieHeader(params: {
 }): string {
   const session = createReadySessionValue(params);
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${READY_SESSION_COOKIE}=${session.value}; Path=/ready; HttpOnly; SameSite=Strict; Max-Age=${session.maxAgeSec}${secure}`;
+  // Path=/ obligatoire : les APIs sont sous /api/ready/*, pas /ready/*.
+  return `${READY_SESSION_COOKIE}=${encodeURIComponent(session.value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${session.maxAgeSec}${secure}`;
 }

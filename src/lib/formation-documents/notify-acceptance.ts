@@ -196,6 +196,30 @@ export async function notifyClientDevisAccepted(
     );
   }
 
+  const tutorialUrl = process.env.READY_TUTORIAL_URL?.trim() || null;
+
+  const tutorialBlock = tutorialUrl
+    ? `
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px;background:#FFF5F0;border-radius:20px;border:1px solid #FFD4C2;">
+        <tr><td style="padding:18px 20px;">
+          <p style="margin:0;font-size:15px;font-weight:800;color:#111;letter-spacing:-0.02em;">
+            Tutoriel Byound Ready (55 s)
+          </p>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.55;color:#4A4A4A;">
+            Avant d'ouvrir votre fiche, regardez cette courte vidéo : comment copier les champs et déposer votre demande OPCO.
+          </p>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;">
+            <tr><td style="background:#FF5A00;border-radius:999px;">
+              <a href="${escapeEdgeEmailHtml(tutorialUrl)}" target="_blank" rel="noopener noreferrer"
+                 style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:800;color:#FFFFFF;text-decoration:none;letter-spacing:-0.02em;">
+                ▶ Voir le tutoriel
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>`
+    : "";
+
   const readyBlock = readyUrl
     ? `
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 24px;background:#15171E;border-radius:20px;">
@@ -234,6 +258,7 @@ export async function notifyClientDevisAccepted(
         La convention de formation vous sera adressée sous peu. Vous pouvez
         télécharger le devis signé ci-dessous${readyUrl ? ", et préparer votre dossier OPCO avec Byound Ready" : ""}.
       </p>
+      ${tutorialBlock}
       ${readyBlock}`,
     cta: { label: "Voir le devis signé", href: viewUrl },
     footerNote:

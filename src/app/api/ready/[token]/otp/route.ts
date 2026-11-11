@@ -35,7 +35,7 @@ export async function POST(
     );
   }
 
-  let body: { action?: string; code?: string } = {};
+  let body: { action?: string; code?: string; force?: boolean } = {};
   try {
     body = await request.json();
   } catch {
@@ -53,7 +53,7 @@ export async function POST(
         ),
       );
     }
-    const result = await requestReadyOtp(service, link);
+    const result = await requestReadyOtp(service, link, { force: Boolean(body.force) });
     if (!result.ok) {
       const status =
         result.code === "rate_limited" || result.code === "blocked" ? 429 : 400;

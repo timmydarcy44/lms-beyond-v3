@@ -49,7 +49,11 @@ type LinkOtpRow = {
 export async function requestReadyOtp(
   service: SupabaseClient,
   link: LinkOtpRow,
-): Promise<{ ok: true; emailed_to: string } | { ok: false; error: string; code: string }> {
+  opts?: { force?: boolean },
+): Promise<
+  | { ok: true; emailed_to: string; reused?: boolean }
+  | { ok: false; error: string; code: string }
+> {
   const now = Date.now();
   if (link.status === "revoked" || link.status === "expired") {
     return { ok: false, error: "Ce lien a expiré.", code: "expired" };
@@ -86,6 +90,13 @@ export async function requestReadyOtp(
       error: "Trop d'envois de code. Réessayez dans une heure.",
       code: "rate_limited",
     };
+  }
+
+  // Ne pas invalider un code encore valide (évite Strict Mode / double mount),
+  // sauf si l'utilisateur clique explicitement sur « Renvoyer ».
+  const existingExpires = link.otp_expires_at ? Date.parse(link.otp_expires_at) : 0;
+  if (!opts?.force && link.otp_hash && existingExpires > now + 30_000) {
+    return { ok: true, emailed_to: to, reused: true };
   }
 
   const otp = newReadyOtpCode();

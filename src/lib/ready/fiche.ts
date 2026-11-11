@@ -300,6 +300,8 @@ export async function loadReadyFiche(
       id: profile.id,
       label: profile.label,
       portal_name: profile.portalName,
+      portal_url: profile.portalUrl,
+      portal_cta_label: profile.portalCtaLabel,
       optional_learner_fields: profile.optionalLearnerFields,
     },
     attachments: [

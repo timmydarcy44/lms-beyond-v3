@@ -84,6 +84,8 @@ export type ReadyFichePayload = {
     id: string;
     label: string;
     portal_name: string;
+    portal_url: string | null;
+    portal_cta_label: string;
     optional_learner_fields: string[];
   };
   attachments: Array<{

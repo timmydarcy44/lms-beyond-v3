@@ -65,6 +65,8 @@ export function ReadyFiche({ token, initial }: Props) {
     id: fiche.opco_profile.id,
     label: fiche.opco_profile.label,
     portalName: fiche.opco_profile.portal_name,
+    portalUrl: fiche.opco_profile.portal_url,
+    portalCtaLabel: fiche.opco_profile.portal_cta_label,
     labels: {},
     fieldOrder: [],
     optionalLearnerFields: fiche.opco_profile.optional_learner_fields as Array<
@@ -207,34 +209,51 @@ export function ReadyFiche({ token, initial }: Props) {
                 stagiaire{fiche.course.learners_count > 1 ? "s" : ""}
               </p>
             </div>
-            <div className="flex w-full max-w-md gap-3 md:w-auto">
-              <div
-                className="flex-1 px-4 py-3"
-                style={{ background: "var(--ready-card)", borderRadius: 22 }}
-              >
-                <p className="text-[11px]" style={{ color: "var(--ready-muted)" }}>
-                  Votre OPCO
-                </p>
-                <p className="mt-1 text-[16px] font-extrabold tracking-[-0.03em]">
-                  {fiche.organization.opco_name || fiche.opco_profile.label}
-                </p>
+            <div className="flex w-full max-w-md flex-col gap-3 md:w-auto">
+              <div className="flex gap-3">
+                <div
+                  className="flex-1 px-4 py-3"
+                  style={{ background: "var(--ready-card)", borderRadius: 22 }}
+                >
+                  <p className="text-[11px]" style={{ color: "var(--ready-muted)" }}>
+                    Votre OPCO
+                  </p>
+                  <p className="mt-1 text-[16px] font-extrabold tracking-[-0.03em]">
+                    {fiche.organization.opco_name || fiche.opco_profile.label}
+                  </p>
+                  <p className="text-[12px]" style={{ color: "var(--ready-muted)" }}>
+                    Portail {fiche.opco_profile.portal_name}
+                  </p>
+                </div>
+                <div
+                  className="flex-1 px-4 py-3 text-white"
+                  style={{ background: "var(--ready-gradient)", borderRadius: 22 }}
+                >
+                  <p className="text-[11px] opacity-90">À déposer avant le {depositLabel}</p>
+                  <p className="mt-1 text-[16px] font-extrabold tracking-[-0.03em]">
+                    {depositDays != null && depositDays >= 0
+                      ? `Il vous reste ${depositDays} jour${depositDays > 1 ? "s" : ""}.`
+                      : depositDays != null && depositDays < 0
+                        ? "Délai dépassé"
+                        : "Calendrier à confirmer"}
+                  </p>
+                </div>
+              </div>
+              {fiche.opco_profile.portal_url ? (
+                <a
+                  href={fiche.opco_profile.portal_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-full px-4 py-3 text-center text-[14px] font-extrabold text-white"
+                  style={{ background: "var(--ready-gradient)" }}
+                >
+                  {fiche.opco_profile.portal_cta_label} →
+                </a>
+              ) : (
                 <p className="text-[12px]" style={{ color: "var(--ready-muted)" }}>
-                  Portail {fiche.opco_profile.portal_name}
+                  Déposez ensuite votre demande sur le portail de votre OPCO.
                 </p>
-              </div>
-              <div
-                className="flex-1 px-4 py-3 text-white"
-                style={{ background: "var(--ready-gradient)", borderRadius: 22 }}
-              >
-                <p className="text-[11px] opacity-90">À déposer avant le {depositLabel}</p>
-                <p className="mt-1 text-[16px] font-extrabold tracking-[-0.03em]">
-                  {depositDays != null && depositDays >= 0
-                    ? `Il vous reste ${depositDays} jour${depositDays > 1 ? "s" : ""}.`
-                    : depositDays != null && depositDays < 0
-                      ? "Délai dépassé"
-                      : "Calendrier à confirmer"}
-                </p>
-              </div>
+              )}
             </div>
           </div>
 
@@ -577,6 +596,27 @@ export function ReadyFiche({ token, initial }: Props) {
         </div>
 
         <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-6 lg:w-[320px]">
+          {fiche.opco_profile.portal_url ? (
+            <Panel>
+              <h3 className="text-[15px] font-extrabold tracking-[-0.03em]">
+                Portail {fiche.opco_profile.portal_name}
+              </h3>
+              <p className="mt-2 text-[13px]" style={{ color: "var(--ready-muted)" }}>
+                Une fois les champs copiés, déposez votre demande directement sur le portail de
+                votre OPCO.
+              </p>
+              <a
+                href={fiche.opco_profile.portal_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 flex w-full items-center justify-center rounded-full py-3.5 text-[14px] font-extrabold text-white"
+                style={{ background: "var(--ready-gradient)" }}
+              >
+                {fiche.opco_profile.portal_cta_label} →
+              </a>
+            </Panel>
+          ) : null}
+
           <Panel>
             <h3 className="text-[15px] font-extrabold tracking-[-0.03em]">Coûts calculés</h3>
             <div className="mt-3 space-y-2 text-[13px]">

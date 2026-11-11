@@ -38,6 +38,10 @@ export type ReadyOpcoProfile = {
   id: string;
   label: string;
   portalName: string;
+  /** URL publique du portail (connexion / dépôt). */
+  portalUrl: string | null;
+  /** Libellé du CTA affiché sur la fiche Ready. */
+  portalCtaLabel: string;
   /** Libellés portail (override). */
   labels: Partial<Record<ReadyFieldKey, string>>;
   /** Ordre d'affichage des champs action / entreprise. */
@@ -78,6 +82,8 @@ export const READY_OPCO_PROFILES: Record<string, ReadyOpcoProfile> = {
     id: "default",
     label: "OPCO",
     portalName: "votre portail OPCO",
+    portalUrl: null,
+    portalCtaLabel: "Accéder à votre portail OPCO",
     labels: {},
     fieldOrder: DEFAULT_ORDER,
     optionalLearnerFields: ["learner_entry_date", "learner_diploma"],
@@ -86,6 +92,8 @@ export const READY_OPCO_PROFILES: Record<string, ReadyOpcoProfile> = {
     id: "atlas",
     label: "Atlas",
     portalName: "myAtlas",
+    portalUrl: "https://www.myatlas.fr/",
+    portalCtaLabel: "Ouvrir le portail myAtlas",
     labels: {
       action_title: "Intitulé de l'action",
       action_duration: "Durée (heures)",
@@ -99,6 +107,8 @@ export const READY_OPCO_PROFILES: Record<string, ReadyOpcoProfile> = {
     id: "akto",
     label: "AKTO",
     portalName: "Espace AKTO",
+    portalUrl: "https://www.opco-akto.fr/",
+    portalCtaLabel: "Redirection vers votre portail OPCO",
     labels: {
       action_title: "Intitulé de la formation",
       company_idcc: "IDCC",
@@ -111,6 +121,8 @@ export const READY_OPCO_PROFILES: Record<string, ReadyOpcoProfile> = {
     id: "opco-ep",
     label: "OPCO EP",
     portalName: "portail OPCO EP",
+    portalUrl: "https://www.opcoep.fr/",
+    portalCtaLabel: "Redirection vers votre portail OPCO",
     labels: {
       action_formula: "Type d'action (inter / intra)",
       learner_diploma: "Niveau de diplôme",
@@ -122,6 +134,8 @@ export const READY_OPCO_PROFILES: Record<string, ReadyOpcoProfile> = {
     id: "constructys",
     label: "Constructys",
     portalName: "Espace Constructys",
+    portalUrl: "https://www.constructys.fr/",
+    portalCtaLabel: "Redirection vers votre portail OPCO",
     labels: {
       of_nda: "N° déclaration d'activité",
       learner_contract: "Nature du contrat",

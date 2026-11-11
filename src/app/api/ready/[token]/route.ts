@@ -54,6 +54,8 @@ export async function GET(
       recipient_name: link.recipient_name,
       authenticated: Boolean(authed),
       submitted: Boolean(link.submitted_at),
+      // Aide le client à savoir s'il doit renvoyer un Bearer
+      auth_via: authed ? "session" : null,
     }),
   );
 }

@@ -38,15 +38,20 @@ export function encryptJson(value: unknown): Buffer {
 
 export function decryptJson<T = Record<string, unknown>>(payload: Buffer | Uint8Array | null): T | null {
   if (!payload || payload.length < 29) return null;
-  const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(payload);
-  const key = encryptionKey();
-  const iv = buf.subarray(0, 12);
-  const tag = buf.subarray(12, 28);
-  const data = buf.subarray(28);
-  const decipher = createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(tag);
-  const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
-  return JSON.parse(decrypted.toString("utf8")) as T;
+  try {
+    const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(payload);
+    const key = encryptionKey();
+    const iv = buf.subarray(0, 12);
+    const tag = buf.subarray(12, 28);
+    const data = buf.subarray(28);
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
+    return JSON.parse(decrypted.toString("utf8")) as T;
+  } catch (e) {
+    console.warn("[ready] decryptJson failed (clé différente ou payload corrompu):", e);
+    return null;
+  }
 }
 
 export function bufferFromDb(value: unknown): Buffer | null {

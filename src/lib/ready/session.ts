@@ -105,16 +105,31 @@ export async function readReadySession(): Promise<SessionPayload | null> {
   return parseReadySessionValue(jar.get(READY_SESSION_COOKIE)?.value);
 }
 
-/** Pour les route handlers qui lisent le cookie depuis Request. */
+/** Cookie httpOnly (secours) + Authorization Bearer (principal côté SPA). */
 export function readReadySessionFromRequest(request: Request): SessionPayload | null {
+  const auth = request.headers.get("authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) {
+    const token = auth.slice(7).trim();
+    const fromBearer = parseReadySessionValue(token);
+    if (fromBearer) return fromBearer;
+  }
+  const readyHeader = request.headers.get("x-ready-session")?.trim();
+  if (readyHeader) {
+    const fromHeader = parseReadySessionValue(readyHeader);
+    if (fromHeader) return fromHeader;
+  }
   const header = request.headers.get("cookie") || "";
   const match = header
     .split(";")
     .map((c) => c.trim())
     .find((c) => c.startsWith(`${READY_SESSION_COOKIE}=`));
   if (!match) return null;
-  const value = decodeURIComponent(match.slice(READY_SESSION_COOKIE.length + 1));
-  return parseReadySessionValue(value);
+  try {
+    const value = decodeURIComponent(match.slice(READY_SESSION_COOKIE.length + 1));
+    return parseReadySessionValue(value);
+  } catch {
+    return parseReadySessionValue(match.slice(READY_SESSION_COOKIE.length + 1));
+  }
 }
 
 export function readySessionSetCookieHeader(params: {
@@ -124,6 +139,19 @@ export function readySessionSetCookieHeader(params: {
 }): string {
   const session = createReadySessionValue(params);
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  // Path=/ obligatoire : les APIs sont sous /api/ready/*, pas /ready/*.
   return `${READY_SESSION_COOKIE}=${encodeURIComponent(session.value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${session.maxAgeSec}${secure}`;
 }
+
+export function issueReadySession(params: {
+  linkId: string;
+  tokenHash: string;
+  linkExpiresAt: Date;
+}): { value: string; maxAgeSec: number; cookie: string } {
+  const session = createReadySessionValue(params);
+  return {
+    value: session.value,
+    maxAgeSec: session.maxAgeSec,
+    cookie: readySessionSetCookieHeader(params),
+  };
+}
+

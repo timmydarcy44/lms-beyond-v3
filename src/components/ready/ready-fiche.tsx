@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { CopyField } from "@/components/ready/copy-field";
+import { readyAuthHeaders } from "@/lib/ready/client-session";
 import {
   copyAmountCents,
   copyDurationHours,
@@ -75,7 +76,10 @@ export function ReadyFiche({ token, initial }: Props) {
     fieldLabel(profile, key, fallback);
 
   const reload = useCallback(async () => {
-    const res = await fetch(`/api/ready/${encodeURIComponent(token)}/fiche`);
+    const res = await fetch(`/api/ready/${encodeURIComponent(token)}/fiche`, {
+      headers: readyAuthHeaders(token),
+      credentials: "include",
+    });
     if (!res.ok) return;
     const json = (await res.json()) as ReadyFichePayload;
     setFiche(json);
@@ -87,7 +91,11 @@ export function ReadyFiche({ token, initial }: Props) {
     try {
       const res = await fetch(`/api/ready/${encodeURIComponent(token)}/patch`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...readyAuthHeaders(token),
+        },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const json = await res.json();
@@ -130,6 +138,8 @@ export function ReadyFiche({ token, initial }: Props) {
     try {
       const res = await fetch(`/api/ready/${encodeURIComponent(token)}/deposited`, {
         method: "POST",
+        headers: readyAuthHeaders(token),
+        credentials: "include",
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Impossible d'enregistrer");

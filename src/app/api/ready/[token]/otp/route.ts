@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isReadyLinkAccessible, loadReadyLinkByToken } from "@/lib/ready/load-link";
 import { maskEmail, requestReadyOtp, verifyReadyOtp } from "@/lib/ready/otp";
-import { readySessionSetCookieHeader } from "@/lib/ready/session";
+import { issueReadySession } from "@/lib/ready/session";
 
 export const dynamic = "force-dynamic";
 
@@ -96,15 +96,19 @@ export async function POST(
       );
     }
 
-    const res = securityHeaders(NextResponse.json({ ok: true }));
-    res.headers.append(
-      "Set-Cookie",
-      readySessionSetCookieHeader({
-        linkId: fresh.id,
-        tokenHash: fresh.token_hash,
-        linkExpiresAt: new Date(fresh.expires_at),
+    const issued = issueReadySession({
+      linkId: fresh.id,
+      tokenHash: fresh.token_hash,
+      linkExpiresAt: new Date(fresh.expires_at),
+    });
+    const res = securityHeaders(
+      NextResponse.json({
+        ok: true,
+        session: issued.value,
+        expires_in: issued.maxAgeSec,
       }),
     );
+    res.headers.append("Set-Cookie", issued.cookie);
     return res;
   }
 

@@ -5,6 +5,12 @@ import { useParams } from "next/navigation";
 import { AccessGate } from "@/components/ready/access-gate";
 import { ExpiredScreen } from "@/components/ready/expired-screen";
 import { ReadyFiche } from "@/components/ready/ready-fiche";
+import {
+  clearReadyClientSession,
+  readReadyClientSession,
+  readyAuthHeaders,
+  saveReadyClientSession,
+} from "@/lib/ready/client-session";
 import type { ReadyFichePayload } from "@/lib/ready/types";
 
 type GateState = {
@@ -25,8 +31,12 @@ export default function ReadyTokenPage() {
   const [openingFiche, setOpeningFiche] = useState(false);
 
   const fetchFiche = useCallback(async (): Promise<ReadyFichePayload> => {
-    const fRes = await fetch(`/api/ready/${encodeURIComponent(token)}/fiche`);
+    const fRes = await fetch(`/api/ready/${encodeURIComponent(token)}/fiche`, {
+      headers: readyAuthHeaders(token),
+      credentials: "include",
+    });
     if (fRes.status === 401) {
+      clearReadyClientSession(token);
       throw new Error("Session expirée — ressaisissez le code.");
     }
     if (fRes.status === 410) {
@@ -42,7 +52,10 @@ export default function ReadyTokenPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/ready/${encodeURIComponent(token)}`);
+      const res = await fetch(`/api/ready/${encodeURIComponent(token)}`, {
+        headers: readyAuthHeaders(token),
+        credentials: "include",
+      });
       const json = await res.json();
       if (res.status === 404) {
         setGate({
@@ -65,22 +78,26 @@ export default function ReadyTokenPage() {
         });
         return;
       }
+
+      const hasClientSession = Boolean(readReadyClientSession(token));
       const next: GateState = {
         status: String(json.status || "active"),
         expires_at: json.expires_at ?? null,
         recipient_masked: String(json.recipient_masked || "***"),
-        authenticated: Boolean(json.authenticated),
+        authenticated: Boolean(json.authenticated) || hasClientSession,
         submitted: Boolean(json.submitted),
       };
       setGate(next);
-      if (next.authenticated) {
+
+      if (next.authenticated || hasClientSession) {
         try {
           const payload = await fetchFiche();
           setFiche(payload);
-        } catch (e) {
+          setGate((g) => (g ? { ...g, authenticated: true } : g));
+        } catch {
+          clearReadyClientSession(token);
           setGate({ ...next, authenticated: false });
           setFiche(null);
-          setError(e instanceof Error ? e.message : "Erreur");
         }
       }
     } catch (e) {
@@ -163,7 +180,8 @@ export default function ReadyTokenPage() {
       token={token}
       recipientMasked={gate.recipient_masked}
       expiresAt={gate.expires_at}
-      onAuthenticated={async () => {
+      onAuthenticated={async (sessionValue) => {
+        saveReadyClientSession(token, sessionValue);
         setOpeningFiche(true);
         setError(null);
         try {
@@ -171,9 +189,9 @@ export default function ReadyTokenPage() {
           setGate((g) => (g ? { ...g, authenticated: true } : g));
           setFiche(payload);
         } catch (e) {
+          clearReadyClientSession(token);
           setOpeningFiche(false);
-          setError(e instanceof Error ? e.message : "Erreur");
-          throw e instanceof Error ? e : new Error("Erreur");
+          throw e instanceof Error ? e : new Error("Fiche indisponible");
         } finally {
           setOpeningFiche(false);
         }

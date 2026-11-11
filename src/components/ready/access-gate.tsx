@@ -6,7 +6,7 @@ type Props = {
   token: string;
   recipientMasked: string;
   expiresAt: string | null;
-  onAuthenticated: () => void | Promise<void>;
+  onAuthenticated: (sessionValue: string) => void | Promise<void>;
 };
 
 export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated }: Props) {
@@ -60,7 +60,9 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Code incorrect");
-      await onAuthenticated();
+      const sessionValue = String(json.session || "");
+      if (!sessionValue) throw new Error("Session manquante — réessayez.");
+      await onAuthenticated(sessionValue);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
       setDigits(["", "", "", "", "", ""]);

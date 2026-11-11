@@ -22,6 +22,20 @@ export default function ReadyTokenPage() {
   const [fiche, setFiche] = useState<ReadyFichePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [openingFiche, setOpeningFiche] = useState(false);
+
+  const fetchFiche = useCallback(async (): Promise<ReadyFichePayload> => {
+    const fRes = await fetch(`/api/ready/${encodeURIComponent(token)}/fiche`);
+    if (fRes.status === 401) {
+      throw new Error("Session expirée — ressaisissez le code.");
+    }
+    if (fRes.status === 410) {
+      throw new Error("Ce lien a expiré.");
+    }
+    const json = await fRes.json();
+    if (!fRes.ok) throw new Error(json.error || "Fiche indisponible");
+    return json as ReadyFichePayload;
+  }, [token]);
 
   const loadGate = useCallback(async () => {
     if (!token) return;
@@ -31,7 +45,12 @@ export default function ReadyTokenPage() {
       const res = await fetch(`/api/ready/${encodeURIComponent(token)}`);
       const json = await res.json();
       if (res.status === 404) {
-        setGate({ status: "expired", expires_at: null, recipient_masked: "***", authenticated: false });
+        setGate({
+          status: "expired",
+          expires_at: null,
+          recipient_masked: "***",
+          authenticated: false,
+        });
         return;
       }
       if (!res.ok && json.status !== "expired" && json.status !== "blocked") {
@@ -55,25 +74,21 @@ export default function ReadyTokenPage() {
       };
       setGate(next);
       if (next.authenticated) {
-        const fRes = await fetch(`/api/ready/${encodeURIComponent(token)}/fiche`);
-        if (fRes.status === 401) {
+        try {
+          const payload = await fetchFiche();
+          setFiche(payload);
+        } catch (e) {
           setGate({ ...next, authenticated: false });
           setFiche(null);
-          return;
+          setError(e instanceof Error ? e.message : "Erreur");
         }
-        if (fRes.status === 410) {
-          setGate({ ...next, status: "expired", authenticated: false });
-          return;
-        }
-        if (!fRes.ok) throw new Error("Fiche indisponible");
-        setFiche((await fRes.json()) as ReadyFichePayload);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, fetchFiche]);
 
   useEffect(() => {
     void loadGate();
@@ -81,7 +96,10 @@ export default function ReadyTokenPage() {
 
   if (loading && !gate) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-4 text-[14px]" style={{ color: "var(--ready-muted)" }}>
+      <main
+        className="flex min-h-screen items-center justify-center px-4 text-[14px]"
+        style={{ color: "var(--ready-muted)" }}
+      >
         Chargement…
       </main>
     );
@@ -102,13 +120,16 @@ export default function ReadyTokenPage() {
   if (gate.status === "blocked") {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
-        <img src="/brand/logo-byound-blanc.png" alt="Byound" className="absolute left-4 top-6 h-7 w-auto" />
+        <img
+          src="/brand/logo-byound-blanc.png"
+          alt="Byound"
+          className="absolute left-4 top-6 h-7 w-auto"
+        />
         <h1 className="text-[28px] font-extrabold tracking-[-0.045em] text-white">
           Accès temporairement bloqué
         </h1>
         <p className="mt-3 max-w-sm text-[14px]" style={{ color: "var(--ready-muted)" }}>
-          Trop de codes incorrects. Réessayez dans 15 minutes, ou demandez un nouveau code après le
-          déblocage.
+          Trop de codes incorrects. Réessayez dans 15 minutes.
         </p>
         <button
           type="button"
@@ -121,18 +142,42 @@ export default function ReadyTokenPage() {
     );
   }
 
-  if (!gate.authenticated || !fiche) {
+  if (openingFiche) {
     return (
-      <AccessGate
-        token={token}
-        recipientMasked={gate.recipient_masked}
-        expiresAt={gate.expires_at}
-        onAuthenticated={() => {
-          void loadGate();
-        }}
-      />
+      <main
+        className="flex min-h-screen flex-col items-center justify-center px-4 text-center"
+        style={{ color: "var(--ready-muted)" }}
+      >
+        <p className="text-[15px] font-semibold text-white">Ouverture de votre fiche…</p>
+        <p className="mt-2 text-[13px]">Un instant.</p>
+      </main>
     );
   }
 
-  return <ReadyFiche token={token} initial={fiche} />;
+  if (fiche) {
+    return <ReadyFiche token={token} initial={fiche} />;
+  }
+
+  return (
+    <AccessGate
+      token={token}
+      recipientMasked={gate.recipient_masked}
+      expiresAt={gate.expires_at}
+      onAuthenticated={async () => {
+        setOpeningFiche(true);
+        setError(null);
+        try {
+          const payload = await fetchFiche();
+          setGate((g) => (g ? { ...g, authenticated: true } : g));
+          setFiche(payload);
+        } catch (e) {
+          setOpeningFiche(false);
+          setError(e instanceof Error ? e.message : "Erreur");
+          throw e instanceof Error ? e : new Error("Erreur");
+        } finally {
+          setOpeningFiche(false);
+        }
+      }}
+    />
+  );
 }

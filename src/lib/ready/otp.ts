@@ -44,6 +44,7 @@ type LinkOtpRow = {
   otp_attempts: number;
   otp_sent_count_window: number;
   otp_window_started_at: string | null;
+  opened_at?: string | null;
 };
 
 export async function requestReadyOtp(
@@ -198,18 +199,18 @@ export async function verifyReadyOtp(
     };
   }
 
-  await service
-    .from("ready_links")
-    .update({
-      otp_hash: null,
-      otp_expires_at: null,
-      otp_attempts: 0,
-      blocked_until: null,
-      status: link.status === "blocked" ? "active" : link.status,
-      opened_at: link.status === "active" ? new Date().toISOString() : undefined,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", link.id);
+  const patch: Record<string, unknown> = {
+    otp_hash: null,
+    otp_expires_at: null,
+    otp_attempts: 0,
+    blocked_until: null,
+    status: link.status === "blocked" ? "active" : link.status,
+    updated_at: new Date().toISOString(),
+  };
+  if (!link.opened_at && link.status === "active") {
+    patch.opened_at = new Date().toISOString();
+  }
+  await service.from("ready_links").update(patch).eq("id", link.id);
 
   await logReadyEvent(service, link.id, "otp_success", {});
   return { ok: true };

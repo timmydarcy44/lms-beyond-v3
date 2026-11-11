@@ -11,8 +11,8 @@ import { createClient } from "@supabase/supabase-js";
 dotenv.config({ path: path.join(process.cwd(), ".env.local"), override: true });
 
 const TO = (process.argv[2] || "timmydarcy44@gmail.com").trim().toLowerCase();
-/** Account management · Printngo — a un devis + participants. */
-const DOSSIER = "5c2e8c3e-5b7e-4e41-b853-f094c4101736";
+/** Devis signé Printngo — Adapter sa communication (ATLAS, 1 stagiaire). */
+const DOSSIER = "16f62973-141b-4ee1-b6dc-61ad099e8299";
 
 async function main() {
   if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY manquant");

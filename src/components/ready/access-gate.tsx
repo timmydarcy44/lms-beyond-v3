@@ -6,12 +6,13 @@ type Props = {
   token: string;
   recipientMasked: string;
   expiresAt: string | null;
-  onAuthenticated: () => void;
+  onAuthenticated: () => void | Promise<void>;
 };
 
 export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated }: Props) {
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
-  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
@@ -21,7 +22,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
   const requestCode = async (force = false) => {
     if (!force && requestedRef.current) return;
     requestedRef.current = true;
-    setBusy(true);
+    setSending(true);
     setError(null);
     try {
       const res = await fetch(`/api/ready/${encodeURIComponent(token)}/otp`, {
@@ -36,7 +37,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
       requestedRef.current = false;
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
-      setBusy(false);
+      setSending(false);
     }
   };
 
@@ -49,7 +50,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
     if (verifyingRef.current) return;
     if (code.length !== 6) return;
     verifyingRef.current = true;
-    setBusy(true);
+    setVerifying(true);
     setError(null);
     try {
       const res = await fetch(`/api/ready/${encodeURIComponent(token)}/otp`, {
@@ -59,14 +60,13 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Code incorrect");
-      onAuthenticated();
+      await onAuthenticated();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
       setDigits(["", "", "", "", "", ""]);
       inputs.current[0]?.focus();
       verifyingRef.current = false;
-    } finally {
-      setBusy(false);
+      setVerifying(false);
     }
   };
 
@@ -95,7 +95,13 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
             style={{ background: "var(--ready-gradient)" }}
             aria-hidden
           >
-            <img src="/brand/logo-b.png" alt="" className="h-9 w-9 object-contain" />
+            {/* logo-b.png a un fond noir : screen enlève le carré */}
+            <img
+              src="/brand/logo-b.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              style={{ mixBlendMode: "screen" }}
+            />
           </div>
           <h1 className="mt-5 text-[26px] font-extrabold tracking-[-0.045em] text-white">
             Votre fiche Byound Ready
@@ -104,6 +110,12 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
             Pour protéger les données de vos stagiaires, saisissez le code à 6 chiffres envoyé à{" "}
             <strong className="text-white">{recipientMasked}</strong>.
           </p>
+
+          {sending ? (
+            <p className="mt-4 text-[13px]" style={{ color: "var(--ready-muted)" }}>
+              Envoi du code…
+            </p>
+          ) : null}
 
           <div className="mt-6 flex justify-center gap-2">
             {digits.map((d, i) => (
@@ -117,7 +129,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
                 aria-label={`Chiffre ${i + 1} du code`}
                 maxLength={1}
                 value={d}
-                disabled={busy}
+                disabled={verifying}
                 onChange={(e) => {
                   const v = e.target.value.replace(/\D/g, "").slice(-1);
                   const next = [...digits];
@@ -132,7 +144,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
                     inputs.current[i - 1]?.focus();
                   }
                 }}
-                className="h-12 w-10 rounded-[14px] text-center text-[20px] font-bold text-white outline-none"
+                className="h-12 w-10 rounded-[14px] text-center text-[20px] font-bold text-white outline-none disabled:opacity-60"
                 style={{
                   background: "var(--ready-tile)",
                   border:
@@ -152,23 +164,23 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
 
           <button
             type="button"
-            disabled={busy || digits.join("").length !== 6 || verifyingRef.current}
+            disabled={verifying || digits.join("").length !== 6}
             onClick={() => void verify(digits.join(""))}
             className="mt-6 w-full rounded-full bg-white py-3.5 text-[15px] font-extrabold text-black disabled:opacity-50"
           >
-            Accéder à ma fiche
+            {verifying ? "Vérification…" : "Accéder à ma fiche"}
           </button>
 
           <p className="mt-4 text-[12px]" style={{ color: "var(--ready-muted)" }}>
             {sent ? "Pas reçu ? " : ""}
             <button
               type="button"
-              disabled={busy}
+              disabled={sending || verifying}
               onClick={() => {
                 requestedRef.current = false;
                 void requestCode(true);
               }}
-              className="font-semibold underline-offset-2"
+              className="font-semibold underline-offset-2 disabled:opacity-50"
               style={{ color: "#FF5A00" }}
             >
               Renvoyer le code
@@ -200,7 +212,7 @@ export function AccessGate({ token, recipientMasked, expiresAt, onAuthenticated 
         className="mt-auto pt-10 text-center text-[11px]"
         style={{ color: "var(--ready-muted)" }}
       >
-        Byound Business · Ce lien vous a été envoyé avec votre devis.
+        Byound Business · Ce lien vous a été envoyé après acceptation de votre devis.
       </p>
     </main>
   );

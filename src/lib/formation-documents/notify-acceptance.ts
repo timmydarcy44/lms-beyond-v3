@@ -200,22 +200,43 @@ export async function notifyClientDevisAccepted(
 
   const tutorialBlock = tutorialUrl
     ? `
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px;background:#FFF5F0;border-radius:20px;border:1px solid #FFD4C2;">
-        <tr><td style="padding:18px 20px;">
-          <p style="margin:0;font-size:15px;font-weight:800;color:#111;letter-spacing:-0.02em;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 16px;background:#0A0B12;border-radius:20px;">
+        <tr><td style="padding:18px 20px 8px;">
+          <p style="margin:0;font-size:15px;font-weight:800;color:#F3F4FA;letter-spacing:-0.02em;">
             Tutoriel Byound Ready (55 s)
           </p>
-          <p style="margin:8px 0 0;font-size:14px;line-height:1.55;color:#4A4A4A;">
-            Avant d'ouvrir votre fiche, regardez cette courte vidéo : comment copier les champs et déposer votre demande OPCO.
+          <p style="margin:8px 0 14px;font-size:14px;line-height:1.55;color:#9AA0B5;">
+            Avant d'ouvrir votre fiche : comment copier les champs et déposer votre demande OPCO.
           </p>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;">
-            <tr><td style="background:#FF5A00;border-radius:999px;">
-              <a href="${escapeEdgeEmailHtml(tutorialUrl)}" target="_blank" rel="noopener noreferrer"
-                 style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:800;color:#FFFFFF;text-decoration:none;letter-spacing:-0.02em;">
-                ▶ Voir le tutoriel
-              </a>
-            </td></tr>
-          </table>
+        </td></tr>
+        <tr><td style="padding:0 12px 12px;">
+          <!-- Clients compatibles (ex. Apple Mail) : lecture inline -->
+          <video
+            width="100%"
+            height="auto"
+            controls
+            playsinline
+            webkit-playsinline
+            preload="metadata"
+            style="display:block;width:100%;max-width:100%;border-radius:14px;background:#000;"
+          >
+            <source src="${escapeEdgeEmailHtml(tutorialUrl)}" type="video/mp4" />
+          </video>
+          <!-- Fallback Gmail / Outlook : zone cliquable -->
+          <!--[if !mso]><!-->
+          <a href="${escapeEdgeEmailHtml(tutorialUrl)}" target="_blank" rel="noopener noreferrer"
+             style="display:block;margin-top:12px;text-align:center;padding:14px 18px;background:#FF5A00;border-radius:999px;font-size:14px;font-weight:800;color:#FFFFFF;text-decoration:none;letter-spacing:-0.02em;">
+            ▶ Lancer le tutoriel
+          </a>
+          <!--<![endif]-->
+          <!--[if mso]>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;"><tr><td align="center" bgcolor="#FF5A00" style="border-radius:999px;">
+            <a href="${escapeEdgeEmailHtml(tutorialUrl)}" style="display:inline-block;padding:14px 18px;font-size:14px;font-weight:800;color:#FFFFFF;text-decoration:none;">Lancer le tutoriel</a>
+          </td></tr></table>
+          <![endif]-->
+          <p style="margin:10px 0 4px;font-size:12px;line-height:1.45;color:#6B7288;text-align:center;">
+            Si la vidéo ne s'affiche pas dans votre messagerie, utilisez le bouton ci-dessus.
+          </p>
         </td></tr>
       </table>`
     : "";

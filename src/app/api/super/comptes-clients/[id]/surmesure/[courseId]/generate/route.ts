@@ -4,6 +4,10 @@ import { generateJSON } from "@/lib/ai/openai-client";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { normalizeAiProgramStructure } from "@/lib/training-courses/normalize-ai-program";
 import { SURMESURE_SELECT } from "@/lib/training-courses/surmesure";
+import {
+  formatOrgContextForPrompt,
+  loadSurMesureOrgContext,
+} from "@/lib/training-courses/surmesure-org-context";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +75,7 @@ export async function POST(request: NextRequest, context: Ctx) {
 
   const body = (await request.json().catch(() => ({}))) as { brief?: string };
   const brief = String(body.brief ?? "").trim();
+  const orgCtx = await loadSurMesureOrgContext(service, orgId);
 
   const systemPrompt =
     "Tu es architecte pédagogique senior pour Byound Business (France). Réponds UNIQUEMENT en JSON valide, en français. " +
@@ -78,9 +83,13 @@ export async function POST(request: NextRequest, context: Ctx) {
     "PAS de contenu LMS (pas de texte long, pas de slides). Titres concrets, progressifs, opérationnels. " +
     "Chaque sous-chapitre = une activité ou compétence mesurable. " +
     "Adapte le volume à la durée (1 jour ≈ 3 sections ; 2 jours ≈ 4 sections ; 3 jours ≈ 5 sections). " +
+    "Ancre les titres dans le secteur d'activité du client (vocabulaire métier). " +
     "Inclure naturellement des points d'évaluation (quiz) et d'ancrage (entretien) via le libellé des sous-chapitres si pertinent.";
 
   const userPrompt = `Génère le programme détaillé (Section → Chapitre → Sous-chapitre) pour cette formation Sur-mesure Byound, co-construite avec le client.
+
+Contexte entreprise :
+${formatOrgContextForPrompt(orgCtx)}
 
 Titre: ${course.title}
 Durée: ${course.duration || "2 jours"}

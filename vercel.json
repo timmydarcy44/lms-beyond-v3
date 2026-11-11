@@ -58,7 +58,7 @@
     },
     {
       "path": "/api/cron/formation-relances",
-      "schedule": "15 7 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/bpf-campaign",

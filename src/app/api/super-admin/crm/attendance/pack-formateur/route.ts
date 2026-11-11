@@ -3,9 +3,9 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { loadSlotContext } from "@/lib/formation-attendance/slot-context";
 import { resolveTrainerEmail } from "@/lib/formation-assessments/synth";
-import { sendPackFormateurEmail } from "@/lib/formation-documents/pack-formateur";
+import { sendBackstageEmail } from "@/lib/formation-documents/backstage";
 
-/** Envoi manuel immédiat du pack formateur (test / relance jour J). */
+/** Renvoi manuel Backstage (fiche session / écran émargement). */
 export async function POST(req: NextRequest) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const slotId = String(body?.slot_id ?? "").trim();
+  const mailType = body?.mail_type === "rappel" ? "rappel" : "backstage";
   if (!slotId) return NextResponse.json({ error: "slot_id requis" }, { status: 400 });
 
   const ctx = await loadSlotContext(service, slotId);
@@ -33,19 +34,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const result = await sendPackFormateurEmail(service, {
+  const result = await sendBackstageEmail(service, {
     dossierId,
     toEmail: trainerEmail,
     slotId,
-    payload: {
-      course_title: ctx.session.title || ctx.dossiers[0]?.course_title || null,
-      location: ctx.session.location_label,
-    },
+    mailType,
+    force: true,
   });
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error || "Envoi impossible" }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, to: trainerEmail });
+  return NextResponse.json({
+    ok: true,
+    to: trainerEmail,
+    mail_type: mailType,
+    skipped: Boolean(result.skipped),
+  });
 }

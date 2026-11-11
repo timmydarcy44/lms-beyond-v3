@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
             .in("id", profileIds)
         : { data: [] as Array<Record<string, unknown>> };
       const byId = new Map((profiles ?? []).map((p) => [String(p.id), p]));
-      const { schedulePositionnementMails, schedulePackFormateurMails } = await import(
+      const { schedulePositionnementMails, scheduleBackstageMails } = await import(
         "@/lib/formation-documents/schedule"
       );
       const { resolveTrainerEmail } = await import("@/lib/formation-assessments/synth");
@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
 
       const { data: allSlots } = await service
         .from("formation_slots")
-        .select("id, slot_date, day_part")
+        .select("id, slot_date, day_part, starts_at, ends_at")
         .eq("session_id", sessionId)
         .order("slot_date", { ascending: true });
       const { data: sessionRow } = await service
@@ -256,7 +256,7 @@ export async function POST(req: NextRequest) {
         .select("location_label")
         .eq("id", sessionId)
         .maybeSingle();
-      await schedulePackFormateurMails(service, {
+      await scheduleBackstageMails(service, {
         dossierId,
         trainerEmail,
         courseTitle: dossierFull.course_title ? String(dossierFull.course_title) : null,
@@ -265,6 +265,8 @@ export async function POST(req: NextRequest) {
           id: String(s.id),
           slot_date: String(s.slot_date),
           day_part: String(s.day_part),
+          starts_at: s.starts_at ? String(s.starts_at) : null,
+          ends_at: s.ends_at ? String(s.ends_at) : null,
         })),
       });
     }

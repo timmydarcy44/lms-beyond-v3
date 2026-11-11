@@ -235,17 +235,17 @@ export async function transitionFormationDossier(
             })),
         });
 
-        const { schedulePackFormateurMails } = await import(
+        const { scheduleBackstageMails } = await import(
           "@/lib/formation-documents/schedule"
         );
         const sessionId = ctx.dossier.session_id;
         if (sessionId) {
           const { data: allSlots } = await service
             .from("formation_slots")
-            .select("id, slot_date, day_part")
+            .select("id, slot_date, day_part, starts_at, ends_at")
             .eq("session_id", sessionId)
             .order("slot_date", { ascending: true });
-          await schedulePackFormateurMails(service, {
+          await scheduleBackstageMails(service, {
             dossierId: params.dossierId,
             trainerEmail,
             courseTitle: ctx.dossier.course_title,
@@ -254,60 +254,27 @@ export async function transitionFormationDossier(
               id: String(s.id),
               slot_date: String(s.slot_date),
               day_part: String(s.day_part),
+              starts_at: s.starts_at ? String(s.starts_at) : null,
+              ends_at: s.ends_at ? String(s.ends_at) : null,
             })),
           });
         }
       }
     } else if (params.toStatus === "session") {
-      // Pack formateur immédiat dès l’entrée en Session
+      // Backstage : planifie J-2 / rappel (envoi immédiat seulement si fenêtre déjà passée et session future)
       const trainerEmail = await resolveTrainerEmail(service, params.dossierId);
       if (trainerEmail) {
         const ctx = await loadDossierDocContext(service, params.dossierId);
-        const { sendPackFormateurEmail } = await import(
-          "@/lib/formation-documents/pack-formateur"
-        );
-        let slotId: string | null = null;
         if (ctx?.dossier.session_id) {
-          const { data: nextSlot } = await service
-            .from("formation_slots")
-            .select("id")
-            .eq("session_id", ctx.dossier.session_id)
-            .order("slot_date", { ascending: true })
-            .order("day_part", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          slotId = nextSlot?.id ? String(nextSlot.id) : null;
-        }
-        const sent = await sendPackFormateurEmail(service, {
-          dossierId: params.dossierId,
-          toEmail: trainerEmail,
-          slotId,
-          payload: {
-            course_title: ctx?.dossier.course_title ?? null,
-            location: ctx?.session?.location_label ?? null,
-          },
-        });
-        if (!sent.ok) {
-          console.warn("[formation-dossier] pack formateur:", sent.error);
-        } else {
-          await service.from("formation_events").insert({
-            dossier_id: params.dossierId,
-            event_type: "pack_formateur_sent",
-            actor_user_id: params.actorUserId ?? null,
-            payload: { to: trainerEmail, slot_id: slotId, trigger: "status_session" },
-          });
-        }
-        // Garde aussi le planning J-1 pour les jours suivants
-        if (ctx?.dossier.session_id) {
-          const { schedulePackFormateurMails } = await import(
+          const { scheduleBackstageMails } = await import(
             "@/lib/formation-documents/schedule"
           );
           const { data: allSlots } = await service
             .from("formation_slots")
-            .select("id, slot_date, day_part")
+            .select("id, slot_date, day_part, starts_at, ends_at")
             .eq("session_id", ctx.dossier.session_id)
             .order("slot_date", { ascending: true });
-          await schedulePackFormateurMails(service, {
+          await scheduleBackstageMails(service, {
             dossierId: params.dossierId,
             trainerEmail,
             courseTitle: ctx.dossier.course_title,
@@ -316,6 +283,8 @@ export async function transitionFormationDossier(
               id: String(s.id),
               slot_date: String(s.slot_date),
               day_part: String(s.day_part),
+              starts_at: s.starts_at ? String(s.starts_at) : null,
+              ends_at: s.ends_at ? String(s.ends_at) : null,
             })),
           });
         }

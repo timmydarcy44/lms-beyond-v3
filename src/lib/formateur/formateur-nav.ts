@@ -22,7 +22,7 @@ export type FormateurNavItem = {
 
 /** Navigation Expert / Formateur — orientée action pédagogique. */
 export const FORMATEUR_NAV_ITEMS: FormateurNavItem[] = [
-  { label: "Accueil", href: "/dashboard/formateur", icon: Home },
+  { label: "Backstage", href: "/dashboard/formateur", icon: Home },
   { label: "Planning", href: "/dashboard/formateur/planning", icon: CalendarDays },
   { label: "Mes cours", href: "/dashboard/formateur/formations", icon: BookOpen },
   { label: "Parcours", href: "/dashboard/formateur/parcours", icon: Layers },
@@ -50,13 +50,13 @@ export const FORMATEUR_NAV_SECTIONS: Array<{ label: string; items: FormateurNavI
 ];
 
 export function resolveFormateurActiveLabel(pathname: string | null): string {
-  if (!pathname) return "Accueil";
+  if (!pathname) return "Backstage";
   const match = FORMATEUR_NAV_ITEMS.filter((item) => item.href !== "/dashboard/formateur")
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0];
   if (match) return match.label;
   if (pathname === "/dashboard/formateur" || pathname.startsWith("/dashboard/formateur/")) {
-    return "Accueil";
+    return "Backstage";
   }
-  return "Accueil";
+  return "Backstage";
 }

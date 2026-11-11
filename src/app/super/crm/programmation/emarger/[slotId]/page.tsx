@@ -219,7 +219,7 @@ export default function TrainerEmargementPage() {
       });
       const json = await parseFetchJson<{ error?: string; to?: string }>(res);
       if (!res.ok) throw new Error(json.error || "Envoi impossible");
-      toast.success(`Pack formateur envoyé${json.to ? ` à ${json.to}` : ""}`);
+      toast.success(`Backstage renvoyé${json.to ? ` à ${json.to}` : ""}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Envoi refusé");
     } finally {
@@ -285,7 +285,7 @@ export default function TrainerEmargementPage() {
             className="mt-3 border-[#262A4A] bg-transparent text-[#B7AEFF]"
             onClick={() => void sendPackFormateur()}
           >
-            Envoyer le pack formateur
+            Renvoyer le Backstage
           </Button>
         </header>
 

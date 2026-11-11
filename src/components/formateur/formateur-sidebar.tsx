@@ -58,7 +58,7 @@ export function FormateurSidebar({
   const [initials, setInitials] = useState("?");
   const [displayName, setDisplayName] = useState("Expert");
   const resolvedActive = activeItem || resolveFormateurActiveLabel(pathname);
-  const accueil = FORMATEUR_NAV_ITEMS[0];
+  const backstageHome = FORMATEUR_NAV_ITEMS[0];
 
   useEffect(() => {
     let ignore = false;
@@ -126,7 +126,11 @@ export function FormateurSidebar({
       ) : null}
 
       <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
-        <NavLink item={accueil} active={resolvedActive === accueil.label} collapsed={collapsed} />
+        <NavLink
+          item={backstageHome}
+          active={resolvedActive === backstageHome.label}
+          collapsed={collapsed}
+        />
         {items?.length ? (
           <div className="space-y-1">
             {items.map((item) => (

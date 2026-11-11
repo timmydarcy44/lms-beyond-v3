@@ -14,6 +14,7 @@ import { AccountFormationRequestWizard } from "./account-formation-request-wizar
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
 import { PIPELINE_PRODUCT_CATALOG } from "@/lib/crm/pipeline-quoted-products";
+import { BanAddressAutocomplete } from "@/components/address/ban-address-autocomplete";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
 type Tab =
@@ -422,7 +423,16 @@ function OrgAddressCard({ account }: { account: NonNullable<Detail["account"]> }
         }}
       >
         <Field label="Adresse">
-          <input value={line} onChange={(e) => setLine(e.target.value)} className={fieldClass} required />
+          <BanAddressAutocomplete
+            value={line}
+            onChange={setLine}
+            onSelect={(hit) => {
+              setLine(hit.addressLine);
+              setZip(hit.addressZip);
+              setCity(hit.addressCity);
+            }}
+            className={fieldClass}
+          />
         </Field>
         <Field label="CP">
           <input value={zip} onChange={(e) => setZip(e.target.value)} className={fieldClass} required />

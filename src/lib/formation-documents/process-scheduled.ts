@@ -232,15 +232,18 @@ export async function processDueFormationMails(
       continue;
     }
 
-    if (row.kind === "pack_formateur_j1") {
-      const { sendPackFormateurEmail } = await import(
-        "@/lib/formation-documents/pack-formateur"
-      );
-      const result = await sendPackFormateurEmail(service, {
+    if (
+      row.kind === "pack_formateur_j1" ||
+      row.kind === "backstage_j2" ||
+      row.kind === "backstage_rappel"
+    ) {
+      const { sendBackstageEmail } = await import("@/lib/formation-documents/backstage");
+      const mailType = row.kind === "backstage_rappel" ? "rappel" : "backstage";
+      const result = await sendBackstageEmail(service, {
         dossierId: row.dossier_id,
         toEmail: row.to_email,
         slotId: row.slot_id,
-        payload: row.payload,
+        mailType,
       });
       if (!result.ok) {
         errors.push(`${row.id}: ${result.error}`);

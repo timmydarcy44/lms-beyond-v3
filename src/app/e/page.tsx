@@ -14,6 +14,67 @@ import type { EmargePublicContext } from "@/components/attendance/emargement-pub
  *
  * Query params : contournement d'un 404 Vercel sur /e/p et /e/s.
  */
+function BackstageEmargerGate({
+  slotId,
+  bt,
+  sig,
+}: {
+  slotId: string;
+  bt: string;
+  sig: string;
+}) {
+  const [ok, setOk] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const q = new URLSearchParams({ bt, sig, slot: slotId });
+        const res = await fetch(`/api/backstage/verify?${q.toString()}`);
+        const json = (await res.json()) as { ok?: boolean; error?: string };
+        if (!res.ok || !json.ok) {
+          setError(
+            json.error === "expired"
+              ? "Ce lien Backstage a expiré."
+              : "Lien Backstage invalide.",
+          );
+          setOk(false);
+          return;
+        }
+        setOk(true);
+      } catch {
+        setError("Vérification impossible.");
+        setOk(false);
+      }
+    })();
+  }, [bt, sig, slotId]);
+
+  if (ok === null) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0A0C1B] text-[#A3A8C7]">
+        Vérification du lien…
+      </main>
+    );
+  }
+  if (!ok) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0A0C1B] px-4 text-[#F3F4FA]">
+        <div className="max-w-md rounded-2xl border border-[#262A4A] bg-[#141731] p-6 text-center">
+          <h1 className="text-xl font-bold">Accès refusé</h1>
+          <p className="mt-2 text-sm text-red-300">{error}</p>
+          <a
+            href="/dashboard/formateur"
+            className="mt-4 inline-block text-sm text-[#B7AEFF] underline"
+          >
+            Ouvrir mon espace formateur
+          </a>
+        </div>
+      </main>
+    );
+  }
+  return <EmargementProjectClient slotId={slotId} />;
+}
+
 function EmargementEntryInner() {
   const search = useSearchParams();
   const slotId = (search.get("slot") || search.get("slotId") || "").trim();
@@ -40,6 +101,13 @@ function EmargementEntryInner() {
   }, [launchToken]);
 
   if (slotId) {
+    const bt = (search.get("bt") || "").trim();
+    const sig = (search.get("sig") || "").trim();
+    // Lien Backstage signé : refus si jeton absent/invalide/expiré.
+    // Les ouvertures internes (/e?slot= seul) restent possibles (salle / BO).
+    if (bt || sig) {
+      return <BackstageEmargerGate slotId={slotId} bt={bt} sig={sig} />;
+    }
     return <EmargementProjectClient slotId={slotId} />;
   }
 

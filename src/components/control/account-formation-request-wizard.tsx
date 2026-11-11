@@ -7,6 +7,7 @@ import {
   formatByoundPostalAddress,
   formatPostalAddress,
 } from "@/lib/formation-documents/postal-address";
+import { BanAddressAutocomplete } from "@/components/address/ban-address-autocomplete";
 
 type TrainingCourse = {
   id: string;
@@ -725,11 +726,15 @@ export function AccountFormationRequestWizard({
               </label>
               {locationMode === "other" ? (
                 <Field label="Précisez le lieu">
-                  <input
+                  <BanAddressAutocomplete
                     value={locationOther}
-                    onChange={(e) => setLocationOther(e.target.value)}
+                    onChange={setLocationOther}
+                    onSelect={(hit) => {
+                      setLocationOther(hit.label);
+                    }}
                     placeholder="Adresse ou salle"
                     className={fieldClass}
+                    type={undefined}
                   />
                 </Field>
               ) : null}
@@ -742,9 +747,14 @@ export function AccountFormationRequestWizard({
               Adresse + SIRET obligatoires pour générer devis et convention.
             </p>
             <Field label="Adresse">
-              <input
+              <BanAddressAutocomplete
                 value={addressLine}
-                onChange={(e) => setAddressLine(e.target.value)}
+                onChange={setAddressLine}
+                onSelect={(hit) => {
+                  setAddressLine(hit.addressLine);
+                  setAddressZip(hit.addressZip);
+                  setAddressCity(hit.addressCity);
+                }}
                 placeholder="N° et rue"
                 className={fieldClass}
               />

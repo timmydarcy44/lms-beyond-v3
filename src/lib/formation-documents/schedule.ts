@@ -137,10 +137,121 @@ export async function scheduleAbsentRelances(
 }
 
 /**
- * Pack formateur : la veille à 17h (heure locale Paris approximée via ISO),
- * ou le matin du jour J si J-1 est déjà passé.
- * Un mail par jour de session (premier créneau du jour).
+ * Byound Backstage :
+ * - mail principal à J-2 09:00 Europe/Paris (immédiat si création tardive, jamais si session passée)
+ * - rappel le jour J, 1 h avant le début (plancher 07:30 Paris)
+ * Un couple de mails par jour de session (premier créneau du jour).
  */
+export async function scheduleBackstageMails(
+  service: SupabaseClient,
+  params: {
+    dossierId: string;
+    trainerEmail: string | null;
+    courseTitle?: string | null;
+    location?: string | null;
+    slots: Array<{
+      id: string;
+      slot_date: string;
+      day_part: string;
+      starts_at?: string | null;
+      ends_at?: string | null;
+    }>;
+  },
+) {
+  if (!params.trainerEmail?.includes("@")) return;
+
+  const { addCivilDays, parisWallToUtc } = await import(
+    "@/lib/formation-documents/paris-time"
+  );
+
+  const byDate = new Map<string, (typeof params.slots)[number]>();
+  for (const slot of params.slots) {
+    const key = String(slot.slot_date);
+    if (!byDate.has(key)) byDate.set(key, slot);
+  }
+
+  // Annule d'anciens packs J-1 encore en file
+  await service
+    .from("formation_scheduled_mails")
+    .update({
+      cancelled_at: new Date().toISOString(),
+      cancel_reason: "backstage_rename",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("dossier_id", params.dossierId)
+    .eq("kind", "pack_formateur_j1")
+    .is("sent_at", null)
+    .is("cancelled_at", null);
+
+  const now = Date.now();
+
+  for (const slot of byDate.values()) {
+    const startsAt = slot.starts_at
+      ? new Date(slot.starts_at)
+      : parisWallToUtc(slot.slot_date, slot.day_part === "apres_midi" ? 13 : 9, 0);
+    const endsAt = slot.ends_at
+      ? new Date(slot.ends_at)
+      : parisWallToUtc(slot.slot_date, slot.day_part === "apres_midi" ? 17 : 12, 0);
+
+    if (!Number.isFinite(startsAt.getTime())) continue;
+
+    // Session du jour déjà terminée (+1h marge) → aucun envoi
+    if (endsAt.getTime() + 60 * 60 * 1000 < now) continue;
+
+    const payload = {
+      course_title: params.courseTitle ?? null,
+      location: params.location ?? null,
+      slot_date: slot.slot_date,
+      day_part: slot.day_part,
+    };
+
+    // —— Backstage J-2 09:00 Paris ——
+    const j2Ymd = addCivilDays(slot.slot_date, -2);
+    let backstageAt = parisWallToUtc(j2Ymd, 9, 0);
+    if (backstageAt.getTime() < now) {
+      // Création tardive : immédiat si session encore future
+      if (startsAt.getTime() > now) {
+        backstageAt = new Date(now + 2 * 60_000);
+      } else {
+        backstageAt = new Date(NaN); // trop tard pour le pack J-2
+      }
+    }
+    if (Number.isFinite(backstageAt.getTime())) {
+      await upsertScheduledMail(service, {
+        dossierId: params.dossierId,
+        kind: "backstage_j2",
+        toEmail: params.trainerEmail,
+        scheduledAt: backstageAt,
+        slotId: slot.id,
+        payload,
+      });
+    }
+
+    // —— Rappel jour J : 1 h avant, plancher 07:30 Paris ——
+    let reminderAt = new Date(startsAt.getTime() - 60 * 60 * 1000);
+    const floor = parisWallToUtc(slot.slot_date, 7, 30);
+    if (reminderAt.getTime() < floor.getTime()) reminderAt = floor;
+    if (reminderAt.getTime() < now) {
+      if (startsAt.getTime() > now) {
+        reminderAt = new Date(now + 2 * 60_000);
+      } else {
+        reminderAt = new Date(NaN);
+      }
+    }
+    if (Number.isFinite(reminderAt.getTime())) {
+      await upsertScheduledMail(service, {
+        dossierId: params.dossierId,
+        kind: "backstage_rappel",
+        toEmail: params.trainerEmail,
+        scheduledAt: reminderAt,
+        slotId: slot.id,
+        payload,
+      });
+    }
+  }
+}
+
+/** @deprecated alias → scheduleBackstageMails */
 export async function schedulePackFormateurMails(
   service: SupabaseClient,
   params: {
@@ -152,44 +263,12 @@ export async function schedulePackFormateurMails(
       id: string;
       slot_date: string;
       day_part: string;
+      starts_at?: string | null;
+      ends_at?: string | null;
     }>;
   },
 ) {
-  if (!params.trainerEmail?.includes("@")) return;
-
-  const byDate = new Map<string, (typeof params.slots)[number]>();
-  for (const slot of params.slots) {
-    const key = String(slot.slot_date);
-    if (!byDate.has(key)) byDate.set(key, slot);
-  }
-
-  for (const slot of byDate.values()) {
-    const day = new Date(`${slot.slot_date}T17:00:00`);
-    if (!Number.isFinite(day.getTime())) continue;
-    const j1 = new Date(day.getTime() - DAY_MS);
-    // Veille 17h ; si trop tard → 7h le jour J, ou maintenant + 2 min
-    let sendAt = j1;
-    if (sendAt.getTime() < Date.now()) {
-      sendAt = new Date(`${slot.slot_date}T07:00:00`);
-    }
-    if (sendAt.getTime() < Date.now()) {
-      sendAt = new Date(Date.now() + 2 * 60_000);
-    }
-
-    await upsertScheduledMail(service, {
-      dossierId: params.dossierId,
-      kind: "pack_formateur_j1",
-      toEmail: params.trainerEmail,
-      scheduledAt: sendAt,
-      slotId: slot.id,
-      payload: {
-        course_title: params.courseTitle ?? null,
-        location: params.location ?? null,
-        slot_date: slot.slot_date,
-        day_part: slot.day_part,
-      },
-    });
-  }
+  return scheduleBackstageMails(service, params);
 }
 
 /**

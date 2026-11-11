@@ -1,0 +1,15 @@
+export const backstageTheme = {
+  page: "#F1F0EC",
+  card: "#FFFFFF",
+  ink: "#111111",
+  muted: "#5C6578",
+  quiet: "#8A93AE",
+  line: "#E6E4DF",
+  violet: "#3A2BA0",
+  violetDeep: "#1A1440",
+  violetBright: "#6E5BFF",
+  mint: "#8FF2C4",
+  black: "#111111",
+  font: "-apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+  radius: "28px",
+} as const;

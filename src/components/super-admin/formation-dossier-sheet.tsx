@@ -191,6 +191,39 @@ export function FormationDossierSheet({
     notes: "",
   });
   const [devisBusy, setDevisBusy] = useState(false);
+  const [readyLink, setReadyLink] = useState<{
+    id: string;
+    status: string;
+    expires_at: string | null;
+    submitted_at: string | null;
+    opened_at: string | null;
+    progress_ready: number;
+    progress_total: number;
+    recipient_email: string;
+  } | null>(null);
+  const [readyBusy, setReadyBusy] = useState(false);
+
+  const loadReady = useCallback(async () => {
+    if (!dossierId) return;
+    try {
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/ready`);
+      const json = await parseFetchJson<{
+        link?: {
+          id: string;
+          status: string;
+          expires_at: string | null;
+          submitted_at: string | null;
+          opened_at: string | null;
+          progress_ready: number;
+          progress_total: number;
+          recipient_email: string;
+        } | null;
+      }>(res);
+      if (res.ok) setReadyLink(json.link ?? null);
+    } catch {
+      /* ignore */
+    }
+  }, [dossierId]);
 
   const load = useCallback(async () => {
     if (!dossierId) return;
@@ -250,13 +283,16 @@ export function FormationDossierSheet({
   }, [dossierId, onClose]);
 
   useEffect(() => {
-    if (dossierId) void load();
-    else {
+    if (dossierId) {
+      void load();
+      void loadReady();
+    } else {
       setDossier(null);
       setParticipants([]);
       setCoffre(null);
+      setReadyLink(null);
     }
-  }, [dossierId, load]);
+  }, [dossierId, load, loadReady]);
 
   const loadCoffre = useCallback(async () => {
     if (!dossierId) return;
@@ -378,6 +414,7 @@ export function FormationDossierSheet({
         : "Document envoyé",
     );
     await load();
+    if (doc.kind === "devis") await loadReady();
     onChanged();
   };
 
@@ -1090,50 +1127,119 @@ export function FormationDossierSheet({
             ) : null}
 
             {tab === "docs" ? (
-              <ul className="space-y-2">
-                {(dossier.formation_documents ?? []).map((doc) => (
-                  <li
-                    key={doc.id}
-                    className="flex items-center justify-between gap-2 rounded-xl border border-[#262A4A] bg-[#141731] px-3 py-2"
-                  >
+              <div className="space-y-3">
+                <div className="rounded-xl border border-[#262A4A] bg-[#141731] px-3 py-3">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">{doc.title}</p>
-                      <p className="text-[11px] text-[#A3A8C7]">
-                        {doc.signed_at
-                          ? `Signé ${new Date(doc.signed_at).toLocaleString("fr-FR")}`
-                          : doc.opened_at
-                            ? `Ouvert ${new Date(doc.opened_at).toLocaleString("fr-FR")}`
-                            : doc.sent_at
-                              ? `Envoyé ${new Date(doc.sent_at).toLocaleString("fr-FR")}`
-                              : doc.generated_at
-                                ? `Généré ${new Date(doc.generated_at).toLocaleString("fr-FR")}`
-                                : "—"}
-                      </p>
+                      <p className="text-sm font-semibold text-white">Byound Ready</p>
+                      {readyLink ? (
+                        <p className="mt-1 text-[11px] text-[#A3A8C7]">
+                          {readyLink.status === "submitted"
+                            ? "Demande déposée"
+                            : readyLink.opened_at
+                              ? `Ouvert · ${readyLink.progress_ready}/${readyLink.progress_total} champs`
+                              : readyLink.status === "revoked"
+                                ? "Révoqué"
+                                : readyLink.status === "expired"
+                                  ? "Expiré"
+                                  : "Envoyé à la signature du devis"}
+                          {readyLink.expires_at
+                            ? ` · expire ${new Date(readyLink.expires_at).toLocaleDateString("fr-FR")}`
+                            : ""}
+                          {readyLink.recipient_email
+                            ? ` · ${readyLink.recipient_email}`
+                            : ""}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-[#A3A8C7]">
+                          Le lien naît à l’acceptation du devis (mail « Merci » + Ready).
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={docStatusBadgeClass(doc)}>
-                        {docStatusLabel(doc)}
-                      </span>
+                    {readyLink &&
+                    ["active", "blocked", "submitted"].includes(readyLink.status) ? (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-[#262A4A] bg-transparent text-[#A3A8C7]"
-                        onClick={() => previewDoc(doc)}
+                        disabled={readyBusy}
+                        className="border-[#5A2030] bg-transparent text-[#FF8FA3]"
+                        onClick={async () => {
+                          if (!confirm("Révoquer le lien Byound Ready ?")) return;
+                          setReadyBusy(true);
+                          try {
+                            const res = await fetch(
+                              `/api/super-admin/crm/formation-dossiers/${dossierId}/ready`,
+                              {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "revoke",
+                                  link_id: readyLink.id,
+                                }),
+                              },
+                            );
+                            const json = await parseFetchJson<{ error?: string }>(res);
+                            if (!res.ok) {
+                              toast.error(json.error || "Révocation impossible");
+                              return;
+                            }
+                            toast.success("Lien Byound Ready révoqué");
+                            await loadReady();
+                          } finally {
+                            setReadyBusy(false);
+                          }
+                        }}
                       >
-                        Voir
+                        Révoquer
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-[#262A4A] bg-transparent text-[#A3A8C7]"
-                        onClick={() => void sendDoc(doc)}
-                      >
-                        {doc.sent_at ? "Renvoyer" : "Envoyer"}
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    ) : null}
+                  </div>
+                </div>
+                <ul className="space-y-2">
+                  {(dossier.formation_documents ?? []).map((doc) => (
+                    <li
+                      key={doc.id}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-[#262A4A] bg-[#141731] px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{doc.title}</p>
+                        <p className="text-[11px] text-[#A3A8C7]">
+                          {doc.signed_at
+                            ? `Signé ${new Date(doc.signed_at).toLocaleString("fr-FR")}`
+                            : doc.opened_at
+                              ? `Ouvert ${new Date(doc.opened_at).toLocaleString("fr-FR")}`
+                              : doc.sent_at
+                                ? `Envoyé ${new Date(doc.sent_at).toLocaleString("fr-FR")}`
+                                : doc.generated_at
+                                  ? `Généré ${new Date(doc.generated_at).toLocaleString("fr-FR")}`
+                                  : "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={docStatusBadgeClass(doc)}>
+                          {docStatusLabel(doc)}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#262A4A] bg-transparent text-[#A3A8C7]"
+                          onClick={() => previewDoc(doc)}
+                        >
+                          Voir
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#262A4A] bg-transparent text-[#A3A8C7]"
+                          onClick={() => void sendDoc(doc)}
+                        >
+                          {doc.sent_at ? "Renvoyer" : "Envoyer"}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
 
             {tab === "participants" ? (

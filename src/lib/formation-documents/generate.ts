@@ -105,6 +105,10 @@ export async function generateFormationDocuments(
     let { buffer } = await resolveFormationPdfBuffer(service, {
       kind,
       ctx,
+      participantName:
+        kind === "convocation" || kind === "certificat" || kind === "attestation"
+          ? params.participantName
+          : null,
       buildFallback: () =>
         buildFormationDocumentPdf({
           ctx,

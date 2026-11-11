@@ -48,13 +48,55 @@ export async function loadManropeFontFaceCss(): Promise<string> {
   return cachedManropeCss;
 }
 
+async function loadPuppeteerCore(): Promise<{
+  launch: (opts: Record<string, unknown>) => Promise<{ newPage: () => Promise<unknown>; close: () => Promise<void> }>;
+}> {
+  const mod = (await import("puppeteer-core")) as {
+    default?: { launch: (opts: Record<string, unknown>) => Promise<unknown>; _isPuppeteerCore?: boolean };
+    launch?: (opts: Record<string, unknown>) => Promise<unknown>;
+  };
+  // Prefer the PuppeteerNode singleton (default), not the namespace `launch` helper.
+  if (mod.default && typeof mod.default.launch === "function") {
+    return mod.default as { launch: (opts: Record<string, unknown>) => Promise<{ newPage: () => Promise<unknown>; close: () => Promise<void> }> };
+  }
+  if (typeof mod.launch === "function") {
+    return mod as { launch: (opts: Record<string, unknown>) => Promise<{ newPage: () => Promise<unknown>; close: () => Promise<void> }> };
+  }
+  throw new Error("puppeteer-core.launch introuvable");
+}
+
 async function launchBrowser() {
-  const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-  if (isVercel) {
+  const launchArgs = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+  ];
+
+  const localChrome =
+    process.env.PUPPETEER_EXECUTABLE_PATH?.trim() ||
+    process.env.CHROME_PATH?.trim() ||
+    null;
+
+  // Priorité au Chrome local (scripts / .env) même si VERCEL=1 est présent dans .env.local
+  if (localChrome) {
+    const puppeteer = await loadPuppeteerCore();
+    return puppeteer.launch({
+      executablePath: localChrome,
+      headless: true,
+      args: launchArgs,
+    });
+  }
+
+  const isServerless = Boolean(
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      (process.env.VERCEL && process.env.VERCEL_ENV),
+  );
+  if (isServerless) {
     const chromium = await import("@sparticuz/chromium");
-    const puppeteer = await import("puppeteer-core");
+    const puppeteer = await loadPuppeteerCore();
     const executablePath = await chromium.default.executablePath();
-    return puppeteer.default.launch({
+    return puppeteer.launch({
       args: chromium.default.args,
       defaultViewport: { width: 1280, height: 720 },
       executablePath,
@@ -63,20 +105,18 @@ async function launchBrowser() {
   }
 
   try {
-    const puppeteer = await import("puppeteer");
-    return puppeteer.default.launch({
+    const mod = await import("puppeteer");
+    const puppeteer = (mod as { default?: { launch: (o: Record<string, unknown>) => Promise<unknown> } })
+      .default;
+    if (!puppeteer?.launch) throw new Error("puppeteer.launch missing");
+    return puppeteer.launch({
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
-    });
+      args: launchArgs,
+    }) as Promise<{ newPage: () => Promise<unknown>; close: () => Promise<void> }>;
   } catch {
-    const puppeteer = await import("puppeteer-core");
+    const puppeteer = await loadPuppeteerCore();
     const chromium = await import("@sparticuz/chromium");
-    return puppeteer.default.launch({
+    return puppeteer.launch({
       args: chromium.default.args,
       executablePath: await chromium.default.executablePath(),
       headless: true,

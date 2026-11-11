@@ -75,8 +75,8 @@ export const MAIL_COPY: Record<
   convocation: {
     subject: "Convocation à votre formation — Byound",
     title: "Vous êtes convoqué·e",
-    body: "Retrouvez les informations pratiques de votre session. Présentez-vous le jour J avec votre téléphone pour émarger.",
-    cta: "Voir la convocation",
+    body: "Votre convocation est en pièce jointe (PDF) : dates, lieu, horaires et infos pratiques. Présentez-vous le jour J avec votre téléphone pour émarger.",
+    cta: "Ouvrir la pièce jointe",
   },
   livret: {
     subject: "Livret d'accueil — Byound",

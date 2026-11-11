@@ -10,7 +10,10 @@ export function buildFormationDocMail(params: {
   kind: Lot4DocumentKind;
   recipientName?: string | null;
   courseTitle?: string | null;
-  viewUrl: string;
+  /** Lien CTA — omis pour les docs envoyés uniquement en PJ (ex. convocation). */
+  viewUrl?: string | null;
+  /** false = pas de bouton (convocation / livret en PJ). Défaut : true si viewUrl. */
+  includeCta?: boolean;
   extraParagraphs?: string[];
   organizationName?: string | null;
   amountHtCents?: number | null;
@@ -20,7 +23,10 @@ export function buildFormationDocMail(params: {
   issuedAt?: string | null;
 }): { subject: string; html: string } {
   if (params.kind === "devis" || params.kind === "convention") {
-    return buildNeoBanqueSignableMail(params);
+    return buildNeoBanqueSignableMail({
+      ...params,
+      viewUrl: params.viewUrl || "https://www.byound.fr",
+    });
   }
 
   const copy = MAIL_COPY[params.kind];
@@ -33,14 +39,20 @@ export function buildFormationDocMail(params: {
   const extras = (params.extraParagraphs ?? [])
     .map((p) => edgeEmailParagraph(p))
     .join("");
+  const showCta =
+    params.includeCta !== false && Boolean(params.viewUrl?.trim());
 
   const html = buildEdgeEmailShell({
     title: copy.title,
     preheader: copy.body,
     bodyHtml: `${edgeEmailParagraph(greeting)}${edgeEmailParagraph(copy.body)}${course}${extras}`,
-    cta: { label: copy.cta, href: params.viewUrl },
+    cta: showCta
+      ? { label: copy.cta, href: String(params.viewUrl) }
+      : undefined,
     footerNote:
-      "Byound — organisme de formation. Cet e-mail concerne votre dossier formation. Ne transférez pas le lien d'accès.",
+      params.kind === "convocation"
+        ? "Byound — organisme de formation. La convocation est en pièce jointe de cet e-mail."
+        : "Byound — organisme de formation. Cet e-mail concerne votre dossier formation. Ne transférez pas le lien d'accès.",
   });
 
   return { subject: copy.subject, html };

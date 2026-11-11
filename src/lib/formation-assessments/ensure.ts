@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
 import type { AssessmentKind } from "@/lib/formation-assessments/types";
-import { appOrigin } from "@/lib/formation-documents/context";
+import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
 
 function newToken(): string {
   return randomBytes(24).toString("base64url");
@@ -64,5 +64,5 @@ export async function ensureAssessmentAttempt(
 }
 
 export function assessmentUrl(accessToken: string): string {
-  return `${appOrigin()}/a/${accessToken}`;
+  return `${BYOUND_PUBLIC_ORIGIN}/a/${accessToken}`;
 }

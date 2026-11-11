@@ -439,6 +439,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         signedAt: now,
         signerName: evidence.signer_name,
         accessToken: String(doc.access_token),
+        documentId: String(doc.id),
       });
     } catch (err) {
       console.warn(

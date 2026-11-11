@@ -137,7 +137,7 @@ export async function notifyStaffDocumentAccepted(
   }
 }
 
-/** Confirmation client après acceptation devis + lien vers PDF signé. */
+/** Confirmation client après acceptation devis + Byound Ready + lien PDF signé. */
 export async function notifyClientDevisAccepted(
   service: SupabaseClient,
   params: {
@@ -145,6 +145,7 @@ export async function notifyClientDevisAccepted(
     signedAt: string;
     signerName: string;
     accessToken: string;
+    documentId?: string | null;
   },
 ): Promise<void> {
   const ctx = await loadDossierDocContext(service, params.dossierId);
@@ -161,35 +162,93 @@ export async function notifyClientDevisAccepted(
   const signedLabel = new Date(params.signedAt).toLocaleString("fr-FR", {
     timeZone: "Europe/Paris",
   });
+  const firstName =
+    String(params.signerName || "")
+      .trim()
+      .split(/\s+/)[0] || "Bonjour";
+
+  let readyUrl: string | null = null;
+  try {
+    let documentId = params.documentId ? String(params.documentId) : null;
+    if (!documentId) {
+      const { data: devisDoc } = await service
+        .from("formation_documents")
+        .select("id")
+        .eq("dossier_id", params.dossierId)
+        .eq("kind", "devis")
+        .maybeSingle();
+      documentId = devisDoc?.id ? String(devisDoc.id) : null;
+    }
+    if (documentId) {
+      const { ensureReadyLink } = await import("@/lib/ready/lifecycle");
+      const ready = await ensureReadyLink(service, {
+        dossierId: params.dossierId,
+        documentId,
+        recipientEmail: to,
+        recipientName: ctx?.dossier.contact_name || params.signerName,
+      });
+      readyUrl = ready.url;
+    }
+  } catch (e) {
+    console.warn(
+      "[notify-client-acceptance] Byound Ready:",
+      e instanceof Error ? e.message : e,
+    );
+  }
+
+  const readyBlock = readyUrl
+    ? `
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 24px;background:#15171E;border-radius:20px;">
+        <tr><td style="padding:20px;">
+          <p style="margin:0;font-size:15px;font-weight:800;color:#F3F4FA;letter-spacing:-0.02em;">
+            Votre fiche Byound Ready
+          </p>
+          <p style="margin:10px 0 0;font-size:14px;line-height:1.55;color:#9AA0B5;">
+            Toutes les infos à copier-coller pour votre demande de prise en charge OPCO — lien sécurisé, accès par code envoyé à cette adresse.
+          </p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:16px;">
+            <tr><td align="center" style="background:#FFFFFF;border-radius:999px;">
+              <a href="${escapeEdgeEmailHtml(readyUrl)}" target="_blank" rel="noopener noreferrer"
+                 style="display:block;padding:14px 22px;font-size:14px;font-weight:800;color:#0A0B12;text-decoration:none;letter-spacing:-0.02em;">
+                Ouvrir ma fiche Ready →
+              </a>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>`
+    : "";
 
   const html = buildEdgeEmailShell({
-    title: "Devis accepté",
+    title: "Merci d'avoir accepté le devis",
     preheader: `Confirmation — ${course}`,
     bodyHtml: `
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
-        Bonjour ${escapeEdgeEmailHtml(params.signerName)},
+        Bonjour ${escapeEdgeEmailHtml(firstName)},
       </p>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4A4A4A;">
-        Nous avons bien enregistré votre acceptation du devis pour
+        Merci d'avoir accepté le devis pour
         <strong>${escapeEdgeEmailHtml(course)}</strong>
         (${escapeEdgeEmailHtml(company)}) le ${escapeEdgeEmailHtml(signedLabel)}.
       </p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A4A4A;">
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#4A4A4A;">
         La convention de formation vous sera adressée sous peu. Vous pouvez
-        télécharger le devis signé via le bouton ci-dessous.
-      </p>`,
+        télécharger le devis signé ci-dessous${readyUrl ? ", et préparer votre dossier OPCO avec Byound Ready" : ""}.
+      </p>
+      ${readyBlock}`,
     cta: { label: "Voir le devis signé", href: viewUrl },
-    footerNote: "Byound — confirmation d'acceptation de devis",
+    footerNote:
+      "Byound — confirmation d'acceptation. Le lien Ready est personnel : ne le transférez pas.",
   });
 
   const result = await sendEmail({
     to,
     from: EDGE_COCKPIT_FROM,
-    subject: `Confirmation — devis accepté · ${course}`,
+    subject: `Merci — devis accepté · ${course}`,
     html,
     tags: {
       type: "formation-devis-client-accepted",
       dossier_id: params.dossierId,
+      ready: readyUrl ? "1" : "0",
     },
   });
   if (!result.success) {

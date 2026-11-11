@@ -61,6 +61,9 @@ export async function resolveFormationPdfBuffer(
     buildFallback: () => Buffer;
     /** Requis pour remplir la convention coffre */
     ctx?: DossierDocContext | null;
+    /** Personnalisation convocation / certificat */
+    participantName?: string | null;
+    positionnementUrl?: string | null;
   },
 ): Promise<{ buffer: Buffer; source: "vault" | "vault_filled" | "generated" }> {
   if (params.kind === "convention" && params.ctx) {
@@ -74,6 +77,25 @@ export async function resolveFormationPdfBuffer(
   if (params.kind === "devis" && params.ctx) {
     const { fillVaultDevisPdf } = await import("@/lib/formation-documents/fill-devis-vault");
     const filled = await fillVaultDevisPdf(service, params.ctx);
+    if (filled) return { buffer: filled, source: "vault_filled" };
+  }
+
+  if (params.kind === "convocation" && params.ctx) {
+    const { fillConvocationPdf } = await import(
+      "@/lib/formation-documents/convocation-html"
+    );
+    const filled = await fillConvocationPdf(params.ctx, {
+      participantName:
+        params.participantName ||
+        params.ctx.participants[0]?.name ||
+        params.ctx.dossier.contact_name ||
+        "Participant",
+      participantJobTitle:
+        params.ctx.participants.find(
+          (p) => p.name === params.participantName,
+        )?.job_title ?? params.ctx.participants[0]?.job_title,
+      positionnementUrl: params.positionnementUrl,
+    });
     if (filled) return { buffer: filled, source: "vault_filled" };
   }
 

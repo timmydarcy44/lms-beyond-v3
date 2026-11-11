@@ -20,12 +20,15 @@ async function pdfAttachment(
   kind: Lot4DocumentKind,
   filename: string,
   participantName?: string | null,
+  positionnementUrl?: string | null,
 ): Promise<EmailAttachment | null> {
   const ctx = await loadDossierDocContext(service, dossierId);
   if (!ctx) return null;
   const { buffer } = await resolveFormationPdfBuffer(service, {
     kind,
     ctx,
+    participantName,
+    positionnementUrl,
     buildFallback: () => buildFormationDocumentPdf({ ctx, kind, participantName }),
   });
   return {
@@ -106,28 +109,57 @@ export async function sendFormationDocument(
       };
     }
     for (const p of recipients) {
+      let positionnementUrl: string | null = null;
+      try {
+        const { ensureAssessmentAttempt, assessmentUrl } = await import(
+          "@/lib/formation-assessments/ensure"
+        );
+        const attempt = await ensureAssessmentAttempt(service, {
+          dossierId: params.dossierId,
+          kind: "positionnement",
+          participantId: p.id,
+          profileId: p.profile_id,
+        });
+        positionnementUrl = assessmentUrl(attempt.access_token);
+      } catch (e) {
+        console.warn("[formation-docs] positionnement link for convocation:", e);
+      }
+
       const attachment = await pdfAttachment(
         service,
         params.dossierId,
         "convocation",
         `convocation-${p.name.replace(/\s+/g, "-").toLowerCase()}.pdf`,
         p.name,
+        positionnementUrl,
       );
+      if (!attachment) {
+        return {
+          ok: false,
+          error: `PDF convocation introuvable pour ${p.name}`,
+          code: "pdf_missing",
+          sent_to: sentTo,
+        };
+      }
+      const first = p.name.trim().split(/\s+/)[0] || p.name;
+      // Pas de lien /doc (UI devis) — la convocation part uniquement en pièce jointe.
       const mail = buildFormationDocMail({
         kind: "convocation",
-        recipientName: p.name,
+        recipientName: first,
         courseTitle,
-        viewUrl,
+        includeCta: false,
         extraParagraphs: [
-          "Le jour de la formation, un code salle vous sera annoncé pour émarger depuis votre téléphone.",
+          "Ouvrez le PDF joint pour le détail (lieu, horaires, checklist, contacts).",
+          "Le jour J, un code salle vous sera annoncé pour émarger depuis votre téléphone.",
         ],
       });
       const result = await sendEmail({
         to: p.email!,
         from: EDGE_COCKPIT_FROM,
-        subject: mail.subject,
+        replyTo: "contact@byound.fr",
+        subject: `Convocation — ${courseTitle || "votre formation Byound"}`,
         html: mail.html,
-        attachments: attachment ? [attachment] : undefined,
+        attachments: [attachment],
         tags: {
           type: "formation-doc-convocation",
           dossier_id: params.dossierId,

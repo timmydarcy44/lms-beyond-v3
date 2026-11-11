@@ -61,6 +61,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/ready-purge",
+      "schedule": "0 4 * * *"
+    },
+    {
       "path": "/api/cron/bpf-campaign",
       "schedule": "0 8 1 4 *"
     },

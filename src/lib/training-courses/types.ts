@@ -56,6 +56,12 @@ export type TrainingCourseRow = {
   trainer_headline: string | null;
   trainer_photo_url: string | null;
   is_active: boolean | null;
+  /** Compte client si formation Sur-mesure ; null = catalogue public. */
+  organization_id?: string | null;
+  /** catalogue | surmesure */
+  source?: "catalogue" | "surmesure" | null;
+  /** Besoins spécifiques / adaptations (Qualiopi). */
+  specific_needs?: string | null;
   created_at: string | null;
   updated_at: string | null;
 };

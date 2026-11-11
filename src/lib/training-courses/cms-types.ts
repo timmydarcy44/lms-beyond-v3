@@ -1,8 +1,12 @@
 /** Types CMS formations Byound — structure publique uniquement (pas LMS). */
 
+/** kind optionnel : activités structure-only (Sur-mesure / builder catalogue). */
+export type TrainingProgramSubchapterKind = "content" | "quiz" | "experiential_interview";
+
 export type TrainingProgramSubchapter = {
   id: string;
   title: string;
+  kind?: TrainingProgramSubchapterKind;
 };
 
 export type TrainingProgramChapter = {

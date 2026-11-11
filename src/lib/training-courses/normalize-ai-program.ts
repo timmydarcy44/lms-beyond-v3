@@ -1,16 +1,34 @@
-import { createId, type TrainingProgramSection } from "@/lib/training-courses/cms-types";
+import {
+  createId,
+  type TrainingProgramSection,
+  type TrainingProgramSubchapter,
+  type TrainingProgramSubchapterKind,
+} from "@/lib/training-courses/cms-types";
 
-function normalizeSubchapters(raw: unknown): { id: string; title: string }[] {
+function normalizeKind(raw: unknown): TrainingProgramSubchapterKind | undefined {
+  if (raw === "quiz" || raw === "experiential_interview" || raw === "content") return raw;
+  return undefined;
+}
+
+function normalizeSubchapters(raw: unknown): TrainingProgramSubchapter[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((item) => {
       if (typeof item === "string") return { id: createId(), title: item.trim() };
       if (item && typeof item === "object" && "title" in item) {
-        return { id: createId(), title: String((item as { title: string }).title).trim() };
+        const row = item as { id?: string; title: string; kind?: unknown };
+        const title = String(row.title).trim();
+        if (!title) return null;
+        const kind = normalizeKind(row.kind);
+        return {
+          id: row.id?.trim() || createId(),
+          title,
+          ...(kind ? { kind } : {}),
+        };
       }
       return null;
     })
-    .filter((s): s is { id: string; title: string } => Boolean(s?.title));
+    .filter((s): s is TrainingProgramSubchapter => Boolean(s?.title));
 }
 
 export function normalizeAiProgramStructure(raw: unknown): TrainingProgramSection[] {

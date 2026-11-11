@@ -19,23 +19,44 @@ export async function GET() {
     return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
   }
 
+  // Catalogue OF uniquement (exclure les Sur-mesure client).
   let { data, error } = await supabase
     .from("training_courses")
     .select(SELECT_COLS)
+    .is("organization_id", null)
     .order("title", { ascending: true });
+
+  if (error && /organization_id/i.test(error.message)) {
+    ({ data, error } = await supabase
+      .from("training_courses")
+      .select(SELECT_COLS)
+      .order("title", { ascending: true }));
+  }
 
   if (error && /lms_course_id/i.test(error.message)) {
     ({ data, error } = await supabase
       .from("training_courses")
       .select(SELECT_COLS_BASE)
+      .is("organization_id", null)
       .order("title", { ascending: true }));
+    if (error && /organization_id/i.test(error.message)) {
+      ({ data, error } = await supabase
+        .from("training_courses")
+        .select(SELECT_COLS_BASE)
+        .order("title", { ascending: true }));
+    }
   }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ courses: data ?? [] });
+  const courses = (data ?? []).filter(
+    (row: { organization_id?: string | null; source?: string | null }) =>
+      !row.organization_id && (row.source == null || row.source === "catalogue"),
+  );
+
+  return NextResponse.json({ courses });
 }
 
 export async function POST(request: NextRequest) {

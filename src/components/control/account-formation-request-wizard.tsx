@@ -16,6 +16,7 @@ type TrainingCourse = {
   inter_price: number | null;
   intra_price: number | null;
   is_active: boolean | null;
+  source?: "catalogue" | "surmesure" | null;
 };
 
 type Person = {
@@ -74,6 +75,7 @@ export function AccountFormationRequestWizard({
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<TrainingCourse[]>([]);
+  const [customCourses, setCustomCourses] = useState<TrainingCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [courseId, setCourseId] = useState("");
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
@@ -137,20 +139,38 @@ export function AccountFormationRequestWizard({
     return locationOther.trim();
   }, [modality, locationMode, clientAddressLabel, locationOther]);
 
-  const selectedCourse = courses.find((c) => c.id === courseId) ?? null;
+  const allCourses = useMemo(() => [...courses, ...customCourses], [courses, customCourses]);
+  const selectedCourse = allCourses.find((c) => c.id === courseId) ?? null;
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       setCoursesLoading(true);
       try {
-        const res = await fetch("/api/super/training-courses");
-        const json = (await res.json()) as { courses?: TrainingCourse[]; error?: string };
-        if (!res.ok) throw new Error(json.error || "Catalogue indisponible");
-        const list = (json.courses ?? []).filter((c) => c.is_active !== false);
+        const [catalogRes, customRes] = await Promise.all([
+          fetch("/api/super/training-courses"),
+          fetch(`/api/super/comptes-clients/${orgId}/surmesure`),
+        ]);
+        const catalogJson = (await catalogRes.json()) as {
+          courses?: TrainingCourse[];
+          error?: string;
+        };
+        const customJson = (await customRes.json()) as {
+          courses?: TrainingCourse[];
+          error?: string;
+        };
+        if (!catalogRes.ok) throw new Error(catalogJson.error || "Catalogue indisponible");
+        const list = (catalogJson.courses ?? []).filter((c) => c.is_active !== false);
+        const custom = (customJson.courses ?? [])
+          .filter((c) => c.is_active !== false)
+          .map((c) => ({ ...c, source: "surmesure" as const }));
         if (!cancelled) {
           setCourses(list);
-          if (list[0] && !courseId) setCourseId(list[0].id);
+          setCustomCourses(custom);
+          if (!courseId) {
+            const first = list[0] ?? custom[0];
+            if (first) setCourseId(first.id);
+          }
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Catalogue indisponible");
@@ -162,7 +182,7 @@ export function AccountFormationRequestWizard({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [orgId]);
 
   useEffect(() => {
     if (modality === "distanciel") return;
@@ -282,7 +302,7 @@ export function AccountFormationRequestWizard({
 
   async function submit() {
     if (!selectedCourse) {
-      setError("Choisissez une formation du catalogue.");
+      setError("Choisissez une formation (catalogue ou Sur-mesure).");
       return;
     }
     if (!startDate || !endDate) {
@@ -461,46 +481,54 @@ export function AccountFormationRequestWizard({
 
       {step === 1 ? (
         <div className="space-y-3">
-          <p className="text-sm text-[#C9D2E8]">Choisissez une formation du catalogue Byound.</p>
+          <p className="text-sm text-[#C9D2E8]">
+            Choisissez une formation du catalogue Byound, ou une formation construite avec ce
+            client.
+          </p>
           {coursesLoading ? (
             <p className="flex items-center gap-2 text-sm text-[#8A93AE]">
               <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
             </p>
           ) : (
-            <div className="max-h-72 space-y-2 overflow-auto">
-              {courses.map((course) => (
-                <label
-                  key={course.id}
-                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 text-sm ${
-                    courseId === course.id
-                      ? "border-[#6E5BFF] bg-[#17122E]"
-                      : "border-[#26304F] bg-[#111831]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="course"
-                    checked={courseId === course.id}
-                    onChange={() => setCourseId(course.id)}
-                    className="mt-1"
-                  />
-                  <span>
-                    <span className="font-semibold text-white">{course.title}</span>
-                    <span className="mt-0.5 block text-xs text-[#8A93AE]">
-                      {[
-                        course.duration,
-                        course.intra_price != null
-                          ? `${course.intra_price} € HT intra`
-                          : course.inter_price != null
-                            ? `${course.inter_price} € HT inter`
-                            : "Prix à renseigner",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                </label>
-              ))}
+            <div className="max-h-80 space-y-4 overflow-auto">
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#8A93AE]">
+                  Catalogue Byound
+                </p>
+                {courses.length === 0 ? (
+                  <p className="text-xs text-[#8A93AE]">Aucune formation catalogue active.</p>
+                ) : (
+                  courses.map((course) => (
+                    <CourseRadio
+                      key={course.id}
+                      course={course}
+                      selected={courseId === course.id}
+                      onSelect={() => setCourseId(course.id)}
+                    />
+                  ))
+                )}
+              </div>
+              <div className="space-y-2 border-t border-[#1A2340] pt-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#C4B8FF]">
+                  Construites avec vous
+                </p>
+                {customCourses.length === 0 ? (
+                  <p className="text-xs text-[#8A93AE]">
+                    Aucune formation Sur-mesure pour ce compte. Créez-en une dans l’onglet
+                    Sur-mesure.
+                  </p>
+                ) : (
+                  customCourses.map((course) => (
+                    <CourseRadio
+                      key={course.id}
+                      course={course}
+                      selected={courseId === course.id}
+                      onSelect={() => setCourseId(course.id)}
+                      badge="Sur-mesure"
+                    />
+                  ))
+                )}
+              </div>
             </div>
           )}
           <button
@@ -892,5 +920,55 @@ export function AccountFormationRequestWizard({
         </div>
       ) : null}
     </SidePanel>
+  );
+}
+
+function CourseRadio({
+  course,
+  selected,
+  onSelect,
+  badge,
+}: {
+  course: TrainingCourse;
+  selected: boolean;
+  onSelect: () => void;
+  badge?: string;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 text-sm ${
+        selected ? "border-[#6E5BFF] bg-[#17122E]" : "border-[#26304F] bg-[#111831]"
+      }`}
+    >
+      <input
+        type="radio"
+        name="course"
+        checked={selected}
+        onChange={onSelect}
+        className="mt-1"
+      />
+      <span>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-white">{course.title}</span>
+          {badge ? (
+            <span className="rounded-full bg-[#241C3E] px-2 py-0.5 text-[10px] font-semibold text-[#C4B8FF]">
+              {badge}
+            </span>
+          ) : null}
+        </span>
+        <span className="mt-0.5 block text-xs text-[#8A93AE]">
+          {[
+            course.duration,
+            course.intra_price != null
+              ? `${course.intra_price} € HT intra`
+              : course.inter_price != null
+                ? `${course.inter_price} € HT inter`
+                : "Prix à renseigner",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </span>
+    </label>
   );
 }

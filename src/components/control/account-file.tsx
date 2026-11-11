@@ -12,6 +12,7 @@ import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
+import { AccountSurMesureTab } from "./account-surmesure-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
 import { PIPELINE_PRODUCT_CATALOG } from "@/lib/crm/pipeline-quoted-products";
 import { BanAddressAutocomplete } from "@/components/address/ban-address-autocomplete";
@@ -22,6 +23,7 @@ type Tab =
   | "members"
   | "courses"
   | "dossiers"
+  | "surmesure"
   | "badges"
   | "tests"
   | "revenue"
@@ -33,6 +35,7 @@ type Tab =
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "dossiers", label: "Dossiers formation" },
+  { id: "surmesure", label: "Sur-mesure" },
   { id: "courses", label: "Accès LMS" },
   { id: "modules", label: "Offres SaaS" },
   { id: "members", label: "Membres" },
@@ -135,6 +138,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           detail={detail}
           onNewRequest={() => setRequestWizardOpen(true)}
           onOpenDossiers={() => openTab("dossiers")}
+          onOpenSurMesure={() => openTab("surmesure")}
           onOpenLms={() => openTab("courses")}
           onOpenSaas={() => openTab("modules")}
         />
@@ -146,6 +150,9 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           organizationId={account.id}
           onNewRequest={() => setRequestWizardOpen(true)}
         />
+      ) : null}
+      {tab === "surmesure" ? (
+        <AccountSurMesureTab organizationId={account.id} organizationName={account.name} />
       ) : null}
       {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
       {tab === "tests" ? <EmptyState title="Aucun test envoyé pour ce compte." /> : null}
@@ -276,12 +283,14 @@ function Overview({
   detail,
   onNewRequest,
   onOpenDossiers,
+  onOpenSurMesure,
   onOpenLms,
   onOpenSaas,
 }: {
   detail: Detail;
   onNewRequest: () => void;
   onOpenDossiers: () => void;
+  onOpenSurMesure: () => void;
   onOpenLms: () => void;
   onOpenSaas: () => void;
 }) {
@@ -294,7 +303,7 @@ function Overview({
           <p className="text-xs font-semibold uppercase tracking-wide text-[#C4B8FF]">Formation Qualiopi</p>
           <h2 className="mt-2 text-lg font-extrabold">Nouvelle demande</h2>
           <p className="mt-2 text-sm text-[#C9D2E8]">
-            Catalogue → participants → dates / lieu → devis &amp; convention.
+            Catalogue ou Sur-mesure → participants → dates / lieu → devis &amp; convention.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -310,6 +319,13 @@ function Overview({
               className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
             >
               Voir les dossiers
+            </button>
+            <button
+              type="button"
+              onClick={onOpenSurMesure}
+              className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
+            >
+              Sur-mesure
             </button>
           </div>
         </section>

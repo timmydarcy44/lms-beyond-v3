@@ -22,11 +22,21 @@ export async function fetchPublicTrainingCourses(
     return catalogFallbackCourses().map(enrichCoursePublic);
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("training_courses")
     .select(SELECT_COLS)
     .eq("is_active", true)
+    .is("organization_id", null)
     .order("title", { ascending: true });
+
+  // Colonnes Sur-mesure absentes (migration non appliquée) → fallback sans filtre org.
+  if (error && /organization_id/i.test(error.message)) {
+    ({ data, error } = await supabase
+      .from("training_courses")
+      .select(SELECT_COLS)
+      .eq("is_active", true)
+      .order("title", { ascending: true }));
+  }
 
   if (error || !data?.length) {
     if (error && !isMissingTableError(error)) {
@@ -35,7 +45,9 @@ export async function fetchPublicTrainingCourses(
     return catalogFallbackCourses().map(enrichCoursePublic);
   }
 
-  return (data as TrainingCourseRow[]).map(enrichCoursePublic);
+  return (data as TrainingCourseRow[])
+    .filter((row) => !row.organization_id && (row.source == null || row.source === "catalogue"))
+    .map(enrichCoursePublic);
 }
 
 export async function fetchTrainingCourseBySlug(
@@ -51,7 +63,7 @@ export async function fetchTrainingCourseBySlug(
   }
 
   // Détail par slug : on accepte aussi les fiches inactives (aperçu CMS avant publication).
-  // Le catalogue public filtre toujours is_active = true.
+  // Le catalogue public filtre toujours is_active = true. Sur-mesure client exclus.
   const { data, error } = await supabase
     .from("training_courses")
     .select(SELECT_COLS)
@@ -69,7 +81,12 @@ export async function fetchTrainingCourseBySlug(
     }
   }
 
-  return enrichCoursePublic(data as TrainingCourseRow);
+  const row = data as TrainingCourseRow;
+  if (row.organization_id || row.source === "surmesure") {
+    return null;
+  }
+
+  return enrichCoursePublic(row);
 }
 
 export async function fetchAllTrainingCoursesAdmin(

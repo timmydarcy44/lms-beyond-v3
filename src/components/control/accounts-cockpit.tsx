@@ -12,11 +12,8 @@ import type { ControlAccount, ControlCockpit } from "@/lib/control/load";
 const MODULE_LABELS: Record<string, string> = {
   beyond_care: "Byound Care",
   mental_health_tracking: "Byound Care",
-  beyond_lms: "LMS",
-  beyond_connect: "Connect",
-  beyond_play: "Play",
-  beyond_note: "Note",
-  gamification: "Play",
+  beyond_lms: "Byound LMS",
+  beyond_connect: "Byound Recruit",
   ai_advanced: "IA",
   analytics_pro: "Analytics",
 };
@@ -54,8 +51,21 @@ function inTab(account: ControlAccount, tab: Tab) {
   return account.kind !== "demo" && account.status !== "demo" && account.status !== "archived";
 }
 
+const HIDDEN_MODULE_KEYS = new Set([
+  "beyond_play",
+  "beyond_note",
+  "gamification",
+  "mental_health_tracking",
+]);
+
 function moduleLabels(keys: string[]) {
-  return [...new Set(keys.map((key) => MODULE_LABELS[key] ?? key))].filter((label) => label !== "mental_health_tracking");
+  return [
+    ...new Set(
+      keys
+        .filter((key) => !HIDDEN_MODULE_KEYS.has(key))
+        .map((key) => MODULE_LABELS[key] ?? key)
+    ),
+  ];
 }
 
 const pill: Record<string, { bg: string; fg: string; label: string }> = {

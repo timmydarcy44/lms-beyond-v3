@@ -430,7 +430,7 @@ function Overview({
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">SaaS</p>
           <h2 className="mt-2 text-lg font-extrabold">Accès produits</h2>
           <p className="mt-2 text-sm text-[#C9D2E8]">
-            Ouvrir ou restreindre LMS, RH / Care, recrutement (Connect) et les autres modules.
+            Ouvrir ou restreindre Byound Recruit, Byound LMS et Byound Care pour ce compte.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -910,13 +910,7 @@ function RevenueBlock({ documents, fallbackCents }: { documents: Detail["documen
 }
 
 function SaasOffersTab({ orgId, modules }: { orgId: string; modules: string[] }) {
-  const initialFeatures = [
-    "beyond_connect",
-    "beyond_lms",
-    "beyond_care",
-    "beyond_play",
-    "beyond_note",
-  ].map((feature_key) => ({
+  const initialFeatures = ["beyond_connect", "beyond_lms", "beyond_care"].map((feature_key) => ({
     feature_key,
     is_enabled:
       feature_key === "beyond_care"
@@ -929,9 +923,8 @@ function SaasOffersTab({ orgId, modules }: { orgId: string; modules: string[] })
       <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
         <h2 className="text-lg font-extrabold">Accès SaaS du compte</h2>
         <p className="mt-1 max-w-2xl text-sm text-[#8A93AE]">
-          Activez ou restreignez les produits pour ce client : recrutement (Connect), LMS,
-          RH / Care, et les autres modules. Les collaborateurs n&apos;y accèdent que si le produit
-          est ouvert ici.
+          Activez ou restreignez Byound Recruit, Byound LMS et Byound Care pour ce client.
+          Les collaborateurs n&apos;y accèdent que si le produit est ouvert ici.
         </p>
         <div className="mt-4 [&_div]:border-[#26304F] [&_div]:bg-[#0B1122] [&_p.text-sm]:text-white [&_p.text-xs]:text-[#8A93AE]">
           <OrganizationFeaturesPanel orgId={orgId} initialFeatures={initialFeatures} />

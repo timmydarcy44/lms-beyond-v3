@@ -30,9 +30,9 @@ const ROLE_OPTIONS = [
 ];
 
 const ACCESS_FIELDS = [
-  { key: "access_lms", label: "Accès LMS" },
-  { key: "access_connect", label: "Accès Connect" },
-  { key: "access_care", label: "Accès Care" },
+  { key: "access_lms", label: "Accès Byound LMS" },
+  { key: "access_connect", label: "Accès Byound Recruit" },
+  { key: "access_care", label: "Accès Byound Care" },
 ] as const;
 
 export function OrganizationMembersPanel({ orgId, title, members, maxVisible = 10 }: Props) {

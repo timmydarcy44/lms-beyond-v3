@@ -13,28 +13,18 @@ type Props = {
 const FEATURE_LIST = [
   {
     key: "beyond_connect",
-    label: "Beyond Connect",
-    description: "Matching, talents, recrutement et accès Connect.",
+    label: "Byound Recruit",
+    description: "Recrutement, matching talents et accès entreprise.",
   },
   {
     key: "beyond_lms",
-    label: "Beyond LMS",
+    label: "Byound LMS",
     description: "Formations, parcours et contenus pédagogiques.",
   },
   {
     key: "beyond_care",
-    label: "Beyond Care",
-    description: "Suivi d'accompagnement et indicateurs care.",
-  },
-  {
-    key: "beyond_play",
-    label: "Beyond Play",
-    description: "Expériences interactives et gamification.",
-  },
-  {
-    key: "beyond_note",
-    label: "Beyond Note",
-    description: "Notes, ressources personnelles et mémoire.",
+    label: "Byound Care",
+    description: "Suivi RH / accompagnement et indicateurs care.",
   },
 ];
 

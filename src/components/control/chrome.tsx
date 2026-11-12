@@ -98,7 +98,18 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export const fieldClass = "w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm outline-none";
 
-export function DisabledTip({ label, reason, children }: { label: string; reason: string; children?: ReactNode }) {
+export function DisabledTip({
+  label,
+  reason,
+  children,
+  variant = "muted",
+}: {
+  label: string;
+  reason: string;
+  children?: ReactNode;
+  variant?: "muted" | "primary";
+}) {
+  const primary = variant === "primary";
   return (
     <span className="group relative inline-flex">
       <button
@@ -106,7 +117,11 @@ export function DisabledTip({ label, reason, children }: { label: string; reason
         disabled
         aria-label={label}
         title={reason}
-        className="cursor-not-allowed rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#8A93AE] opacity-90"
+        className={
+          primary
+            ? "cursor-not-allowed rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] opacity-50"
+            : "cursor-not-allowed rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#8A93AE] opacity-90"
+        }
       >
         {children ?? label}
       </button>

@@ -8,14 +8,15 @@ import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
 import { REASON_CODES } from "@/lib/control/constants";
 import { formatEuroDelta, formatEurosHt, summarizeRevenue, type BillingDoc } from "@/lib/control/policy";
 import type { loadAccountDetail } from "@/lib/control/load";
-import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
 import { AccountDossiersTab } from "./account-dossiers-tab";
 import { AccountOverview, accountHeaderMeta, useAccountKpis } from "./account-overview";
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
+import { AccountMembersTab } from "./account-members-tab";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
+import { formatPersonName } from "@/lib/control/account-participants";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
 
@@ -93,13 +94,6 @@ function defaultTabForNav(nav: NavId): Tab {
   return "overview";
 }
 
-const ROLE_COLORS = {
-  admin: { bg: "#241C3E", fg: "#C4B8FF" },
-  tutor: { bg: "#1A2744", fg: "#8DB8FF" },
-  invited: { bg: "#3A3118", fg: "#F2CF6B" },
-  member: { bg: "#163228", fg: "#6BE39B" },
-};
-
 export function AccountFile({ detail, initialTab, embedded = false }: { detail: Detail; initialTab?: string; embedded?: boolean }) {
   const account = detail.account;
   const router = useRouter();
@@ -112,17 +106,30 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
   });
   const [actionsOpen, setActionsOpen] = useState(false);
   const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | "space" | null>(null);
+  const [invitePrefill, setInvitePrefill] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | null>(null);
   const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const kpis = useAccountKpis(detail);
 
   const activeNav = navFromTab(tab);
   const hasAdmin = detail.members.some((member) => member.role === "admin" && member.email.includes("@"));
+  const needsConfig = account?.status !== "active" && account?.status !== "demo";
   const spaceReason = !detail.schemaReady
     ? "L'ouverture d'espace n'est pas encore disponible."
-    : !hasAdmin
-      ? "Aucun administrateur actif sur ce compte"
-      : null;
+    : needsConfig
+      ? "Ce compte est encore « À configurer ». Finalisez la mise en route (admin, modules) avant d'ouvrir son espace."
+      : !hasAdmin
+        ? "Aucun administrateur actif sur ce compte. Invitez un administrateur pour pouvoir ouvrir l'espace."
+        : null;
+
+  function openInvite(prefill?: { firstName?: string; lastName?: string; email?: string }) {
+    setInvitePrefill(prefill ?? null);
+    setPanel("invite");
+  }
 
   function openTab(next: Tab) {
     setTab(next);
@@ -222,7 +229,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
                   ＋ Demande de formation
                 </button>
                 {spaceReason ? (
-                  <DisabledTip label="Ouvrir son espace ↗" reason={spaceReason} />
+                  <DisabledTip label="Ouvrir son espace ↗" reason={spaceReason} variant="primary" />
                 ) : (
                   <button
                     type="button"
@@ -254,7 +261,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
                       ) : (
                         <span className="block px-2 py-1.5 text-[#6C7593]">Aucun admin à contacter</span>
                       )}
-                      <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("invite"); }}>Inviter</button>
+                      <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); openInvite(); }}>Inviter</button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); openTab("courses"); }}>Accès LMS</button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>
                     </span>
@@ -298,11 +305,20 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           onOpenDossiers={() => openTab("dossiers")}
           onOpenLms={() => openTab("courses")}
           onOpenSaas={() => openTab("modules")}
-          onInvite={() => setPanel("invite")}
+          onInvite={() => openInvite()}
           onOpenJournal={() => openTab("journal")}
         />
       ) : null}
-      {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
+      {tab === "members" ? (
+        <AccountMembersTab
+          organizationId={account.id}
+          organizationName={account.name}
+          roleCfa={Boolean(account.roleCfa)}
+          onInvite={openInvite}
+          onImport={() => setPanel("import")}
+          onNotice={setNotice}
+        />
+      ) : null}
       {tab === "courses" ? <CoursesTab detail={detail} onAssign={() => setPanel("course")} /> : null}
       {tab === "dossiers" ? (
         <AccountDossiersTab
@@ -321,7 +337,22 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {tab === "modules" ? <SaasOffersTab orgId={account.id} modules={account.modules} /> : null}
       {tab === "journal" ? <JournalTab detail={detail} name={account.name} /> : null}
 
-      {panel === "invite" ? <InvitePanel orgId={account.id} courses={detail.lmsCourses} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "invite" ? (
+        <InvitePanel
+          orgId={account.id}
+          courses={detail.lmsCourses}
+          prefill={invitePrefill}
+          onClose={() => {
+            setPanel(null);
+            setInvitePrefill(null);
+          }}
+          onDone={(message) => {
+            setNotice(message);
+            setInvitePrefill(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
       {panel === "course" ? <AssignPanel orgId={account.id} courses={detail.lmsCourses} people={detail.people} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "badge" ? <BadgePanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "import" ? <ImportPanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
@@ -461,307 +492,6 @@ function TabBar({
       ) : null}
     </div>
   );
-}
-
-function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; onInvite: () => void; onImport: () => void; onNotice: (message: string) => void }) {
-  const [filter, setFilter] = useState("all");
-  const [query, setQuery] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const [menu, setMenu] = useState<string | null>(null);
-  const [view, setView] = useState<"list" | "cards">("cards");
-  const people = detail.people.filter((person) => {
-    if (filter === "admins" && roleTone(person.role) !== "admin") return false;
-    if (filter === "tutors" && !person.isTutor) return false;
-    if (filter === "invites" && !person.invited) return false;
-    if (filter === "staff" && (person.invited || roleTone(person.role) === "admin")) return false;
-    return `${person.name} ${person.email}`.toLowerCase().includes(query.toLowerCase());
-  });
-  const shown = expanded || view === "cards" ? people : people.slice(0, 8);
-  const pending = detail.people.filter((person) => person.invited).length;
-  const inTraining = detail.people.filter((person) => person.formationsTotal > 0).length;
-  const withBadge = detail.people.filter((person) => person.badges > 0).length;
-  const activeKnown = detail.people.some((person) => person.lastSeenAt);
-  const active = detail.people.filter((person) => person.lastSeenAt && !person.invited).length;
-
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem("byound.account.members.view");
-      if (stored === "list" || stored === "cards") setView(stored);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const setViewSafe = (next: "list" | "cards") => {
-    setView(next);
-    try {
-      window.localStorage.setItem("byound.account.members.view", next);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  return (
-    <div className="mt-5 space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <SegmentedFilter
-          value={filter}
-          onChange={setFilter}
-          items={[
-            { id: "all", label: "Tous", count: detail.people.length },
-            { id: "staff", label: "Collaborateurs", count: detail.people.filter((person) => !person.invited && roleTone(person.role) === "member").length },
-            { id: "admins", label: "Administrateurs", count: detail.people.filter((person) => roleTone(person.role) === "admin").length },
-            { id: "tutors", label: "Tuteurs", count: detail.people.filter((person) => person.isTutor).length },
-            { id: "invites", label: "Invitations", count: pending },
-          ]}
-        />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un membre" className="ml-auto rounded-full border border-[#26304F] bg-[#0B1122] px-4 py-2 text-sm" />
-        <div className="flex overflow-hidden rounded-full border border-[#26304F] bg-[#0B1122]">
-          <button
-            type="button"
-            aria-label="Vue liste"
-            onClick={() => setViewSafe("list")}
-            className="px-3 py-1.5 text-sm"
-            style={{ background: view === "list" ? "#1A2340" : "transparent", color: view === "list" ? "#F2F4FA" : "#6C7593" }}
-          >
-            ☰
-          </button>
-          <button
-            type="button"
-            aria-label="Vue cartes"
-            onClick={() => setViewSafe("cards")}
-            className="px-3 py-1.5 text-sm"
-            style={{ background: view === "cards" ? "#1A2340" : "transparent", color: view === "cards" ? "#F2F4FA" : "#6C7593" }}
-          >
-            ▦
-          </button>
-        </div>
-        <button type="button" onClick={onImport} className="rounded-full border border-[#26304F] px-4 py-2 text-sm">Importer</button>
-        <button type="button" onClick={onInvite} className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">Inviter</button>
-      </div>
-      <div className="grid gap-3 md:grid-cols-4">
-        <KpiCard label="Actifs ce mois" value={activeKnown ? `${active} / ${detail.people.length || 0}` : "—"} />
-        <KpiCard label="Invitations en attente" value={String(pending)} />
-        <KpiCard label="En formation" value={String(inTraining)} />
-        <KpiCard label="Avec au moins un badge" value={String(withBadge)} />
-      </div>
-      {people.length === 0 ? <EmptyState title="Aucun membre pour ce filtre." action={<button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onInvite}>Inviter un membre</button>} /> : view === "cards" ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((person) => {
-            const tone = person.invited ? ROLE_COLORS.invited : ROLE_COLORS[roleTone(person.role)];
-            const tutorTone = ROLE_COLORS.tutor;
-            return (
-              <article key={person.userId} className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
-                <div className="flex items-start gap-3">
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#6E5BFF] text-sm font-extrabold">
-                    {initials(person.name)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-extrabold text-[#F2F4FA]">{person.name}</p>
-                    <p className="truncate text-xs text-[#9AA3BD]">{person.email}</p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: tone.bg, color: tone.fg }}>
-                        {person.invited ? "Invité" : roleLabel(person.role)}
-                      </span>
-                      {person.isTutor ? (
-                        <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: tutorTone.bg, color: tutorTone.fg }}>
-                          Tuteur
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs">
-                  <span className="rounded-2xl bg-[#0B1122] p-2">
-                    <span className="block text-sm font-extrabold text-[#F2F4FA]">
-                      {person.formationsTotal ? `${person.formationsDone}/${person.formationsTotal}` : "—"}
-                    </span>
-                    Formations
-                  </span>
-                  <span className="rounded-2xl bg-[#0B1122] p-2">
-                    <span className="block text-sm font-extrabold text-[#F2F4FA]">{person.badges || "—"}</span>
-                    Badges
-                  </span>
-                </div>
-                <div className="relative mt-4 flex items-center justify-between gap-2">
-                  <p className="text-xs text-[#6C7593]">
-                    {person.invited && person.createdAt
-                      ? `Invité le ${new Date(person.createdAt).toLocaleDateString("fr-FR")}`
-                      : "Membre du compte"}
-                  </p>
-                  <div className="flex gap-2">
-                    {person.invited ? (
-                      <button
-                        type="button"
-                        className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0A0F1E]"
-                        onClick={() =>
-                          void memberAction(
-                            detail.account?.id,
-                            { action: "remind", email: person.email, employeeId: person.employeeId },
-                            onNotice,
-                          )
-                        }
-                      >
-                        Relancer
-                      </button>
-                    ) : null}
-                    <button type="button" aria-label="Actions" onClick={() => setMenu(menu === person.userId ? null : person.userId)}>
-                      ⋯
-                    </button>
-                  </div>
-                  {menu === person.userId ? (
-                    <span className="absolute right-0 top-8 z-10 w-48 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
-                      {person.userId.startsWith("employee:") ? null : (
-                        <>
-                          {(["admin", "learner"] as const).map((role) => (
-                            <button
-                              key={role}
-                              type="button"
-                              className="block w-full rounded-xl px-2 py-1 text-left"
-                              onClick={() =>
-                                void memberAction(
-                                  detail.account?.id,
-                                  { action: "role", userId: person.userId, role },
-                                  onNotice,
-                                )
-                              }
-                            >
-                              {roleLabel(role)}
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            className="block w-full rounded-xl px-2 py-1 text-left"
-                            onClick={() =>
-                              void memberAction(
-                                detail.account?.id,
-                                {
-                                  action: "toggle_tutor",
-                                  userId: person.userId,
-                                  enabled: person.isTutor ? "false" : "true",
-                                },
-                                onNotice,
-                              )
-                            }
-                          >
-                            {person.isTutor ? "Retirer le rôle tuteur" : "Ajouter le rôle tuteur"}
-                          </button>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        className="block w-full rounded-xl px-2 py-1 text-left"
-                        onClick={() =>
-                          void memberAction(
-                            detail.account?.id,
-                            { action: "deactivate", employeeId: person.employeeId },
-                            onNotice,
-                          )
-                        }
-                      >
-                        Désactiver
-                      </button>
-                    </span>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-[28px] border border-[#1A2340] bg-[#111831]">
-          <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.9fr)_auto] px-4 py-3 text-[13px] text-[#6C7593]">
-            <span>Membre</span><span>Rôle</span><span>Formations</span><span>Open Badges</span><span>Dernière connexion</span><span />
-          </div>
-          {shown.map((person) => {
-            const tone = person.invited ? ROLE_COLORS.invited : ROLE_COLORS[roleTone(person.role)];
-            const tutorTone = ROLE_COLORS.tutor;
-            const ratio = person.formationsTotal ? Math.round((person.formationsDone / person.formationsTotal) * 100) : 0;
-            return (
-              <div key={person.userId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.9fr)_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm">
-                <span className="min-w-0">
-                  <span className="mr-2 inline-grid h-9 w-9 place-items-center rounded-full bg-[#6E5BFF] text-xs font-bold">{initials(person.name)}</span>
-                  <span className="font-semibold">{person.name}</span>
-                  <span className="block truncate pl-11 text-xs text-[#8A93AE]">{person.email}</span>
-                </span>
-                <span className="flex flex-wrap gap-1">
-                  <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: tone.bg, color: tone.fg }}>
-                    {person.invited ? "Invité" : roleLabel(person.role)}
-                  </span>
-                  {person.isTutor ? (
-                    <span className="w-fit rounded-full px-2 py-1 text-xs" style={{ background: tutorTone.bg, color: tutorTone.fg }}>
-                      Tuteur
-                    </span>
-                  ) : null}
-                </span>
-                <span>{person.formationsTotal ? <>{person.formationsDone} / {person.formationsTotal} terminées<span className="mt-1 block h-1.5 rounded-full bg-[#1A2340]"><span className="block h-1.5 rounded-full bg-[#6E5BFF]" style={{ width: `${ratio}%` }} /></span></> : "Aucune"}</span>
-                <span>{person.badges ? `${person.badges} badge${person.badges > 1 ? "s" : ""}` : "—"}</span>
-                <span className="text-xs" style={{ color: person.invited ? "#F2CF6B" : "#C9D2E8" }}>{person.invited && person.createdAt ? `Invité le ${new Date(person.createdAt).toLocaleDateString("fr-FR")}` : "—"}</span>
-                <span className="relative flex gap-2">
-                  {person.invited ? <button type="button" className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0A0F1E]" onClick={() => void memberAction(detail.account?.id, { action: "remind", email: person.email, employeeId: person.employeeId }, onNotice)}>Relancer</button> : <span className="rounded-full border border-[#26304F] px-3 py-1 text-xs">Voir</span>}
-                  <button type="button" aria-label="Actions" onClick={() => setMenu(menu === person.userId ? null : person.userId)}>⋯</button>
-                  {menu === person.userId ? (
-                    <span className="absolute right-0 top-8 z-10 w-48 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
-                      {person.userId.startsWith("employee:") ? null : (
-                        <>
-                          {(["admin", "learner"] as const).map((role) => (
-                            <button key={role} type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "role", userId: person.userId, role }, onNotice)}>{roleLabel(role)}</button>
-                          ))}
-                          <button
-                            type="button"
-                            className="block w-full rounded-xl px-2 py-1 text-left"
-                            onClick={() =>
-                              void memberAction(
-                                detail.account?.id,
-                                {
-                                  action: "toggle_tutor",
-                                  userId: person.userId,
-                                  enabled: person.isTutor ? "false" : "true",
-                                },
-                                onNotice,
-                              )
-                            }
-                          >
-                            {person.isTutor ? "Retirer le rôle tuteur" : "Ajouter le rôle tuteur"}
-                          </button>
-                        </>
-                      )}
-                      <button type="button" className="block w-full rounded-xl px-2 py-1 text-left" onClick={() => void memberAction(detail.account?.id, { action: "deactivate", employeeId: person.employeeId }, onNotice)}>Désactiver</button>
-                    </span>
-                  ) : null}
-                </span>
-              </div>
-            );
-          })}
-          <div className="flex justify-between border-t border-[#1A2340] px-4 py-3 text-xs text-[#8A93AE]">
-            <span>{shown.length} sur {people.length} membres</span>
-            {people.length > 8 && !expanded ? <button type="button" onClick={() => setExpanded(true)}>Voir tout</button> : null}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-async function memberAction(
-  orgId: string | undefined,
-  body: Record<string, string | boolean | null>,
-  onNotice: (message: string) => void,
-) {
-  if (!orgId) return;
-  const payload = { ...body };
-  if (payload.enabled === "true") payload.enabled = true;
-  if (payload.enabled === "false") payload.enabled = false;
-  const response = await fetch(`/api/super/comptes-clients/${orgId}/members`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = (await response.json()) as { error?: string };
-  onNotice(response.ok ? "Membre mis à jour." : json.error || "Action impossible");
-  if (response.ok && typeof window !== "undefined") {
-    window.location.reload();
-  }
 }
 
 function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void }) {
@@ -1214,25 +944,47 @@ function Remind({ id }: { id: string }) {
   }}>{label}</button>;
 }
 
-function InvitePanel({ orgId, courses, onClose, onDone }: { orgId: string; courses: Detail["lmsCourses"]; onClose: () => void; onDone: (message: string) => void }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+function InvitePanel({
+  orgId,
+  courses,
+  prefill,
+  onClose,
+  onDone,
+}: {
+  orgId: string;
+  courses: Detail["lmsCourses"];
+  prefill?: { firstName?: string; lastName?: string; email?: string } | null;
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const [firstName, setFirstName] = useState(formatPersonName(prefill?.firstName) || "");
+  const [lastName, setLastName] = useState(formatPersonName(prefill?.lastName) || "");
+  const [email, setEmail] = useState(prefill?.email || "");
   const [role, setRole] = useState("learner");
   const [courseId, setCourseId] = useState("");
   return (
     <SidePanel title="Inviter" onClose={onClose}>
       <form onSubmit={async (event) => {
         event.preventDefault();
-        const response = await fetch(`/api/super/comptes-clients/${orgId}/invite`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ firstName, lastName, email, role, courseId: courseId || undefined }) });
+        const response = await fetch(`/api/super/comptes-clients/${orgId}/invite`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: formatPersonName(firstName),
+            lastName: formatPersonName(lastName),
+            email,
+            role,
+            courseId: courseId || undefined,
+          }),
+        });
         const json = (await response.json()) as { error?: string };
         if (!response.ok) return onDone(json.error || "Invitation impossible");
         onDone(courseId ? "Invitation envoyée. La formation est assignée si la personne a déjà un compte." : "Invitation envoyée.");
         onClose();
       }}>
         <Field label="E-mail"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={fieldClass} /></Field>
-        <Field label="Prénom"><input required value={firstName} onChange={(event) => setFirstName(event.target.value)} className={fieldClass} /></Field>
-        <Field label="Nom"><input required value={lastName} onChange={(event) => setLastName(event.target.value)} className={fieldClass} /></Field>
+        <Field label="Prénom"><input required value={firstName} onChange={(event) => setFirstName(event.target.value)} onBlur={() => setFirstName(formatPersonName(firstName))} className={fieldClass} /></Field>
+        <Field label="Nom"><input required value={lastName} onChange={(event) => setLastName(event.target.value)} onBlur={() => setLastName(formatPersonName(lastName))} className={fieldClass} /></Field>
         <Field label="Rôle"><select value={role} onChange={(event) => setRole(event.target.value)} className={fieldClass}><option value="learner">Collaborateur</option><option value="admin">Administrateur</option><option value="tutor">Tuteur</option></select></Field>
         <Field label="Formation LMS à assigner"><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}><option value="">Aucune</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></Field>
         <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Envoyer l'invitation</button>

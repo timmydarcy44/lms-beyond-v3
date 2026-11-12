@@ -142,18 +142,37 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   }
 
   if (body.action === "deactivate") {
-    if (!body.employeeId) {
+    if (body.employeeId) {
+      const updated = await service
+        .from("employees")
+        .update({ status: "inactive" })
+        .eq("id", body.employeeId)
+        .eq("company_id", id);
+      if (updated.error) return NextResponse.json({ error: updated.error.message }, { status: 400 });
+    }
+    if (body.userId && !String(body.userId).startsWith("employee:")) {
+      const removed = await service
+        .from("org_memberships")
+        .delete()
+        .eq("org_id", id)
+        .eq("user_id", body.userId);
+      if (removed.error) return NextResponse.json({ error: removed.error.message }, { status: 400 });
+    }
+    if (!body.employeeId && (!body.userId || String(body.userId).startsWith("employee:"))) {
       return NextResponse.json(
         { error: "Ce membre n'a pas de fiche collaborateur à désactiver." },
         { status: 400 },
       );
     }
-    const updated = await service
-      .from("employees")
-      .update({ status: "inactive" })
-      .eq("id", body.employeeId)
-      .eq("company_id", id);
-    if (updated.error) return NextResponse.json({ error: updated.error.message }, { status: 400 });
+    await service.from("org_activity").insert(
+      buildActivityRow({
+        orgId: id,
+        actorUserId: data.user.id,
+        actorType: "byound_on_behalf",
+        action: "deactivate_member",
+        payload: { userId: body.userId ?? null, employeeId: body.employeeId ?? null },
+      }),
+    );
     return NextResponse.json({ ok: true });
   }
 

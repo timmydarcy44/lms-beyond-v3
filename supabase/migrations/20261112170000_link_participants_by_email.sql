@@ -1,0 +1,65 @@
+-- PROPOSITION — ne pas exécuter sans validation.
+-- Rattache formation_participants.profile_id au user_id d'un membre du même
+-- compte lorsque l'e-mail du profil participant correspond (casse/espaces ignorés)
+-- à l'e-mail d'un membre org_memberships, et que les ids diffèrent.
+--
+-- Prévisualisation (nombre de lignes concernées) :
+--
+-- select count(*) as rows_to_update
+-- from public.formation_participants fp
+-- join public.formation_dossiers fd on fd.id = fp.dossier_id
+-- join public.profiles pp on pp.id = fp.profile_id
+-- join public.org_memberships om on om.org_id = fd.organization_id
+-- join public.profiles mp on mp.id = om.user_id
+-- where lower(trim(coalesce(pp.reference_email, pp.email, '')))
+--     = lower(trim(coalesce(mp.reference_email, mp.email, '')))
+--   and lower(trim(coalesce(pp.reference_email, pp.email, ''))) <> ''
+--   and fp.profile_id <> om.user_id
+--   and not exists (
+--     select 1 from public.formation_participants x
+--     where x.dossier_id = fp.dossier_id and x.profile_id = om.user_id
+--   );
+--
+-- Mise à jour (à lancer seulement après le count) :
+--
+-- update public.formation_participants fp
+-- set profile_id = matched.member_user_id
+-- from (
+--   select distinct on (fp2.id)
+--     fp2.id as participant_id,
+--     om.user_id as member_user_id
+--   from public.formation_participants fp2
+--   join public.formation_dossiers fd on fd.id = fp2.dossier_id
+--   join public.profiles pp on pp.id = fp2.profile_id
+--   join public.org_memberships om on om.org_id = fd.organization_id
+--   join public.profiles mp on mp.id = om.user_id
+--   where lower(trim(coalesce(pp.reference_email, pp.email, '')))
+--       = lower(trim(coalesce(mp.reference_email, mp.email, '')))
+--     and lower(trim(coalesce(pp.reference_email, pp.email, ''))) <> ''
+--     and fp2.profile_id <> om.user_id
+--     and not exists (
+--       select 1 from public.formation_participants x
+--       where x.dossier_id = fp2.dossier_id and x.profile_id = om.user_id
+--     )
+--   order by fp2.id, om.created_at asc
+-- ) matched
+-- where fp.id = matched.participant_id;
+--
+-- Cas déjà présents sous le bon profil : supprimer les doublons orphelins
+-- (prévisualiser d'abord) :
+--
+-- select fp.id
+-- from public.formation_participants fp
+-- join public.formation_dossiers fd on fd.id = fp.dossier_id
+-- join public.profiles pp on pp.id = fp.profile_id
+-- join public.org_memberships om on om.org_id = fd.organization_id
+-- join public.profiles mp on mp.id = om.user_id
+-- where lower(trim(coalesce(pp.reference_email, pp.email, '')))
+--     = lower(trim(coalesce(mp.reference_email, mp.email, '')))
+--   and fp.profile_id <> om.user_id
+--   and exists (
+--     select 1 from public.formation_participants x
+--     where x.dossier_id = fp.dossier_id and x.profile_id = om.user_id
+--   );
+
+select 1;

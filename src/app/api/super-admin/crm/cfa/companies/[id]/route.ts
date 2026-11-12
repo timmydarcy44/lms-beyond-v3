@@ -166,17 +166,33 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     db.from("cfa_company_needs").select("id, title, cursus_id, quantity, start_date, location, soft_skill_ids, status").eq("company_id", id).order("created_at"),
     db.from("cfa_profile_sends").select("id, application_id, need_id, job_offer_id, sent_to_email, sent_at, opened_at, response").eq("company_id", id).order("sent_at", { ascending: false }),
     db.from("company_tutors").select("id, first_name, last_name, email, job_title, user_id, invited_at, last_code_sent_at, activated_at").eq("company_id", id).order("last_name"),
-    db.from("apprentice_placements").select("id, apprentice_id, tutor_id, status").eq("company_id", id).in("status", ["pending", "active"]),
+    db.from("apprentice_placements").select("id, apprentice_id, tutor_id, status, started_at, created_at").eq("company_id", id).in("status", ["pending", "active"]),
     db.from("cfa_company_activities").select("id, type, body, actor_id, next_action, next_action_at, done_at, created_at").eq("company_id", id).order("created_at", { ascending: false }).limit(80),
   ]);
 
   const migrationRequired = [contacts, needs, activities].some((result) => result.error && /schema cache|does not exist|42P01/i.test(result.error.message));
-  const placementRows = (placements.data ?? []) as { id: string; apprentice_id: string; tutor_id: string | null; status: string }[];
+  const placementRows = (placements.data ?? []) as {
+    id: string;
+    apprentice_id: string;
+    tutor_id: string | null;
+    status: string;
+    started_at?: string | null;
+    created_at?: string | null;
+  }[];
   const apprenticeIds = placementRows.map((row) => row.apprentice_id);
   const applications = apprenticeIds.length
-    ? await db.from("cfa_applications").select("id, first_name, last_name, specialization, status").in("id", apprenticeIds)
+    ? await db.from("cfa_applications").select("id, first_name, last_name, specialization, status, interview_at").in("id", apprenticeIds)
     : { data: [] };
-  const applicationById = new Map(((applications.data ?? []) as { id: string; first_name?: string; last_name?: string; specialization?: string | null; status?: string }[]).map((row) => [row.id, row]));
+  const applicationById = new Map(
+    ((applications.data ?? []) as {
+      id: string;
+      first_name?: string;
+      last_name?: string;
+      specialization?: string | null;
+      status?: string;
+      interview_at?: string | null;
+    }[]).map((row) => [row.id, row]),
+  );
   const apprentices = placementRows.map((row) => {
     const application = applicationById.get(row.apprentice_id);
     return {
@@ -188,6 +204,9 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
       lastName: application?.last_name ?? "",
       specialization: application?.specialization ?? "",
       applicationStatus: application?.status ?? "",
+      proposedAt: row.created_at ?? null,
+      startedAt: row.started_at ?? null,
+      interviewAt: application?.interview_at ?? null,
     };
   });
   const inContract = ((applications.data ?? []) as { status?: string }[]).some((row) => row.status === "contract");
@@ -389,12 +408,22 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       organization_id: String((saved.data as { organization_id?: string | null }).organization_id ?? "") || null,
     }, actor);
     if (lookupNote) {
-      await db.from("cfa_company_activities").insert({
-        company_id: id,
-        type: "opco_lookup",
-        body: lookupNote,
-        actor_id: actor,
-      });
+      const existingLookup = await db
+        .from("cfa_company_activities")
+        .select("id")
+        .eq("company_id", id)
+        .eq("type", "opco_lookup")
+        .eq("body", lookupNote)
+        .limit(1)
+        .maybeSingle();
+      if (!existingLookup.data?.id) {
+        await db.from("cfa_company_activities").insert({
+          company_id: id,
+          type: "opco_lookup",
+          body: lookupNote,
+          actor_id: actor,
+        });
+      }
     }
     return NextResponse.json({ company: saved.data, opcoLookup });
   }

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Briefcase, Check } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { ActionNotice } from "@/components/cfa/action-notice";
 import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
-import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
+import { isAlternanceContractType, placedLabel } from "@/lib/cfa/alternance-contract";
+import { formatCompanyName, formatPersonName } from "@/lib/cfa/format-org-name";
 import type { CompanyApprentice } from "./tutors-section";
 import type { CompanyContact } from "./contacts-section";
 
@@ -88,7 +89,6 @@ export function PostesSection({
   onMessage: (message: string) => void;
 }) {
   const router = useRouter();
-  const [openSkills, setOpenSkills] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ state: "working" | "done" | "error"; title: string; detail: string } | null>(null);
   const [query, setQuery] = useState("");
   const [orgs, setOrgs] = useState<Array<{ id: string; name: string; siret?: string | null }>>([]);
@@ -123,120 +123,184 @@ export function PostesSection({
     router.push(`/dashboard/entreprise/offres/${result.offerId}/edition?step=1`);
   }
 
+  const cards: Array<{
+    key: string;
+    title: string;
+    cursus?: string | null;
+    contract?: string | null;
+    meta?: string | null;
+    placed: number;
+    wanted: number;
+    offer?: CompanyOffer | null;
+    need?: CompanyNeed | null;
+  }> = [];
+
+  for (const need of needs) {
+    const related = offers.find(
+      (offer) =>
+        offer.diploma_prepared === need.cursus_id ||
+        (offer.title && need.title && offer.title.toLowerCase().includes(need.title.toLowerCase().slice(0, 12))),
+    );
+    const placed = apprentices.filter(
+      (item) => item.placementStatus === "active" && (!need.cursus_id || item.specialization === need.cursus_id),
+    ).length;
+    cards.push({
+      key: `need-${need.id}`,
+      title: need.title,
+      cursus: need.cursus_id ? getCfaSpecializationLabel(need.cursus_id) : null,
+      contract: related?.contract_type || "Contrat d'apprentissage",
+      meta: [need.start_date || related?.contract_duration, formatCompanyName(need.location || related?.city || "")].filter(Boolean).join(" · ") || null,
+      placed,
+      wanted: need.quantity,
+      offer: related ?? null,
+      need,
+    });
+  }
+
+  for (const offer of offers) {
+    if (cards.some((card) => card.offer?.id === offer.id)) continue;
+    cards.push({
+      key: `offer-${offer.id}`,
+      title: offer.title || "Sans titre",
+      cursus: offer.diploma_prepared
+        ? getCfaSpecializationLabel(offer.diploma_prepared) === offer.diploma_prepared
+          ? offer.diploma_prepared
+          : getCfaSpecializationLabel(offer.diploma_prepared)
+        : null,
+      contract: offer.contract_type,
+      meta: [offer.contract_duration, formatCompanyName(offer.city)].filter(Boolean).join(" · ") || null,
+      placed: 0,
+      wanted: 1,
+      offer,
+      need: null,
+    });
+  }
+
   return (
-    <section id="postes" className="scroll-mt-28 rounded-[26px] border border-[#1A2340] bg-[#111831] p-5" style={{ borderTop: "4px solid #14A37F" }}>
-      <header className="-mx-5 -mt-5 mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-[#1A2340] px-5 py-4" style={{ background: "linear-gradient(90deg, #14A37F2E, transparent 75%)" }}>
+    <section id="postes" className="scroll-mt-28 rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
-          <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#14A37F] text-[#04140C]"><Briefcase className="h-5 w-5" /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#5EDCC326] text-[#5EDCC3]">
+            <Briefcase className="h-5 w-5" />
+          </span>
           <div>
-            <p className="text-xs font-extrabold text-[#6BE3C0]">3 · Postes et offres</p>
-            <h2 className="text-xl font-extrabold">Postes et offres</h2>
-            <p className="text-xs text-[#AEB6CC]">Besoins du CFA et offres publiées sur Byound.</p>
+            <h2 className="text-[17px] font-extrabold text-[#F2F4FA]">Postes et offres</h2>
+            <p className="text-xs text-[#9AA3BD]">Besoins du CFA et offres publiées sur Byound.</p>
           </div>
         </div>
-        <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => void createOffer()}>+ Poste</button>
+        <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-extrabold" onClick={() => void createOffer()}>
+          ＋ Poste
+        </button>
       </header>
       <ActionNotice open={Boolean(notice)} state={notice?.state ?? "working"} title={notice?.title ?? ""} detail={notice?.detail} onClose={() => setNotice(null)} />
 
       <ul className="space-y-3">
-        {needs.map((need) => {
-          const chosen = need.soft_skill_ids ?? [];
-          const placed = apprentices.filter((item) => item.placementStatus === "active" && item.specialization === need.cursus_id).length;
-          const ratio = Math.min(100, Math.round((placed / Math.max(need.quantity, 1)) * 100));
+        {cards.map((card) => {
+          const ratio = placedLabel(card.placed, card.wanted);
+          const badContract = card.offer?.contract_type && !isAlternanceContractType(card.offer.contract_type);
           return (
-            <li key={need.id} className="rounded-2xl bg-[#0B1122] p-4">
+            <li key={card.key} className="rounded-[18px] bg-[#0B1122] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-extrabold">{need.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[16px] font-extrabold text-[#F2F4FA]">{card.title}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {need.cursus_id ? <span className="rounded-full bg-[#14A37F] px-2.5 py-1 text-[11px] font-extrabold text-[#04140C]">{getCfaSpecializationLabel(need.cursus_id)}</span> : null}
-                    {need.start_date ? <span className="rounded-full bg-[#14233A] px-2.5 py-1 text-[11px] font-extrabold">{need.start_date}</span> : null}
-                    {need.location ? <span className="rounded-full bg-[#14233A] px-2.5 py-1 text-[11px] font-extrabold">{need.location}</span> : null}
+                    {card.cursus ? <span className="rounded-full bg-[#143226] px-2.5 py-1 text-[11px] font-extrabold text-[#6BE39B]">{card.cursus}</span> : null}
+                    {card.contract ? <span className="rounded-full bg-[#14233A] px-2.5 py-1 text-[11px] font-extrabold text-[#8DB8FF]">{card.contract}</span> : null}
+                    {card.meta ? <span className="rounded-full bg-[#1A2340] px-2.5 py-1 text-[11px] font-extrabold text-[#B7BED3]">{card.meta}</span> : null}
                   </div>
                 </div>
-                <p className="text-xs font-extrabold text-[#6BE3C0]">{placed} / {need.quantity} placés</p>
+                <div className="text-right">
+                  <p className="text-[20px] font-extrabold leading-none text-[#F2F4FA]">{ratio.ratio}</p>
+                  <p className="mt-1 text-[11px] text-[#9AA3BD]">{ratio.unit}</p>
+                </div>
               </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#1A2340]"><span className="block h-full bg-[#14A37F]" style={{ width: `${ratio}%` }} /></div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {chosen.map((id) => {
-                  const skill = SOFT_SKILLS.find((item) => String(item.id) === id);
-                  return skill ? <span key={id} className="rounded-full bg-[#143226] px-2.5 py-1 text-[11px] font-extrabold text-[#6BE3C0]"><Check className="mr-1 inline h-3 w-3" />{skill.titre}</span> : null;
-                })}
-                <span className="text-xs text-[#AEB6CC]">{chosen.length} / 5 choisies</span>
-              </div>
-              <button type="button" className="mt-3 text-sm font-semibold text-[#6BE3C0]" onClick={() => setOpenSkills(openSkills === need.id ? null : need.id)}>+ Choisir dans le catalogue (20)</button>
-              {openSkills === need.id ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {SOFT_SKILLS.map((skill) => {
-                    const id = String(skill.id);
-                    const active = chosen.includes(id);
-                    const disabled = !active && chosen.length >= 5;
-                    return (
-                      <button key={id} type="button" aria-pressed={active} disabled={disabled} className={`h-8 rounded-full px-3 text-xs font-extrabold disabled:opacity-40 ${active ? "bg-[#14A37F] text-[#04140C]" : "bg-[#111831] text-[#AEB6CC]"}`} onClick={() => void saveNeed({
-                        action: "save_need",
-                        needId: need.id,
-                        title: need.title,
-                        cursusId: need.cursus_id ?? "",
-                        quantity: need.quantity,
-                        startDate: need.start_date ?? "",
-                        location: need.location ?? "",
-                        softSkillIds: active ? chosen.filter((item) => item !== id) : [...chosen, id],
-                      })}>{skill.titre}</button>
-                    );
-                  })}
+
+              {badContract ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-[14px] border border-[#F2CF6B55] bg-[#3A2A0E55] px-3 py-2.5">
+                  <p className="text-sm text-[#F2CF6B]">
+                    Cette offre est en « {card.offer?.contract_type} » : elle ne permet pas de signer un contrat en alternance
+                  </p>
+                  <a
+                    href={`/dashboard/entreprise/offres/${card.offer?.id}/edition?step=1`}
+                    className="h-8 shrink-0 rounded-full border border-[#F2CF6B88] px-3 text-xs font-extrabold text-[#F2CF6B] inline-flex items-center"
+                  >
+                    Modifier l&apos;offre
+                  </a>
                 </div>
               ) : null}
-              <button type="button" className="mt-4 h-9 rounded-full bg-[#6E5BFF] px-4 text-xs font-extrabold text-white" onClick={() => onProposal({ kind: "need", id: need.id, title: need.title })}>Proposer un profil pour ce poste</button>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#1A2340] pt-3">
+                <p className="text-xs text-[#9AA3BD]">
+                  {card.offer
+                    ? `Offre publiée sur Byound le ${publishedOn(card.offer.created_at)} · ${card.offer.applicationCount ?? 0} candidature${(card.offer.applicationCount ?? 0) > 1 ? "s" : ""} reçue${(card.offer.applicationCount ?? 0) > 1 ? "s" : ""}`
+                    : "Aucune offre publiée"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {card.offer ? (
+                    <a href={`/dashboard/ecole/offres/${card.offer.id}`} className="inline-flex h-9 items-center rounded-full border border-[#26304F] px-3 text-xs font-semibold">
+                      Voir les candidatures
+                    </a>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="h-9 rounded-full bg-[#6E5BFF] px-3 text-xs font-extrabold text-white"
+                    onClick={() =>
+                      onProposal(
+                        card.need
+                          ? { kind: "need", id: card.need.id, title: card.need.title }
+                          : card.offer
+                            ? { kind: "offer", id: card.offer.id, title: card.offer.title || "Offre" }
+                            : { kind: null, id: "", title: "" },
+                      )
+                    }
+                  >
+                    Proposer un profil
+                  </button>
+                </div>
+              </div>
             </li>
           );
         })}
+        {!cards.length ? <li className="text-sm text-[#6C7593]">Aucun poste pour le moment.</li> : null}
       </ul>
 
-      <div className="mt-6">
-        <h3 className="text-sm font-extrabold">Offres publiées sur Byound</h3>
-        {linked ? (
-          <ul className="mt-3 space-y-3">
-            {offers.map((offer) => (
-              <li key={offer.id} className="rounded-2xl bg-[#0B1122] p-4">
-                <span className="rounded-full bg-[#6E5BFF] px-2.5 py-1 text-[11px] font-extrabold text-white">Offre publiée sur Byound</span>
-                <p className="mt-2 text-xs text-[#AEB6CC]">{publishedOn(offer.created_at)}</p>
-                <p className="mt-1 font-extrabold">{offer.title || "Sans titre"}</p>
-                <p className="mt-1 text-xs text-[#AEB6CC]">{[offer.contract_type, offer.contract_duration, offer.start_label, offer.diploma_prepared ? getCfaSpecializationLabel(offer.diploma_prepared) === offer.diploma_prepared ? offer.diploma_prepared : getCfaSpecializationLabel(offer.diploma_prepared) : "", offer.city].filter(Boolean).join(" · ")}</p>
-                <p className="mt-2 text-xs">{offer.applicationCount ?? 0} candidature{(offer.applicationCount ?? 0) > 1 ? "s" : ""} reçue{(offer.applicationCount ?? 0) > 1 ? "s" : ""}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <a href={`/dashboard/ecole/offres/${offer.id}`} className="inline-flex h-9 items-center rounded-full border border-[#26304F] px-3 text-xs font-semibold">Voir l'offre et les candidatures</a>
-                  <button type="button" className="h-9 rounded-full bg-[#6E5BFF] px-3 text-xs font-extrabold text-white" onClick={() => onProposal({ kind: "offer", id: offer.id, title: offer.title || "Offre" })}>Proposer un profil pour cette offre</button>
-                </div>
-              </li>
-            ))}
-            {!offers.length ? <li className="text-sm text-[#5D6785]">Aucune offre active.</li> : null}
-          </ul>
-        ) : (
-          <div className="mt-3 rounded-2xl border border-dashed border-[#26304F] p-4">
-            <p className="text-sm">Cette entreprise n'a pas de compte Byound Business : ses offres ne peuvent pas s'afficher ici.</p>
-            <form className="mt-3 flex gap-2" onSubmit={(event) => {
+      {!linked ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-[#26304F] p-4">
+          <p className="text-sm">Cette entreprise n&apos;a pas de compte Byound Business : ses offres ne peuvent pas s&apos;afficher ici.</p>
+          <form
+            className="mt-3 flex gap-2"
+            onSubmit={(event) => {
               event.preventDefault();
               void fetch(`/api/super-admin/crm/cfa/organizations?q=${encodeURIComponent(query)}`).then(async (response) => {
                 const result = await response.json();
                 setOrgs(result.organizations ?? []);
               });
-            }}>
-              <input aria-label="Compte Byound" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nom ou SIRET" className="h-11 flex-1 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-              <button type="submit" className="h-11 rounded-full border border-[#26304F] px-4 text-xs font-extrabold">Relier à un compte Byound Business</button>
-            </form>
-            <ul className="mt-3 space-y-2">
-              {orgs.map((org) => (
-                <li key={org.id}><button type="button" className="text-sm text-[#B9AFFF]" onClick={() => setPendingOrg(org)}>{org.name}{org.siret ? ` · ${org.siret}` : ""}</button></li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+            }}
+          >
+            <input aria-label="Compte Byound" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nom ou SIRET" className="h-11 flex-1 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
+            <button type="submit" className="h-11 rounded-full border border-[#26304F] px-4 text-xs font-extrabold">
+              Relier à un compte Byound Business
+            </button>
+          </form>
+          <ul className="mt-3 space-y-2">
+            {orgs.map((org) => (
+              <li key={org.id}>
+                <button type="button" className="text-sm text-[#B9AFFF]" onClick={() => setPendingOrg(org)}>
+                  {formatCompanyName(org.name)}
+                  {org.siret ? ` · ${org.siret}` : ""}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {pendingOrg ? (
         <div className="mt-4 rounded-2xl bg-[#241C4A] p-4">
-          <p className="text-sm">Rattacher {pendingOrg.name} ? Le rattachement sera journalisé.</p>
-          <button type="button" className="mt-3 h-9 rounded-full bg-[#6E5BFF] px-4 text-xs font-extrabold text-white" onClick={() => void saveNeed({ action: "link_organization", organizationId: pendingOrg.id }).then(() => setPendingOrg(null))}>Confirmer</button>
+          <p className="text-sm">Rattacher {formatCompanyName(pendingOrg.name)} ? Le rattachement sera journalisé.</p>
+          <button type="button" className="mt-3 h-9 rounded-full bg-[#6E5BFF] px-4 text-xs font-extrabold text-white" onClick={() => void saveNeed({ action: "link_organization", organizationId: pendingOrg.id }).then(() => setPendingOrg(null))}>
+            Confirmer
+          </button>
         </div>
       ) : null}
 
@@ -342,48 +406,74 @@ function ProfilesPanel({
     <div className="mt-5 rounded-[24px] border border-[#6E5BFF] p-4">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-lg font-extrabold">{title}</h3>
-        <button type="button" className="text-sm" onClick={onClose}>Fermer</button>
+        <button type="button" className="text-sm" onClick={onClose}>
+          Fermer
+        </button>
       </div>
       {!current.kind ? (
         <div className="mt-3 space-y-2">
           <p className="text-sm text-[#AEB6CC]">Choisissez un poste ou une offre.</p>
-          {needs.map((need) => <button key={need.id} type="button" className="block text-sm font-semibold text-[#B9AFFF]" onClick={() => setCurrent({ kind: "need", id: need.id, title: need.title })}>Poste : {need.title}</button>)}
-          {offers.map((offer) => <button key={offer.id} type="button" className="block text-sm font-semibold text-[#B9AFFF]" onClick={() => setCurrent({ kind: "offer", id: offer.id, title: offer.title || "Offre" })}>Offre : {offer.title || "Sans titre"}</button>)}
+          {needs.map((need) => (
+            <button key={need.id} type="button" className="block text-sm font-semibold text-[#B9AFFF]" onClick={() => setCurrent({ kind: "need", id: need.id, title: need.title })}>
+              Poste : {need.title}
+            </button>
+          ))}
+          {offers.map((offer) => (
+            <button key={offer.id} type="button" className="block text-sm font-semibold text-[#B9AFFF]" onClick={() => setCurrent({ kind: "offer", id: offer.id, title: offer.title || "Offre" })}>
+              Offre : {offer.title || "Sans titre"}
+            </button>
+          ))}
         </div>
       ) : null}
       {needsCursus ? (
-        <label className="mt-3 block text-sm">Aucun cursus ne correspond{alias ? ` à « ${alias} »` : ""}.
-          <select className="mt-2 h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3" defaultValue="" onChange={(event) => {
-            const cursusId = event.target.value;
-            if (!cursusId) return;
-            const apply = () => {
-              const params = new URLSearchParams({ offerId: current.id, cursusId });
-              void fetch(`/api/super-admin/crm/cfa/companies/${companyId}/proposals?${params}`).then(async (response) => {
-                const result = await response.json();
-                if (!response.ok) return;
-                setCandidates(result.candidates ?? []);
-                setNeedsCursus(false);
-              });
-            };
-            if (!alias) {
-              apply();
-              return;
-            }
-            void fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "set_cursus_alias", alias, cursusId }),
-            }).then(apply);
-          }}>
+        <label className="mt-3 block text-sm">
+          Aucun cursus ne correspond{alias ? ` à « ${alias} »` : ""}.
+          <select
+            className="mt-2 h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3"
+            defaultValue=""
+            onChange={(event) => {
+              const cursusId = event.target.value;
+              if (!cursusId) return;
+              const apply = () => {
+                const params = new URLSearchParams({ offerId: current.id, cursusId });
+                void fetch(`/api/super-admin/crm/cfa/companies/${companyId}/proposals?${params}`).then(async (response) => {
+                  const result = await response.json();
+                  if (!response.ok) return;
+                  setCandidates(result.candidates ?? []);
+                  setNeedsCursus(false);
+                });
+              };
+              if (!alias) {
+                apply();
+                return;
+              }
+              void fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "set_cursus_alias", alias, cursusId }),
+              }).then(apply);
+            }}
+          >
             <option value="">Choisir le cursus</option>
-            {CFA_SPECIALIZATIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            {CFA_SPECIALIZATIONS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
           </select>
         </label>
       ) : null}
       {contacts.length > 1 ? (
-        <label className="mt-3 block text-sm">Destinataire
+        <label className="mt-3 block text-sm">
+          Destinataire
           <select aria-label="Contact destinataire" value={contactId} onChange={(event) => setContactId(event.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3">
-            {contacts.filter((item) => item.email).map((item) => <option key={item.id} value={item.id}>{item.first_name} {item.last_name} · {item.email}</option>)}
+            {contacts
+              .filter((item) => item.email)
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatPersonName(`${item.first_name} ${item.last_name}`)} · {item.email}
+                </option>
+              ))}
           </select>
         </label>
       ) : null}
@@ -396,8 +486,10 @@ function ProfilesPanel({
               <div className="flex gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#241C4A] text-xs font-extrabold">{`${candidate.firstName.charAt(0)}${candidate.lastName.charAt(0)}`.toUpperCase()}</span>
                 <div>
-                  <p className="font-extrabold">{candidate.firstName} {candidate.lastName}</p>
-                  <p className="text-xs text-[#AEB6CC]">{candidate.cursus} · {candidate.status} · {candidate.availability}</p>
+                  <p className="font-extrabold">{formatPersonName(`${candidate.firstName} ${candidate.lastName}`)}</p>
+                  <p className="text-xs text-[#AEB6CC]">
+                    {candidate.cursus} · {candidate.status} · {candidate.availability}
+                  </p>
                   <p className="text-xs text-[#AEB6CC]">{candidate.evaluated ? `${candidate.matched} / ${candidate.wanted} soft skills` : "non évalué"}</p>
                 </div>
               </div>
@@ -406,23 +498,69 @@ function ProfilesPanel({
                 {sent?.response === "interested" ? <span className="rounded-full bg-[#14A37F] px-3 py-1 text-xs font-extrabold text-[#04140C]">Intéressé</span> : null}
                 {sent?.response === "declined" ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-xs font-extrabold text-[#AEB6CC]">Décliné</span> : null}
                 {sent && !sent.response ? <span className="text-xs font-extrabold text-[#6BE3C0]">{sentLabel}</span> : null}
-                {!sent && candidate.shareWithCompanies ? <button type="button" className="h-9 rounded-full bg-[#6E5BFF] px-3 text-xs font-extrabold text-white" onClick={() => { setNotice({ state: "working", title: "Envoi", detail: "Vous pouvez encore annuler." }); setPending({ id: candidate.id, name: `${candidate.firstName} ${candidate.lastName}`, email: contacts.find((item) => item.id === contactId)?.email || contacts.find((item) => item.email)?.email || "" }); }}>Envoyer le profil</button> : null}
-                {!sent && !candidate.shareWithCompanies ? <button type="button" className="h-9 rounded-full border border-[#E7A92C] px-3 text-xs font-extrabold text-[#F6D68B]" onClick={() => {
-                  setNotice({ state: "working", title: "Demande d'accord", detail: `E-mail en cours pour ${candidate.firstName}.` });
-                  void fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "request_consent", applicationId: candidate.id, needId: current.kind === "need" ? current.id : undefined, jobOfferId: current.kind === "offer" ? current.id : undefined }) }).then(async (response) => {
-                    const result = await response.json();
-                    setNotice(response.ok
-                      ? { state: "done", title: "Demande envoyée", detail: `${candidate.firstName} reçoit le lien vers l'offre.` }
-                      : { state: "error", title: "E-mail non envoyé", detail: result.error || "Envoi impossible" });
-                  });
-                }}>Demander l'accord</button> : null}
+                {!sent && candidate.shareWithCompanies ? (
+                  <button
+                    type="button"
+                    className="h-9 rounded-full bg-[#6E5BFF] px-3 text-xs font-extrabold text-white"
+                    onClick={() => {
+                      setNotice({ state: "working", title: "Envoi", detail: "Vous pouvez encore annuler." });
+                      setPending({
+                        id: candidate.id,
+                        name: `${candidate.firstName} ${candidate.lastName}`,
+                        email: contacts.find((item) => item.id === contactId)?.email || contacts.find((item) => item.email)?.email || "",
+                      });
+                    }}
+                  >
+                    Envoyer le profil
+                  </button>
+                ) : null}
+                {!sent && !candidate.shareWithCompanies ? (
+                  <button
+                    type="button"
+                    className="h-9 rounded-full border border-[#E7A92C] px-3 text-xs font-extrabold text-[#F6D68B]"
+                    onClick={() => {
+                      setNotice({ state: "working", title: "Demande d'accord", detail: `E-mail en cours pour ${candidate.firstName}.` });
+                      void fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          action: "request_consent",
+                          applicationId: candidate.id,
+                          needId: current.kind === "need" ? current.id : undefined,
+                          jobOfferId: current.kind === "offer" ? current.id : undefined,
+                        }),
+                      }).then(async (response) => {
+                        const result = await response.json();
+                        setNotice(
+                          response.ok
+                            ? { state: "done", title: "Demande envoyée", detail: `${candidate.firstName} reçoit le lien vers l'offre.` }
+                            : { state: "error", title: "E-mail non envoyé", detail: result.error || "Envoi impossible" },
+                        );
+                      });
+                    }}
+                  >
+                    Demander l&apos;accord
+                  </button>
+                ) : null}
               </div>
             </li>
           );
         })}
       </ul>
       {pending ? (
-        <p className="mt-4 rounded-full bg-[#241C4A] px-4 py-2 text-sm">Profil de {pending.name} envoyé à {pending.email || "le contact"} · <button type="button" className="font-extrabold" onClick={() => { setPending(null); setNotice(null); }}>Annuler</button></p>
+        <p className="mt-4 rounded-full bg-[#241C4A] px-4 py-2 text-sm">
+          Profil de {pending.name} envoyé à {pending.email || "le contact"} ·{" "}
+          <button
+            type="button"
+            className="font-extrabold"
+            onClick={() => {
+              setPending(null);
+              setNotice(null);
+            }}
+          >
+            Annuler
+          </button>
+        </p>
       ) : null}
       <ActionNotice open={Boolean(notice)} state={notice?.state ?? "working"} title={notice?.title ?? ""} detail={notice?.detail} onClose={() => setNotice(null)} />
     </div>

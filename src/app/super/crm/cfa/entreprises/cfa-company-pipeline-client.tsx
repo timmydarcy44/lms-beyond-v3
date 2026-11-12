@@ -429,7 +429,10 @@ export function CfaCompanyPipelineClient({
   }
 
   function openCompany(company: CfaCompany) {
-    if (!readOnly) router.push(`/super/cfa/entreprises/${company.id}`);
+    if (readOnly) return;
+    const url = new URL(window.location.href);
+    const back = url.searchParams.toString();
+    router.push(`/super/cfa/entreprises/${company.id}${back ? `?${back}` : ""}`);
   }
 
   function runAction(company: CfaCompany, e: React.MouseEvent) {

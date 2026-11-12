@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadAccountDetail } from "@/lib/control/load";
 import { loadCompanyDirectory } from "@/lib/control/companies";
 import { CompanyFile } from "./company-file";
@@ -17,6 +17,14 @@ export default async function EntreprisePage({
   const directory = await loadCompanyDirectory();
   const company = directory.items.find((item) => item.id === id);
   if (!company) notFound();
+
+  /** La fiche CFA éditable vit sous /super/cfa/entreprises — pas la vue résumé lecture seule. */
+  const wantCfa =
+    partie === "cfa" || (company.roleCfa && !company.roleBusiness && partie !== "business");
+  if (wantCfa && company.cfaCompanyId) {
+    redirect(`/super/cfa/entreprises/${company.cfaCompanyId}`);
+  }
+
   const detail = company.organizationId ? await loadAccountDetail(company.organizationId) : null;
   return <CompanyFile company={company} detail={detail} initialPart={partie} initialTab={tab} />;
 }

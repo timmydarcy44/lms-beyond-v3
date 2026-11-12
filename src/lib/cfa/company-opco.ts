@@ -92,11 +92,22 @@ export async function refreshCompanyOpco(
     return { ok: false as const, error: saved.error.message };
   }
 
-  await db.from("cfa_company_activities").insert({
-    company_id: companyId,
-    type: "opco_lookup",
-    body: lookupBody(found.opco, found.source),
-    actor_id: input.actorId,
-  });
+  const body = lookupBody(found.opco, found.source);
+  const existing = await db
+    .from("cfa_company_activities")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("type", "opco_lookup")
+    .eq("body", body)
+    .limit(1)
+    .maybeSingle();
+  if (!existing.data?.id) {
+    await db.from("cfa_company_activities").insert({
+      company_id: companyId,
+      type: "opco_lookup",
+      body,
+      actor_id: input.actorId,
+    });
+  }
   return { ok: true as const, skipped: false as const, company: saved.data };
 }

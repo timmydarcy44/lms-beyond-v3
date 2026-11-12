@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Building2 } from "lucide-react";
 import { cleanSiret, isValidSiret } from "@/lib/cfa/siret";
+import { formatCompanyName } from "@/lib/cfa/format-org-name";
+import { formatSiretDisplay, normalizePlaceName } from "@/lib/control/address-format";
+import { isOpcoContractReady } from "@/lib/cfa/company-opco";
 
 export type IdentityCompany = {
   id: string;
@@ -82,7 +85,16 @@ function toDraft(company: IdentityCompany): Draft {
 }
 
 function countFields(draft: Draft) {
-  return [draft.siret, draft.company_name, draft.trade_name, draft.address_line, draft.postal_code, draft.city, draft.naf_code, draft.headcount_range].filter((value) => value.trim()).length;
+  return [
+    draft.siret,
+    draft.company_name,
+    draft.trade_name,
+    draft.address_line,
+    draft.postal_code,
+    draft.city,
+    draft.naf_code,
+    draft.headcount_range,
+  ].filter((value) => value.trim()).length;
 }
 
 function fieldClass(value: string) {
@@ -96,25 +108,55 @@ function syncedLabel(value?: string | null) {
   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
+function displayHeadcount(raw: string | null | undefined) {
+  const value = String(raw ?? "").trim();
+  if (!value) return null;
+  if (/unit[eé]\s*non\s*employeuse/i.test(value) || /^0\s*$/.test(value)) {
+    return { label: "Aucun salarié", hint: "Premier salarié : vérifier les aides à l'embauche" };
+  }
+  return { label: value, hint: null };
+}
+
+function Missing() {
+  return <span className="font-semibold text-[#F2CF6B]">À compléter</span>;
+}
+
 export function EntrepriseSection({
   company,
   onCompany,
   onMessage,
+  editing,
+  onEditing,
 }: {
   company: IdentityCompany;
   onCompany: (company: IdentityCompany) => void;
   onMessage: (message: string) => void;
+  editing?: boolean;
+  onEditing?: (next: boolean) => void;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(company));
   const [source, setSource] = useState(company.opco_source ?? null);
   const [syncedAt, setSyncedAt] = useState(company.registry_synced_at ?? null);
   const [matches, setMatches] = useState<RegistryCompany[]>([]);
   const [lookupBusy, setLookupBusy] = useState(false);
+  const [internalEdit, setInternalEdit] = useState(false);
   const firstSave = useRef(true);
   const fromRegistry = useRef(false);
   const opcoTouched = useRef(false);
   const registryKey = useRef("");
   const searchTimer = useRef<number | null>(null);
+
+  const isEditing = editing ?? internalEdit;
+  function setEditing(next: boolean) {
+    onEditing?.(next);
+    if (editing === undefined) setInternalEdit(next);
+  }
+
+  useEffect(() => {
+    setDraft(toDraft(company));
+    setSource(company.opco_source ?? null);
+    setSyncedAt(company.registry_synced_at ?? null);
+  }, [company.id]);
 
   useEffect(() => {
     if (opcoTouched.current) return;
@@ -123,6 +165,7 @@ export function EntrepriseSection({
   }, [company.opco, company.opco_source]);
 
   useEffect(() => {
+    if (!isEditing) return;
     if (firstSave.current) {
       firstSave.current = false;
       return;
@@ -131,7 +174,7 @@ export function EntrepriseSection({
       void persist(draft);
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [draft]);
+  }, [draft, isEditing]);
 
   async function persist(snapshot: Draft) {
     const response = await fetch(`/api/super-admin/crm/cfa/companies/${company.id}`, {
@@ -140,6 +183,11 @@ export function EntrepriseSection({
       body: JSON.stringify({
         action: "identity",
         ...snapshot,
+        company_name: formatCompanyName(snapshot.company_name) || snapshot.company_name,
+        trade_name: formatCompanyName(snapshot.trade_name),
+        address_line: normalizePlaceName(snapshot.address_line),
+        city: normalizePlaceName(snapshot.city),
+        siret: cleanSiret(snapshot.siret),
         structure_type: snapshot.structure_type || null,
         fromRegistry: fromRegistry.current,
         opcoTouched: opcoTouched.current,
@@ -186,11 +234,11 @@ export function EntrepriseSection({
     setDraft((current) => ({
       ...current,
       siret: match.siret,
-      company_name: match.companyName || current.company_name,
-      trade_name: match.tradeName,
-      address_line: match.addressLine,
+      company_name: formatCompanyName(match.companyName) || current.company_name,
+      trade_name: formatCompanyName(match.tradeName),
+      address_line: normalizePlaceName(match.addressLine),
       postal_code: match.postalCode,
-      city: match.city,
+      city: normalizePlaceName(match.city),
       naf_code: match.nafCode,
       naf_label: match.nafLabel,
       headcount_range: match.headcountRange,
@@ -213,6 +261,15 @@ export function EntrepriseSection({
       if (isValidSiret(digits)) searchTimer.current = window.setTimeout(() => void search(digits), 400);
       else if (name === "company_name" && label.trim().length >= 3) searchTimer.current = window.setTimeout(() => void search(label.trim()), 800);
     }
+  }
+
+  async function confirmOpco() {
+    if (!company.opco?.trim()) return;
+    opcoTouched.current = true;
+    const next = { ...toDraft(company), opco: company.opco };
+    setDraft(next);
+    setEditing(true);
+    await persist(next);
   }
 
   async function retryOpco() {
@@ -238,115 +295,215 @@ export function EntrepriseSection({
     }
   }
 
-  const opco = draft.opco.trim();
-  const synced = syncedLabel(syncedAt);
-  const count = countFields(draft);
+  const count = countFields(toDraft(company));
+  const synced = syncedLabel(syncedAt || company.registry_synced_at);
+  const structureLabel = STRUCTURES.find(([v]) => v === company.structure_type)?.[1] ?? null;
+  const addressLine = [
+    formatCompanyName(company.address_line || company.company_address),
+    company.postal_code,
+    formatCompanyName(company.city),
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const activity = [company.naf_code, company.naf_label].filter((v) => String(v ?? "").trim()).join(" · ");
+  const headcount = displayHeadcount(company.headcount_range);
+  const opcoReady = isOpcoContractReady(company);
 
   return (
-    <section id="entreprise" className="scroll-mt-28 rounded-[26px] border border-[#1A2340] bg-[#111831] p-5" style={{ borderTop: "4px solid #6E5BFF" }}>
-      <header className="-mx-5 -mt-5 mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-[#1A2340] px-5 py-4" style={{ background: "linear-gradient(90deg, #6E5BFF2E, transparent 75%)" }}>
+    <section id="entreprise" className="scroll-mt-28 rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
-          <span className="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-[#6E5BFF] text-white"><Building2 className="h-5 w-5" /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#6E5BFF26] text-[#A99BFF]">
+            <Building2 className="h-5 w-5" />
+          </span>
           <div>
-            <p className="text-xs font-extrabold text-[#C9C1FF]">1 · Entreprise</p>
-            <h2 className="text-xl font-extrabold">Entreprise</h2>
-            <p className="text-xs text-[#AEB6CC]">Identité, annuaire et OPCO.</p>
+            <h2 className="text-[17px] font-extrabold text-[#F2F4FA]">Entreprise</h2>
+            <p className="text-xs text-[#9AA3BD]">
+              {synced ? `Complété depuis l'annuaire des entreprises · ${synced}` : "Identité, annuaire et OPCO."}
+            </p>
           </div>
         </div>
-        <span className="rounded-full bg-[#6E5BFF24] px-3 py-1 text-xs font-extrabold text-[#C9C1FF]">{count} / 8 champs</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-extrabold ${
+              count >= 8 ? "bg-[#143226] text-[#6BE39B]" : "bg-[#6E5BFF24] text-[#C9C2FF]"
+            }`}
+          >
+            {count} / 8 champs
+          </span>
+          <button
+            type="button"
+            className="text-sm font-semibold text-[#A99BFF]"
+            onClick={() => {
+              firstSave.current = true;
+              setEditing(!isEditing);
+            }}
+          >
+            {isEditing ? "Fermer" : "Modifier"}
+          </button>
+        </div>
       </header>
 
-      {synced ? (
-        <p className="mb-4 rounded-2xl bg-[#14233A] px-4 py-3 text-sm text-[#B9AFFF]">Rempli depuis l'annuaire des entreprises · {synced}</p>
-      ) : null}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label id="champ-siret" className="block scroll-mt-28 text-sm">SIRET
-          <input value={draft.siret} inputMode="numeric" placeholder="À compléter" onChange={(event) => edit("siret", event.target.value)} className={fieldClass(draft.siret)} />
-        </label>
-        <label className="block text-sm">Raison sociale
-          <input value={draft.company_name} placeholder="À compléter" onChange={(event) => edit("company_name", event.target.value)} className={fieldClass(draft.company_name)} />
-        </label>
-        <label className="block text-sm">Enseigne
-          <input value={draft.trade_name} placeholder="À compléter" onChange={(event) => edit("trade_name", event.target.value)} className={fieldClass(draft.trade_name)} />
-        </label>
-        <label className="block text-sm sm:col-span-2">Adresse
-          <input value={draft.address_line} placeholder="À compléter" onChange={(event) => edit("address_line", event.target.value)} className={fieldClass(draft.address_line)} />
-        </label>
-        <label className="block text-sm">Code postal
-          <input value={draft.postal_code} inputMode="numeric" placeholder="À compléter" onChange={(event) => edit("postal_code", event.target.value)} className={fieldClass(draft.postal_code)} />
-        </label>
-        <label className="block text-sm">Ville
-          <input value={draft.city} placeholder="À compléter" onChange={(event) => edit("city", event.target.value)} className={fieldClass(draft.city)} />
-        </label>
-        <label id="champ-naf" className="block scroll-mt-28 text-sm">Code NAF
-          <input value={draft.naf_code} placeholder="À compléter" onChange={(event) => edit("naf_code", event.target.value)} className={fieldClass(draft.naf_code)} />
-        </label>
-        <label className="block text-sm">Libellé NAF
-          <input value={draft.naf_label} placeholder="À compléter" onChange={(event) => edit("naf_label", event.target.value)} className={fieldClass(draft.naf_label)} />
-        </label>
-        <label className="block text-sm">Effectif
-          <input value={draft.headcount_range} placeholder="À compléter" onChange={(event) => edit("headcount_range", event.target.value)} className={fieldClass(draft.headcount_range)} />
-        </label>
-        <label className="block text-sm">IDCC
-          <input value={draft.idcc} placeholder="À compléter" onChange={(event) => edit("idcc", event.target.value)} className={fieldClass(draft.idcc)} />
-        </label>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button type="button" className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-semibold" onClick={() => { registryKey.current = ""; void search(isValidSiret(cleanSiret(draft.siret)) ? cleanSiret(draft.siret) : draft.company_name); }}>
-          {lookupBusy ? "Recherche…" : "Actualiser"}
-        </button>
-        {matches.length > 1 ? <p className="text-xs text-[#AEB6CC]">{matches.length} entreprises correspondent. Choisissez-en une.</p> : null}
-      </div>
-      {matches.length > 1 ? (
-        <ul className="mt-3 space-y-2">
-          {matches.map((match) => (
-            <li key={match.siret}>
-              <button type="button" className="w-full rounded-2xl border border-[#26304F] px-3 py-2 text-left text-sm" onClick={() => applyRegistry(match)}>
-                {match.companyName} · {match.siret} · {match.city}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <fieldset className="mt-5">
-        <legend className="text-sm font-extrabold">Type de structure</legend>
-        <div role="radiogroup" aria-label="Type de structure" className="mt-2 flex flex-wrap gap-2">
-          {STRUCTURES.map(([value, label]) => {
-            const active = draft.structure_type === value;
-            return (
-              <button key={value} type="button" role="radio" aria-checked={active} onClick={() => edit("structure_type", active ? "" : value)} className={`h-9 rounded-full px-3 text-xs font-extrabold ${active ? "bg-[#6E5BFF] text-white" : "bg-[#0B1122] text-[#AEB6CC]"}`}>
-                {label}
-              </button>
-            );
-          })}
+      {!isEditing ? (
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-3">
+          <Field label="Adresse">{addressLine || <Missing />}</Field>
+          <Field label="Activité">{activity || <Missing />}</Field>
+          <Field label="Effectif">
+            {headcount ? (
+              <span>
+                {headcount.label}
+                {headcount.hint ? <span className="mt-0.5 block text-xs font-normal text-[#6C7593]">{headcount.hint}</span> : null}
+              </span>
+            ) : (
+              <Missing />
+            )}
+          </Field>
+          <Field label="Type de structure">{structureLabel || <Missing />}</Field>
+          <Field label="IDCC">
+            {company.idcc?.trim() ? (
+              <span>
+                {company.idcc}
+                {company.idcc_label ? <span className="text-[#9AA3BD]"> · {company.idcc_label}</span> : null}
+              </span>
+            ) : (
+              <Missing />
+            )}
+          </Field>
+          <Field label="OPCO">
+            {company.opco?.trim() ? (
+              opcoReady ? (
+                company.opco
+              ) : (
+                <button type="button" className="text-left" onClick={() => void confirmOpco()}>
+                  {company.opco} <span className="text-[#F2CF6B]">à confirmer</span>
+                </button>
+              )
+            ) : (
+              <Missing />
+            )}
+          </Field>
         </div>
-      </fieldset>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label id="champ-siret" className="block scroll-mt-28 text-sm">
+              SIRET
+              <input value={draft.siret} inputMode="numeric" placeholder="À compléter" onChange={(event) => edit("siret", event.target.value)} onBlur={() => edit("siret", cleanSiret(draft.siret))} className={fieldClass(draft.siret)} />
+              {draft.siret ? <span className="mt-1 block text-xs text-[#6C7593]">{formatSiretDisplay(draft.siret)}</span> : null}
+            </label>
+            <label className="block text-sm">
+              Raison sociale
+              <input value={draft.company_name} placeholder="À compléter" onChange={(event) => edit("company_name", event.target.value)} onBlur={() => edit("company_name", formatCompanyName(draft.company_name))} className={fieldClass(draft.company_name)} />
+            </label>
+            <label className="block text-sm">
+              Enseigne
+              <input value={draft.trade_name} placeholder="À compléter" onChange={(event) => edit("trade_name", event.target.value)} onBlur={() => edit("trade_name", formatCompanyName(draft.trade_name))} className={fieldClass(draft.trade_name)} />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              Adresse
+              <input value={draft.address_line} placeholder="À compléter" onChange={(event) => edit("address_line", event.target.value)} onBlur={() => edit("address_line", normalizePlaceName(draft.address_line))} className={fieldClass(draft.address_line)} />
+            </label>
+            <label className="block text-sm">
+              Code postal
+              <input value={draft.postal_code} inputMode="numeric" placeholder="À compléter" onChange={(event) => edit("postal_code", event.target.value)} className={fieldClass(draft.postal_code)} />
+            </label>
+            <label className="block text-sm">
+              Ville
+              <input value={draft.city} placeholder="À compléter" onChange={(event) => edit("city", event.target.value)} onBlur={() => edit("city", normalizePlaceName(draft.city))} className={fieldClass(draft.city)} />
+            </label>
+            <label id="champ-naf" className="block scroll-mt-28 text-sm">
+              Code NAF
+              <input value={draft.naf_code} placeholder="À compléter" onChange={(event) => edit("naf_code", event.target.value)} className={fieldClass(draft.naf_code)} />
+            </label>
+            <label className="block text-sm">
+              Libellé NAF
+              <input value={draft.naf_label} placeholder="À compléter" onChange={(event) => edit("naf_label", event.target.value)} className={fieldClass(draft.naf_label)} />
+            </label>
+            <label className="block text-sm">
+              Effectif
+              <input value={draft.headcount_range} placeholder="À compléter" onChange={(event) => edit("headcount_range", event.target.value)} className={fieldClass(draft.headcount_range)} />
+            </label>
+            <label className="block text-sm">
+              IDCC
+              <input value={draft.idcc} placeholder="À compléter" onChange={(event) => edit("idcc", event.target.value)} className={fieldClass(draft.idcc)} />
+            </label>
+          </div>
 
-      <div id="champ-opco" className="mt-5 scroll-mt-28 rounded-2xl border border-[#1A2340] bg-[#0B1122] p-4">
-        <label className="block text-sm font-extrabold">OPCO
-          <input value={draft.opco} placeholder="À compléter" onChange={(event) => edit("opco", event.target.value)} className={fieldClass(draft.opco)} />
-        </label>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          {source === "cfadock" && opco ? <span className="text-xs text-[#AEB6CC]">source CFADock</span> : null}
-          {source === "manual" && opco ? <span className="text-xs text-[#AEB6CC]">saisie manuelle</span> : null}
-          {source === "idcc" && opco ? <span className="text-xs text-[#AEB6CC]">d'après la convention collective</span> : null}
-          {source === "naf" ? (
-            <>
-              <span className="rounded-full bg-[#3A2A0E] px-3 py-1 text-xs font-extrabold text-[#F6D68B]">à confirmer</span>
-              <span className="text-xs text-[#AEB6CC]">estimé d'après le code NAF</span>
-            </>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="h-9 rounded-full border border-[#26304F] px-4 text-xs font-semibold"
+              onClick={() => {
+                registryKey.current = "";
+                void search(isValidSiret(cleanSiret(draft.siret)) ? cleanSiret(draft.siret) : draft.company_name);
+              }}
+            >
+              {lookupBusy ? "Recherche…" : "Mettre à jour depuis l'annuaire"}
+            </button>
+            {matches.length > 1 ? <p className="text-xs text-[#AEB6CC]">{matches.length} entreprises correspondent. Choisissez-en une.</p> : null}
+          </div>
+          {matches.length > 1 ? (
+            <ul className="mt-3 space-y-2">
+              {matches.map((match) => (
+                <li key={match.siret}>
+                  <button type="button" className="w-full rounded-2xl border border-[#26304F] px-3 py-2 text-left text-sm" onClick={() => applyRegistry(match)}>
+                    {formatCompanyName(match.companyName)} · {formatSiretDisplay(match.siret)} · {formatCompanyName(match.city)}
+                  </button>
+                </li>
+              ))}
+            </ul>
           ) : null}
-          {!opco && source !== "naf" ? (
-            <>
-              <span className="rounded-full bg-[#3A2A0E] px-3 py-1 text-xs font-extrabold text-[#F6D68B]">OPCO à confirmer</span>
-              <button type="button" disabled={lookupBusy} className="h-8 rounded-full border border-[#26304F] px-3 text-xs font-semibold" onClick={() => void retryOpco()}>Relancer la recherche</button>
-            </>
-          ) : null}
-        </div>
-      </div>
+
+          <fieldset className="mt-5">
+            <legend className="text-sm font-extrabold">Type de structure</legend>
+            <div role="radiogroup" aria-label="Type de structure" className="mt-2 flex flex-wrap gap-2">
+              {STRUCTURES.map(([value, label]) => {
+                const active = draft.structure_type === value;
+                return (
+                  <button key={value} type="button" role="radio" aria-checked={active} onClick={() => edit("structure_type", active ? "" : value)} className={`h-9 rounded-full px-3 text-xs font-extrabold ${active ? "bg-[#6E5BFF] text-white" : "bg-[#0B1122] text-[#AEB6CC]"}`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <div id="champ-opco" className="mt-5 scroll-mt-28 rounded-2xl border border-[#1A2340] bg-[#0B1122] p-4">
+            <label className="block text-sm font-extrabold">
+              OPCO
+              <input value={draft.opco} placeholder="À compléter" onChange={(event) => edit("opco", event.target.value)} className={fieldClass(draft.opco)} />
+            </label>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              {source === "cfadock" && draft.opco.trim() ? <span className="text-xs text-[#AEB6CC]">source CFADock</span> : null}
+              {source === "manual" && draft.opco.trim() ? <span className="text-xs text-[#AEB6CC]">saisie manuelle</span> : null}
+              {source === "idcc" && draft.opco.trim() ? <span className="text-xs text-[#AEB6CC]">d&apos;après la convention collective</span> : null}
+              {source === "naf" ? (
+                <>
+                  <span className="rounded-full bg-[#3A2A0E] px-3 py-1 text-xs font-extrabold text-[#F6D68B]">à confirmer</span>
+                  <span className="text-xs text-[#AEB6CC]">estimé d&apos;après le code NAF</span>
+                </>
+              ) : null}
+              {!draft.opco.trim() && source !== "naf" ? (
+                <>
+                  <span className="rounded-full bg-[#3A2A0E] px-3 py-1 text-xs font-extrabold text-[#F6D68B]">OPCO à confirmer</span>
+                  <button type="button" disabled={lookupBusy} className="h-8 rounded-full border border-[#26304F] px-3 text-xs font-semibold" onClick={() => void retryOpco()}>
+                    Relancer la recherche
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </>
+      )}
     </section>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[12px] font-semibold text-[#6C7593]">{label}</p>
+      <div className="mt-1 text-sm font-semibold text-[#F2F4FA]">{children}</div>
+    </div>
   );
 }

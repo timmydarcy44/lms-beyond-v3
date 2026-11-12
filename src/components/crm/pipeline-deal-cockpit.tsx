@@ -190,7 +190,8 @@ export function PipelineDealCockpit({
   const isWonFormationStage = (SIGNED_DEAL_STAGES_FOR_FORMATIONS as readonly string[]).includes(
     form.stage_slug,
   );
-  const showCreateOrg = canCreateOrganisation(form.stage_slug, form.organization_id);
+  const showCreateOrg =
+    Boolean(form.id) && canCreateOrganisation(form.stage_slug, form.organization_id);
   const showOpenOrg = hasOrganisationLink(form.organization_id);
 
   const [activeTab, setActiveTab] = useState<CockpitTab>("overview");
@@ -275,21 +276,27 @@ export function PipelineDealCockpit({
   return (
     <div className="space-y-4 text-white">
       {(showCreateOrg || showOpenOrg) && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-400/35 bg-emerald-950/40 px-4 py-3">
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 ${
+            showOpenOrg
+              ? "border-emerald-400/35 bg-emerald-950/40"
+              : "border-[#6E5BFF]/45 bg-[#6E5BFF]/12"
+          }`}
+        >
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-100">
-              {showOpenOrg ? "Compte client actif" : "Deal gagné — créer le compte client"}
+            <p className={`text-sm font-semibold ${showOpenOrg ? "text-emerald-100" : "text-[#E8DEFF]"}`}>
+              {showOpenOrg ? "Compte client actif" : "Créer un compte client"}
             </p>
-            <p className="text-xs text-emerald-200/80">
+            <p className={`text-xs ${showOpenOrg ? "text-emerald-200/80" : "text-[#C9C2FF]/90"}`}>
               {showOpenOrg
                 ? "Pilotez dossiers formation et relation depuis Comptes clients."
-                : "Activez l’organisation pour piloter les formations hors pipeline."}
+                : "Le compte apparaîtra dans Comptes clients pour piloter formations et accès."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {showOpenOrg && form.organization_id ? (
               <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-500" asChild>
-                <Link href={`/super/organisations/${form.organization_id}?tab=dossiers`}>
+                <Link href={`/super/organisations/${form.organization_id}`}>
                   <Building2 className="mr-1.5 h-4 w-4" />
                   Ouvrir le compte
                 </Link>
@@ -299,11 +306,11 @@ export function PipelineDealCockpit({
               <Button
                 type="button"
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-500"
+                className="bg-[#6E5BFF] hover:bg-[#5B4AE6]"
                 onClick={onCreateOrganisation}
               >
                 <GraduationCap className="mr-1.5 h-4 w-4" />
-                Créer le compte client
+                Créer un compte client
               </Button>
             ) : null}
           </div>

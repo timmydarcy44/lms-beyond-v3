@@ -1411,15 +1411,8 @@ export const PipelineBoardClient = forwardRef<
           onSuccess={(organizationId) => {
             setForm((f) => ({ ...f, organization_id: organizationId }));
             setCreateOrgDeal((d) => (d ? { ...d, organization_id: organizationId } : d));
-            void load({ silent: true });
-            toast.success("Compte client créé", {
-              action: {
-                label: "Ouvrir",
-                onClick: () => {
-                  window.location.href = `/super/organisations/${organizationId}?tab=dossiers`;
-                },
-              },
-            });
+            toast.success("Compte client créé — redirection…");
+            window.location.href = `/super/organisations/${organizationId}`;
           }}
         />
       ) : null}

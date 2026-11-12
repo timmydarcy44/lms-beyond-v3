@@ -89,11 +89,11 @@ export default function PipelineBtobDealPage() {
 
         <div className="mt-6 flex flex-wrap gap-3">
           {showCreate ? (
-            <Button onClick={() => setModalOpen(true)}>Créer le compte client</Button>
+            <Button onClick={() => setModalOpen(true)}>Créer un compte client</Button>
           ) : null}
           {showLink && orgId ? (
             <Button variant="outline" asChild>
-              <Link href={`/super/organisations/${orgId}?tab=dossiers`}>
+              <Link href={`/super/organisations/${orgId}`}>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Ouvrir le compte client
               </Link>
@@ -113,7 +113,9 @@ export default function PipelineBtobDealPage() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         deal={deal}
-        onSuccess={() => void load()}
+        onSuccess={(organizationId) => {
+          window.location.href = `/super/organisations/${organizationId}`;
+        }}
       />
     </div>
   );

@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/control/chrome";
 import { DataTable, StatusPill } from "@/components/control/ui";
 import { formatEuroDelta, formatEurosHt } from "@/lib/control/policy";
 import type { ControlAccount, ControlCockpit } from "@/lib/control/load";
+
+const VIEW_STORAGE_KEY = "byound.accounts.view";
+type ViewMode = "list" | "cards";
 
 const MODULE_LABELS: Record<string, string> = {
   beyond_care: "Byound Care",
@@ -87,6 +90,25 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
   const [sort, setSort] = useState<SortKey>("revenue");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [view, setView] = useState<ViewMode>("list");
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      if (stored === "list" || stored === "cards") setView(stored);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setViewSafe = (next: ViewMode) => {
+    setView(next);
+    try {
+      window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const commercial = data.accounts.filter((account) => account.kind !== "demo" && account.status !== "demo");
   const revenue = commercial.reduce((sum, account) => sum + account.revenue12HtCents, 0);
@@ -214,86 +236,200 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
           <input type="checkbox" checked={showTests} onChange={(event) => setShowTests(event.target.checked)} />
           Afficher les comptes de test ({counts.demo})
         </label>
+        <div className="flex overflow-hidden rounded-full border border-[#26304F] bg-[#0B1122]">
+          <button
+            type="button"
+            aria-label="Vue liste"
+            onClick={() => setViewSafe("list")}
+            className="px-3 py-1.5 text-sm"
+            style={{
+              background: view === "list" ? "#1A2340" : "transparent",
+              color: view === "list" ? "#F2F4FA" : "#6C7593",
+            }}
+          >
+            ☰
+          </button>
+          <button
+            type="button"
+            aria-label="Vue cartes"
+            onClick={() => setViewSafe("cards")}
+            className="px-3 py-1.5 text-sm"
+            style={{
+              background: view === "cards" ? "#1A2340" : "transparent",
+              color: view === "cards" ? "#F2F4FA" : "#6C7593",
+            }}
+          >
+            ▦
+          </button>
+        </div>
       </div>
 
-      <DataTable
-        columns={[
-          {
-            id: "account",
-            header: "Compte",
-            cell: (account) => (
-              <span className="flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#0A0F1E]" style={{ background: colorFor(account.name) }}>
-                  {account.logoUrl ? <img src={account.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : initials(account.name)}
-                </span>
-                <span>
-                  <span className="block font-semibold">{account.name}</span>
-                  <span className="block text-[12px] text-[#9AA3BD]">{account.kind === "internal" ? "Interne" : "Entreprise"} · {relative(account.lastActivityAt)}</span>
-                </span>
-              </span>
-            ),
-          },
-          {
-            id: "status",
-            header: "Statut",
-            cell: (account) => {
-              const status = account.kind === "internal" ? pill.internal : pill[account.status] ?? pill.onboarding;
-              const tone = account.status === "active" ? "success" : account.status === "archived" ? "danger" : account.status === "trial" ? "info" : "warning";
-              return <StatusPill label={status.label} tone={account.kind === "internal" ? "info" : tone} />;
-            },
-          },
-          {
-            id: "modules",
-            header: "Modules",
-            cell: (account) => moduleLabels(account.modules).join(", ") || "—",
-          },
-          { id: "users", header: "Utilisateurs actifs", cell: (account) => `${account.activeUsers} / ${account.totalUsers}` },
-          {
-            id: "revenue",
-            header: "CA 12 mois",
-            cell: (account) => account.status === "trial"
-              ? (account.openQuoteHtCents ? formatEurosHt(account.openQuoteHtCents) : "Devis en cours")
-              : formatEurosHt(account.revenue12HtCents),
-          },
-          { id: "signal", header: "Signal", cell: (account) => account.signal?.label ?? "—" },
-          {
-            id: "open",
-            header: "",
-            cell: (account) => (
-              <span className="relative flex items-center justify-end gap-1">
-                <button
-                  type="button"
-                  className="rounded-full px-2 py-1"
-                  aria-label="Actions"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setOpenMenu(openMenu === account.id ? null : account.id);
-                  }}
-                >
-                  ⋯
-                </button>
-                {openMenu === account.id ? (
-                  <span className="absolute right-0 top-8 z-10 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-sm" onClick={(event) => event.stopPropagation()}>
-                    <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { void navigator.clipboard.writeText(account.id); setCopied(account.id); }}>
-                      {copied === account.id ? "Identifiant copié" : "Copier l'identifiant"}
-                    </button>
-                    {duplicateIds.includes(account.id) ? (
-                      <Link className="block rounded-xl px-2 py-1.5" href={`/super/organisations/comparer?ids=${data.duplicates.find((group) => group.ids.includes(account.id))?.ids.join(",") ?? ""}`}>
-                        Comparer
-                      </Link>
-                    ) : null}
+      {rows.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState title="Aucun compte pour ce filtre." />
+        </div>
+      ) : view === "cards" ? (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {rows.map((account) => {
+            const status = account.kind === "internal" ? pill.internal : pill[account.status] ?? pill.onboarding;
+            const modules = moduleLabels(account.modules);
+            return (
+              <button
+                key={account.id}
+                type="button"
+                onClick={() => router.push(`/super/organisations/${account.id}`)}
+                className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5 text-left transition hover:border-[#6E5BFF]/50"
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-sm font-extrabold text-[#0A0F1E]"
+                    style={{ background: colorFor(account.name) }}
+                  >
+                    {account.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={account.logoUrl} alt="" className="h-12 w-12 rounded-2xl object-cover" />
+                    ) : (
+                      initials(account.name)
+                    )}
                   </span>
-                ) : null}
-                <ChevronRight className="h-4 w-4 text-[#6C7593]" />
-              </span>
-            ),
-          },
-        ]}
-        rows={rows}
-        rowKey={(account) => account.id}
-        onRow={(account) => router.push(`/super/organisations/${account.id}`)}
-        empty={<EmptyState title="Aucun compte pour ce filtre." />}
-      />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="truncate text-base font-extrabold text-[#F2F4FA]">{account.name}</h2>
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        style={{ background: status.bg, color: status.fg }}
+                      >
+                        {status.label}
+                      </span>
+                      {account.isTest ? (
+                        <span className="rounded-full border border-dashed border-[#6C7593] px-2 py-0.5 text-[11px] text-[#9AA3BD]">
+                          Test
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-[#9AA3BD]">
+                      {account.kind === "internal" ? "Interne" : "Entreprise"}
+                      {account.addressCity ? ` · ${account.addressCity}` : ""}
+                      {" · "}
+                      {relative(account.lastActivityAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                  <span className="rounded-2xl bg-[#0B1122] p-2">
+                    <span className="block text-sm font-extrabold text-[#F2F4FA]">
+                      {account.activeUsers}/{account.totalUsers}
+                    </span>
+                    Utilisateurs
+                  </span>
+                  <span className="rounded-2xl bg-[#0B1122] p-2">
+                    <span className="block text-sm font-extrabold text-[#F2F4FA]">
+                      {account.status === "trial"
+                        ? account.openQuoteHtCents
+                          ? formatEurosHt(account.openQuoteHtCents)
+                          : "—"
+                        : formatEurosHt(account.revenue12HtCents)}
+                    </span>
+                    CA 12 mois
+                  </span>
+                  <span className="rounded-2xl bg-[#0B1122] p-2">
+                    <span className="block text-sm font-extrabold text-[#F2F4FA]">
+                      {modules.length || "—"}
+                    </span>
+                    Modules
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <p className="truncate text-xs text-[#6C7593]">
+                    {account.accountManagerName || "Sans chargé de compte"}
+                    {account.signal?.label ? ` · ${account.signal.label}` : ""}
+                  </p>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#6C7593]" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <DataTable
+          columns={[
+            {
+              id: "account",
+              header: "Compte",
+              cell: (account) => (
+                <span className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#0A0F1E]" style={{ background: colorFor(account.name) }}>
+                    {account.logoUrl ? <img src={account.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : initials(account.name)}
+                  </span>
+                  <span>
+                    <span className="block font-semibold">{account.name}</span>
+                    <span className="block text-[12px] text-[#9AA3BD]">{account.kind === "internal" ? "Interne" : "Entreprise"} · {relative(account.lastActivityAt)}</span>
+                  </span>
+                </span>
+              ),
+            },
+            {
+              id: "status",
+              header: "Statut",
+              cell: (account) => {
+                const status = account.kind === "internal" ? pill.internal : pill[account.status] ?? pill.onboarding;
+                const tone = account.status === "active" ? "success" : account.status === "archived" ? "danger" : account.status === "trial" ? "info" : "warning";
+                return <StatusPill label={status.label} tone={account.kind === "internal" ? "info" : tone} />;
+              },
+            },
+            {
+              id: "modules",
+              header: "Modules",
+              cell: (account) => moduleLabels(account.modules).join(", ") || "—",
+            },
+            { id: "users", header: "Utilisateurs actifs", cell: (account) => `${account.activeUsers} / ${account.totalUsers}` },
+            {
+              id: "revenue",
+              header: "CA 12 mois",
+              cell: (account) => account.status === "trial"
+                ? (account.openQuoteHtCents ? formatEurosHt(account.openQuoteHtCents) : "Devis en cours")
+                : formatEurosHt(account.revenue12HtCents),
+            },
+            { id: "signal", header: "Signal", cell: (account) => account.signal?.label ?? "—" },
+            {
+              id: "open",
+              header: "",
+              cell: (account) => (
+                <span className="relative flex items-center justify-end gap-1">
+                  <button
+                    type="button"
+                    className="rounded-full px-2 py-1"
+                    aria-label="Actions"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenMenu(openMenu === account.id ? null : account.id);
+                    }}
+                  >
+                    ⋯
+                  </button>
+                  {openMenu === account.id ? (
+                    <span className="absolute right-0 top-8 z-10 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-sm" onClick={(event) => event.stopPropagation()}>
+                      <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { void navigator.clipboard.writeText(account.id); setCopied(account.id); }}>
+                        {copied === account.id ? "Identifiant copié" : "Copier l'identifiant"}
+                      </button>
+                      {duplicateIds.includes(account.id) ? (
+                        <Link className="block rounded-xl px-2 py-1.5" href={`/super/organisations/comparer?ids=${data.duplicates.find((group) => group.ids.includes(account.id))?.ids.join(",") ?? ""}`}>
+                          Comparer
+                        </Link>
+                      ) : null}
+                    </span>
+                  ) : null}
+                  <ChevronRight className="h-4 w-4 text-[#6C7593]" />
+                </span>
+              ),
+            },
+          ]}
+          rows={rows}
+          rowKey={(account) => account.id}
+          onRow={(account) => router.push(`/super/organisations/${account.id}`)}
+          empty={<EmptyState title="Aucun compte pour ce filtre." />}
+        />
+      )}
     </div>
   );
 }

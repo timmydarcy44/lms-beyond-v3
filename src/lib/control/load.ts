@@ -230,6 +230,7 @@ export async function loadAccountDetail(orgId: string) {
       employees: [],
       activity: [],
       outboundEmails: [],
+      staffManagers: [],
       note: null,
       documents: [],
       courses: [],
@@ -239,7 +240,7 @@ export async function loadAccountDetail(orgId: string) {
     };
   }
 
-  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, catalog] = await Promise.all([
+  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, catalog, staffAdmins] = await Promise.all([
     db.from("org_memberships").select("user_id, role, created_at").eq("org_id", orgId),
     db.from("employees").select("id, first_name, last_name, email, job_title, status, created_at").eq("company_id", orgId),
     db.from("org_activity").select("id, actor_type, action, payload, created_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(40),
@@ -253,6 +254,7 @@ export async function loadAccountDetail(orgId: string) {
     db.from("org_billing_documents").select("id, doc_type, number, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type, opco_ht_cents").eq("org_id", orgId).order("issued_at", { ascending: false }),
     db.from("courses").select("id, title, status, cover_image, delivery_format").eq("org_id", orgId).limit(40),
     db.from("courses").select("id, title, status, cover_image, delivery_format").in("status", ["published", "active"]).limit(40),
+    db.from("super_admins").select("user_id").eq("is_active", true),
   ]);
 
   const userIds = ((memberships.data ?? []) as Array<{ user_id: string }>).map((item) => item.user_id);
@@ -455,6 +457,30 @@ export async function loadAccountDetail(orgId: string) {
     tracked: boolean;
   }>;
 
+  const staffIds = [
+    ...new Set(
+      ((staffAdmins.error ? [] : staffAdmins.data) ?? [])
+        .map((row) => String(row.user_id))
+        .filter(Boolean),
+    ),
+  ];
+  if (account.accountManagerId && !staffIds.includes(account.accountManagerId)) {
+    staffIds.push(account.accountManagerId);
+  }
+  const staffProfiles = staffIds.length
+    ? await db.from("profiles").select("id, full_name, display_name, email").in("id", staffIds)
+    : { data: [], error: null };
+  const staffManagers = ((staffProfiles.error ? [] : staffProfiles.data) ?? [])
+    .map((profile) => ({
+      id: String(profile.id),
+      name:
+        String(profile.full_name || profile.display_name || "").trim() ||
+        String(profile.email || "").trim() ||
+        "Chargé de compte",
+      email: String(profile.email || "").trim().toLowerCase(),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
   return {
     account,
     schemaReady: cockpit.schemaReady,
@@ -465,6 +491,7 @@ export async function loadAccountDetail(orgId: string) {
     outboundEmails: [...trackedEmails, ...legacyEmails].sort(
       (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
     ),
+    staffManagers,
     note: notes.error ? null : (notes.data?.[0] ?? null),
     documents: documents.error ? [] : documents.data ?? [],
     courses: formations,

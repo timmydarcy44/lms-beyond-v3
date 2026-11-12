@@ -143,20 +143,26 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       </p>
       )}
       <header className="flex flex-wrap items-start justify-between gap-4">
-        {embedded ? <div /> : (
         <div>
-          <h1 className="text-[36px] font-extrabold tracking-[-1.2px]">{account.name}</h1>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full px-2 py-1" style={{ background: account.status === "active" ? "#163228" : "#3A3118", color: account.status === "active" ? "#6BE39B" : "#F2CF6B" }}>{account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer"}</span>
-            <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">{account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}</span>
-            {account.clientSince ? <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</span> : null}
-            <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">{account.accountManagerName ?? "Chargé de compte non assigné"}</span>
-            <span className="rounded-full border border-[#6E5BFF]/55 bg-[#6E5BFF]/20 px-2.5 py-1 font-semibold text-[#E8DEFF]">
-              CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT
-            </span>
+          {embedded ? null : (
+            <h1 className="text-[36px] font-extrabold tracking-[-1.2px]">{account.name}</h1>
+          )}
+          <div className={`${embedded ? "" : "mt-2 "}flex flex-wrap items-center gap-2 text-xs`}>
+            {embedded ? null : (
+              <>
+                <span className="rounded-full px-2 py-1" style={{ background: account.status === "active" ? "#163228" : "#3A3118", color: account.status === "active" ? "#6BE39B" : "#F2CF6B" }}>{account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer"}</span>
+                <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">{account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}</span>
+                {account.clientSince ? <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</span> : null}
+              </>
+            )}
+            <AccountManagerPicker detail={detail} onNotice={setNotice} />
+            {embedded ? null : (
+              <span className="rounded-full border border-[#6E5BFF]/55 bg-[#6E5BFF]/20 px-2.5 py-1 font-semibold text-[#E8DEFF]">
+                CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT
+              </span>
+            )}
           </div>
         </div>
-        )}
         <div className="flex flex-wrap gap-2">
           {detail.members.find((member) => member.role === "admin" && member.email)?.email ? (
             <a className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]" href={`mailto:${detail.members.find((member) => member.role === "admin")?.email}`}>Contacter l&apos;admin</a>
@@ -931,6 +937,76 @@ function SaasOffersTab({ orgId, modules }: { orgId: string; modules: string[] })
         </div>
       </section>
     </div>
+  );
+}
+
+function AccountManagerPicker({
+  detail,
+  onNotice,
+}: {
+  detail: Detail;
+  onNotice: (message: string | null) => void;
+}) {
+  const router = useRouter();
+  const account = detail.account;
+  const managers = detail.staffManagers ?? [];
+  const [value, setValue] = useState(account?.accountManagerId ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setValue(account?.accountManagerId ?? "");
+  }, [account?.accountManagerId]);
+
+  if (!account) return null;
+
+  async function save(nextId: string) {
+    const previous = value;
+    setValue(nextId);
+    setSaving(true);
+    onNotice(null);
+    try {
+      const response = await fetch(`/api/super/comptes-clients/${account.id}/account-manager`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountManagerId: nextId || null }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setValue(previous);
+        onNotice(payload.error || "Impossible d'assigner le chargé de compte.");
+        return;
+      }
+      const label = payload.accountManagerName || managers.find((item) => item.id === nextId)?.name;
+      onNotice(label ? `Chargé de compte : ${label}` : "Chargé de compte retiré.");
+      router.refresh();
+    } catch {
+      setValue(previous);
+      onNotice("Impossible d'assigner le chargé de compte.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <label className="inline-flex items-center gap-1.5 rounded-full border border-[#3A4668] bg-[#151C33] px-2.5 py-1 text-[#E8ECF8]">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8A93AE]">Chargé de compte</span>
+      <select
+        className="max-w-[180px] bg-transparent text-xs font-semibold text-[#E8ECF8] outline-none disabled:opacity-60"
+        value={value}
+        disabled={saving || managers.length === 0}
+        onChange={(event) => {
+          void save(event.target.value);
+        }}
+        aria-label="Choisir le chargé de compte"
+      >
+        <option value="">Non assigné</option>
+        {managers.map((manager) => (
+          <option key={manager.id} value={manager.id}>
+            {manager.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

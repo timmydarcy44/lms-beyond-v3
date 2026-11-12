@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { sendEmail } from "@/lib/email/resend-client";
 import {
   buildEdgeEmailShell,
@@ -7,7 +8,8 @@ import {
 } from "@/lib/emails/edge-email-shell";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 
-const TIMMY_EMAIL = "timmydarcy44@gmail.com";
+/** Secours uniquement si aucun chargé de compte n'est assigné. */
+const FALLBACK_STAFF_EMAIL = "timmydarcy44@gmail.com";
 
 function row(label: string, value: string) {
   return `<tr>
@@ -16,57 +18,92 @@ function row(label: string, value: string) {
   </tr>`;
 }
 
+function profileLabel(profile: {
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}): string | null {
+  return (
+    String(profile.full_name ?? "").trim() ||
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+    String(profile.email ?? "").trim().toLowerCase() ||
+    null
+  );
+}
+
+/**
+ * Destinataires staff pour les notifs devis/convention :
+ * prioritairement le chargé de compte du client.
+ */
 async function resolveStaffRecipients(
   service: SupabaseClient,
   dossierId: string,
-): Promise<{ emails: string[]; managerLabel: string | null }> {
+): Promise<{
+  emails: string[];
+  managerLabel: string | null;
+  orgId: string | null;
+  hasAccountManager: boolean;
+}> {
   const { data: dossier } = await service
     .from("formation_dossiers")
     .select("organization_id, owner_user_id")
     .eq("id", dossierId)
     .maybeSingle();
 
-  const userIds = new Set<string>();
-  if (dossier?.owner_user_id) userIds.add(String(dossier.owner_user_id));
-
+  const orgId = dossier?.organization_id ? String(dossier.organization_id) : null;
   let managerId: string | null = null;
-  if (dossier?.organization_id) {
+  if (orgId) {
     const { data: org } = await service
       .from("organizations")
       .select("account_manager_id")
-      .eq("id", dossier.organization_id)
+      .eq("id", orgId)
       .maybeSingle();
     managerId = org?.account_manager_id ? String(org.account_manager_id) : null;
-    if (managerId) userIds.add(managerId);
   }
 
-  const emails = new Set<string>([TIMMY_EMAIL]);
-  let managerLabel: string | null = null;
+  const preferredIds = [managerId, dossier?.owner_user_id ? String(dossier.owner_user_id) : null].filter(
+    (id): id is string => Boolean(id),
+  );
 
-  if (userIds.size) {
+  let managerLabel: string | null = null;
+  let managerEmail: string | null = null;
+  let ownerEmail: string | null = null;
+
+  if (preferredIds.length) {
     const { data: profiles } = await service
       .from("profiles")
       .select("id, email, full_name, first_name, last_name")
-      .in("id", [...userIds]);
+      .in("id", preferredIds);
     for (const profile of profiles ?? []) {
       const email = String(profile.email ?? "")
         .trim()
         .toLowerCase();
-      if (email.includes("@")) emails.add(email);
+      if (!email.includes("@")) continue;
       if (managerId && String(profile.id) === managerId) {
-        managerLabel =
-          String(profile.full_name ?? "").trim() ||
-          [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
-          email ||
-          null;
+        managerEmail = email;
+        managerLabel = profileLabel(profile);
+      } else if (dossier?.owner_user_id && String(profile.id) === String(dossier.owner_user_id)) {
+        ownerEmail = email;
       }
     }
   }
 
-  return { emails: [...emails], managerLabel };
+  const emails = managerEmail
+    ? [managerEmail]
+    : ownerEmail
+      ? [ownerEmail]
+      : [FALLBACK_STAFF_EMAIL];
+
+  return {
+    emails,
+    managerLabel,
+    orgId,
+    hasAccountManager: Boolean(managerEmail),
+  };
 }
 
-/** Informe Timmy + le gestionnaire du compte qu’un devis / une convention a été accepté(e). */
+/** Informe le chargé de compte qu’un devis / une convention a été accepté(e). */
 export async function notifyStaffDocumentAccepted(
   service: SupabaseClient,
   params: {
@@ -76,7 +113,7 @@ export async function notifyStaffDocumentAccepted(
   },
 ): Promise<void> {
   const ctx = await loadDossierDocContext(service, params.dossierId);
-  const { emails, managerLabel } = await resolveStaffRecipients(service, params.dossierId);
+  const { emails, managerLabel, orgId } = await resolveStaffRecipients(service, params.dossierId);
 
   const kindLabel = params.kind === "devis" ? "Devis" : "Convention";
   const company = ctx?.organization.name || "Entreprise";
@@ -108,7 +145,7 @@ export async function notifyStaffDocumentAccepted(
         ${row("Document", kindLabel)}
         ${row("Entreprise", company)}
         ${ctx?.organization.siret ? row("SIRET", ctx.organization.siret) : ""}
-        ${managerLabel ? row("Gestionnaire", managerLabel) : ""}
+        ${managerLabel ? row("Chargé de compte", managerLabel) : ""}
         ${row("Formation", course)}
         ${row("Montant", amount)}
         ${row("Lieu", location)}
@@ -116,21 +153,37 @@ export async function notifyStaffDocumentAccepted(
         ${row("Accepté le", signedLabel)}
         ${row("Dossier", params.dossierId)}
       </table>`,
-    footerNote: "Notification automatique — acceptation publique /doc",
+    footerNote: "Notification automatique — chargé de compte",
   });
 
-  const result = await sendEmail({
-    to: emails,
-    skipBcc: true,
-    from: EDGE_COCKPIT_FROM,
-    subject: `[Byound] ${kindLabel} accepté — ${company} · ${course}`,
-    html,
-    tags: {
-      type: "formation-doc-accepted",
-      kind: params.kind,
-      dossier_id: params.dossierId,
-    },
-  });
+  const subject = `[Byound] ${kindLabel} accepté — ${company} · ${course}`;
+  const tags = {
+    type: "formation-doc-accepted",
+    kind: params.kind,
+    dossier_id: params.dossierId,
+  };
+  const result = orgId
+    ? await sendOrgTrackedEmail({
+        orgId,
+        kind: params.kind === "devis" ? "devis" : "convention",
+        label: `${kindLabel} accepté(e) — notif chargé de compte`,
+        db: service,
+        meta: { dossier_id: params.dossierId, event: "accepted", recipients: emails },
+        to: emails,
+        skipBcc: true,
+        from: EDGE_COCKPIT_FROM,
+        subject,
+        html,
+        tags,
+      })
+    : await sendEmail({
+        to: emails,
+        skipBcc: true,
+        from: EDGE_COCKPIT_FROM,
+        subject,
+        html,
+        tags,
+      });
 
   if (!result.success) {
     console.warn("[notify-acceptance]", result.error);
@@ -312,7 +365,7 @@ export async function notifyStaffDevisChangeRequest(
   },
 ): Promise<{ emails: string[] }> {
   const ctx = await loadDossierDocContext(service, params.dossierId);
-  const { emails, managerLabel } = await resolveStaffRecipients(
+  const { emails, managerLabel, orgId } = await resolveStaffRecipients(
     service,
     params.dossierId,
   );
@@ -331,7 +384,7 @@ export async function notifyStaffDevisChangeRequest(
         ${row("Entreprise", company)}
         ${row("Formation", course)}
         ${params.contactName ? row("Contact", params.contactName) : ""}
-        ${managerLabel ? row("Gestionnaire", managerLabel) : ""}
+        ${managerLabel ? row("Chargé de compte", managerLabel) : ""}
         ${row("Dossier", params.dossierId)}
       </table>
       <p style="margin:20px 0 0;font-size:15px;line-height:1.6;color:#111;">
@@ -340,17 +393,35 @@ export async function notifyStaffDevisChangeRequest(
     footerNote: "Notification — demande de modification /doc",
   });
 
-  await sendEmail({
-    to: emails,
-    skipBcc: true,
-    from: EDGE_COCKPIT_FROM,
-    subject: `[Byound] Modification devis — ${company} · ${course}`,
-    html,
-    tags: {
-      type: "formation-devis-change-request",
-      dossier_id: params.dossierId,
-    },
-  });
+  const subject = `[Byound] Modification devis — ${company} · ${course}`;
+  const tags = {
+    type: "formation-devis-change-request",
+    dossier_id: params.dossierId,
+  };
+  if (orgId) {
+    await sendOrgTrackedEmail({
+      orgId,
+      kind: "devis",
+      label: "Demande de modification devis — notif chargé de compte",
+      db: service,
+      meta: { dossier_id: params.dossierId, event: "change_request", recipients: emails },
+      to: emails,
+      skipBcc: true,
+      from: EDGE_COCKPIT_FROM,
+      subject,
+      html,
+      tags,
+    });
+  } else {
+    await sendEmail({
+      to: emails,
+      skipBcc: true,
+      from: EDGE_COCKPIT_FROM,
+      subject,
+      html,
+      tags,
+    });
+  }
 
   return { emails };
 }

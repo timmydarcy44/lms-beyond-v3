@@ -108,7 +108,7 @@ export function FicheEntreprise({ id, listQuery = "" }: { id: string; listQuery?
   const [nextAction, setNextAction] = useState<NextAction | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingStage, setPendingStage] = useState<CfaHostStageId | null>(null);
-  const [editEntreprise, setEditEntreprise] = useState(false);
+  const [editEntreprise, setEditEntreprise] = useState(true);
   const [activeSection, setActiveSection] = useState("entreprise");
   const [accountManagers, setAccountManagers] = useState<AccountManagerOption[]>([]);
   const [accountManager, setAccountManager] = useState<AccountManagerOption | null>(null);
@@ -395,7 +395,7 @@ export function FicheEntreprise({ id, listQuery = "" }: { id: string; listQuery?
                 <select
                   className="absolute inset-0 cursor-pointer opacity-0"
                   value={accountManager?.id ?? ""}
-                  disabled={managerBusy || accountManagerColumnMissing || accountManagers.length === 0}
+                  disabled={managerBusy || accountManagers.length === 0}
                   aria-label="Choisir le chargé de compte"
                   onChange={(event) => void saveAccountManager(event.target.value)}
                 >
@@ -407,7 +407,7 @@ export function FicheEntreprise({ id, listQuery = "" }: { id: string; listQuery?
                   ))}
                 </select>
               </label>
-              {accountManagerColumnMissing ? (
+              {accountManagerColumnMissing && accountManagers.length === 0 ? (
                 <p className="max-w-[220px] text-right text-[11px] text-[#F2CF6B]">
                   Collez 20261112180000_cfa_company_account_manager.sql pour activer l&apos;assignation.
                 </p>

@@ -74,7 +74,11 @@ export function EntreprisesClient({ items, schemaReady }: { items: CompanyListIt
     <div className="mx-auto max-w-[1240px] space-y-6 px-6 py-8">
       <PageHeader
         title="Entreprises"
-        subtitle={schemaReady ? "Une fiche, deux rôles possibles." : "Lecture seule tant que le script SQL des fiches n'est pas collé."}
+        subtitle={
+          schemaReady
+            ? "Une fiche, deux rôles possibles."
+            : "Annuaire partiel : collez 20261104150000_companies.sql pour unifier Business et CFA."
+        }
         actions={
           <>
             <a href="/super/entreprises/doublons" className="rounded-full border border-[#26304F] px-4 py-2 text-sm text-white">

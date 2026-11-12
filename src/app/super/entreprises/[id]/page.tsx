@@ -18,10 +18,11 @@ export default async function EntreprisePage({
   const company = directory.items.find((item) => item.id === id);
   if (!company) notFound();
 
-  /** La fiche CFA éditable vit sous /super/cfa/entreprises — pas la vue résumé lecture seule. */
-  const wantCfa =
-    partie === "cfa" || (company.roleCfa && !company.roleBusiness && partie !== "business");
-  if (wantCfa && company.cfaCompanyId) {
+  /** Toujours la fiche CFA éditable — jamais la vue résumé « lecture seule ». */
+  if (company.cfaCompanyId && partie !== "business") {
+    redirect(`/super/cfa/entreprises/${company.cfaCompanyId}`);
+  }
+  if (company.roleCfa && !company.roleBusiness && company.cfaCompanyId) {
     redirect(`/super/cfa/entreprises/${company.cfaCompanyId}`);
   }
 

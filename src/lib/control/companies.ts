@@ -119,13 +119,22 @@ export async function loadCompanyDirectory(): Promise<CompanyDirectory> {
     return { schemaReady: false, items: virtualItems(orgs, cfas, btobDeals, apprentices, offerCounts, candidateCounts, managerName) };
   }
 
+  const companyRows = (companies.data ?? []) as AnyRow[];
+  /** Table créée mais pas encore remplie : on sert les sources virtuelles sans passer en « lecture seule ». */
+  if (companyRows.length === 0) {
+    return {
+      schemaReady: true,
+      items: virtualItems(orgs, cfas, btobDeals, apprentices, offerCounts, candidateCounts, managerName),
+    };
+  }
+
   const sourcesByCompany = new Map<string, AnyRow[]>();
   for (const source of sources) {
     const companyId = text(source.company_id);
     sourcesByCompany.set(companyId, [...(sourcesByCompany.get(companyId) ?? []), source]);
   }
 
-  const items = ((companies.data ?? []) as AnyRow[]).map((company) => {
+  const items = companyRows.map((company) => {
     const id = text(company.id);
     const linked = sourcesByCompany.get(id) ?? [];
     const organizationId = text(company.organization_id) || text(linked.find((source) => source.source_type === "organization")?.source_id);

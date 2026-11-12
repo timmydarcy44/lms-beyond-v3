@@ -139,7 +139,7 @@ export function EntrepriseSection({
   const [syncedAt, setSyncedAt] = useState(company.registry_synced_at ?? null);
   const [matches, setMatches] = useState<RegistryCompany[]>([]);
   const [lookupBusy, setLookupBusy] = useState(false);
-  const [internalEdit, setInternalEdit] = useState(false);
+  const [internalEdit, setInternalEdit] = useState(true);
   const firstSave = useRef(true);
   const fromRegistry = useRef(false);
   const opcoTouched = useRef(false);

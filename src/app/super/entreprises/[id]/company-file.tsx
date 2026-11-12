@@ -50,6 +50,10 @@ export function CompanyFile({
   }, [company.cfaCompanyId, part]);
 
   function choose(next: "business" | "cfa") {
+    if (next === "cfa" && company.cfaCompanyId) {
+      router.push(`/super/cfa/entreprises/${company.cfaCompanyId}`);
+      return;
+    }
     setPart(next);
     router.replace(`/super/entreprises/${company.id}?partie=${next}`);
   }
@@ -89,13 +93,13 @@ export function CompanyFile({
           {company.cfaCompanyId ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-[#1A2340] bg-[#111831] px-4 py-3">
               <p className="text-sm text-[#9AA3BD]">
-                Vue résumé — pour modifier contacts, postes et statut, ouvre la fiche CFA.
+                La fiche éditable (contacts, postes, statut, chargé de compte) est sur le CRM CFA.
               </p>
               <Link
                 href={`/super/cfa/entreprises/${company.cfaCompanyId}`}
                 className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
               >
-                Ouvrir la fiche CFA
+                Ouvrir la fiche éditable
               </Link>
             </div>
           ) : null}

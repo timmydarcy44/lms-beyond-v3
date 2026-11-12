@@ -20,8 +20,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const courseId = String(body.courseId ?? "").trim();
   if (!courseId) return NextResponse.json({ error: "courseId requis" }, { status: 400 });
 
-  const course = await service.from("courses").select("id, title").eq("id", courseId).maybeSingle();
+  const course = await service
+    .from("courses")
+    .select("id, title, builder_snapshot")
+    .eq("id", courseId)
+    .maybeSingle();
   if (!course.data) return NextResponse.json({ error: "Formation introuvable" }, { status: 404 });
+  const publisher = (course.data.builder_snapshot as { general?: { publisher?: string } } | null)?.general?.publisher;
+  if (publisher !== "byound") {
+    return NextResponse.json(
+      { error: "Seules les formations LMS Byound peuvent être mises à disposition" },
+      { status: 400 },
+    );
+  }
 
   const granted = await grantLmsCourseToOrganization(orgId, courseId, {
     grantedBy: data.user.id,

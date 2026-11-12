@@ -36,8 +36,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!courseId || userIds.length === 0) {
     return NextResponse.json({ error: "Choisissez une formation et au moins un participant." }, { status: 400 });
   }
-  const course = await service.from("courses").select("id, title").eq("id", courseId).maybeSingle();
+  const course = await service
+    .from("courses")
+    .select("id, title, builder_snapshot")
+    .eq("id", courseId)
+    .maybeSingle();
   if (!course.data) return NextResponse.json({ error: "Formation introuvable" }, { status: 404 });
+  const publisher = (course.data.builder_snapshot as { general?: { publisher?: string } } | null)?.general?.publisher;
+  if (publisher !== "byound") {
+    return NextResponse.json(
+      { error: "Seules les formations LMS Byound peuvent être assignées" },
+      { status: 400 },
+    );
+  }
   const { grantLmsCourseToOrganization } = await import("@/lib/org/org-formations");
   await grantLmsCourseToOrganization(id, courseId, {
     grantedBy: data.user.id,

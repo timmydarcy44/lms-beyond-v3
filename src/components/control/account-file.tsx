@@ -238,8 +238,8 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {tab === "modules" ? <SaasOffersTab orgId={account.id} modules={account.modules} /> : null}
       {tab === "journal" ? <JournalTab detail={detail} name={account.name} /> : null}
 
-      {panel === "invite" ? <InvitePanel orgId={account.id} courses={detail.catalogue} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
-      {panel === "course" ? <AssignPanel orgId={account.id} courses={detail.catalogue} people={detail.people} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "invite" ? <InvitePanel orgId={account.id} courses={detail.lmsCourses} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
+      {panel === "course" ? <AssignPanel orgId={account.id} courses={detail.lmsCourses} people={detail.people} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "badge" ? <BadgePanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "import" ? <ImportPanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "space" ? <SpaceDialog orgId={account.id} orgName={account.name} onClose={() => setPanel(null)} /> : null}
@@ -421,7 +421,7 @@ function Overview({
             Assigner aux collabs ou mettre à disposition du dashboard entreprise.
           </p>
           <p className="mt-3 text-xs text-[#8A93AE]">
-            {detail.courses.length} formation(s) liée(s) · {detail.catalogue.length} au catalogue
+            {detail.courses.length} formation(s) liée(s) · {detail.lmsCourses.length} LMS disponible(s)
           </p>
           <button
             type="button"
@@ -715,7 +715,7 @@ async function memberAction(
 function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void }) {
   const [filter, setFilter] = useState("running");
   const assigned = detail.courses;
-  const rows = filter === "catalog" ? detail.catalogue : assigned.filter((course) => {
+  const rows = filter === "lms" ? detail.lmsCourses : assigned.filter((course) => {
     if (filter === "upcoming") return course.status === "draft";
     if (filter === "done") return course.status === "archived" || course.status === "completed";
     return course.status !== "draft" && course.status !== "archived" && course.status !== "completed";
@@ -727,15 +727,15 @@ function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void
           { id: "running", label: "En cours", count: assigned.filter((course) => course.status !== "draft").length },
           { id: "upcoming", label: "À venir", count: assigned.filter((course) => course.status === "draft").length },
           { id: "done", label: "Terminées", count: assigned.filter((course) => course.status === "archived" || course.status === "completed").length },
-          { id: "catalog", label: "Catalogue disponible", count: detail.catalogue.length },
+          { id: "lms", label: "LMS Byound", count: detail.lmsCourses.length },
         ]} />
-        {detail.catalogue.length === 0 ? (
-          <span className="ml-auto"><DisabledTip label="Assigner une formation" reason="Aucune formation disponible pour ce compte" /></span>
+        {detail.lmsCourses.length === 0 ? (
+          <span className="ml-auto"><DisabledTip label="Assigner une formation" reason="Aucune formation LMS Byound disponible" /></span>
         ) : (
           <button type="button" className="ml-auto rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white" onClick={() => onAssign()}>Assigner une formation</button>
         )}
       </div>
-      {rows.length === 0 ? <EmptyState title={filter === "catalog" ? "Aucune formation disponible à assigner." : "Aucune formation assignée à ce compte."} action={detail.catalogue.length ? <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onAssign}>Assigner une formation</button> : undefined} /> : (
+      {rows.length === 0 ? <EmptyState title={filter === "lms" ? "Aucune formation LMS disponible à assigner." : "Aucune formation assignée à ce compte."} action={detail.lmsCourses.length ? <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onAssign}>Assigner une formation</button> : undefined} /> : (
         <div className="grid gap-4 md:grid-cols-2">
           {rows.map((course) => {
             const enrolled = "enrolled" in course ? course.enrolled : 0;
@@ -748,7 +748,7 @@ function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void
                     <span className="rounded-full bg-[#1A2340] px-2 py-1">{course.status === "draft" ? "À venir" : course.status === "archived" || course.status === "completed" ? "Terminée" : "En cours"}</span>
                     {course.format ? <span className="rounded-full bg-[#1A2340] px-2 py-1">{course.format}</span> : null}
                   </div>
-                  {filter !== "catalog" ? (
+                  {filter !== "lms" ? (
                     <CourseMenu orgId={detail.account?.id} courseId={course.id} onAssign={onAssign} />
                   ) : null}
                 </div>
@@ -1169,7 +1169,7 @@ function Remind({ id }: { id: string }) {
   }}>{label}</button>;
 }
 
-function InvitePanel({ orgId, courses, onClose, onDone }: { orgId: string; courses: Detail["catalogue"]; onClose: () => void; onDone: (message: string) => void }) {
+function InvitePanel({ orgId, courses, onClose, onDone }: { orgId: string; courses: Detail["lmsCourses"]; onClose: () => void; onDone: (message: string) => void }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -1189,14 +1189,14 @@ function InvitePanel({ orgId, courses, onClose, onDone }: { orgId: string; cours
         <Field label="Prénom"><input required value={firstName} onChange={(event) => setFirstName(event.target.value)} className={fieldClass} /></Field>
         <Field label="Nom"><input required value={lastName} onChange={(event) => setLastName(event.target.value)} className={fieldClass} /></Field>
         <Field label="Rôle"><select value={role} onChange={(event) => setRole(event.target.value)} className={fieldClass}><option value="learner">Collaborateur</option><option value="admin">Administrateur</option><option value="tutor">Tuteur</option></select></Field>
-        <Field label="Formation à assigner"><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}><option value="">Aucune</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></Field>
+        <Field label="Formation LMS à assigner"><select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={fieldClass}><option value="">Aucune</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></Field>
         <button type="submit" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Envoyer l'invitation</button>
       </form>
     </SidePanel>
   );
 }
 
-function AssignPanel({ orgId, courses, people, onClose, onDone }: { orgId: string; courses: Detail["catalogue"]; people: Detail["people"]; onClose: () => void; onDone: (message: string) => void }) {
+function AssignPanel({ orgId, courses, people, onClose, onDone }: { orgId: string; courses: Detail["lmsCourses"]; people: Detail["people"]; onClose: () => void; onDone: (message: string) => void }) {
   const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
   const [selected, setSelected] = useState<string[]>([]);
   const [mode, setMode] = useState<"members" | "company">("members");

@@ -236,13 +236,13 @@ export async function loadAccountDetail(orgId: string) {
       note: null,
       documents: [],
       courses: [],
-      catalogue: [],
+      lmsCourses: [],
       badges: [],
       assertions: [],
     };
   }
 
-  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, catalog, staffAdmins] = await Promise.all([
+  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, lmsPool, staffAdmins, lmsGrants] = await Promise.all([
     db.from("org_memberships").select("user_id, role, created_at").eq("org_id", orgId),
     db.from("employees").select("id, first_name, last_name, email, job_title, status, created_at").eq("company_id", orgId),
     db.from("org_activity").select("id, actor_type, action, payload, created_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(40),
@@ -255,12 +255,19 @@ export async function loadAccountDetail(orgId: string) {
     db.from("org_notes").select("id, body, updated_at").eq("org_id", orgId).order("updated_at", { ascending: false }).limit(1),
     db.from("org_billing_documents").select("id, doc_type, number, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type, opco_ht_cents").eq("org_id", orgId).order("issued_at", { ascending: false }),
     db.from("courses").select("id, title, status, cover_image, delivery_format").eq("org_id", orgId).limit(40),
-    db.from("courses").select("id, title, status, cover_image, delivery_format").in("status", ["published", "active"]).limit(40),
+    // Formations LMS Byound (publisher=byound) — distinctes des offres catalogue commercial
+    db
+      .from("courses")
+      .select("id, title, status, cover_image, delivery_format, builder_snapshot")
+      .in("status", ["published", "active", "draft"])
+      .order("updated_at", { ascending: false })
+      .limit(400),
     db
       .from("account_managers")
       .select("id, first_name, last_name, email, phone, photo_url, is_active")
       .eq("is_active", true)
       .order("last_name", { ascending: true }),
+    db.from("organization_lms_courses").select("course_id, granted_at").eq("organization_id", orgId).limit(200),
   ]);
 
   const userIds = ((memberships.data ?? []) as Array<{ user_id: string }>).map((item) => item.user_id);
@@ -345,6 +352,11 @@ export async function loadAccountDetail(orgId: string) {
       lastSeenAt: null as string | null,
     }));
 
+  type LmsPoolRow = FormationRow & {
+    builder_snapshot?: { general?: { publisher?: string; title?: string; cover_image?: string; heroImage?: string } } | null;
+  };
+  const isByoundLms = (course: LmsPoolRow) => course.builder_snapshot?.general?.publisher === "byound";
+
   const courseById = new Map<string, FormationRow>();
   for (const course of (orgCourses.error ? [] : orgCourses.data ?? []) as FormationRow[]) courseById.set(course.id, course);
   const missingIds = [...new Set(enrollmentRows.map((row) => row.course_id))].filter((id) => !courseById.has(id));
@@ -352,8 +364,21 @@ export async function loadAccountDetail(orgId: string) {
     const extra = await db.from("courses").select("id, title, status, cover_image, delivery_format").in("id", missingIds);
     for (const course of (extra.data ?? []) as FormationRow[]) courseById.set(course.id, course);
   }
+  const grantIds = ((lmsGrants.error ? [] : lmsGrants.data) ?? [])
+    .map((row) => String((row as { course_id?: string }).course_id ?? ""))
+    .filter((id) => id && !courseById.has(id));
+  if (grantIds.length) {
+    const granted = await db.from("courses").select("id, title, status, cover_image, delivery_format").in("id", grantIds);
+    for (const course of (granted.data ?? []) as FormationRow[]) courseById.set(course.id, course);
+  }
   const enrolledByCourse = new Map<string, number>();
   for (const row of enrollmentRows) enrolledByCourse.set(row.course_id, (enrolledByCourse.get(row.course_id) ?? 0) + 1);
+  const ownedIds = new Set(((orgCourses.data ?? []) as FormationRow[]).map((item) => item.id));
+  const grantedIdSet = new Set(
+    ((lmsGrants.error ? [] : lmsGrants.data) ?? [])
+      .map((row) => String((row as { course_id?: string }).course_id ?? ""))
+      .filter(Boolean),
+  );
   const formations = [...courseById.values()].map((course) => ({
     id: course.id,
     title: course.title || "Formation",
@@ -363,19 +388,24 @@ export async function loadAccountDetail(orgId: string) {
     duration: null,
     enrolled: enrolledByCourse.get(course.id) ?? 0,
     badges: 0,
-    owned: ((orgCourses.data ?? []) as FormationRow[]).some((item) => item.id === course.id),
+    owned: ownedIds.has(course.id),
+    lmsGranted: grantedIdSet.has(course.id),
   }));
   const assignedIds = new Set(formations.map((course) => course.id));
-  const catalogue = ((catalog.error ? [] : catalog.data) ?? [])
-    .filter((course) => !assignedIds.has(course.id))
-    .map((course) => ({
-      id: course.id as string,
-      title: (course.title as string) || "Formation",
-      status: (course.status as string) || "published",
-      cover: (course.cover_image as string | null) || null,
-      format: (course.delivery_format as string | null) || null,
-      duration: null,
-    }));
+  const lmsPoolRows = ((lmsPool.error ? [] : lmsPool.data) ?? []) as LmsPoolRow[];
+  const lmsCourses = lmsPoolRows
+    .filter((course) => isByoundLms(course) && !assignedIds.has(course.id))
+    .map((course) => {
+      const general = course.builder_snapshot?.general;
+      return {
+        id: course.id,
+        title: general?.title?.trim() || course.title || "Formation",
+        status: course.status || "published",
+        cover: general?.cover_image || general?.heroImage || course.cover_image || null,
+        format: course.delivery_format || null,
+        duration: null,
+      };
+    });
 
   const badgeCards = ((orgBadgeQuery.error ? [] : orgBadgeQuery.data) ?? []).map((badge) => {
     const criteria = Array.isArray(badge.criteria_items) ? badge.criteria_items.length : 0;
@@ -502,7 +532,7 @@ export async function loadAccountDetail(orgId: string) {
     note: notes.error ? null : (notes.data?.[0] ?? null),
     documents: documents.error ? [] : documents.data ?? [],
     courses: formations,
-    catalogue,
+    lmsCourses,
     badges: badgeCards,
     assertions: assertionRows
       .filter((row) => !row.revoked_at)

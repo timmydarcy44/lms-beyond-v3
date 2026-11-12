@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Pencil, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FileText, Loader2, Pencil, Sparkles } from "lucide-react";
 import {
   createId,
   type TrainingProgramSection,
   type TrainingProgramSubchapterKind,
 } from "@/lib/training-courses/cms-types";
+import { AccountFormationRequestWizard } from "@/components/control/account-formation-request-wizard";
 import {
   type SurMesureCourse,
   splitPrerequisites,
   surmesureEditHref,
 } from "@/lib/training-courses/surmesure-ui";
+import { buildSessionPlan } from "@/lib/training-courses/surmesure-planning";
+
+type WizardPerson = {
+  userId: string;
+  name: string;
+  email: string;
+  invited?: boolean;
+};
+
+type OrgAddress = {
+  addressLine: string | null;
+  addressZip: string | null;
+  addressCity: string | null;
+  siret?: string | null;
+};
 
 function kindLabel(kind?: TrainingProgramSubchapterKind) {
   if (kind === "quiz") return "Quiz";
@@ -178,22 +195,40 @@ export function AccountSurMesurePresentation({
   organizationId,
   organizationName,
   initialCourse,
+  people = [],
+  contactEmail = null,
+  contactName = null,
+  orgAddress = null,
 }: {
   organizationId: string;
   organizationName: string;
   initialCourse: SurMesureCourse;
+  people?: WizardPerson[];
+  contactEmail?: string | null;
+  contactName?: string | null;
+  orgAddress?: OrgAddress | null;
 }) {
+  const router = useRouter();
   const [course, setCourse] = useState(initialCourse);
   const [structure, setStructure] = useState<TrainingProgramSection[]>(
     initialCourse.program_structure ?? [],
   );
   const [generating, setGenerating] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const prerequisites = splitPrerequisites(course.prerequisites).filter(Boolean);
   const sectionsCount = structure.length;
   const chaptersCount = structure.reduce((n, s) => n + s.chapters.length, 0);
+  const subchaptersCount = structure.reduce(
+    (n, s) => n + s.chapters.reduce((m, c) => m + c.subchapters.length, 0),
+    0,
+  );
+  const sessionPlan = useMemo(
+    () => buildSessionPlan(structure, course.duration),
+    [structure, course.duration],
+  );
 
   async function persistStructure(next: TrainingProgramSection[]) {
     setStructure(next);
@@ -262,6 +297,7 @@ export function AccountSurMesurePresentation({
             course.domain,
             sectionsCount ? `${sectionsCount} sections` : null,
             chaptersCount ? `${chaptersCount} chapitres` : null,
+            subchaptersCount ? `${subchaptersCount} sous-chapitres` : null,
           ]
             .filter(Boolean)
             .map((item) => (
@@ -271,6 +307,13 @@ export function AccountSurMesurePresentation({
             ))}
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setQuoteOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+          >
+            <FileText className="h-4 w-4" /> Créer un devis
+          </button>
           <Link
             href={surmesureEditHref(organizationId, course.id)}
             className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
@@ -287,6 +330,10 @@ export function AccountSurMesurePresentation({
             {structure.length ? "Régénérer la structure" : "Créer avec Byound AI"}
           </button>
         </div>
+        <p className="mt-3 max-w-xl text-xs text-[#8A93AE]">
+          Le devis Sur-mesure n’est pas figé ici : le tarif dépend des formateurs selon les
+          compétences à animer. Le CTA ouvre une demande de dossier à finaliser ensuite.
+        </p>
       </header>
 
       {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}
@@ -346,10 +393,76 @@ export function AccountSurMesurePresentation({
         </section>
       )}
 
+      {structure.length > 0 ? (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-extrabold">Planning pédagogique</h2>
+            <p className="mt-1 text-sm text-[#8A93AE]">
+              Répartition automatique des sections sur Matinée / Après-midi selon la durée (
+              {course.duration || "—"}).
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {sessionPlan.map((slot) => (
+              <article
+                key={slot.label}
+                className="rounded-[24px] border border-[#26304F] bg-[#111831] p-4"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#C4B8FF]">
+                  {slot.label}
+                </p>
+                {slot.sections.length === 0 ? (
+                  <p className="mt-2 text-sm text-[#8A93AE]">Aucune section assignée</p>
+                ) : (
+                  <ul className="mt-3 space-y-2">
+                    {slot.sections.map((section, localIdx) => {
+                      const globalIndex = slot.sectionIndexes[localIdx] ?? localIdx;
+                      return (
+                        <li
+                          key={section.id}
+                          className="rounded-xl border border-[#1A2340] bg-[#0B1122] px-3 py-2"
+                        >
+                          <p className="text-xs text-[#8A93AE]">Section {globalIndex + 1}</p>
+                          <p className="text-sm font-semibold text-white">{section.title}</p>
+                          <p className="mt-0.5 text-[11px] text-[#8A93AE]">
+                            {section.chapters.length} chapitre(s) ·{" "}
+                            {section.chapters.reduce((n, c) => n + c.subchapters.length, 0)}{" "}
+                            sous-chapitre(s)
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="space-y-3">
-        <h2 className="text-lg font-extrabold">Programme</h2>
+        <h2 className="text-lg font-extrabold">Programme détaillé</h2>
         <StructureOutline sections={structure} onChange={(next) => void persistStructure(next)} />
       </section>
+
+      {quoteOpen ? (
+        <AccountFormationRequestWizard
+          orgId={organizationId}
+          orgName={organizationName}
+          contactEmail={contactEmail}
+          contactName={contactName}
+          orgAddress={orgAddress}
+          people={people}
+          initialCourseId={course.id}
+          quoteMode="surmesure"
+          onClose={() => setQuoteOpen(false)}
+          onDone={(message) => {
+            setNotice(message);
+            setQuoteOpen(false);
+            router.push(`/super/organisations/${organizationId}?tab=dossiers`);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

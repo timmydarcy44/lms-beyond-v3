@@ -40,6 +40,13 @@ type Props = {
   contactName?: string | null;
   orgAddress?: OrgAddress | null;
   people: Person[];
+  /** Pré-sélectionne une formation (ex. depuis la fiche Sur-mesure). */
+  initialCourseId?: string | null;
+  /**
+   * catalogue = devis envoyé tout de suite.
+   * surmesure = dossier créé, devis finalisé plus tard (tarif formateur).
+   */
+  quoteMode?: "catalogue" | "surmesure";
   onClose: () => void;
   onDone: (message: string, dossierId?: string) => void;
   onAddressSaved?: (address: OrgAddress) => void;
@@ -68,16 +75,20 @@ export function AccountFormationRequestWizard({
   contactName,
   orgAddress: orgAddressProp,
   people,
+  initialCourseId = null,
+  quoteMode = "catalogue",
   onClose,
   onDone,
   onAddressSaved,
 }: Props) {
-  const [step, setStep] = useState<Step>(1);
+  const isSurMesureQuote = quoteMode === "surmesure";
+  const [step, setStep] = useState<Step>(initialCourseId ? 2 : 1);
   const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState<TrainingCourse[]>([]);
   const [customCourses, setCustomCourses] = useState<TrainingCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
-  const [courseId, setCourseId] = useState("");
+  const [courseId, setCourseId] = useState(initialCourseId ?? "");
+  const [provisionalHt, setProvisionalHt] = useState("");
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [deferParticipants, setDeferParticipants] = useState(false);
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -167,7 +178,9 @@ export function AccountFormationRequestWizard({
         if (!cancelled) {
           setCourses(list);
           setCustomCourses(custom);
-          if (!courseId) {
+          if (initialCourseId) {
+            setCourseId(initialCourseId);
+          } else if (!courseId) {
             const first = list[0] ?? custom[0];
             if (first) setCourseId(first.id);
           }
@@ -191,6 +204,14 @@ export function AccountFormationRequestWizard({
 
   const amounts = useMemo(() => {
     const qty = deferParticipants ? 1 : Math.max(1, selectedPeople.length || 1);
+    // Sur-mesure : montant provisoire optionnel (tarif formateur à finaliser).
+    if (isSurMesureQuote) {
+      const provisional = Number(String(provisionalHt).replace(",", "."));
+      const unitEuros = Number.isFinite(provisional) && provisional > 0 ? provisional : 0;
+      const ht = Math.round(unitEuros * 100);
+      const tva = Math.round(ht * 0.2);
+      return { qty, unit: ht, unitEuros, ht, tva, ttc: ht + tva, provisional: true as const };
+    }
     // Intra = forfait session ; inter = × participants
     const intra = selectedCourse?.intra_price;
     const inter = selectedCourse?.inter_price;
@@ -206,8 +227,8 @@ export function AccountFormationRequestWizard({
         ? unit
         : unit * qty;
     const tva = Math.round(ht * 0.2);
-    return { qty, unit, unitEuros, ht, tva, ttc: ht + tva };
-  }, [selectedCourse, selectedPeople.length, deferParticipants]);
+    return { qty, unit, unitEuros, ht, tva, ttc: ht + tva, provisional: false as const };
+  }, [selectedCourse, selectedPeople.length, deferParticipants, isSurMesureQuote, provisionalHt]);
 
   function slotTimes(dayPart: "matin" | "apres_midi", slotDate: string) {
     const start = dayPart === "matin" ? morningStart : afternoonStart;
@@ -317,7 +338,7 @@ export function AccountFormationRequestWizard({
       setError("E-mail de devis requis.");
       return;
     }
-    if (amounts.ht <= 0) {
+    if (!isSurMesureQuote && amounts.ht <= 0) {
       setError(
         "Montant catalogue à 0 € — renseignez le prix de la formation (intra) avant d'envoyer le devis.",
       );
@@ -359,10 +380,18 @@ export function AccountFormationRequestWizard({
           modality_presence: modality,
           funding_type: fundingType,
           notes: [
-            `Demande créée depuis le compte client · ${amounts.qty} participant(s)`,
+            isSurMesureQuote
+              ? "Demande Sur-mesure · devis à finaliser selon formateur(s) / compétences"
+              : `Demande créée depuis le compte client · ${amounts.qty} participant(s)`,
             `Financement: ${fundingType === "opco" ? "OPCO" : "fonds propres"}`,
             `Horaires: ${morningStart}-${morningEnd} / ${afternoonStart}-${afternoonEnd}`,
             resolvedLocation ? `Lieu: ${resolvedLocation}` : null,
+            isSurMesureQuote && amounts.ht > 0
+              ? `Montant provisoire saisi: ${(amounts.ht / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })} HT`
+              : null,
+            isSurMesureQuote && amounts.ht <= 0
+              ? "Montant HT non figé (dépend du formateur retenu)"
+              : null,
           ]
             .filter(Boolean)
             .join("\n"),
@@ -424,36 +453,42 @@ export function AccountFormationRequestWizard({
         }
       }
 
-      const devisRes = await fetch(
-        `/api/super-admin/crm/formation-dossiers/${dossierId}/validate`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "devis" }),
-        },
-      );
-      if (!devisRes.ok) {
-        const sendRes = await fetch(
-          `/api/super-admin/crm/formation-dossiers/${dossierId}/documents/send`,
+      if (!isSurMesureQuote) {
+        const devisRes = await fetch(
+          `/api/super-admin/crm/formation-dossiers/${dossierId}/validate`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ kind: "devis", to: devisEmail.trim().toLowerCase() }),
+            body: JSON.stringify({ action: "devis" }),
           },
         );
-        if (!sendRes.ok) {
-          const j = (await sendRes.json()) as { error?: string };
-          throw new Error(
-            j.error ||
-              "Dossier créé mais envoi du devis impossible — renvoyez depuis le dossier.",
+        if (!devisRes.ok) {
+          const sendRes = await fetch(
+            `/api/super-admin/crm/formation-dossiers/${dossierId}/documents/send`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ kind: "devis", to: devisEmail.trim().toLowerCase() }),
+            },
           );
+          if (!sendRes.ok) {
+            const j = (await sendRes.json()) as { error?: string };
+            throw new Error(
+              j.error ||
+                "Dossier créé mais envoi du devis impossible — renvoyez depuis le dossier.",
+            );
+          }
         }
+        onDone(
+          `Demande créée · devis envoyé à ${devisEmail.trim().toLowerCase()}.`,
+          dossierId,
+        );
+      } else {
+        onDone(
+          "Dossier Sur-mesure créé · devis à finaliser selon le formateur retenu.",
+          dossierId,
+        );
       }
-
-      onDone(
-        `Demande créée · devis envoyé à ${devisEmail.trim().toLowerCase()}.`,
-        dossierId,
-      );
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Création impossible");
@@ -463,19 +498,28 @@ export function AccountFormationRequestWizard({
   }
 
   return (
-    <SidePanel title="Nouvelle demande formation" onClose={onClose}>
+    <SidePanel
+      title={isSurMesureQuote ? "Créer un devis Sur-mesure" : "Nouvelle demande formation"}
+      onClose={onClose}
+    >
       <div className="mb-4 flex gap-1 text-xs font-semibold text-[#8A93AE]">
-        {[1, 2, 3, 4].map((n) => (
+        {(isSurMesureQuote && initialCourseId ? [2, 3, 4] : [1, 2, 3, 4]).map((n) => (
           <span
             key={n}
             className={`rounded-full px-2.5 py-1 ${
               step === n ? "bg-[#6E5BFF] text-white" : "bg-[#1A2340]"
             }`}
           >
-            {n === 1 ? "Formation" : n === 2 ? "Participants" : n === 3 ? "Session" : "Envoi"}
+            {n === 1 ? "Formation" : n === 2 ? "Participants" : n === 3 ? "Session" : "Devis"}
           </span>
         ))}
       </div>
+      {isSurMesureQuote ? (
+        <p className="mb-3 rounded-2xl border border-[#3A3118] bg-[#241C10] px-3 py-2 text-xs text-[#F2CF6B]">
+          Le devis définitif dépend des formateurs (compétences / tarif). On crée le dossier
+          maintenant ; le montant sera figé ensuite.
+        </p>
+      ) : null}
 
       {error ? <p className="mb-3 text-sm text-[#FF8A9B]">{error}</p> : null}
 
@@ -599,7 +643,9 @@ export function AccountFormationRequestWizard({
             <button
               type="button"
               className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
-              onClick={() => setStep(1)}
+              onClick={() =>
+                isSurMesureQuote && initialCourseId ? onClose() : setStep(1)
+              }
             >
               Retour
             </button>
@@ -864,14 +910,21 @@ export function AccountFormationRequestWizard({
                 ? "Participants à compléter"
                 : `${selectedPeople.length} participant(s)`}{" "}
               ·{" "}
-              {(amounts.ht / 100).toLocaleString("fr-FR", {
-                style: "currency",
-                currency: "EUR",
-              })}{" "}
-              HT catalogue
+              {isSurMesureQuote
+                ? amounts.ht > 0
+                  ? `${(amounts.ht / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })} HT provisoire`
+                  : "Montant à finaliser (formateur)"
+                : `${(amounts.ht / 100).toLocaleString("fr-FR", {
+                    style: "currency",
+                    currency: "EUR",
+                  })} HT catalogue`}
             </p>
             <ul className="mt-3 space-y-1 text-[11px] text-[#8A93AE]">
-              <li>✓ Formation + montant catalogue</li>
+              <li>
+                {isSurMesureQuote
+                  ? "✓ Formation Sur-mesure (devis non envoyé tout de suite)"
+                  : "✓ Formation + montant catalogue"}
+              </li>
               <li>✓ Dates + horaires + lieu</li>
               <li>✓ Adresse + SIRET bénéficiaire</li>
               <li>
@@ -881,6 +934,17 @@ export function AccountFormationRequestWizard({
               </li>
             </ul>
           </div>
+          {isSurMesureQuote ? (
+            <Field label="Montant provisoire HT (€) — optionnel">
+              <input
+                className={fieldClass}
+                inputMode="decimal"
+                value={provisionalHt}
+                onChange={(e) => setProvisionalHt(e.target.value)}
+                placeholder="Laisser vide si dépend du formateur"
+              />
+            </Field>
+          ) : null}
           <Field label="Destinataire du devis (prénom et nom)">
             <input
               value={devisName}
@@ -914,7 +978,7 @@ export function AccountFormationRequestWizard({
               onClick={() => void submit()}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Créer et envoyer le devis
+              {isSurMesureQuote ? "Créer le dossier devis" : "Créer et envoyer le devis"}
             </button>
           </div>
         </div>

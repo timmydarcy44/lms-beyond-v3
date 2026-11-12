@@ -8,46 +8,53 @@ import {
   formatOrgContextForPrompt,
   loadSurMesureOrgContext,
 } from "@/lib/training-courses/surmesure-org-context";
+import {
+  densityTargetsForDuration,
+  describeDensityForPrompt,
+  parseFormationDuration,
+} from "@/lib/training-courses/surmesure-planning";
 
 export const dynamic = "force-dynamic";
 
-const PROGRAM_SCHEMA = {
-  type: "object",
-  properties: {
-    program: {
-      type: "array",
-      minItems: 2,
-      maxItems: 6,
-      items: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          chapters: {
-            type: "array",
-            minItems: 2,
-            maxItems: 8,
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                subchapters: {
-                  type: "array",
-                  minItems: 2,
-                  maxItems: 8,
-                  items: { type: "string" },
+function programSchema(targets: ReturnType<typeof densityTargetsForDuration>) {
+  return {
+    type: "object",
+    properties: {
+      program: {
+        type: "array",
+        minItems: targets.minSections,
+        maxItems: targets.maxSections,
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            chapters: {
+              type: "array",
+              minItems: targets.minChaptersPerSection,
+              maxItems: 8,
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  subchapters: {
+                    type: "array",
+                    minItems: targets.minSubchaptersPerChapter,
+                    maxItems: 10,
+                    items: { type: "string" },
+                  },
                 },
+                required: ["title", "subchapters"],
               },
-              required: ["title", "subchapters"],
             },
           },
+          required: ["title", "description", "chapters"],
         },
-        required: ["title", "description", "chapters"],
       },
     },
-  },
-  required: ["program"],
-};
+    required: ["program"],
+  };
+}
 
 type Ctx = { params: Promise<{ id: string; courseId: string }> };
 
@@ -77,22 +84,28 @@ export async function POST(request: NextRequest, context: Ctx) {
   const brief = String(body.brief ?? "").trim();
   const orgCtx = await loadSurMesureOrgContext(service, orgId);
 
+  const duration = parseFormationDuration(course.duration);
+  const targets = densityTargetsForDuration(duration);
+  const densityRules = describeDensityForPrompt(duration, targets);
+
   const systemPrompt =
-    "Tu es architecte pédagogique senior pour Byound Business (France). Réponds UNIQUEMENT en JSON valide, en français. " +
+    "Tu es architecte pédagogique senior pour Byound Business (France), niveau CEGOS/Orsys. " +
+    "Réponds UNIQUEMENT en JSON valide, en français. " +
     "program = arborescence EXACTE : SECTION (title + description) → CHAPITRES (title) → SOUS-CHAPITRES (tableau de strings titres). " +
     "PAS de contenu LMS (pas de texte long, pas de slides). Titres concrets, progressifs, opérationnels. " +
-    "Chaque sous-chapitre = une activité ou compétence mesurable. " +
-    "Adapte le volume à la durée (1 jour ≈ 3 sections ; 2 jours ≈ 4 sections ; 3 jours ≈ 5 sections). " +
+    "Chaque sous-chapitre = une activité, cas pratique, outil ou compétence mesurable. " +
     "Ancre les titres dans le secteur d'activité du client (vocabulaire métier). " +
-    "Inclure naturellement des points d'évaluation (quiz) et d'ancrage (entretien) via le libellé des sous-chapitres si pertinent.";
+    "Inclure naturellement des points d'évaluation (quiz) et d'ancrage (entretien) via le libellé des sous-chapitres. " +
+    "IMPORTANT densite : un programme trop léger est REFUSÉ. " +
+    densityRules;
 
-  const userPrompt = `Génère le programme détaillé (Section → Chapitre → Sous-chapitre) pour cette formation Sur-mesure Byound, co-construite avec le client.
+  const userPrompt = `Génère un programme DÉTAILLÉ et DENSE (Section → Chapitre → Sous-chapitre) pour cette formation Sur-mesure Byound.
 
 Contexte entreprise :
 ${formatOrgContextForPrompt(orgCtx)}
 
 Titre: ${course.title}
-Durée: ${course.duration || "2 jours"}
+Durée: ${course.duration || duration.raw} (≈ ${duration.hours} h / ${duration.days} jour(s) / ${duration.halfDays} demi-journées)
 Niveau: ${course.level || "Intermédiaire"}
 Domaine: ${course.domain || "—"}
 Public: ${Array.isArray(course.audience) ? course.audience.join(", ") : "—"}
@@ -102,9 +115,17 @@ Besoins spécifiques: ${course.specific_needs || "—"}
 Description: ${course.short_description || course.long_description || "—"}
 ${brief ? `\nBrief commercial / client :\n${brief}` : ""}
 
-Retourne { "program": [ ... ] }. Densité adaptée à la durée. PAS de contenu de chapitre.`;
+Contraintes de densité :
+${densityRules}
 
-  const result = await generateJSON<Record<string, unknown>>(userPrompt, PROGRAM_SCHEMA, systemPrompt);
+Le programme doit pouvoir se découper en Matinée 1 / Après-midi 1 / Matinée 2 / Après-midi 2… selon la durée.
+Retourne { "program": [ ... ] }. PAS de contenu de chapitre.`;
+
+  const result = await generateJSON<Record<string, unknown>>(
+    userPrompt,
+    programSchema(targets),
+    systemPrompt,
+  );
   if (!result) {
     return NextResponse.json({ error: "IA indisponible — vérifiez OPENAI_API_KEY" }, { status: 503 });
   }
@@ -116,12 +137,28 @@ Retourne { "program": [ ... ] }. Densité adaptée à la durée. PAS de contenu 
     0,
   );
 
-  if (program_structure.length < 2 || chapterCount < 4 || subCount < 8) {
+  // Seuil un peu souple (90 %) pour éviter les faux négatifs IA, mais bien au-dessus de l'ancien 2/4/8.
+  const minSectionsOk = Math.max(3, Math.floor(targets.minSections * 0.9));
+  const minChaptersOk = Math.max(6, Math.floor(targets.minChaptersTotal * 0.85));
+  const minSubsOk = Math.max(18, Math.floor(targets.minSubchaptersTotal * 0.8));
+
+  if (
+    program_structure.length < minSectionsOk ||
+    chapterCount < minChaptersOk ||
+    subCount < minSubsOk
+  ) {
     return NextResponse.json(
       {
         error:
-          "L'IA n'a pas produit un programme assez dense. Enrichissez le brief Qualiopi et relancez.",
-        debug: { sections: program_structure.length, chapters: chapterCount, subchapters: subCount },
+          `Programme trop léger pour ${duration.hours} h (${program_structure.length} sections / ${chapterCount} chapitres / ${subCount} sous-chapitres). ` +
+          `Attendu ≈ ${targets.minSections}+ sections, ${targets.minChaptersTotal}+ chapitres, ${targets.minSubchaptersTotal}+ sous-chapitres. Relancez.`,
+        debug: {
+          sections: program_structure.length,
+          chapters: chapterCount,
+          subchapters: subCount,
+          targets,
+          duration,
+        },
       },
       { status: 422 },
     );
@@ -141,5 +178,5 @@ Retourne { "program": [ ... ] }. Densité adaptée à la durée. PAS de contenu 
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
-  return NextResponse.json({ course: updated, program_structure });
+  return NextResponse.json({ course: updated, program_structure, duration, targets });
 }

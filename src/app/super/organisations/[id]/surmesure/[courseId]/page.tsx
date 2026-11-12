@@ -33,12 +33,28 @@ export default async function SurMesureDetailPage({
 
   if (error || !data) notFound();
 
+  const admin = detail.members.find((m) => m.role === "admin" && m.email.includes("@"));
+
   return (
     <SurMesureShell orgId={id} orgName={detail.account.name} crumb={data.title}>
       <AccountSurMesurePresentation
         organizationId={id}
         organizationName={detail.account.name}
         initialCourse={data as SurMesureCourse}
+        people={detail.people.map((p) => ({
+          userId: p.userId,
+          name: p.name,
+          email: p.email,
+          invited: p.invited,
+        }))}
+        contactEmail={admin?.email ?? null}
+        contactName={admin?.name ?? null}
+        orgAddress={{
+          addressLine: detail.account.addressLine,
+          addressZip: detail.account.addressZip,
+          addressCity: detail.account.addressCity,
+          siret: detail.account.siret,
+        }}
       />
     </SurMesureShell>
   );

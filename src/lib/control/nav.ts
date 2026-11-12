@@ -47,6 +47,20 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
             !pathname.startsWith("/super/crm/pipeline/prescripteurs")),
       },
       {
+        id: "demandes",
+        label: "Demandes entrantes",
+        href: "/super/crm/demandes",
+        match: under("/super/crm/demandes"),
+        countKey: "incomingDemandes",
+        countTone: "queue",
+      },
+      {
+        id: "programmation",
+        label: "Programmation",
+        href: "/super/crm/programmation",
+        match: under("/super/crm/programmation"),
+      },
+      {
         id: "comptes",
         label: "Comptes clients",
         href: "/super/organisations",
@@ -60,12 +74,19 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     dot: "#5EDCC3",
     items: [
       {
+        id: "cfa-demandes",
+        label: "Demandes entrantes",
+        href: "/super/crm/cfa/demandes",
+        countKey: "admissionsReview",
+        countTone: "queue",
+        match: under("/super/crm/cfa/demandes"),
+      },
+      {
         id: "admissions",
         label: "Admissions",
         href: "/super/crm/cfa",
-        countKey: "admissionsReview",
-        countTone: "queue",
-        match: (pathname) => pathname === "/super/crm/cfa" || pathname.startsWith("/super/crm/cfa/apprenants"),
+        match: (pathname) =>
+          pathname === "/super/crm/cfa" || pathname.startsWith("/super/crm/cfa/apprenants"),
       },
       {
         id: "accueil",
@@ -141,14 +162,6 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     dot: "#9AA3BD",
     items: [
       {
-        id: "demandes",
-        label: "Demandes entrantes",
-        href: "/super/crm/demandes",
-        match: under("/super/crm/demandes"),
-        countKey: "incomingDemandes",
-        countTone: "queue",
-      },
-      {
         id: "gestionnaires",
         label: "Gestionnaires de compte",
         href: "/super/gestionnaires",
@@ -171,12 +184,6 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         label: "Particuliers",
         href: "/super/utilisateurs?role=btoc",
         match: (pathname, role) => pathname === "/super/utilisateurs" && role === "btoc",
-      },
-      {
-        id: "programmation",
-        label: "Programmation",
-        href: "/super/crm/programmation",
-        match: under("/super/crm/programmation"),
       },
       { id: "qualiopi", label: "Qualiopi", href: "/super/crm/qualiopi", match: exact("/super/crm/qualiopi") },
       {

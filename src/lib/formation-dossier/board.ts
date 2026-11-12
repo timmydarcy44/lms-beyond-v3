@@ -22,6 +22,24 @@ export type FormationDossierBoardCard = {
   updated_at: string;
 };
 
+/** Enrichissement pour la fiche compte client (onglet Formations). */
+export type AccountDossierCard = FormationDossierBoardCard & {
+  training_course_id: string | null;
+  cover_url: string | null;
+  duration_hours: number | null;
+  modality_presence: string | null;
+  location_label: string | null;
+  participants_count: number | null;
+  contact_email: string | null;
+  contact_name: string | null;
+  last_slot_date: string | null;
+  devis_sent_at: string | null;
+  devis_signed_at: string | null;
+  convention_sent_at: string | null;
+  convention_signed_at: string | null;
+  attendance_complete: boolean | null;
+};
+
 const OVERDUE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export function isBpfIncomplete(row: {

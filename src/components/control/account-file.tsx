@@ -11,6 +11,7 @@ import type { loadAccountDetail } from "@/lib/control/load";
 import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
+import { AccountDossiersTab } from "./account-dossiers-tab";
 import { AccountOverview, accountHeaderMeta, useAccountKpis } from "./account-overview";
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
@@ -304,8 +305,9 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
       {tab === "courses" ? <CoursesTab detail={detail} onAssign={() => setPanel("course")} /> : null}
       {tab === "dossiers" ? (
-        <FormationDossiersTab
+        <AccountDossiersTab
           organizationId={account.id}
+          invoicedHtCents={account.revenue12HtCents}
           onNewRequest={() => setRequestWizardOpen(true)}
         />
       ) : null}
@@ -356,12 +358,14 @@ function isTab(value: string | undefined): value is Tab {
 
 function tabCounts(detail: Detail): Partial<Record<Tab | NavId, number>> {
   const dossiers = detail.dossiers?.total ?? 0;
+  const badges = detail.badges.length || detail.assertions.length;
   return {
     members: detail.people.length,
+    dossiers,
     courses: detail.courses.length,
-    badges: detail.badges.length || detail.assertions.length,
-    formations:
-      dossiers + detail.courses.length + (detail.badges.length || detail.assertions.length),
+    badges,
+    surmesure: 0,
+    formations: dossiers + detail.courses.length + badges,
   };
 }
 
@@ -419,24 +423,37 @@ function TabBar({
         })}
       </div>
       {subItems ? (
-        <div className="flex flex-wrap gap-1">
+        <div
+          className={`inline-flex max-w-full flex-wrap gap-1 overflow-x-auto rounded-2xl border border-[#1A2340] p-1 ${
+            nav === "formations" ? "bg-[#0B1122]" : "bg-[#111831]"
+          }`}
+        >
           {subItems.map((item) => {
             const active = tab === item.id;
             const count = counts[item.id];
+            const formationsStyle = nav === "formations";
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onTabChange(item.id)}
-                className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
-                style={{
-                  background: active ? "#6E5BFF" : "#151C33",
-                  color: active ? "#fff" : "#C9D2E8",
-                  border: active ? "1px solid transparent" : "1px solid #3A4668",
-                }}
+                className="shrink-0 rounded-xl px-3 py-1.5 text-[12px] font-semibold whitespace-nowrap"
+                style={
+                  formationsStyle
+                    ? {
+                        background: active ? "rgba(110,91,255,0.15)" : "transparent",
+                        color: active ? "#C9C2FF" : "#9AA3BD",
+                        boxShadow: active ? "inset 0 0 0 1px rgba(110,91,255,0.45)" : undefined,
+                      }
+                    : {
+                        background: active ? "#6E5BFF" : "#151C33",
+                        color: active ? "#fff" : "#C9D2E8",
+                        border: active ? "1px solid transparent" : "1px solid #3A4668",
+                      }
+                }
               >
                 {item.label}
-                {count != null ? <span className="ml-1.5 opacity-80">{count}</span> : null}
+                {count != null ? <span className="ml-1.5 opacity-70">{count}</span> : null}
               </button>
             );
           })}
@@ -1243,135 +1260,6 @@ function ImportPanel({ orgId, onClose, onDone }: { orgId: string; onClose: () =>
         </form>
       ) : null}
     </SidePanel>
-  );
-}
-
-function FormationDossiersTab({
-  organizationId,
-  onNewRequest,
-}: {
-  organizationId: string;
-  onNewRequest?: () => void;
-}) {
-  const [rows, setRows] = useState<
-    Array<{
-      id: string;
-      course_title: string | null;
-      status: string;
-      amount_ht_cents: number | null;
-      deal_regressed: boolean;
-      pending_confirm_fields: unknown;
-      created_at: string;
-    }>
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [notice, setLocalNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `/api/super-admin/crm/formation-dossiers?organization_id=${encodeURIComponent(organizationId)}`,
-        );
-        const json = (await res.json()) as { dossiers?: typeof rows; error?: string };
-        if (!cancelled) setRows(json.dossiers ?? []);
-      } catch {
-        if (!cancelled) setRows([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [organizationId]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-[#9AA3BD]">
-          Pilotez ici les demandes de formation (devis → convention → session → clôture Qualiopi).
-        </p>
-        <button
-          type="button"
-          disabled={creating}
-          className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
-          onClick={() => {
-            if (onNewRequest) {
-              onNewRequest();
-              return;
-            }
-            void (async () => {
-              setCreating(true);
-              setLocalNotice(null);
-              try {
-                const res = await fetch("/api/super-admin/crm/formation-dossiers", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ organization_id: organizationId, source: "manual" }),
-                });
-                const json = (await res.json()) as { dossier?: { id: string }; error?: string };
-                if (!res.ok) throw new Error(json.error || "Création impossible");
-                setRows((current) => [
-                  {
-                    id: json.dossier!.id,
-                    course_title: null,
-                    status: "qualification",
-                    amount_ht_cents: null,
-                    deal_regressed: false,
-                    pending_confirm_fields: [],
-                    created_at: new Date().toISOString(),
-                  },
-                  ...current,
-                ]);
-                setLocalNotice("Dossier créé en Qualification.");
-              } catch (error) {
-                setLocalNotice(error instanceof Error ? error.message : "Création impossible");
-              } finally {
-                setCreating(false);
-              }
-            })();
-          }}
-        >
-          {creating ? "Création…" : "Nouvelle demande"}
-        </button>
-      </div>
-      {notice ? <p className="text-sm text-[#C4BAFF]">{notice}</p> : null}
-      {loading ? (
-        <EmptyState title="Chargement des dossiers…" />
-      ) : rows.length === 0 ? (
-        <EmptyState title="Aucun dossier formation pour cette entreprise." />
-      ) : (
-        <div className="overflow-hidden rounded-2xl border border-[#262A4A]">
-          <div className="grid grid-cols-[1.4fr_0.8fr_0.7fr_0.6fr] gap-2 border-b border-[#262A4A] bg-[#141731] px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-[#A3A8C7]">
-            <span>Formation</span>
-            <span>Statut</span>
-            <span>Montant HT</span>
-            <span>Flags</span>
-          </div>
-          {rows.map((row) => (
-            <div
-              key={row.id}
-              className="grid grid-cols-[1.4fr_0.8fr_0.7fr_0.6fr] gap-2 border-b border-[#262A4A]/px-4 py-3 text-sm text-[#F3F4FA] last:border-b-0"
-            >
-              <span>{row.course_title?.trim() || "À confirmer"}</span>
-              <span className="text-[#A3A8C7]">{row.status}</span>
-              <span>
-                {row.amount_ht_cents != null
-                  ? `${(row.amount_ht_cents / 100).toLocaleString("fr-FR")} €`
-                  : "—"}
-              </span>
-              <span className="text-[#A3A8C7]">
-                {row.deal_regressed ? "Deal reculé" : "—"}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 

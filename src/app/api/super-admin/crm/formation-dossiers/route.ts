@@ -12,6 +12,7 @@ import {
   isBpfIncomplete,
   isDossierOverdue,
   ownerInitials,
+  type AccountDossierCard,
   type FormationDossierBoardCard,
 } from "@/lib/formation-dossier/board";
 
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
   const orgId = req.nextUrl.searchParams.get("organization_id")?.trim() || "";
   const dealId = req.nextUrl.searchParams.get("deal_id")?.trim() || "";
   const enriched = req.nextUrl.searchParams.get("enriched") === "1";
+  const accountView = req.nextUrl.searchParams.get("account_view") === "1";
   const inbox = req.nextUrl.searchParams.get("inbox") === "1";
   const countOnly = req.nextUrl.searchParams.get("count") === "1";
 
@@ -127,7 +129,113 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ dossiers: cards });
+  if (!accountView) {
+    return NextResponse.json({ dossiers: cards });
+  }
+
+  const dossierIds = dossiers.map((d) => String(d.id));
+  const courseIds = Array.from(
+    new Set(dossiers.map((d) => d.training_course_id).filter(Boolean).map(String)),
+  );
+  const lastSlotBySession = new Map<string, string>();
+  for (const slot of slots ?? []) {
+    const sid = String(slot.session_id);
+    const date = String(slot.slot_date);
+    const prev = lastSlotBySession.get(sid);
+    if (!prev || date > prev) lastSlotBySession.set(sid, date);
+  }
+
+  const [{ data: courses }, { data: participants }, { data: documents }, { data: sessions }] =
+    await Promise.all([
+      courseIds.length
+        ? service.from("training_courses").select("id, cover_url, duration").in("id", courseIds)
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+      dossierIds.length
+        ? service.from("formation_participants").select("dossier_id").in("dossier_id", dossierIds)
+        : Promise.resolve({ data: [] as Array<{ dossier_id: string }> }),
+      dossierIds.length
+        ? service
+            .from("formation_documents")
+            .select("dossier_id, kind, sent_at, signed_at, status")
+            .in("dossier_id", dossierIds)
+            .in("kind", ["devis", "convention"])
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+      sessionIds.length
+        ? service.from("formation_sessions").select("id, location_label").in("id", sessionIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; location_label: string | null }> }),
+    ]);
+
+  const courseById = new Map(
+    (courses ?? []).map((row) => [String(row.id), row as { cover_url?: string | null; duration?: string | null }]),
+  );
+  const participantsByDossier = new Map<string, number>();
+  for (const row of participants ?? []) {
+    const id = String(row.dossier_id);
+    participantsByDossier.set(id, (participantsByDossier.get(id) ?? 0) + 1);
+  }
+  const docsByDossier = new Map<string, Array<Record<string, unknown>>>();
+  for (const row of documents ?? []) {
+    const id = String(row.dossier_id);
+    docsByDossier.set(id, [...(docsByDossier.get(id) ?? []), row]);
+  }
+  const sessionLocation = new Map(
+    (sessions ?? []).map((row) => [String(row.id), row.location_label ? String(row.location_label) : null]),
+  );
+
+  const hoursFromDuration = (raw: string | null | undefined): number | null => {
+    const text = String(raw ?? "").trim().toLowerCase().replace(",", ".");
+    if (!text) return null;
+    const hoursMatch = text.match(/(\d+(?:\.\d+)?)\s*h(?:eures?)?\b/);
+    if (hoursMatch) return Number(hoursMatch[1]);
+    const daysMatch = text.match(/(\d+(?:\.\d+)?)\s*jours?\b/);
+    if (daysMatch) return Number(daysMatch[1]) * 7;
+    return null;
+  };
+
+  const pickDocDate = (
+    rows: Array<Record<string, unknown>>,
+    kind: string,
+    field: "sent_at" | "signed_at",
+  ) => {
+    const doc = rows.find((row) => String(row.kind) === kind);
+    if (!doc) return null;
+    if (field === "signed_at") {
+      if (doc.signed_at) return String(doc.signed_at);
+      if (doc.status === "signed" && doc.sent_at) return String(doc.sent_at);
+      if (doc.status === "signed") return "signed";
+      return null;
+    }
+    return doc.sent_at ? String(doc.sent_at) : null;
+  };
+
+  const accountCards: AccountDossierCard[] = dossiers.map((d, index) => {
+    const base = cards[index]!;
+    const courseId = d.training_course_id ? String(d.training_course_id) : null;
+    const course = courseId ? courseById.get(courseId) : null;
+    const docs = docsByDossier.get(String(d.id)) ?? [];
+    const sessionId = d.session_id ? String(d.session_id) : null;
+    return {
+      ...base,
+      training_course_id: courseId,
+      cover_url: course?.cover_url ? String(course.cover_url) : null,
+      duration_hours: hoursFromDuration(course?.duration ? String(course.duration) : null),
+      modality_presence: d.modality_presence ? String(d.modality_presence) : null,
+      location_label: sessionId ? sessionLocation.get(sessionId) ?? null : null,
+      participants_count: participantsByDossier.has(String(d.id))
+        ? participantsByDossier.get(String(d.id))!
+        : null,
+      contact_email: d.contact_email ? String(d.contact_email) : null,
+      contact_name: d.contact_name ? String(d.contact_name) : null,
+      last_slot_date: sessionId ? lastSlotBySession.get(sessionId) ?? null : null,
+      devis_sent_at: pickDocDate(docs, "devis", "sent_at"),
+      devis_signed_at: pickDocDate(docs, "devis", "signed_at"),
+      convention_sent_at: pickDocDate(docs, "convention", "sent_at"),
+      convention_signed_at: pickDocDate(docs, "convention", "signed_at"),
+      attendance_complete: null,
+    };
+  });
+
+  return NextResponse.json({ dossiers: accountCards });
 }
 
 export async function POST(req: NextRequest) {

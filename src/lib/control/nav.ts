@@ -74,19 +74,15 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     dot: "#5EDCC3",
     items: [
       {
-        id: "cfa-demandes",
-        label: "Demandes entrantes",
-        href: "/super/crm/cfa/demandes",
-        countKey: "admissionsReview",
-        countTone: "queue",
-        match: under("/super/crm/cfa/demandes"),
-      },
-      {
         id: "admissions",
         label: "Admissions",
         href: "/super/crm/cfa",
+        countKey: "admissionsReview",
+        countTone: "queue",
         match: (pathname) =>
-          pathname === "/super/crm/cfa" || pathname.startsWith("/super/crm/cfa/apprenants"),
+          pathname === "/super/crm/cfa" ||
+          pathname.startsWith("/super/crm/cfa/apprenants") ||
+          pathname.startsWith("/super/crm/cfa/demandes"),
       },
       {
         id: "accueil",

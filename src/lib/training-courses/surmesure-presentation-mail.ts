@@ -119,7 +119,7 @@ export function buildSurMesurePresentationEmailHtml(params: {
       </div>
     </div>
     <p style="margin:18px 8px 0;color:#8A93AE;font-size:12px;line-height:1.45;">
-      Formation Sur-mesure Byound · document de présentation · le devis sera finalisé selon le formateur retenu.
+      Formation Sur-mesure Byound · document de présentation. On pourra avancer sur le cadre (dates, formateur, modalités) à votre rythme.
     </p>
   </div>
 </body>

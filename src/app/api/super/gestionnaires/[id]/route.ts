@@ -72,8 +72,9 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  // Soft delete : désactive + détache des comptes (FK on delete set null si hard delete).
+  // Soft delete : détache des comptes clients et entreprises d'accueil CFA.
   await service.from("organizations").update({ account_manager_id: null }).eq("account_manager_id", id);
+  await service.from("cfa_companies").update({ account_manager_id: null }).eq("account_manager_id", id);
 
   const removed = await service.from("account_managers").delete().eq("id", id).select("id").maybeSingle();
   if (removed.error) return NextResponse.json({ error: removed.error.message }, { status: 400 });

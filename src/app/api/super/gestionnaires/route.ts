@@ -30,8 +30,40 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const managers = (data ?? []).map(mapAccountManagerRow);
+  const ids = managers.map((item) => item.id);
+  const counts = new Map<string, { organizations: number; cfaCompanies: number }>();
+  for (const id of ids) counts.set(id, { organizations: 0, cfaCompanies: 0 });
+  let cfaSchemaMissing = false;
+
+  if (ids.length) {
+    const [orgs, cfa] = await Promise.all([
+      service.from("organizations").select("account_manager_id").in("account_manager_id", ids),
+      service.from("cfa_companies").select("account_manager_id").in("account_manager_id", ids),
+    ]);
+    for (const row of (orgs.data ?? []) as Array<{ account_manager_id?: string | null }>) {
+      const id = String(row.account_manager_id ?? "");
+      const current = counts.get(id);
+      if (current) current.organizations += 1;
+    }
+    if (cfa.error && /account_manager_id|42703|schema cache/i.test(cfa.error.message)) {
+      cfaSchemaMissing = true;
+    } else {
+      for (const row of (cfa.data ?? []) as Array<{ account_manager_id?: string | null }>) {
+        const id = String(row.account_manager_id ?? "");
+        const current = counts.get(id);
+        if (current) current.cfaCompanies += 1;
+      }
+    }
+  }
+
   return NextResponse.json({
-    managers: (data ?? []).map(mapAccountManagerRow),
+    managers: managers.map((manager) => ({
+      ...manager,
+      organizationCount: counts.get(manager.id)?.organizations ?? 0,
+      cfaCompanyCount: counts.get(manager.id)?.cfaCompanies ?? 0,
+    })),
+    cfaSchemaMissing,
   });
 }
 

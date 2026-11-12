@@ -55,6 +55,13 @@ type Summary = {
 
 type Suggestion = { id: string; name: string; siret?: string | null };
 
+type AccountManagerOption = {
+  id: string;
+  name: string;
+  email: string;
+  photoUrl: string | null;
+};
+
 function hashId(id: string) {
   let h = 0;
   for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0;
@@ -103,6 +110,10 @@ export function FicheEntreprise({ id, listQuery = "" }: { id: string; listQuery?
   const [pendingStage, setPendingStage] = useState<CfaHostStageId | null>(null);
   const [editEntreprise, setEditEntreprise] = useState(false);
   const [activeSection, setActiveSection] = useState("entreprise");
+  const [accountManagers, setAccountManagers] = useState<AccountManagerOption[]>([]);
+  const [accountManager, setAccountManager] = useState<AccountManagerOption | null>(null);
+  const [accountManagerColumnMissing, setAccountManagerColumnMissing] = useState(false);
+  const [managerBusy, setManagerBusy] = useState(false);
   const opcoRetries = useRef(0);
 
   const listHref = useMemo(
@@ -130,6 +141,44 @@ export function FicheEntreprise({ id, listQuery = "" }: { id: string; listQuery?
     setProfileSends(result.profileSends ?? []);
     setTimeline(result.timeline ?? []);
     setNextAction(result.nextAction ?? null);
+    setAccountManagers(result.accountManagers ?? []);
+    setAccountManager(result.accountManager ?? null);
+    setAccountManagerColumnMissing(Boolean(result.accountManagerColumnMissing));
+  }
+
+  async function saveAccountManager(nextId: string) {
+    const previous = accountManager;
+    const next = accountManagers.find((item) => item.id === nextId) ?? null;
+    setAccountManager(nextId ? next : null);
+    setManagerBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/super-admin/crm/cfa/companies/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_account_manager", accountManagerId: nextId || null }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setAccountManager(previous);
+        throw new Error(result.error || "Assignation impossible");
+      }
+      setAccountManager(
+        result.accountManagerId
+          ? accountManagers.find((item) => item.id === result.accountManagerId) ?? {
+              id: result.accountManagerId,
+              name: result.accountManagerName || "Gestionnaire",
+              email: "",
+              photoUrl: null,
+            }
+          : null,
+      );
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Assignation impossible");
+    } finally {
+      setManagerBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -322,14 +371,47 @@ export function FicheEntreprise({ id, listQuery = "" }: { id: string; listQuery?
             </div>
 
             <div className="flex flex-col items-end gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#26304F] bg-[#0B1122] px-3 py-1.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1A2340] text-[11px] font-extrabold text-[#9AA3BD]">?</span>
-                <span>
+              <label className="relative inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-[#26304F] bg-[#0B1122] py-1.5 pl-1.5 pr-3">
+                {accountManager?.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={accountManager.photoUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1A2340] text-[11px] font-extrabold text-[#9AA3BD]">
+                    {accountManager
+                      ? accountManager.name
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((part) => part[0]?.toUpperCase() ?? "")
+                          .join("") || "?"
+                      : "?"}
+                  </span>
+                )}
+                <span className="min-w-0">
                   <span className="block text-[10px] leading-none text-[#9AA3BD]">Chargé</span>
-                  <span className="text-sm font-semibold text-[#9AA3BD]">Non assigné</span>
+                  <span className={`mt-0.5 block truncate text-sm font-semibold ${accountManager ? "text-[#F2F4FA]" : "text-[#9AA3BD]"}`}>
+                    {accountManager ? formatPersonName(accountManager.name) : "Non assigné"} ▾
+                  </span>
                 </span>
-                <span className="text-[#6C7593]">▾</span>
-              </div>
+                <select
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  value={accountManager?.id ?? ""}
+                  disabled={managerBusy || accountManagerColumnMissing || accountManagers.length === 0}
+                  aria-label="Choisir le chargé de compte"
+                  onChange={(event) => void saveAccountManager(event.target.value)}
+                >
+                  <option value="">Non assigné</option>
+                  {accountManagers.map((manager) => (
+                    <option key={manager.id} value={manager.id}>
+                      {formatPersonName(manager.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {accountManagerColumnMissing ? (
+                <p className="max-w-[220px] text-right text-[11px] text-[#F2CF6B]">
+                  Collez 20261112180000_cfa_company_account_manager.sql pour activer l&apos;assignation.
+                </p>
+              ) : null}
               <div className="relative flex flex-wrap justify-end gap-2">
                 <button type="button" className="inline-flex h-11 items-center gap-2 rounded-full border border-[#26304F] px-4 text-sm font-semibold" onClick={openMail}>
                   <Mail className="h-4 w-4" /> E-mail

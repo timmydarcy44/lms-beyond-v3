@@ -7,6 +7,8 @@ export type AccountManager = {
   photoUrl: string | null;
   isActive: boolean;
   fullName: string;
+  organizationCount?: number;
+  cfaCompanyCount?: number;
 };
 
 export function mapAccountManagerRow(row: {

@@ -135,7 +135,12 @@ const tutorSchema = z.object({
   jobTitle: z.string().trim().max(120).default(""),
 });
 
-const patchSchema = z.discriminatedUnion("action", [statusSchema, lostSchema, linkSchema, identitySchema, refreshOpcoSchema, contactSchema, designateSchema, tutorSchema, needSchema, aliasSchema, consentSchema, createOfferSchema, sendProfileSchema, noteSchema, nextActionSchema, completeActionSchema, postponeActionSchema]);
+const accountManagerSchema = z.object({
+  action: z.literal("set_account_manager"),
+  accountManagerId: z.string().uuid().nullable(),
+});
+
+const patchSchema = z.discriminatedUnion("action", [statusSchema, lostSchema, linkSchema, identitySchema, refreshOpcoSchema, contactSchema, designateSchema, tutorSchema, needSchema, aliasSchema, consentSchema, createOfferSchema, sendProfileSchema, noteSchema, nextActionSchema, completeActionSchema, postponeActionSchema, accountManagerSchema]);
 
 async function actorId() {
   const client = await getServerClient();
@@ -287,9 +292,59 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     });
   }
 
+  const managersQuery = await db
+    .from("account_managers")
+    .select("id, first_name, last_name, email, photo_url, is_active")
+    .eq("is_active", true)
+    .order("last_name")
+    .order("first_name");
+  const accountManagerColumnMissing = Boolean(
+    managersQuery.error && /account_managers|42P01/i.test(managersQuery.error.message),
+  );
+  const mapManager = (row: {
+    id: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    photo_url?: string | null;
+  }) => ({
+    id: row.id,
+    name: [row.first_name, row.last_name].filter(Boolean).join(" ").trim() || String(row.email ?? "Gestionnaire"),
+    email: String(row.email ?? ""),
+    photoUrl: row.photo_url ? String(row.photo_url) : null,
+  });
+  const accountManagers = accountManagerColumnMissing
+    ? []
+    : ((managersQuery.data ?? []) as Array<{
+        id: string;
+        first_name?: string | null;
+        last_name?: string | null;
+        email?: string | null;
+        photo_url?: string | null;
+        is_active?: boolean | null;
+      }>).map(mapManager);
+
+  const managerId = company.account_manager_id ? String(company.account_manager_id) : null;
+  let accountManager = managerId
+    ? accountManagers.find((item) => item.id === managerId) ?? null
+    : null;
+  if (managerId && !accountManager && !accountManagerColumnMissing) {
+    const currentManager = await db
+      .from("account_managers")
+      .select("id, first_name, last_name, email, photo_url, is_active")
+      .eq("id", managerId)
+      .maybeSingle();
+    if (currentManager.data) accountManager = mapManager(currentManager.data);
+  }
+
   return NextResponse.json({
     company,
     migrationRequired,
+    accountManagerColumnMissing: Boolean(
+      !("account_manager_id" in company) || accountManagerColumnMissing,
+    ),
+    accountManagers,
+    accountManager,
     summary: {
       fields: `${filled} / 8 champs`,
       contacts: contactRows.length
@@ -327,7 +382,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: zodMessage(parsed.error, "Requête invalide.") }, { status: 400 });
 
-  const current = await db.from("cfa_companies").select("status, organization_id, opco, opco_source, idcc, company_name, city").eq("id", id).maybeSingle();
+  const current = await db.from("cfa_companies").select("*").eq("id", id).maybeSingle();
   if (!current.data) return NextResponse.json({ error: "Entreprise introuvable" }, { status: 404 });
   const previous = String((current.data as { status?: string }).status ?? "");
   const actor = await actorId();
@@ -680,6 +735,60 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const saved = await db.from("cfa_company_activities").update({ next_action_at: at.toISOString() }).eq("id", parsed.data.activityId).eq("company_id", id);
     if (saved.error) return NextResponse.json({ error: saved.error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
+  }
+
+  if (parsed.data.action === "set_account_manager") {
+    const accountManagerId = parsed.data.accountManagerId;
+    let accountManagerName: string | null = null;
+    if (accountManagerId) {
+      const manager = await db
+        .from("account_managers")
+        .select("id, first_name, last_name, email, is_active")
+        .eq("id", accountManagerId)
+        .maybeSingle();
+      if (manager.error && /account_managers|42P01/i.test(manager.error.message)) {
+        return NextResponse.json({ error: "Appliquez la migration account_managers." }, { status: 503 });
+      }
+      if (!manager.data || manager.data.is_active === false) {
+        return NextResponse.json({ error: "Choisissez un gestionnaire de compte actif." }, { status: 400 });
+      }
+      accountManagerName =
+        [manager.data.first_name, manager.data.last_name].filter(Boolean).join(" ").trim() ||
+        String(manager.data.email ?? "Gestionnaire");
+    }
+    const previousManagerId = String((current.data as { account_manager_id?: string | null }).account_manager_id ?? "") || null;
+    const updated = await db
+      .from("cfa_companies")
+      .update({ account_manager_id: accountManagerId, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (updated.error) {
+      if (/account_manager_id|schema cache|42703/i.test(updated.error.message)) {
+        return NextResponse.json(
+          { error: "Collez le script 20261112180000_cfa_company_account_manager.sql pour activer les chargés de compte." },
+          { status: 400 },
+        );
+      }
+      return NextResponse.json({ error: updated.error.message }, { status: 400 });
+    }
+    const logged = await logCompanyEvent(db, {
+      companyId: id,
+      actorId: actor,
+      action: "account_manager",
+      body: accountManagerName
+        ? `Chargé de compte : ${accountManagerName}.`
+        : "Chargé de compte retiré.",
+      oldValue: previousManagerId,
+      newValue: accountManagerId,
+      activityType: "status_change",
+    });
+    if (logged && !logged.includes("20261026160000")) return NextResponse.json({ error: logged }, { status: 400 });
+    return NextResponse.json({
+      company: updated.data,
+      accountManagerId,
+      accountManagerName,
+    });
   }
 
   if (parsed.data.action === "link_organization") {

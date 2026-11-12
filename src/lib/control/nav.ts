@@ -41,53 +41,16 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         countKey: "pipelineLate",
         countTone: "late",
         match: (pathname) =>
-          pathname === "/super/crm/pipeline" || pathname.startsWith("/super/crm/pipeline-btob"),
-      },
-      {
-        id: "prescripteurs",
-        label: "Prescripteurs",
-        href: "/super/crm/pipeline/prescripteurs",
-        match: under("/super/crm/pipeline/prescripteurs"),
-      },
-      {
-        id: "contacts",
-        label: "Contacts",
-        href: "/super/utilisateurs",
-        match: (pathname, role) => pathname === "/super/utilisateurs" && !role,
+          pathname === "/super/crm/pipeline" ||
+          pathname.startsWith("/super/crm/pipeline-btob") ||
+          (pathname.startsWith("/super/crm/pipeline") &&
+            !pathname.startsWith("/super/crm/pipeline/prescripteurs")),
       },
       {
         id: "comptes",
         label: "Comptes clients",
         href: "/super/organisations",
         match: under("/super/organisations"),
-      },
-      {
-        id: "gestionnaires",
-        label: "Gestionnaires de compte",
-        href: "/super/gestionnaires",
-        match: under("/super/gestionnaires"),
-      },
-      {
-        id: "particuliers",
-        label: "Particuliers",
-        href: "/super/utilisateurs?role=btoc",
-        match: (pathname, role) => pathname === "/super/utilisateurs" && role === "btoc",
-      },
-      {
-        id: "apprenants",
-        label: "Apprenants",
-        href: "/super/utilisateurs?role=learner",
-        match: (pathname, role) =>
-          pathname === "/super/utilisateurs" && (role === "learner" || role === "student" || role === "apprenant"),
-      },
-      { id: "sessions", label: "Sessions", soon: true, match: () => false },
-      {
-        id: "opco",
-        label: "Dossiers OPCO",
-        soon: true,
-        countKey: "opcoToFile",
-        countTone: "queue",
-        match: () => false,
       },
     ],
   },
@@ -184,6 +147,30 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         match: under("/super/crm/demandes"),
         countKey: "incomingDemandes",
         countTone: "queue",
+      },
+      {
+        id: "gestionnaires",
+        label: "Gestionnaires de compte",
+        href: "/super/gestionnaires",
+        match: under("/super/gestionnaires"),
+      },
+      {
+        id: "prescripteurs",
+        label: "Prescripteurs",
+        href: "/super/crm/pipeline/prescripteurs",
+        match: under("/super/crm/pipeline/prescripteurs"),
+      },
+      {
+        id: "contacts",
+        label: "Contacts",
+        href: "/super/utilisateurs",
+        match: (pathname, role) => pathname === "/super/utilisateurs" && !role,
+      },
+      {
+        id: "particuliers",
+        label: "Particuliers",
+        href: "/super/utilisateurs?role=btoc",
+        match: (pathname, role) => pathname === "/super/utilisateurs" && role === "btoc",
       },
       {
         id: "programmation",

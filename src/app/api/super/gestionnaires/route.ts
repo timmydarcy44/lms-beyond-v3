@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { mapAccountManagerRow } from "@/lib/control/account-managers";
+import { notifyAccountManagerWelcome } from "@/lib/email/account-manager-assigned";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -89,5 +90,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: inserted.error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, manager: mapAccountManagerRow(inserted.data!) });
+  const welcome = await notifyAccountManagerWelcome({
+    firstName,
+    lastName,
+    email,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    manager: mapAccountManagerRow(inserted.data!),
+    emailSent: welcome.sent,
+  });
 }

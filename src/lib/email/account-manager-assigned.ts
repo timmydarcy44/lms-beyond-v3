@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
+import { sendEmail } from "@/lib/email/resend-client";
 import {
   buildEdgeEmailShell,
   edgeEmailParagraph,
@@ -13,6 +14,54 @@ function row(label: string, value: string) {
     <td style="padding:8px 0;font-size:13px;color:#8A8A8A;vertical-align:top;width:160px;">${escapeEdgeEmailHtml(label)}</td>
     <td style="padding:8px 0;font-size:15px;color:#111111;font-weight:500;">${escapeEdgeEmailHtml(value)}</td>
   </tr>`;
+}
+
+/** Accueille un nouveau gestionnaire de compte à sa création. */
+export async function notifyAccountManagerWelcome(params: {
+  firstName: string;
+  lastName?: string | null;
+  email: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  const to = String(params.email ?? "")
+    .trim()
+    .toLowerCase();
+  if (!to.includes("@")) return { sent: false, error: "E-mail invalide" };
+
+  const firstName = String(params.firstName ?? "").trim() || "Bonjour";
+  const fullName = [params.firstName, params.lastName].filter(Boolean).join(" ").trim();
+  const html = buildEdgeEmailShell({
+    title: "Bienvenue chez Byound",
+    preheader: "Vous êtes désormais gestionnaire de compte.",
+    bodyHtml: `${edgeEmailParagraph(`Bonjour ${firstName},`)}${edgeEmailParagraph(
+      "Nous avons l'honneur de vous accueillir comme gestionnaire de compte.",
+    )}${edgeEmailParagraph(
+      "Vous pourrez bientôt recevoir des comptes clients sous votre responsabilité, ainsi que les notifications liées aux devis et conventions.",
+    )}${
+      fullName
+        ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="text-align:left;margin:8px 0 0;">
+        ${row("Profil", fullName)}
+        ${row("E-mail", to)}
+      </table>`
+        : ""
+    }`,
+    footerNote: "Notification Byound Control — création d'un gestionnaire de compte",
+  });
+
+  const result = await sendEmail({
+    to,
+    from: EDGE_COCKPIT_FROM,
+    subject: "Bienvenue — gestionnaire de compte Byound",
+    html,
+    tags: {
+      type: "account-manager-welcome",
+    },
+  });
+
+  if (!result.success) {
+    console.warn("[account-manager-welcome]", result.error);
+    return { sent: false, error: result.error };
+  }
+  return { sent: true };
 }
 
 /** Notifie le gestionnaire qu'un compte client lui a été assigné. */

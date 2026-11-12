@@ -86,7 +86,9 @@ export function AccountManagersCockpit() {
         toast.error(json.error || "Enregistrement impossible.");
         return;
       }
-      toast.success(form.id ? "Gestionnaire mis à jour." : "Gestionnaire ajouté.");
+      if (form.id) toast.success("Gestionnaire mis à jour.");
+      else if (json.emailSent) toast.success("Gestionnaire ajouté — e-mail de bienvenue envoyé.");
+      else toast.success("Gestionnaire ajouté.");
       setOpen(false);
       setForm(EMPTY_FORM);
       await load();

@@ -468,6 +468,7 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [menu, setMenu] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "cards">("cards");
   const people = detail.people.filter((person) => {
     if (filter === "admins" && roleTone(person.role) !== "admin") return false;
     if (filter === "tutors" && !person.isTutor) return false;
@@ -475,12 +476,31 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
     if (filter === "staff" && (person.invited || roleTone(person.role) === "admin")) return false;
     return `${person.name} ${person.email}`.toLowerCase().includes(query.toLowerCase());
   });
-  const shown = expanded ? people : people.slice(0, 8);
+  const shown = expanded || view === "cards" ? people : people.slice(0, 8);
   const pending = detail.people.filter((person) => person.invited).length;
   const inTraining = detail.people.filter((person) => person.formationsTotal > 0).length;
   const withBadge = detail.people.filter((person) => person.badges > 0).length;
   const activeKnown = detail.people.some((person) => person.lastSeenAt);
   const active = detail.people.filter((person) => person.lastSeenAt && !person.invited).length;
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("byound.account.members.view");
+      if (stored === "list" || stored === "cards") setView(stored);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setViewSafe = (next: "list" | "cards") => {
+    setView(next);
+    try {
+      window.localStorage.setItem("byound.account.members.view", next);
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div className="mt-5 space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -496,6 +516,26 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
           ]}
         />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un membre" className="ml-auto rounded-full border border-[#26304F] bg-[#0B1122] px-4 py-2 text-sm" />
+        <div className="flex overflow-hidden rounded-full border border-[#26304F] bg-[#0B1122]">
+          <button
+            type="button"
+            aria-label="Vue liste"
+            onClick={() => setViewSafe("list")}
+            className="px-3 py-1.5 text-sm"
+            style={{ background: view === "list" ? "#1A2340" : "transparent", color: view === "list" ? "#F2F4FA" : "#6C7593" }}
+          >
+            ☰
+          </button>
+          <button
+            type="button"
+            aria-label="Vue cartes"
+            onClick={() => setViewSafe("cards")}
+            className="px-3 py-1.5 text-sm"
+            style={{ background: view === "cards" ? "#1A2340" : "transparent", color: view === "cards" ? "#F2F4FA" : "#6C7593" }}
+          >
+            ▦
+          </button>
+        </div>
         <button type="button" onClick={onImport} className="rounded-full border border-[#26304F] px-4 py-2 text-sm">Importer</button>
         <button type="button" onClick={onInvite} className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">Inviter</button>
       </div>
@@ -505,7 +545,130 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
         <KpiCard label="En formation" value={String(inTraining)} />
         <KpiCard label="Avec au moins un badge" value={String(withBadge)} />
       </div>
-      {people.length === 0 ? <EmptyState title="Aucun membre pour ce filtre." action={<button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onInvite}>Inviter un membre</button>} /> : (
+      {people.length === 0 ? <EmptyState title="Aucun membre pour ce filtre." action={<button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onInvite}>Inviter un membre</button>} /> : view === "cards" ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map((person) => {
+            const tone = person.invited ? ROLE_COLORS.invited : ROLE_COLORS[roleTone(person.role)];
+            const tutorTone = ROLE_COLORS.tutor;
+            return (
+              <article key={person.userId} className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#6E5BFF] text-sm font-extrabold">
+                    {initials(person.name)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-extrabold text-[#F2F4FA]">{person.name}</p>
+                    <p className="truncate text-xs text-[#9AA3BD]">{person.email}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: tone.bg, color: tone.fg }}>
+                        {person.invited ? "Invité" : roleLabel(person.role)}
+                      </span>
+                      {person.isTutor ? (
+                        <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: tutorTone.bg, color: tutorTone.fg }}>
+                          Tuteur
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs">
+                  <span className="rounded-2xl bg-[#0B1122] p-2">
+                    <span className="block text-sm font-extrabold text-[#F2F4FA]">
+                      {person.formationsTotal ? `${person.formationsDone}/${person.formationsTotal}` : "—"}
+                    </span>
+                    Formations
+                  </span>
+                  <span className="rounded-2xl bg-[#0B1122] p-2">
+                    <span className="block text-sm font-extrabold text-[#F2F4FA]">{person.badges || "—"}</span>
+                    Badges
+                  </span>
+                </div>
+                <div className="relative mt-4 flex items-center justify-between gap-2">
+                  <p className="text-xs text-[#6C7593]">
+                    {person.invited && person.createdAt
+                      ? `Invité le ${new Date(person.createdAt).toLocaleDateString("fr-FR")}`
+                      : "Membre du compte"}
+                  </p>
+                  <div className="flex gap-2">
+                    {person.invited ? (
+                      <button
+                        type="button"
+                        className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#0A0F1E]"
+                        onClick={() =>
+                          void memberAction(
+                            detail.account?.id,
+                            { action: "remind", email: person.email, employeeId: person.employeeId },
+                            onNotice,
+                          )
+                        }
+                      >
+                        Relancer
+                      </button>
+                    ) : null}
+                    <button type="button" aria-label="Actions" onClick={() => setMenu(menu === person.userId ? null : person.userId)}>
+                      ⋯
+                    </button>
+                  </div>
+                  {menu === person.userId ? (
+                    <span className="absolute right-0 top-8 z-10 w-48 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
+                      {person.userId.startsWith("employee:") ? null : (
+                        <>
+                          {(["admin", "learner"] as const).map((role) => (
+                            <button
+                              key={role}
+                              type="button"
+                              className="block w-full rounded-xl px-2 py-1 text-left"
+                              onClick={() =>
+                                void memberAction(
+                                  detail.account?.id,
+                                  { action: "role", userId: person.userId, role },
+                                  onNotice,
+                                )
+                              }
+                            >
+                              {roleLabel(role)}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className="block w-full rounded-xl px-2 py-1 text-left"
+                            onClick={() =>
+                              void memberAction(
+                                detail.account?.id,
+                                {
+                                  action: "toggle_tutor",
+                                  userId: person.userId,
+                                  enabled: person.isTutor ? "false" : "true",
+                                },
+                                onNotice,
+                              )
+                            }
+                          >
+                            {person.isTutor ? "Retirer le rôle tuteur" : "Ajouter le rôle tuteur"}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        className="block w-full rounded-xl px-2 py-1 text-left"
+                        onClick={() =>
+                          void memberAction(
+                            detail.account?.id,
+                            { action: "deactivate", employeeId: person.employeeId },
+                            onNotice,
+                          )
+                        }
+                      >
+                        Désactiver
+                      </button>
+                    </span>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
         <div className="overflow-hidden rounded-[28px] border border-[#1A2340] bg-[#111831]">
           <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.9fr)_auto] px-4 py-3 text-[13px] text-[#6C7593]">
             <span>Membre</span><span>Rôle</span><span>Formations</span><span>Open Badges</span><span>Dernière connexion</span><span />

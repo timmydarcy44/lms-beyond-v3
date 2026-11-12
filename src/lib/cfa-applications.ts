@@ -42,16 +42,17 @@ export const CFA_APPLICATION_STATUSES = [
 
 export type CfaApplicationStatus = (typeof CFA_APPLICATION_STATUSES)[number];
 
+/** Libellés bruts DB. L’UI Admissions utilise admissionStatusLabel (regroupements). */
 export const CFA_STATUS_LABELS: Record<CfaApplicationStatus, string> = {
-  brochure: "Téléchargement fiche cursus",
-  profile: "Application",
-  challenge: "Challenge",
-  dossier: "Dossier",
+  brochure: "Fiche cursus",
+  profile: "Candidature",
+  challenge: "Candidature",
+  dossier: "Candidature",
   interview: "Entretien",
-  review: "Review",
-  administrative: "Éléments administratifs",
+  review: "À relire",
+  administrative: "Dossier administratif",
   admitted: "Admis",
-  contract: "En contrat",
+  contract: "Admis",
   rejected: "Non retenu",
 };
 
@@ -120,6 +121,11 @@ export type CfaApplication = {
   updated_at: string;
   profile_id?: string | null;
   origin?: "direct" | "existing_account" | null;
+  placement?: {
+    companyId: string;
+    companyName: string;
+    status: "pending" | "active";
+  } | null;
 };
 
 export function getCfaSpecializationLabel(value: string): string {

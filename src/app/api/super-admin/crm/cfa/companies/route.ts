@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel, type CfaSpecialization } from "@/lib/cfa-applications";
 import { CFA_COMPANY_STATUS_LABELS, isCfaCompanyStatus } from "@/lib/cfa-companies";
+import { formatCompanyName, formatPersonName } from "@/lib/cfa/format-org-name";
+import { isByoundBusinessSiret } from "@/lib/cfa/host-company-stages";
 import { logCompanyEvent } from "@/lib/cfa/company-events";
 import { linkCompanyByExactSiret } from "@/lib/cfa/link-company-organization";
 import { cleanSiret, isValidSiret } from "@/lib/cfa/siret";
@@ -39,16 +41,19 @@ export async function POST(request: NextRequest) {
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
   const body = await request.json().catch(() => ({}));
-  const companyName = clean(body.companyName);
+  const companyName = formatCompanyName(clean(body.companyName));
   const siret = cleanSiret(body.siret);
   const contactName = clean(body.contactName);
-  const legacyFirst = clean(body.firstName);
-  const legacyLast = clean(body.lastName);
+  const legacyFirst = formatPersonName(clean(body.firstName));
+  const legacyLast = formatPersonName(clean(body.lastName));
   const [splitFirst, ...splitRest] = (contactName || `${legacyFirst} ${legacyLast}`).trim().split(/\s+/);
-  const firstName = legacyFirst || splitFirst || "";
-  const lastName = legacyLast || splitRest.join(" ") || firstName;
+  const firstName = legacyFirst || formatPersonName(splitFirst) || "";
+  const lastName = legacyLast || formatPersonName(splitRest.join(" ")) || firstName;
   const apprenticesWanted = Number(body.apprenticesWanted);
   const track1 = clean(body.apprenticeTrack1);
+  const requestedStatus = clean(body.status);
+  const status =
+    requestedStatus && isCfaCompanyStatus(requestedStatus) ? requestedStatus : "to_contact";
 
   if (!companyName && !siret) {
     return NextResponse.json({ error: "Indiquez un SIRET ou un nom." }, { status: 400 });
@@ -58,6 +63,12 @@ export async function POST(request: NextRequest) {
   }
   if (siret && !isValidSiret(siret)) {
     return NextResponse.json({ error: "Le SIRET doit contenir 14 chiffres valides." }, { status: 400 });
+  }
+  if (siret && isByoundBusinessSiret(siret)) {
+    return NextResponse.json(
+      { error: "Byound Business ne peut pas être ajoutée comme entreprise d'accueil." },
+      { status: 400 },
+    );
   }
   if (!firstName) {
     return NextResponse.json({ error: "Le nom du contact principal est requis." }, { status: 400 });
@@ -85,7 +96,7 @@ export async function POST(request: NextRequest) {
       apprentices_wanted: apprenticesWanted,
       apprentice_track_1: track1,
       apprentice_track_2: null,
-      status: "to_contact",
+      status,
     })
     .select("*")
     .single();
@@ -120,16 +131,19 @@ export async function POST(request: NextRequest) {
 }
 
 function companyFields(body: Record<string, unknown>) {
-  const companyName = clean(body.companyName);
+  const companyName = formatCompanyName(clean(body.companyName));
   const siret = cleanSiret(body.siret);
-  const firstName = clean(body.firstName);
-  const lastName = clean(body.lastName);
+  const firstName = formatPersonName(clean(body.firstName));
+  const lastName = formatPersonName(clean(body.lastName));
   const apprenticesWanted = Number(body.apprenticesWanted);
   const track1 = clean(body.apprenticeTrack1);
   const status = clean(body.status);
 
   if (!companyName) return { error: "Le nom de l’entreprise est requis." };
   if (siret && !isValidSiret(siret)) return { error: "Le SIRET doit contenir 14 chiffres valides." };
+  if (siret && isByoundBusinessSiret(siret)) {
+    return { error: "Byound Business ne peut pas être une entreprise d'accueil." };
+  }
   if (!firstName || !lastName) return { error: "Le prénom et le nom du contact sont requis." };
   if (!Number.isInteger(apprenticesWanted) || apprenticesWanted < 1 || apprenticesWanted > 30) {
     return { error: "Indique une quantité entre 1 et 30." };

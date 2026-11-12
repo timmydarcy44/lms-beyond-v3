@@ -86,6 +86,19 @@ export function CompanyFile({
         )
       ) : (
         <div className="space-y-4">
+          {company.cfaCompanyId ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-[#1A2340] bg-[#111831] px-4 py-3">
+              <p className="text-sm text-[#9AA3BD]">
+                Vue résumé — pour modifier contacts, postes et statut, ouvre la fiche CFA.
+              </p>
+              <Link
+                href={`/super/cfa/entreprises/${company.cfaCompanyId}`}
+                className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+              >
+                Ouvrir la fiche CFA
+              </Link>
+            </div>
+          ) : null}
           <SegmentedFilter
             value={cfaTab}
             onChange={(id) => setCfaTab(id as CfaTab)}

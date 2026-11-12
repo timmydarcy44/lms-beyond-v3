@@ -1,0 +1,39 @@
+-- PROPOSITION — ne pas exécuter sans validation.
+-- Contexte : le signup entreprise créait les fiches en status = 'creating_offer'
+-- alors que le parcours démarrage est « À contacter » (to_contact).
+-- API manuelle et business-dev créent déjà en to_contact.
+--
+-- Entreprises concernées (lecture seule, à rejouer pour compter) :
+--
+-- select id, company_name, email, status, created_at
+-- from public.cfa_companies
+-- where status = 'creating_offer'
+-- order by created_at desc;
+--
+-- Snapshot observé (2026-11-12) :
+-- - Timmy Test (031a3079-e26c-4acc-843b-e7402ae20ba1)
+-- - Printngo (dd5ef2c4-87f6-4be9-a22c-e9ef6a5b24a5)
+-- - Jessica C (a302a710-ccca-4729-a4bf-937d6d09f28a)
+-- - Metriks (17773c9e-0def-47a7-acc9-363110812364)
+-- - Byound School (ebabad9b-f364-4d46-918c-092ebe35b2f8)
+-- - Byound (d9ee01f1-e9fc-4fc9-bba9-dae7e9846642)
+-- - Lalaland (d38e869f-a84e-432a-b2c6-bacb13a185df)
+--
+-- Correction proposée (uniquement celles jamais passées par un autre statut) :
+--
+-- update public.cfa_companies c
+-- set status = 'to_contact', updated_at = now()
+-- where c.status = 'creating_offer'
+--   and not exists (
+--     select 1
+--     from public.cfa_audit_events e
+--     where e.company_id = c.id
+--       and e.action = 'company_status'
+--       and e.old_value is not null
+--       and e.old_value <> 'creating_offer'
+--   );
+--
+-- Byound Business (SIRET 13070905800015) est exclus côté application,
+-- pas besoin de supprimer la ligne.
+
+select 1;

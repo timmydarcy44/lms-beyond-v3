@@ -39,13 +39,9 @@ export async function ensureCfaSignupCompany(
     contact_first_name: firstName || null,
     contact_last_name: lastName || null,
     contact_name: `${firstName} ${lastName}`.trim() || null,
-    status: "creating_offer",
+    status: "to_contact",
   });
   if (created.error) {
-    console.warn(
-      created.error.code === "23514"
-        ? "[cfa-signup] collez 20261026210000 pour la colonne Création offre d'emploi."
-        : `[cfa-signup] création entreprise: ${created.error.message}`,
-    );
+    console.warn(`[cfa-signup] création entreprise: ${created.error.message}`);
   }
 }

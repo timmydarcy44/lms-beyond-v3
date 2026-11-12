@@ -11,11 +11,12 @@ export const CFA_COMPANY_STATUSES = [
 
 export type CfaCompanyStatus = (typeof CFA_COMPANY_STATUSES)[number];
 
+/** Libellés legacy (formulaires / journal). L’UI board utilise CFA_HOST_STAGES. */
 export const CFA_COMPANY_STATUS_LABELS: Record<CfaCompanyStatus, string> = {
-  creating_offer: "Création offre d'emploi",
+  creating_offer: "Création de l'offre",
   to_contact: "À contacter",
   email_sent: "Mail envoyé",
-  appointment: "Rendez-vous programmé",
+  appointment: "Rendez-vous",
   pending_decision: "En attente de décision",
   recruiting: "Recrutement en cours",
   recruited: "Recrutement réussi",

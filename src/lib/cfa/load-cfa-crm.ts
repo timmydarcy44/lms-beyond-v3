@@ -64,6 +64,48 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
     }),
   );
 
+  const appIds = applications.map((row) => String((row as { id: string }).id));
+  const placementsQuery = appIds.length
+    ? await db
+        .from("apprentice_placements")
+        .select("apprentice_id, company_id, status")
+        .in("apprentice_id", appIds)
+        .in("status", ["pending", "active"])
+        .order("created_at", { ascending: false })
+    : { data: [], error: null };
+  const placementRows = (placementsQuery.error ? [] : placementsQuery.data ?? []) as Array<{
+    apprentice_id: string;
+    company_id: string;
+    status: string;
+  }>;
+  const companyIds = [...new Set(placementRows.map((row) => row.company_id))];
+  const companiesQuery = companyIds.length
+    ? await db.from("cfa_companies").select("id, company_name").in("id", companyIds)
+    : { data: [], error: null };
+  const companyNames = new Map(
+    ((companiesQuery.error ? [] : companiesQuery.data ?? []) as Array<{ id: string; company_name: string }>).map(
+      (row) => [row.id, row.company_name],
+    ),
+  );
+  const placementByApp = new Map<string, { companyId: string; companyName: string; status: "pending" | "active" }>();
+  for (const row of placementRows) {
+    if (placementByApp.has(row.apprentice_id)) continue;
+    placementByApp.set(row.apprentice_id, {
+      companyId: row.company_id,
+      companyName: companyNames.get(row.company_id) || "Entreprise",
+      status: row.status === "active" ? "active" : "pending",
+    });
+  }
+
+  const applicationsWithPlacement = applications.map((application) => {
+    const id = String((application as { id: string }).id);
+    const placement = placementByApp.get(id) ?? null;
+    return {
+      ...application,
+      placement,
+    };
+  });
+
   const downloadsQuery = await db
     .from("cfa_program_downloads")
     .select("id,first_name,last_name,email,phone,specialization,created_at")
@@ -75,7 +117,7 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
   }
 
   return {
-    applications,
+    applications: applicationsWithPlacement,
     downloads: downloadsMissing ? [] : (downloadsQuery.data ?? []),
     downloadsMigrationRequired: downloadsMissing,
   };
@@ -87,23 +129,93 @@ export async function loadCfaCompanies(db: Db) {
     if (error.code === "42P01" || error.code === "42703") return { companies: [], migrationRequired: true };
     return { error: error.message };
   }
-  const companies = (data ?? []) as Array<Record<string, unknown>>;
-  const actions = await db
-    .from("cfa_company_activities")
-    .select("company_id, next_action, next_action_at")
-    .is("done_at", null)
-    .not("next_action_at", "is", null);
-  if (actions.error) return { companies };
-  const byCompany = new Map(
-    ((actions.data ?? []) as { company_id: string; next_action: string | null; next_action_at: string | null }[]).map((row) => [row.company_id, row]),
+  const { isByoundBusinessSiret } = await import("@/lib/cfa/host-company-stages");
+  const companies = ((data ?? []) as Array<Record<string, unknown>>).filter(
+    (company) => !isByoundBusinessSiret(company.siret ? String(company.siret) : null),
   );
+  const companyIds = companies.map((c) => String(c.id ?? "")).filter(Boolean);
+  const emptyId = "00000000-0000-0000-0000-000000000000";
+  const ids = companyIds.length ? companyIds : [emptyId];
+
+  const [openActions, activities, audits, placements] = await Promise.all([
+    db
+      .from("cfa_company_activities")
+      .select("company_id, next_action, next_action_at")
+      .is("done_at", null)
+      .not("next_action_at", "is", null)
+      .in("company_id", ids),
+    db
+      .from("cfa_company_activities")
+      .select("company_id, created_at")
+      .in("company_id", ids)
+      .order("created_at", { ascending: false }),
+    db
+      .from("cfa_audit_events")
+      .select("company_id, created_at")
+      .eq("action", "company_status")
+      .in("company_id", ids)
+      .order("created_at", { ascending: false }),
+    db.from("apprentice_placements").select("company_id, status").in("company_id", ids),
+  ]);
+
+  const openActionByCompany = new Map<string, { next_action: string | null; next_action_at: string | null }>();
+  for (const row of (openActions.error ? [] : openActions.data ?? []) as Array<{
+    company_id: string;
+    next_action: string | null;
+    next_action_at: string | null;
+  }>) {
+    if (!openActionByCompany.has(String(row.company_id))) {
+      openActionByCompany.set(String(row.company_id), {
+        next_action: row.next_action,
+        next_action_at: row.next_action_at,
+      });
+    }
+  }
+
+  const lastActivityByCompany = new Map<string, string>();
+  for (const row of (activities.error ? [] : activities.data ?? []) as Array<{
+    company_id: string;
+    created_at: string;
+  }>) {
+    const id = String(row.company_id);
+    if (!lastActivityByCompany.has(id)) lastActivityByCompany.set(id, row.created_at);
+  }
+
+  const lastStatusAtByCompany = new Map<string, string>();
+  for (const row of (audits.error ? [] : audits.data ?? []) as Array<{
+    company_id: string;
+    created_at: string;
+  }>) {
+    const id = String(row.company_id);
+    if (!lastStatusAtByCompany.has(id)) lastStatusAtByCompany.set(id, row.created_at);
+  }
+
+  const proposedByCompany = new Map<string, number>();
+  const recruitedByCompany = new Map<string, number>();
+  for (const row of (placements.error ? [] : placements.data ?? []) as Array<{
+    company_id: string;
+    status: string | null;
+  }>) {
+    const id = String(row.company_id);
+    if (row.status === "pending") proposedByCompany.set(id, (proposedByCompany.get(id) ?? 0) + 1);
+    if (row.status === "active") recruitedByCompany.set(id, (recruitedByCompany.get(id) ?? 0) + 1);
+  }
+
   return {
     companies: companies.map((company) => {
-      const action = byCompany.get(String(company.id ?? ""));
+      const id = String(company.id ?? "");
+      const action = openActionByCompany.get(id);
+      const lastStatusAt = lastStatusAtByCompany.get(id) ?? null;
+      const lastActivityAt = lastActivityByCompany.get(id) ?? null;
       return {
         ...company,
         next_action: action?.next_action ?? null,
         next_action_at: action?.next_action_at ?? null,
+        last_status_at: lastStatusAt,
+        last_action_at:
+          lastStatusAt || lastActivityAt || (company.updated_at ? String(company.updated_at) : null),
+        candidates_proposed: proposedByCompany.get(id) ?? 0,
+        apprentices_recruited: recruitedByCompany.get(id) ?? 0,
       };
     }),
   };

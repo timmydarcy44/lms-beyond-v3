@@ -1,17 +1,42 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Building2, Loader2, Plus, RefreshCw, X } from "lucide-react";
-
-import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
-import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 import {
-  CFA_COMPANY_STATUSES,
-  CFA_COMPANY_STATUS_LABELS,
-  type CfaCompanyStatus,
-} from "@/lib/cfa-companies";
-import { cn } from "@/lib/utils";
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCorners,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { useDraggable } from "@dnd-kit/core";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CFA_SPECIALIZATIONS, getCfaSpecializationLabel } from "@/lib/cfa-applications";
+import { formatCompanyName, formatPersonName } from "@/lib/cfa/format-org-name";
+import {
+  CFA_HOST_MAIL_REMINDER_DAYS,
+  CFA_HOST_OFFER_REMINDER_DAYS,
+  CFA_HOST_STAGES,
+  daysSince,
+  dbStatusForHostStage,
+  hostStageFromStatus,
+  hostStageMeta,
+  relativeDaysAgo,
+  shortFrWeekdayDate,
+  trackColor,
+  type CfaHostStageId,
+} from "@/lib/cfa/host-company-stages";
+import type { CfaCompanyStatus } from "@/lib/cfa-companies";
+import { looksLikeTestAccount } from "@/lib/control/test-account";
+import {
+  PageTitle,
+  StageStrip,
+  TestToggle,
+  ViewSwitch,
+} from "@/components/control/cfa-board-chrome";
 
 type CfaCompany = {
   id: string;
@@ -24,66 +49,174 @@ type CfaCompany = {
   email: string | null;
   phone: string | null;
   company_address: string | null;
+  city: string | null;
+  naf_label: string | null;
   soft_skills: string | null;
   apprentices_wanted: number | null;
   apprentice_track_1: string | null;
   status: CfaCompanyStatus;
   created_at: string;
+  updated_at?: string | null;
   next_action?: string | null;
   next_action_at?: string | null;
+  last_status_at?: string | null;
+  last_action_at?: string | null;
+  candidates_proposed?: number;
+  apprentices_recruited?: number;
+  offer_with_client?: boolean;
 };
-
-const columns: { id: CfaCompanyStatus; label: string; accent: string }[] = [
-  { id: "creating_offer", label: "Création offre d'emploi", accent: "bg-cyan-400" },
-  { id: "to_contact", label: "À contacter", accent: "bg-slate-400" },
-  { id: "email_sent", label: "Mail envoyé", accent: "bg-sky-500" },
-  { id: "appointment", label: "Rendez-vous programmé", accent: "bg-indigo-500" },
-  { id: "pending_decision", label: "En attente de décision", accent: "bg-amber-500" },
-  { id: "recruiting", label: "Recrutement en cours", accent: "bg-violet-500" },
-  { id: "recruited", label: "Recrutement réussi", accent: "bg-emerald-500" },
-  { id: "not_recruited", label: "Non recrutement", accent: "bg-rose-400" },
-];
 
 const fieldClass =
-  "h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none focus:border-indigo-400";
+  "h-10 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm text-[#F2F4FA] outline-none";
 
-type CompanyDraft = {
-  companyName: string;
-  companyAddress: string;
-  siret: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  contactRole: string;
-  quantity: number;
-  track1: string;
-  softSkills: string[];
-  status: CfaCompanyStatus;
-};
+const AVATAR_GRADIENTS = [
+  ["#6E5BFF", "#2A1E8F"],
+  ["#14836E", "#0B3B36"],
+  ["#2F6FD6", "#0E2A5C"],
+  ["#B65BFF", "#3B1466"],
+  ["#C9A227", "#5A4510"],
+] as const;
 
-function splitSkills(value: string | null): string[] {
-  return (value ?? "")
-    .split("·")
-    .map((skill) => skill.trim())
-    .filter(Boolean);
+function hashId(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i += 1) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h;
 }
 
-function draftFromCompany(company: CfaCompany): CompanyDraft {
+function avatarGradient(id: string) {
+  const [a, b] = AVATAR_GRADIENTS[hashId(id) % AVATAR_GRADIENTS.length]!;
+  return `linear-gradient(135deg, ${a}, ${b})`;
+}
+
+function initials(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
+function isTestCompany(company: CfaCompany) {
+  return looksLikeTestAccount({
+    email: company.email,
+    name: company.company_name,
+  });
+}
+
+function contactLabel(company: CfaCompany) {
+  const name =
+    formatPersonName(
+      [company.contact_first_name, company.contact_last_name].filter(Boolean).join(" ") ||
+        company.contact_name,
+    ) || "";
+  if (!name) return null;
+  const role = company.contact_role?.trim();
+  return role ? `${name} · ${formatPersonName(role)}` : name;
+}
+
+function citySector(company: CfaCompany) {
+  const city = formatCompanyName(company.city) || null;
+  const sector = company.naf_label?.trim() || null;
+  if (city && sector) return `${city} · ${sector}`;
+  return city || sector || null;
+}
+
+function readUrlState() {
+  if (typeof window === "undefined") {
+    return { q: "", track: "all", remind: false, showTest: false, view: "board" as const };
+  }
+  const url = new URL(window.location.href);
   return {
-    companyName: company.company_name,
-    companyAddress: company.company_address ?? "",
-    siret: company.siret ?? "",
-    firstName: company.contact_first_name ?? "",
-    lastName: company.contact_last_name ?? "",
-    email: company.email ?? "",
-    phone: company.phone ?? "",
-    contactRole: company.contact_role ?? "",
-    quantity: company.apprentices_wanted ?? 1,
-    track1: company.apprentice_track_1 ?? "",
-    softSkills: splitSkills(company.soft_skills),
-    status: company.status,
+    q: url.searchParams.get("q") || "",
+    track: url.searchParams.get("track") || "all",
+    remind: url.searchParams.get("remind") === "1",
+    showTest: url.searchParams.get("test") === "1",
+    view: url.searchParams.get("view") === "list" ? ("list" as const) : ("board" as const),
   };
+}
+
+function writeUrlState(state: {
+  q: string;
+  track: string;
+  remind: boolean;
+  showTest: boolean;
+  view: "board" | "list";
+}) {
+  const url = new URL(window.location.href);
+  if (!state.q.trim()) url.searchParams.delete("q");
+  else url.searchParams.set("q", state.q);
+  if (state.track === "all") url.searchParams.delete("track");
+  else url.searchParams.set("track", state.track);
+  if (!state.remind) url.searchParams.delete("remind");
+  else url.searchParams.set("remind", "1");
+  if (!state.showTest) url.searchParams.delete("test");
+  else url.searchParams.set("test", "1");
+  if (state.view === "board") url.searchParams.delete("view");
+  else url.searchParams.set("view", state.view);
+  window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
+function needsMailRemind(company: CfaCompany) {
+  if (hostStageFromStatus(company.status) !== "email_sent") return false;
+  const ref = company.last_status_at || company.last_action_at || company.updated_at || company.created_at;
+  const n = daysSince(ref);
+  return n != null && n >= CFA_HOST_MAIL_REMINDER_DAYS;
+}
+
+function needsOfferRemind(company: CfaCompany) {
+  if (hostStageFromStatus(company.status) !== "creating_offer") return false;
+  if (!company.offer_with_client) return false;
+  const ref = company.last_status_at || company.last_action_at || company.updated_at || company.created_at;
+  const n = daysSince(ref);
+  return n != null && n >= CFA_HOST_OFFER_REMINDER_DAYS;
+}
+
+function isOverdue(company: CfaCompany) {
+  return needsMailRemind(company) || needsOfferRemind(company);
+}
+
+function footerMeta(company: CfaCompany): { text: string | null; overdue: boolean } {
+  const stage = hostStageFromStatus(company.status);
+  const overdue = isOverdue(company);
+  if (stage === "to_contact") {
+    const rel = relativeDaysAgo(company.created_at);
+    return { text: rel ? `Ajoutée ${rel}` : null, overdue: false };
+  }
+  if (stage === "email_sent") {
+    const ref = company.last_status_at || company.last_action_at || company.updated_at;
+    const rel = relativeDaysAgo(ref);
+    return { text: rel ? `Mail envoyé ${rel}` : null, overdue };
+  }
+  if (stage === "appointment") {
+    const when = shortFrWeekdayDate(company.next_action_at);
+    return { text: when ? `RDV ${when}` : company.next_action || null, overdue: false };
+  }
+  if (stage === "creating_offer") {
+    return {
+      text: company.offer_with_client ? "Offre chez le client" : "Offre en rédaction",
+      overdue,
+    };
+  }
+  if (stage === "recruiting") {
+    const n = company.candidates_proposed ?? 0;
+    return { text: `${n} candidat${n > 1 ? "s" : ""} proposé${n > 1 ? "s" : ""}`, overdue: false };
+  }
+  if (stage === "recruited") {
+    const n = company.apprentices_recruited ?? 0;
+    return { text: `${n} alternant${n > 1 ? "s" : ""} recruté${n > 1 ? "s" : ""}`, overdue: false };
+  }
+  return { text: null, overdue: false };
+}
+
+function primaryAction(company: CfaCompany): { label: string; tone: "blue" | "red" | "amber" | "teal" | "none" } | null {
+  const stage = hostStageFromStatus(company.status);
+  if (stage === "to_contact") return { label: "Contacter", tone: "blue" };
+  if (stage === "email_sent") return { label: "Relancer", tone: needsMailRemind(company) ? "red" : "blue" };
+  if (stage === "appointment") return { label: "Préparer", tone: "blue" };
+  if (stage === "creating_offer") {
+    return company.offer_with_client
+      ? { label: "Relancer", tone: needsOfferRemind(company) ? "red" : "amber" }
+      : { label: "Publier", tone: "amber" };
+  }
+  if (stage === "recruiting") return { label: "Voir les candidats", tone: "teal" };
+  return null;
 }
 
 export function CfaCompanyPipelineClient({
@@ -93,13 +226,19 @@ export function CfaCompanyPipelineClient({
   apiPath?: string;
   readOnly?: boolean;
 } = {}) {
+  const router = useRouter();
+  const initial = readUrlState();
   const [companies, setCompanies] = useState<CfaCompany[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [migrationRequired, setMigrationRequired] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [query, setQuery] = useState(initial.q);
+  const [track, setTrack] = useState(initial.track);
+  const [remindOnly, setRemindOnly] = useState(initial.remind);
+  const [showTest, setShowTest] = useState(initial.showTest);
+  const [view, setView] = useState<"board" | "list">(initial.view);
   const [open, setOpen] = useState(false);
+  const [createStatus, setCreateStatus] = useState<CfaCompanyStatus>("to_contact");
   const [companyName, setCompanyName] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
   const [siret, setSiret] = useState("");
@@ -110,15 +249,18 @@ export function CfaCompanyPipelineClient({
   const [phone, setPhone] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [track1, setTrack1] = useState("");
-  const [selected, setSelected] = useState<CfaCompany | null>(null);
-  const [draft, setDraft] = useState<CompanyDraft | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [editMessage, setEditMessage] = useState("");
+  const [saving, setSaving] = useState(false);
   const [lostCompany, setLostCompany] = useState<CfaCompany | null>(null);
   const [lostReason, setLostReason] = useState("");
-  const router = useRouter();
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [activeDrag, setActiveDrag] = useState<CfaCompany | null>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  async function load() {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -126,37 +268,77 @@ export function CfaCompanyPipelineClient({
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Chargement impossible");
       setCompanies(result.companies ?? []);
-      setMigrationRequired(Boolean(result.migrationRequired));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Chargement impossible");
     } finally {
       setLoading(false);
     }
-  }
+  }, [apiPath]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+    void load();
+  }, [load]);
 
-  const counts = useMemo(
-    () => ({
-      total: companies.length,
-      creatingOffer: companies.filter((item) => item.status === "creating_offer").length,
-      toContact: companies.filter((item) => item.status === "to_contact").length,
-      recruiting: companies.filter((item) => item.status === "recruiting").length,
-      recruited: companies.filter((item) => item.status === "recruited").length,
-    }),
-    [companies],
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [load]);
+
+  useEffect(() => {
+    writeUrlState({ q: query, track, remind: remindOnly, showTest, view });
+  }, [query, track, remindOnly, showTest, view]);
+
+  const testCount = useMemo(() => companies.filter(isTestCompany).length, [companies]);
+
+  const visible = useMemo(() => {
+    return companies.filter((company) => {
+      if (!showTest && isTestCompany(company)) return false;
+      if (track !== "all" && company.apprentice_track_1 !== track) return false;
+      if (remindOnly && !isOverdue(company)) return false;
+      const hay = `${company.company_name} ${company.contact_name ?? ""} ${company.email ?? ""} ${company.city ?? ""}`.toLowerCase();
+      return hay.includes(query.trim().toLowerCase());
+    });
+  }, [companies, showTest, track, remindOnly, query]);
+
+  const remindCount = useMemo(
+    () => companies.filter((c) => (showTest || !isTestCompany(c)) && isOverdue(c)).length,
+    [companies, showTest],
+  );
+
+  const stageCounts = useMemo(() => {
+    const map = Object.fromEntries(CFA_HOST_STAGES.map((s) => [s.id, 0])) as Record<CfaHostStageId, number>;
+    for (const company of visible) {
+      const stage = hostStageFromStatus(company.status);
+      if (stage) map[stage] += 1;
+    }
+    return map;
+  }, [visible]);
+
+  const openPosts = useMemo(
+    () =>
+      visible
+        .filter((c) => hostStageFromStatus(c.status) !== "recruited")
+        .reduce((sum, c) => sum + (c.apprentices_wanted ?? 0), 0),
+    [visible],
+  );
+  const recruitedCount = useMemo(
+    () => visible.reduce((sum, c) => sum + (c.apprentices_recruited ?? 0), 0),
+    [visible],
   );
 
   async function changeStatus(company: CfaCompany, status: CfaCompanyStatus, reason = "") {
     if (status === "not_recruited" && !reason) {
       setLostCompany(company);
       setLostReason("");
-      return;
+      return false;
     }
-    setUpdating(company.id);
+    const previous = company.status;
+    setCompanies((current) =>
+      current.map((item) => (item.id === company.id ? { ...item, status } : item)),
+    );
     setError("");
     try {
       const response = await fetch(apiPath, {
@@ -166,17 +348,21 @@ export function CfaCompanyPipelineClient({
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Mise à jour impossible");
-      setCompanies((current) => current.map((item) => (item.id === company.id ? result.company : item)));
-      setSelected((current) => (current?.id === company.id ? result.company : current));
-      setSelected((current) => (current?.id === company.id ? result.company : current));
+      setCompanies((current) =>
+        current.map((item) => (item.id === company.id ? { ...item, ...result.company } : item)),
+      );
+      return true;
     } catch (updateError) {
+      setCompanies((current) =>
+        current.map((item) => (item.id === company.id ? { ...item, status: previous } : item)),
+      );
       setError(updateError instanceof Error ? updateError.message : "Mise à jour impossible");
-    } finally {
-      setUpdating(null);
+      return false;
     }
   }
 
-  function resetForm() {
+  function openCreate(status: CfaCompanyStatus = "to_contact") {
+    setCreateStatus(status);
     setCompanyName("");
     setCompanyAddress("");
     setSiret("");
@@ -187,68 +373,7 @@ export function CfaCompanyPipelineClient({
     setPhone("");
     setQuantity(1);
     setTrack1("");
-  }
-
-  function openCompany(company: CfaCompany) {
-    if (!readOnly) {
-      router.push(`/super/cfa/entreprises/${company.id}`);
-      return;
-    }
-    setSelected(company);
-    setDraft(draftFromCompany(company));
-    setEditMessage("");
-  }
-
-  function toggleDraftSkill(skill: string) {
-    setDraft((current) =>
-      current
-        ? {
-            ...current,
-            softSkills: current.softSkills.includes(skill)
-              ? current.softSkills.filter((item) => item !== skill)
-              : [...current.softSkills, skill],
-          }
-        : current,
-    );
-  }
-
-  async function saveCompany(event: React.FormEvent) {
-    event.preventDefault();
-    if (!selected || !draft) return;
-    setSavingEdit(true);
-    setEditMessage("");
-    setError("");
-    try {
-      const response = await fetch(apiPath, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: selected.id,
-          companyName: draft.companyName,
-          companyAddress: draft.companyAddress,
-          siret: draft.siret,
-          firstName: draft.firstName,
-          lastName: draft.lastName,
-          contactRole: draft.contactRole,
-          email: draft.email,
-          phone: draft.phone,
-          apprenticesWanted: draft.quantity,
-          apprenticeTrack1: draft.track1,
-          softSkills: draft.softSkills.join(" · "),
-          status: draft.status,
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Enregistrement impossible");
-      setCompanies((current) => current.map((item) => (item.id === selected.id ? result.company : item)));
-      setSelected(result.company);
-      setDraft(draftFromCompany(result.company));
-      setEditMessage("Enregistré.");
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Enregistrement impossible");
-    } finally {
-      setSavingEdit(false);
-    }
+    setOpen(true);
   }
 
   async function lookupSiret(value: string) {
@@ -261,9 +386,9 @@ export function CfaCompanyPipelineClient({
       const response = await fetch(`${apiPath}/lookup?siret=${digits}`);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Entreprise introuvable");
-      if (result.companyName) setCompanyName(result.companyName);
+      if (result.companyName) setCompanyName(formatCompanyName(result.companyName));
       if (result.address) setCompanyAddress(result.address);
-      setLookup(result.companyName ? `Entreprise trouvée : ${result.companyName}` : "SIRET reconnu");
+      setLookup(result.companyName ? `Entreprise trouvée : ${formatCompanyName(result.companyName)}` : "SIRET reconnu");
     } catch (lookupError) {
       setLookup(lookupError instanceof Error ? lookupError.message : "Recherche impossible");
     }
@@ -278,21 +403,22 @@ export function CfaCompanyPipelineClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          companyName,
+          companyName: formatCompanyName(companyName),
           siret,
-          contactName: `${firstName} ${lastName}`.trim(),
-          firstName,
-          lastName,
+          companyAddress,
+          contactName: `${formatPersonName(firstName)} ${formatPersonName(lastName)}`.trim(),
+          firstName: formatPersonName(firstName),
+          lastName: formatPersonName(lastName),
           email,
           phone,
           apprenticesWanted: quantity,
           apprenticeTrack1: track1,
+          status: createStatus,
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Création impossible");
       setCompanies((current) => [result.company, ...current]);
-      resetForm();
       setOpen(false);
       if (result.company?.id) router.push(`/super/cfa/entreprises/${result.company.id}`);
     } catch (createError) {
@@ -302,86 +428,300 @@ export function CfaCompanyPipelineClient({
     }
   }
 
+  function openCompany(company: CfaCompany) {
+    if (!readOnly) router.push(`/super/cfa/entreprises/${company.id}`);
+  }
+
+  function runAction(company: CfaCompany, e: React.MouseEvent) {
+    e.stopPropagation();
+    const stage = hostStageFromStatus(company.status);
+    if (stage === "to_contact" || stage === "email_sent") {
+      const params = new URLSearchParams();
+      if (company.email) params.set("to", company.email);
+      if (company.contact_name || company.contact_first_name) {
+        params.set(
+          "name",
+          formatPersonName(
+            [company.contact_first_name, company.contact_last_name].filter(Boolean).join(" ") ||
+              company.contact_name ||
+              "",
+          ),
+        );
+      }
+      params.set("company", formatCompanyName(company.company_name));
+      router.push(`/super/crm/emails?${params.toString()}`);
+      return;
+    }
+    openCompany(company);
+  }
+
+  function scrollToStage(stageId: string) {
+    const el = columnRefs.current[stageId];
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }
+
+  function updateScrollHint() {
+    const el = boardRef.current;
+    if (!el) return;
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+  }
+
+  useEffect(() => {
+    updateScrollHint();
+    const el = boardRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", updateScrollHint);
+    window.addEventListener("resize", updateScrollHint);
+    return () => {
+      el.removeEventListener("scroll", updateScrollHint);
+      window.removeEventListener("resize", updateScrollHint);
+    };
+  }, [visible, view, loading]);
+
+  function onDragStart(event: DragStartEvent) {
+    const company = visible.find((c) => c.id === String(event.active.id));
+    setActiveDrag(company ?? null);
+    setMenuId(null);
+  }
+
+  async function onDragEnd(event: DragEndEvent) {
+    setActiveDrag(null);
+    const overId = event.over?.id ? String(event.over.id) : "";
+    const companyId = String(event.active.id);
+    const company = companies.find((c) => c.id === companyId);
+    if (!company || !overId.startsWith("stage:")) return;
+    const stageId = overId.replace("stage:", "") as CfaHostStageId;
+    const nextStatus = dbStatusForHostStage(stageId);
+    if (company.status === nextStatus) return;
+    const ok = await changeStatus(company, nextStatus);
+    if (!ok) setNotice("Déplacement annulé.");
+  }
+
+  const byStage = useMemo(() => {
+    const map = Object.fromEntries(CFA_HOST_STAGES.map((s) => [s.id, [] as CfaCompany[]])) as Record<
+      CfaHostStageId,
+      CfaCompany[]
+    >;
+    for (const company of visible) {
+      const stage = hostStageFromStatus(company.status);
+      if (stage) map[stage].push(company);
+    }
+    return map;
+  }, [visible]);
+
   return (
-    <div className="space-y-6 px-3 py-6 text-white sm:px-6 sm:py-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-950">Entreprises partenaires</h1>
-          <p className="mt-2 max-w-2xl text-sm text-gray-500">
-            Du premier contact au recrutement des alternants.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {readOnly ? null : (
-          <button
-            type="button"
-            onClick={() => {
-              resetForm();
-              setOpen(true);
-            }}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#635BFF] px-4 text-sm font-semibold text-white hover:bg-[#554ee6]"
-          >
-            <Plus className="h-4 w-4" />
-            Entreprise
-          </button>
-          )}
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/15 bg-[#10243f] px-4 text-sm font-semibold text-[#f8fbff] hover:bg-[#16325c]"
-          >
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            Actualiser
-          </button>
+    <div className="space-y-5 px-3 py-6 text-[#F2F4FA] sm:px-6 sm:py-8">
+      <PageTitle
+        title="Entreprises d'accueil"
+        subtitle={`${visible.length} entreprise${visible.length > 1 ? "s" : ""} · ${remindCount} relance${remindCount > 1 ? "s" : ""} à faire cette semaine`}
+        actions={
+          readOnly ? null : (
+            <button
+              type="button"
+              onClick={() => openCreate("to_contact")}
+              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+            >
+              ＋ Entreprise
+            </button>
+          )
+        }
+      />
+
+      {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}
+      {notice ? <p className="text-sm text-[#F2CF6B]">{notice}</p> : null}
+
+      <StageStrip
+        title="Du premier contact au recrutement"
+        meta={`${openPosts} poste${openPosts > 1 ? "s" : ""} ouvert${openPosts > 1 ? "s" : ""} au total · ${recruitedCount} alternant${recruitedCount > 1 ? "s" : ""} recruté${recruitedCount > 1 ? "s" : ""}`}
+        items={CFA_HOST_STAGES.map((stage) => ({
+          id: stage.id,
+          label: stage.label,
+          count: stageCounts[stage.id],
+          color: stage.color,
+        }))}
+        onSelect={scrollToStage}
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="⌕ Rechercher une entreprise"
+          className="w-[250px] rounded-full border border-[#26304F] bg-[#0B1122] px-4 py-2 text-sm outline-none placeholder:text-[#6C7593]"
+        />
+        <select
+          value={track}
+          onChange={(e) => setTrack(e.target.value)}
+          className="rounded-full border border-[#26304F] bg-[#111831] px-3 py-2 text-sm text-[#B7BED3]"
+        >
+          <option value="all">Tous les cursus</option>
+          {CFA_SPECIALIZATIONS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => setRemindOnly((v) => !v)}
+          className="rounded-full px-3.5 py-1.5 text-sm font-semibold"
+          style={{
+            background: remindOnly ? "#FFFFFF" : "#111831",
+            color: remindOnly ? "#0A0F1E" : "#B7BED3",
+            border: remindOnly ? "1px solid #FFFFFF" : "1px solid #1A2340",
+          }}
+        >
+          À relancer {remindCount}
+        </button>
+        <select
+          className="rounded-full border border-[#26304F] bg-[#111831] px-3 py-2 text-sm text-[#B7BED3]"
+          defaultValue="all"
+          aria-label="Chargé de compte"
+        >
+          <option value="all">Chargé : tous</option>
+        </select>
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <TestToggle checked={showTest} count={testCount} onChange={setShowTest} />
+          <ViewSwitch value={view} onChange={setView} />
         </div>
       </div>
 
+      {loading ? (
+        <div className="grid grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-64 animate-pulse rounded-[22px] bg-[#111831]" />
+          ))}
+        </div>
+      ) : view === "list" ? (
+        <ListView
+          companies={visible}
+          onOpen={openCompany}
+          onAction={runAction}
+          menuId={menuId}
+          setMenuId={setMenuId}
+          onMove={(company, status) => void changeStatus(company, status)}
+        />
+      ) : (
+        <div className="relative">
+          <div
+            ref={boardRef}
+            className="flex gap-[14px] overflow-x-auto pb-4"
+            style={{ scrollbarWidth: "thin" }}
+          >
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={onDragStart}
+              onDragEnd={(e) => void onDragEnd(e)}
+            >
+              {CFA_HOST_STAGES.map((stage) => (
+                <StageColumn
+                  key={stage.id}
+                  stageId={stage.id}
+                  companies={byStage[stage.id]}
+                  columnRef={(el) => {
+                    columnRefs.current[stage.id] = el;
+                  }}
+                  onAdd={() => openCreate(dbStatusForHostStage(stage.id))}
+                  onOpen={openCompany}
+                  onAction={runAction}
+                  menuId={menuId}
+                  setMenuId={setMenuId}
+                  onMove={(company, status) => void changeStatus(company, status)}
+                  readOnly={readOnly}
+                />
+              ))}
+              <DragOverlay>
+                {activeDrag ? <CompanyCard company={activeDrag} overlay /> : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
+          {canScrollRight ? (
+            <button
+              type="button"
+              aria-label="Défiler"
+              onClick={() => boardRef.current?.scrollBy({ left: 276, behavior: "smooth" })}
+              className="absolute top-1/2 right-0 z-10 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white text-[#0A0F1E] shadow-lg"
+              style={{
+                boxShadow: "-24px 0 32px #0A0F1E",
+              }}
+            >
+              ›
+            </button>
+          ) : null}
+        </div>
+      )}
+
       {open ? (
-        <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
-          <form onSubmit={(event) => void createCompany(event)} className="super-nav-dropdown my-8 w-full max-w-lg rounded-2xl p-5 sm:p-6">
+        <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#0A0F1E]/85 p-4 backdrop-blur-sm sm:items-center">
+          <form
+            onSubmit={(event) => void createCompany(event)}
+            className="my-8 w-full max-w-lg rounded-[24px] border border-[#1A2340] bg-[#111831] p-5 sm:p-6"
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-[#f8fbff]">Nouvelle entreprise</h2>
+                <h2 className="text-xl font-extrabold text-[#F2F4FA]">Nouvelle entreprise</h2>
+                <p className="mt-1 text-sm text-[#9AA3BD]">
+                  Étape : {hostStageMeta(hostStageFromStatus(createStatus) || "to_contact").label}
+                </p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
-                <X className="h-4 w-4" />
+              <button type="button" onClick={() => setOpen(false)} className="text-[#9AA3BD]">
+                ✕
               </button>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                SIRET ou nom
+              <label className="block text-xs font-semibold text-[#9AA3BD] sm:col-span-2">
+                SIRET
                 <input
                   value={siret}
                   onChange={(event) => void lookupSiret(event.target.value)}
                   inputMode="numeric"
                   maxLength={14}
-                  placeholder="SIRET, 14 chiffres"
-                  className={cn(fieldClass, "mt-1")}
+                  placeholder="14 chiffres"
+                  className={`${fieldClass} mt-1`}
                 />
-                {lookup ? <span className="mt-1 block text-[11px] font-medium text-indigo-200">{lookup}</span> : null}
+                {lookup ? <span className="mt-1 block text-[11px] text-[#A99BFF]">{lookup}</span> : null}
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
+              <label className="block text-xs font-semibold text-[#9AA3BD] sm:col-span-2">
                 Entreprise
-                <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required placeholder="Raison sociale" className={cn(fieldClass, "mt-1")} />
+                <input
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                  onBlur={() => setCompanyName(formatCompanyName(companyName))}
+                  required
+                  className={`${fieldClass} mt-1`}
+                />
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
+              <label className="block text-xs font-semibold text-[#9AA3BD]">
                 Prénom
-                <input value={firstName} onChange={(event) => setFirstName(event.target.value)} required className={cn(fieldClass, "mt-1")} />
+                <input
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  onBlur={() => setFirstName(formatPersonName(firstName))}
+                  required
+                  className={`${fieldClass} mt-1`}
+                />
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
+              <label className="block text-xs font-semibold text-[#9AA3BD]">
                 Nom
-                <input value={lastName} onChange={(event) => setLastName(event.target.value)} required className={cn(fieldClass, "mt-1")} />
+                <input
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  onBlur={() => setLastName(formatPersonName(lastName))}
+                  required
+                  className={`${fieldClass} mt-1`}
+                />
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Adresse mail
-                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className={cn(fieldClass, "mt-1")} />
+              <label className="block text-xs font-semibold text-[#9AA3BD]">
+                E-mail
+                <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" className={`${fieldClass} mt-1`} />
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Numéro de téléphone
-                <input value={phone} onChange={(event) => setPhone(event.target.value)} className={cn(fieldClass, "mt-1")} />
+              <label className="block text-xs font-semibold text-[#9AA3BD]">
+                Téléphone
+                <input value={phone} onChange={(event) => setPhone(event.target.value)} className={`${fieldClass} mt-1`} />
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Quantité
+              <label className="block text-xs font-semibold text-[#9AA3BD]">
+                Postes
                 <input
                   value={quantity}
                   onChange={(event) => setQuantity(Math.min(30, Math.max(1, Number(event.target.value) || 1)))}
@@ -389,27 +729,31 @@ export function CfaCompanyPipelineClient({
                   min={1}
                   max={30}
                   required
-                  className={cn(fieldClass, "mt-1")}
+                  className={`${fieldClass} mt-1`}
                 />
               </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                Besoin cursus
-                <select value={track1} onChange={(event) => setTrack1(event.target.value)} required className={cn(fieldClass, "mt-1")}>
+              <label className="block text-xs font-semibold text-[#9AA3BD] sm:col-span-2">
+                Cursus
+                <select value={track1} onChange={(event) => setTrack1(event.target.value)} required className={`${fieldClass} mt-1`}>
                   <option value="">Choisir le cursus</option>
                   {CFA_SPECIALIZATIONS.map((item) => (
                     <option key={item.value} value={item.value}>
-                      {item.group} — {item.label}
+                      {item.label}
                     </option>
                   ))}
                 </select>
               </label>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg px-4 text-sm font-semibold text-[#d5e0f2] hover:bg-white/10">
+              <button type="button" onClick={() => setOpen(false)} className="rounded-full px-4 py-2 text-sm text-[#9AA3BD]">
                 Annuler
               </button>
-              <button type="submit" disabled={saving} className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white disabled:opacity-60">
-                {saving ? "Création…" : "Créer et ouvrir la fiche"}
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {saving ? "Création…" : "Créer"}
               </button>
             </div>
           </form>
@@ -417,9 +761,9 @@ export function CfaCompanyPipelineClient({
       ) : null}
 
       {lostCompany ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-[#050d1d]/75 p-4">
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-[#0A0F1E]/85 p-4">
           <form
-            className="super-nav-dropdown w-full max-w-md rounded-2xl p-5"
+            className="w-full max-w-md rounded-[24px] border border-[#1A2340] bg-[#111831] p-5"
             onSubmit={(event) => {
               event.preventDefault();
               const company = lostCompany;
@@ -427,225 +771,402 @@ export function CfaCompanyPipelineClient({
               void changeStatus(company, "not_recruited", lostReason);
             }}
           >
-            <h2 className="text-lg font-bold text-[#f8fbff]">Marquer perdu</h2>
-            <label className="mt-3 block text-xs font-semibold text-[#d5e0f2]">Motif
-              <textarea required value={lostReason} onChange={(event) => setLostReason(event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-white/15 bg-[#10243f] px-3 py-2 text-sm text-white" />
+            <h2 className="text-lg font-extrabold">Marquer non recruté</h2>
+            <label className="mt-3 block text-xs font-semibold text-[#9AA3BD]">
+              Motif
+              <textarea
+                required
+                value={lostReason}
+                onChange={(event) => setLostReason(event.target.value)}
+                className="mt-1 min-h-24 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm"
+              />
             </label>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="h-10 px-4 text-sm text-[#d5e0f2]" onClick={() => setLostCompany(null)}>Annuler</button>
-              <button type="submit" className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white">Confirmer</button>
-            </div>
-          </form>
-        </div>
-      ) : null}
-
-      {readOnly && selected && draft ? (
-        <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-[#050d1d]/75 p-4 sm:items-center">
-          <form onSubmit={(event) => void saveCompany(event)} className="super-nav-dropdown my-8 w-full max-w-2xl rounded-2xl p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold text-indigo-300">Fiche entreprise</p>
-                <h2 className="mt-1 text-xl font-bold text-[#f8fbff]">Modifier {selected.company_name}</h2>
-              </div>
-              <button type="button" onClick={() => setSelected(null)} className="rounded-full p-2 text-[#d5e0f2] hover:bg-white/10" aria-label="Fermer">
-                <X className="h-4 w-4" />
+              <button type="button" className="px-4 text-sm text-[#9AA3BD]" onClick={() => setLostCompany(null)}>
+                Annuler
               </button>
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                Numéro SIRET
-                <input value={draft.siret} onChange={(event) => setDraft({ ...draft, siret: event.target.value.replace(/\s/g, "") })} required inputMode="numeric" minLength={14} maxLength={14} className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                Entreprise
-                <input value={draft.companyName} onChange={(event) => setDraft({ ...draft, companyName: event.target.value })} required className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2] sm:col-span-2">
-                Adresse
-                <input value={draft.companyAddress} onChange={(event) => setDraft({ ...draft, companyAddress: event.target.value })} className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Prénom
-                <input value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} required className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Nom
-                <input value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} required className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Adresse mail
-                <input value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} type="email" className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Numéro de téléphone
-                <input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Qualité
-                <input value={draft.contactRole} onChange={(event) => setDraft({ ...draft, contactRole: event.target.value })} className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Quantité
-                <input value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} type="number" min={1} max={30} required className={cn(fieldClass, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Besoin cursus
-                <select value={draft.track1} onChange={(event) => setDraft({ ...draft, track1: event.target.value })} required className={cn(fieldClass, "mt-1")}>
-                  <option value="">Choisir le cursus</option>
-                  {CFA_SPECIALIZATIONS.map((item) => (
-                    <option key={item.value} value={item.value}>{item.group} — {item.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-xs font-semibold text-[#d5e0f2]">
-                Statut
-                <select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as CfaCompanyStatus })} className={cn(fieldClass, "mt-1")}>
-                  {CFA_COMPANY_STATUSES.map((status) => (
-                    <option key={status} value={status}>{CFA_COMPANY_STATUS_LABELS[status]}</option>
-                  ))}
-                </select>
-              </label>
-              <fieldset className="sm:col-span-2">
-                <legend className="text-xs font-semibold text-[#d5e0f2]">Soft skills pour le ou les postes</legend>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {SOFT_SKILLS.map((skill) => {
-                    const active = draft.softSkills.includes(skill.titre);
-                    return (
-                      <button
-                        key={skill.id}
-                        type="button"
-                        onClick={() => toggleDraftSkill(skill.titre)}
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-medium",
-                          active ? "border-[#635BFF] bg-[#635BFF] text-white" : "border-white/15 text-[#d5e0f2] hover:bg-white/10",
-                        )}
-                      >
-                        {skill.titre}
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            </div>
-            <div className="mt-5 flex items-center justify-end gap-3">
-              {editMessage ? <p className="mr-auto text-sm text-[#d5e0f2]">{editMessage}</p> : null}
-              <button type="button" onClick={() => setSelected(null)} className="h-10 rounded-lg px-4 text-sm font-semibold text-[#d5e0f2] hover:bg-white/10">
-                Fermer
-              </button>
-              <button type="submit" disabled={savingEdit} className="h-10 rounded-lg bg-[#635BFF] px-4 text-sm font-semibold text-white disabled:opacity-60">
-                {savingEdit ? "Enregistrement…" : "Enregistrer"}
+              <button type="submit" className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">
+                Confirmer
               </button>
             </div>
           </form>
         </div>
       ) : null}
+    </div>
+  );
+}
 
-      <div className="grid gap-3 sm:grid-cols-5">
-        {[
-          ["Entreprises", counts.total],
-          ["Création offre d'emploi", counts.creatingOffer],
-          ["À contacter", counts.toContact],
-          ["Recrutement en cours", counts.recruiting],
-          ["Recrutements réussis", counts.recruited],
-        ].map(([label, value]) => (
-          <div key={String(label)} className="super-glass-panel rounded-2xl border border-white/10 p-4 shadow-sm">
-            <p className="text-xs font-medium text-gray-500">{label}</p>
-            <p className="mt-2 text-2xl font-bold text-gray-950">{value}</p>
+function StageColumn({
+  stageId,
+  companies,
+  columnRef,
+  onAdd,
+  onOpen,
+  onAction,
+  menuId,
+  setMenuId,
+  onMove,
+  readOnly,
+}: {
+  stageId: CfaHostStageId;
+  companies: CfaCompany[];
+  columnRef: (el: HTMLDivElement | null) => void;
+  onAdd: () => void;
+  onOpen: (c: CfaCompany) => void;
+  onAction: (c: CfaCompany, e: React.MouseEvent) => void;
+  menuId: string | null;
+  setMenuId: (id: string | null) => void;
+  onMove: (c: CfaCompany, status: CfaCompanyStatus) => void;
+  readOnly: boolean;
+}) {
+  const stage = hostStageMeta(stageId);
+  const { setNodeRef, isOver } = useDroppable({ id: `stage:${stageId}` });
+  return (
+    <div
+      ref={(el) => {
+        setNodeRef(el);
+        columnRef(el);
+      }}
+      className="flex w-[262px] shrink-0 flex-col rounded-[22px] border border-[#1A2340] bg-[#0D1326] p-3"
+      style={{ boxShadow: isOver ? `inset 0 0 0 1px ${stage.color}` : undefined }}
+    >
+      <div className="mb-3 flex items-center gap-2 px-1">
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: stage.color }} />
+        <span className="text-sm font-extrabold text-[#F2F4FA]">{stage.label}</span>
+        <span className="ml-auto rounded-full bg-[#1A2340] px-2 py-0.5 text-[11px] font-semibold text-[#9AA3BD]">
+          {companies.length}
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col gap-2.5">
+        {companies.length === 0 ? (
+          <div className="rounded-[18px] border border-dashed border-[#2E3860] px-3 py-8 text-center text-xs text-[#6C7593]">
+            {stage.emptyHint}
           </div>
-        ))}
+        ) : (
+          companies.map((company) => (
+            <DraggableCard
+              key={company.id}
+              company={company}
+              onOpen={onOpen}
+              onAction={onAction}
+              menuId={menuId}
+              setMenuId={setMenuId}
+              onMove={onMove}
+            />
+          ))
+        )}
+      </div>
+      {readOnly ? null : (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="mt-3 rounded-full border border-[#26304F] px-3 py-2 text-sm font-semibold text-[#9AA3BD] hover:text-[#F2F4FA]"
+        >
+          ＋ Ajouter
+        </button>
+      )}
+    </div>
+  );
+}
+
+function DraggableCard({
+  company,
+  onOpen,
+  onAction,
+  menuId,
+  setMenuId,
+  onMove,
+}: {
+  company: CfaCompany;
+  onOpen: (c: CfaCompany) => void;
+  onAction: (c: CfaCompany, e: React.MouseEvent) => void;
+  menuId: string | null;
+  setMenuId: (id: string | null) => void;
+  onMove: (c: CfaCompany, status: CfaCompanyStatus) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: company.id,
+  });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.4 : 1 }
+    : undefined;
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      <CompanyCard
+        company={company}
+        onOpen={onOpen}
+        onAction={onAction}
+        menuId={menuId}
+        setMenuId={setMenuId}
+        onMove={onMove}
+      />
+    </div>
+  );
+}
+
+function CompanyCard({
+  company,
+  onOpen,
+  onAction,
+  menuId,
+  setMenuId,
+  onMove,
+  overlay,
+}: {
+  company: CfaCompany;
+  onOpen?: (c: CfaCompany) => void;
+  onAction?: (c: CfaCompany, e: React.MouseEvent) => void;
+  menuId?: string | null;
+  setMenuId?: (id: string | null) => void;
+  onMove?: (c: CfaCompany, status: CfaCompanyStatus) => void;
+  overlay?: boolean;
+}) {
+  const name = formatCompanyName(company.company_name);
+  const contact = contactLabel(company);
+  const place = citySector(company);
+  const posts = company.apprentices_wanted ?? 0;
+  const track = company.apprentice_track_1;
+  const trackLabel = track ? getCfaSpecializationLabel(track) : null;
+  const meta = footerMeta(company);
+  const action = primaryAction(company);
+  const overdue = meta.overdue;
+
+  return (
+    <article
+      onClick={() => onOpen?.(company)}
+      className="cursor-pointer rounded-[18px] border bg-[#111831] p-[15px]"
+      style={{
+        borderColor: overdue ? "#FF5D7355" : "#1A2340",
+        boxShadow: overlay ? "0 12px 40px rgba(0,0,0,0.45)" : undefined,
+      }}
+    >
+      <div className="flex items-start gap-2.5">
+        <span
+          className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full text-[11px] font-extrabold text-white"
+          style={{ background: avatarGradient(company.id) }}
+        >
+          {initials(name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14.5px] font-extrabold text-[#F2F4FA]">{name}</p>
+          {place ? <p className="truncate text-xs text-[#9AA3BD]">{place}</p> : null}
+        </div>
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="Actions"
+            className="grid h-7 w-7 place-items-center rounded-full text-[#6C7593]"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuId?.(menuId === company.id ? null : company.id);
+            }}
+          >
+            ⋯
+          </button>
+          {menuId === company.id ? (
+            <div className="absolute right-0 top-8 z-20 w-48 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs shadow-xl">
+              <p className="px-2 py-1 text-[10px] font-semibold text-[#6C7593]">Déplacer vers…</p>
+              {CFA_HOST_STAGES.map((stage) => (
+                <button
+                  key={stage.id}
+                  type="button"
+                  className="block w-full rounded-xl px-2 py-1.5 text-left hover:bg-[#151C33]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuId?.(null);
+                    onMove?.(company, dbStatusForHostStage(stage.id));
+                  }}
+                >
+                  {stage.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="mt-1 block w-full rounded-xl px-2 py-1.5 text-left text-[#FF8A9B] hover:bg-[#151C33]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuId?.(null);
+                  onMove?.(company, "not_recruited");
+                }}
+              >
+                Non recrutement
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      {migrationRequired ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Applique la migration 20261010120000_cfa_companies_contact.sql.
-        </div>
-      ) : null}
-      {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
+      <p className="mt-3 truncate text-xs text-[#9AA3BD]">
+        {contact ? `☺ ${contact}` : <span className="text-[#6C7593]">Contact à trouver</span>}
+      </p>
 
-      {loading ? (
-        <div className="flex min-h-72 items-center justify-center">
-          <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
-        </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {posts > 0 ? (
+          <span className="rounded-full bg-[#1A2340] px-2.5 py-0.5 text-[11px] font-semibold text-[#C9D2E8]">
+            {posts} poste{posts > 1 ? "s" : ""}
+          </span>
+        ) : null}
+        {trackLabel ? (
+          <span
+            className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+            style={{ background: `${trackColor(track)}22`, color: trackColor(track) }}
+          >
+            {trackLabel}
+          </span>
+        ) : (
+          <span className="rounded-full bg-[#1A2340] px-2.5 py-0.5 text-[11px] font-semibold text-[#6C7593]">
+            Cursus à définir
+          </span>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#1A2340] pt-2.5">
+        {meta.text ? (
+          <p className="truncate text-[11px]" style={{ color: overdue ? "#FF8A9B" : "#6C7593" }}>
+            {meta.text}
+          </p>
+        ) : (
+          <span />
+        )}
+        {action ? (
+          <button
+            type="button"
+            onClick={(e) => onAction?.(company, e)}
+            className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold"
+            style={{
+              background:
+                action.tone === "red"
+                  ? "#FF5D731A"
+                  : action.tone === "amber"
+                    ? "#F2CF6B22"
+                    : action.tone === "teal"
+                      ? "#5EDCC322"
+                      : "#8DB8FF22",
+              color:
+                action.tone === "red"
+                  ? "#FF8A9B"
+                  : action.tone === "amber"
+                    ? "#F2CF6B"
+                    : action.tone === "teal"
+                      ? "#5EDCC3"
+                      : "#8DB8FF",
+              border: action.tone === "red" ? "1px solid #FF8A9B55" : undefined,
+            }}
+          >
+            {action.label}
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function ListView({
+  companies,
+  onOpen,
+  onAction,
+  menuId,
+  setMenuId,
+  onMove,
+}: {
+  companies: CfaCompany[];
+  onOpen: (c: CfaCompany) => void;
+  onAction: (c: CfaCompany, e: React.MouseEvent) => void;
+  menuId: string | null;
+  setMenuId: (id: string | null) => void;
+  onMove: (c: CfaCompany, status: CfaCompanyStatus) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-[24px] border border-[#1A2340] bg-[#111831]">
+      <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,.9fr)_minmax(0,1fr)_minmax(0,1fr)_120px] gap-2 px-4 py-3 text-[12.5px] font-extrabold text-[#6C7593]">
+        <span>Entreprise</span>
+        <span>Contact</span>
+        <span>Étape</span>
+        <span>Postes / cursus</span>
+        <span>Dernière action</span>
+        <span>Action</span>
+      </div>
+      {companies.length === 0 ? (
+        <p className="border-t border-[#1A2340] px-4 py-8 text-center text-sm text-[#6C7593]">
+          Aucune entreprise pour ces filtres.
+        </p>
       ) : (
-        <div className="-mx-3 min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-2 sm:-mx-6">
-          <div className="flex w-max min-w-full flex-nowrap gap-4 px-3 pb-5 sm:px-6">
-            {columns.map((column) => {
-              const items = companies.filter((company) => company.status === column.id);
-              return (
-                <section key={column.id} className="super-glass-panel flex h-[min(72vh,760px)] w-[280px] min-w-[280px] max-w-[280px] shrink-0 flex-col rounded-2xl border border-white/10 p-3">
-                  <header className="flex shrink-0 items-center justify-between gap-2 px-1 py-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className={cn("h-2 w-2 shrink-0 rounded-full", column.accent)} />
-                      <h2 className="text-sm font-semibold leading-tight text-gray-800">{column.label}</h2>
-                    </div>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-gray-500">{items.length}</span>
-                  </header>
-                  <div className="mt-2 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                    {items.map((company) => (
-                      <article
-                        key={company.id}
-                        onClick={() => openCompany(company)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            openCompany(company);
-                          }
+        companies.map((company) => {
+          const stageId = hostStageFromStatus(company.status);
+          const stage = stageId ? hostStageMeta(stageId) : null;
+          const meta = footerMeta(company);
+          const action = primaryAction(company);
+          return (
+            <div
+              key={company.id}
+              className="grid cursor-pointer grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,.9fr)_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm"
+              onClick={() => onOpen(company)}
+            >
+              <span className="truncate font-semibold">{formatCompanyName(company.company_name)}</span>
+              <span className="truncate text-[#9AA3BD]">{contactLabel(company) || "Contact à trouver"}</span>
+              <span>
+                {stage ? (
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                    style={{ background: `${stage.color}22`, color: stage.color }}
+                  >
+                    {stage.label}
+                  </span>
+                ) : (
+                  "—"
+                )}
+              </span>
+              <span className="truncate text-[#9AA3BD]">
+                {company.apprentices_wanted ? `${company.apprentices_wanted} poste(s)` : "—"}
+                {company.apprentice_track_1
+                  ? ` · ${getCfaSpecializationLabel(company.apprentice_track_1)}`
+                  : ""}
+              </span>
+              <span className="truncate text-xs" style={{ color: meta.overdue ? "#FF8A9B" : "#6C7593" }}>
+                {meta.text || "—"}
+              </span>
+              <span className="relative flex items-center gap-1">
+                {action ? (
+                  <button
+                    type="button"
+                    className="rounded-full bg-[#8DB8FF22] px-2.5 py-1 text-[11px] font-semibold text-[#8DB8FF]"
+                    onClick={(e) => onAction(company, e)}
+                  >
+                    {action.label}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="text-[#6C7593]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuId(menuId === company.id ? null : company.id);
+                  }}
+                >
+                  ⋯
+                </button>
+                {menuId === company.id ? (
+                  <span className="absolute right-0 top-7 z-20 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-xs">
+                    {CFA_HOST_STAGES.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="block w-full rounded-xl px-2 py-1 text-left"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuId(null);
+                          onMove(company, dbStatusForHostStage(s.id));
                         }}
-                        role="button"
-                        tabIndex={0}
-                        className="cursor-pointer rounded-xl border border-white/10 bg-[#10284d]/80 p-4 text-left shadow-sm hover:border-[#635BFF]/50"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold text-gray-950">{company.company_name}</h3>
-                            <p className="mt-1 truncate text-xs text-gray-500">{company.siret || "SIRET à préciser"}</p>
-                            {company.next_action ? (
-                              <p className={`mt-1 text-xs font-semibold ${company.next_action_at && new Date(company.next_action_at).getTime() < Date.now() ? "text-rose-600" : "text-gray-700"}`}>
-                                {company.next_action} · {company.next_action_at ? new Date(company.next_action_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : ""}
-                              </p>
-                            ) : null}
-                          </div>
-                          <Building2 className="h-4 w-4 shrink-0 text-indigo-500" />
-                        </div>
-                        <div className="mt-3 space-y-1 text-xs text-gray-600">
-                          <p>{company.contact_name || "Contact à préciser"}{company.contact_role ? ` · ${company.contact_role}` : ""}</p>
-                          <p>
-                            {company.apprentices_wanted ?? "—"} · {company.apprentice_track_1 ? getCfaSpecializationLabel(company.apprentice_track_1) : "Cursus à préciser"}
-                          </p>
-                          {company.soft_skills ? (
-                            <p className="line-clamp-2">{company.soft_skills}</p>
-                          ) : null}
-                        </div>
-                        <div className="mt-4 border-t border-gray-100 pt-3" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                          <label className="text-[10px] font-semibold text-gray-400">Statut</label>
-                          {readOnly ? (
-                            <p className="mt-1 text-xs font-medium text-gray-700">{CFA_COMPANY_STATUS_LABELS[company.status]}</p>
-                          ) : (
-                          <select
-                            value={company.status}
-                            disabled={updating === company.id}
-                            onChange={(event) => void changeStatus(company, event.target.value as CfaCompanyStatus)}
-                            className="mt-1 h-9 w-full rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-gray-700 outline-none focus:border-indigo-400"
-                          >
-                            {CFA_COMPANY_STATUSES.map((status) => (
-                              <option key={status} value={status}>{CFA_COMPANY_STATUS_LABELS[status]}</option>
-                            ))}
-                          </select>
-                          )}
-                        </div>
-                      </article>
+                        {s.label}
+                      </button>
                     ))}
-                    {items.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-gray-200 px-3 py-8 text-center text-xs text-gray-400">
-                        Aucune entreprise
-                      </div>
-                    ) : null}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        </div>
+                  </span>
+                ) : null}
+              </span>
+            </div>
+          );
+        })
       )}
     </div>
   );

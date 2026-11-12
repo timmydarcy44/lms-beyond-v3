@@ -6,12 +6,13 @@ import {
   DOSSIER_STAGE_COLORS,
   type DossierStage,
 } from "@/lib/formation-dossier/stages";
-import type {
-  AccountMemberPerson,
-  AccountParticipantsPayload,
-  UnlinkedParticipant,
-} from "@/lib/control/account-participants";
-import { formatPersonName, splitPersonName } from "@/lib/control/account-participants";
+import {
+  formatPersonName,
+  splitPersonName,
+  type AccountMemberPerson,
+  type AccountParticipantsPayload,
+  type UnlinkedParticipant,
+} from "@/lib/control/account-participants-format";
 import { roleLabel, roleTone } from "@/lib/roles";
 import { EmptyState, SidePanel, Field, fieldClass } from "./chrome";
 

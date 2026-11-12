@@ -16,7 +16,7 @@ import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { AccountMembersTab } from "./account-members-tab";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
-import { formatPersonName } from "@/lib/control/account-participants";
+import { formatPersonName } from "@/lib/control/account-participants-format";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
 

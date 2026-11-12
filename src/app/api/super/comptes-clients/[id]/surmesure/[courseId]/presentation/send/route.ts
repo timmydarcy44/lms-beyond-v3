@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { sendEmail } from "@/lib/email/resend-client";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { SURMESURE_SELECT } from "@/lib/training-courses/surmesure";
 import { buildSurMesurePresentationEmailHtml } from "@/lib/training-courses/surmesure-presentation-mail";
@@ -56,14 +56,19 @@ export async function POST(request: NextRequest, context: Ctx) {
     personalNote: message || null,
   });
 
-  const result = await sendEmail({
+  const result = await sendOrgTrackedEmail({
+    orgId,
+    kind: "presentation",
+    label: "Présentation Sur-mesure",
+    db: service,
+    actorUserId: auth.user.id,
+    meta: { course_id: courseId },
     to,
     subject: `Présentation Sur-mesure — ${course.title}`,
     html,
     text: `Présentation de la formation Sur-mesure « ${course.title} » pour ${organizationName}.`,
     tags: {
       type: "surmesure-presentation",
-      organization_id: orgId,
       course_id: courseId,
     },
   });

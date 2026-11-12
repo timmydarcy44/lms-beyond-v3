@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { jsPDF } from "jspdf";
 import { loadDossierDocContext, eurosFromCents } from "@/lib/formation-documents/context";
 import { uploadFormationPdf, newDocToken } from "@/lib/formation-documents/storage";
-import { sendEmail } from "@/lib/email/resend-client";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import {
   buildEdgeEmailShell,
@@ -307,7 +307,12 @@ export async function issueFormationInvoice(
         cta: { label: "Voir la facture", href: viewUrl },
         footerNote: "Facture émise non modifiable. Pour une correction, un avoir sera établi.",
       });
-      await sendEmail({
+      await sendOrgTrackedEmail({
+        orgId: String(dossier.organization_id),
+        kind: "facture",
+        db: service,
+        actorUserId: params.actorUserId ?? null,
+        meta: { dossier_id: params.dossierId, invoice_number: number },
         to: String(dossier.contact_email),
         from: EDGE_COCKPIT_FROM,
         subject: `Facture ${number} — Byound`,

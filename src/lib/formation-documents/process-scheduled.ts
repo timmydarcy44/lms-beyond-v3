@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/lib/email/resend-client";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import {
   buildEdgeEmailShell,
@@ -67,6 +67,48 @@ function relanceCopy(kind: string): { title: string; body: string; cta: string }
     body: "Un message concernant votre dossier formation.",
     cta: "Ouvrir",
   };
+}
+
+const orgIdCache = new Map<string, string | null>();
+
+async function orgIdForDossier(service: SupabaseClient, dossierId: string): Promise<string | null> {
+  if (orgIdCache.has(dossierId)) return orgIdCache.get(dossierId) ?? null;
+  const { data } = await service
+    .from("formation_dossiers")
+    .select("organization_id")
+    .eq("id", dossierId)
+    .maybeSingle();
+  const orgId = data?.organization_id ? String(data.organization_id) : null;
+  orgIdCache.set(dossierId, orgId);
+  return orgId;
+}
+
+async function sendScheduledOrgMail(
+  service: SupabaseClient,
+  row: DueRow,
+  kind: string,
+  options: {
+    subject: string;
+    html: string;
+    tags?: Record<string, string>;
+  },
+) {
+  const orgId = await orgIdForDossier(service, row.dossier_id);
+  if (!orgId) {
+    return { success: false as const, error: "Organisation introuvable pour le dossier" };
+  }
+  return sendOrgTrackedEmail({
+    orgId,
+    kind,
+    label: kind.startsWith("devis_") || kind.startsWith("convention_") ? "Relance" : undefined,
+    db: service,
+    meta: { dossier_id: row.dossier_id, scheduled_mail_id: row.id, scheduled_kind: row.kind },
+    to: row.to_email,
+    from: EDGE_COCKPIT_FROM,
+    subject: options.subject,
+    html: options.html,
+    tags: options.tags,
+  });
 }
 
 async function resolveViewUrl(service: SupabaseClient, row: DueRow): Promise<string> {
@@ -180,9 +222,7 @@ export async function processDueFormationMails(
           row.payload && typeof row.payload.course_title === "string"
             ? row.payload.course_title
             : "votre formation";
-        const result = await sendEmail({
-          to: row.to_email,
-          from: EDGE_COCKPIT_FROM,
+        const result = await sendScheduledOrgMail(service, row, "positionnement", {
           subject: "Test de positionnement — Byound",
           html: buildEdgeEmailShell({
             title: "Test de positionnement",
@@ -277,13 +317,16 @@ export async function processDueFormationMails(
         )}${edgeEmailParagraph(copy.body)}`,
         cta: { label: copy.cta, href: assessmentUrl(attempt.access_token) },
       });
-      const result = await sendEmail({
-        to: row.to_email,
-        from: EDGE_COCKPIT_FROM,
-        subject: `${copy.title} — Byound`,
-        html,
-        tags: { type: `formation-${row.kind}`, dossier_id: row.dossier_id },
-      });
+      const result = await sendScheduledOrgMail(
+        service,
+        row,
+        row.kind.startsWith("eval_froid") ? "eval-froid" : "relance",
+        {
+          subject: `${copy.title} — Byound`,
+          html,
+          tags: { type: `formation-${row.kind}`, dossier_id: row.dossier_id },
+        },
+      );
       if (!result.success) {
         errors.push(`${row.id}: ${result.error}`);
         continue;
@@ -347,13 +390,16 @@ export async function processDueFormationMails(
       });
     }
 
-    const result = await sendEmail({
-      to: row.to_email,
-      from: EDGE_COCKPIT_FROM,
-      subject,
-      html,
-      tags: { type: `formation-${row.kind}`, dossier_id: row.dossier_id },
-    });
+    const result = await sendScheduledOrgMail(
+      service,
+      row,
+      row.kind.startsWith("devis_") || row.kind.startsWith("convention_") ? "relance" : "other",
+      {
+        subject,
+        html,
+        tags: { type: `formation-${row.kind}`, dossier_id: row.dossier_id },
+      },
+    );
 
     if (!result.success) {
       errors.push(`${row.id}: ${result.error || "email_failed"}`);

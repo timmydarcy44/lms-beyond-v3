@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { markOrgOutboundEmailEvent } from "@/lib/email/org-outbound";
 import { getResendClient } from "@/lib/email/resend-client";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -77,6 +78,13 @@ export async function POST(req: NextRequest) {
         await supabase.from("expert_emails").update({ status: next }).eq("id", current.data.id);
       }
     }
+
+    await markOrgOutboundEmailEvent({
+      resendId: emailId,
+      type: event.type,
+      at: event.created_at || new Date().toISOString(),
+      db: supabase,
+    });
   }
 
   if (event.type !== "email.opened") {

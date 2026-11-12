@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { formatEurosHt } from "@/lib/control/policy";
-import { sendEmail } from "@/lib/email/resend-client";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,13 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
   const profile = userId ? await service.from("profiles").select("email").eq("id", userId).maybeSingle() : { data: null };
   const email = profile.data?.email as string | undefined;
   if (!email) return NextResponse.json({ error: "Aucun administrateur à prévenir" }, { status: 404 });
-  const sent = await sendEmail({
+  const sent = await sendOrgTrackedEmail({
+    orgId: String(invoice.data.org_id),
+    kind: "relance",
+    label: "Rappel de facture",
+    db: service,
+    actorUserId: data.user.id,
+    meta: { billing_document_id: invoice.data.id, invoice_number: invoice.data.number },
     to: email,
     subject: `Rappel de facture ${invoice.data.number ?? ""}`.trim(),
     html: `<p>La facture ${invoice.data.number ?? ""} de ${formatEurosHt(Number(invoice.data.amount_ht_cents ?? 0))} HT est arrivée à échéance.</p>`,

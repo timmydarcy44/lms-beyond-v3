@@ -229,6 +229,7 @@ export async function loadAccountDetail(orgId: string) {
       people: [],
       employees: [],
       activity: [],
+      outboundEmails: [],
       note: null,
       documents: [],
       courses: [],
@@ -238,10 +239,16 @@ export async function loadAccountDetail(orgId: string) {
     };
   }
 
-  const [memberships, employees, activity, notes, documents, orgCourses, catalog] = await Promise.all([
+  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, catalog] = await Promise.all([
     db.from("org_memberships").select("user_id, role, created_at").eq("org_id", orgId),
     db.from("employees").select("id, first_name, last_name, email, job_title, status, created_at").eq("company_id", orgId),
-    db.from("org_activity").select("id, actor_type, action, payload, created_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(20),
+    db.from("org_activity").select("id, actor_type, action, payload, created_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(40),
+    db
+      .from("org_outbound_emails")
+      .select("id, kind, label, subject, to_email, status, sent_at, delivered_at, opened_at, resend_id, meta")
+      .eq("org_id", orgId)
+      .order("sent_at", { ascending: false })
+      .limit(100),
     db.from("org_notes").select("id, body, updated_at").eq("org_id", orgId).order("updated_at", { ascending: false }).limit(1),
     db.from("org_billing_documents").select("id, doc_type, number, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type, opco_ht_cents").eq("org_id", orgId).order("issued_at", { ascending: false }),
     db.from("courses").select("id, title, status, cover_image, delivery_format").eq("org_id", orgId).limit(40),
@@ -378,6 +385,76 @@ export async function loadAccountDetail(orgId: string) {
     };
   });
 
+  const trackedEmails = (outboundEmails.error ? [] : outboundEmails.data ?? []).map((row) => ({
+    id: String(row.id),
+    kind: String(row.kind),
+    label: String(row.label || row.kind),
+    subject: String(row.subject),
+    toEmail: String(row.to_email),
+    status: String(row.status || "envoyé") as "envoyé" | "délivré" | "ouvert" | "rejeté",
+    sentAt: String(row.sent_at),
+    deliveredAt: row.delivered_at ? String(row.delivered_at) : null,
+    openedAt: row.opened_at ? String(row.opened_at) : null,
+    tracked: true as const,
+  }));
+
+  // Historique dossiers déjà envoyés avant le journal outbound (sans tracking Resend).
+  const dossiers = await db
+    .from("formation_dossiers")
+    .select("id")
+    .eq("organization_id", orgId)
+    .limit(80);
+  const dossierIds = (dossiers.error ? [] : dossiers.data ?? []).map((row) => String(row.id));
+  const legacyDocs =
+    dossierIds.length > 0
+      ? await db
+          .from("formation_documents")
+          .select("id, kind, title, sent_at, last_sent_to, opened_at")
+          .in("dossier_id", dossierIds)
+          .not("sent_at", "is", null)
+          .order("sent_at", { ascending: false })
+          .limit(80)
+      : { data: [], error: null };
+
+  const trackedKeys = new Set(
+    trackedEmails.map((email) => `${email.kind}|${email.toEmail}|${email.sentAt.slice(0, 16)}`),
+  );
+  const legacyEmails = (legacyDocs.error ? [] : legacyDocs.data ?? [])
+    .map((row) => {
+      const toEmail = String(row.last_sent_to || "")
+        .split(",")[0]
+        ?.trim()
+        .toLowerCase();
+      const sentAt = String(row.sent_at);
+      const kind = String(row.kind);
+      const key = `${kind}|${toEmail}|${sentAt.slice(0, 16)}`;
+      if (!toEmail || !toEmail.includes("@") || trackedKeys.has(key)) return null;
+      return {
+        id: `legacy:${row.id}`,
+        kind,
+        label: String(row.title || kind),
+        subject: String(row.title || kind),
+        toEmail,
+        status: (row.opened_at ? "ouvert" : "envoyé") as "envoyé" | "délivré" | "ouvert" | "rejeté",
+        sentAt,
+        deliveredAt: null as string | null,
+        openedAt: row.opened_at ? String(row.opened_at) : null,
+        tracked: false as const,
+      };
+    })
+    .filter(Boolean) as Array<{
+    id: string;
+    kind: string;
+    label: string;
+    subject: string;
+    toEmail: string;
+    status: "envoyé" | "délivré" | "ouvert" | "rejeté";
+    sentAt: string;
+    deliveredAt: string | null;
+    openedAt: string | null;
+    tracked: boolean;
+  }>;
+
   return {
     account,
     schemaReady: cockpit.schemaReady,
@@ -385,6 +462,9 @@ export async function loadAccountDetail(orgId: string) {
     people: [...members, ...invited],
     employees: employees.error ? [] : employees.data ?? [],
     activity: activity.error ? [] : activity.data ?? [],
+    outboundEmails: [...trackedEmails, ...legacyEmails].sort(
+      (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
+    ),
     note: notes.error ? null : (notes.data?.[0] ?? null),
     documents: documents.error ? [] : documents.data ?? [],
     courses: formations,

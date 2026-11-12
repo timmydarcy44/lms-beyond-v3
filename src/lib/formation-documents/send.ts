@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendEmail, type EmailAttachment } from "@/lib/email/resend-client";
+import type { EmailAttachment } from "@/lib/email/resend-client";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import {
   CONVENTION_PACK_KINDS,
@@ -153,7 +154,12 @@ export async function sendFormationDocument(
           "Le jour J, un code salle vous sera annoncé pour émarger depuis votre téléphone.",
         ],
       });
-      const result = await sendEmail({
+      const result = await sendOrgTrackedEmail({
+        orgId: ctx.organization.id,
+        kind: "convocation",
+        db: service,
+        actorUserId: params.actorUserId ?? null,
+        meta: { dossier_id: params.dossierId, document_id: doc.id },
         to: p.email!,
         from: EDGE_COCKPIT_FROM,
         replyTo: "contact@byound.fr",
@@ -209,7 +215,12 @@ export async function sendFormationDocument(
         courseTitle,
         viewUrl,
       });
-      const result = await sendEmail({
+      const result = await sendOrgTrackedEmail({
+        orgId: ctx.organization.id,
+        kind: params.kind,
+        db: service,
+        actorUserId: params.actorUserId ?? null,
+        meta: { dossier_id: params.dossierId, document_id: doc.id, participant: p.name },
         to: p.email!,
         from: EDGE_COCKPIT_FROM,
         subject: mail.subject,
@@ -278,7 +289,12 @@ export async function sendFormationDocument(
           : null),
       issuedAt: doc.generated_at || doc.sent_at || new Date().toISOString(),
     });
-    const result = await sendEmail({
+    const result = await sendOrgTrackedEmail({
+      orgId: ctx.organization.id,
+      kind: params.kind,
+      db: service,
+      actorUserId: params.actorUserId ?? null,
+      meta: { dossier_id: params.dossierId, document_id: doc.id },
       to,
       from: EDGE_COCKPIT_FROM,
       subject: mail.subject,

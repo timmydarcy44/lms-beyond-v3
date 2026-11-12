@@ -935,8 +935,91 @@ function SaasOffersTab({ orgId, modules }: { orgId: string; modules: string[] })
 }
 
 function JournalTab({ detail, name }: { detail: Detail; name: string }) {
-  if (!detail.activity.length) return <div className="mt-5"><EmptyState title="Aucune action enregistrée pour ce compte." /></div>;
-  return <section className="mt-5 rounded-[28px] border border-[#1A2340] bg-[#111831] p-5"><JournalList items={detail.activity} name={name} /></section>;
+  const emails = detail.outboundEmails ?? [];
+  const actions = detail.activity ?? [];
+  if (!emails.length && !actions.length) {
+    return <div className="mt-5"><EmptyState title="Aucune action ni e-mail enregistré pour ce compte." /></div>;
+  }
+  return (
+    <div className="mt-5 space-y-5">
+      <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+        <h2 className="text-lg font-extrabold">E-mails envoyés</h2>
+        <p className="mt-1 text-sm text-[#8A93AE]">
+          Devis, conventions, convocations, factures, présentations… avec indicateur d&apos;ouverture.
+        </p>
+        <OutboundEmailList items={emails} />
+      </section>
+      <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
+        <h2 className="text-lg font-extrabold">Actions</h2>
+        <JournalList items={actions} name={name} />
+      </section>
+    </div>
+  );
+}
+
+function openBadge(email: NonNullable<Detail["outboundEmails"]>[number]) {
+  if (email.status === "ouvert" || email.openedAt) {
+    return {
+      label: email.tracked ? "Ouvert" : "Lien ouvert",
+      bg: "#163228",
+      fg: "#6BE39B",
+      detail: email.openedAt
+        ? new Date(email.openedAt).toLocaleString("fr-FR")
+        : null,
+    };
+  }
+  if (email.status === "rejeté") {
+    return { label: "Rejeté", bg: "#3A1820", fg: "#FF8A9B", detail: null };
+  }
+  if (email.status === "délivré" || email.deliveredAt) {
+    return { label: "Non ouvert", bg: "#3A3118", fg: "#F2CF6B", detail: "Délivré" };
+  }
+  if (!email.tracked) {
+    return { label: "Ouverture non suivie", bg: "#1A2340", fg: "#8A93AE", detail: null };
+  }
+  return { label: "Non ouvert", bg: "#3A3118", fg: "#F2CF6B", detail: "Envoyé" };
+}
+
+function OutboundEmailList({ items }: { items: NonNullable<Detail["outboundEmails"]> }) {
+  if (!items.length) {
+    return <p className="mt-4 text-sm text-[#8A93AE]">Aucun e-mail enregistré pour l&apos;instant.</p>;
+  }
+  return (
+    <ul className="mt-4 space-y-3">
+      {items.map((email) => {
+        const badge = openBadge(email);
+        return (
+          <li
+            key={email.id}
+            className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-[#26304F] bg-[#0B1122] px-4 py-3"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[#1A2340] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#C4B8FF]">
+                  {email.label}
+                </span>
+                <span className="text-sm font-semibold text-white">{email.subject}</span>
+              </div>
+              <p className="mt-1 text-sm text-[#C9D2E8]">
+                À {email.toEmail} · {new Date(email.sentAt).toLocaleString("fr-FR")}
+              </p>
+            </div>
+            <div className="text-right">
+              <span
+                className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                style={{ background: badge.bg, color: badge.fg }}
+              >
+                {badge.label}
+              </span>
+              {badge.detail ? (
+                <p className="mt-1 text-[11px] text-[#8A93AE]">{badge.detail}</p>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 function JournalList({ items, name }: { items: Detail["activity"]; name: string }) {

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/lib/email/resend-client";
+import { sendOrgTrackedEmail } from "@/lib/email/org-outbound";
 import { getCollaboratorInviteEmail } from "@/lib/emails/templates/collaborator-mail";
 import {
   buildCollaboratorInviteMetadata,
@@ -75,7 +75,16 @@ export async function deliverCollaboratorInvite(
     companyName: params.companyName,
     inviteLink: link,
   });
-  const sent = await sendEmail({ to: email, subject: mail.subject, html: mail.html });
+  const sent = await sendOrgTrackedEmail({
+    orgId: params.organizationId,
+    kind: "invite",
+    label: "Invitation collaborateur",
+    db: service,
+    meta: { employee_id: params.employeeId ?? null },
+    to: email,
+    subject: mail.subject,
+    html: mail.html,
+  });
   if (!sent.success) {
     console.error("[collaborator-invite] resend", email, sent.error);
     return { sent: false, error: sent.error ?? "Envoi Resend refusé" };

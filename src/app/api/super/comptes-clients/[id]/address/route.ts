@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { normalizeOrgAddressFields } from "@/lib/control/address-format";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +21,25 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     address_city?: string;
     address_country?: string;
     siret?: string;
+    opco_name?: string | null;
   };
 
-  const address_line = String(body.address_line ?? "").trim();
-  const address_zip = String(body.address_zip ?? "").trim();
-  const address_city = String(body.address_city ?? "").trim();
-  const address_country = String(body.address_country ?? "FR").trim() || "FR";
-  const siretRaw = String(body.siret ?? "").replace(/\D/g, "");
+  const normalized = normalizeOrgAddressFields({
+    address_line: String(body.address_line ?? ""),
+    address_zip: String(body.address_zip ?? ""),
+    address_city: String(body.address_city ?? ""),
+    address_country: String(body.address_country ?? "FR"),
+    siret: body.siret,
+  });
+  const address_line = normalized.address_line;
+  const address_zip = normalized.address_zip;
+  const address_city = normalized.address_city;
+  const address_country = normalized.address_country;
+  const siretRaw = normalized.siret ?? "";
+  const opcoName =
+    body.opco_name === undefined || body.opco_name === null
+      ? undefined
+      : String(body.opco_name).trim() || null;
 
   if (!address_line || !address_zip || !address_city) {
     return NextResponse.json(
@@ -45,8 +58,13 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     address_country,
   };
   if (siretRaw) patch.siret = siretRaw;
+  if (opcoName !== undefined) patch.opco_name = opcoName;
 
-  const updated = await service.from("organizations").update(patch).eq("id", id).select("id").maybeSingle();
+  let updated = await service.from("organizations").update(patch).eq("id", id).select("id").maybeSingle();
+  if (updated.error && /opco_name/i.test(updated.error.message) && "opco_name" in patch) {
+    const { opco_name: _ignored, ...withoutOpco } = patch;
+    updated = await service.from("organizations").update(withoutOpco).eq("id", id).select("id").maybeSingle();
+  }
   if (updated.error) {
     const msg = updated.error.message || "Mise à jour impossible";
     if (msg.includes("address_")) {
@@ -61,6 +79,13 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
   return NextResponse.json({
     ok: true,
-    address: { address_line, address_zip, address_city, address_country, siret: siretRaw || null },
+    address: {
+      address_line,
+      address_zip,
+      address_city,
+      address_country,
+      siret: siretRaw || null,
+      opco_name: opcoName ?? null,
+    },
   });
 }

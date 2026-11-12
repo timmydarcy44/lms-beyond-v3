@@ -1,4 +1,5 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
+import { normalizePlaceName } from "./address-format";
 import { classifyOrganization, normalizeOrgName, pickSignal, summarizeRevenue, type BillingDoc, type OrgKind, type OrgStatus } from "./policy";
 
 type OrgRow = {
@@ -20,9 +21,15 @@ type OrgRow = {
   address_zip?: string | null;
   address_city?: string | null;
   address_country?: string | null;
+  is_test?: boolean | null;
+  opco_name?: string | null;
 };
 
 const FULL_COLUMNS =
+  "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,status,kind,account_manager_id,trial_ends_at,client_since,siret,address_line,address_zip,address_city,address_country,is_test,opco_name";
+const FULL_COLUMNS_NO_OPCO =
+  "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,status,kind,account_manager_id,trial_ends_at,client_since,siret,address_line,address_zip,address_city,address_country,is_test";
+const FULL_COLUMNS_NO_TEST =
   "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,status,kind,account_manager_id,trial_ends_at,client_since,siret,address_line,address_zip,address_city,address_country";
 const FULL_COLUMNS_NO_ADDRESS =
   "id,name,slug,created_at,updated_at,logo_url,onboarding_step,estimated_users,status,kind,account_manager_id,trial_ends_at,client_since,siret";
@@ -68,6 +75,13 @@ export type ControlAccount = {
   addressZip: string | null;
   addressCity: string | null;
   addressCountry: string | null;
+  isTest: boolean;
+  opcoName: string | null;
+  roleBusiness: boolean;
+  roleCfa: boolean;
+  invitedUsers: number;
+  connectedUsers: number;
+  invoiceCount12: number;
 };
 
 export type ControlCockpit = {
@@ -77,24 +91,20 @@ export type ControlCockpit = {
 };
 
 async function selectOrgs(db: NonNullable<ReturnType<typeof getServiceRoleClient>>) {
-  const full = await db.from("organizations").select(FULL_COLUMNS).order("name");
-  if (!full.error) return { rows: (full.data ?? []) as OrgRow[], schemaReady: true };
-  if (
-    full.error.code === "42703" ||
-    full.error.message.includes("address_") ||
-    full.error.message.includes("status") ||
-    full.error.message.includes("kind")
-  ) {
-    const mid = await db.from("organizations").select(FULL_COLUMNS_NO_ADDRESS).order("name");
-    if (!mid.error) return { rows: (mid.data ?? []) as OrgRow[], schemaReady: true };
-    if (mid.error.code === "42703" || mid.error.message.includes("status") || mid.error.message.includes("kind")) {
-      const base = await db.from("organizations").select(BASE_COLUMNS).order("name");
-      if (base.error) throw new Error(base.error.message);
-      return { rows: (base.data ?? []) as OrgRow[], schemaReady: false };
+  const attempts = [FULL_COLUMNS, FULL_COLUMNS_NO_OPCO, FULL_COLUMNS_NO_TEST, FULL_COLUMNS_NO_ADDRESS, BASE_COLUMNS];
+  let lastError: { message: string; code?: string } | null = null;
+  for (let i = 0; i < attempts.length; i += 1) {
+    const result = await db.from("organizations").select(attempts[i]).order("name");
+    if (!result.error) {
+      return { rows: (result.data ?? []) as OrgRow[], schemaReady: i < attempts.length - 1 };
     }
-    throw new Error(mid.error.message);
+    lastError = result.error;
+    const missingColumn =
+      result.error.code === "42703" ||
+      /address_|status|kind|is_test|opco_name/i.test(result.error.message);
+    if (!missingColumn) throw new Error(result.error.message);
   }
-  throw new Error(full.error.message);
+  throw new Error(lastError?.message || "Impossible de charger les organisations");
 }
 
 export async function loadControlCockpit(now = new Date()): Promise<ControlCockpit> {
@@ -107,7 +117,7 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
   since.setUTCMonth(since.getUTCMonth() - 24);
   const managerIds = rows.map((row) => row.account_manager_id).filter((id): id is string => Boolean(id));
 
-  const [memberships, employees, features, billing, managers] = await Promise.all([
+  const [memberships, employees, features, billing, managers, deals] = await Promise.all([
     db.from("org_memberships").select("org_id, role, created_at").in("org_id", ids),
     db.from("employees").select("company_id, status").in("company_id", ids),
     db.from("organization_features").select("org_id, feature_key, is_enabled").in("org_id", ids),
@@ -115,7 +125,19 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
     managerIds.length
       ? db.from("account_managers").select("id, first_name, last_name, email").in("id", managerIds)
       : Promise.resolve({ data: [], error: null }),
+    db
+      .from("crm_pipeline_deals")
+      .select("organization_id, offers_business, offers_school, pipeline_type")
+      .in("organization_id", ids)
+      .limit(2000),
   ]);
+
+  const dealRows = (deals.error ? [] : deals.data ?? []) as Array<{
+    organization_id?: string | null;
+    offers_business?: boolean | null;
+    offers_school?: boolean | null;
+    pipeline_type?: string | null;
+  }>;
 
   const docs: BillingDoc[] = ((billing.error ? [] : billing.data) ?? []).map((row) => ({
     orgId: String(row.org_id),
@@ -157,7 +179,16 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
       ? employeeRows.filter((item) => (item.status ?? "active") === "active").length
       : memberRows.length;
     const pendingInvites = employeeRows.filter((item) => item.status === "invited" || item.status === "pending").length;
+    const invitedUsers = pendingInvites;
+    const connectedUsers = memberRows.length;
     const revenue = summarizeRevenue(docs, orgsForRevenue, from12.toISOString(), to, row.id, to);
+    const invoiceCount12 = docs.filter(
+      (doc) =>
+        doc.orgId === row.id &&
+        doc.docType === "invoice" &&
+        Boolean(doc.issuedAt) &&
+        String(doc.issuedAt) >= from12.toISOString(),
+    ).length;
     const lastMembership = memberRows.reduce<string | null>((latest, item) => {
       if (!item.created_at) return latest;
       if (!latest || item.created_at > latest) return item.created_at;
@@ -167,6 +198,12 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
     const modules = ((features.error ? [] : features.data) ?? [])
       .filter((item) => item.org_id === row.id && item.is_enabled)
       .map((item) => String(item.feature_key));
+    const orgDeals = dealRows.filter((deal) => deal.organization_id === row.id);
+    const roleCfa = orgDeals.some(
+      (deal) => deal.offers_school === true || String(deal.pipeline_type ?? "").toLowerCase().includes("cfa"),
+    );
+    const roleBusiness =
+      orgDeals.length === 0 ? true : orgDeals.some((deal) => deal.offers_business !== false) || !roleCfa;
     const signal = pickSignal({
       overdueCents: kind === "demo" || status === "demo" ? 0 : revenue.overdueHtCents,
       pendingInvites,
@@ -198,11 +235,18 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
       clientSince: row.client_since ?? (classifyOrganization(row.slug).clientSinceFromCreated ? row.created_at : null),
       trialEndsAt: row.trial_ends_at ?? null,
       createdAt: row.created_at,
-      siret: row.siret ?? null,
-      addressLine: row.address_line?.trim() || null,
-      addressZip: row.address_zip?.trim() || null,
-      addressCity: row.address_city?.trim() || null,
+      siret: row.siret ? String(row.siret).replace(/\D/g, "") : null,
+      addressLine: row.address_line ? normalizePlaceName(row.address_line) : null,
+      addressZip: row.address_zip?.replace(/\s+/g, "").trim() || null,
+      addressCity: row.address_city ? normalizePlaceName(row.address_city) : null,
       addressCountry: row.address_country?.trim() || "FR",
+      isTest: row.is_test === true || kind === "demo",
+      opcoName: row.opco_name?.trim() || null,
+      roleBusiness,
+      roleCfa,
+      invitedUsers,
+      connectedUsers,
+      invoiceCount12,
     } satisfies ControlAccount;
   });
 
@@ -239,10 +283,11 @@ export async function loadAccountDetail(orgId: string) {
       lmsCourses: [],
       badges: [],
       assertions: [],
+      dossiers: { total: 0, inProgress: 0, nextSessionDate: null as string | null },
     };
   }
 
-  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, lmsPool, staffAdmins, lmsGrants] = await Promise.all([
+  const [memberships, employees, activity, outboundEmails, notes, documents, orgCourses, lmsPool, staffAdmins, lmsGrants, dossiersQuery] = await Promise.all([
     db.from("org_memberships").select("user_id, role, created_at").eq("org_id", orgId),
     db.from("employees").select("id, first_name, last_name, email, job_title, status, created_at").eq("company_id", orgId),
     db.from("org_activity").select("id, actor_type, action, payload, created_at").eq("org_id", orgId).order("created_at", { ascending: false }).limit(40),
@@ -268,6 +313,11 @@ export async function loadAccountDetail(orgId: string) {
       .eq("is_active", true)
       .order("last_name", { ascending: true }),
     db.from("organization_lms_courses").select("course_id, granted_at").eq("organization_id", orgId).limit(200),
+    db
+      .from("formation_dossiers")
+      .select("id, status, session_id")
+      .eq("organization_id", orgId)
+      .limit(200),
   ]);
 
   const userIds = ((memberships.data ?? []) as Array<{ user_id: string }>).map((item) => item.user_id);
@@ -518,6 +568,27 @@ export async function loadAccountDetail(orgId: string) {
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
+  const dossierRows = (dossiersQuery.error ? [] : dossiersQuery.data ?? []) as Array<{
+    id: string;
+    status: string | null;
+    session_id: string | null;
+  }>;
+  const closedStatuses = new Set(["fin", "cloture"]);
+  const dossiersInProgress = dossierRows.filter((row) => !closedStatuses.has(String(row.status ?? ""))).length;
+  const sessionIds = [...new Set(dossierRows.map((row) => row.session_id).filter(Boolean))] as string[];
+  let nextSessionDate: string | null = null;
+  if (sessionIds.length) {
+    const today = new Date().toISOString().slice(0, 10);
+    const slots = await db
+      .from("formation_slots")
+      .select("session_id, slot_date")
+      .in("session_id", sessionIds)
+      .gte("slot_date", today)
+      .order("slot_date", { ascending: true })
+      .limit(20);
+    nextSessionDate = slots.error ? null : ((slots.data?.[0] as { slot_date?: string } | undefined)?.slot_date ?? null);
+  }
+
   return {
     account,
     schemaReady: cockpit.schemaReady,
@@ -533,6 +604,11 @@ export async function loadAccountDetail(orgId: string) {
     documents: documents.error ? [] : documents.data ?? [],
     courses: formations,
     lmsCourses,
+    dossiers: {
+      total: dossierRows.length,
+      inProgress: dossiersInProgress,
+      nextSessionDate,
+    },
     badges: badgeCards,
     assertions: assertionRows
       .filter((row) => !row.revoked_at)

@@ -11,10 +11,10 @@ import type { loadAccountDetail } from "@/lib/control/load";
 import { roleLabel, roleTone } from "@/lib/roles";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
+import { AccountOverview, accountHeaderMeta, useAccountKpis } from "./account-overview";
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
-import { BanAddressAutocomplete } from "@/components/address/ban-address-autocomplete";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
 
@@ -38,8 +38,8 @@ type NavId = "overview" | "formations" | "saas" | "members" | "revenue" | "docum
 const NAV_ITEMS: Array<{ id: NavId; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "formations", label: "Formations" },
-  { id: "saas", label: "SaaS" },
   { id: "members", label: "Membres" },
+  { id: "saas", label: "Produits SaaS" },
   { id: "revenue", label: "Chiffre d'affaires" },
   { id: "documents", label: "Coffre Qualiopi" },
   { id: "journal", label: "Journal" },
@@ -113,7 +113,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
   const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | "space" | null>(null);
   const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  if (!account) return null;
+  const kpis = useAccountKpis(detail);
 
   const activeNav = navFromTab(tab);
   const hasAdmin = detail.members.some((member) => member.role === "admin" && member.email.includes("@"));
@@ -135,70 +135,151 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
     openTab(defaultTabForNav(nav));
   }
 
+  if (!account) return null;
+
+  const adminEmail = detail.members.find((member) => member.role === "admin" && member.email)?.email;
+  const headerMeta = accountHeaderMeta(account);
+  const statusLabel =
+    account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer";
+  const statusTone =
+    account.status === "active"
+      ? { bg: "#163228", fg: "#6BE39B" }
+      : { bg: "#3A3118", fg: "#F2CF6B" };
+
   return (
     <div className="mx-auto max-w-[1240px] px-6 py-8">
       {embedded ? null : (
-      <p className="mb-3 text-sm text-[#8A93AE]">
-        <Link href="/super/organisations">Comptes clients</Link> · {account.name}
-      </p>
+        <p className="mb-4 text-sm text-[#9AA3BD]">
+          <Link href="/super/organisations" className="font-semibold text-[#A99BFF]">
+            ‹ Comptes clients
+          </Link>
+          <span className="text-[#6C7593]"> / {account.name}</span>
+        </p>
       )}
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          {embedded ? null : (
-            <h1 className="text-[36px] font-extrabold tracking-[-1.2px]">{account.name}</h1>
-          )}
-          <div className={`${embedded ? "" : "mt-2 "}flex flex-wrap items-center gap-2 text-xs`}>
-            {embedded ? null : (
-              <>
-                <span className="rounded-full px-2 py-1" style={{ background: account.status === "active" ? "#163228" : "#3A3118", color: account.status === "active" ? "#6BE39B" : "#F2CF6B" }}>{account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer"}</span>
-                <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">{account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}</span>
-                {account.clientSince ? <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</span> : null}
-              </>
-            )}
-            <AccountManagerPicker detail={detail} onNotice={setNotice} />
-            {embedded ? null : (
-              <span className="rounded-full border border-[#6E5BFF]/55 bg-[#6E5BFF]/20 px-2.5 py-1 font-semibold text-[#E8DEFF]">
-                CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT
-              </span>
-            )}
+
+      {embedded ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <AccountManagerPicker detail={detail} onNotice={setNotice} />
+        </div>
+      ) : (
+        <header
+          className="overflow-hidden rounded-[30px] border border-[#2A3157] p-[28px_30px]"
+          style={{
+            background:
+              "radial-gradient(120% 140% at 0% 0%, #2A2270 0%, #151B3A 45%, #111831 100%)",
+          }}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div className="flex min-w-0 items-start gap-4">
+              {account.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={account.logoUrl}
+                  alt=""
+                  className="h-[72px] w-[72px] rounded-[18px] object-cover"
+                />
+              ) : (
+                <span className="grid h-[72px] w-[72px] place-items-center rounded-[18px] bg-[linear-gradient(135deg,#6E5BFF,#241C3E)] text-xl font-extrabold text-white">
+                  {initials(account.name)}
+                </span>
+              )}
+              <div className="min-w-0">
+                <h1 className="text-[38px] font-extrabold leading-none tracking-[-1.2px] text-[#F2F4FA]">
+                  {account.name}
+                </h1>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full px-2.5 py-1 font-semibold" style={{ background: statusTone.bg, color: statusTone.fg }}>
+                    {statusLabel}
+                  </span>
+                  <span className="rounded-full bg-[#1A2340] px-2.5 py-1 text-[#C9D2E8]">
+                    {account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}
+                  </span>
+                  {account.roleBusiness ? (
+                    <span className="rounded-full bg-[#1A2340] px-2.5 py-1 text-[#C9D2E8]">Business</span>
+                  ) : null}
+                  {account.roleCfa ? (
+                    <span className="rounded-full bg-[#1A2340] px-2.5 py-1 text-[#C9D2E8]">CFA</span>
+                  ) : null}
+                  {account.isTest ? (
+                    <span className="rounded-full border border-dashed border-[#6C7593] px-2.5 py-1 text-[#9AA3BD]">
+                      Compte test
+                    </span>
+                  ) : null}
+                </div>
+                {headerMeta ? <p className="mt-3 text-sm text-[#9AA3BD]">{headerMeta}</p> : null}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-3">
+              <AccountManagerPicker detail={detail} onNotice={setNotice} />
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRequestWizardOpen(true)}
+                  className="rounded-full bg-[#6E5BFF]/15 px-4 py-2 text-sm font-semibold text-[#C9C2FF]"
+                >
+                  ＋ Demande de formation
+                </button>
+                {spaceReason ? (
+                  <DisabledTip label="Ouvrir son espace ↗" reason={spaceReason} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPanel("space")}
+                    className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
+                  >
+                    Ouvrir son espace ↗
+                  </button>
+                )}
+                <span className="relative">
+                  <button
+                    type="button"
+                    aria-label="Plus d'actions"
+                    onClick={() => setActionsOpen((value) => !value)}
+                    className="grid h-10 w-10 place-items-center rounded-full border border-[#3A4668] bg-[#151C33] text-lg text-[#E8ECF8]"
+                  >
+                    ⋯
+                  </button>
+                  {actionsOpen ? (
+                    <span className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-[#26304F] bg-[#111831] p-2 text-sm">
+                      {adminEmail ? (
+                        <a
+                          className="block w-full rounded-xl px-2 py-1.5 text-left"
+                          href={`mailto:${adminEmail}`}
+                          onClick={() => setActionsOpen(false)}
+                        >
+                          Contacter l&apos;admin
+                        </a>
+                      ) : (
+                        <span className="block px-2 py-1.5 text-[#6C7593]">Aucun admin à contacter</span>
+                      )}
+                      <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("invite"); }}>Inviter</button>
+                      <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); openTab("courses"); }}>Accès LMS</button>
+                      <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {detail.members.find((member) => member.role === "admin" && member.email)?.email ? (
-            <a className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]" href={`mailto:${detail.members.find((member) => member.role === "admin")?.email}`}>Contacter l&apos;admin</a>
-          ) : (
-            <DisabledTip label="Contacter l'admin" reason="Aucun administrateur actif sur ce compte" />
-          )}
-          <button
-            type="button"
-            onClick={() => setRequestWizardOpen(true)}
-            className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
-          >
-            Nouvelle demande formation
-          </button>
-          <span className="relative">
-            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]">Plus</button>
-            {actionsOpen ? (
-              <span className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-[#26304F] bg-[#111831] p-2 text-sm">
-                <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("invite"); }}>Inviter</button>
-                <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); openTab("courses"); }}>Accès LMS</button>
-                <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>
-              </span>
-            ) : null}
-          </span>
-          {spaceReason ? (
-            <DisabledTip label="Ouvrir son espace" reason={spaceReason} />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPanel("space")}
-              className="rounded-full border border-[#6E5BFF]/60 bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
-            >
-              Ouvrir son espace
-            </button>
-          )}
-        </div>
-      </header>
+
+          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/10 pt-5 lg:grid-cols-4">
+            {kpis.map((kpi, index) => (
+              <div
+                key={kpi.label}
+                className={`min-w-0 ${index > 0 ? "lg:border-l lg:border-white/10 lg:pl-5" : ""} ${index % 2 === 1 ? "border-l border-white/10 pl-5 lg:border-l" : ""}`}
+              >
+                <div className="flex items-center gap-2 text-xs text-[#9AA3BD]">
+                  <span className="h-2 w-2 rounded-full" style={{ background: kpi.color }} />
+                  {kpi.label}
+                </div>
+                <p className="mt-1 text-[30px] font-extrabold leading-none text-[#F2F4FA]">{kpi.value}</p>
+                <p className="mt-2 text-xs text-[#6C7593]">{kpi.sub}</p>
+              </div>
+            ))}
+          </div>
+        </header>
+      )}
 
       <TabBar
         nav={activeNav}
@@ -210,14 +291,14 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {notice ? <p className="mt-4 text-sm text-[#6BE39B]">{notice}</p> : null}
 
       {tab === "overview" ? (
-        <Overview
+        <AccountOverview
           detail={detail}
           onNewRequest={() => setRequestWizardOpen(true)}
           onOpenDossiers={() => openTab("dossiers")}
-          onOpenSurMesure={() => openTab("surmesure")}
           onOpenLms={() => openTab("courses")}
-          onOpenRevenue={() => openTab("revenue")}
           onOpenSaas={() => openTab("modules")}
+          onInvite={() => setPanel("invite")}
+          onOpenJournal={() => openTab("journal")}
         />
       ) : null}
       {tab === "members" ? <MembersTab detail={detail} onInvite={() => setPanel("invite")} onImport={() => setPanel("import")} onNotice={setNotice} /> : null}
@@ -274,12 +355,13 @@ function isTab(value: string | undefined): value is Tab {
 }
 
 function tabCounts(detail: Detail): Partial<Record<Tab | NavId, number>> {
+  const dossiers = detail.dossiers?.total ?? 0;
   return {
     members: detail.people.length,
     courses: detail.courses.length,
     badges: detail.badges.length || detail.assertions.length,
     formations:
-      detail.courses.length + (detail.badges.length || detail.assertions.length),
+      dossiers + detail.courses.length + (detail.badges.length || detail.assertions.length),
   };
 }
 
@@ -300,7 +382,7 @@ function TabBar({
 
   return (
     <div className="mt-6 space-y-3">
-      <div className="flex min-w-0 flex-wrap items-end gap-1 border-b border-[#1A2340]">
+      <div className="inline-flex max-w-full overflow-x-auto rounded-full border border-[#1A2340] bg-[#111831] p-[5px]">
         {NAV_ITEMS.map((item) => {
           const active = nav === item.id;
           const count =
@@ -314,17 +396,20 @@ function TabBar({
               key={item.id}
               type="button"
               onClick={() => onNavChange(item.id)}
-              className="px-3 py-2 text-[13px] font-extrabold"
+              className="shrink-0 rounded-full px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap"
               style={{
-                color: active ? "#fff" : "#8A93AE",
-                boxShadow: active ? "inset 0 -2px 0 #8B7BFF" : undefined,
+                background: active ? "#FFFFFF" : "transparent",
+                color: active ? "#0A0F1E" : "#B7BED3",
               }}
             >
               {item.label}
               {count != null ? (
                 <span
                   className="ml-1.5 rounded-full px-1.5 text-[11px]"
-                  style={{ background: active ? "#6E5BFF" : "#1A2340", color: "#fff" }}
+                  style={{
+                    background: active ? "#E8ECF8" : "#1A2340",
+                    color: active ? "#0A0F1E" : "#B7BED3",
+                  }}
                 >
                   {count}
                 </span>
@@ -358,219 +443,6 @@ function TabBar({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function Overview({
-  detail,
-  onNewRequest,
-  onOpenDossiers,
-  onOpenSurMesure,
-  onOpenLms,
-  onOpenRevenue,
-  onOpenSaas,
-}: {
-  detail: Detail;
-  onNewRequest: () => void;
-  onOpenDossiers: () => void;
-  onOpenSurMesure: () => void;
-  onOpenLms: () => void;
-  onOpenRevenue: () => void;
-  onOpenSaas: () => void;
-}) {
-  const account = detail.account;
-  if (!account) return null;
-  return (
-    <div className="mt-5 space-y-4">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-[28px] border border-[#6E5BFF]/45 bg-[#17122E] p-5 lg:col-span-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#C4B8FF]">Formation Qualiopi</p>
-          <h2 className="mt-2 text-lg font-extrabold">Nouvelle demande</h2>
-          <p className="mt-2 text-sm text-[#C9D2E8]">
-            Catalogue ou Sur-mesure → participants → dates / lieu → devis &amp; convention.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onNewRequest}
-              className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
-            >
-              Nouvelle demande
-            </button>
-            <button
-              type="button"
-              onClick={onOpenDossiers}
-              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
-            >
-              Voir les dossiers
-            </button>
-            <button
-              type="button"
-              onClick={onOpenSurMesure}
-              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
-            >
-              Sur-mesure
-            </button>
-          </div>
-        </section>
-
-        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">Accès LMS</p>
-          <h2 className="mt-2 text-lg font-extrabold">Parcours digitaux</h2>
-          <p className="mt-2 text-sm text-[#C9D2E8]">
-            Assigner aux collabs ou mettre à disposition du dashboard entreprise.
-          </p>
-          <p className="mt-3 text-xs text-[#8A93AE]">
-            {detail.courses.length} formation(s) liée(s) · {detail.lmsCourses.length} LMS disponible(s)
-          </p>
-          <button
-            type="button"
-            onClick={onOpenLms}
-            className="mt-4 rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
-          >
-            Gérer les accès LMS
-          </button>
-        </section>
-
-        <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">SaaS</p>
-          <h2 className="mt-2 text-lg font-extrabold">Accès produits</h2>
-          <p className="mt-2 text-sm text-[#C9D2E8]">
-            Ouvrir ou restreindre Byound Recruit, Byound LMS et Byound Care pour ce compte.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onOpenSaas}
-              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
-            >
-              Gérer le SaaS
-            </button>
-            <button
-              type="button"
-              onClick={onOpenRevenue}
-              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
-            >
-              Voir le CA
-            </button>
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-4">
-        <KpiCard label="Utilisateurs actifs" value={`${account.activeUsers} / ${account.totalUsers}`} />
-        <KpiCard label="Formations LMS" value={String(detail.courses.length)} />
-        <KpiCard label="Open Badges" value={String(detail.assertions.length)} />
-        <KpiCard label="CA 12 mois" value={formatEurosHt(account.revenue12HtCents)} />
-      </div>
-
-      <OrgAddressCard account={account} />
-
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_.8fr]">
-        <RevenueBlock documents={detail.documents} fallbackCents={account.revenue12HtCents} />
-        <NoteForm orgId={account.id} initial={detail.note?.body ?? ""} />
-      </div>
-    </div>
-  );
-}
-
-function OrgAddressCard({ account }: { account: NonNullable<Detail["account"]> }) {
-  const router = useRouter();
-  const [line, setLine] = useState(account.addressLine ?? "");
-  const [zip, setZip] = useState(account.addressZip ?? "");
-  const [city, setCity] = useState(account.addressCity ?? "");
-  const [siret, setSiret] = useState(account.siret ?? "");
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const complete = Boolean(account.addressLine && account.addressZip && account.addressCity);
-
-  return (
-    <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-extrabold">Adresse postale</h2>
-          <p className="mt-1 text-sm text-[#8A93AE]">
-            Requise pour les devis et les sessions « chez le client ».
-          </p>
-        </div>
-        <span
-          className="rounded-full px-2 py-1 text-xs font-semibold"
-          style={{
-            background: complete ? "#163228" : "#3A3118",
-            color: complete ? "#6BE39B" : "#F2CF6B",
-          }}
-        >
-          {complete ? "Renseignée" : "À compléter"}
-        </span>
-      </div>
-      <form
-        className="mt-4 grid gap-3 md:grid-cols-[1.4fr_100px_1fr]"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          setSaving(true);
-          setMsg(null);
-          try {
-            const res = await fetch(`/api/super/comptes-clients/${account.id}/address`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                address_line: line.trim(),
-                address_zip: zip.trim(),
-                address_city: city.trim(),
-                siret: siret.replace(/\D/g, "") || undefined,
-              }),
-            });
-            const json = (await res.json()) as { error?: string };
-            if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
-            setMsg("Adresse enregistrée.");
-            router.refresh();
-          } catch (error) {
-            setMsg(error instanceof Error ? error.message : "Enregistrement impossible");
-          } finally {
-            setSaving(false);
-          }
-        }}
-      >
-        <Field label="Adresse">
-          <BanAddressAutocomplete
-            value={line}
-            onChange={setLine}
-            onSelect={(hit) => {
-              setLine(hit.addressLine);
-              setZip(hit.addressZip);
-              setCity(hit.addressCity);
-            }}
-            className={fieldClass}
-          />
-        </Field>
-        <Field label="CP">
-          <input value={zip} onChange={(e) => setZip(e.target.value)} className={fieldClass} required />
-        </Field>
-        <Field label="Ville">
-          <input value={city} onChange={(e) => setCity(e.target.value)} className={fieldClass} required />
-        </Field>
-        <div className="md:col-span-3">
-          <Field label="SIRET">
-            <input
-              value={siret}
-              onChange={(e) => setSiret(e.target.value)}
-              className={fieldClass}
-              placeholder="14 chiffres"
-            />
-          </Field>
-        </div>
-        <div className="flex items-center gap-3 md:col-span-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] disabled:opacity-50"
-          >
-            {saving ? "Enregistrement…" : "Enregistrer l'adresse"}
-          </button>
-          {msg ? <p className="text-sm text-[#8A93AE]">{msg}</p> : null}
-        </div>
-      </form>
-    </section>
   );
 }
 
@@ -989,11 +861,22 @@ function AccountManagerPicker({
     }
   }
 
+  const selected = managers.find((manager) => manager.id === value) ?? null;
+  const label = selected?.name || "Non assigné";
+
   return (
-    <label className="inline-flex items-center gap-1.5 rounded-full border border-[#3A4668] bg-[#151C33] px-2.5 py-1 text-[#E8ECF8]">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-[#8A93AE]">Chargé de compte</span>
+    <label className="relative inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-[#3A4668] bg-[#151C33] py-1.5 pl-1.5 pr-3 text-[#E8ECF8]">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#1A2744] text-[10px] font-extrabold text-[#8DB8FF]">
+        {selected ? initials(selected.name) : "?"}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[10px] leading-none text-[#9AA3BD]">Chargé de compte</span>
+        <span className="mt-0.5 block truncate text-xs font-semibold text-[#F2F4FA]">
+          {label} ▾
+        </span>
+      </span>
       <select
-        className="max-w-[180px] bg-transparent text-xs font-semibold text-[#E8ECF8] outline-none disabled:opacity-60"
+        className="absolute inset-0 cursor-pointer opacity-0"
         value={value}
         disabled={saving || managers.length === 0}
         onChange={(event) => {
@@ -1135,24 +1018,6 @@ function CourseMenu({ orgId, courseId, onAssign }: { orgId: string | undefined; 
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "B";
-}
-
-function NoteForm({ orgId, initial }: { orgId: string; initial: string }) {
-  const [body, setBody] = useState(initial);
-  const [saved, setSaved] = useState<string | null>(null);
-  return (
-    <form className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5" onSubmit={async (event) => {
-      event.preventDefault();
-      const response = await fetch(`/api/super/comptes-clients/${orgId}/note`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }) });
-      const json = (await response.json()) as { error?: string };
-      setSaved(response.ok ? "Note enregistrée." : json.error || "Note impossible");
-    }}>
-      <h2 className="font-extrabold">Note interne</h2>
-      <textarea value={body} onChange={(event) => setBody(event.target.value)} className={`${fieldClass} mt-3 min-h-28`} />
-      <button type="submit" className="mt-3 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Enregistrer</button>
-      {saved ? <p className="mt-2 text-xs text-[#8A93AE]">{saved}</p> : null}
-    </form>
-  );
 }
 
 function InvoiceStatus({ status, paidByOpco }: { status: string; paidByOpco: boolean }) {

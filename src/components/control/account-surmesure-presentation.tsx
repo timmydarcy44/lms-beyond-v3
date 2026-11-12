@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Loader2, Pencil, Sparkles } from "lucide-react";
+import { FileText, Loader2, Pencil, Presentation, Sparkles } from "lucide-react";
 import {
   createId,
   type TrainingProgramSection,
   type TrainingProgramSubchapterKind,
 } from "@/lib/training-courses/cms-types";
 import { AccountFormationRequestWizard } from "@/components/control/account-formation-request-wizard";
+import { AccountSurMesureDeck } from "@/components/control/account-surmesure-deck";
 import {
   type SurMesureCourse,
   splitPrerequisites,
@@ -215,6 +216,7 @@ export function AccountSurMesurePresentation({
   );
   const [generating, setGenerating] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [deckOpen, setDeckOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -314,9 +316,16 @@ export function AccountSurMesurePresentation({
           >
             <FileText className="h-4 w-4" /> Créer un devis
           </button>
+          <button
+            type="button"
+            onClick={() => setDeckOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
+          >
+            <Presentation className="h-4 w-4" /> Présentation
+          </button>
           <Link
             href={surmesureEditHref(organizationId, course.id)}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white"
           >
             <Pencil className="h-4 w-4" /> Modifier la fiche
           </Link>
@@ -461,6 +470,17 @@ export function AccountSurMesurePresentation({
             setQuoteOpen(false);
             router.push(`/super/organisations/${organizationId}?tab=dossiers`);
           }}
+        />
+      ) : null}
+
+      {deckOpen ? (
+        <AccountSurMesureDeck
+          organizationId={organizationId}
+          organizationName={organizationName}
+          course={{ ...course, program_structure: structure }}
+          defaultEmail={contactEmail}
+          defaultName={contactName}
+          onClose={() => setDeckOpen(false)}
         />
       ) : null}
     </div>

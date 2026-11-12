@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
 import { REASON_CODES } from "@/lib/control/constants";
@@ -14,10 +14,11 @@ import { AccountFormationRequestWizard } from "./account-formation-request-wizar
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
-import { PIPELINE_PRODUCT_CATALOG } from "@/lib/crm/pipeline-quoted-products";
 import { BanAddressAutocomplete } from "@/components/address/ban-address-autocomplete";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
+
+/** Onglets de contenu (sous-vues comprises). */
 type Tab =
   | "overview"
   | "members"
@@ -25,27 +26,71 @@ type Tab =
   | "dossiers"
   | "surmesure"
   | "badges"
-  | "tests"
   | "revenue"
   | "funding"
   | "documents"
+  | "journal"
   | "modules"
-  | "journal";
+  | "tests";
 
-const TABS: Array<{ id: Tab; label: string }> = [
+type NavId = "overview" | "formations" | "saas" | "members" | "revenue" | "documents" | "journal";
+
+const NAV_ITEMS: Array<{ id: NavId; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
-  { id: "dossiers", label: "Dossiers formation" },
-  { id: "surmesure", label: "Sur-mesure" },
-  { id: "courses", label: "Accès LMS" },
-  { id: "modules", label: "Offres SaaS" },
+  { id: "formations", label: "Formations" },
+  { id: "saas", label: "SaaS" },
   { id: "members", label: "Membres" },
-  { id: "badges", label: "Open Badges" },
-  { id: "tests", label: "Tests" },
   { id: "revenue", label: "Chiffre d'affaires" },
-  { id: "funding", label: "Financement" },
   { id: "documents", label: "Coffre Qualiopi" },
   { id: "journal", label: "Journal" },
 ];
+
+const FORMATIONS_SUB: Array<{ id: Tab; label: string }> = [
+  { id: "dossiers", label: "Dossiers formation" },
+  { id: "surmesure", label: "Sur-mesure" },
+  { id: "courses", label: "Accès LMS" },
+  { id: "badges", label: "Open Badges" },
+];
+
+const REVENUE_SUB: Array<{ id: Tab; label: string }> = [
+  { id: "revenue", label: "Chiffre d'affaires" },
+  { id: "funding", label: "Financement" },
+];
+
+const LEGACY_TAB_IDS: Tab[] = [
+  "overview",
+  "members",
+  "courses",
+  "dossiers",
+  "surmesure",
+  "badges",
+  "revenue",
+  "funding",
+  "documents",
+  "journal",
+  "modules",
+  "tests",
+];
+
+function navFromTab(tab: Tab): NavId {
+  if (tab === "dossiers" || tab === "surmesure" || tab === "courses" || tab === "badges") return "formations";
+  if (tab === "modules") return "saas";
+  if (tab === "revenue" || tab === "funding") return "revenue";
+  if (tab === "members") return "members";
+  if (tab === "documents") return "documents";
+  if (tab === "journal") return "journal";
+  return "overview";
+}
+
+function defaultTabForNav(nav: NavId): Tab {
+  if (nav === "formations") return "dossiers";
+  if (nav === "saas") return "modules";
+  if (nav === "revenue") return "revenue";
+  if (nav === "members") return "members";
+  if (nav === "documents") return "documents";
+  if (nav === "journal") return "journal";
+  return "overview";
+}
 
 const ROLE_COLORS = {
   admin: { bg: "#241C3E", fg: "#C4B8FF" },
@@ -57,13 +102,20 @@ const ROLE_COLORS = {
 export function AccountFile({ detail, initialTab, embedded = false }: { detail: Detail; initialTab?: string; embedded?: boolean }) {
   const account = detail.account;
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : "overview");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (isTab(initialTab)) {
+      if (initialTab === "tests") return "overview";
+      return initialTab;
+    }
+    return "overview";
+  });
   const [actionsOpen, setActionsOpen] = useState(false);
   const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | "space" | null>(null);
   const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   if (!account) return null;
 
+  const activeNav = navFromTab(tab);
   const hasAdmin = detail.members.some((member) => member.role === "admin" && member.email.includes("@"));
   const spaceReason = !detail.schemaReady
     ? "L'ouverture d'espace n'est pas encore disponible."
@@ -79,6 +131,10 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
     window.history.replaceState(null, "", `${url.pathname}${url.search}`);
   }
 
+  function openNav(nav: NavId) {
+    openTab(defaultTabForNav(nav));
+  }
+
   return (
     <div className="mx-auto max-w-[1240px] px-6 py-8">
       {embedded ? null : (
@@ -92,28 +148,30 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           <h1 className="text-[36px] font-extrabold tracking-[-1.2px]">{account.name}</h1>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
             <span className="rounded-full px-2 py-1" style={{ background: account.status === "active" ? "#163228" : "#3A3118", color: account.status === "active" ? "#6BE39B" : "#F2CF6B" }}>{account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer"}</span>
-            <span className="rounded-full bg-[#1A2340] px-2 py-1">{account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}</span>
-            {account.clientSince ? <span className="rounded-full bg-[#1A2340] px-2 py-1">Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</span> : null}
-            <span className="rounded-full bg-[#1A2340] px-2 py-1">{account.accountManagerName ?? "Chargé de compte non assigné"}</span>
-            <span className="rounded-full bg-white px-2 py-1 font-semibold text-[#0A0F1E]">CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT</span>
+            <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">{account.kind === "demo" ? "Démo" : account.kind === "internal" ? "Interne" : "Entreprise"}</span>
+            {account.clientSince ? <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">Client depuis {new Date(account.clientSince).toLocaleDateString("fr-FR")}</span> : null}
+            <span className="rounded-full bg-[#1A2340] px-2 py-1 text-[#C9D2E8]">{account.accountManagerName ?? "Chargé de compte non assigné"}</span>
+            <span className="rounded-full border border-[#6E5BFF]/55 bg-[#6E5BFF]/20 px-2.5 py-1 font-semibold text-[#E8DEFF]">
+              CA 12 mois · {formatEurosHt(account.revenue12HtCents)} HT
+            </span>
           </div>
         </div>
         )}
         <div className="flex flex-wrap gap-2">
           {detail.members.find((member) => member.role === "admin" && member.email)?.email ? (
-            <a className="rounded-full border border-[#26304F] px-4 py-2 text-sm" href={`mailto:${detail.members.find((member) => member.role === "admin")?.email}`}>Contacter l'admin</a>
+            <a className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]" href={`mailto:${detail.members.find((member) => member.role === "admin")?.email}`}>Contacter l&apos;admin</a>
           ) : (
             <DisabledTip label="Contacter l'admin" reason="Aucun administrateur actif sur ce compte" />
           )}
           <button
             type="button"
             onClick={() => setRequestWizardOpen(true)}
-            className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
+            className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
           >
             Nouvelle demande formation
           </button>
           <span className="relative">
-            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold">Plus</button>
+            <button type="button" onClick={() => setActionsOpen((value) => !value)} className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]">Plus</button>
             {actionsOpen ? (
               <span className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border border-[#26304F] bg-[#111831] p-2 text-sm">
                 <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("invite"); }}>Inviter</button>
@@ -125,12 +183,24 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           {spaceReason ? (
             <DisabledTip label="Ouvrir son espace" reason={spaceReason} />
           ) : (
-            <button type="button" onClick={() => setPanel("space")} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Ouvrir son espace</button>
+            <button
+              type="button"
+              onClick={() => setPanel("space")}
+              className="rounded-full border border-[#6E5BFF]/60 bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Ouvrir son espace
+            </button>
           )}
         </div>
       </header>
 
-      <TabBar tab={tab} counts={tabCounts(detail)} onChange={openTab} />
+      <TabBar
+        nav={activeNav}
+        tab={tab}
+        counts={tabCounts(detail)}
+        onNavChange={openNav}
+        onTabChange={openTab}
+      />
       {notice ? <p className="mt-4 text-sm text-[#6BE39B]">{notice}</p> : null}
 
       {tab === "overview" ? (
@@ -140,6 +210,7 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
           onOpenDossiers={() => openTab("dossiers")}
           onOpenSurMesure={() => openTab("surmesure")}
           onOpenLms={() => openTab("courses")}
+          onOpenRevenue={() => openTab("revenue")}
           onOpenSaas={() => openTab("modules")}
         />
       ) : null}
@@ -155,7 +226,6 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
         <AccountSurMesureTab organizationId={account.id} organizationName={account.name} />
       ) : null}
       {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
-      {tab === "tests" ? <EmptyState title="Aucun test envoyé pour ce compte." /> : null}
       {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
       {tab === "funding" ? <EmptyState title="Aucun dossier de financement pour ce compte." /> : null}
       {tab === "documents" ? <AccountQualiopiCoffre organizationId={account.id} /> : null}
@@ -194,87 +264,93 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
 }
 
 function isTab(value: string | undefined): value is Tab {
-  return TABS.some((item) => item.id === value);
+  return Boolean(value && LEGACY_TAB_IDS.includes(value as Tab));
 }
 
-function tabCounts(detail: Detail): Partial<Record<Tab, number>> {
+function tabCounts(detail: Detail): Partial<Record<Tab | NavId, number>> {
   return {
     members: detail.people.length,
     courses: detail.courses.length,
     badges: detail.badges.length || detail.assertions.length,
+    formations:
+      detail.courses.length + (detail.badges.length || detail.assertions.length),
   };
 }
 
-function TabBar({ tab, counts, onChange }: { tab: Tab; counts: Partial<Record<Tab, number>>; onChange: (tab: Tab) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const [limit, setLimit] = useState(TABS.length);
-  const [more, setMore] = useState(false);
-  useEffect(() => {
-    const node = ref.current;
-    const measureNode = measureRef.current;
-    if (!node || !measureNode) return;
-    const measure = () => {
-      const buttons = [...measureNode.querySelectorAll("button")];
-      const available = node.clientWidth;
-      let used = 0;
-      let next = buttons.length;
-      for (let index = 0; index < buttons.length; index += 1) {
-        const size = buttons[index]?.getBoundingClientRect().width ?? 0;
-        const reserve = index < buttons.length - 1 ? 72 : 0;
-        if (used + size + reserve > available) {
-          next = Math.max(1, index);
-          break;
-        }
-        used += size;
-      }
-      setLimit(next);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [counts]);
-
-  const activeIndex = TABS.findIndex((item) => item.id === tab);
-  const visible = TABS.slice(0, limit);
-  if (activeIndex >= limit) {
-    visible[visible.length - 1] = TABS[activeIndex];
-  }
-  const hidden = TABS.filter((item) => !visible.some((shown) => shown.id === item.id));
+function TabBar({
+  nav,
+  tab,
+  counts,
+  onNavChange,
+  onTabChange,
+}: {
+  nav: NavId;
+  tab: Tab;
+  counts: Partial<Record<Tab | NavId, number>>;
+  onNavChange: (nav: NavId) => void;
+  onTabChange: (tab: Tab) => void;
+}) {
+  const subItems = nav === "formations" ? FORMATIONS_SUB : nav === "revenue" ? REVENUE_SUB : null;
 
   return (
-    <div className="relative mt-6">
-      <div ref={measureRef} aria-hidden className="invisible absolute flex">
-        {TABS.map((item) => (
-          <button key={item.id} type="button" className="px-3 py-2 text-[13px] font-extrabold">
-            {item.label}
-            {counts[item.id] != null ? <span className="ml-1.5 rounded-full px-1.5 text-[11px]">{counts[item.id]}</span> : null}
-          </button>
-        ))}
+    <div className="mt-6 space-y-3">
+      <div className="flex min-w-0 flex-wrap items-end gap-1 border-b border-[#1A2340]">
+        {NAV_ITEMS.map((item) => {
+          const active = nav === item.id;
+          const count =
+            item.id === "formations"
+              ? counts.formations
+              : item.id === "members"
+                ? counts.members
+                : undefined;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onNavChange(item.id)}
+              className="px-3 py-2 text-[13px] font-extrabold"
+              style={{
+                color: active ? "#fff" : "#8A93AE",
+                boxShadow: active ? "inset 0 -2px 0 #8B7BFF" : undefined,
+              }}
+            >
+              {item.label}
+              {count != null ? (
+                <span
+                  className="ml-1.5 rounded-full px-1.5 text-[11px]"
+                  style={{ background: active ? "#6E5BFF" : "#1A2340", color: "#fff" }}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
-      <div ref={ref} className="flex min-w-0 items-end gap-1 border-b border-[#1A2340]">
-      {visible.map((item) => (
-        <button key={item.id} type="button" onClick={() => onChange(item.id)} className="px-3 py-2 text-[13px] font-extrabold" style={{ color: tab === item.id ? "#fff" : "#8A93AE", boxShadow: tab === item.id ? "inset 0 -2px 0 #8B7BFF" : undefined }}>
-          {item.label}
-          {counts[item.id] != null ? (
-            <span className="ml-1.5 rounded-full px-1.5 text-[11px]" style={{ background: tab === item.id ? "#6E5BFF" : "#1A2340" }}>{counts[item.id]}</span>
-          ) : null}
-        </button>
-      ))}
-      {hidden.length ? (
-        <span className="relative">
-          <button type="button" className="px-3 py-2 text-[13px] font-extrabold text-[#8A93AE]" onClick={() => setMore((value) => !value)}>Plus</button>
-          {more ? (
-            <span className="absolute left-0 z-20 mt-1 min-w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2">
-              {hidden.map((item) => (
-                <button key={item.id} type="button" className="block w-full rounded-xl px-2 py-1.5 text-left text-sm" onClick={() => { onChange(item.id); setMore(false); }}>{item.label}</button>
-              ))}
-            </span>
-          ) : null}
-        </span>
+      {subItems ? (
+        <div className="flex flex-wrap gap-1">
+          {subItems.map((item) => {
+            const active = tab === item.id;
+            const count = counts[item.id];
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onTabChange(item.id)}
+                className="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                style={{
+                  background: active ? "#6E5BFF" : "#151C33",
+                  color: active ? "#fff" : "#C9D2E8",
+                  border: active ? "1px solid transparent" : "1px solid #3A4668",
+                }}
+              >
+                {item.label}
+                {count != null ? <span className="ml-1.5 opacity-80">{count}</span> : null}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
-      </div>
     </div>
   );
 }
@@ -285,6 +361,7 @@ function Overview({
   onOpenDossiers,
   onOpenSurMesure,
   onOpenLms,
+  onOpenRevenue,
   onOpenSaas,
 }: {
   detail: Detail;
@@ -292,6 +369,7 @@ function Overview({
   onOpenDossiers: () => void;
   onOpenSurMesure: () => void;
   onOpenLms: () => void;
+  onOpenRevenue: () => void;
   onOpenSaas: () => void;
 }) {
   const account = detail.account;
@@ -316,14 +394,14 @@ function Overview({
             <button
               type="button"
               onClick={onOpenDossiers}
-              className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
+              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
             >
               Voir les dossiers
             </button>
             <button
               type="button"
               onClick={onOpenSurMesure}
-              className="rounded-full border border-[#26304F] px-4 py-2 text-sm"
+              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
             >
               Sur-mesure
             </button>
@@ -342,25 +420,34 @@ function Overview({
           <button
             type="button"
             onClick={onOpenLms}
-            className="mt-4 rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold"
+            className="mt-4 rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
           >
             Gérer les accès LMS
           </button>
         </section>
 
         <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">Offres SaaS</p>
-          <h2 className="mt-2 text-lg font-extrabold">Licences &amp; produits</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#8A93AE]">SaaS</p>
+          <h2 className="mt-2 text-lg font-extrabold">Accès produits</h2>
           <p className="mt-2 text-sm text-[#C9D2E8]">
-            Activer LMS, Connect, Care, nevo… sur ce compte.
+            Ouvrir ou restreindre LMS, RH / Care, recrutement (Connect) et les autres modules.
           </p>
-          <button
-            type="button"
-            onClick={onOpenSaas}
-            className="mt-4 rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold"
-          >
-            Gérer les offres
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onOpenSaas}
+              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
+            >
+              Gérer le SaaS
+            </button>
+            <button
+              type="button"
+              onClick={onOpenRevenue}
+              className="rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#E8ECF8]"
+            >
+              Voir le CA
+            </button>
+          </div>
         </section>
       </div>
 
@@ -515,7 +602,7 @@ function MembersTab({ detail, onInvite, onImport, onNotice }: { detail: Detail; 
         />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un membre" className="ml-auto rounded-full border border-[#26304F] bg-[#0B1122] px-4 py-2 text-sm" />
         <button type="button" onClick={onImport} className="rounded-full border border-[#26304F] px-4 py-2 text-sm">Importer</button>
-        <button type="button" onClick={onInvite} className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Inviter</button>
+        <button type="button" onClick={onInvite} className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">Inviter</button>
       </div>
       <div className="grid gap-3 md:grid-cols-4">
         <KpiCard label="Actifs ce mois" value={activeKnown ? `${active} / ${detail.people.length || 0}` : "—"} />
@@ -639,7 +726,7 @@ function CoursesTab({ detail, onAssign }: { detail: Detail; onAssign: () => void
         {detail.catalogue.length === 0 ? (
           <span className="ml-auto"><DisabledTip label="Assigner une formation" reason="Aucune formation disponible pour ce compte" /></span>
         ) : (
-          <button type="button" className="ml-auto rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={() => onAssign()}>Assigner une formation</button>
+          <button type="button" className="ml-auto rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white" onClick={() => onAssign()}>Assigner une formation</button>
         )}
       </div>
       {rows.length === 0 ? <EmptyState title={filter === "catalog" ? "Aucune formation disponible à assigner." : "Aucune formation assignée à ce compte."} action={detail.catalogue.length ? <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onAssign}>Assigner une formation</button> : undefined} /> : (
@@ -692,7 +779,7 @@ function BadgesTab({ detail, onCreate }: { detail: Detail; onCreate: () => void 
           { id: "fix", label: "À corriger", count: detail.badges.reduce((sum, badge) => sum + badge.toFix, 0) },
           { id: "revoked", label: "Révoqués", count: detail.badges.reduce((sum, badge) => sum + badge.revoked, 0) },
         ]} />
-        <button type="button" onClick={onCreate} className="ml-auto rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">Créer un Open Badge</button>
+        <button type="button" onClick={onCreate} className="ml-auto rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">Créer un Open Badge</button>
       </div>
       {cards.length === 0 && detail.assertions.length === 0 ? <EmptyState title="Aucun badge délivré pour l'instant." action={<button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={onCreate}>Délivrer un premier badge</button>} /> : cards.length === 0 ? null : (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -840,27 +927,15 @@ function SaasOffersTab({ orgId, modules }: { orgId: string; modules: string[] })
   return (
     <div className="mt-5 space-y-5">
       <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-        <h2 className="text-lg font-extrabold">Produits Byound</h2>
-        <p className="mt-1 text-sm text-[#8A93AE]">
-          Activez les accès SaaS du compte. La facturation sièges arrivera ensuite.
+        <h2 className="text-lg font-extrabold">Accès SaaS du compte</h2>
+        <p className="mt-1 max-w-2xl text-sm text-[#8A93AE]">
+          Activez ou restreignez les produits pour ce client : recrutement (Connect), LMS,
+          RH / Care, et les autres modules. Les collaborateurs n&apos;y accèdent que si le produit
+          est ouvert ici.
         </p>
         <div className="mt-4 [&_div]:border-[#26304F] [&_div]:bg-[#0B1122] [&_p.text-sm]:text-white [&_p.text-xs]:text-[#8A93AE]">
           <OrganizationFeaturesPanel orgId={orgId} initialFeatures={initialFeatures} />
         </div>
-      </section>
-      <section className="rounded-[28px] border border-[#1A2340] bg-[#111831] p-5">
-        <h2 className="text-lg font-extrabold">Référentiel commercial</h2>
-        <p className="mt-1 text-sm text-[#8A93AE]">
-          Offres typiques (hors devis formation Qualiopi) — pour cadrer la conversation.
-        </p>
-        <ul className="mt-4 grid gap-3 md:grid-cols-2">
-          {PIPELINE_PRODUCT_CATALOG.map((product) => (
-            <li key={product.id} className="rounded-2xl border border-[#26304F] bg-[#0B1122] p-4">
-              <p className="font-semibold text-white">{product.label}</p>
-              <p className="mt-1 text-xs text-[#8A93AE]">{product.hint}</p>
-            </li>
-          ))}
-        </ul>
       </section>
     </div>
   );

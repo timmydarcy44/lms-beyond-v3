@@ -101,10 +101,16 @@ export const fieldClass = "w-full rounded-2xl border border-[#26304F] bg-[#0B112
 export function DisabledTip({ label, reason, children }: { label: string; reason: string; children?: ReactNode }) {
   return (
     <span className="group relative inline-flex">
-      <button type="button" disabled aria-label={label} title={reason} className="cursor-not-allowed rounded-full border border-[#26304F] px-4 py-2 text-sm text-[#8A93AE] opacity-80">
+      <button
+        type="button"
+        disabled
+        aria-label={label}
+        title={reason}
+        className="cursor-not-allowed rounded-full border border-[#3A4668] bg-[#151C33] px-4 py-2 text-sm font-semibold text-[#8A93AE] opacity-90"
+      >
         {children ?? label}
       </button>
-      <span className="pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-56 rounded-2xl bg-[#0B1122] px-3 py-2 text-left text-xs text-[#F4F7FF] group-hover:block">
+      <span className="pointer-events-none absolute right-0 top-full z-20 mt-2 hidden w-56 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-left text-xs text-[#F4F7FF] group-hover:block">
         {reason}
       </span>
     </span>

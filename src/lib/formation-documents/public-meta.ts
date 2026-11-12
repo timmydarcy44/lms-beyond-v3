@@ -127,19 +127,26 @@ export async function loadAccountManager(
       initials: "TD",
     };
   }
-  const { data: profile } = await service
-    .from("profiles")
-    .select("full_name, first_name, last_name, email, phone")
+  const { data: manager } = await service
+    .from("account_managers")
+    .select("first_name, last_name, email, phone, is_active")
     .eq("id", managerId)
     .maybeSingle();
+  if (!manager || manager.is_active === false) {
+    return {
+      name: "Timmy Darcy",
+      email: "timmydarcy44@gmail.com",
+      phone: null,
+      initials: "TD",
+    };
+  }
   const name =
-    String(profile?.full_name || "").trim() ||
-    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+    [manager.first_name, manager.last_name].filter(Boolean).join(" ").trim() ||
     "Contact Byound";
   return {
     name,
-    email: profile?.email ? String(profile.email) : null,
-    phone: profile?.phone ? String(profile.phone) : null,
+    email: manager.email ? String(manager.email) : null,
+    phone: manager.phone ? String(manager.phone) : null,
     initials: initials(name),
   };
 }

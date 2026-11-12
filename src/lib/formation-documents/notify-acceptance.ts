@@ -62,31 +62,41 @@ async function resolveStaffRecipients(
     managerId = org?.account_manager_id ? String(org.account_manager_id) : null;
   }
 
-  const preferredIds = [managerId, dossier?.owner_user_id ? String(dossier.owner_user_id) : null].filter(
-    (id): id is string => Boolean(id),
-  );
-
   let managerLabel: string | null = null;
   let managerEmail: string | null = null;
   let ownerEmail: string | null = null;
 
-  if (preferredIds.length) {
-    const { data: profiles } = await service
-      .from("profiles")
-      .select("id, email, full_name, first_name, last_name")
-      .in("id", preferredIds);
-    for (const profile of profiles ?? []) {
-      const email = String(profile.email ?? "")
+  if (managerId) {
+    const { data: manager } = await service
+      .from("account_managers")
+      .select("id, email, first_name, last_name, is_active")
+      .eq("id", managerId)
+      .maybeSingle();
+    if (manager?.is_active !== false) {
+      const email = String(manager?.email ?? "")
         .trim()
         .toLowerCase();
-      if (!email.includes("@")) continue;
-      if (managerId && String(profile.id) === managerId) {
+      if (email.includes("@")) {
         managerEmail = email;
-        managerLabel = profileLabel(profile);
-      } else if (dossier?.owner_user_id && String(profile.id) === String(dossier.owner_user_id)) {
-        ownerEmail = email;
+        managerLabel = profileLabel({
+          first_name: manager?.first_name,
+          last_name: manager?.last_name,
+          email: manager?.email,
+        });
       }
     }
+  }
+
+  if (!managerEmail && dossier?.owner_user_id) {
+    const { data: profile } = await service
+      .from("profiles")
+      .select("id, email, full_name, first_name, last_name")
+      .eq("id", dossier.owner_user_id)
+      .maybeSingle();
+    const email = String(profile?.email ?? "")
+      .trim()
+      .toLowerCase();
+    if (email.includes("@")) ownerEmail = email;
   }
 
   const emails = managerEmail

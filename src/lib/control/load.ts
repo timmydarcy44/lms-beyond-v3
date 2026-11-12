@@ -113,7 +113,7 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
     db.from("organization_features").select("org_id, feature_key, is_enabled").in("org_id", ids),
     db.from("org_billing_documents").select("org_id, doc_type, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type, opco_ht_cents").gte("issued_at", since.toISOString()),
     managerIds.length
-      ? db.from("profiles").select("id, full_name, display_name").in("id", managerIds)
+      ? db.from("account_managers").select("id, first_name, last_name, email").in("id", managerIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -130,9 +130,11 @@ export async function loadControlCockpit(now = new Date()): Promise<ControlCockp
   }));
 
   const managerName = new Map(
-    ((managers.error ? [] : managers.data) ?? []).map((profile) => [
-      profile.id as string,
-      (profile.full_name as string) || (profile.display_name as string) || "Chargé de compte",
+    ((managers.error ? [] : managers.data) ?? []).map((manager) => [
+      manager.id as string,
+      [manager.first_name, manager.last_name].filter(Boolean).join(" ").trim() ||
+        (manager.email as string) ||
+        "Chargé de compte",
     ]),
   );
 
@@ -254,7 +256,11 @@ export async function loadAccountDetail(orgId: string) {
     db.from("org_billing_documents").select("id, doc_type, number, status, issued_at, due_at, paid_at, amount_ht_cents, sale_type, opco_ht_cents").eq("org_id", orgId).order("issued_at", { ascending: false }),
     db.from("courses").select("id, title, status, cover_image, delivery_format").eq("org_id", orgId).limit(40),
     db.from("courses").select("id, title, status, cover_image, delivery_format").in("status", ["published", "active"]).limit(40),
-    db.from("super_admins").select("user_id").eq("is_active", true),
+    db
+      .from("account_managers")
+      .select("id, first_name, last_name, email, phone, photo_url, is_active")
+      .eq("is_active", true)
+      .order("last_name", { ascending: true }),
   ]);
 
   const userIds = ((memberships.data ?? []) as Array<{ user_id: string }>).map((item) => item.user_id);
@@ -457,27 +463,28 @@ export async function loadAccountDetail(orgId: string) {
     tracked: boolean;
   }>;
 
-  const staffIds = [
-    ...new Set(
-      ((staffAdmins.error ? [] : staffAdmins.data) ?? [])
-        .map((row) => String(row.user_id))
-        .filter(Boolean),
-    ),
-  ];
-  if (account.accountManagerId && !staffIds.includes(account.accountManagerId)) {
-    staffIds.push(account.accountManagerId);
+  let staffManagerRows = (staffAdmins.error ? [] : staffAdmins.data) ?? [];
+  if (
+    account.accountManagerId &&
+    !staffManagerRows.some((row) => String(row.id) === account.accountManagerId)
+  ) {
+    const current = await db
+      .from("account_managers")
+      .select("id, first_name, last_name, email, phone, photo_url, is_active")
+      .eq("id", account.accountManagerId)
+      .maybeSingle();
+    if (current.data) staffManagerRows = [...staffManagerRows, current.data];
   }
-  const staffProfiles = staffIds.length
-    ? await db.from("profiles").select("id, full_name, display_name, email").in("id", staffIds)
-    : { data: [], error: null };
-  const staffManagers = ((staffProfiles.error ? [] : staffProfiles.data) ?? [])
-    .map((profile) => ({
-      id: String(profile.id),
+  const staffManagers = staffManagerRows
+    .map((manager) => ({
+      id: String(manager.id),
       name:
-        String(profile.full_name || profile.display_name || "").trim() ||
-        String(profile.email || "").trim() ||
+        [manager.first_name, manager.last_name].filter(Boolean).join(" ").trim() ||
+        String(manager.email || "").trim() ||
         "Chargé de compte",
-      email: String(profile.email || "").trim().toLowerCase(),
+      email: String(manager.email || "").trim().toLowerCase(),
+      phone: manager.phone ? String(manager.phone) : null,
+      photoUrl: manager.photo_url ? String(manager.photo_url) : null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 

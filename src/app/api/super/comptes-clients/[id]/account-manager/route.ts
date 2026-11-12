@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { notifyAccountManagerAssigned } from "@/lib/email/account-manager-assigned";
 import { buildActivityRow } from "@/lib/control/policy";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -23,22 +24,48 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       ? null
       : String(raw).trim();
 
+  const current = await service
+    .from("organizations")
+    .select("id, account_manager_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (current.error) return NextResponse.json({ error: current.error.message }, { status: 500 });
+  if (!current.data) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+
+  const previousManagerId = current.data.account_manager_id
+    ? String(current.data.account_manager_id)
+    : null;
+
+  let accountManagerName: string | null = null;
+  let managerEmail: string | null = null;
   if (accountManagerId) {
-    const admin = await service
-      .from("super_admins")
-      .select("user_id")
-      .eq("user_id", accountManagerId)
-      .eq("is_active", true)
+    const manager = await service
+      .from("account_managers")
+      .select("id, first_name, last_name, email, is_active")
+      .eq("id", accountManagerId)
       .maybeSingle();
-    if (admin.error) {
-      return NextResponse.json({ error: admin.error.message }, { status: 500 });
+    if (manager.error) {
+      if (/account_managers|42P01/i.test(manager.error.message)) {
+        return NextResponse.json(
+          { error: "Appliquez la migration account_managers sur Supabase." },
+          { status: 503 },
+        );
+      }
+      return NextResponse.json({ error: manager.error.message }, { status: 500 });
     }
-    if (!admin.data) {
+    if (!manager.data || manager.data.is_active === false) {
       return NextResponse.json(
-        { error: "Le chargé de compte doit être un membre du staff Byound." },
+        { error: "Choisissez un gestionnaire de compte actif." },
         { status: 400 },
       );
     }
+    accountManagerName =
+      [manager.data.first_name, manager.data.last_name].filter(Boolean).join(" ").trim() ||
+      String(manager.data.email || "") ||
+      "Chargé de compte";
+    managerEmail = String(manager.data.email || "")
+      .trim()
+      .toLowerCase();
   }
 
   const updated = await service
@@ -55,20 +82,6 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
   }
 
-  let accountManagerName: string | null = null;
-  if (accountManagerId) {
-    const profile = await service
-      .from("profiles")
-      .select("full_name, display_name, email")
-      .eq("id", accountManagerId)
-      .maybeSingle();
-    accountManagerName =
-      (profile.data?.full_name as string | null) ||
-      (profile.data?.display_name as string | null) ||
-      (profile.data?.email as string | null) ||
-      "Chargé de compte";
-  }
-
   await service.from("org_activity").insert(
     buildActivityRow({
       orgId: id,
@@ -78,13 +91,26 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       payload: {
         account_manager_id: accountManagerId,
         account_manager_name: accountManagerName,
+        previous_account_manager_id: previousManagerId,
       },
     }),
   );
+
+  let emailSent = false;
+  if (accountManagerId && accountManagerId !== previousManagerId) {
+    const notify = await notifyAccountManagerAssigned(service, {
+      orgId: id,
+      managerId: accountManagerId,
+      assignedByUserId: data.user.id,
+    });
+    emailSent = notify.sent;
+  }
 
   return NextResponse.json({
     ok: true,
     accountManagerId,
     accountManagerName,
+    managerEmail,
+    emailSent,
   });
 }

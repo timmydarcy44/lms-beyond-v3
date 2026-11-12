@@ -977,7 +977,9 @@ function AccountManagerPicker({
         return;
       }
       const label = payload.accountManagerName || managers.find((item) => item.id === nextId)?.name;
-      onNotice(label ? `Chargé de compte : ${label}` : "Chargé de compte retiré.");
+      if (!nextId) onNotice("Chargé de compte retiré.");
+      else if (payload.emailSent) onNotice(`Chargé de compte : ${label} — e-mail d'assignation envoyé.`);
+      else onNotice(label ? `Chargé de compte : ${label}` : "Chargé de compte mis à jour.");
       router.refresh();
     } catch {
       setValue(previous);

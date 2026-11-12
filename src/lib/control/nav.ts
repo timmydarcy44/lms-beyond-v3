@@ -62,6 +62,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         match: under("/super/organisations"),
       },
       {
+        id: "gestionnaires",
+        label: "Gestionnaires de compte",
+        href: "/super/gestionnaires",
+        match: under("/super/gestionnaires"),
+      },
+      {
         id: "particuliers",
         label: "Particuliers",
         href: "/super/utilisateurs?role=btoc",

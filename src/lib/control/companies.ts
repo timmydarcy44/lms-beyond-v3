@@ -82,7 +82,7 @@ export async function loadCompanyDirectory(): Promise<CompanyDirectory> {
 
   const companies = await db.from("companies").select("*").is("merged_into", null).order("name");
   const schemaReady = !companies.error;
-  const [orgs, cfas, deals, sources, placements, needs, sends, profiles] = await Promise.all([
+  const [orgs, cfas, deals, sources, placements, needs, sends, managers] = await Promise.all([
     rows(db, "organizations", ["id, name, slug, logo_url, status, kind, account_manager_id, siret", "id, name, slug, logo_url, siret", "id, name, slug"]),
     rows(db, "cfa_companies", ["id, company_name, city, siret, naf_code, naf_label, opco", "id, company_name, siret", "id, company_name"]),
     rows(db, "crm_pipeline_deals", [
@@ -93,11 +93,14 @@ export async function loadCompanyDirectory(): Promise<CompanyDirectory> {
     rows(db, "apprentice_placements", ["company_id, status"]),
     rows(db, "cfa_company_needs", ["company_id"]),
     rows(db, "cfa_profile_sends", ["company_id"]),
-    rows(db, "profiles", ["id, full_name, display_name", "id, full_name"]),
+    rows(db, "account_managers", ["id, first_name, last_name, email", "id, email"]),
   ]);
 
   const managerName = new Map(
-    profiles.map((profile) => [text(profile.id), text(profile.full_name) || text(profile.display_name)]),
+    managers.map((manager) => [
+      text(manager.id),
+      [text(manager.first_name), text(manager.last_name)].filter(Boolean).join(" ").trim() || text(manager.email),
+    ]),
   );
   const orgById = new Map(orgs.map((org) => [text(org.id), org]));
   const cfaById = new Map(cfas.map((company) => [text(company.id), company]));

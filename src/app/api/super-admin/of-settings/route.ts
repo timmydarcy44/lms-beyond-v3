@@ -1,8 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { HANDICAP_REFERENT_CANDIDATES } from "@/lib/handicap/referent-candidates";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const OF_SETTINGS_ID = "00000000-0000-4000-8000-000000000001";
+
+async function resolveHandicapReferentOptions(
+  service: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+) {
+  const options: Array<{
+    key: string;
+    label: string;
+    email: string;
+    userId: string | null;
+  }> = [];
+
+  for (const candidate of HANDICAP_REFERENT_CANDIDATES) {
+    let userId: string | null = null;
+    const { data: profile } = await service
+      .from("profiles")
+      .select("id")
+      .ilike("email", candidate.email)
+      .maybeSingle();
+    if (profile?.id) {
+      userId = String(profile.id);
+    } else {
+      try {
+        const listed = await service.auth.admin.listUsers({ page: 1, perPage: 200 });
+        const match = listed.data.users.find(
+          (u) => u.email?.trim().toLowerCase() === candidate.email,
+        );
+        userId = match?.id ?? null;
+      } catch {
+        userId = null;
+      }
+    }
+    options.push({
+      key: candidate.key,
+      label: candidate.label,
+      email: candidate.email,
+      userId,
+    });
+  }
+
+  return options;
+}
 
 export async function GET() {
   if (!(await isSuperAdmin())) {
@@ -18,7 +60,9 @@ export async function GET() {
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ settings: data ?? null });
+
+  const handicapReferentOptions = await resolveHandicapReferentOptions(service);
+  return NextResponse.json({ settings: data ?? null, handicapReferentOptions });
 }
 
 export async function PATCH(req: NextRequest) {

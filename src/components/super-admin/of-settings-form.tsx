@@ -22,6 +22,13 @@ type OfSettings = {
   bpf_campaign_deadline: string | null;
 };
 
+type HandicapReferentOption = {
+  key: string;
+  label: string;
+  email: string;
+  userId: string | null;
+};
+
 const EMPTY: OfSettings = {
   legal_name: "",
   nda: "",
@@ -40,6 +47,7 @@ const EMPTY: OfSettings = {
 
 export function OfSettingsForm() {
   const [form, setForm] = useState<OfSettings>(EMPTY);
+  const [referentOptions, setReferentOptions] = useState<HandicapReferentOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -47,7 +55,10 @@ export function OfSettingsForm() {
     void (async () => {
       try {
         const res = await fetch("/api/super-admin/of-settings");
-        const json = (await res.json()) as { settings?: Partial<OfSettings> | null };
+        const json = (await res.json()) as {
+          settings?: Partial<OfSettings> | null;
+          handicapReferentOptions?: HandicapReferentOption[];
+        };
         if (json.settings) {
           setForm({
             ...EMPTY,
@@ -56,6 +67,7 @@ export function OfSettingsForm() {
             ),
           } as OfSettings);
         }
+        setReferentOptions(json.handicapReferentOptions ?? []);
       } catch {
         toast.error("Paramètres OF indisponibles (migration Lot 1 requise)");
       } finally {
@@ -67,6 +79,10 @@ export function OfSettingsForm() {
   const set = (key: keyof OfSettings, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
+
+  const selectedReferentMissing =
+    Boolean(form.referent_handicap_user_id) &&
+    !referentOptions.some((o) => o.userId && o.userId === form.referent_handicap_user_id);
 
   return (
     <div className="rounded-2xl border border-[#262A4A] bg-[#141731] p-6 text-[#F3F4FA]">
@@ -116,7 +132,6 @@ export function OfSettingsForm() {
               ["fiscal_year_start", "Début exercice (YYYY-MM-DD)"],
               ["fiscal_year_end", "Fin exercice (YYYY-MM-DD)"],
               ["bpf_campaign_deadline", "Échéance campagne BPF (YYYY-MM-DD)"],
-              ["referent_handicap_user_id", "Référent handicap (user id)"],
             ] as const
           ).map(([key, label]) => (
             <div key={key} className="space-y-1.5">
@@ -133,6 +148,40 @@ export function OfSettingsForm() {
               />
             </div>
           ))}
+
+          <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-[#A3A8C7]">Référent handicap</Label>
+            <select
+              value={form.referent_handicap_user_id ?? ""}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (next.startsWith("__missing_")) return;
+                set("referent_handicap_user_id", next);
+              }}
+              className="w-full rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#F3F4FA]"
+            >
+              <option value="">— Non assigné —</option>
+              {referentOptions.map((opt) => (
+                <option
+                  key={opt.key}
+                  value={opt.userId ?? `__missing_${opt.key}`}
+                  disabled={!opt.userId}
+                >
+                  {opt.label} ({opt.email})
+                  {!opt.userId ? " — compte introuvable" : ""}
+                </option>
+              ))}
+              {selectedReferentMissing ? (
+                <option value={form.referent_handicap_user_id ?? ""}>
+                  Autre (id actuel)
+                </option>
+              ) : null}
+            </select>
+            <p className="text-xs text-[#A3A8C7]">
+              Donne accès à Qualiopi → Handicap (dossiers RQTH + annuaire partenaires).
+            </p>
+          </div>
+
           <div className="md:col-span-2">
             <Button
               type="submit"

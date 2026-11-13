@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Accessibility, Lock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { QualiopiHandicapPartners } from "@/components/super-admin/qualiopi-handicap-partners";
 import {
   QUALIOPI_CARD,
@@ -14,6 +14,7 @@ import {
   QUALIOPI_PAGE_BG,
 } from "@/components/super-admin/qualiopi/qualiopi-audit-styles";
 import { HANDICAP_PARTNERS_META } from "@/lib/handicap/partners-directory";
+import { handicapSourceLabel } from "@/lib/handicap/labels";
 import { cn } from "@/lib/utils";
 
 type MainTab = "business" | "school" | "annuaire";
@@ -31,35 +32,12 @@ type HandicapCard = {
   updated_at: string;
 };
 
-type Followup = {
-  id: string;
-  body: string;
-  created_at: string;
-};
-
-type Detail = HandicapCard & {
-  referent_notes: string | null;
-  accommodations: unknown;
-};
-
-function sourceLabel(kind: string) {
-  if (kind === "employee") return "Salarié";
-  if (kind === "formation_participant") return "Participant formation";
-  if (kind === "cfa_application") return "Candidature CFA";
-  return kind;
-}
-
 export function QualiopiHandicapPanel() {
+  const router = useRouter();
   const [tab, setTab] = useState<MainTab>("business");
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<HandicapCard[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<Detail | null>(null);
-  const [followups, setFollowups] = useState<Followup[]>([]);
-  const [notes, setNotes] = useState("");
-  const [followupDraft, setFollowupDraft] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const loadList = useCallback(async (scope: ScopeTab) => {
     setLoading(true);
@@ -73,9 +51,6 @@ export function QualiopiHandicapPanel() {
       if (!res.ok) throw new Error(json.error || "Chargement impossible");
       setLocked(Boolean(json.locked));
       setProfiles(json.profiles ?? []);
-      setSelectedId(null);
-      setDetail(null);
-      setFollowups([]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur");
     } finally {
@@ -85,7 +60,6 @@ export function QualiopiHandicapPanel() {
 
   useEffect(() => {
     if (tab === "annuaire") {
-      // Annuaire = doc qualité partagé : on vérifie juste le gate via un scope business.
       void (async () => {
         setLoading(true);
         try {
@@ -104,26 +78,7 @@ export function QualiopiHandicapPanel() {
     void loadList(tab);
   }, [tab, loadList]);
 
-  const loadDetail = useCallback(async (id: string) => {
-    setSelectedId(id);
-    try {
-      const res = await fetch(`/api/super-admin/crm/qualiopi/handicap?id=${id}`);
-      const json = (await res.json()) as {
-        profile?: Detail;
-        followups?: Followup[];
-        error?: string;
-      };
-      if (!res.ok) throw new Error(json.error || "Fiche indisponible");
-      setDetail(json.profile ?? null);
-      setNotes(json.profile?.referent_notes ?? "");
-      setFollowups(json.followups ?? []);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
-    }
-  }, []);
-
   const filteredEmpty = !loading && profiles.length === 0;
-
   const headerCount = useMemo(() => profiles.length, [profiles.length]);
 
   if (locked) {
@@ -153,8 +108,7 @@ export function QualiopiHandicapPanel() {
               Handicap
             </h1>
             <p className={cn(QUALIOPI_MUTED, "mt-2 max-w-xl text-sm")}>
-              Cartes RQTH (Business / School) et annuaire partenaires AN-HAN-01 — dernière MAJ{" "}
-              {HANDICAP_PARTNERS_META.lastUpdatedLabel}.
+              Cartes RQTH — cliquez une carte pour ouvrir la fiche, puis Gestion handicap.
             </p>
           </div>
           <div className="flex gap-2">
@@ -211,7 +165,9 @@ export function QualiopiHandicapPanel() {
             >
               {label}
               {tab === id && id !== "annuaire" ? ` · ${headerCount}` : ""}
-              {tab === id && id === "annuaire" ? ` · MAJ ${HANDICAP_PARTNERS_META.lastUpdatedLabel}` : ""}
+              {tab === id && id === "annuaire"
+                ? ` · MAJ ${HANDICAP_PARTNERS_META.lastUpdatedLabel}`
+                : ""}
             </button>
           ))}
         </div>
@@ -223,7 +179,6 @@ export function QualiopiHandicapPanel() {
             <QualiopiHandicapPartners />
           )
         ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <section className={cn(QUALIOPI_CARD, "p-5")}>
             {loading ? (
               <p className={cn(QUALIOPI_MUTED, "text-sm")}>Chargement…</p>
@@ -232,151 +187,35 @@ export function QualiopiHandicapPanel() {
                 Aucune RQTH active sur {tab === "business" ? "Business" : "School"} pour le moment.
               </p>
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2">
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {profiles.map((p) => (
                   <li key={p.id}>
                     <button
                       type="button"
-                      onClick={() => void loadDetail(p.id)}
+                      onClick={() => router.push(`/super/crm/qualiopi/handicap/${p.id}`)}
                       className={cn(
                         QUALIOPI_CARD_INNER,
                         "w-full p-4 text-left transition hover:bg-white/[0.06]",
-                        selectedId === p.id && "ring-1 ring-[#6BE3C0]/50",
                       )}
                     >
                       <p className="font-semibold text-white">{p.person_name}</p>
                       <p className={cn(QUALIOPI_MUTED, "mt-1 text-xs")}>
-                        {sourceLabel(p.source_kind)}
+                        {handicapSourceLabel(p.source_kind)}
                         {p.organization_name ? ` · ${p.organization_name}` : ""}
                       </p>
                       {p.needs_summary ? (
                         <p className="mt-2 line-clamp-2 text-sm text-white/75">{p.needs_summary}</p>
                       ) : null}
+                      <p className="mt-3 text-xs font-semibold text-[#6BE3C0]">Ouvrir la fiche →</p>
                     </button>
                   </li>
                 ))}
               </ul>
             )}
+            <p className={cn(QUALIOPI_MUTED, "mt-4 text-xs")}>
+              Sur chaque fiche : CTA « Gestion handicap » (RQTH, documents, besoins, plan, rendez-vous).
+            </p>
           </section>
-
-          <aside className={cn(QUALIOPI_CARD, "p-5")}>
-            {!detail ? (
-              <p className={cn(QUALIOPI_MUTED, "text-sm")}>
-                Sélectionnez une carte pour ouvrir le dossier référente.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <p className={QUALIOPI_KICKER}>Fiche</p>
-                  <h2 className="mt-1 text-xl font-semibold">{detail.person_name}</h2>
-                  <p className={cn(QUALIOPI_MUTED, "text-sm")}>
-                    {detail.person_email || "—"}
-                    <br />
-                    {sourceLabel(detail.source_kind)}
-                    {detail.organization_name ? ` · ${detail.organization_name}` : ""}
-                  </p>
-                </div>
-
-                <div>
-                  <label className={cn(QUALIOPI_MUTED, "text-xs font-semibold uppercase")}>
-                    Notes référente
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={4}
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white"
-                  />
-                  <Button
-                    type="button"
-                    disabled={saving}
-                    className="mt-2 w-full bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]"
-                    onClick={async () => {
-                      setSaving(true);
-                      try {
-                        const res = await fetch("/api/super-admin/crm/qualiopi/handicap", {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: detail.id, referent_notes: notes }),
-                        });
-                        const json = (await res.json()) as { error?: string };
-                        if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
-                        toast.success("Notes enregistrées");
-                      } catch (err) {
-                        toast.error(err instanceof Error ? err.message : "Erreur");
-                      } finally {
-                        setSaving(false);
-                      }
-                    }}
-                  >
-                    Enregistrer les notes
-                  </Button>
-                </div>
-
-                <div>
-                  <p className={cn(QUALIOPI_MUTED, "text-xs font-semibold uppercase")}>Journal</p>
-                  <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto">
-                    {followups.length === 0 ? (
-                      <li className={cn(QUALIOPI_MUTED, "text-sm")}>Aucune entrée.</li>
-                    ) : (
-                      followups.map((f) => (
-                        <li key={f.id} className={cn(QUALIOPI_CARD_INNER, "px-3 py-2 text-sm")}>
-                          <p className="text-white/90">{f.body}</p>
-                          <p className={cn(QUALIOPI_MUTED, "mt-1 text-[11px]")}>
-                            {new Date(f.created_at).toLocaleString("fr-FR")}
-                          </p>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                  <form
-                    className="mt-3 flex gap-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void (async () => {
-                        const text = followupDraft.trim();
-                        if (!text) return;
-                        setSaving(true);
-                        try {
-                          const res = await fetch("/api/super-admin/crm/qualiopi/handicap", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              id: detail.id,
-                              action: "add_followup",
-                              body: text,
-                            }),
-                          });
-                          const json = (await res.json()) as {
-                            followup?: Followup;
-                            error?: string;
-                          };
-                          if (!res.ok) throw new Error(json.error || "Ajout impossible");
-                          setFollowups((prev) => (json.followup ? [json.followup, ...prev] : prev));
-                          setFollowupDraft("");
-                        } catch (err) {
-                          toast.error(err instanceof Error ? err.message : "Erreur");
-                        } finally {
-                          setSaving(false);
-                        }
-                      })();
-                    }}
-                  >
-                    <Input
-                      value={followupDraft}
-                      onChange={(e) => setFollowupDraft(e.target.value)}
-                      placeholder="Ajouter un suivi…"
-                      className="border-white/10 bg-black/20 text-white"
-                    />
-                    <Button type="submit" disabled={saving} className="bg-white/10 text-white">
-                      +
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            )}
-          </aside>
-        </div>
         )}
       </div>
     </div>

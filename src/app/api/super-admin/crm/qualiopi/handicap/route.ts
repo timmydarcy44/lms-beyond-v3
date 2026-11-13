@@ -139,6 +139,12 @@ export async function PATCH(req: NextRequest) {
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if ("referent_notes" in body) patch.referent_notes = String(body.referent_notes ?? "").trim() || null;
   if ("needs_summary" in body) patch.needs_summary = String(body.needs_summary ?? "").trim() || null;
+  if ("specific_needs" in body) {
+    patch.specific_needs = String(body.specific_needs ?? "").trim() || null;
+  }
+  if ("accompaniment_plan" in body) {
+    patch.accompaniment_plan = String(body.accompaniment_plan ?? "").trim() || null;
+  }
   if ("active" in body) patch.active = Boolean(body.active);
   if ("accommodations" in body && Array.isArray(body.accommodations)) {
     patch.accommodations = body.accommodations;

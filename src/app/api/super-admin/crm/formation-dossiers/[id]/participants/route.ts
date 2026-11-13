@@ -4,6 +4,7 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { ensureLearnerProfileByEmail } from "@/lib/formation-dossier/ensure-learner";
 import type { BpfLearnerStatus } from "@/lib/formation-dossier/constants";
 import { BPF_LEARNER_STATUSES } from "@/lib/formation-dossier/constants";
+import { syncParticipantHandicapProfile } from "@/lib/handicap/sync";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -15,11 +16,19 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
   const { id } = await ctx.params;
-  const { data: rows, error } = await service
+  let rowsQuery = await service
     .from("formation_participants")
-    .select("id, dossier_id, profile_id, job_title, bpf_learner_status, needs_specific_support, created_at")
+    .select("id, dossier_id, profile_id, job_title, bpf_learner_status, needs_specific_support, rqth, created_at")
     .eq("dossier_id", id)
     .order("created_at", { ascending: true });
+  if (rowsQuery.error && /rqth|schema cache|column/i.test(rowsQuery.error.message)) {
+    rowsQuery = await service
+      .from("formation_participants")
+      .select("id, dossier_id, profile_id, job_title, bpf_learner_status, needs_specific_support, created_at")
+      .eq("dossier_id", id)
+      .order("created_at", { ascending: true });
+  }
+  const { data: rows, error } = rowsQuery;
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const profileIds = (rows ?? []).map((r) => String(r.profile_id));
@@ -155,6 +164,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const bpfLearnerStatus = BPF_LEARNER_STATUSES.includes(bpfRaw as BpfLearnerStatus)
     ? (bpfRaw as BpfLearnerStatus)
     : null;
+  const rqth = Boolean(body?.rqth);
+  const needsSpecific = Boolean(body?.needs_specific_support) || rqth;
 
   try {
     const learner = await ensureLearnerProfileByEmail(service, {
@@ -163,24 +174,33 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       lastName,
       organizationId: String(dossier.organization_id),
       bpfLearnerStatus,
-      needsSpecificSupport: Boolean(body?.needs_specific_support),
+      needsSpecificSupport: needsSpecific,
       jobTitle,
     });
 
-    const { data: participant, error } = await service
+    const upsertRow: Record<string, unknown> = {
+      dossier_id: dossierId,
+      profile_id: learner.profileId,
+      job_title: jobTitle,
+      bpf_learner_status: bpfLearnerStatus,
+      needs_specific_support: needsSpecific,
+      rqth,
+    };
+
+    let { data: participant, error } = await service
       .from("formation_participants")
-      .upsert(
-        {
-          dossier_id: dossierId,
-          profile_id: learner.profileId,
-          job_title: jobTitle,
-          bpf_learner_status: bpfLearnerStatus,
-          needs_specific_support: Boolean(body?.needs_specific_support),
-        },
-        { onConflict: "dossier_id,profile_id" },
-      )
+      .upsert(upsertRow, { onConflict: "dossier_id,profile_id" })
       .select("*")
       .single();
+
+    if (error && /rqth|schema cache|column/i.test(error.message)) {
+      delete upsertRow.rqth;
+      ({ data: participant, error } = await service
+        .from("formation_participants")
+        .upsert(upsertRow, { onConflict: "dossier_id,profile_id" })
+        .select("*")
+        .single());
+    }
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
@@ -197,8 +217,28 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       dossier_id: dossierId,
       event_type: "participant_added",
       actor_user_id: actorUserId,
-      payload: { profile_id: learner.profileId, email },
+      payload: { profile_id: learner.profileId, email, rqth },
     });
+
+    if (participant) {
+      const personName =
+        [firstName, lastName].filter(Boolean).join(" ").trim() || email || "Participant";
+      await syncParticipantHandicapProfile(
+        service,
+        {
+          id: String(participant.id),
+          dossier_id: dossierId,
+          rqth: Boolean((participant as { rqth?: boolean }).rqth ?? rqth),
+          needs_specific_support: needsSpecific,
+        },
+        {
+          organizationId: String(dossier.organization_id),
+          personName,
+          personEmail: email,
+          needsSummary: rqth ? "RQTH déclarée (participant formation)" : null,
+        },
+      );
+    }
 
     return NextResponse.json({ participant, createdAuthUser: learner.createdAuthUser }, { status: 201 });
   } catch (err) {

@@ -7,6 +7,7 @@ import {
   evidenceKindLabel,
   type EmployeeInclusionProfile,
 } from "@/lib/entreprise/inclusion-accommodations";
+import { EnterpriseEmployeeRqthForm } from "@/components/enterprise/enterprise-employee-rqth-form";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -15,9 +16,20 @@ type Props = {
   className?: string;
   hideButton?: boolean;
   openSignal?: number;
+  /** Si fourni, permet de déclarer / modifier la RQTH (persistance réelle). */
+  employeeId?: string | null;
+  onRqthSaved?: (next: { rqth: boolean; needs_summary: string | null }) => void;
 };
 
-export function EnterpriseEmployeeInclusionCta({ employeeName, profile, className, hideButton, openSignal = 0 }: Props) {
+export function EnterpriseEmployeeInclusionCta({
+  employeeName,
+  profile,
+  className,
+  hideButton,
+  openSignal = 0,
+  employeeId,
+  onRqthSaved,
+}: Props) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (openSignal) setOpen(true);
@@ -30,6 +42,8 @@ export function EnterpriseEmployeeInclusionCta({ employeeName, profile, classNam
     notes: null,
   };
   const hasFactors = data.factors.length > 0;
+  const hasRqth = data.factors.some((f) => f.id === "rqth");
+  const rqthDetail = data.factors.find((f) => f.id === "rqth")?.detail ?? "";
 
   return (
     <>
@@ -80,15 +94,27 @@ export function EnterpriseEmployeeInclusionCta({ employeeName, profile, classNam
               </button>
             </div>
 
+            {employeeId ? (
+              <div className="mt-6">
+                <EnterpriseEmployeeRqthForm
+                  employeeId={employeeId}
+                  initialRqth={hasRqth}
+                  initialNeeds={rqthDetail}
+                  onSaved={(next) => {
+                    onRqthSaved?.(next);
+                  }}
+                />
+              </div>
+            ) : null}
+
             {!hasFactors ? (
-              <div className="mt-8 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-8 text-center">
+              <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-8 text-center">
                 <Shield className="mx-auto h-8 w-8 text-gray-300" />
                 <p className="mt-3 text-sm font-semibold text-gray-800">
                   Aucun élément d’inclusion déclaré
                 </p>
                 <p className="mt-2 text-sm text-gray-500">
-                  Dès qu’un handicap, une RQTH ou une difficulté est déclarée ou documentée, les
-                  aménagements recommandés apparaîtront ici.
+                  Cochez la RQTH ci-dessus pour ouvrir le suivi auprès de la référente Byound.
                 </p>
               </div>
             ) : (

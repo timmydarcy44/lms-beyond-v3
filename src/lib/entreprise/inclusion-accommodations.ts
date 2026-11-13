@@ -155,6 +155,26 @@ export function buildInclusionProfile(params: {
   };
 }
 
+/** Profil inclusion à partir de la déclaration RQTH persistée (hors mock). */
+export function buildInclusionFromEmployeeRqth(input: {
+  rqth?: boolean | null;
+  needsSummary?: string | null;
+}): EmployeeInclusionProfile {
+  if (!input.rqth) return emptyInclusionProfile();
+  return buildInclusionProfile({
+    factors: [
+      {
+        id: "rqth",
+        label: "RQTH",
+        kind: "declared",
+        detail: input.needsSummary?.trim() || "Déclaration volontaire collaborateur",
+      },
+    ],
+    notes:
+      "Visible RH (statut RQTH). Le détail d’accompagnement est confié à la référente handicap Byound.",
+  });
+}
+
 export function evidenceKindLabel(kind: InclusionEvidenceKind) {
   if (kind === "proven") return "Prouvé / documenté";
   if (kind === "declared") return "Déclaré";

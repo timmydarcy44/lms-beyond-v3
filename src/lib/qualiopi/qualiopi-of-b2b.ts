@@ -126,19 +126,24 @@ Module experts + synthèse annuelle.
     indicatorIds: [20, 26],
     template: `# Accueil PSH — Byound
 
-## Référent handicap
-Contact : referent-handicap@byound.fr
+## Référente handicap
+Jessica CONTENTIN — jessica.contentin@byound.fr
 
 ## Modalités
 - Étude personnalisée de chaque situation
 - Adaptation pédagogique / technique possible selon le parcours
 - Information sur les fiches formation publiques
+- Procédure associée : PR-HAN-01 · Fiche suivi : FS-HAN-01
 
-## Partenariats
-À lister (Agefiph, Cap emploi, MDPH, partenaires locaux…).
+## Partenariats (AN-HAN-01)
+Annuaire des partenaires handicap — version 1.0 du 13/11/2026 (prochaine revue : novembre 2027).
+Premier recours : Ressource Handicap Formation (RHF) Normandie, puis partenaire adapté
+(Agefiph Normandie, Cap emploi Calvados, MDPH 14, France Travail, Mission Locale, PRITH,
+Mission ville-handicap Caen, Unafam 14, Valentin Haüy Caen, interlocuteurs entreprise cliente).
+Espace produit : Qualiopi → Handicap → Annuaire.
 
 ## Preuve
-Note + échanges datés + partenariats.
+Note process + AN-HAN-01 + échanges datés (colonne « Contact établi le » / fiche FS-HAN-01).
 `,
   },
   {

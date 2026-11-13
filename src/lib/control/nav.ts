@@ -183,6 +183,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
       },
       { id: "qualiopi", label: "Qualiopi", href: "/super/crm/qualiopi", match: exact("/super/crm/qualiopi") },
       {
+        id: "handicap",
+        label: "Handicap",
+        href: "/super/crm/qualiopi/handicap",
+        match: under("/super/crm/qualiopi/handicap"),
+      },
+      {
         id: "bpf",
         label: "BPF",
         href: "/super/qualite/bpf",

@@ -28,6 +28,7 @@ import { listSalarieAssignedFormations } from "@/lib/salarie/assigned-formations
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { buildJadeEmployeeDetailPayload } from "@/lib/demo/jade-dashboard-mocks";
+import { buildInclusionFromEmployeeRqth } from "@/lib/entreprise/inclusion-accommodations";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const EMPLOYEE_SELECTS = [
+  "id, first_name, last_name, email, job_title, department, phone, hire_date, metier, profile_id, company_id, created_at, rqth, rqth_declared_at, rqth_needs_summary",
   "id, first_name, last_name, email, job_title, department, phone, hire_date, metier, profile_id, company_id, created_at",
   "id, first_name, last_name, email, job_title, department, phone, hire_date, profile_id, company_id, created_at",
   "id, first_name, last_name, email, job_title, department, profile_id, company_id, created_at",
@@ -373,6 +375,15 @@ export async function GET(
 
   activity.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 
+  const empRec = employee as {
+    rqth?: boolean | null;
+    rqth_needs_summary?: string | null;
+  };
+  const inclusion = buildInclusionFromEmployeeRqth({
+    rqth: empRec.rqth,
+    needsSummary: empRec.rqth_needs_summary,
+  });
+
   return NextResponse.json({
     employee: { ...employee, profile_id: testStatus.profile_id ?? employee.profile_id },
     formations_in_progress: formationsInProgress,
@@ -397,6 +408,7 @@ export async function GET(
     missions: missions ?? [],
     hr_documents: hrDocuments,
     metier_match: metierMatch,
+    inclusion,
   });
 }
 

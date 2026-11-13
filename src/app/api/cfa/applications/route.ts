@@ -13,6 +13,7 @@ import { sendAccessCode } from "@/lib/cfa/access-code";
 import { grantCfaAssessmentShares } from "@/lib/cfa/assessment-shares";
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
 import { getSession } from "@/lib/auth/session";
+import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CFA_ADMIN_EMAIL = "timmydarcy44@gmail.com";
@@ -363,6 +364,17 @@ export async function PATCH(request: Request) {
     error = retry.error;
   }
   if (error || !data) return NextResponse.json({ error: error?.message || "Enregistrement impossible" }, { status: 400 });
+
+  if (action === "administrative" && data.cerfa_data) {
+    await syncCfaApplicationHandicapProfile(db, {
+      id: String(data.id),
+      first_name: data.first_name ? String(data.first_name) : null,
+      last_name: data.last_name ? String(data.last_name) : null,
+      email: data.email ? String(data.email) : null,
+      specialization: data.specialization ? String(data.specialization) : null,
+      cerfa_data: (data.cerfa_data ?? {}) as Record<string, string>,
+    });
+  }
 
   if (action === "dossier") {
     const challengeSummary = CFA_CHALLENGE_QUESTIONS.map((question) => {

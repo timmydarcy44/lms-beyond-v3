@@ -16,7 +16,10 @@ import { EnterpriseEmployeeEntretiensSection } from "@/components/enterprise/ent
 import { EnterpriseEmployeeInclusionCta } from "@/components/enterprise/enterprise-employee-inclusion";
 import { formatSeniority } from "@/lib/entreprise/seniority";
 import { gapStatusLabel, type SoftSkillGap } from "@/lib/entreprise/metier-skill-gaps";
-import type { EmployeeInclusionProfile } from "@/lib/entreprise/inclusion-accommodations";
+import {
+  buildInclusionFromEmployeeRqth,
+  type EmployeeInclusionProfile,
+} from "@/lib/entreprise/inclusion-accommodations";
 import {
   AXES_LABELS,
   IDMC_AXIS_KEYS,
@@ -637,6 +640,15 @@ export default function SalarieDetailPage() {
           profile={inclusion}
           hideButton
           openSignal={inclusionSignal}
+          employeeId={employeeId}
+          onRqthSaved={(next) => {
+            setInclusion(
+              buildInclusionFromEmployeeRqth({
+                rqth: next.rqth,
+                needsSummary: next.needs_summary,
+              }),
+            );
+          }}
         />
         <ProfileTabs current={tab} onChange={goTab} />
 
@@ -744,6 +756,15 @@ export default function SalarieDetailPage() {
                   "Collaborateur"
                 }
                 profile={inclusion}
+                employeeId={employeeId}
+                onRqthSaved={(next) => {
+                  setInclusion(
+                    buildInclusionFromEmployeeRqth({
+                      rqth: next.rqth,
+                      needsSummary: next.needs_summary,
+                    }),
+                  );
+                }}
               />
               <button
                 type="button"

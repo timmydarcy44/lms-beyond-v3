@@ -44,6 +44,7 @@ type ParticipantRow = {
   job_title: string | null;
   bpf_learner_status: string | null;
   needs_specific_support: boolean;
+  rqth?: boolean;
   attendance_method_pref: string | null;
   attendance?: { planned: number; attended: number };
   assessments?: {
@@ -178,6 +179,7 @@ export function FormationDossierSheet({
     email: "",
     job_title: "",
     bpf_learner_status: "salarie_prive",
+    rqth: false,
   });
   const [meta, setMeta] = useState<Lot5Meta | null>(null);
   const [trainerId, setTrainerId] = useState("");
@@ -1299,6 +1301,7 @@ export function FormationDossierSheet({
                               {p.email}
                               {p.job_title ? ` · ${p.job_title}` : ""}
                               {p.bpf_learner_status ? ` · ${p.bpf_learner_status}` : ""}
+                              {p.rqth ? " · RQTH" : ""}
                             </p>
                             <p className="mt-1 text-[11px] text-[#A3A8C7]">
                               Émarg. {p.attendance?.attended ?? 0}/{p.attendance?.planned ?? 0}
@@ -1373,6 +1376,7 @@ export function FormationDossierSheet({
                         email: "",
                         job_title: "",
                         bpf_learner_status: "salarie_prive",
+                        rqth: false,
                       });
                       await load();
                       onChanged();
@@ -1432,6 +1436,17 @@ export function FormationDossierSheet({
                       </option>
                     ))}
                   </select>
+                  <label className="flex items-center gap-2 text-sm text-[#C8CEE8]">
+                    <input
+                      type="checkbox"
+                      checked={participantForm.rqth}
+                      onChange={(e) =>
+                        setParticipantForm((c) => ({ ...c, rqth: e.target.checked }))
+                      }
+                      className="h-4 w-4 rounded border-[#262A4A]"
+                    />
+                    RQTH — suivi référente handicap
+                  </label>
                   <Button type="submit" className="w-full bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]">
                     Ajouter le participant
                   </Button>

@@ -15,6 +15,7 @@ import {
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, revealCerfaField } from "@/lib/cfa/sensitive";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
 import { publicAppUrl } from "@/lib/env";
+import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -86,12 +87,26 @@ export async function PATCH(request: NextRequest) {
   if (input.action === "save_cerfa") {
     const db = getServiceRoleClient();
     if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-    const { data: current } = await db.from("cfa_applications").select("cerfa_data").eq("id", id).maybeSingle();
+    const { data: current } = await db
+      .from("cfa_applications")
+      .select("id, first_name, last_name, email, specialization, cerfa_data")
+      .eq("id", id)
+      .maybeSingle();
     const previous = (current?.cerfa_data ?? {}) as Record<string, string>;
     const merged = mergeSealedCerfa(previous, input.cerfa);
     const { error } = await db.from("cfa_applications").update({ cerfa_data: merged.cerfa }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     if (merged.refused.length) return NextResponse.json({ error: SENSITIVE_KEY_ERROR }, { status: 400 });
+    if (current) {
+      await syncCfaApplicationHandicapProfile(db, {
+        id: String(current.id),
+        first_name: current.first_name ? String(current.first_name) : null,
+        last_name: current.last_name ? String(current.last_name) : null,
+        email: current.email ? String(current.email) : null,
+        specialization: current.specialization ? String(current.specialization) : null,
+        cerfa_data: merged.cerfa,
+      });
+    }
     return NextResponse.json({ ok: true });
   }
   if (input.action === "mark_fee") {

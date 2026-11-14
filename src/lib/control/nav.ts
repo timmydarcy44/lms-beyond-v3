@@ -13,6 +13,8 @@ export type ControlNavItem = {
   label: string;
   href?: string;
   soon?: boolean;
+  /** Force un chargement plein page (sortie du layout /super). */
+  hardNav?: boolean;
   countKey?: keyof ControlNavCounts;
   countTone?: ControlNavTone;
   match: (pathname: string, role: string | null) => boolean;
@@ -186,7 +188,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         id: "handicap",
         label: "Espace handicap",
         href: "/handicap",
-        match: (pathname) => pathname === "/handicap" || pathname.startsWith("/handicap/"),
+        /** Navigation pleine page : évite le soft-nav App Router /super → /handicap (404). */
+        hardNav: true,
+        match: (pathname) =>
+          pathname === "/handicap" ||
+          pathname.startsWith("/handicap/") ||
+          pathname.startsWith("/super/crm/qualiopi/handicap"),
       },
       {
         id: "bpf",

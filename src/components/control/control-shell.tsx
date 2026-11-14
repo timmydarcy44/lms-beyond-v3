@@ -201,13 +201,33 @@ function ControlFrame({
                         </span>
                       );
                     }
+                    const className =
+                      "flex items-center justify-between rounded-xl px-3 py-2 text-[14px] font-medium";
+                    const style = {
+                      background: active ? "#6E5BFF" : "transparent",
+                      color: active ? "#fff" : "#C9D2E8",
+                    } as const;
+                    if (item.hardNav) {
+                      return (
+                        <a
+                          key={item.id}
+                          href={item.href}
+                          onClick={() => setMobileNav(false)}
+                          className={className}
+                          style={style}
+                        >
+                          <span className="min-w-0 truncate">{item.label}</span>
+                          {count > 0 ? <Count n={count} tone={item.countTone ?? "queue"} /> : null}
+                        </a>
+                      );
+                    }
                     return (
                       <Link
                         key={item.id}
                         href={item.href}
                         onClick={() => setMobileNav(false)}
-                        className="flex items-center justify-between rounded-xl px-3 py-2 text-[14px] font-medium"
-                        style={{ background: active ? "#6E5BFF" : "transparent", color: active ? "#fff" : "#C9D2E8" }}
+                        className={className}
+                        style={style}
                       >
                         <span className="min-w-0 truncate">{item.label}</span>
                         {count > 0 ? <Count n={count} tone={item.countTone ?? "queue"} /> : null}

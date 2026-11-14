@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Accessibility, Lock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ type HandicapCard = {
 };
 
 export function QualiopiHandicapPanel() {
-  const router = useRouter();
   const [tab, setTab] = useState<MainTab>("business");
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -192,7 +190,10 @@ export function QualiopiHandicapPanel() {
                   <li key={p.id}>
                     <button
                       type="button"
-                      onClick={() => router.push(`/super/crm/qualiopi/handicap/${p.id}`)}
+                      onClick={() => {
+                        // Pleine page : soft-nav /super → /handicap via redirect provoquait des 404.
+                        window.location.href = `/super/crm/qualiopi/handicap/${p.id}`;
+                      }}
                       className={cn(
                         QUALIOPI_CARD_INNER,
                         "w-full p-4 text-left transition hover:bg-white/[0.06]",

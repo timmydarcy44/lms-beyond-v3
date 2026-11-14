@@ -15,14 +15,16 @@ type NavCounts = {
   requests: number;
 };
 
+const BASE = "/handicap";
+
 const NAV = [
-  { id: "accueil", label: "Accueil", href: "/handicap" },
-  { id: "personnes", label: "Personnes accompagnées", href: "/handicap/personnes", countKey: "people" as const },
-  { id: "rdv", label: "Rendez-vous", href: "/handicap/rendez-vous", countKey: "meetings" as const },
-  { id: "demandes", label: "Demandes", href: "/handicap/demandes", countKey: "requests" as const, amber: true },
-  { id: "partenaires", label: "Partenaires", href: "/handicap/partenaires" },
-  { id: "ressources", label: "Ressources", href: "/handicap/ressources" },
-  { id: "registre", label: "Registre Qualiopi", href: "/handicap/registre" },
+  { id: "accueil", label: "Accueil", href: BASE },
+  { id: "personnes", label: "Personnes accompagnées", href: `${BASE}/personnes`, countKey: "people" as const },
+  { id: "rdv", label: "Rendez-vous", href: `${BASE}/rendez-vous`, countKey: "meetings" as const },
+  { id: "demandes", label: "Demandes", href: `${BASE}/demandes`, countKey: "requests" as const, amber: true },
+  { id: "partenaires", label: "Partenaires", href: `${BASE}/partenaires` },
+  { id: "ressources", label: "Ressources", href: `${BASE}/ressources` },
+  { id: "registre", label: "Registre Qualiopi", href: `${BASE}/registre` },
 ];
 
 export function HandicapShell({
@@ -67,8 +69,8 @@ export function HandicapShell({
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => {
             const active =
-              item.href === "/handicap"
-                ? pathname === "/handicap"
+              item.href === BASE
+                ? pathname === BASE
                 : pathname === item.href || pathname.startsWith(`${item.href}/`);
             const count =
               item.countKey === "people"
@@ -159,18 +161,18 @@ export function HandicapShell({
                 if (e.key !== "Enter") return;
                 const q = (e.target as HTMLInputElement).value.trim();
                 if (!q) return;
-                window.location.href = `/handicap/personnes?q=${encodeURIComponent(q)}`;
+                window.location.href = `${BASE}/personnes?q=${encodeURIComponent(q)}`;
               }}
             />
           </div>
           <Link
-            href="/handicap/personnes?nouveau=1"
+            href={`${BASE}/personnes?nouveau=1`}
             className="shrink-0 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-[#0A0F1E]"
           >
             ＋ Nouvel accompagnement
           </Link>
           <Link
-            href="/handicap/demandes"
+            href={`${BASE}/demandes`}
             className="relative grid h-10 w-10 place-items-center rounded-full border"
             style={{ borderColor: T.border, background: T.card, color: T.muted }}
             aria-label="Notifications — demandes"

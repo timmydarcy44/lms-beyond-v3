@@ -335,7 +335,7 @@ export function HandicapCaseDossier({
                 </button>
                 {bundle.isSuperAdmin ? (
                   <Link
-                    href="/super/crm/qualiopi/handicap"
+                    href="/super"
                     className="block px-4 py-2 text-[13px] hover:bg-white/5"
                     onClick={() => setMenuOpen(false)}
                   >

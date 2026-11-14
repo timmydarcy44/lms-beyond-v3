@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { handicapPath } from "@/lib/handicap/paths";
 import { STATUS_LABELS } from "@/lib/handicap/theme";
 
 export type HandicapTodo = {
@@ -248,7 +249,7 @@ export async function loadHandicapHomeData(
       title: `${personName(c)} a demandé un aménagement`,
       subtitle: "À prendre en charge",
       cta: "Prendre contact",
-      href: `/handicap/personnes/${c.id}`,
+      href: handicapPath(`/personnes/${c.id}`),
     });
   }
 
@@ -265,7 +266,7 @@ export async function loadHandicapHomeData(
       title: `Rendez-vous avec ${c ? personName(c) : "la personne"}`,
       subtitle: m.title,
       cta: "Ouvrir le dossier",
-      href: `/handicap/personnes/${m.caseId}`,
+      href: handicapPath(`/personnes/${m.caseId}`),
     });
   }
 
@@ -282,7 +283,7 @@ export async function loadHandicapHomeData(
       title: String(a.label ?? "Action en retard"),
       subtitle: c ? personName(c) : "Dossier",
       cta: "Ouvrir",
-      href: `/handicap/personnes/${a.case_id}`,
+      href: handicapPath(`/personnes/${a.case_id}`),
     });
   }
 
@@ -298,7 +299,7 @@ export async function loadHandicapHomeData(
       title: "Justificatif RQTH à renouveler",
       subtitle: personName(c),
       cta: "Prévenir",
-      href: `/handicap/personnes/${c.id}`,
+      href: handicapPath(`/personnes/${c.id}`),
     });
   }
 
@@ -314,7 +315,7 @@ export async function loadHandicapHomeData(
       title: "Transmettre les aménagements au formateur",
       subtitle: personName(c),
       cta: "Transmettre",
-      href: `/handicap/personnes/${c.id}`,
+      href: handicapPath(`/personnes/${c.id}`),
     });
   }
 

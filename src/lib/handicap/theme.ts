@@ -33,7 +33,7 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_PILL: Record<string, { bg: string; color: string }> = {
-  active: { bg: "rgba(206,0,88,0.16)", color: "#CE0058" },
+  active: { bg: "rgba(107,227,155,0.16)", color: "#6BE39B" },
   plan: { bg: "rgba(206,0,88,0.16)", color: "#CE0058" },
   request: { bg: "rgba(242,207,107,0.15)", color: "#F2CF6B" },
   interview: { bg: "rgba(141,184,255,0.15)", color: "#8DB8FF" },

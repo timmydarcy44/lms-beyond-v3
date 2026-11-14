@@ -366,24 +366,9 @@ and (
   or (hp.source_kind = 'cfa_application')
 );
 
--- Besoins spécifiques / needs_summary → accommodation catégorie « autre »
-insert into public.disability_accommodations (case_id, category, label, details, created_at)
-select
-  dc.id,
-  'autre',
-  'Besoins spécifiques',
-  nullif(trim(coalesce(hp.specific_needs, hp.needs_summary)), ''),
-  coalesce(hp.updated_at, hp.created_at, now())
-from public.handicap_profiles hp
-join public.disability_cases dc on dc.legacy_handicap_profile_id = hp.id
-where nullif(trim(coalesce(hp.specific_needs, hp.needs_summary)), '') is not null
-  and not exists (
-    select 1
-    from public.disability_accommodations da
-    where da.case_id = dc.id
-      and da.category = 'autre'
-      and da.label = 'Besoins spécifiques'
-  );
+-- NE PAS migrer specific_needs / needs_summary en aménagements.
+-- Ces textes restent une note interne (jamais transmissibles au formateur).
+-- Ancienne insertion « Besoins spécifiques » retirée volontairement.
 
 -- Plan libre → rendez-vous historique clos
 insert into public.disability_meetings (

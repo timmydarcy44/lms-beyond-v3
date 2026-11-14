@@ -6,6 +6,10 @@ import { signDisabilityConsentToken } from "@/lib/handicap/consent-token";
 import { encryptDisabilityNotes } from "@/lib/handicap/notes-crypto";
 import { ACCOMPANIMENT_PLAN_LABEL } from "@/lib/handicap/plan-storage";
 import { resolveDisabilityCaseId } from "@/lib/handicap/resolve-case";
+import {
+  buildTrainerShareEmailHtml,
+  selectAccommodationsForTrainerShare,
+} from "@/lib/handicap/share-trainer-guard";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
 import { sendEmail } from "@/lib/email/resend-client";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -27,6 +31,7 @@ const ACC_CATEGORIES = new Set([
 const ACTION_OWNERS = new Set(["referent", "trainer", "byound", "company", "partner"]);
 const MEETING_MODES = new Set(["visio", "telephone", "presentiel"]);
 const PARTNERS = new Set(["agefiph", "cap_emploi", "medecin_travail", "autre"]);
+const PARTNER_STATUSES = new Set(["a_contacter", "en_cours", "accorde", "refuse"]);
 
 async function touchCase(service: NonNullable<ReturnType<typeof getServiceRoleClient>>, caseId: string) {
   await service
@@ -220,38 +225,45 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (!body.confirmed) {
       return NextResponse.json({ error: "Confirmation requise avant envoi" }, { status: 400 });
     }
+    const includeAutreIds = Array.isArray(body.include_autre_ids)
+      ? body.include_autre_ids.map((x) => String(x))
+      : [];
     const { data: accs } = await service
       .from("disability_accommodations")
       .select("id, label, details, category")
       .eq("case_id", caseId);
-    const list = (accs ?? []).filter((a) => a.label);
+    const rows = (accs ?? []).map((a) => ({
+      id: String(a.id),
+      label: String(a.label ?? ""),
+      details: a.details ? String(a.details) : null,
+      category: String(a.category ?? ""),
+    }));
+    const selected = selectAccommodationsForTrainerShare(rows, { includeAutreIds });
+    if (selected.error) {
+      return NextResponse.json({ error: selected.error }, { status: 400 });
+    }
+    const list = selected.ok;
     if (!list.length) {
       return NextResponse.json({ error: "Aucun aménagement à transmettre" }, { status: 400 });
     }
 
     const now = new Date().toISOString();
+    const ids = list.map((a) => a.id);
     const { error: shareErr } = await service
       .from("disability_accommodations")
       .update({ shared_with_trainer_at: now })
-      .eq("case_id", caseId)
-      .is("shared_with_trainer_at", null);
+      .in("id", ids)
+      .eq("case_id", caseId);
     if (shareErr) return NextResponse.json({ error: shareErr.message }, { status: 400 });
 
-    // E-mail non sensible : lien uniquement + liste d'aménagements (pas de motif / RQTH / docs).
     const trainerEmail = String(body.trainer_email ?? "").trim().toLowerCase();
     if (trainerEmail.includes("@")) {
-      const items = list
-        .map((a) => `<li>${escapeHtml(String(a.label))}</li>`)
-        .join("");
       const appUrl =
         process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://www.byound.fr";
       await sendEmail({
         to: trainerEmail,
         subject: "Nouveaux aménagements pédagogiques — Byound Handicap",
-        html: `<p>Des aménagements ont été partagés pour une session à venir.</p>
-<ul>${items}</ul>
-<p><a href="${appUrl}/dashboard/formateur">Ouvrir votre espace formateur</a></p>
-<p>Ce message ne contient aucune information médicale.</p>`,
+        html: buildTrainerShareEmailHtml({ items: list, appUrl }),
         skipBcc: true,
       });
     }
@@ -300,10 +312,17 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     await touchCase(service, caseId);
   } else if (action === "add_meeting") {
-    const title = String(body.title ?? "Rendez-vous").trim() || "Rendez-vous";
     const scheduledAt = body.scheduled_at ? String(body.scheduled_at) : null;
     const modeRaw = body.mode ? String(body.mode).trim() : null;
     const mode = modeRaw && MEETING_MODES.has(modeRaw) ? modeRaw : null;
+    const defaultTitle = scheduledAt
+      ? `Entretien du ${new Date(scheduledAt).toLocaleDateString("fr-FR", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })}`
+      : "Entretien";
+    const title = String(body.title ?? "").trim() || defaultTitle;
     const { error } = await service.from("disability_meetings").insert({
       case_id: caseId,
       title,
@@ -311,6 +330,47 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       mode,
       status: "open",
     });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await touchCase(service, caseId);
+  } else if (action === "update_meeting") {
+    const meetingId = String(body.meeting_id ?? "").trim();
+    if (!meetingId) return NextResponse.json({ error: "meeting_id requis" }, { status: 400 });
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (body.title != null) patch.title = String(body.title).trim() || "Entretien";
+    if (body.scheduled_at != null) patch.scheduled_at = String(body.scheduled_at);
+    if (body.mode != null) {
+      const modeRaw = String(body.mode).trim();
+      patch.mode = MEETING_MODES.has(modeRaw) ? modeRaw : null;
+    }
+    const { error } = await service
+      .from("disability_meetings")
+      .update(patch)
+      .eq("id", meetingId)
+      .eq("case_id", caseId)
+      .eq("status", "open");
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await touchCase(service, caseId);
+  } else if (action === "delete_meeting") {
+    const meetingId = String(body.meeting_id ?? "").trim();
+    if (!meetingId) return NextResponse.json({ error: "meeting_id requis" }, { status: 400 });
+    const { data: meeting } = await service
+      .from("disability_meetings")
+      .select("id, notes_enc")
+      .eq("id", meetingId)
+      .eq("case_id", caseId)
+      .maybeSingle();
+    if (!meeting) return NextResponse.json({ error: "RDV introuvable" }, { status: 404 });
+    if (meeting.notes_enc) {
+      return NextResponse.json(
+        { error: "Impossible de supprimer un rendez-vous qui contient des notes." },
+        { status: 400 },
+      );
+    }
+    const { error } = await service
+      .from("disability_meetings")
+      .delete()
+      .eq("id", meetingId)
+      .eq("case_id", caseId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     await touchCase(service, caseId);
   } else if (action === "save_meeting_notes") {
@@ -364,10 +424,21 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     await touchCase(service, caseId);
   } else if (action === "add_partner") {
     const partner = String(body.partner ?? "").trim();
-    const status = body.status != null ? String(body.status).trim() || null : null;
+    const statusRaw = body.status != null ? String(body.status).trim() : "a_contacter";
+    const status = PARTNER_STATUSES.has(statusRaw) ? statusRaw : "a_contacter";
     const note = body.note != null ? String(body.note).trim() || null : null;
     if (!PARTNERS.has(partner)) {
       return NextResponse.json({ error: "Partenaire invalide" }, { status: 400 });
+    }
+    const { data: existing } = await service
+      .from("disability_partners")
+      .select("id")
+      .eq("case_id", caseId)
+      .eq("partner", partner)
+      .limit(1)
+      .maybeSingle();
+    if (existing?.id) {
+      return NextResponse.json({ error: "Partenaire déjà ajouté" }, { status: 400 });
     }
     const { error } = await service.from("disability_partners").insert({
       case_id: caseId,
@@ -375,6 +446,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       status,
       note,
     });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    await touchCase(service, caseId);
+  } else if (action === "set_partner_status") {
+    const partnerId = String(body.partner_id ?? "").trim();
+    const status = String(body.status ?? "").trim();
+    if (!partnerId || !PARTNER_STATUSES.has(status)) {
+      return NextResponse.json({ error: "Partenaire ou statut invalide" }, { status: 400 });
+    }
+    const { error } = await service
+      .from("disability_partners")
+      .update({ status })
+      .eq("id", partnerId)
+      .eq("case_id", caseId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     await touchCase(service, caseId);
   } else if (action === "export_log") {

@@ -69,16 +69,19 @@ export async function ensureDisabilityAccommodationRequest(
     created = true;
   }
 
-  const contact = String(source.contactMessage ?? "").trim();
+  // Message à la référente = note interne (jamais un aménagement transmissible).
+  const contact = String(source.contactMessage ?? source.needsText ?? "").trim();
   if (contact) {
     await upsertAccommodationNote(service, caseId, "Message à la référente", contact);
   }
 
+  // Besoins déclarés / RQTH : note interne sur l'employé, pas un aménagement.
   const needs = String(source.needsText ?? "").trim();
-  if (needs && needs !== contact) {
-    await upsertAccommodationNote(service, caseId, "Demande d'aménagement", needs);
-  } else if (needs && !contact) {
-    await upsertAccommodationNote(service, caseId, "Demande d'aménagement", needs);
+  if (needs && employeeId) {
+    await service
+      .from("employees")
+      .update({ rqth_needs_summary: needs.slice(0, 2000) })
+      .eq("id", employeeId);
   }
 
   await notifyDisabilityRequest(service, {

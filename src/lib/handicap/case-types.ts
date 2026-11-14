@@ -40,7 +40,22 @@ export const ACTION_STATUS_LABEL: Record<string, string> = {
   planned: "Planifié",
 };
 
+export const PARTNER_STATUS_LABEL: Record<string, string> = {
+  a_contacter: "À contacter",
+  en_cours: "En cours",
+  accorde: "Accordé",
+  refuse: "Refusé",
+};
+
+export const PARTNER_STATUS_ORDER = [
+  "a_contacter",
+  "en_cours",
+  "accorde",
+  "refuse",
+] as const;
+
 export type DisabilityCaseContext = {
+  /** Conservé pour envoi consentement — jamais affiché en clair sur le dossier. */
   email: string | null;
   jobTitle: string | null;
   department: string | null;
@@ -48,15 +63,9 @@ export type DisabilityCaseContext = {
   alternanceStatus: string | null;
   hostCompanyName: string | null;
   rqthDeclared: boolean;
+  /** Note interne — jamais transmissible au formateur. */
   needsSummary: string | null;
   contactMessage: string | null;
-};
-
-export type DisabilityCaseTests = {
-  disc: { D: number; I: number; S: number; C: number } | null;
-  idmcScore: number | null;
-  idmcAxes: Record<string, number> | null;
-  softSkills: Array<{ skill: string; score: number }>;
 };
 
 export type DisabilityCaseDetail = {
@@ -71,6 +80,8 @@ export type DisabilityCaseDetail = {
   consentGivenAt: string | null;
   consentMethod: string | null;
   rqthValidUntil: string | null;
+  /** Justificatif RQTH déposé (document kind=rqth). */
+  hasRqthDocument: boolean;
   companyInformed: boolean;
   nextFormation: string | null;
   stepIndex: number;
@@ -78,8 +89,9 @@ export type DisabilityCaseDetail = {
   accompanimentPlanHtml: string | null;
   /** E-mail de consentement envoyé (ISO). */
   consentRequestedAt: string | null;
+  /** Lien Control (super admins). */
+  controlHref: string | null;
   context: DisabilityCaseContext;
-  tests: DisabilityCaseTests;
   accommodations: Array<{
     id: string;
     category: string;
@@ -120,7 +132,7 @@ export type DisabilityCaseDetail = {
   accessLog: Array<{
     id: string;
     action: string;
-    actorId: string | null;
+    actorName: string | null;
     createdAt: string;
   }>;
 };

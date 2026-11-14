@@ -1,16 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  hasAnyTestResults,
-  loadEmployeeTestResults,
-} from "@/lib/entreprise/employee-profile-diagnostics";
 import { decryptDisabilityNotes } from "@/lib/handicap/notes-crypto";
 import {
   type DisabilityCaseContext,
   type DisabilityCaseDetail,
-  type DisabilityCaseTests,
   statusToStepIndex,
 } from "@/lib/handicap/case-types";
-import { ACCOMPANIMENT_PLAN_LABEL, isAccompanimentPlanLabel } from "@/lib/handicap/plan-storage";
+import { handicapSourceHref } from "@/lib/handicap/labels";
+import { isAccompanimentPlanLabel } from "@/lib/handicap/plan-storage";
+import { isInternalAccommodationLabel } from "@/lib/handicap/share-trainer-guard";
 import { STATUS_LABELS } from "@/lib/handicap/theme";
 
 export type { DisabilityCaseDetail } from "@/lib/handicap/case-types";
@@ -19,6 +16,8 @@ export {
   accommodationCategoryLabel,
   statusToStepIndex,
   ACTION_STATUS_LABEL,
+  PARTNER_STATUS_LABEL,
+  PARTNER_STATUS_ORDER,
 } from "@/lib/handicap/case-types";
 
 const EMPTY_CONTEXT: DisabilityCaseContext = {
@@ -33,12 +32,38 @@ const EMPTY_CONTEXT: DisabilityCaseContext = {
   contactMessage: null,
 };
 
-const EMPTY_TESTS: DisabilityCaseTests = {
-  disc: null,
-  idmcScore: null,
-  idmcAxes: null,
-  softSkills: [],
-};
+/** VERDIER → Verdier ; Jean-PIERRE → Jean-Pierre */
+export function toDisplayName(raw: string): string {
+  return String(raw ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) =>
+      part
+        .split("-")
+        .map((seg) => {
+          if (!seg) return seg;
+          const lower = seg.toLocaleLowerCase("fr-FR");
+          return lower.charAt(0).toLocaleUpperCase("fr-FR") + lower.slice(1);
+        })
+        .join("-"),
+    )
+    .join(" ");
+}
+
+function uniqueJoin(parts: Array<string | null | undefined>): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of parts) {
+    const v = String(p ?? "").trim();
+    if (!v) continue;
+    const key = v.toLocaleLowerCase("fr-FR");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out.join(" · ");
+}
 
 export async function loadDisabilityCaseDetail(
   service: SupabaseClient,
@@ -89,7 +114,7 @@ export async function loadDisabilityCaseDetail(
         .select("id, action, actor_id, created_at")
         .eq("case_id", caseId)
         .order("created_at", { ascending: false })
-        .limit(20),
+        .limit(40),
     ]);
     accommodations = (results[0].data as Array<Record<string, unknown>> | null) ?? null;
     actions = (results[1].data as Array<Record<string, unknown>> | null) ?? null;
@@ -107,6 +132,7 @@ export async function loadDisabilityCaseDetail(
   let roleLine =
     c.scope === "school" ? "Alternant · Byound School" : "Salarié · Entreprise · Business";
   let profileId: string | null = c.person_profile_id ? String(c.person_profile_id) : null;
+  let controlHref: string | null = null;
   const context: DisabilityCaseContext = { ...EMPTY_CONTEXT };
 
   const contactFromAcc = (accommodations ?? []).find(
@@ -125,9 +151,10 @@ export async function loadDisabilityCaseDetail(
       .eq("id", c.employee_id)
       .maybeSingle();
     if (emp) {
-      personName =
-        [emp.first_name, emp.last_name].filter(Boolean).join(" ").trim() || personName;
-      personFirstName = String(emp.first_name ?? "").trim() || personFirstName;
+      const first = toDisplayName(String(emp.first_name ?? ""));
+      const last = toDisplayName(String(emp.last_name ?? ""));
+      personName = [first, last].filter(Boolean).join(" ").trim() || personName;
+      personFirstName = first || personFirstName;
       profileId = emp.profile_id ? String(emp.profile_id) : profileId;
       context.email = emp.email ? String(emp.email) : null;
       context.jobTitle = emp.job_title ? String(emp.job_title) : null;
@@ -144,15 +171,15 @@ export async function loadDisabilityCaseDetail(
           .eq("id", orgId)
           .maybeSingle();
         organizationName = org?.name ? String(org.name) : null;
+        controlHref = handicapSourceHref("employee", String(c.employee_id), String(orgId));
       }
-      roleLine = [
+      roleLine = uniqueJoin([
         "Salarié",
-        context.jobTitle,
         organizationName,
+        context.jobTitle,
+        context.department,
         "Business",
-      ]
-        .filter(Boolean)
-        .join(" · ");
+      ]);
     }
   } else if (c.cfa_application_id) {
     let app: Record<string, unknown> | null = null;
@@ -176,9 +203,10 @@ export async function loadDisabilityCaseDetail(
       }
     }
     if (app) {
-      personName =
-        [app.first_name, app.last_name].filter(Boolean).join(" ").trim() || personName;
-      personFirstName = String(app.first_name ?? "").trim() || personFirstName;
+      const first = toDisplayName(String(app.first_name ?? ""));
+      const last = toDisplayName(String(app.last_name ?? ""));
+      personName = [first, last].filter(Boolean).join(" ").trim() || personName;
+      personFirstName = first || personFirstName;
       profileId = app.profile_id ? String(app.profile_id) : profileId;
       context.email = app.email ? String(app.email) : null;
       context.specialization = app.specialization ? String(app.specialization) : null;
@@ -187,14 +215,14 @@ export async function loadDisabilityCaseDetail(
         : app.status
           ? String(app.status)
           : null;
-      roleLine = [
+      organizationName = "Byound School";
+      controlHref = handicapSourceHref("cfa_application", String(c.cfa_application_id));
+      roleLine = uniqueJoin([
         "Alternant",
+        organizationName,
         context.specialization,
         "Byound School",
-      ]
-        .filter(Boolean)
-        .join(" · ");
-      organizationName = "Byound School";
+      ]);
 
       try {
         const { data: placement } = await service
@@ -223,16 +251,20 @@ export async function loadDisabilityCaseDetail(
       .eq("id", c.person_profile_id)
       .maybeSingle();
     if (p) {
+      const fromParts = [p.first_name, p.last_name]
+        .filter(Boolean)
+        .map((x) => toDisplayName(String(x)))
+        .join(" ")
+        .trim();
       personName =
-        String(p.full_name ?? "").trim() ||
-        [p.first_name, p.last_name].filter(Boolean).join(" ").trim() ||
-        personName;
-      personFirstName = String(p.first_name ?? "").trim() || personFirstName;
+        fromParts || toDisplayName(String(p.full_name ?? "").trim()) || personName;
+      personFirstName =
+        toDisplayName(String(p.first_name ?? "").trim()) || personFirstName;
       context.email = p.email ? String(p.email) : null;
     }
     const { data: empByProfile } = await service
       .from("employees")
-      .select("job_title, department, rqth, rqth_needs_summary, company_id")
+      .select("id, job_title, department, rqth, rqth_needs_summary, company_id")
       .eq("profile_id", c.person_profile_id)
       .limit(1)
       .maybeSingle();
@@ -245,6 +277,13 @@ export async function loadDisabilityCaseDetail(
       context.needsSummary = empByProfile.rqth_needs_summary
         ? String(empByProfile.rqth_needs_summary)
         : null;
+      if (empByProfile.company_id) {
+        controlHref = handicapSourceHref(
+          "employee",
+          String(empByProfile.id),
+          String(empByProfile.company_id),
+        );
+      }
     }
   }
 
@@ -255,27 +294,6 @@ export async function loadDisabilityCaseDetail(
       .eq("id", c.organization_id)
       .maybeSingle();
     organizationName = org?.name ? String(org.name) : null;
-  }
-
-  let tests: DisabilityCaseTests = { ...EMPTY_TESTS };
-  if (profileId) {
-    try {
-      const raw = await loadEmployeeTestResults(service, profileId);
-      if (hasAnyTestResults(raw)) {
-        tests = {
-          disc: raw.disc,
-          idmcScore: raw.idmc_score,
-          idmcAxes: raw.idmc_axes,
-          softSkills: raw.soft_skills,
-        };
-      }
-    } catch (err) {
-      console.error(
-        "[disability] load tests",
-        caseId,
-        err instanceof Error ? err.message : err,
-      );
-    }
   }
 
   const mappedAccAll = (accommodations ?? []).map((a) => ({
@@ -295,12 +313,57 @@ export async function loadDisabilityCaseDetail(
       : null) ||
     planFromAcc?.details ||
     null;
-  const mappedAcc = mappedAccAll.filter((a) => !isAccompanimentPlanLabel(a.label));
+
+  // Notes internes (besoins, messages) : hors liste aménagements.
+  const mappedAcc = mappedAccAll.filter(
+    (a) => !isAccompanimentPlanLabel(a.label) && !isInternalAccommodationLabel(a.label),
+  );
 
   if (!context.needsSummary) {
-    const demande = mappedAcc.find((a) => a.label === "Demande d'aménagement" && a.details);
-    if (demande?.details) context.needsSummary = demande.details;
+    const needsAcc = mappedAccAll.find(
+      (a) =>
+        (a.label === "Besoins spécifiques" || a.label === "Demande d'aménagement") &&
+        a.details,
+    );
+    if (needsAcc?.details) context.needsSummary = needsAcc.details;
   }
+
+  const mappedDocs = (documents ?? []).map((d) => ({
+    id: String(d.id),
+    kind: String(d.kind),
+    title: String(d.title),
+    uploadedAt: String(d.uploaded_at),
+    validUntil: d.valid_until ? String(d.valid_until) : null,
+  }));
+  const hasRqthDocument = mappedDocs.some((d) => d.kind === "rqth");
+
+  const actorIds = [
+    ...new Set(
+      (accessLog ?? [])
+        .map((l) => (l.actor_id ? String(l.actor_id) : null))
+        .filter((x): x is string => Boolean(x)),
+    ),
+  ];
+  const actorNameById = new Map<string, string>();
+  if (actorIds.length) {
+    const { data: actors } = await service
+      .from("profiles")
+      .select("id, first_name, last_name, full_name")
+      .in("id", actorIds);
+    for (const a of actors ?? []) {
+      const fromParts = [a.first_name, a.last_name]
+        .filter(Boolean)
+        .map((x) => toDisplayName(String(x)))
+        .join(" ")
+        .trim();
+      const name =
+        fromParts || toDisplayName(String(a.full_name ?? "").trim()) || "Équipe Byound";
+      actorNameById.set(String(a.id), name);
+    }
+  }
+
+  // profileId volontairement non utilisé pour charger des tests — confidentialité /handicap.
+  void profileId;
 
   return {
     id: String(c.id),
@@ -317,11 +380,12 @@ export async function loadDisabilityCaseDetail(
       c.consent_requested_at != null ? String(c.consent_requested_at) : null,
     accompanimentPlanHtml,
     rqthValidUntil: c.rqth_valid_until ? String(c.rqth_valid_until) : null,
+    hasRqthDocument,
     companyInformed: Boolean(c.company_informed),
     nextFormation: context.specialization,
     stepIndex: statusToStepIndex(String(c.status)),
+    controlHref,
     context,
-    tests,
     accommodations: mappedAcc,
     actions: (actions ?? []).map((a) => ({
       id: String(a.id),
@@ -344,7 +408,7 @@ export async function loadDisabilityCaseDetail(
       }
       return {
         id: String(m.id),
-        title: String(m.title ?? "Rendez-vous"),
+        title: String(m.title ?? "Entretien"),
         scheduledAt: m.scheduled_at ? String(m.scheduled_at) : null,
         mode: m.mode ? String(m.mode) : null,
         notes,
@@ -352,23 +416,17 @@ export async function loadDisabilityCaseDetail(
         closedAt: m.closed_at ? String(m.closed_at) : null,
       };
     }),
-    documents: (documents ?? []).map((d) => ({
-      id: String(d.id),
-      kind: String(d.kind),
-      title: String(d.title),
-      uploadedAt: String(d.uploaded_at),
-      validUntil: d.valid_until ? String(d.valid_until) : null,
-    })),
+    documents: mappedDocs,
     partners: (partners ?? []).map((p) => ({
       id: String(p.id),
       partner: String(p.partner),
-      status: p.status ? String(p.status) : null,
+      status: p.status ? String(p.status) : "a_contacter",
       note: p.note ? String(p.note) : null,
     })),
     accessLog: (accessLog ?? []).map((l) => ({
       id: String(l.id),
       action: String(l.action),
-      actorId: l.actor_id ? String(l.actor_id) : null,
+      actorName: l.actor_id ? actorNameById.get(String(l.actor_id)) ?? null : null,
       createdAt: String(l.created_at),
     })),
   };

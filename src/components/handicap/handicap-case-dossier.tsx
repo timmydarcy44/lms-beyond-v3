@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Check,
   Eye,
@@ -12,10 +12,18 @@ import {
 import { HandicapPlanEditor } from "@/components/handicap/handicap-plan-editor";
 import {
   ACTION_STATUS_LABEL,
+  PARTNER_STATUS_LABEL,
+  PARTNER_STATUS_ORDER,
   PIPELINE_STEPS,
   accommodationCategoryLabel,
   type DisabilityCaseDetail,
 } from "@/lib/handicap/case-types";
+import {
+  SHAREABLE_CATEGORIES,
+  buildTrainerShareEmailHtml,
+  containsForbiddenDisabilityTerms,
+  selectAccommodationsForTrainerShare,
+} from "@/lib/handicap/share-trainer-guard";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 
 const OWNER_LABEL: Record<string, string> = {
@@ -33,6 +41,8 @@ const PARTNER_LABEL: Record<string, string> = {
   autre: "Autre",
 };
 
+const ALL_PARTNERS = ["agefiph", "cap_emploi", "medecin_travail", "autre"] as const;
+
 const MODE_LABEL: Record<string, string> = {
   visio: "Visio",
   telephone: "Téléphone",
@@ -40,8 +50,8 @@ const MODE_LABEL: Record<string, string> = {
 };
 
 const ACCESS_LABEL: Record<string, string> = {
-  view_case: "Ouverture du dossier",
-  open_document: "Ouverture d'un document",
+  view_case: "Dossier consulté",
+  open_document: "Document ouvert",
   share_trainer: "Partage formateur",
   export: "Export",
   manual_delete: "Suppression manuelle",
@@ -55,6 +65,12 @@ const CAT_COLOR: Record<string, string> = {
   materiel: T.accent,
   autre: T.muted,
 };
+
+const PLAN_SUGGESTIONS = [
+  "Transmettre les aménagements au formateur",
+  "Vérifier l'accessibilité de la salle",
+  "Bilan après la session",
+] as const;
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return "—";
@@ -103,18 +119,77 @@ function initials(name: string) {
     .join("");
 }
 
-function rqthTone(until: string | null): "ok" | "amber" | "red" | "none" {
-  if (!until) return "none";
-  const d = new Date(until);
-  const now = new Date();
-  if (d < now) return "red";
-  const in45 = new Date(now);
-  in45.setDate(in45.getDate() + 45);
-  if (d <= in45) return "amber";
-  return "ok";
+function defaultMeetingTitle(iso: string) {
+  return `Entretien du ${new Date(iso).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  })}`;
 }
 
 type Bundle = { case: DisabilityCaseDetail; isSuperAdmin: boolean };
+
+type AccessDisplay =
+  | {
+      kind: "single";
+      id: string;
+      label: string;
+      actorName: string | null;
+      createdAt: string;
+    }
+  | {
+      kind: "grouped";
+      id: string;
+      actorName: string;
+      count: number;
+      createdAt: string;
+    };
+
+function groupAccessLog(
+  rows: DisabilityCaseDetail["accessLog"],
+): AccessDisplay[] {
+  const sorted = [...rows].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  const out: AccessDisplay[] = [];
+  let i = 0;
+  while (i < sorted.length) {
+    const cur = sorted[i];
+    if (cur.action === "view_case" && cur.actorName) {
+      let count = 1;
+      let j = i + 1;
+      const start = new Date(cur.createdAt).getTime();
+      while (j < sorted.length) {
+        const next = sorted[j];
+        if (next.action !== "view_case" || next.actorName !== cur.actorName) break;
+        const t = new Date(next.createdAt).getTime();
+        if (Math.abs(start - t) > 30 * 60 * 1000) break;
+        count += 1;
+        j += 1;
+      }
+      if (count > 1) {
+        out.push({
+          kind: "grouped",
+          id: cur.id,
+          actorName: cur.actorName,
+          count,
+          createdAt: cur.createdAt,
+        });
+        i = j;
+        continue;
+      }
+    }
+    out.push({
+      kind: "single",
+      id: cur.id,
+      label: ACCESS_LABEL[cur.action] ?? cur.action,
+      actorName: cur.actorName,
+      createdAt: cur.createdAt,
+    });
+    i += 1;
+  }
+  return out;
+}
 
 export function HandicapCaseDossier({
   initial,
@@ -130,19 +205,27 @@ export function HandicapCaseDossier({
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showPlanUpload, setShowPlanUpload] = useState(false);
+  const [planNoteOpen, setPlanNoteOpen] = useState(false);
   const [planHtml, setPlanHtml] = useState(initial.case.accompanimentPlanHtml || "");
-  const [planDirty, setPlanDirty] = useState(false);
+  const [planSaved, setPlanSaved] = useState(false);
   const [consentInfo, setConsentInfo] = useState<string | null>(null);
   const [notesSaved, setNotesSaved] = useState(false);
   const [viewNotesId, setViewNotesId] = useState<string | null>(null);
+  const [meetingMenuId, setMeetingMenuId] = useState<string | null>(null);
+  const [editMeetingId, setEditMeetingId] = useState<string | null>(null);
   const [showAllLog, setShowAllLog] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [includeAutreIds, setIncludeAutreIds] = useState<string[]>([]);
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const planTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const documentsRef = useRef<HTMLElement | null>(null);
   const c = bundle.case;
 
   useEffect(() => {
     setBundle(initial);
     setPlanHtml(initial.case.accompanimentPlanHtml || "");
-    setPlanDirty(false);
+    setPlanSaved(false);
   }, [initial]);
 
   async function mutate(body: Record<string, unknown>) {
@@ -186,21 +269,74 @@ export function HandicapCaseDossier({
     }, 800);
   }
 
-  const openMeeting =
-    c.meetings.find((m) => m.status === "open") ?? null;
+  function onPlanChange(html: string) {
+    setPlanHtml(html);
+    setPlanSaved(false);
+    if (planTimer.current) clearTimeout(planTimer.current);
+    planTimer.current = setTimeout(() => {
+      void mutate({ action: "save_plan", html }).then((ok) => {
+        if (ok) setPlanSaved(true);
+      });
+    }, 800);
+  }
+
+  function openDocuments(upload = true) {
+    documentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (upload) setShowUpload(true);
+  }
+
+  const openMeetings = c.meetings.filter((m) => m.status === "open");
   const closedMeetings = c.meetings.filter((m) => m.status === "closed");
-  const rqth = rqthTone(c.rqthValidUntil);
-  const logLines = showAllLog ? c.accessLog : c.accessLog.slice(0, 5);
+  const logGrouped = useMemo(
+    () => groupAccessLog(c.accessLog),
+    [c.accessLog],
+  );
+  const logLines = showAllLog ? logGrouped : logGrouped.slice(0, 5);
+
+  const statusPill =
+    c.status === "active"
+      ? { bg: "rgba(107,227,155,0.16)", color: T.green }
+      : { bg: T.accentSoft, color: T.accent };
+
+  const autrePending = c.accommodations.filter(
+    (a) => a.category === "autre" && !a.sharedWithTrainerAt,
+  );
+  const sharePreview = useMemo(() => {
+    const selected = selectAccommodationsForTrainerShare(
+      c.accommodations.map((a) => ({
+        id: a.id,
+        label: a.label,
+        details: a.details,
+        category: a.category,
+      })),
+      { includeAutreIds },
+    );
+    return selected;
+  }, [c.accommodations, includeAutreIds]);
+
+  const emailPreviewHtml = useMemo(() => {
+    if (!sharePreview.ok.length) return "";
+    return buildTrainerShareEmailHtml({
+      items: sharePreview.ok,
+      appUrl: typeof window !== "undefined" ? window.location.origin : "https://www.byound.fr",
+    });
+  }, [sharePreview]);
+
+  const availablePartners = ALL_PARTNERS.filter(
+    (p) => !c.partners.some((x) => x.partner === p),
+  );
 
   return (
     <div className="space-y-5">
       {error ? (
-        <p className="rounded-2xl px-4 py-2 text-sm" style={{ background: "rgba(255,138,155,0.12)", color: T.red }}>
+        <p
+          className="rounded-2xl px-4 py-2 text-sm"
+          style={{ background: "rgba(255,138,155,0.12)", color: T.red }}
+        >
           {error}
         </p>
       ) : null}
 
-      {/* Header */}
       <header
         className="relative overflow-hidden rounded-[30px] border p-6"
         style={{
@@ -224,31 +360,39 @@ export function HandicapCaseDossier({
               <div className="mt-2 flex flex-wrap gap-2">
                 <span
                   className="rounded-full px-3 py-1 text-[12px] font-bold"
-                  style={{ background: T.accentSoft, color: T.accent }}
+                  style={{ background: statusPill.bg, color: statusPill.color }}
                 >
                   {c.statusLabel}
                 </span>
-                {c.rqthValidUntil ? (
+                {c.hasRqthDocument && c.rqthValidUntil ? (
                   <span
                     className="rounded-full px-3 py-1 text-[12px] font-bold"
-                    style={{
-                      background:
-                        rqth === "red"
-                          ? "rgba(255,138,155,0.15)"
-                          : rqth === "amber"
-                            ? "rgba(242,207,107,0.15)"
-                            : "rgba(255,255,255,0.08)",
-                      color:
-                        rqth === "red" ? T.red : rqth === "amber" ? T.amber : T.muted,
-                    }}
+                    style={{ background: "rgba(255,255,255,0.08)", color: T.muted }}
                   >
                     RQTH valide jusqu&apos;en {formatMonthYear(c.rqthValidUntil)}
+                  </span>
+                ) : c.context?.rqthDeclared || c.rqthValidUntil ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      className="rounded-full px-3 py-1 text-[12px] font-bold"
+                      style={{ background: "rgba(242,207,107,0.15)", color: T.amber }}
+                    >
+                      Justificatif RQTH à déposer
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openDocuments(true)}
+                      className="rounded-full px-3 py-1 text-[12px] font-bold"
+                      style={{ background: T.accent, color: T.accentOn }}
+                    >
+                      Déposer
+                    </button>
                   </span>
                 ) : null}
                 {c.consentGivenAt ? (
                   <span
                     className="rounded-full px-3 py-1 text-[12px] font-bold"
-                    style={{ background: T.accentSoft, color: T.accent }}
+                    style={{ background: "rgba(107,227,155,0.16)", color: T.green }}
                   >
                     ✓ Consentement recueilli le {formatDate(c.consentGivenAt)}
                   </span>
@@ -268,11 +412,7 @@ export function HandicapCaseDossier({
                           setConsentInfo(null);
                           const ok = await mutate({ action: "request_consent" });
                           if (ok) {
-                            setConsentInfo(
-                              c.context?.email
-                                ? `E-mail de consentement envoyé à ${c.context.email}.`
-                                : "E-mail de consentement envoyé.",
-                            );
+                            setConsentInfo("E-mail de consentement envoyé.");
                           }
                         });
                       }}
@@ -305,12 +445,6 @@ export function HandicapCaseDossier({
               ) : null}
               <p className="mt-3 text-[13px]" style={{ color: T.muted }}>
                 {c.roleLine}
-                {c.context?.jobTitle ? ` · Poste : ${c.context.jobTitle}` : ""}
-                {c.context?.specialization
-                  ? ` · Alternance : ${c.context.specialization}`
-                  : c.nextFormation
-                    ? ` · Formation : ${c.nextFormation}`
-                    : ""}
               </p>
             </div>
           </div>
@@ -327,7 +461,7 @@ export function HandicapCaseDossier({
             <button
               type="button"
               className="rounded-full px-4 py-2 text-[13px] font-bold"
-              style={{ background: "#fff", color: T.bg }}
+              style={{ background: T.accent, color: T.accentOn }}
               onClick={() => setShowMeetingForm(true)}
             >
               Planifier un rendez-vous
@@ -369,13 +503,13 @@ export function HandicapCaseDossier({
                 >
                   Exporter le dossier PDF
                 </button>
-                {bundle.isSuperAdmin ? (
+                {bundle.isSuperAdmin && c.controlHref ? (
                   <a
-                    href="/super"
+                    href={c.controlHref}
                     className="block px-4 py-2 text-[13px] hover:bg-white/5"
                     onClick={() => setMenuOpen(false)}
                   >
-                    Voir dans Byound Control
+                    Voir la fiche complète
                   </a>
                 ) : null}
               </div>
@@ -383,7 +517,6 @@ export function HandicapCaseDossier({
           </div>
         </div>
 
-        {/* Pipeline */}
         <div className="mt-6 flex flex-wrap items-center gap-2">
           {PIPELINE_STEPS.map((step, idx) => {
             const done = idx < c.stepIndex || (c.status === "closed" && idx <= c.stepIndex);
@@ -394,11 +527,7 @@ export function HandicapCaseDossier({
                 type="button"
                 disabled={pending}
                 onClick={() => {
-                  if (
-                    confirm(
-                      `Passer à l'étape « ${step.label} » ?`,
-                    )
-                  ) {
+                  if (confirm(`Passer à l'étape « ${step.label} » ?`)) {
                     run({ action: "set_status", status: step.id });
                   }
                 }}
@@ -422,129 +551,8 @@ export function HandicapCaseDossier({
         </div>
       </header>
 
-      {/* Contexte + tests */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div
-          className="rounded-[24px] border p-5"
-          style={{ background: T.card, borderColor: T.border }}
-        >
-          <h2 className="text-[16px] font-extrabold">Contexte</h2>
-          <dl className="mt-4 space-y-3 text-[13px]">
-            {[
-              ["Organisation", c.organizationName],
-              ["Poste", c.context?.jobTitle],
-              ["Service", c.context?.department],
-              ["Alternance / spécialisation", c.context?.specialization],
-              ["Statut alternance", c.context?.alternanceStatus],
-              ["Entreprise d'accueil", c.context?.hostCompanyName],
-              ["E-mail", c.context?.email],
-              ["RQTH déclarée", c.context?.rqthDeclared ? "Oui" : c.rqthValidUntil ? "Justificatif au dossier" : "Non"],
-            ]
-              .filter(([, v]) => Boolean(v))
-              .map(([label, value]) => (
-                <div key={String(label)} className="flex justify-between gap-4 border-b pb-2" style={{ borderColor: T.border }}>
-                  <dt style={{ color: T.tertiary }}>{label}</dt>
-                  <dd className="text-right font-semibold">{value}</dd>
-                </div>
-              ))}
-          </dl>
-          {c.context?.contactMessage ? (
-            <div className="mt-4 rounded-2xl border p-3" style={{ borderColor: T.accentSoftBorder, background: T.accentSoft }}>
-              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: T.accent }}>
-                Message reçu
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed">{c.context.contactMessage}</p>
-            </div>
-          ) : null}
-          {c.context?.needsSummary && c.context.needsSummary !== c.context.contactMessage ? (
-            <div className="mt-3 rounded-2xl border p-3" style={{ borderColor: T.border, background: T.inner }}>
-              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: T.tertiary }}>
-                Besoins déclarés
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed">{c.context.needsSummary}</p>
-            </div>
-          ) : null}
-        </div>
-
-        <div
-          className="rounded-[24px] border p-5"
-          style={{ background: T.card, borderColor: T.border }}
-        >
-          <h2 className="text-[16px] font-extrabold">Résultats des tests</h2>
-          {!c.tests?.disc && c.tests?.idmcScore == null && !(c.tests?.softSkills?.length) ? (
-            <p className="mt-4 text-sm" style={{ color: T.muted }}>
-              Aucun test disponible pour ce profil.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {c.tests?.disc ? (
-                <div>
-                  <p className="text-[12px] font-bold" style={{ color: T.accent }}>
-                    DISC
-                  </p>
-                  <div className="mt-2 grid grid-cols-4 gap-2">
-                    {(["D", "I", "S", "C"] as const).map((k) => (
-                      <div
-                        key={k}
-                        className="rounded-xl p-2 text-center"
-                        style={{ background: T.inner }}
-                      >
-                        <p className="text-[11px] font-bold" style={{ color: T.muted }}>
-                          {k}
-                        </p>
-                        <p className="text-[18px] font-extrabold">{c.tests.disc?.[k] ?? 0}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {c.tests?.idmcScore != null || c.tests?.idmcAxes ? (
-                <div>
-                  <p className="text-[12px] font-bold" style={{ color: T.accent }}>
-                    IDMC{c.tests.idmcScore != null ? ` · ${c.tests.idmcScore}` : ""}
-                  </p>
-                  {c.tests.idmcAxes ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {Object.entries(c.tests.idmcAxes).map(([axis, score]) => (
-                        <span
-                          key={axis}
-                          className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                          style={{ background: T.inner, color: T.muted }}
-                        >
-                          {axis} {Math.round(score)}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-              {c.tests?.softSkills?.length ? (
-                <div>
-                  <p className="text-[12px] font-bold" style={{ color: T.accent }}>
-                    Soft skills
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {c.tests.softSkills.slice(0, 8).map((s) => (
-                      <span
-                        key={s.skill}
-                        className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                        style={{ background: T.inner, color: T.muted }}
-                      >
-                        {s.skill} {Math.round(s.score)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </section>
-
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Left column */}
         <div className="space-y-5">
-          {/* Accommodations */}
           <section
             className="rounded-[24px] border p-5"
             style={{ background: T.card, borderColor: T.border }}
@@ -565,6 +573,23 @@ export function HandicapCaseDossier({
                 <Plus className="h-3.5 w-3.5" /> Aménagement
               </button>
             </div>
+
+            {c.context?.needsSummary ? (
+              <div
+                className="mt-4 rounded-2xl border p-3"
+                style={{ borderColor: T.border, background: T.inner }}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: T.tertiary }}>
+                  Note interne — besoins déclarés
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed" style={{ color: T.muted }}>
+                  {c.context.needsSummary}
+                </p>
+                <p className="mt-2 text-[11px]" style={{ color: T.tertiary }}>
+                  Jamais transmise au formateur.
+                </p>
+              </div>
+            ) : null}
 
             {showAccForm ? (
               <AccommodationForm
@@ -632,21 +657,9 @@ export function HandicapCaseDossier({
                 className="mt-4 rounded-full px-4 py-2 text-[13px] font-bold"
                 style={{ background: T.accent, color: T.accentOn }}
                 onClick={() => {
-                  const email = window.prompt(
-                    "E-mail du formateur (optionnel — sans e-mail, le partage est seulement journalisé) :",
-                    "",
-                  );
-                  if (
-                    confirm(
-                      "Transmettre uniquement la liste des aménagements au formateur (sans motif, RQTH ni documents) ?",
-                    )
-                  ) {
-                    run({
-                      action: "share_accommodations",
-                      confirmed: true,
-                      trainer_email: email || "",
-                    });
-                  }
+                  setIncludeAutreIds([]);
+                  setShareEmail("");
+                  setShareOpen(true);
                 }}
               >
                 Transmettre au formateur
@@ -654,7 +667,6 @@ export function HandicapCaseDossier({
             ) : null}
           </section>
 
-          {/* Plan rédigé + actions */}
           <section
             className="rounded-[24px] border p-5"
             style={{ background: T.card, borderColor: T.border }}
@@ -663,13 +675,16 @@ export function HandicapCaseDossier({
               <div>
                 <h2 className="text-[16px] font-extrabold">Plan d&apos;accompagnement</h2>
                 <p className="mt-0.5 text-[12px]" style={{ color: T.muted }}>
-                  Rédigez le plan (gras, listes…) ou déposez un PDF signé
+                  Actions suivies · note facultative · PDF signé
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowPlanUpload((v) => !v)}
+                  onClick={() => {
+                    setShowPlanUpload(true);
+                    openDocuments(false);
+                  }}
                   className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold"
                   style={{ background: "rgba(255,255,255,0.06)" }}
                 >
@@ -679,86 +694,12 @@ export function HandicapCaseDossier({
                   type="button"
                   onClick={() => setShowActionForm((v) => !v)}
                   className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold"
-                  style={{ background: "rgba(255,255,255,0.06)" }}
+                  style={{ background: T.accentSoft, color: T.accent }}
                 >
                   <Plus className="h-3.5 w-3.5" /> Action
                 </button>
               </div>
             </div>
-
-            <div className="mt-4 space-y-3">
-              <HandicapPlanEditor
-                content={planHtml}
-                disabled={pending}
-                onChange={(html) => {
-                  setPlanHtml(html);
-                  setPlanDirty(true);
-                }}
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={pending || !planDirty}
-                  className="rounded-full px-4 py-2 text-[13px] font-bold disabled:opacity-50"
-                  style={{ background: T.accent, color: T.accentOn }}
-                  onClick={() => {
-                    startTransition(async () => {
-                      const ok = await mutate({ action: "save_plan", html: planHtml });
-                      if (ok) setPlanDirty(false);
-                    });
-                  }}
-                >
-                  Enregistrer le plan
-                </button>
-                {planDirty ? (
-                  <span className="text-[12px]" style={{ color: T.amber }}>
-                    Modifications non enregistrées
-                  </span>
-                ) : c.accompanimentPlanHtml ? (
-                  <span className="text-[12px]" style={{ color: T.muted }}>
-                    Plan enregistré
-                  </span>
-                ) : null}
-              </div>
-            </div>
-
-            {showPlanUpload ? (
-              <UploadForm
-                caseId={c.id}
-                pending={pending}
-                defaultKind="plan_signe"
-                onCancel={() => setShowPlanUpload(false)}
-                onDone={(b) => {
-                  setBundle(b);
-                  setShowPlanUpload(false);
-                }}
-                onError={setError}
-                setPending={startTransition}
-              />
-            ) : null}
-
-            {c.documents.filter((d) => d.kind === "plan_signe").length > 0 ? (
-              <ul className="mt-4 space-y-2">
-                {c.documents
-                  .filter((d) => d.kind === "plan_signe")
-                  .map((d) => (
-                    <li
-                      key={d.id}
-                      className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-[13px]"
-                      style={{ borderColor: T.borderSoft, background: T.inner }}
-                    >
-                      <span className="font-semibold">{d.title}</span>
-                      <a
-                        href={`/api/handicap/cases/${c.id}/documents/${d.id}`}
-                        className="font-bold"
-                        style={{ color: T.accent }}
-                      >
-                        Ouvrir PDF
-                      </a>
-                    </li>
-                  ))}
-              </ul>
-            ) : null}
 
             {showActionForm ? (
               <ActionForm
@@ -775,8 +716,31 @@ export function HandicapCaseDossier({
 
             <ul className="mt-4 space-y-2">
               {c.actions.length === 0 ? (
-                <li className="text-sm" style={{ color: T.muted }}>
-                  Aucune action planifiée.
+                <li className="rounded-2xl border border-dashed p-4" style={{ borderColor: T.borderSoft }}>
+                  <p className="text-sm font-semibold" style={{ color: T.muted }}>
+                    Aucune action pour le moment
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {PLAN_SUGGESTIONS.map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          run({
+                            action: "add_action",
+                            label,
+                            owner: "referent",
+                            due_date: "",
+                          })
+                        }
+                        className="rounded-full px-3 py-1.5 text-[12px] font-bold"
+                        style={{ background: T.accentSoft, color: T.accent }}
+                      >
+                        + {label}
+                      </button>
+                    ))}
+                  </div>
                 </li>
               ) : (
                 c.actions.map((a) => {
@@ -836,9 +800,71 @@ export function HandicapCaseDossier({
                 })
               )}
             </ul>
+
+            <div className="mt-5 border-t pt-4" style={{ borderColor: T.borderSoft }}>
+              <button
+                type="button"
+                onClick={() => setPlanNoteOpen((v) => !v)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <span className="text-[13px] font-bold">Note du plan (facultatif)</span>
+                <span className="text-[12px]" style={{ color: T.muted }}>
+                  {planNoteOpen ? "Replier" : "Déplier"}
+                </span>
+              </button>
+              {planNoteOpen ? (
+                <div className="mt-3 space-y-2">
+                  <HandicapPlanEditor
+                    content={planHtml}
+                    disabled={pending}
+                    onChange={onPlanChange}
+                  />
+                  <p className="text-[11px]" style={{ color: T.tertiary }}>
+                    {planSaved
+                      ? "Enregistré automatiquement"
+                      : planHtml
+                        ? "Enregistrement…"
+                        : "Vide — enregistré automatiquement à la frappe"}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            {showPlanUpload ? (
+              <UploadForm
+                caseId={c.id}
+                pending={pending}
+                defaultKind="plan_signe"
+                onCancel={() => setShowPlanUpload(false)}
+                onDone={(b) => {
+                  setBundle(b);
+                  setShowPlanUpload(false);
+                }}
+                onError={setError}
+                setPending={startTransition}
+              />
+            ) : null}
+
+            {c.documents.filter((d) => d.kind === "plan_signe").length > 0 ? (
+              <ul className="mt-4 space-y-2">
+                {c.documents
+                  .filter((d) => d.kind === "plan_signe")
+                  .map((d) => (
+                    <li
+                      key={d.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-[13px]"
+                      style={{ borderColor: T.borderSoft, background: T.inner }}
+                    >
+                      <span className="font-semibold">{d.title}</span>
+                      <span className="text-[11px]" style={{ color: T.muted }}>
+                        Plan signé · {formatDate(d.uploadedAt)}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            ) : null}
           </section>
 
-          {/* Meetings */}
           <section
             className="rounded-[24px] border p-5"
             style={{ background: T.card, borderColor: T.border }}
@@ -873,77 +899,125 @@ export function HandicapCaseDossier({
               />
             ) : null}
 
-            {openMeeting ? (
-              <div
-                className="mt-4 rounded-2xl border p-4"
-                style={{ borderColor: T.accent, background: T.inner }}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[15px] font-extrabold">{openMeeting.title}</p>
-                  <span
-                    className="rounded-full px-2.5 py-1 text-[11px] font-bold"
-                    style={{ background: T.accentSoft, color: T.accent }}
-                  >
-                    {formatDateTime(openMeeting.scheduledAt)}
-                    {openMeeting.mode
-                      ? ` · ${MODE_LABEL[openMeeting.mode] ?? openMeeting.mode}`
-                      : ""}
-                  </span>
-                </div>
-                <textarea
-                  value={openMeeting.notes}
-                  onChange={(e) => onNotesChange(openMeeting.id, e.target.value)}
-                  rows={5}
-                  placeholder="Notes de l'entretien…"
-                  className="mt-3 w-full resize-y rounded-xl border bg-transparent px-3 py-2 text-[13px] outline-none"
-                  style={{ borderColor: T.borderSoft, color: T.text }}
-                />
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[11px]" style={{ color: T.tertiary }}>
-                    {notesSaved ? "Enregistré automatiquement" : "Saisie…"}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={pending}
-                      className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
-                      style={{ borderColor: T.borderSoft }}
-                      onClick={() => {
-                        const next = window.prompt(
-                          "Nouvelle date/heure (AAAA-MM-JJTHH:MM)",
-                          openMeeting.scheduledAt?.slice(0, 16) || "",
-                        );
-                        if (next) {
-                          run({
-                            action: "reschedule_meeting",
-                            meeting_id: openMeeting.id,
-                            scheduled_at: new Date(next).toISOString(),
-                          });
-                        }
-                      }}
-                    >
-                      Reporter
-                    </button>
-                    <button
-                      type="button"
-                      disabled={pending}
-                      className="rounded-full px-3 py-1.5 text-[12px] font-bold"
-                      style={{ background: T.accent, color: T.accentOn }}
-                      onClick={() => {
-                        if (confirm("Clôturer ce rendez-vous ? Les notes resteront lisibles mais non modifiables.")) {
-                          run({ action: "close_meeting", meeting_id: openMeeting.id });
-                        }
-                      }}
-                    >
-                      Clôturer le rendez-vous
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
+            {openMeetings.length === 0 ? (
               <p className="mt-4 text-sm" style={{ color: T.muted }}>
                 Aucun rendez-vous ouvert.
               </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {openMeetings.map((m) => (
+                  <div
+                    key={m.id}
+                    className="rounded-2xl border p-4"
+                    style={{ borderColor: T.accentSoftBorder, background: T.inner }}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-[15px] font-extrabold">{m.title}</p>
+                        <p className="mt-1 text-[12px]" style={{ color: T.muted }}>
+                          {formatDateTime(m.scheduledAt)}
+                          {m.mode ? ` · ${MODE_LABEL[m.mode] ?? m.mode}` : ""}
+                        </p>
+                      </div>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          className="grid h-8 w-8 place-items-center rounded-full border"
+                          style={{ borderColor: T.borderSoft }}
+                          onClick={() =>
+                            setMeetingMenuId((id) => (id === m.id ? null : m.id))
+                          }
+                          aria-label="Actions rendez-vous"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                        {meetingMenuId === m.id ? (
+                          <div
+                            className="absolute right-0 top-9 z-10 w-44 rounded-xl border py-1 shadow-xl"
+                            style={{ background: T.card, borderColor: T.border }}
+                          >
+                            <button
+                              type="button"
+                              className="block w-full px-3 py-2 text-left text-[12px] hover:bg-white/5"
+                              onClick={() => {
+                                setMeetingMenuId(null);
+                                setEditMeetingId(m.id);
+                              }}
+                            >
+                              Modifier
+                            </button>
+                            {!m.notes.trim() ? (
+                              <button
+                                type="button"
+                                className="block w-full px-3 py-2 text-left text-[12px] hover:bg-white/5"
+                                style={{ color: T.red }}
+                                onClick={() => {
+                                  setMeetingMenuId(null);
+                                  if (confirm("Supprimer ce rendez-vous ?")) {
+                                    run({ action: "delete_meeting", meeting_id: m.id });
+                                  }
+                                }}
+                              >
+                                Supprimer
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {editMeetingId === m.id ? (
+                      <MeetingEditForm
+                        meeting={m}
+                        pending={pending}
+                        onCancel={() => setEditMeetingId(null)}
+                        onSubmit={(payload) => {
+                          startTransition(async () => {
+                            const ok = await mutate({
+                              action: "update_meeting",
+                              meeting_id: m.id,
+                              ...payload,
+                            });
+                            if (ok) setEditMeetingId(null);
+                          });
+                        }}
+                      />
+                    ) : null}
+
+                    <textarea
+                      value={m.notes}
+                      onChange={(e) => onNotesChange(m.id, e.target.value)}
+                      rows={4}
+                      placeholder="Notes de l'entretien…"
+                      className="mt-3 w-full resize-y rounded-xl border bg-transparent px-3 py-2 text-[13px] outline-none"
+                      style={{ borderColor: T.borderSoft, color: T.text }}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px]" style={{ color: T.tertiary }}>
+                        Enregistré automatiquement
+                        {notesSaved ? "" : ""}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        className="rounded-full px-3 py-1.5 text-[12px] font-bold"
+                        style={{ background: T.accent, color: T.accentOn }}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Clôturer ce rendez-vous ? Les notes resteront lisibles mais non modifiables.",
+                            )
+                          ) {
+                            run({ action: "close_meeting", meeting_id: m.id });
+                          }
+                        }}
+                      >
+                        Clôturer
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {closedMeetings.length > 0 ? (
@@ -969,7 +1043,11 @@ export function HandicapCaseDossier({
                     {viewNotesId === m.id ? (
                       <p
                         className="w-full whitespace-pre-wrap rounded-xl border p-3 text-[12px]"
-                        style={{ borderColor: T.borderSoft, background: T.inner, color: T.muted }}
+                        style={{
+                          borderColor: T.borderSoft,
+                          background: T.inner,
+                          color: T.muted,
+                        }}
                       >
                         {m.notes || "Aucune note."}
                       </p>
@@ -981,9 +1059,9 @@ export function HandicapCaseDossier({
           </section>
         </div>
 
-        {/* Right column */}
         <div className="space-y-5">
           <section
+            ref={documentsRef}
             className="rounded-[24px] border p-5"
             style={{ background: T.card, borderColor: T.border }}
           >
@@ -1039,7 +1117,12 @@ export function HandicapCaseDossier({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-bold">{d.title}</p>
                       <p className="text-[11px]" style={{ color: T.muted }}>
-                        Déposé le {formatDate(d.uploadedAt)}
+                        {d.kind === "plan_signe"
+                          ? "Plan signé"
+                          : d.kind === "rqth"
+                            ? "Justificatif RQTH"
+                            : "Document"}{" "}
+                        · Déposé le {formatDate(d.uploadedAt)}
                         {d.validUntil ? ` · valide jusqu'en ${formatMonthYear(d.validUntil)}` : ""}
                       </p>
                     </div>
@@ -1118,7 +1201,11 @@ export function HandicapCaseDossier({
                     ) {
                       return;
                     }
-                    run({ action: "set_company_informed", company_informed: true, confirmed: true });
+                    run({
+                      action: "set_company_informed",
+                      company_informed: true,
+                      confirmed: true,
+                    });
                   } else {
                     run({ action: "set_company_informed", company_informed: false });
                   }
@@ -1135,31 +1222,88 @@ export function HandicapCaseDossier({
               </button>
             </div>
 
-            <div className="mt-3 space-y-2">
-              {c.partners.length === 0 ? (
-                <p className="text-[12px]" style={{ color: T.muted }}>
-                  Aucun partenaire mobilisé.
-                </p>
-              ) : (
-                c.partners.map((p) => (
-                  <div
-                    key={p.id}
-                    className="rounded-2xl border px-3 py-2.5 text-[13px]"
-                    style={{ background: T.inner, borderColor: T.borderSoft }}
-                  >
-                    <p className="font-bold">{PARTNER_LABEL[p.partner] ?? p.partner}</p>
-                    {p.status ? (
-                      <p className="text-[12px]" style={{ color: T.muted }}>
-                        {p.status}
-                      </p>
-                    ) : null}
+            <div className="mt-4">
+              <p className="text-[13px] font-bold">Partenaires</p>
+              <div className="mt-2 space-y-2">
+                {c.partners.length === 0 ? (
+                  <p className="text-[12px]" style={{ color: T.muted }}>
+                    Aucun partenaire mobilisé.
+                  </p>
+                ) : (
+                  c.partners.map((p) => {
+                    const status = p.status || "a_contacter";
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between gap-2 rounded-2xl border px-3 py-2.5"
+                        style={{ background: T.inner, borderColor: T.borderSoft }}
+                      >
+                        <p className="text-[13px] font-bold">
+                          {PARTNER_LABEL[p.partner] ?? p.partner}
+                        </p>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => {
+                            const idx = PARTNER_STATUS_ORDER.indexOf(
+                              status as (typeof PARTNER_STATUS_ORDER)[number],
+                            );
+                            const next =
+                              PARTNER_STATUS_ORDER[
+                                (idx >= 0 ? idx + 1 : 0) % PARTNER_STATUS_ORDER.length
+                              ];
+                            run({
+                              action: "set_partner_status",
+                              partner_id: p.id,
+                              status: next,
+                            });
+                          }}
+                          className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+                          style={{
+                            background:
+                              status === "accorde"
+                                ? "rgba(107,227,155,0.15)"
+                                : status === "refuse"
+                                  ? "rgba(255,138,155,0.15)"
+                                  : status === "en_cours"
+                                    ? "rgba(242,207,107,0.15)"
+                                    : "rgba(255,255,255,0.06)",
+                            color:
+                              status === "accorde"
+                                ? T.green
+                                : status === "refuse"
+                                  ? T.red
+                                  : status === "en_cours"
+                                    ? T.amber
+                                    : T.muted,
+                          }}
+                          title="Cliquer pour changer le statut"
+                        >
+                          {PARTNER_STATUS_LABEL[status] ?? status}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+                {availablePartners.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {availablePartners.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        disabled={pending}
+                        onClick={() =>
+                          run({ action: "add_partner", partner: p, status: "a_contacter" })
+                        }
+                        className="rounded-full px-2.5 py-1 text-[11px] font-bold"
+                        style={{ background: "rgba(255,255,255,0.06)", color: T.muted }}
+                      >
+                        + {PARTNER_LABEL[p]}
+                      </button>
+                    ))}
                   </div>
-                ))
-              )}
-              <PartnerQuickAdd
-                pending={pending}
-                onAdd={(partner) => run({ action: "add_partner", partner })}
-              />
+                ) : null}
+              </div>
             </div>
           </section>
 
@@ -1177,23 +1321,19 @@ export function HandicapCaseDossier({
                 logLines.map((l) => (
                   <li
                     key={l.id}
-                    className="flex items-start justify-between gap-2 text-[12px]"
+                    className="text-[12px]"
                     style={{ color: T.muted }}
                   >
-                    <span>
-                      {ACCESS_LABEL[l.action] ?? l.action}
-                      {l.actorId ? (
-                        <span className="ml-1 opacity-60">
-                          · {l.actorId.slice(0, 8)}…
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="shrink-0">{relativeTime(l.createdAt)}</span>
+                    {l.kind === "grouped"
+                      ? `Dossier consulté par ${l.actorName} · ${l.count} fois · ${relativeTime(l.createdAt)}`
+                      : [l.label, l.actorName, relativeTime(l.createdAt)]
+                          .filter(Boolean)
+                          .join(" · ")}
                   </li>
                 ))
               )}
             </ul>
-            {c.accessLog.length > 5 ? (
+            {logGrouped.length > 5 ? (
               <button
                 type="button"
                 className="mt-3 text-[12px] font-bold"
@@ -1204,6 +1344,196 @@ export function HandicapCaseDossier({
               </button>
             ) : null}
           </section>
+        </div>
+      </div>
+
+      {shareOpen ? (
+        <ShareTrainerModal
+          pending={pending}
+          email={shareEmail}
+          setEmail={setShareEmail}
+          autrePending={autrePending}
+          includeAutreIds={includeAutreIds}
+          setIncludeAutreIds={setIncludeAutreIds}
+          preview={sharePreview}
+          emailHtml={emailPreviewHtml}
+          onClose={() => setShareOpen(false)}
+          onConfirm={() => {
+            if (sharePreview.error) {
+              setError(sharePreview.error);
+              return;
+            }
+            if (!sharePreview.ok.length) {
+              setError("Aucun aménagement à transmettre");
+              return;
+            }
+            startTransition(async () => {
+              const ok = await mutate({
+                action: "share_accommodations",
+                confirmed: true,
+                trainer_email: shareEmail.trim(),
+                include_autre_ids: includeAutreIds,
+              });
+              if (ok) setShareOpen(false);
+            });
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ShareTrainerModal({
+  pending,
+  email,
+  setEmail,
+  autrePending,
+  includeAutreIds,
+  setIncludeAutreIds,
+  preview,
+  emailHtml,
+  onClose,
+  onConfirm,
+}: {
+  pending: boolean;
+  email: string;
+  setEmail: (v: string) => void;
+  autrePending: DisabilityCaseDetail["accommodations"];
+  includeAutreIds: string[];
+  setIncludeAutreIds: (ids: string[]) => void;
+  preview: ReturnType<typeof selectAccommodationsForTrainerShare>;
+  emailHtml: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const shareableCount = preview.ok.filter((a) =>
+    SHAREABLE_CATEGORIES.has(a.category),
+  ).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border p-5 shadow-2xl"
+        style={{ background: T.card, borderColor: T.border }}
+      >
+        <h3 className="text-[18px] font-extrabold">Transmettre au formateur</h3>
+        <p className="mt-1 text-[13px]" style={{ color: T.muted }}>
+          Catégories évaluations, supports, rythme, locaux et matériel uniquement.
+          La catégorie « autre » nécessite une confirmation explicite.
+        </p>
+
+        <label className="mt-4 block text-[12px] font-bold" style={{ color: T.muted }}>
+          E-mail du formateur (optionnel)
+        </label>
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          placeholder="formateur@exemple.fr"
+          className="mt-1 w-full rounded-xl border bg-transparent px-3 py-2 text-[13px]"
+          style={{ borderColor: T.borderSoft }}
+        />
+
+        {autrePending.length > 0 ? (
+          <div className="mt-4 space-y-2">
+            <p className="text-[12px] font-bold" style={{ color: T.amber }}>
+              Inclure « autre » ? Confirmation requise — texte exact :
+            </p>
+            {autrePending.map((a) => {
+              const checked = includeAutreIds.includes(a.id);
+              const forbidden =
+                containsForbiddenDisabilityTerms(a.label) ||
+                containsForbiddenDisabilityTerms(a.details ?? "");
+              return (
+                <label
+                  key={a.id}
+                  className="flex items-start gap-2 rounded-xl border p-3 text-[13px]"
+                  style={{ borderColor: T.borderSoft, background: T.inner }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={forbidden}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        if (
+                          !confirm(
+                            `Confirmer l'envoi de cet aménagement « autre » ?\n\n${a.label}${a.details ? `\n${a.details}` : ""}`,
+                          )
+                        ) {
+                          return;
+                        }
+                        setIncludeAutreIds([...includeAutreIds, a.id]);
+                      } else {
+                        setIncludeAutreIds(includeAutreIds.filter((id) => id !== a.id));
+                      }
+                    }}
+                    className="mt-1"
+                  />
+                  <span>
+                    <strong>{a.label}</strong>
+                    {a.details ? (
+                      <span className="mt-0.5 block" style={{ color: T.muted }}>
+                        {a.details}
+                      </span>
+                    ) : null}
+                    {forbidden ? (
+                      <span className="mt-1 block text-[12px]" style={{ color: T.red }}>
+                        Reformulez en décrivant le besoin, sans mention du handicap.
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {preview.error ? (
+          <p
+            className="mt-4 rounded-xl px-3 py-2 text-[13px] font-semibold"
+            style={{ background: "rgba(255,138,155,0.12)", color: T.red }}
+          >
+            {preview.error}
+          </p>
+        ) : (
+          <div className="mt-4">
+            <p className="text-[12px] font-bold" style={{ color: T.muted }}>
+              Aperçu exact de l&apos;e-mail reçu par le formateur
+              {shareableCount || preview.ok.length
+                ? ` · ${preview.ok.length} aménagement(s)`
+                : ""}
+            </p>
+            <div
+              className="prose prose-invert mt-2 max-w-none rounded-xl border p-4 text-[13px]"
+              style={{ borderColor: T.borderSoft, background: T.inner }}
+              dangerouslySetInnerHTML={{
+                __html:
+                  emailHtml ||
+                  "<p style='color:#9AA3BD'>Aucun aménagement sélectionné.</p>",
+              }}
+            />
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={pending || Boolean(preview.error) || !preview.ok.length}
+            onClick={onConfirm}
+            className="rounded-full px-4 py-2 text-[13px] font-bold disabled:opacity-50"
+            style={{ background: T.accent, color: T.accentOn }}
+          >
+            Envoyer
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-4 py-2 text-[13px] font-bold"
+            style={{ color: T.muted }}
+          >
+            Annuler
+          </button>
         </div>
       </div>
     </div>
@@ -1219,7 +1549,7 @@ function AccommodationForm({
   onCancel: () => void;
   onSubmit: (p: { category: string; label: string; details: string }) => void;
 }) {
-  const [category, setCategory] = useState("autre");
+  const [category, setCategory] = useState("supports");
   const [label, setLabel] = useState("");
   const [details, setDetails] = useState("");
   return (
@@ -1345,7 +1675,12 @@ function ActionForm({
         >
           Ajouter
         </button>
-        <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 text-[12px] font-bold" style={{ color: T.muted }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full px-4 py-2 text-[12px] font-bold"
+          style={{ color: T.muted }}
+        >
           Annuler
         </button>
       </div>
@@ -1362,9 +1697,17 @@ function MeetingForm({
   onCancel: () => void;
   onSubmit: (p: { title: string; scheduled_at: string; mode: string }) => void;
 }) {
-  const [title, setTitle] = useState("Entretien");
   const [when, setWhen] = useState("");
+  const [title, setTitle] = useState("");
   const [mode, setMode] = useState("visio");
+  const [titleTouched, setTitleTouched] = useState(false);
+
+  useEffect(() => {
+    if (!titleTouched && when) {
+      setTitle(defaultMeetingTitle(when));
+    }
+  }, [when, titleTouched]);
+
   return (
     <form
       className="mt-4 space-y-3 rounded-2xl border p-4"
@@ -1373,7 +1716,89 @@ function MeetingForm({
         e.preventDefault();
         if (!when) return;
         onSubmit({
-          title: title.trim() || "Rendez-vous",
+          title: title.trim() || defaultMeetingTitle(when),
+          scheduled_at: new Date(when).toISOString(),
+          mode,
+        });
+      }}
+    >
+      <input
+        type="datetime-local"
+        value={when}
+        onChange={(e) => setWhen(e.target.value)}
+        required
+        className="w-full rounded-xl border bg-transparent px-3 py-2 text-[13px]"
+        style={{ borderColor: T.borderSoft }}
+      />
+      <input
+        value={title}
+        onChange={(e) => {
+          setTitleTouched(true);
+          setTitle(e.target.value);
+        }}
+        placeholder="Titre"
+        className="w-full rounded-xl border bg-transparent px-3 py-2 text-[13px]"
+        style={{ borderColor: T.borderSoft }}
+      />
+      <select
+        value={mode}
+        onChange={(e) => setMode(e.target.value)}
+        className="w-full rounded-xl border bg-transparent px-3 py-2 text-[13px]"
+        style={{ borderColor: T.borderSoft }}
+      >
+        {Object.entries(MODE_LABEL).map(([k, v]) => (
+          <option key={k} value={k}>
+            {v}
+          </option>
+        ))}
+      </select>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-full px-4 py-2 text-[12px] font-bold"
+          style={{ background: T.accent, color: T.accentOn }}
+        >
+          Planifier
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full px-4 py-2 text-[12px] font-bold"
+          style={{ color: T.muted }}
+        >
+          Annuler
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MeetingEditForm({
+  meeting,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  meeting: DisabilityCaseDetail["meetings"][number];
+  pending: boolean;
+  onCancel: () => void;
+  onSubmit: (p: { title: string; scheduled_at: string; mode: string }) => void;
+}) {
+  const [title, setTitle] = useState(meeting.title);
+  const [when, setWhen] = useState(
+    meeting.scheduledAt ? meeting.scheduledAt.slice(0, 16) : "",
+  );
+  const [mode, setMode] = useState(meeting.mode || "visio");
+  return (
+    <form
+      className="mt-3 space-y-2 rounded-xl border p-3"
+      style={{ borderColor: T.borderSoft }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!when) return;
+        onSubmit({
+          title: title.trim() || defaultMeetingTitle(when),
           scheduled_at: new Date(when).toISOString(),
           mode,
         });
@@ -1409,12 +1834,17 @@ function MeetingForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full px-4 py-2 text-[12px] font-bold"
+          className="rounded-full px-3 py-1.5 text-[12px] font-bold"
           style={{ background: T.accent, color: T.accentOn }}
         >
-          Planifier
+          Enregistrer
         </button>
-        <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 text-[12px] font-bold" style={{ color: T.muted }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full px-3 py-1.5 text-[12px] font-bold"
+          style={{ color: T.muted }}
+        >
           Annuler
         </button>
       </div>
@@ -1440,7 +1870,9 @@ function UploadForm({
   defaultKind?: string;
 }) {
   const [kind, setKind] = useState(defaultKind);
-  const [title, setTitle] = useState(defaultKind === "plan_signe" ? "Plan d'accompagnement signé" : "");
+  const [title, setTitle] = useState(
+    defaultKind === "plan_signe" ? "Plan d'accompagnement signé" : "",
+  );
   const [validUntil, setValidUntil] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
@@ -1462,7 +1894,9 @@ function UploadForm({
               method: "POST",
               body: fd,
             });
-            const json = (await res.json().catch(() => null)) as Bundle & { error?: string };
+            const json = (await res.json().catch(() => null)) as Bundle & {
+              error?: string;
+            };
             if (!res.ok || !json?.case) {
               onError(json?.error || "Échec du dépôt");
               return;
@@ -1514,35 +1948,15 @@ function UploadForm({
         >
           Déposer
         </button>
-        <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 text-[12px] font-bold" style={{ color: T.muted }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full px-4 py-2 text-[12px] font-bold"
+          style={{ color: T.muted }}
+        >
           Annuler
         </button>
       </div>
     </form>
-  );
-}
-
-function PartnerQuickAdd({
-  pending,
-  onAdd,
-}: {
-  pending: boolean;
-  onAdd: (partner: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {(["agefiph", "cap_emploi", "medecin_travail", "autre"] as const).map((p) => (
-        <button
-          key={p}
-          type="button"
-          disabled={pending}
-          onClick={() => onAdd(p)}
-          className="rounded-full px-2.5 py-1 text-[11px] font-bold"
-          style={{ background: "rgba(255,255,255,0.06)", color: T.muted }}
-        >
-          + {PARTNER_LABEL[p]}
-        </button>
-      ))}
-    </div>
   );
 }

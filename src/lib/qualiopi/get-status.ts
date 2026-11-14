@@ -34,6 +34,8 @@ export type QualiopiNaAttestation = {
 export type QualiopiStatusSignals = {
   coursesPublicWithInfo: number;
   coursesPublicTotal: number;
+  /** Fiches publiées conformes Lot 1 (Preuves catalogue). */
+  coursesCompliantCount: number;
   coursesWithResults: number;
   coursesWithObjectives: number;
   approvedExperts: number;
@@ -128,58 +130,24 @@ function assessAuto(
   const sessionsComplete = ctx.sessions.filter(sessionComplete).length;
 
   switch (id) {
-    case 1: {
-      const c = ctx.coffre;
-      const fiches = proof(
-        "Fiches formation publiques",
-        "/super/crm/qualiopi/catalogue",
-        null,
-        `${sig.coursesPublicWithInfo} / ${Math.max(sig.coursesPublicTotal, 1)} fiches`,
-      );
-      const coffreProof = proof(
-        "Coffre administratif",
-        "/super/crm/qualiopi?tab=coffre",
-        null,
-        `${c.deposited} / ${c.expected} modèles`,
-      );
-      if (c.deposited >= c.expected && sig.coursesPublicWithInfo >= 1) {
-        return withManual({
-          status: "proven",
-          proofs: [fiches, coffreProof],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
-        });
-      }
-      if (c.deposited > 0 || sig.coursesPublicWithInfo > 0) {
-        return withManual({
-          status: "todo",
-          proofs: [fiches, coffreProof],
-          nextAction: {
-            label: c.deposited < c.expected ? "Déposer" : "Compléter",
-            href: c.deposited < c.expected ? "/super/crm/qualiopi?tab=coffre" : "/super/crm/qualiopi/catalogue",
-          },
-        });
-      }
-      return withManual({
-        status: "missing",
-        proofs: [],
-        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi?tab=coffre" },
-      });
-    }
+    case 1:
     case 2: {
+      const published = Math.max(sig.coursesPublicTotal, 0);
+      const complete = sig.coursesCompliantCount ?? 0;
       const p = proof(
-        "Indicateurs de résultats sur fiches",
+        "Fiches catalogue complètes",
         "/super/crm/qualiopi/catalogue",
         null,
-        `${sig.coursesWithResults} / ${Math.max(sig.coursesPublicTotal, 1)} fiches`,
+        `${complete} / ${Math.max(published, 1)} fiches complètes`,
       );
-      if (sig.coursesWithResults >= Math.max(1, Math.ceil(sig.coursesPublicTotal * 0.8))) {
+      if (published > 0 && complete >= published) {
         return withManual({
           status: "proven",
           proofs: [p],
           nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
         });
       }
-      if (sig.coursesWithResults > 0) {
+      if (complete > 0) {
         return withManual({
           status: "todo",
           proofs: [p],
@@ -187,9 +155,9 @@ function assessAuto(
         });
       }
       return withManual({
-        status: "missing",
-        proofs: [],
-        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/catalogue" },
+        status: published > 0 ? "todo" : "missing",
+        proofs: published > 0 ? [p] : [],
+        nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
       });
     }
     case 4:

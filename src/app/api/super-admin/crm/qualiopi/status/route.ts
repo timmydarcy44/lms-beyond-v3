@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { loadDisabilityReferentContact } from "@/lib/handicap/referent-contact";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { getQualiopiStatus, type QualiopiStatusSignals } from "@/lib/qualiopi/get-status";
 import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
+import { assessQualiopiFicheCompliance } from "@/lib/training-courses/qualiopi-fiche";
 
 export const dynamic = "force-dynamic";
 
@@ -62,10 +64,11 @@ async function buildStatus(force = false) {
       supabase
         .from("crm_qualiopi_indicator_proofs")
         .select("indicator_id, label, comment, file_url, proof_at, updated_at"),
-      // Colonnes réelles de training_courses (pas published / is_public / quality_indicators)
       supabase
         .from("training_courses")
-        .select("id, objectives, is_active, results_method_override"),
+        .select(
+          "id, objectives, is_active, results_method_override, formats, badge_name, badge_class_id, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, price_on_quote, intra_price, inter_price",
+        ),
     ]),
   );
 
@@ -99,26 +102,42 @@ async function buildStatus(force = false) {
 
   const settings = settingsRes.data as Record<string, unknown> | null;
   const globalResultsMethod = String(settings?.results_indicators_method ?? "").trim();
+  const handicapContact = await loadDisabilityReferentContact(supabase);
+  const accessibilityOk = Boolean(handicapContact.email);
 
   const courses = (trainingRes.error ? [] : trainingRes.data ?? []) as Array<{
     id: string;
     objectives?: unknown;
     is_active?: boolean | null;
     results_method_override?: string | null;
+    formats?: string[] | null;
+    badge_name?: string | null;
+    badge_class_id?: string | null;
+    recognition_type?: string | null;
+    pedagogical_modality?: string | null;
+    pedagogical_modality_detail?: string | null;
+    financing_modalities?: string | null;
+    duration?: string | null;
+    price_on_quote?: boolean | null;
+    intra_price?: number | null;
+    inter_price?: number | null;
   }>;
   if (trainingRes.error) {
     console.warn("[qualiopi/status] training_courses:", trainingRes.error.message);
   }
-  const publicCourses = courses.filter((c) => c.is_active !== false);
-  const coursesPublicTotal = publicCourses.length || courses.length;
+  const publicCourses = courses.filter((c) => c.is_active === true);
+  const coursesPublicTotal = publicCourses.length;
   let coursesWithObjectives = 0;
   let coursesWithResults = 0;
   let coursesPublicWithInfo = 0;
-  for (const row of publicCourses.length ? publicCourses : courses) {
-    const objs = row.objectives;
-    const hasObj =
-      (Array.isArray(objs) && objs.filter((o) => String(o).trim()).length >= 3) ||
-      (typeof objs === "string" && objs.trim().length >= 20);
+  let coursesCompliantCount = 0;
+  for (const row of publicCourses) {
+    const objs = Array.isArray(row.objectives)
+      ? row.objectives.filter((o) => String(o).trim())
+      : typeof row.objectives === "string" && row.objectives.trim().length >= 20
+        ? [row.objectives]
+        : [];
+    const hasObj = objs.length >= 3;
     if (hasObj) {
       coursesWithObjectives += 1;
       coursesPublicWithInfo += 1;
@@ -127,6 +146,15 @@ async function buildStatus(force = false) {
     if (override || globalResultsMethod) {
       coursesWithResults += 1;
     }
+    const compliance = assessQualiopiFicheCompliance(
+      {
+        ...row,
+        objectives: objs,
+        duration: row.duration != null ? String(row.duration) : null,
+      },
+      { accessibilityOk },
+    );
+    if (compliance.ok) coursesCompliantCount += 1;
   }
 
   const processSafe = await supabase.from("crm_qualiopi_process_docs").select("kind, status");
@@ -147,6 +175,7 @@ async function buildStatus(force = false) {
   const signals: QualiopiStatusSignals = {
     coursesPublicWithInfo,
     coursesPublicTotal,
+    coursesCompliantCount,
     coursesWithResults,
     coursesWithObjectives,
     approvedExperts: await safeCount(() =>

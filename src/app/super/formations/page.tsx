@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { SuperTrainingCoursesManager } from "@/components/super-admin/super-training-courses-manager";
 
 export const metadata: Metadata = {
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default function SuperFormationsPage() {
-  return <SuperTrainingCoursesManager />;
+  return (
+    <Suspense fallback={<div className="p-8 text-sm text-gray-500">Chargement du studio…</div>}>
+      <SuperTrainingCoursesManager />
+    </Suspense>
+  );
 }

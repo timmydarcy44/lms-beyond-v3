@@ -15,7 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { TrainingCourseRow, TrainingCourseFaqItem } from "@/lib/training-courses/types";
 import {
@@ -205,6 +205,7 @@ type Catalog = "business" | "online";
 
 export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const online = catalog === "online";
   const [courses, setCourses] = useState<TrainingCourseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -249,6 +250,25 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
   useEffect(() => {
     void loadCourses();
   }, [loadCourses]);
+
+  // Deep-link Preuves catalogue : ?edit=<id>&field=<id>
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || !courses.length) return;
+    if (courses.some((c) => c.id === editId)) {
+      setSelectedId(editId);
+      setTab("general");
+      const field = searchParams.get("field");
+      if (field) {
+        window.setTimeout(() => {
+          document.getElementById(`qualiopi-field-${field}`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }, 250);
+      }
+    }
+  }, [searchParams, courses]);
 
   const domains = useMemo(() => {
     const set = new Set(courses.map((c) => c.domain).filter(Boolean) as string[]);
@@ -968,7 +988,9 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                     <textarea className={`${TEXTAREA} min-h-[160px]`} value={state.long_description} onChange={(e) => patch("long_description", e.target.value)} />
                   </label>
                   <div className="grid gap-6 lg:grid-cols-2">
-                    <TrainingLinesEditor label="Objectifs" items={state.objectives} onChange={(v) => patch("objectives", v)} />
+                    <div id="qualiopi-field-objectives">
+                      <TrainingLinesEditor label="Objectifs" items={state.objectives} onChange={(v) => patch("objectives", v)} />
+                    </div>
                     <TrainingLinesEditor label="Compétences acquises" items={state.skills} onChange={(v) => patch("skills", v)} />
                     <TrainingLinesEditor label="Pourquoi choisir" items={state.why_choose} onChange={(v) => patch("why_choose", v)} />
                     <TrainingLinesEditor label="Bénéfices" items={state.benefits} onChange={(v) => patch("benefits", v)} />
@@ -1003,7 +1025,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                       </p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="block text-sm">
+                      <label id="qualiopi-field-recognition_type" className="block text-sm">
                         <span className="mb-1 block font-medium text-gray-700">Type de reconnaissance</span>
                         <select
                           className={INPUT}
@@ -1027,7 +1049,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                           placeholder="À rédiger"
                         />
                       </label>
-                      <label className="block text-sm">
+                      <label id="qualiopi-field-pedagogical_modality" className="block text-sm">
                         <span className="mb-1 block font-medium text-gray-700">Modalité pédagogique</span>
                         <select
                           className={INPUT}
@@ -1042,7 +1064,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                           ))}
                         </select>
                       </label>
-                      <label className="block text-sm sm:col-span-2">
+                      <label id="qualiopi-field-pedagogical_modality_detail" className="block text-sm sm:col-span-2">
                         <span className="mb-1 block font-medium text-gray-700">
                           Description des modalités pédagogiques
                         </span>
@@ -1053,7 +1075,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                           placeholder="À rédiger"
                         />
                       </label>
-                      <label className="block text-sm sm:col-span-2">
+                      <label id="qualiopi-field-financing_modalities" className="block text-sm sm:col-span-2">
                         <span className="mb-1 block font-medium text-gray-700">
                           Modalités de financement
                         </span>

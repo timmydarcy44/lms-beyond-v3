@@ -219,6 +219,34 @@ async function buildStatus(force = false) {
     supabase.from("handicap_profiles").select("id", { count: "exact", head: true }),
   );
 
+  let evalChaudCompleted = 0;
+  let evalFroidCompleted = 0;
+  let evalTemplatesReady = false;
+  try {
+    const [{ count: chaudDone }, { count: froidDone }, { data: tplRows }] = await Promise.all([
+      supabase
+        .from("formation_assessment_attempts")
+        .select("id", { count: "exact", head: true })
+        .eq("kind", "eval_chaud")
+        .not("completed_at", "is", null),
+      supabase
+        .from("formation_assessment_attempts")
+        .select("id", { count: "exact", head: true })
+        .eq("kind", "eval_froid")
+        .not("completed_at", "is", null),
+      supabase
+        .from("formation_assessment_templates")
+        .select("kind")
+        .in("kind", ["eval_chaud", "eval_froid"]),
+    ]);
+    evalChaudCompleted = chaudDone ?? 0;
+    evalFroidCompleted = froidDone ?? 0;
+    const kinds = new Set((tplRows ?? []).map((r) => String(r.kind)));
+    evalTemplatesReady = kinds.has("eval_chaud") && kinds.has("eval_froid");
+  } catch (e) {
+    console.warn("[qualiopi/status] eval chaud/froid:", e);
+  }
+
   const signals: QualiopiStatusSignals = {
     coursesPublicWithInfo,
     coursesPublicTotal,
@@ -227,6 +255,9 @@ async function buildStatus(force = false) {
     coursesWithObjectives,
     infoPackCompleteCount,
     infoPackPartialCount,
+    evalChaudCompleted,
+    evalFroidCompleted,
+    evalTemplatesReady,
     approvedExperts: await safeCount(() =>
       supabase
         .from("experts")

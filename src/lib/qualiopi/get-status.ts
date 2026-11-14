@@ -42,6 +42,11 @@ export type QualiopiStatusSignals = {
   infoPackCompleteCount: number;
   /** Au moins un document d’information envoyé (convention / règlement / livret / convocation). */
   infoPackPartialCount: number;
+  /** Réponses complétées éval à chaud / à froid. */
+  evalChaudCompleted: number;
+  evalFroidCompleted: number;
+  /** Gabarits éval à chaud / à froid présents. */
+  evalTemplatesReady: boolean;
   approvedExperts: number;
   formateurPlansCount: number;
   formateurActionsDoneCount: number;
@@ -241,23 +246,49 @@ function assessAuto(
       });
     }
     case 11: {
+      const chaud = sig.evalChaudCompleted ?? 0;
+      const froid = sig.evalFroidCompleted ?? 0;
+      const responses = chaud + froid;
+      const templatesOk = Boolean(sig.evalTemplatesReady);
       const p = proof(
-        "Émargements / clôtures",
-        "/super/crm/qualiopi?tab=emargements",
+        "Évaluations à chaud / à froid",
+        "/super/crm/formations",
         null,
-        `${sessionsComplete} / ${Math.max(sessionsTotal, 1)} sessions`,
+        templatesOk
+          ? `${responses} réponse(s) · ${chaud} à chaud · ${froid} à froid · gabarits actifs`
+          : `${responses} réponse(s)`,
       );
-      if (sessionsComplete >= 1) {
+      if (responses >= 1 || sessionsComplete >= 1) {
         return withManual({
           status: "proven",
+          proofs: [
+            p,
+            ...(sessionsComplete >= 1
+              ? [
+                  proof(
+                    "Émargements / clôtures",
+                    "/super/crm/qualiopi?tab=emargements",
+                    null,
+                    `${sessionsComplete} / ${Math.max(sessionsTotal, 1)}`,
+                  ),
+                ]
+              : []),
+          ],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/formations" },
+        });
+      }
+      // Dispositif en place (gabarits) mais pas encore de réponses collectées
+      if (templatesOk || sessionsTotal >= 1) {
+        return withManual({
+          status: "todo",
           proofs: [p],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi?tab=emargements" },
+          nextAction: { label: "Compléter", href: "/super/crm/formations" },
         });
       }
       return withManual({
-        status: sessionsTotal > 0 ? "todo" : "missing",
-        proofs: sessionsTotal > 0 ? [p] : [],
-        nextAction: { label: "Compléter", href: "/super/crm/qualiopi?tab=emargements" },
+        status: "missing",
+        proofs: [],
+        nextAction: { label: "Ajouter", href: "/super/crm/formations" },
       });
     }
     case 12: {

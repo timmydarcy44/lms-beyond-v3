@@ -357,8 +357,6 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
         emargementsSlot
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-4">
-          <QualiopiPlanExamples />
           {/* Criteria */}
           <section className="rounded-[24px] border p-5" style={{ background: CARD, borderColor: BORDER }}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -541,6 +539,12 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                     ) : null}
                                   </div>
                                 </div>
+                                {ind.status === "todo" || ind.status === "missing" ? (
+                                  <QualiopiPlanExamples
+                                    indicatorId={ind.indicatorId}
+                                    compact
+                                  />
+                                ) : null}
                               </li>
                             ))}
                           </ul>
@@ -551,7 +555,6 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
               </ul>
             )}
           </section>
-          </div>
 
           {/* Right column */}
           <aside className="space-y-3">

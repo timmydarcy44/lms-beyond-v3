@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isEdgebsDemoEmployeeId } from "@/lib/entreprise/edgebs-demo-enrich";
 import { resolveEntrepriseOverviewAccess } from "@/lib/entreprise/overview-route";
+import { ensureDisabilityAccommodationRequest } from "@/lib/handicap/create-request";
 import { syncEmployeeHandicapProfile } from "@/lib/handicap/sync";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -30,6 +31,7 @@ export async function POST(
   const body = (await request.json().catch(() => null)) as {
     rqth?: boolean;
     needs_summary?: string | null;
+    accommodation_needed?: boolean;
   } | null;
   if (!body || typeof body.rqth !== "boolean") {
     return NextResponse.json({ error: "rqth (boolean) requis" }, { status: 400 });
@@ -85,6 +87,18 @@ export async function POST(
     rqth: Boolean(data.rqth),
     rqth_needs_summary: data.rqth_needs_summary ? String(data.rqth_needs_summary) : null,
   });
+
+  const accommodationNeeded =
+    Boolean(body.accommodation_needed) || (Boolean(body.rqth) && Boolean(needs));
+  if (accommodationNeeded) {
+    await ensureDisabilityAccommodationRequest(service, {
+      scope: "business",
+      employeeId: String(data.id),
+      organizationId: data.company_id ? String(data.company_id) : companyId || null,
+      needsText: needs,
+      personEmail: data.email ? String(data.email) : null,
+    });
+  }
 
   return NextResponse.json({
     employee: {

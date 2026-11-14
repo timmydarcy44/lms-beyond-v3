@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { QualiopiHandicapPanel } from "@/components/super-admin/qualiopi-handicap-panel";
-
-export default function QualiopiHandicapPage() {
-  return <QualiopiHandicapPanel />;
+/** Ancien écran Control → nouvel espace /handicap (Lot 2). */
+export default function LegacyQualiopiHandicapRedirect() {
+  redirect("/handicap");
 }

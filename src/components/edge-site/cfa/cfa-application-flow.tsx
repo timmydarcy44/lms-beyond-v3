@@ -602,6 +602,38 @@ function AdministrativeEnrollment({
           options={["Oui", "Non"]}
         />
       </div>
+      <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <label className="flex items-start gap-3 text-sm text-white/90">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-white/20"
+            checked={data.accommodationNeeded === "1"}
+            onChange={(e) =>
+              setData({
+                ...data,
+                accommodationNeeded: e.target.checked ? "1" : "",
+                accommodationNeeds: e.target.checked ? data.accommodationNeeds ?? "" : "",
+              })
+            }
+          />
+          <span>
+            <span className="font-semibold">J&apos;ai besoin d&apos;un aménagement</span>
+            <span className="mt-1 block text-xs text-white/45">
+              Facultatif. La référente handicap vous contactera sous 72&nbsp;h. Décrivez le besoin,
+              pas la situation médicale.
+            </span>
+          </span>
+        </label>
+        {data.accommodationNeeded === "1" ? (
+          <textarea
+            value={data.accommodationNeeds ?? ""}
+            onChange={(e) => setData({ ...data, accommodationNeeds: e.target.value })}
+            rows={3}
+            placeholder="Besoins / aménagements souhaités (optionnel)"
+            className="mt-4 w-full rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/30"
+          />
+        ) : null}
+      </div>
       <div className="mt-10">
         <h3 className="text-xl font-semibold">Pièces justificatives</h3>
         <div className="mt-4 grid gap-3">

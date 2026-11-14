@@ -20,6 +20,9 @@ export function EnterpriseEmployeeRqthForm({
   className,
 }: Props) {
   const [rqth, setRqth] = useState(initialRqth);
+  const [accommodationNeeded, setAccommodationNeeded] = useState(
+    Boolean(initialNeeds?.trim()),
+  );
   const [needs, setNeeds] = useState(initialNeeds);
   const [saving, setSaving] = useState(false);
 
@@ -38,7 +41,9 @@ export function EnterpriseEmployeeRqthForm({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   rqth,
-                  needs_summary: rqth ? needs : null,
+                  accommodation_needed: accommodationNeeded,
+                  needs_summary:
+                    rqth || accommodationNeeded ? needs.trim() || null : null,
                 }),
               },
             );
@@ -47,7 +52,11 @@ export function EnterpriseEmployeeRqthForm({
               employee?: { rqth: boolean; rqth_needs_summary: string | null };
             };
             if (!res.ok) throw new Error(json.error ?? "Enregistrement impossible");
-            toast.success(rqth ? "RQTH enregistrée — transmise à la référente Byound" : "RQTH retirée");
+            toast.success(
+              accommodationNeeded || rqth
+                ? "Demande transmise à la référente handicap"
+                : "Enregistrement effectué",
+            );
             onSaved?.({
               rqth: Boolean(json.employee?.rqth),
               needs_summary: json.employee?.rqth_needs_summary ?? null,
@@ -60,10 +69,10 @@ export function EnterpriseEmployeeRqthForm({
         })();
       }}
     >
-      <p className="text-sm font-bold text-teal-950">Déclaration RQTH</p>
+      <p className="text-sm font-bold text-teal-950">Déclaration RQTH & aménagements</p>
       <p className="mt-1 text-xs text-teal-900/70">
-        Information confidentielle. Le statut est visible RH ; le suivi détaillé est réservé à la
-        référente handicap Byound.
+        Information confidentielle. Le suivi détaillé est réservé à la référente handicap
+        Byound. Décrivez le besoin, pas la situation médicale.
       </p>
       <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
         <input
@@ -74,7 +83,16 @@ export function EnterpriseEmployeeRqthForm({
         />
         Je dispose d&apos;une RQTH (ou le collaborateur en dispose)
       </label>
-      {rqth ? (
+      <label className="mt-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <input
+          type="checkbox"
+          checked={accommodationNeeded}
+          onChange={(e) => setAccommodationNeeded(e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        J&apos;ai besoin d&apos;un aménagement
+      </label>
+      {rqth || accommodationNeeded ? (
         <textarea
           value={needs}
           onChange={(e) => setNeeds(e.target.value)}

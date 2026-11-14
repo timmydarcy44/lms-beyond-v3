@@ -1,13 +1,17 @@
-"use client";
+import { redirect } from "next/navigation";
+import { resolveDisabilityCaseId } from "@/lib/handicap/resolve-case";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
-import { use } from "react";
-import { QualiopiHandicapFiche } from "@/components/super-admin/qualiopi-handicap-fiche";
-
-export default function QualiopiHandicapFichePage({
+export default async function LegacyHandicapFicheRedirect({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  return <QualiopiHandicapFiche profileId={id} />;
+  const { id } = await params;
+  const service = getServiceRoleClient();
+  if (service) {
+    const caseId = await resolveDisabilityCaseId(service, id);
+    if (caseId) redirect(`/handicap/personnes/${caseId}`);
+  }
+  redirect("/handicap");
 }

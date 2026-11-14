@@ -126,6 +126,8 @@ export type ConvocationHtmlOpts = {
   /** Data URLs pré-générées (sinon générées dans fillConvocationPdf). */
   positionnementQrDataUrl?: string | null;
   reglementQrDataUrl?: string | null;
+  /** Référente handicap (of_settings) — jamais de nom en dur. */
+  handicapReferentLine?: string | null;
 };
 
 export function buildConvocationHtml(
@@ -344,7 +346,10 @@ export function buildConvocationHtml(
         </div>
         <div class="contact-row">
           <strong>Handicap ou besoin d'aménagement</strong>
-          <span>Mme Jessica Contentin · jessica.contentin@byound.fr</span>
+          <span>${esc(
+            opts.handicapReferentLine?.trim() ||
+              "Référente handicap Byound · referent-handicap@byound.fr",
+          )}</span>
         </div>
         <div class="contact-row">
           <strong>Règlement intérieur</strong>
@@ -377,12 +382,29 @@ export async function fillConvocationPdf(
       opts.positionnementUrl?.trim() ||
       `${BYOUND_PUBLIC_ORIGIN}/dashboard/formateur`;
     const reglementUrl = `${BYOUND_PUBLIC_ORIGIN}/reglement-interieur`;
+    let handicapReferentLine = opts.handicapReferentLine?.trim() || null;
+    if (!handicapReferentLine) {
+      try {
+        const { getServiceRoleClient } = await import("@/lib/supabase/server");
+        const { loadDisabilityReferentContact } = await import(
+          "@/lib/handicap/referent-contact"
+        );
+        const service = getServiceRoleClient();
+        if (service) {
+          const contact = await loadDisabilityReferentContact(service);
+          handicapReferentLine = contact.publicLine;
+        }
+      } catch {
+        handicapReferentLine = null;
+      }
+    }
     const [positionnementQrDataUrl, reglementQrDataUrl] = await Promise.all([
       opts.positionnementQrDataUrl || qrDataUrl(posUrl, 140),
       opts.reglementQrDataUrl || qrDataUrl(reglementUrl, 120),
     ]);
     const { html } = buildConvocationHtml(ctx, {
       ...opts,
+      handicapReferentLine,
       positionnementQrDataUrl,
       reglementQrDataUrl,
     });

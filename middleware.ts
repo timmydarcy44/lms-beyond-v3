@@ -85,6 +85,7 @@ async function fetchProfileRoleForRequest(request: NextRequest): Promise<string>
 
 const BEYOND_ONLY_PREFIXES = [
   "/super",
+  "/handicap",
   "/dashboard",
   "/lms",
   "/portail",
@@ -203,6 +204,41 @@ async function runMiddleware(request: NextRequest) {
   }
 
   if (request.nextUrl.pathname.startsWith("/super")) return NextResponse.next();
+
+  // Espace Handicap (/handicap/**) — auth + staff (référente / super-admin) via cookies
+  if (
+    (request.nextUrl.pathname === "/handicap" ||
+      request.nextUrl.pathname.startsWith("/handicap/")) &&
+    SUPABASE_URL &&
+    SUPABASE_ANON_KEY
+  ) {
+    const handicapResponse = NextResponse.next();
+    const supabaseHandicap = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+      cookies: {
+        get(name) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name, value, options) {
+          handicapResponse.cookies.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          handicapResponse.cookies.set({ name, value: "", ...options, maxAge: 0 });
+        },
+      },
+    });
+    const {
+      data: { user: handicapUser },
+    } = await supabaseHandicap.auth.getUser();
+    if (!handicapUser) {
+      const login = new URL("/login", request.url);
+      login.searchParams.set("next", request.nextUrl.pathname);
+      return NextResponse.redirect(login);
+    }
+    // Le détail staff (of_settings / role_type / super_admins) est vérifié dans le layout serveur.
+    return handicapResponse;
+  }
+
   const url = request.nextUrl;
   const originalUrl = request.nextUrl.clone();
   const beyondCenterHost = isBeyondCenterHostname(hostWithoutPort);

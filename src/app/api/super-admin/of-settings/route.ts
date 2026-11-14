@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { HANDICAP_REFERENT_CANDIDATES } from "@/lib/handicap/referent-candidates";
+import { parseActivityProfile } from "@/lib/qualiopi/activity-profile";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const OF_SETTINGS_ID = "00000000-0000-4000-8000-000000000001";
@@ -153,7 +154,15 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.qualiopi_activities !== undefined && body.qualiopi_activities && typeof body.qualiopi_activities === "object") {
-    patch.qualiopi_activities = body.qualiopi_activities;
+    const profile = parseActivityProfile(body.qualiopi_activities);
+    const hasCore = profile.of || profile.cfa || profile.vae || profile.bilan;
+    if (!hasCore) {
+      return NextResponse.json(
+        { error: "Au moins une activité (OF, CFA, VAE ou Bilan) doit rester active." },
+        { status: 400 },
+      );
+    }
+    patch.qualiopi_activities = profile;
   }
   if (body.qualiopi_audit_type !== undefined) {
     const t = String(body.qualiopi_audit_type);

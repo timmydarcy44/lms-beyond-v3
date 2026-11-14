@@ -5,6 +5,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  ACTIVITY_LABELS,
+  DEFAULT_QUALIOPI_ACTIVITIES,
+  parseActivityProfile,
+  type QualiopiActivityProfile,
+} from "@/lib/qualiopi/activity-profile";
+import type { QualiopiActivityKey } from "@/lib/qualiopi/indicators";
 
 type OfSettings = {
   legal_name: string | null;
@@ -28,6 +36,9 @@ type OfSettings = {
   reclamation_reply_business_days: string | null;
   signalement_ack_business_days: string | null;
 };
+
+/** Activités affichées dans les paramètres (hors flags techniques certifying / pfst). */
+const ACTIVITY_SWITCH_KEYS: QualiopiActivityKey[] = ["of", "cfa", "vae", "bilan"];
 
 type HandicapReferentOption = {
   key: string;
@@ -63,6 +74,7 @@ const EMPTY: OfSettings = {
 
 export function OfSettingsForm() {
   const [form, setForm] = useState<OfSettings>(EMPTY);
+  const [activities, setActivities] = useState<QualiopiActivityProfile>(DEFAULT_QUALIOPI_ACTIVITIES);
   const [referentOptions, setReferentOptions] = useState<HandicapReferentOption[]>([]);
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,20 +85,22 @@ export function OfSettingsForm() {
       try {
         const res = await fetch("/api/super-admin/of-settings");
         const json = (await res.json()) as {
-          settings?: Partial<OfSettings> | null;
+          settings?: (Partial<OfSettings> & { qualiopi_activities?: unknown }) | null;
           handicapReferentOptions?: HandicapReferentOption[];
           staffOptions?: StaffOption[];
         };
         if (json.settings) {
+          const { qualiopi_activities, ...rest } = json.settings;
           setForm({
             ...EMPTY,
             ...Object.fromEntries(
-              Object.entries(json.settings).map(([key, value]) => [
+              Object.entries(rest).map(([key, value]) => [
                 key,
                 value == null ? "" : String(value),
               ]),
             ),
           } as OfSettings);
+          setActivities(parseActivityProfile(qualiopi_activities));
         }
         setReferentOptions(json.handicapReferentOptions ?? []);
         setStaffOptions(json.staffOptions ?? []);
@@ -100,6 +114,18 @@ export function OfSettingsForm() {
 
   const set = (key: keyof OfSettings, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const toggleActivity = (key: QualiopiActivityKey, next: boolean) => {
+    setActivities((current) => {
+      const updated = { ...current, [key]: next };
+      const anyCore = ACTIVITY_SWITCH_KEYS.some((k) => updated[k]);
+      if (!anyCore) {
+        toast.error("Au moins une activité (OF, CFA, VAE ou Bilan) doit rester active.");
+        return current;
+      }
+      return updated;
+    });
   };
 
   const selectedReferentMissing =
@@ -128,10 +154,16 @@ export function OfSettingsForm() {
                 const res = await fetch("/api/super-admin/of-settings", {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(form),
+                  body: JSON.stringify({ ...form, qualiopi_activities: activities }),
                 });
-                const json = (await res.json()) as { error?: string };
+                const json = (await res.json()) as {
+                  error?: string;
+                  settings?: { qualiopi_activities?: unknown };
+                };
                 if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
+                if (json.settings?.qualiopi_activities !== undefined) {
+                  setActivities(parseActivityProfile(json.settings.qualiopi_activities));
+                }
                 toast.success("Paramètres OF enregistrés");
               } catch (error) {
                 toast.error(error instanceof Error ? error.message : "Erreur");
@@ -141,6 +173,31 @@ export function OfSettingsForm() {
             })();
           }}
         >
+          <div className="md:col-span-2 space-y-3 rounded-xl border border-[#262A4A] bg-[#0A0C1B]/60 p-4">
+            <div>
+              <p className="text-sm font-medium text-[#F3F4FA]">Activités Qualiopi</p>
+              <p className="mt-1 text-xs text-[#A3A8C7]">
+                Coupez CFA si vous certifiez uniquement en organisme de formation (Business). Les
+                indicateurs réservés passent alors en non applicables.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {ACTIVITY_SWITCH_KEYS.map((key) => (
+                <label
+                  key={key}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-[#262A4A] px-3 py-2.5"
+                >
+                  <span className="text-sm text-[#F3F4FA]">{ACTIVITY_LABELS[key]}</span>
+                  <Switch
+                    checked={activities[key]}
+                    onCheckedChange={(checked) => toggleActivity(key, checked)}
+                    className="data-[state=checked]:bg-[#6C5CF5]"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
           {(
             [
               ["legal_name", "Raison sociale"],

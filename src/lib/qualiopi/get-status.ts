@@ -43,6 +43,10 @@ export type QualiopiStatusSignals = {
   veilleMetierDone: number;
   veillePedagogieDone: number;
   veilleToReadThisMonth: number;
+  /** Digests générés (veille auto) sur 90 j. */
+  veilleDigestCount: number;
+  veilleAnySaved: number;
+  veilleAnyDone: number;
   reclamationsProcessReady: boolean;
   reclamationsOpenCount: number;
   signalementsProcessReady: boolean;
@@ -370,25 +374,60 @@ function assessAuto(
     case 23:
     case 24:
     case 25: {
-      const done =
+      const themeDone =
         id === 23
           ? sig.veilleReglementaireDone
           : id === 24
             ? sig.veilleMetierDone
             : sig.veillePedagogieDone;
-      return withManual(
-        done >= 1
-          ? {
-              status: "proven",
-              proofs: [proof("Veille traitée", "/super/crm/qualiopi/veilles", null, null)],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/veilles" },
-            }
-          : {
-              status: "todo",
-              proofs: [],
-              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/veilles" },
-            },
-      );
+      // Highlight « Traité » sans thème / transversal : compte pour les 3 axes
+      const exploited = themeDone >= 1 || sig.veilleAnyDone >= 1;
+      const autoActive = sig.veilleDigestCount >= 1 || sig.veilleAnySaved >= 1;
+      const axisLabel =
+        id === 23 ? "réglementaire" : id === 24 ? "métier" : "pédagogie";
+
+      if (exploited || autoActive) {
+        const proofs: QualiopiProofRef[] = [];
+        if (sig.veilleDigestCount >= 1) {
+          proofs.push(
+            proof(
+              "Veille automatique (digests)",
+              "/super/crm/qualiopi/veilles",
+              null,
+              `${sig.veilleDigestCount} digest(s) / 90 j`,
+            ),
+          );
+        }
+        if (exploited) {
+          proofs.push(
+            proof(
+              `Highlight ${axisLabel} traité`,
+              "/super/crm/qualiopi/veilles",
+              null,
+              themeDone >= 1 ? `${themeDone} traité(s)` : `${sig.veilleAnyDone} traité(s)`,
+            ),
+          );
+        } else if (sig.veilleAnySaved >= 1) {
+          proofs.push(
+            proof(
+              "Surlignages enregistrés",
+              "/super/crm/qualiopi/veilles",
+              null,
+              `${sig.veilleAnySaved} — passer en Traité pour renforcer la preuve`,
+            ),
+          );
+        }
+        return withManual({
+          status: "proven",
+          proofs,
+          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/veilles" },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [],
+        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/veilles" },
+      });
     }
     case 26:
       return withManual(

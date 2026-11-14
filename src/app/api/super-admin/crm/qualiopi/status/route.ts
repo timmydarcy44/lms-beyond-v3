@@ -130,6 +130,9 @@ async function buildStatus(force = false) {
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
+  const since90 = new Date();
+  since90.setUTCDate(since90.getUTCDate() - 90);
+  const since90Iso = since90.toISOString();
 
   const signals: QualiopiStatusSignals = {
     coursesPublicWithInfo,
@@ -178,6 +181,21 @@ async function buildStatus(force = false) {
         .select("id", { count: "exact", head: true })
         .neq("status", "done")
         .gte("created_at", monthStart.toISOString()),
+    ),
+    veilleDigestCount: await safeCount(() =>
+      supabase
+        .from("crm_qualiopi_veille_digests")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", since90Iso),
+    ),
+    veilleAnySaved: await safeCount(() =>
+      supabase.from("crm_qualiopi_veille_highlights").select("id", { count: "exact", head: true }),
+    ),
+    veilleAnyDone: await safeCount(() =>
+      supabase
+        .from("crm_qualiopi_veille_highlights")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "done"),
     ),
     reclamationsProcessReady: Boolean(processReady.reclamations),
     reclamationsOpenCount: await safeCount(() =>

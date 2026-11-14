@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadHandicapHomeData } from "@/lib/handicap/home-data";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
@@ -39,7 +38,7 @@ export default async function HandicapRendezVousPage() {
             const d = new Date(m.scheduledAt);
             return (
               <li key={m.id}>
-                <Link
+                <a
                   href={`/handicap/personnes/${m.caseId}`}
                   className="flex items-center gap-4 rounded-[20px] border px-4 py-3"
                   style={{ background: T.card, borderColor: T.border, color: T.text }}
@@ -69,7 +68,7 @@ export default async function HandicapRendezVousPage() {
                     </p>
                   </div>
                   <span style={{ color: T.muted }}>›</span>
-                </Link>
+                </a>
               </li>
             );
           })}

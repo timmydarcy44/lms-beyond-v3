@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { HandicapHomePayload } from "@/lib/handicap/home-data";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
@@ -103,7 +102,7 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                       {todo.subtitle}
                     </p>
                   </div>
-                  <Link
+                  <a
                     href={todo.href}
                     className="self-center rounded-full px-3 py-1.5 text-[12px] font-bold"
                     style={{
@@ -112,7 +111,7 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                     }}
                   >
                     {todo.cta}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -126,9 +125,9 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-[16px] font-extrabold">Prochains rendez-vous</h2>
-              <Link href="/handicap/rendez-vous" className="text-[12px] font-semibold" style={{ color: T.accent }}>
+              <a href="/handicap/rendez-vous" className="text-[12px] font-semibold" style={{ color: T.accent }}>
                 Agenda ›
-              </Link>
+              </a>
             </div>
             {data.upcomingMeetings.length === 0 ? (
               <p className="mt-4 text-sm" style={{ color: T.muted }}>
@@ -269,10 +268,20 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                   const pill = STATUS_PILL[p.status] ?? STATUS_PILL.closed;
                   const shown = p.accommodations.slice(0, 3);
                   const extra = p.accommodations.length - shown.length;
+                  const href = `/handicap/personnes/${p.id}`;
                   return (
-                    <tr key={p.id} className="border-t" style={{ borderColor: T.border }}>
+                    <tr
+                      key={p.id}
+                      className="border-t cursor-pointer transition hover:bg-white/[0.02]"
+                      style={{ borderColor: T.border }}
+                      onClick={() => {
+                        window.location.href = href;
+                      }}
+                    >
                       <td className="py-3.5 pr-3">
-                        <p className="font-bold">{p.personName}</p>
+                        <a href={href} className="font-bold hover:underline" onClick={(e) => e.stopPropagation()}>
+                          {p.personName}
+                        </a>
                         <p className="text-[12px]" style={{ color: T.muted }}>
                           {p.roleLine}
                         </p>
@@ -317,13 +326,9 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                         {p.nextStep.text}
                       </td>
                       <td className="py-3.5 text-right">
-                        <Link
-                          href={`/handicap/personnes/${p.id}`}
-                          className="text-[16px] font-bold"
-                          style={{ color: T.muted }}
-                        >
+                        <a href={href} className="text-[16px] font-bold" style={{ color: T.muted }}>
                           ›
-                        </Link>
+                        </a>
                       </td>
                     </tr>
                   );

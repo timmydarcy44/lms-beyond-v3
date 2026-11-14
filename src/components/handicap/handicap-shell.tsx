@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Lock, Search } from "lucide-react";
 import { Manrope } from "next/font/google";
@@ -81,7 +80,7 @@ export function HandicapShell({
                     ? counts.requests
                     : null;
             return (
-              <Link
+              <a
                 key={item.id}
                 href={item.href}
                 className="flex items-center justify-between rounded-full px-3 py-2.5 text-[13.5px] font-semibold transition"
@@ -106,7 +105,7 @@ export function HandicapShell({
                     {count}
                   </span>
                 ) : null}
-              </Link>
+              </a>
             );
           })}
         </nav>
@@ -165,13 +164,13 @@ export function HandicapShell({
               }}
             />
           </div>
-          <Link
+          <a
             href={`${BASE}/personnes?nouveau=1`}
             className="shrink-0 rounded-full bg-white px-4 py-2.5 text-[13px] font-bold text-[#0A0F1E]"
           >
             ＋ Nouvel accompagnement
-          </Link>
-          <Link
+          </a>
+          <a
             href={`${BASE}/demandes`}
             className="relative grid h-10 w-10 place-items-center rounded-full border"
             style={{ borderColor: T.border, background: T.card, color: T.muted }}
@@ -186,7 +185,7 @@ export function HandicapShell({
                 {counts.requests > 9 ? "9+" : counts.requests}
               </span>
             ) : null}
-          </Link>
+          </a>
         </header>
 
         <main className="min-h-0 flex-1 overflow-auto px-6 py-6">{children}</main>

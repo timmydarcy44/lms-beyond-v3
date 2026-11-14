@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadHandicapHomeData } from "@/lib/handicap/home-data";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
@@ -39,7 +38,7 @@ export default async function HandicapDemandesPage() {
         <ul className="space-y-2">
           {demandes.map((p) => (
             <li key={p.id}>
-              <Link
+              <a
                 href={`/handicap/personnes/${p.id}`}
                 className="flex items-center justify-between rounded-[20px] border px-4 py-3"
                 style={{ background: T.card, borderColor: T.border, color: T.text }}
@@ -57,7 +56,7 @@ export default async function HandicapDemandesPage() {
                 >
                   Prendre contact ›
                 </span>
-              </Link>
+              </a>
             </li>
           ))}
         </ul>

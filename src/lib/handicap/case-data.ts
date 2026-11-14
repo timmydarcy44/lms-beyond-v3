@@ -25,45 +25,55 @@ export async function loadDisabilityCaseDetail(
     .maybeSingle();
   if (error || !c) return null;
 
-  const [
-    { data: accommodations },
-    { data: actions },
-    { data: meetings },
-    { data: documents },
-    { data: partners },
-    { data: accessLog },
-  ] = await Promise.all([
-    service
-      .from("disability_accommodations")
-      .select("id, category, label, details, shared_with_trainer_at")
-      .eq("case_id", caseId)
-      .order("created_at", { ascending: true }),
-    service
-      .from("disability_actions")
-      .select("id, label, owner, due_date, status, done_at")
-      .eq("case_id", caseId)
-      .order("due_date", { ascending: true, nullsFirst: false }),
-    service
-      .from("disability_meetings")
-      .select("id, title, scheduled_at, mode, notes_enc, status, closed_at")
-      .eq("case_id", caseId)
-      .order("scheduled_at", { ascending: false, nullsFirst: false }),
-    service
-      .from("disability_documents")
-      .select("id, kind, title, uploaded_at, valid_until")
-      .eq("case_id", caseId)
-      .order("uploaded_at", { ascending: false }),
-    service
-      .from("disability_partners")
-      .select("id, partner, status, note")
-      .eq("case_id", caseId),
-    service
-      .from("disability_access_log")
-      .select("id, action, actor_id, created_at")
-      .eq("case_id", caseId)
-      .order("created_at", { ascending: false })
-      .limit(20),
-  ]);
+  let accommodations: Array<Record<string, unknown>> | null = null;
+  let actions: Array<Record<string, unknown>> | null = null;
+  let meetings: Array<Record<string, unknown>> | null = null;
+  let documents: Array<Record<string, unknown>> | null = null;
+  let partners: Array<Record<string, unknown>> | null = null;
+  let accessLog: Array<Record<string, unknown>> | null = null;
+
+  try {
+    const results = await Promise.all([
+      service
+        .from("disability_accommodations")
+        .select("id, category, label, details, shared_with_trainer_at")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: true }),
+      service
+        .from("disability_actions")
+        .select("id, label, owner, due_date, status, done_at")
+        .eq("case_id", caseId)
+        .order("due_date", { ascending: true }),
+      service
+        .from("disability_meetings")
+        .select("id, title, scheduled_at, mode, notes_enc, status, closed_at")
+        .eq("case_id", caseId)
+        .order("scheduled_at", { ascending: false }),
+      service
+        .from("disability_documents")
+        .select("id, kind, title, uploaded_at, valid_until")
+        .eq("case_id", caseId)
+        .order("uploaded_at", { ascending: false }),
+      service
+        .from("disability_partners")
+        .select("id, partner, status, note")
+        .eq("case_id", caseId),
+      service
+        .from("disability_access_log")
+        .select("id, action, actor_id, created_at")
+        .eq("case_id", caseId)
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
+    accommodations = (results[0].data as Array<Record<string, unknown>> | null) ?? null;
+    actions = (results[1].data as Array<Record<string, unknown>> | null) ?? null;
+    meetings = (results[2].data as Array<Record<string, unknown>> | null) ?? null;
+    documents = (results[3].data as Array<Record<string, unknown>> | null) ?? null;
+    partners = (results[4].data as Array<Record<string, unknown>> | null) ?? null;
+    accessLog = (results[5].data as Array<Record<string, unknown>> | null) ?? null;
+  } catch (err) {
+    console.error("[disability] load related", caseId, err instanceof Error ? err.message : err);
+  }
 
   let personName = "Personne";
   let personFirstName = "la personne";
@@ -161,15 +171,27 @@ export async function loadDisabilityCaseDetail(
       status: String(a.status),
       doneAt: a.done_at ? String(a.done_at) : null,
     })),
-    meetings: (meetings ?? []).map((m) => ({
-      id: String(m.id),
-      title: String(m.title ?? "Rendez-vous"),
-      scheduledAt: m.scheduled_at ? String(m.scheduled_at) : null,
-      mode: m.mode ? String(m.mode) : null,
-      notes: decryptDisabilityNotes(m.notes_enc ? String(m.notes_enc) : ""),
-      status: String(m.status ?? "open"),
-      closedAt: m.closed_at ? String(m.closed_at) : null,
-    })),
+    meetings: (meetings ?? []).map((m) => {
+      let notes = "";
+      try {
+        notes = decryptDisabilityNotes(m.notes_enc ? String(m.notes_enc) : "");
+      } catch (err) {
+        console.error(
+          "[disability] decrypt notes",
+          m.id,
+          err instanceof Error ? err.message : err,
+        );
+      }
+      return {
+        id: String(m.id),
+        title: String(m.title ?? "Rendez-vous"),
+        scheduledAt: m.scheduled_at ? String(m.scheduled_at) : null,
+        mode: m.mode ? String(m.mode) : null,
+        notes,
+        status: String(m.status ?? "open"),
+        closedAt: m.closed_at ? String(m.closed_at) : null,
+      };
+    }),
     documents: (documents ?? []).map((d) => ({
       id: String(d.id),
       kind: String(d.kind),

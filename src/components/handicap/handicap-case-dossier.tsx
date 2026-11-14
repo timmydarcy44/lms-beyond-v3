@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Check,
@@ -334,13 +333,13 @@ export function HandicapCaseDossier({
                   Exporter le dossier PDF
                 </button>
                 {bundle.isSuperAdmin ? (
-                  <Link
+                  <a
                     href="/super"
                     className="block px-4 py-2 text-[13px] hover:bg-white/5"
                     onClick={() => setMenuOpen(false)}
                   >
                     Voir dans Byound Control
-                  </Link>
+                  </a>
                 ) : null}
               </div>
             ) : null}

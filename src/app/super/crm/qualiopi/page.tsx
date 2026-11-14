@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
-import { ChevronRight, FileText, Plus, Trash2, Upload } from "lucide-react";
+import { ChevronRight, FileText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { QualiopiRnqPanel } from "@/components/super-admin/qualiopi-rnq-panel";
-import { QualiopiAuditRecapPanel } from "@/components/super-admin/qualiopi-audit-recap-panel";
+import { QualiopiOverviewV2 } from "@/components/super-admin/qualiopi-overview-v2";
 import {
   QUALIOPI_CORE_DOCS,
   formatSignedAt,
@@ -24,12 +22,7 @@ import {
   type QualiopiDocument,
   type QualiopiSession,
 } from "@/lib/crm/qualiopi-shared";
-import {
-  QUALIOPI_CARD,
-  QUALIOPI_CARD_INNER,
-  QUALIOPI_MUTED,
-  QUALIOPI_PAGE_BG,
-} from "@/components/super-admin/qualiopi/qualiopi-audit-styles";
+import { getCoffreAdminStatus } from "@/lib/qualiopi/coffre-admin";
 import { cn } from "@/lib/utils";
 
 function sessionDateBadge(scheduledAt: string | null) {
@@ -45,7 +38,11 @@ function sessionDateBadge(scheduledAt: string | null) {
     .toLocaleDateString("fr-FR", { month: "short" })
     .replace(".", "")
     .toUpperCase();
-  const subtitle = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const subtitle = d.toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
   return { line1, line2, subtitle };
 }
 
@@ -57,11 +54,14 @@ function signatureSummary(session: QualiopiSession) {
   return `${signed}/${total} signatures`;
 }
 
+type TabId = "overview" | "coffre" | "emargements" | "veilles" | "qualite" | "risques";
+
 export default function CrmQualiopiPage() {
   const [documents, setDocuments] = useState<QualiopiDocument[]>([]);
   const [sessions, setSessions] = useState<QualiopiSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [complianceRefreshKey, setComplianceRefreshKey] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabId>("overview");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<QualiopiDocKind>("autre");
@@ -71,19 +71,30 @@ export default function CrmQualiopiPage() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
       const [docsRes, sessionsRes] = await Promise.all([
-        fetch("/api/super-admin/crm/qualiopi/documents"),
-        fetch("/api/super-admin/crm/qualiopi/sessions"),
+        fetch("/api/super-admin/crm/qualiopi/documents", { signal: controller.signal }),
+        fetch("/api/super-admin/crm/qualiopi/sessions", { signal: controller.signal }),
       ]);
+      clearTimeout(timer);
       const docsJson = await docsRes.json();
       const sessionsJson = await sessionsRes.json();
       if (!docsRes.ok) throw new Error(docsJson.error || "Documents indisponibles");
+      if (!sessionsRes.ok) throw new Error(sessionsJson.error || "Sessions indisponibles");
       setDocuments(docsJson.documents ?? []);
       setSessions(sessionsJson.sessions ?? []);
-      setComplianceRefreshKey((k) => k + 1);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Chargement impossible");
+      const msg =
+        error instanceof Error
+          ? error.name === "AbortError"
+            ? "Délai dépassé — réessayez"
+            : error.message
+          : "Chargement impossible";
+      setLoadError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -93,12 +104,13 @@ export default function CrmQualiopiPage() {
     void load();
   }, []);
 
-  const vaultDocs = useMemo(() => {
-    const byKind = new Map(documents.filter((d) => d.kind !== "autre").map((d) => [d.kind, d]));
-    return QUALIOPI_CORE_DOCS.map((template) => byKind.get(template.kind)).filter(Boolean) as QualiopiDocument[];
-  }, [documents]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab");
+    if (t === "coffre" || t === "emargements" || t === "overview") setTab(t);
+  }, []);
 
-  const vaultDeposited = vaultDocs.filter((d) => d.file_url).length;
+  const coffre = useMemo(() => getCoffreAdminStatus(documents), [documents]);
 
   const openAdd = (preset?: { id?: string; kind?: QualiopiDocKind; title?: string }) => {
     setReplaceId(preset?.id ?? null);
@@ -120,255 +132,241 @@ export default function CrmQualiopiPage() {
       form.set("kind", kind);
       if (replaceId) form.set("id", replaceId);
       if (file) form.set("file", file);
-      const res = await fetch("/api/super-admin/crm/qualiopi/documents", { method: "POST", body: form });
+      const res = await fetch("/api/super-admin/crm/qualiopi/documents", {
+        method: "POST",
+        body: form,
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
       toast.success("Document enregistré");
       setDialogOpen(false);
       await load();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Enregistrement impossible");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
       setSaving(false);
     }
   };
 
   const removeDoc = async (doc: QualiopiDocument) => {
-    if (!confirm(doc.kind === "autre" ? "Supprimer ce document ?" : "Retirer le fichier de ce modèle ?")) return;
-    const res = await fetch(`/api/super-admin/crm/qualiopi/documents/${doc.id}`, { method: "DELETE" });
+    if (!confirm("Supprimer ce fichier du coffre ?")) return;
+    const res = await fetch(`/api/super-admin/crm/qualiopi/documents?id=${doc.id}`, {
+      method: "DELETE",
+    });
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      toast.error("Suppression impossible");
+      toast.error(json.error || "Suppression impossible");
       return;
     }
+    toast.success("Supprimé");
     await load();
   };
 
-  return (
-    <div className={cn(QUALIOPI_PAGE_BG, "space-y-8 px-3 py-6 sm:px-6 sm:py-8")}>
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">Qualiopi</h1>
-            <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-              Référentiel RNQ, coffre administratif et preuves de session : convention, émargement, satisfaction.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
-              <Link href="/super/crm/qualiopi/veilles">Veilles</Link>
-            </Button>
-            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
-              <Link href="/super/crm/qualiopi/qualite">Qualité</Link>
-            </Button>
-            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
-              <Link href="/super/crm/qualiopi/risques">Risques</Link>
-            </Button>
-            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
-              <Link href="/super/crm/qualiopi/process">Process</Link>
-            </Button>
-            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
-              <Link href="/super/crm/qualiopi/pilote">Pilote</Link>
-            </Button>
-            <Button
-              onClick={() => openAdd()}
-              className="rounded-full bg-white text-[#0b0e18] hover:bg-white/90"
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Ajouter un document
-            </Button>
-          </div>
+  const coffreSlot = (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Coffre administratif</h2>
+          <p className="mt-1 text-sm text-[#9AA3BD]">
+            Convention, règlement intérieur, livret d’accueil — source unique pour l’indicateur 1.
+          </p>
         </div>
+        <span className="text-sm font-medium tabular-nums text-white/70">
+          {coffre.deposited} / {coffre.expected} déposés
+        </span>
       </div>
-
-      <QualiopiRnqPanel refreshKey={complianceRefreshKey} />
-
-      <QualiopiAuditRecapPanel />
-
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Coffre administratif</h2>
-            <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
-              Envoyé automatiquement dès qu&apos;une formation B2B est programmée ou démarre.
-            </p>
-          </div>
-          <span className="text-sm font-medium tabular-nums text-white/70">
-            {vaultDeposited} / {QUALIOPI_CORE_DOCS.length} déposés
-          </span>
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-36 animate-pulse rounded-2xl bg-white/5" />
+          ))}
         </div>
-
-        {loading ? (
-          <p className={cn("text-sm", QUALIOPI_MUTED)}>Chargement…</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {vaultDocs.map((doc) => {
-              const deposited = Boolean(doc.file_url);
-              return (
-                <div key={doc.id} className={cn(QUALIOPI_CARD, "relative p-4")}>
-                  <span
-                    className={cn(
-                      "absolute right-3 top-3 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                      deposited
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                        : "border-amber-500/25 bg-amber-500/10 text-amber-200",
-                    )}
+      ) : loadError ? (
+        <div className="rounded-2xl border border-[#FF8A9B]/30 bg-[#FF8A9B]/10 p-4 text-sm text-[#FF8A9B]">
+          {loadError}
+          <Button size="sm" className="ml-3 rounded-full bg-white text-[#0A0F1E]" onClick={() => void load()}>
+            Réessayer
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {coffre.slots.map((slot) => {
+            const doc = slot.document;
+            return (
+              <div
+                key={slot.kind}
+                className="relative rounded-2xl border border-[#1A2340] bg-[#111831] p-4"
+              >
+                <span
+                  className={cn(
+                    "absolute right-3 top-3 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                    slot.deposited
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                      : "border-amber-500/25 bg-amber-500/10 text-amber-200",
+                  )}
+                >
+                  {slot.deposited ? "Déposé" : "À déposer"}
+                </span>
+                <FileText className="h-8 w-8 text-[#6E5BFF]/80" />
+                <div className="mt-3 pr-16 font-semibold text-white">{slot.title}</div>
+                <p className="mt-1 text-xs text-[#9AA3BD]">
+                  {doc?.file_name ? doc.file_name : "Aucun fichier"}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      openAdd({
+                        id: doc?.id,
+                        kind: slot.kind,
+                        title: slot.title,
+                      })
+                    }
+                    className="rounded-lg bg-[#6E5BFF] text-white hover:bg-[#5a4ae0]"
                   >
-                    {deposited ? "Déposé" : "À déposer"}
-                  </span>
-                  <FileText className="h-8 w-8 text-[#3D7BFF]/80" />
-                  <div className="mt-3 pr-16 font-semibold text-white">{doc.title}</div>
-                  <p className={cn("mt-1 text-xs", QUALIOPI_MUTED)}>
-                    {doc.file_name ? doc.file_name : "Aucun fichier — glissez un modèle ici"}
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Upload className="mr-1 h-3 w-3" />
+                    {slot.deposited ? "Remplacer" : "Déposer"}
+                  </Button>
+                  {doc?.file_url ? (
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/5"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </a>
+                  ) : null}
+                  {doc?.file_url ? (
                     <Button
                       size="sm"
-                      onClick={() => openAdd(doc)}
-                      className="rounded-lg bg-[#3D7BFF] text-white hover:bg-[#3568d4]"
+                      variant="ghost"
+                      className="text-white/40 hover:bg-white/5 hover:text-white/70"
+                      onClick={() => void removeDoc(doc)}
                     >
-                      <Upload className="mr-1 h-3 w-3" />
-                      {deposited ? "Remplacer" : "Déposer"}
+                      <Trash2 className="h-3 w-3" />
                     </Button>
-                    {doc.file_url ? (
-                      <a
-                        href={doc.file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/60 hover:bg-white/5"
-                        title="Voir le fichier"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </a>
-                    ) : null}
-                    {doc.file_url ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-white/40 hover:bg-white/5 hover:text-white/70"
-                        onClick={() => void removeDoc(doc)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    ) : null}
-                  </div>
+                  ) : null}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 
-      <section className={cn(QUALIOPI_CARD, "p-5 sm:p-6")}>
-        <h2 className="text-lg font-semibold text-white">Émargements horodatés</h2>
-        <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
-          Preuve Qualiopi : jour et heure de signature de chaque collaborateur.
-        </p>
-        {loading ? (
-          <p className={cn("mt-4 text-sm", QUALIOPI_MUTED)}>Chargement…</p>
-        ) : sessions.length === 0 ? (
-          <p className={cn("mt-4 text-sm", QUALIOPI_MUTED)}>Aucune session pour le moment.</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {sessions.map((session) => {
-              const badge = sessionDateBadge(session.scheduled_at);
-              const statusLabel =
-                session.status === "scheduled"
-                  ? "Programmée"
-                  : qualiopiSessionStatusLabel(session.status);
-              return (
-                <li key={session.id}>
-                  <details className={cn("group", QUALIOPI_CARD_INNER, "overflow-hidden")}>
-                    <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-3 sm:px-4 [&::-webkit-details-marker]:hidden">
-                      <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-center leading-tight">
-                        <span className="text-lg font-bold tabular-nums text-white">{badge.line1}</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-white/50">
-                          {badge.line2}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-white">{session.course_name}</p>
-                        <p className={cn("text-xs", QUALIOPI_MUTED)}>{badge.subtitle}</p>
-                      </div>
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-white/70">
-                          {statusLabel}
-                        </span>
-                        <span className={cn("hidden text-xs sm:inline", QUALIOPI_MUTED)}>
-                          {signatureSummary(session)}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-white/30 transition group-open:rotate-90" />
-                      </div>
-                    </summary>
-                    <ul className="space-y-1 border-t border-white/[0.06] px-4 py-3">
-                      {(session.attendees ?? []).length === 0 ? (
-                        <li className={cn("text-sm", QUALIOPI_MUTED)}>Aucun participant inscrit.</li>
-                      ) : (
-                        (session.attendees ?? []).map((attendee) => {
-                          const signed = formatSignedAt(attendee.signed_at);
-                          return (
-                            <li
-                              key={attendee.id}
-                              className="flex flex-wrap justify-between gap-2 rounded-lg px-2 py-1.5 text-sm text-white/80"
-                            >
-                              <span>
-                                {attendee.full_name}{" "}
-                                <span className="text-white/35">({attendee.email})</span>
-                              </span>
-                              <span className={signed ? "text-emerald-300/90" : "text-amber-200/90"}>
-                                {signed ? `Signé ${signed.label}` : "En attente d’émargement"}
-                              </span>
-                            </li>
-                          );
-                        })
-                      )}
-                    </ul>
-                  </details>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+  const emargementsSlot = (
+    <section className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5 sm:p-6">
+      <h2 className="text-lg font-semibold text-white">Émargements horodatés</h2>
+      <p className="mt-1 text-sm text-[#9AA3BD]">
+        Une session est complète quand tous les participants ont signé.
+      </p>
+      {loading ? (
+        <div className="mt-4 h-24 animate-pulse rounded-xl bg-white/5" />
+      ) : loadError ? (
+        <div className="mt-4 text-sm text-[#FF8A9B]">
+          {loadError}{" "}
+          <button type="button" className="underline" onClick={() => void load()}>
+            Réessayer
+          </button>
+        </div>
+      ) : sessions.length === 0 ? (
+        <p className="mt-4 text-sm text-[#9AA3BD]">Aucune session pour le moment.</p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {sessions.map((session) => {
+            const badge = sessionDateBadge(session.scheduled_at);
+            const statusLabel =
+              session.status === "scheduled"
+                ? "Programmée"
+                : qualiopiSessionStatusLabel(session.status);
+            return (
+              <li
+                key={session.id}
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-[#1A2340] bg-[#0B1122] px-3 py-2.5"
+              >
+                <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-[#6E5BFF]/15 text-[#C9C2FF]">
+                  <span className="text-lg font-bold leading-none">{badge.line1}</span>
+                  <span className="text-[10px] uppercase">{badge.line2}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-white">
+                    {session.course_name || "Formation"}
+                  </p>
+                  <p className="text-xs text-[#9AA3BD]">
+                    {session.company_name} · {statusLabel} · {signatureSummary(session)}
+                    {session.scheduled_at ? ` · ${formatSignedAt(session.scheduled_at)}` : ""}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+
+  return (
+    <div className="min-h-screen px-4 py-6 sm:px-6" style={{ background: "#0A0F1E" }}>
+      <div className="mx-auto max-w-[1200px]">
+        <QualiopiOverviewV2
+          tab={tab}
+          onTabChange={setTab}
+          coffreSlot={coffreSlot}
+          emargementsSlot={emargementsSlot}
+        />
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="border-[#1A2340] bg-[#111831] text-white">
           <DialogHeader>
-            <DialogTitle>{replaceId ? "Mettre à jour le document" : "Ajouter un document"}</DialogTitle>
+            <DialogTitle>{replaceId ? "Remplacer le document" : "Déposer un document"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Titre</Label>
-              <Input value={title} onChange={(event) => setTitle(event.target.value)} />
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="border-[#26304F] bg-[#0B1122]"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
               <select
                 value={kind}
-                onChange={(event) => setKind(event.target.value as QualiopiDocKind)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                disabled={Boolean(replaceId && kind !== "autre")}
+                onChange={(e) => setKind(e.target.value as QualiopiDocKind)}
+                className="w-full rounded-md border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm"
               >
-                <option value="convention">Convention de formation</option>
-                <option value="reglement">Règlement intérieur</option>
-                <option value="livret">Livret d&apos;accueil</option>
+                {QUALIOPI_CORE_DOCS.map((d) => (
+                  <option key={d.kind} value={d.kind}>
+                    {d.title}
+                  </option>
+                ))}
                 <option value="autre">Autre</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Fichier (PDF)</Label>
+              <Label>Fichier PDF</Label>
               <Input
                 type="file"
-                accept=".pdf,application/pdf,image/*"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                accept="application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="border-[#26304F] bg-[#0B1122]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button variant="ghost" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={() => void saveDoc()} disabled={saving}>
-              {saving ? "Enregistrement…" : "Enregistrer"}
+            <Button
+              disabled={saving}
+              onClick={() => void saveDoc()}
+              className="bg-[#6E5BFF] text-white"
+            >
+              {saving ? "…" : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>

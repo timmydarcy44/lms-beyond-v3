@@ -293,9 +293,24 @@ export function assessQualiopiCompliance(input: {
       );
     })(),
 
-    naDraft(13),
-    naDraft(14),
-    naDraft(15),
+    row(
+      13,
+      "partial",
+      "CFA — coordination alternance centre / entreprise : preuves à formaliser.",
+      "Dépôt manuel indicateur 13.",
+    ),
+    row(
+      14,
+      "partial",
+      "CFA — accompagnement socio-professionnel : preuves à formaliser.",
+      "Dépôt manuel indicateur 14.",
+    ),
+    row(
+      15,
+      "partial",
+      "CFA — droits et devoirs des apprentis : preuves à formaliser.",
+      "Dépôt manuel indicateur 15.",
+    ),
     naDraft(16),
 
     // —— Critère 4 ——
@@ -347,7 +362,12 @@ export function assessQualiopiCompliance(input: {
             "Compléter le catalogue et activer le suivi LMS sur un dossier.",
           ),
 
-    naDraft(20),
+    row(
+      20,
+      "partial",
+      "CFA — mobilité, référent handicap, conseil de perfectionnement : preuves à formaliser.",
+      "Dépôt manuel indicateur 20.",
+    ),
 
     // —— Critère 5 ——
     hasExperts && signals.approvedExperts >= 2
@@ -475,7 +495,13 @@ export function assessQualiopiCompliance(input: {
         ),
 
     naDraft(28),
-    naDraft(29),
+    // Ind. 29 : applicable si CFA (profil) — scorer legacy : partiel en attendant preuves CFA
+    row(
+      29,
+      "partial",
+      "CFA — insertion / poursuite d’études : preuves à formaliser (taux, actions).",
+      "Dépôt manuel ou module CFA.",
+    ),
 
     // —— Critère 7 ——
     ev.sessionsWithFullSatisfaction >= 1
@@ -541,7 +567,6 @@ export function assessQualiopiCompliance(input: {
           "Qualiopi → Risques : créer le registre, ou Qualité → action PAQ.",
         ),
 
-    naDraft(33),
   ];
 
   // Garde-fou : tout id N/A OF doit rester not_applicable même si draft divergé.

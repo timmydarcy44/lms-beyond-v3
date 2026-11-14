@@ -1,0 +1,620 @@
+import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
+import {
+  DEFAULT_QUALIOPI_ACTIVITIES,
+  isIndicatorApplicable,
+  parseActivityProfile,
+  type QualiopiActivityProfile,
+} from "@/lib/qualiopi/activity-profile";
+import { QUALIOPI_AUDIT_PROOF_RECAP } from "@/lib/qualiopi/audit-proof-recap";
+import { getCoffreAdminStatus } from "@/lib/qualiopi/coffre-admin";
+import { QUALIOPI_INDICATORS } from "@/lib/qualiopi/indicators";
+import type {
+  QualiopiIndicatorStatus,
+  QualiopiProofRef,
+  QualiopiStatusSnapshot,
+  QualiopiUiStatus,
+} from "@/lib/qualiopi/status-types";
+
+const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000;
+
+export type QualiopiManualProof = {
+  indicatorId: number;
+  label: string;
+  comment: string | null;
+  fileUrl: string | null;
+  proofAt: string;
+  updatedAt: string;
+};
+
+export type QualiopiNaAttestation = {
+  indicatorId: number;
+  note: string | null;
+};
+
+export type QualiopiStatusSignals = {
+  coursesPublicWithInfo: number;
+  coursesPublicTotal: number;
+  coursesWithResults: number;
+  coursesWithObjectives: number;
+  approvedExperts: number;
+  formateurPlansCount: number;
+  formateurActionsDoneCount: number;
+  veilleReglementaireDone: number;
+  veilleMetierDone: number;
+  veillePedagogieDone: number;
+  veilleToReadThisMonth: number;
+  reclamationsProcessReady: boolean;
+  reclamationsOpenCount: number;
+  signalementsProcessReady: boolean;
+  exitsCount: number;
+  risksCount: number;
+  actionsDoneCount: number;
+  subcontractReadyCount: number;
+  handicapProfilesCount: number;
+  handicapProcessReady: boolean;
+  lmsEnrollmentsCount: number;
+  pedagogicalReferentsCount: number;
+  meansProcessReady: boolean;
+};
+
+function stale(iso: string | null | undefined): boolean {
+  if (!iso) return true;
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return true;
+  return Date.now() - t > TWELVE_MONTHS_MS;
+}
+
+function proof(
+  label: string,
+  href: string | null,
+  updatedAt: string | null = null,
+  counter: string | null = null,
+): QualiopiProofRef {
+  return { label, href, updatedAt, counter };
+}
+
+function helpFor(id: number): { where: string | null; how: string | null } {
+  const row = QUALIOPI_AUDIT_PROOF_RECAP.find((r) => r.indicatorId === id);
+  return { where: row?.where ?? null, how: row?.how ?? null };
+}
+
+function sessionComplete(s: QualiopiSession): boolean {
+  const attendees = s.attendees ?? [];
+  if (!attendees.length) return false;
+  return attendees.every((a) => Boolean(a.signed_at));
+}
+
+type Draft = {
+  status: QualiopiUiStatus;
+  proofs: QualiopiProofRef[];
+  nextAction: { label: string; href: string } | null;
+};
+
+function assessAuto(
+  id: number,
+  ctx: {
+    coffre: ReturnType<typeof getCoffreAdminStatus>;
+    sessions: QualiopiSession[];
+    signals: QualiopiStatusSignals;
+    manuals: QualiopiManualProof[];
+  },
+): Draft {
+  const manuals = ctx.manuals.filter((m) => m.indicatorId === id);
+  const manualProofs = manuals.map((m) =>
+    proof(m.label, m.fileUrl, m.updatedAt || m.proofAt, null),
+  );
+  const withManual = (d: Draft): Draft => {
+    if (!manualProofs.length) return d;
+    const proofs = [...d.proofs, ...manualProofs];
+    if (d.status === "missing" || d.status === "todo") {
+      const fresh = manuals.some((m) => !stale(m.proofAt));
+      return {
+        status: fresh ? "proven" : "todo",
+        proofs,
+        nextAction: fresh
+          ? d.nextAction
+          : { label: "Mettre à jour la preuve", href: "/super/crm/qualiopi?tab=overview" },
+      };
+    }
+    return { ...d, proofs };
+  };
+
+  const sig = ctx.signals;
+  const sessionsTotal = ctx.sessions.length;
+  const sessionsComplete = ctx.sessions.filter(sessionComplete).length;
+
+  switch (id) {
+    case 1: {
+      const c = ctx.coffre;
+      const fiches = proof(
+        "Fiches formation publiques",
+        "/super/crm/qualiopi/catalogue",
+        null,
+        `${sig.coursesPublicWithInfo} / ${Math.max(sig.coursesPublicTotal, 1)} fiches`,
+      );
+      const coffreProof = proof(
+        "Coffre administratif",
+        "/super/crm/qualiopi?tab=coffre",
+        null,
+        `${c.deposited} / ${c.expected} modèles`,
+      );
+      if (c.deposited >= c.expected && sig.coursesPublicWithInfo >= 1) {
+        return withManual({
+          status: "proven",
+          proofs: [fiches, coffreProof],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
+        });
+      }
+      if (c.deposited > 0 || sig.coursesPublicWithInfo > 0) {
+        return withManual({
+          status: "todo",
+          proofs: [fiches, coffreProof],
+          nextAction: {
+            label: c.deposited < c.expected ? "Déposer" : "Compléter",
+            href: c.deposited < c.expected ? "/super/crm/qualiopi?tab=coffre" : "/super/crm/qualiopi/catalogue",
+          },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [],
+        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi?tab=coffre" },
+      });
+    }
+    case 2: {
+      const p = proof(
+        "Indicateurs de résultats sur fiches",
+        "/super/crm/qualiopi/catalogue",
+        null,
+        `${sig.coursesWithResults} / ${Math.max(sig.coursesPublicTotal, 1)} fiches`,
+      );
+      if (sig.coursesWithResults >= Math.max(1, Math.ceil(sig.coursesPublicTotal * 0.8))) {
+        return withManual({
+          status: "proven",
+          proofs: [p],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
+        });
+      }
+      if (sig.coursesWithResults > 0) {
+        return withManual({
+          status: "todo",
+          proofs: [p],
+          nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [],
+        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/catalogue" },
+      });
+    }
+    case 4:
+    case 5:
+    case 6:
+    case 8: {
+      const p = proof(
+        "Objectifs / contenus catalogue",
+        "/super/crm/qualiopi/catalogue",
+        null,
+        `${sig.coursesWithObjectives} formation(s)`,
+      );
+      if (sig.coursesWithObjectives >= 1) {
+        return withManual({
+          status: "proven",
+          proofs: [p],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs: [p],
+        nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
+      });
+    }
+    case 9:
+    case 10: {
+      const sent = ctx.sessions.filter(
+        (s) => s.convention_sent_at && s.reglement_sent_at && s.livret_sent_at,
+      ).length;
+      const p = proof(
+        "Pack information / livret",
+        "/super/crm/formations",
+        null,
+        `${sent} / ${Math.max(sessionsTotal, 1)} sessions`,
+      );
+      if (sent >= 1 || (id === 10 && (sig.handicapProcessReady || sig.handicapProfilesCount >= 1))) {
+        return withManual({
+          status: sent >= 1 ? "proven" : "todo",
+          proofs: [p],
+          nextAction: {
+            label: sent >= 1 ? "Voir la preuve" : "Compléter",
+            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/formations",
+          },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [],
+        nextAction: { label: "Ajouter", href: "/super/crm/formations" },
+      });
+    }
+    case 11: {
+      const p = proof(
+        "Émargements / clôtures",
+        "/super/crm/qualiopi?tab=emargements",
+        null,
+        `${sessionsComplete} / ${Math.max(sessionsTotal, 1)} sessions`,
+      );
+      if (sessionsComplete >= 1) {
+        return withManual({
+          status: "proven",
+          proofs: [p],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi?tab=emargements" },
+        });
+      }
+      return withManual({
+        status: sessionsTotal > 0 ? "todo" : "missing",
+        proofs: sessionsTotal > 0 ? [p] : [],
+        nextAction: { label: "Compléter", href: "/super/crm/qualiopi?tab=emargements" },
+      });
+    }
+    case 12: {
+      if (sig.signalementsProcessReady) {
+        return withManual({
+          status: "proven",
+          proofs: [
+            proof("Procédure signalements VHD", "/super/crm/qualiopi/qualite", null, null),
+            proof("Sorties tracées", "/super/crm/formations", null, `${sig.exitsCount}`),
+          ],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/qualite" },
+        });
+      }
+      if (sig.exitsCount >= 1) {
+        return withManual({
+          status: "todo",
+          proofs: [proof("Sorties", "/super/crm/formations", null, `${sig.exitsCount}`)],
+          nextAction: { label: "Compléter", href: "/super/crm/qualiopi/qualite" },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [],
+        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/qualite" },
+      });
+    }
+    case 17:
+      return withManual(
+        sig.meansProcessReady
+          ? {
+              status: "proven",
+              proofs: [proof("Note moyens", "/super/crm/qualiopi/process", null, null)],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/process" },
+            }
+          : {
+              status: "todo",
+              proofs: [],
+              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/process" },
+            },
+      );
+    case 18:
+      return withManual(
+        sessionsTotal >= 1
+          ? {
+              status: "proven",
+              proofs: [proof("Sessions / intervenants", "/super/crm/formations", null, `${sessionsTotal}`)],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/formations" },
+            }
+          : {
+              status: "todo",
+              proofs: [],
+              nextAction: { label: "Ajouter", href: "/super/crm/formations" },
+            },
+      );
+    case 19:
+      if (sig.lmsEnrollmentsCount >= 1 && sig.coursesWithObjectives >= 1) {
+        return withManual({
+          status: "proven",
+          proofs: [
+            proof(
+              "Suivi LMS distanciel",
+              "/super/crm/formations",
+              null,
+              `${sig.lmsEnrollmentsCount} inscription(s)`,
+            ),
+          ],
+          nextAction: { label: "Voir la preuve", href: "/super/crm/formations" },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs: [],
+        nextAction: { label: "Compléter", href: "/super/crm/formations" },
+      });
+    case 21:
+      return withManual(
+        sig.approvedExperts >= 2
+          ? {
+              status: "proven",
+              proofs: [proof("Experts validés", "/super/experts", null, `${sig.approvedExperts}`)],
+              nextAction: { label: "Voir la preuve", href: "/super/experts" },
+            }
+          : {
+              status: "todo",
+              proofs: [
+                proof("Experts validés", "/super/experts", null, `${sig.approvedExperts}`),
+              ],
+              nextAction: { label: "Compléter", href: "/super/experts" },
+            },
+      );
+    case 22:
+      return withManual(
+        sig.formateurPlansCount >= 1 && sig.formateurActionsDoneCount >= 1
+          ? {
+              status: "proven",
+              proofs: [
+                proof(
+                  "Plans formateurs",
+                  "/super/crm/qualiopi/formateurs",
+                  null,
+                  `${sig.formateurPlansCount} plan(s)`,
+                ),
+              ],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/formateurs" },
+            }
+          : {
+              status: "todo",
+              proofs: [],
+              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/formateurs" },
+            },
+      );
+    case 23:
+    case 24:
+    case 25: {
+      const done =
+        id === 23
+          ? sig.veilleReglementaireDone
+          : id === 24
+            ? sig.veilleMetierDone
+            : sig.veillePedagogieDone;
+      return withManual(
+        done >= 1
+          ? {
+              status: "proven",
+              proofs: [proof("Veille traitée", "/super/crm/qualiopi/veilles", null, null)],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/veilles" },
+            }
+          : {
+              status: "todo",
+              proofs: [],
+              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/veilles" },
+            },
+      );
+    }
+    case 26:
+      return withManual(
+        sig.handicapProcessReady || sig.handicapProfilesCount >= 1
+          ? {
+              status: "proven",
+              proofs: [
+                proof(
+                  "Registre handicap (anonymisé)",
+                  "/super/crm/qualiopi/handicap",
+                  null,
+                  `${sig.handicapProfilesCount} fiche(s)`,
+                ),
+              ],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/handicap" },
+            }
+          : {
+              status: "todo",
+              proofs: [],
+              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/handicap" },
+            },
+      );
+    case 27:
+      return withManual(
+        sig.subcontractReadyCount >= 1
+          ? {
+              status: "proven",
+              proofs: [
+                proof(
+                  "Contrats / statuts SST",
+                  "/super/crm/qualiopi/formateurs",
+                  null,
+                  `${sig.subcontractReadyCount}`,
+                ),
+              ],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/formateurs" },
+            }
+          : {
+              status: "missing",
+              proofs: [],
+              nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/formateurs" },
+            },
+      );
+    case 30: {
+      const sat = ctx.sessions.filter((s) => {
+        const a = s.attendees ?? [];
+        return a.length > 0 && a.every((x) => x.satisfaction_at || x.satisfaction_score != null);
+      }).length;
+      return withManual(
+        sat >= 1
+          ? {
+              status: "proven",
+              proofs: [
+                proof("Satisfaction sessions", "/super/crm/qualiopi?tab=emargements", null, `${sat}`),
+              ],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi?tab=emargements" },
+            }
+          : {
+              status: "todo",
+              proofs: [],
+              nextAction: { label: "Compléter", href: "/super/crm/qualiopi?tab=emargements" },
+            },
+      );
+    }
+    case 31:
+      return withManual(
+        sig.reclamationsProcessReady
+          ? {
+              status: sig.reclamationsOpenCount > 0 ? "todo" : "proven",
+              proofs: [
+                proof(
+                  "Registre réclamations",
+                  "/super/crm/qualiopi/qualite",
+                  null,
+                  sig.reclamationsOpenCount > 0
+                    ? `${sig.reclamationsOpenCount} sans réponse`
+                    : "Procédure active",
+                ),
+              ],
+              nextAction: {
+                label: sig.reclamationsOpenCount > 0 ? "Traiter" : "Voir la preuve",
+                href: "/super/crm/qualiopi/qualite",
+              },
+            }
+          : {
+              status: "missing",
+              proofs: [],
+              nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/qualite" },
+            },
+      );
+    case 32:
+      return withManual(
+        sig.risksCount >= 1 || sig.actionsDoneCount >= 1
+          ? {
+              status: "proven",
+              proofs: [
+                proof("Registre des risques", "/super/crm/qualiopi/risques", null, `${sig.risksCount}`),
+                proof("Actions PAQ", "/super/crm/qualiopi/qualite", null, `${sig.actionsDoneCount}`),
+              ],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/risques" },
+            }
+          : {
+              status: "missing",
+              proofs: [],
+              nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/risques" },
+            },
+      );
+    // CFA / certifying / PFST without auto source yet → dépôt manuel
+    default:
+      return withManual(
+        manuals.length
+          ? {
+              status: manuals.some((m) => !stale(m.proofAt)) ? "proven" : "todo",
+              proofs: manualProofs,
+              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi?tab=overview" },
+            }
+          : {
+              status: "missing",
+              proofs: [],
+              nextAction: { label: "Ajouter", href: "/super/crm/qualiopi?tab=overview" },
+            },
+      );
+  }
+}
+
+/** Calcule le statut de chaque indicateur (32) — côté serveur. */
+export function getQualiopiStatus(input: {
+  documents: QualiopiDocument[];
+  sessions: QualiopiSession[];
+  signals: QualiopiStatusSignals;
+  activities?: unknown;
+  auditType?: string | null;
+  auditAt?: string | null;
+  naAttestations?: QualiopiNaAttestation[];
+  manualProofs?: QualiopiManualProof[];
+}): QualiopiStatusSnapshot {
+  const profile: QualiopiActivityProfile = parseActivityProfile(
+    input.activities ?? DEFAULT_QUALIOPI_ACTIVITIES,
+  );
+  const coffre = getCoffreAdminStatus(input.documents);
+  const naById = new Map(
+    (input.naAttestations ?? []).map((a) => [a.indicatorId, a.note?.trim() || null]),
+  );
+  const manuals = input.manualProofs ?? [];
+
+  const indicators: QualiopiIndicatorStatus[] = QUALIOPI_INDICATORS.map((def) => {
+    const help = helpFor(def.id);
+    const applicable = isIndicatorApplicable(def, profile);
+
+    if (!applicable) {
+      const justification = naById.get(def.id) ?? null;
+      return {
+        indicatorId: def.id,
+        criterionId: def.criterionId,
+        shortTitle: def.shortTitle,
+        scopeTag: def.scopeTag,
+        status: justification ? "na" : "todo",
+        proofs: [],
+        nextAction: justification
+          ? null
+          : {
+              label: "Justifier N/A",
+              href: `/super/crm/qualiopi?tab=overview&indicate=${def.id}`,
+            },
+        naJustification: justification,
+        helpWhere: help.where,
+        helpHow: help.how,
+      };
+    }
+
+    const draft = assessAuto(def.id, {
+      coffre,
+      sessions: input.sessions,
+      signals: input.signals,
+      manuals,
+    });
+
+    return {
+      indicatorId: def.id,
+      criterionId: def.criterionId,
+      shortTitle: def.shortTitle,
+      scopeTag: def.scopeTag,
+      status: draft.status,
+      proofs: draft.proofs,
+      nextAction: draft.nextAction,
+      naJustification: null,
+      helpWhere: help.where,
+      helpHow: help.how,
+    };
+  });
+
+  const proven = indicators.filter((i) => i.status === "proven").length;
+  const todo = indicators.filter((i) => i.status === "todo").length;
+  const missing = indicators.filter((i) => i.status === "missing").length;
+  const na = indicators.filter((i) => i.status === "na").length;
+  const applicable = indicators.length - na;
+
+  const auditTypeRaw = String(input.auditType || "surveillance");
+  const auditType =
+    auditTypeRaw === "initial" || auditTypeRaw === "renouvellement"
+      ? auditTypeRaw
+      : "surveillance";
+  const auditAt = input.auditAt ? String(input.auditAt).slice(0, 10) : null;
+  let daysUntil: number | null = null;
+  if (auditAt) {
+    const diff = new Date(`${auditAt}T12:00:00`).getTime() - Date.now();
+    daysUntil = Math.ceil(diff / (24 * 60 * 60 * 1000));
+  }
+
+  const sessionsComplete = input.sessions.filter(sessionComplete).length;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    activities: profile,
+    audit: { type: auditType, at: auditAt, daysUntil },
+    coffre: { deposited: coffre.deposited, expected: coffre.expected },
+    emargements: { complete: sessionsComplete, total: input.sessions.length },
+    veilles: { toReadThisMonth: input.signals.veilleToReadThisMonth },
+    indicators,
+    summary: {
+      proven,
+      todo,
+      missing,
+      na,
+      applicable,
+      total: indicators.length,
+    },
+  };
+}

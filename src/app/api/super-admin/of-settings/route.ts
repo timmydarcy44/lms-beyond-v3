@@ -152,11 +152,38 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  const { data, error } = await service
+  if (body.qualiopi_activities !== undefined && body.qualiopi_activities && typeof body.qualiopi_activities === "object") {
+    patch.qualiopi_activities = body.qualiopi_activities;
+  }
+  if (body.qualiopi_audit_type !== undefined) {
+    const t = String(body.qualiopi_audit_type);
+    if (t === "initial" || t === "surveillance" || t === "renouvellement") {
+      patch.qualiopi_audit_type = t;
+    }
+  }
+  if (body.qualiopi_audit_at !== undefined) {
+    patch.qualiopi_audit_at =
+      body.qualiopi_audit_at === null || body.qualiopi_audit_at === ""
+        ? null
+        : String(body.qualiopi_audit_at).slice(0, 10);
+  }
+
+  let { data, error } = await service
     .from("of_settings")
     .upsert({ id: OF_SETTINGS_ID, ...patch }, { onConflict: "id" })
     .select("*")
     .single();
+
+  if (error && /qualiopi_activities|qualiopi_audit/i.test(error.message)) {
+    delete patch.qualiopi_activities;
+    delete patch.qualiopi_audit_type;
+    delete patch.qualiopi_audit_at;
+    ({ data, error } = await service
+      .from("of_settings")
+      .upsert({ id: OF_SETTINGS_ID, ...patch }, { onConflict: "id" })
+      .select("*")
+      .single());
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ settings: data });

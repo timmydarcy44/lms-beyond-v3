@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { loadHandicapHomeData } from "@/lib/handicap/home-data";
+import { handicapCasePath } from "@/lib/handicap/paths";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -39,7 +40,7 @@ export default async function HandicapRendezVousPage() {
             return (
               <li key={m.id}>
                 <a
-                  href={`/handicap/personnes/${m.caseId}`}
+                  href={handicapCasePath(m.caseId)}
                   className="flex items-center gap-4 rounded-[20px] border px-4 py-3"
                   style={{ background: T.card, borderColor: T.border, color: T.text }}
                 >

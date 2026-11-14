@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { HandicapHomePayload } from "@/lib/handicap/home-data";
+import { handicapCasePath } from "@/lib/handicap/paths";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 
 const TONE_BAR: Record<string, string> = {
@@ -268,14 +269,14 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                   const pill = STATUS_PILL[p.status] ?? STATUS_PILL.closed;
                   const shown = p.accommodations.slice(0, 3);
                   const extra = p.accommodations.length - shown.length;
-                  const href = `/handicap/personnes/${p.id}`;
+                  const href = handicapCasePath(p.id);
                   return (
                     <tr
                       key={p.id}
                       className="border-t cursor-pointer transition hover:bg-white/[0.02]"
                       style={{ borderColor: T.border }}
                       onClick={() => {
-                        window.location.href = href;
+                        window.location.assign(href);
                       }}
                     >
                       <td className="py-3.5 pr-3">

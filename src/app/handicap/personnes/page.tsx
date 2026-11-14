@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { HandicapPlaceholder } from "@/components/handicap/handicap-placeholder";
 import { loadHandicapHomeData } from "@/lib/handicap/home-data";
+import { handicapCasePath } from "@/lib/handicap/paths";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -49,7 +50,7 @@ export default async function HandicapPersonnesPage({
         {people.map((p) => (
           <li key={p.id}>
             <a
-              href={`/handicap/personnes/${p.id}`}
+              href={handicapCasePath(p.id)}
               className="flex items-center justify-between rounded-[20px] border px-4 py-3"
               style={{ background: T.card, borderColor: T.border, color: T.text }}
             >

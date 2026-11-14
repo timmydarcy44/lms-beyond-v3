@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { handicapCasePath } from "@/lib/handicap/paths";
 import { resolveDisabilityCaseId } from "@/lib/handicap/resolve-case";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ export default async function LegacyHandicapGestionRedirect({
   const service = getServiceRoleClient();
   if (service) {
     const caseId = await resolveDisabilityCaseId(service, id);
-    if (caseId) redirect(`/handicap/personnes/${caseId}`);
+    if (caseId) redirect(handicapCasePath(caseId));
   }
   redirect("/handicap");
 }

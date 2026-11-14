@@ -81,6 +81,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: "Formateur non reconnu (staff Byound)" }, { status: 400 });
     }
 
+    const { assertTrainerSubcontractReady } = await import(
+      "@/lib/expert/subcontracting"
+    );
+    const sst = await assertTrainerSubcontractReady(service, trainerUserId);
+    if (!sst.ok) {
+      return NextResponse.json({ error: sst.error, code: sst.code }, { status: 400 });
+    }
+
     const { snapshotTrainerCvToDossier } = await import(
       "@/lib/formation-documents/trainer-cv"
     );
@@ -96,15 +104,25 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       );
     }
 
-    const { error } = await service
-      .from("formation_dossiers")
-      .update({
-        trainer_user_id: trainerUserId,
-        trainer_assigned_at: now,
-        updated_at: now,
-      })
-      .eq("id", id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    const { upsertDossierTrainer } = await import("@/lib/formation-dossier/trainers");
+    const upserted = await upsertDossierTrainer(service, {
+      dossierId: id,
+      userId: trainerUserId,
+      role: "lead",
+      actorUserId,
+    });
+    if (!upserted.ok) {
+      // Fallback legacy si table absente
+      const { error } = await service
+        .from("formation_dossiers")
+        .update({
+          trainer_user_id: trainerUserId,
+          trainer_assigned_at: now,
+          updated_at: now,
+        })
+        .eq("id", id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
     await service
       .from("formation_assignments")
@@ -121,7 +139,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       dossier_id: id,
       event_type: "trainer_assigned",
       actor_user_id: actorUserId,
-      payload: { trainer_user_id: trainerUserId, cv_document_id: cvSnap.documentId },
+      payload: {
+        trainer_user_id: trainerUserId,
+        cv_document_id: cvSnap.documentId,
+        intervenants: upserted.ok ? upserted.snapshot.count : 1,
+      },
     });
 
     // Si tous les positionnements sont faits, envoyer la synthèse au formateur

@@ -143,12 +143,12 @@ export function buildTrainingCourseDetail(
 }
 
 export function formatInterPrice(course: TrainingCoursePublic): string {
-  if (course.inter_price == null) return "Sur devis";
+  if (course.price_on_quote || course.inter_price == null) return "Sur devis";
   return `À partir de ${course.inter_price.toLocaleString("fr-FR")} € HT / participant`;
 }
 
 export function formatIntraPrice(course: TrainingCoursePublic): string {
-  if (course.intra_price == null) return "Sur devis";
+  if (course.price_on_quote || course.intra_price == null) return "Sur devis";
   return `${course.intra_price.toLocaleString("fr-FR")} € HT / groupe`;
 }
 

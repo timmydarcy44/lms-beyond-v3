@@ -63,6 +63,8 @@ type BadgeMeta = { name?: string | null; imageUrl?: string | null };
 type Props = {
   course: TrainingCoursePublic;
   badgeMeta?: BadgeMeta | null;
+  /** Méthode de calcul globale (of_settings.results_indicators_method). */
+  resultsIndicatorsMethod?: string | null;
 };
 
 function TrainingSectionNav({ items }: { items: { id: string; label: string }[] }) {
@@ -247,7 +249,11 @@ function StarRating({ level }: { level: number }) {
   );
 }
 
-export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
+export function EdgeTrainingDetailPage({
+  course,
+  badgeMeta,
+  resultsIndicatorsMethod = null,
+}: Props) {
   const { links } = useEdgePremiumConfig();
   const detail = useMemo(
     () => buildTrainingCourseDetail(course, badgeMeta ?? undefined),
@@ -263,7 +269,14 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
   const evaluationModalities = useMemo(() => buildEvaluationModalities(), []);
   const pedagogicalMethods = useMemo(() => buildPedagogicalMethods(detail), [detail]);
   const qualiopiInfo = useMemo(() => buildQualiopiInfo(course, detail), [course, detail]);
-  const qualityIndicators = useMemo(() => buildQualityIndicators(), []);
+  const qualityIndicators = useMemo(
+    () =>
+      buildQualityIndicators({
+        ofSettingsMethod: resultsIndicatorsMethod,
+        courseOverride: course.results_method_override,
+      }),
+    [resultsIndicatorsMethod, course.results_method_override],
+  );
   const enrichedTrainers = useMemo(() => enrichInstructors(detail, course), [detail, course]);
 
   const navItems = NAV_SECTIONS.map((s) => ({ id: s.id, label: s.label }));
@@ -729,36 +742,32 @@ export function EdgeTrainingDetailPage({ course, badgeMeta }: Props) {
           {/* 11. INDICATEURS QUALITÉ */}
           <section id="qualite" className="scroll-mt-40 space-y-6">
             <h2 className="text-2xl font-semibold tracking-[-0.03em]">Nos indicateurs qualité</h2>
-            {qualityIndicators.available ? (
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                {qualityIndicators.indicators.map((indicator) => (
-                  <div key={indicator.label} className="rounded-[20px] border border-[#050505]/8 bg-white p-5 text-center">
-                    <p className="text-2xl font-semibold tracking-tight text-edge-accent">{indicator.value}</p>
-                    <p className="mt-1 text-xs text-[#050505]/55">{indicator.label}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-[24px] border border-[#050505]/8 bg-white p-7">
+            {!qualityIndicators.available ? (
+              <div className="rounded-[24px] border border-[#050505]/8 bg-white p-5">
                 <div className="flex items-start gap-3">
                   <BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-edge-accent" />
                   <p className="text-sm leading-relaxed text-[#050505]/60">
                     {qualityIndicators.fallbackMessage}
                   </p>
                 </div>
-                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  {qualityIndicators.indicators.map((indicator) => (
-                    <div
-                      key={indicator.label}
-                      className="rounded-[16px] border border-dashed border-[#050505]/12 bg-[#F7F7F5] p-4 text-center"
-                    >
-                      <p className="text-sm font-semibold text-[#050505]/30">—</p>
-                      <p className="mt-1 text-[11px] text-[#050505]/45">{indicator.label}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
-            )}
+            ) : null}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {qualityIndicators.indicators.map((indicator) => (
+                <div
+                  key={indicator.label}
+                  className="rounded-[20px] border border-[#050505]/8 bg-white p-5"
+                >
+                  <p className="text-2xl font-semibold tracking-tight text-edge-accent">
+                    {indicator.value ?? "—"}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[#050505]/70">{indicator.label}</p>
+                  <p className="mt-3 text-[11px] leading-relaxed text-[#050505]/45">
+                    Méthode de calcul : {indicator.method}
+                  </p>
+                </div>
+              ))}
+            </div>
           </section>
 
           {/* 12. CERTIFICATION */}

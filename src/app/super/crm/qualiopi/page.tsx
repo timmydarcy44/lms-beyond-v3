@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { QualiopiRnqPanel } from "@/components/super-admin/qualiopi-rnq-panel";
+import { QualiopiAuditRecapPanel } from "@/components/super-admin/qualiopi-audit-recap-panel";
 import {
   QUALIOPI_CORE_DOCS,
   formatSignedAt,
@@ -160,6 +161,9 @@ export default function CrmQualiopiPage() {
               <Link href="/super/crm/qualiopi/qualite">Qualité</Link>
             </Button>
             <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
+              <Link href="/super/crm/qualiopi/risques">Risques</Link>
+            </Button>
+            <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
               <Link href="/super/crm/qualiopi/process">Process</Link>
             </Button>
             <Button asChild className="rounded-full border border-white/15 bg-transparent text-white hover:bg-white/5">
@@ -177,6 +181,8 @@ export default function CrmQualiopiPage() {
       </div>
 
       <QualiopiRnqPanel refreshKey={complianceRefreshKey} />
+
+      <QualiopiAuditRecapPanel />
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2">

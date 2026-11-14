@@ -132,11 +132,17 @@ export async function GET(_req: Request, ctx: Ctx) {
       Boolean(await resolveExpertCv(service, String(dossier.trainer_user_id)));
   }
 
+  const { listDossierTrainers } = await import("@/lib/formation-dossier/trainers");
+  const dossierTrainers = await listDossierTrainers(service, id);
+
+  const { resolveDossierLmsCourseId } = await import("@/lib/formation-documents/suivi-lms");
+  const lms = await resolveDossierLmsCourseId(service, id);
+
   return NextResponse.json({
     locks: {
       convention_signed: convention?.status === "signed",
       convention_signed_at: convention?.signed_at ?? null,
-      trainer_assigned: Boolean(dossier.trainer_user_id),
+      trainer_assigned: Boolean(dossier.trainer_user_id) || dossierTrainers.count > 0,
       trainer_user_id: dossier.trainer_user_id,
       trainer_cv_ready: trainerCvReady,
       slots_total: slotCount,
@@ -146,6 +152,12 @@ export async function GET(_req: Request, ctx: Ctx) {
     },
     invoice,
     trainers,
+    dossier_trainers: dossierTrainers,
+    suivi_lms: {
+      has_distanciel: lms.hasDistanciel,
+      lms_course_id: lms.lmsCourseId,
+      course_title: lms.courseTitle,
+    },
     amounts: {
       ht: dossier.amount_ht_cents,
       tva: dossier.amount_tva_cents,

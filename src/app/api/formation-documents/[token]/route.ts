@@ -102,13 +102,31 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     }
   }
 
+  const applySpecimen = async (buf: Buffer): Promise<Buffer> => {
+    try {
+      const already =
+        doc.meta &&
+        typeof doc.meta === "object" &&
+        Boolean((doc.meta as { specimen_stamped_at?: unknown }).specimen_stamped_at);
+      if (already) return buf;
+      const docCtx = await loadDossierDocContext(service, String(doc.dossier_id));
+      if (!docCtx?.dossier.is_specimen) return buf;
+      const { stampSpecimenOnPdf } = await import(
+        "@/lib/formation-documents/stamp-specimen"
+      );
+      return await stampSpecimenOnPdf(buf);
+    } catch {
+      return buf;
+    }
+  };
+
   const fromPrivate = await downloadFormationPdf(service, {
     bucket: doc.storage_bucket,
     path: doc.storage_path,
     fileUrl: doc.file_url,
   });
   if (fromPrivate) {
-    return pdfResponse(fromPrivate, `${doc.kind}.pdf`);
+    return pdfResponse(await applySpecimen(fromPrivate), `${doc.kind}.pdf`);
   }
 
   if (!isLot4Kind(String(doc.kind))) {
@@ -127,7 +145,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         kind: doc.kind,
       }),
   });
-  return pdfResponse(buffer, `${doc.kind}.pdf`);
+  return pdfResponse(
+    docCtx.dossier.is_specimen ? await applySpecimen(buffer) : buffer,
+    `${doc.kind}.pdf`,
+  );
 }
 
 /** Acceptation devis / convention — preuve simple + idempotence. */

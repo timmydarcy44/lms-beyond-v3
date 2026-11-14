@@ -213,6 +213,7 @@ export function buildPublicDocMeta(
     superseded: pageState === "superseded",
     expired: pageState === "expired",
     page_state: pageState,
+    is_specimen: docCtx?.dossier.is_specimen === true,
     timeline: buildDossierTimeline({
       dossierStatus,
       signedAt: doc.signed_at ? String(doc.signed_at) : null,

@@ -6,6 +6,13 @@
 
 import type { TrainingCourseDetail } from "@/lib/training-courses/build-detail";
 import type { TrainingCoursePublic } from "@/lib/training-courses/types";
+import {
+  QUALIOPI_RESULTS_FALLBACK,
+  formatQualiopiTariff,
+  pedagogicalModalityLabel,
+  recognitionTypeLabel,
+  resolveResultsMethod,
+} from "@/lib/training-courses/qualiopi-fiche";
 
 export type DiagnosticStep = {
   title: string;
@@ -147,16 +154,41 @@ export function buildQualiopiInfo(
   course: TrainingCoursePublic,
   detail: TrainingCourseDetail,
 ): QualiopiInfoItem[] {
-  const modalites = detail.formatsLabel || "Présentiel · Distanciel · Blended";
+  const modality =
+    pedagogicalModalityLabel(course.pedagogical_modality) ||
+    detail.formatsLabel ||
+    null;
+  const modalityDetail = String(course.pedagogical_modality_detail ?? "").trim();
+  const modalites = [modality, modalityDetail].filter(Boolean).join(" — ") ||
+    "À rédiger";
+  const recognition = recognitionTypeLabel(course.recognition_type);
+  const recognitionDetail = String(course.recognition_detail ?? "").trim();
+  const recognitionValue = recognition
+    ? [recognition, recognitionDetail].filter(Boolean).join(" — ")
+    : "À rédiger";
   const publicConcerne = detail.audience.length
     ? detail.audience.join(" · ")
     : "Collaborateurs et managers concernés par la montée en compétences.";
+  const updatedAt = course.updated_at
+    ? new Date(course.updated_at).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
 
   return [
     { label: "Public concerné", value: publicConcerne, wide: true },
     { label: "Prérequis", value: course.prerequisites || "Aucun prérequis spécifique." },
     { label: "Durée", value: course.duration || "Sur mesure selon le diagnostic." },
-    { label: "Modalités", value: modalites },
+    { label: "Modalités pédagogiques", value: modalites, wide: true },
+    { label: "Type de reconnaissance", value: recognitionValue, wide: true },
+    {
+      label: "Modalités de financement",
+      value: String(course.financing_modalities ?? "").trim() || "À rédiger",
+      wide: true,
+    },
+    { label: "Tarif", value: formatQualiopiTariff(course) },
     {
       label: "Effectif",
       value: `Jusqu'à ${detail.maxIntraParticipants} participants (intra).`,
@@ -174,35 +206,50 @@ export function buildQualiopiInfo(
       value: "referent-handicap@byound.fr — étude personnalisée de chaque situation.",
       wide: true,
     },
+    ...(updatedAt
+      ? [{ label: "Dernière mise à jour de la fiche", value: updatedAt }]
+      : []),
   ];
 }
 
 export type QualityIndicator = {
   label: string;
   value: string | null;
+  method: string;
 };
 
 /**
- * Indicateurs qualité. Renvoie `available: false` tant qu'aucun volume
- * statistiquement représentatif n'est disponible.
+ * Indicateurs qualité. Jamais de valeur fictive.
+ * Affiche toujours la méthode de calcul (globale ou surcharge fiche).
  */
-export function buildQualityIndicators(): {
+export function buildQualityIndicators(input?: {
+  ofSettingsMethod?: string | null;
+  courseOverride?: string | null;
+  /** Valeurs réelles si/quand disponibles — sinon null. */
+  values?: Partial<Record<string, string | null>>;
+}): {
   available: boolean;
   fallbackMessage: string;
+  method: string;
   indicators: QualityIndicator[];
 } {
+  const method = resolveResultsMethod({
+    ofSettingsMethod: input?.ofSettingsMethod,
+    courseOverride: input?.courseOverride,
+  });
+  const values = input?.values ?? {};
   const indicators: QualityIndicator[] = [
-    { label: "Taux de satisfaction", value: null },
-    { label: "Taux de réussite", value: null },
-    { label: "Taux de recommandation", value: null },
-    { label: "Taux de complétion", value: null },
-    { label: "Apprenants formés", value: null },
+    { label: "Taux de satisfaction", value: values.satisfaction ?? null, method },
+    { label: "Taux de réussite", value: values.success ?? null, method },
+    { label: "Taux d'abandon", value: values.dropout ?? null, method },
+    { label: "Taux de recommandation", value: values.recommendation ?? null, method },
+    { label: "Taux de complétion", value: values.completion ?? null, method },
   ];
   const available = indicators.some((i) => i.value != null);
   return {
     available,
-    fallbackMessage:
-      "Les indicateurs seront publiés dès qu'un volume statistiquement représentatif sera atteint.",
+    fallbackMessage: QUALIOPI_RESULTS_FALLBACK,
+    method,
     indicators,
   };
 }

@@ -22,6 +22,7 @@ export const SALARIE_NAV_ITEMS: SalarieNavItem[] = [
   { label: "Mes compétences", href: "/dashboard/salarie/competences", icon: UserCircle },
   { label: "Accompagnement", href: "/dashboard/salarie/accompagnement", icon: Users },
   { label: "Réclamation", href: "/dashboard/salarie/reclamation", icon: MessageSquareWarning },
+  { label: "Signalement", href: "/dashboard/salarie/signalement", icon: MessageSquareWarning },
   { label: "Mon compte", href: "/dashboard/salarie/profil", icon: Wallet },
 ];
 

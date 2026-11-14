@@ -42,6 +42,10 @@ import {
   type TrainingAiGeneratedContent,
 } from "@/components/super-admin/training-cms/training-ai-generate-modal";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
+import {
+  QUALIOPI_PEDAGOGICAL_MODALITIES,
+  QUALIOPI_RECOGNITION_TYPES,
+} from "@/lib/training-courses/qualiopi-fiche";
 
 type CmsState = {
   slug: string;
@@ -76,6 +80,13 @@ type CmsState = {
   sessions: TrainingSessionRow[];
   illustrations: string[];
   is_active: boolean;
+  recognition_type: string;
+  recognition_detail: string;
+  pedagogical_modality: string;
+  pedagogical_modality_detail: string;
+  financing_modalities: string;
+  price_on_quote: boolean;
+  results_method_override: string;
 };
 
 const TABS = [
@@ -128,6 +139,13 @@ function courseToState(course: TrainingCourseRow): CmsState {
     sessions: (course.sessions as TrainingSessionRow[] | null) ?? [],
     illustrations: course.illustrations ?? [],
     is_active: course.is_active ?? true,
+    recognition_type: course.recognition_type ?? "",
+    recognition_detail: course.recognition_detail ?? "",
+    pedagogical_modality: course.pedagogical_modality ?? "",
+    pedagogical_modality_detail: course.pedagogical_modality_detail ?? "",
+    financing_modalities: course.financing_modalities ?? "",
+    price_on_quote: Boolean(course.price_on_quote),
+    results_method_override: course.results_method_override ?? "",
   };
 }
 
@@ -173,6 +191,13 @@ function stateToPayload(state: CmsState) {
     trainer_headline: primary?.headline ?? null,
     trainer_photo_url: primary?.photo_url ?? null,
     is_active: state.is_active,
+    recognition_type: state.recognition_type.trim() || null,
+    recognition_detail: state.recognition_detail.trim() || null,
+    pedagogical_modality: state.pedagogical_modality.trim() || null,
+    pedagogical_modality_detail: state.pedagogical_modality_detail.trim() || null,
+    financing_modalities: state.financing_modalities.trim() || null,
+    price_on_quote: state.price_on_quote,
+    results_method_override: state.results_method_override.trim() || null,
   };
 }
 
@@ -969,6 +994,90 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                     items={state.formats}
                     onChange={(v) => patch("formats", v)}
                   />
+
+                  <div className="rounded-2xl border border-[#E8E6FF] bg-[#F8F7FF] p-5 space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-[#3D36B0]">Qualiopi — informations fiche</p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Indicateurs 1 et 2 — champs obligatoires pour la conformité catalogue.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block text-sm">
+                        <span className="mb-1 block font-medium text-gray-700">Type de reconnaissance</span>
+                        <select
+                          className={INPUT}
+                          value={state.recognition_type}
+                          onChange={(e) => patch("recognition_type", e.target.value)}
+                        >
+                          <option value="">— Choisir —</option>
+                          {QUALIOPI_RECOGNITION_TYPES.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block text-sm">
+                        <span className="mb-1 block font-medium text-gray-700">Précision reconnaissance</span>
+                        <input
+                          className={INPUT}
+                          value={state.recognition_detail}
+                          onChange={(e) => patch("recognition_detail", e.target.value)}
+                          placeholder="À rédiger"
+                        />
+                      </label>
+                      <label className="block text-sm">
+                        <span className="mb-1 block font-medium text-gray-700">Modalité pédagogique</span>
+                        <select
+                          className={INPUT}
+                          value={state.pedagogical_modality}
+                          onChange={(e) => patch("pedagogical_modality", e.target.value)}
+                        >
+                          <option value="">— Choisir —</option>
+                          {QUALIOPI_PEDAGOGICAL_MODALITIES.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block text-sm sm:col-span-2">
+                        <span className="mb-1 block font-medium text-gray-700">
+                          Description des modalités pédagogiques
+                        </span>
+                        <textarea
+                          className={TEXTAREA}
+                          value={state.pedagogical_modality_detail}
+                          onChange={(e) => patch("pedagogical_modality_detail", e.target.value)}
+                          placeholder="À rédiger"
+                        />
+                      </label>
+                      <label className="block text-sm sm:col-span-2">
+                        <span className="mb-1 block font-medium text-gray-700">
+                          Modalités de financement
+                        </span>
+                        <textarea
+                          className={TEXTAREA}
+                          value={state.financing_modalities}
+                          onChange={(e) => patch("financing_modalities", e.target.value)}
+                          placeholder="OPCO, plan de développement des compétences, fonds propres…"
+                        />
+                      </label>
+                      <label className="block text-sm sm:col-span-2">
+                        <span className="mb-1 block font-medium text-gray-700">
+                          Méthode de calcul des indicateurs (surcharge fiche, optionnel)
+                        </span>
+                        <textarea
+                          className={TEXTAREA}
+                          value={state.results_method_override}
+                          onChange={(e) => patch("results_method_override", e.target.value)}
+                          placeholder="Laisser vide pour utiliser la méthode OF (Paramètres)"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
                   <TrainingFaqEditor items={state.faq} onChange={(v) => patch("faq", v)} />
                   <div>
                     <TrainingLinesEditor
@@ -1055,13 +1164,36 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
 
               {tab === "pricing" && (
                 <div className="grid gap-6 sm:grid-cols-2">
+                  <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={state.price_on_quote}
+                      onChange={(e) => patch("price_on_quote", e.target.checked)}
+                      className="h-4 w-4 accent-[#635BFF]"
+                    />
+                    <span className="font-medium text-gray-700">
+                      Afficher « Sur devis » (Qualiopi) — masque les montants publics
+                    </span>
+                  </label>
                   <label className="block text-sm">
                     <span className="mb-1 block font-medium text-gray-700">Prix inter (€ HT / participant)</span>
-                    <input className={INPUT} type="number" value={state.inter_price} onChange={(e) => patch("inter_price", e.target.value)} />
+                    <input
+                      className={INPUT}
+                      type="number"
+                      value={state.inter_price}
+                      disabled={state.price_on_quote}
+                      onChange={(e) => patch("inter_price", e.target.value)}
+                    />
                   </label>
                   <label className="block text-sm">
                     <span className="mb-1 block font-medium text-gray-700">Prix intra (€ HT / groupe)</span>
-                    <input className={INPUT} type="number" value={state.intra_price} onChange={(e) => patch("intra_price", e.target.value)} />
+                    <input
+                      className={INPUT}
+                      type="number"
+                      value={state.intra_price}
+                      disabled={state.price_on_quote}
+                      onChange={(e) => patch("intra_price", e.target.value)}
+                    />
                   </label>
                   <label className="block text-sm">
                     <span className="mb-1 block font-medium text-gray-700">Max participants intra</span>

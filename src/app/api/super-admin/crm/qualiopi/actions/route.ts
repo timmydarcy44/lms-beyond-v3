@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
   const title = String(body.title ?? "").trim();
   if (!title) return NextResponse.json({ error: "Titre requis" }, { status: 400 });
 
-  const source = ["manual", "reclamation", "veille", "satisfaction", "revue"].includes(String(body.source))
+  const source = ["manual", "reclamation", "veille", "satisfaction", "revue", "risque"].includes(
+    String(body.source),
+  )
     ? String(body.source)
     : "manual";
 

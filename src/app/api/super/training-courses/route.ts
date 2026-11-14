@@ -4,9 +4,11 @@ import { catalogModuleToCourseRow } from "@/lib/training-courses/catalog-fallbac
 import { EDGE_TRAINING_MODULES } from "@/lib/edge-site/training-catalog";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
-const SELECT_COLS_BASE =
+const SELECT_COLS_LEGACY =
   "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,program_structure,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,badge_class_id,meta_description,seo_tags,faq,why_choose,instructors,page_blocks,sessions,benefits,case_studies,deliverables,methodology,illustrations,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
+const SELECT_COLS_BASE = `${SELECT_COLS_LEGACY},recognition_type,recognition_detail,pedagogical_modality,pedagogical_modality_detail,financing_modalities,price_on_quote,results_method_override`;
 const SELECT_COLS = `${SELECT_COLS_BASE},lms_course_id`;
+const SELECT_COLS_NO_LMS = SELECT_COLS_BASE;
 
 export async function GET() {
   const isAdmin = await isSuperAdmin();
@@ -20,31 +22,36 @@ export async function GET() {
   }
 
   // Catalogue OF uniquement (exclure les Sur-mesure client).
+  let selectCols = SELECT_COLS;
   let { data, error } = await supabase
     .from("training_courses")
-    .select(SELECT_COLS)
+    .select(selectCols)
     .is("organization_id", null)
     .order("title", { ascending: true });
 
-  if (error && /organization_id/i.test(error.message)) {
+  if (error && /recognition_type|pedagogical_modality|financing_modalities|price_on_quote|results_method_override/i.test(error.message)) {
+    selectCols = `${SELECT_COLS_LEGACY},lms_course_id`;
     ({ data, error } = await supabase
       .from("training_courses")
-      .select(SELECT_COLS)
+      .select(selectCols)
+      .is("organization_id", null)
       .order("title", { ascending: true }));
   }
 
   if (error && /lms_course_id/i.test(error.message)) {
+    selectCols = selectCols.includes("recognition_type") ? SELECT_COLS_NO_LMS : SELECT_COLS_LEGACY;
     ({ data, error } = await supabase
       .from("training_courses")
-      .select(SELECT_COLS_BASE)
+      .select(selectCols)
       .is("organization_id", null)
       .order("title", { ascending: true }));
-    if (error && /organization_id/i.test(error.message)) {
-      ({ data, error } = await supabase
-        .from("training_courses")
-        .select(SELECT_COLS_BASE)
-        .order("title", { ascending: true }));
-    }
+  }
+
+  if (error && /organization_id/i.test(error.message)) {
+    ({ data, error } = await supabase
+      .from("training_courses")
+      .select(selectCols)
+      .order("title", { ascending: true }));
   }
 
   if (error) {

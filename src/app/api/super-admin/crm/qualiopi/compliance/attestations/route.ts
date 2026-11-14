@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { QUALIOPI_OF_NA_IDS, qualiopiOfNaNote } from "@/lib/qualiopi/qualiopi-of-b2b";
 import { QUALIOPI_INDICATOR_COUNT } from "@/lib/qualiopi/qualiopi-rnq-reference";
 
 export const dynamic = "force-dynamic";
@@ -24,28 +25,45 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const indicatorId = parseIndicatorId(body.indicatorId);
   if (indicatorId == null) {
-    return NextResponse.json({ error: "Indicateur invalide (1–32)" }, { status: 400 });
+    return NextResponse.json({ error: "Indicateur invalide (1–33)" }, { status: 400 });
   }
-  const note = typeof body.note === "string" ? body.note.trim().slice(0, 2000) : null;
+
+  const kindRaw = body.kind === "na" ? "na" : "evidence";
+  const kind = QUALIOPI_OF_NA_IDS.has(indicatorId) && body.kind !== "evidence" ? "na" : kindRaw;
+
+  let note: string | null =
+    typeof body.note === "string" ? body.note.trim().slice(0, 2000) : null;
+  if (kind === "na" && !note) {
+    note = qualiopiOfNaNote(indicatorId);
+  }
 
   const sessionClient = await getServerClient();
   const userId = sessionClient ? (await sessionClient.auth.getUser()).data.user?.id : null;
 
-  const { error } = await supabase.from("crm_qualiopi_indicator_attestations").upsert(
-    {
-      indicator_id: indicatorId,
-      note: note || null,
-      attested_by: userId,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "indicator_id" },
-  );
+  const payload = {
+    indicator_id: indicatorId,
+    note: note || null,
+    kind,
+    attested_by: userId,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { error } = await supabase
+    .from("crm_qualiopi_indicator_attestations")
+    .upsert(payload, { onConflict: "indicator_id" });
+
+  if (error && /kind|column|check/i.test(error.message)) {
+    const { kind: _k, ...legacy } = payload;
+    ({ error } = await supabase
+      .from("crm_qualiopi_indicator_attestations")
+      .upsert(legacy, { onConflict: "indicator_id" }));
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, indicatorId });
+  return NextResponse.json({ ok: true, indicatorId, kind, note });
 }
 
 export async function DELETE(req: NextRequest) {

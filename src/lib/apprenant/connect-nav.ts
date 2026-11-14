@@ -66,6 +66,7 @@ export function buildParticulierNavItems(hasOrganisation: boolean): ApprenantNav
       action: "share-profile",
     },
     { label: "Réclamation", href: "/dashboard/apprenant/reclamation", icon: MessageSquareWarning },
+    { label: "Signalement", href: "/dashboard/apprenant/signalement", icon: MessageSquareWarning },
   ];
 }
 
@@ -86,6 +87,7 @@ const BASE: ApprenantNavItem[] = [
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
   { label: "Mes opportunités", href: "/dashboard/apprenant/matching", icon: Briefcase },
   { label: "Réclamation", href: "/dashboard/apprenant/reclamation", icon: MessageSquareWarning },
+  { label: "Signalement", href: "/dashboard/apprenant/signalement", icon: MessageSquareWarning },
 ];
 
 const JESSICA_BASE: ApprenantNavItem[] = [
@@ -103,6 +105,7 @@ const JESSICA_BASE: ApprenantNavItem[] = [
   { label: "Mes résultats", href: "/dashboard/apprenant/results", icon: Award },
   { label: "Wallet", href: "/dashboard/apprenant/badges", icon: Wallet },
   { label: "Réclamation", href: "/dashboard/apprenant/reclamation", icon: MessageSquareWarning },
+  { label: "Signalement", href: "/dashboard/apprenant/signalement", icon: MessageSquareWarning },
 ];
 
 export function buildApprenantNavItems(

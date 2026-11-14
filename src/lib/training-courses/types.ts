@@ -62,6 +62,18 @@ export type TrainingCourseRow = {
   source?: "catalogue" | "surmesure" | null;
   /** Besoins spécifiques / adaptations (Qualiopi). */
   specific_needs?: string | null;
+  /** Qualiopi ind.1 — type de reconnaissance. */
+  recognition_type?: string | null;
+  recognition_detail?: string | null;
+  /** Qualiopi ind.1 — modalité pédagogique structurée. */
+  pedagogical_modality?: string | null;
+  pedagogical_modality_detail?: string | null;
+  /** Qualiopi ind.1 — modalités de financement (texte). */
+  financing_modalities?: string | null;
+  /** Qualiopi ind.1 — afficher « Sur devis » si true. */
+  price_on_quote?: boolean | null;
+  /** Qualiopi ind.2 — surcharge méthode de calcul des indicateurs. */
+  results_method_override?: string | null;
   created_at: string | null;
   updated_at: string | null;
 };

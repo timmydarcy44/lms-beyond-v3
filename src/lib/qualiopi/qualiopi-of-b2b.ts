@@ -1,38 +1,63 @@
-/** Périmètre OF formation continue / B2B — indicateurs hors scope à attester N/A. */
+/** Périmètre OF formation continue / B2B — indicateurs hors scope à justifier N/A (RNQ V10). */
 
 export const QUALIOPI_OF_NA_INDICATORS = [
   {
     id: 3,
-    note: "N/A OF B2B — Byound ne délivre pas de certifications professionnelles RNCP/RS ; pas de suivi de taux d’obtention.",
+    note: "N/A OF B2B — Byound ne délivre pas de certifications professionnelles RNCP/RS ; pas de suivi de taux d’obtention ni de blocs de compétences.",
   },
   {
     id: 7,
-    note: "N/A OF B2B — pas de contrôle d’adéquation RNCP/RS (pas de titres délivrés).",
+    note: "N/A OF B2B — pas de prestations conduisant à une certification professionnelle ; pas de contrôle d’adéquation RNCP/RS.",
   },
   {
-    id: 12,
-    note: "N/A OF B2B — pas d’accompagnement vers l’emploi ou la certification professionnelle hors offre catalogue.",
+    id: 13,
+    note: "N/A OF B2B — hors périmètre formations en alternance (coordination centre / entreprise).",
   },
   {
-    id: 27,
-    note: "N/A OF B2B — pas de sous-traitance pédagogique Qualiopi à date ; interventions gérées en experts internes / partenaires référencés.",
+    id: 14,
+    note: "N/A OF B2B — hors périmètre apprentissage (accompagnement socio-professionnel / citoyenneté).",
+  },
+  {
+    id: 15,
+    note: "N/A OF B2B — hors périmètre apprentissage (droits et devoirs des apprentis, médiateur).",
+  },
+  {
+    id: 16,
+    note: "N/A OF B2B — pas de présentation à une certification professionnelle délivrée par une autorité de certification.",
+  },
+  {
+    id: 20,
+    note: "N/A OF B2B — hors périmètre apprentissage (mobilité, conseil de perfectionnement, supervision CFA). Le référent handicap OF reste tracé sur les ind. 10 et 26.",
   },
   {
     id: 28,
-    note: "N/A OF B2B — hors périmètre CFA / apprentissage pour cet audit initial.",
+    note: "N/A OF B2B — pas de périodes de formation en situation de travail (PFST) dans le catalogue audit initial.",
   },
   {
     id: 29,
-    note: "N/A OF B2B — hors périmètre promotion / pilotage alternance pour cet audit initial.",
+    note: "N/A OF B2B — hors périmètre promotion / insertion par la voie de l’apprentissage.",
+  },
+  {
+    id: 33,
+    note: "N/A OF B2B — indicateur réservé à l’apprentissage / CFA (évaluation des contenus distincte de la satisfaction).",
   },
 ] as const;
+
+export const QUALIOPI_OF_NA_IDS = new Set(
+  QUALIOPI_OF_NA_INDICATORS.map((i) => i.id),
+);
+
+export function qualiopiOfNaNote(indicatorId: number): string | null {
+  return QUALIOPI_OF_NA_INDICATORS.find((i) => i.id === indicatorId)?.note ?? null;
+}
 
 export type QualiopiProcessDocKind =
   | "reclamations"
   | "paq"
   | "formateurs"
   | "handicap"
-  | "moyens";
+  | "moyens"
+  | "signalements";
 
 export const QUALIOPI_PROCESS_DOCS: Array<{
   kind: QualiopiProcessDocKind;
@@ -123,7 +148,7 @@ Module experts + synthèse annuelle.
   {
     kind: "handicap",
     title: "Accueil des personnes en situation de handicap",
-    indicatorIds: [20, 26],
+    indicatorIds: [10, 26],
     template: `# Accueil PSH — Byound
 
 ## Référente handicap
@@ -163,6 +188,40 @@ Locaux partenaires / client — capacité, accessibilité, matériel.
 
 ## Preuve
 Cette note + captures / contrats locaux si présentiel.
+`,
+  },
+  {
+    kind: "signalements",
+    title: "Procédure signalements violences / harcèlement / discriminations",
+    indicatorIds: [12],
+    template: `# Procédure signalements sensibles — Byound
+
+## Objet
+Recueillir et traiter tout signalement de violence, harcèlement ou discrimination lié à une action de formation, dans le respect de la confidentialité.
+
+## Destinataires
+Apprenants, formateurs / experts, entreprises clientes, salariés.
+
+## Canaux
+- Formulaire dédié (espaces dashboard + Qualité)
+- Anonymat possible
+
+## Référent
+Désigné dans les paramètres OF (\`referent_signalement_user_id\`). Accès au registre restreint (RLS).
+
+## Délais (paramétrables)
+- Accusé de réception sous N jours ouvrés (défaut : 2)
+- Traitement et clôture documentés dans le registre
+
+## Étapes
+1. Enregistrement (statut « reçu »)
+2. Accusé de réception
+3. Traitement (statut « en traitement »)
+4. Clôture et, si non anonyme, information du déclarant
+5. Conservation séparée du registre des réclamations qualité
+
+## Preuve
+Registre Qualiopi → Qualité → Signalements + cette procédure (PDF éventuel).
 `,
   },
 ];

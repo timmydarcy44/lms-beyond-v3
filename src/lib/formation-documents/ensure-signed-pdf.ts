@@ -63,6 +63,22 @@ export async function ensureSignedPdfBuffer(
   });
 
   try {
+    try {
+      const { data: dossierRow } = await service
+        .from("formation_dossiers")
+        .select("is_specimen")
+        .eq("id", doc.dossier_id)
+        .maybeSingle();
+      if (dossierRow && (dossierRow as { is_specimen?: boolean }).is_specimen === true) {
+        const { stampSpecimenOnPdf } = await import(
+          "@/lib/formation-documents/stamp-specimen"
+        );
+        buffer = await stampSpecimenOnPdf(buffer);
+      }
+    } catch {
+      /* colonne absente avant migration Lot 7 */
+    }
+
     buffer = await stampAcceptanceOnPdf(buffer, {
       documentLabel: doc.kind === "devis" ? "Devis" : "Convention",
       signerName,

@@ -20,6 +20,13 @@ type OfSettings = {
   fiscal_year_end: string | null;
   referent_handicap_user_id: string | null;
   bpf_campaign_deadline: string | null;
+  results_indicators_method: string | null;
+  referent_qualite_user_id: string | null;
+  referent_signalement_user_id: string | null;
+  lms_inactive_alert_days: string | null;
+  reclamation_ack_business_days: string | null;
+  reclamation_reply_business_days: string | null;
+  signalement_ack_business_days: string | null;
 };
 
 type HandicapReferentOption = {
@@ -28,6 +35,8 @@ type HandicapReferentOption = {
   email: string;
   userId: string | null;
 };
+
+type StaffOption = { userId: string; label: string; email: string };
 
 const EMPTY: OfSettings = {
   legal_name: "",
@@ -43,11 +52,19 @@ const EMPTY: OfSettings = {
   fiscal_year_end: "",
   referent_handicap_user_id: "",
   bpf_campaign_deadline: "",
+  results_indicators_method: "",
+  referent_qualite_user_id: "",
+  referent_signalement_user_id: "",
+  lms_inactive_alert_days: "7",
+  reclamation_ack_business_days: "5",
+  reclamation_reply_business_days: "15",
+  signalement_ack_business_days: "2",
 };
 
 export function OfSettingsForm() {
   const [form, setForm] = useState<OfSettings>(EMPTY);
   const [referentOptions, setReferentOptions] = useState<HandicapReferentOption[]>([]);
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -58,16 +75,21 @@ export function OfSettingsForm() {
         const json = (await res.json()) as {
           settings?: Partial<OfSettings> | null;
           handicapReferentOptions?: HandicapReferentOption[];
+          staffOptions?: StaffOption[];
         };
         if (json.settings) {
           setForm({
             ...EMPTY,
             ...Object.fromEntries(
-              Object.entries(json.settings).map(([key, value]) => [key, value ?? ""]),
+              Object.entries(json.settings).map(([key, value]) => [
+                key,
+                value == null ? "" : String(value),
+              ]),
             ),
           } as OfSettings);
         }
         setReferentOptions(json.handicapReferentOptions ?? []);
+        setStaffOptions(json.staffOptions ?? []);
       } catch {
         toast.error("Paramètres OF indisponibles (migration Lot 1 requise)");
       } finally {
@@ -150,6 +172,22 @@ export function OfSettingsForm() {
           ))}
 
           <div className="space-y-1.5 md:col-span-2">
+            <Label className="text-[#A3A8C7]">
+              Méthode de calcul des indicateurs de résultats (Qualiopi ind. 2)
+            </Label>
+            <textarea
+              value={form.results_indicators_method ?? ""}
+              onChange={(event) => set("results_indicators_method", event.target.value)}
+              rows={4}
+              placeholder="À rédiger — formule, période, nombre de répondants…"
+              className="w-full rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#F3F4FA]"
+            />
+            <p className="text-xs text-[#A3A8C7]">
+              Affichée sous chaque taux sur les fiches publiques. Surchargeable par formation.
+            </p>
+          </div>
+
+          <div className="space-y-1.5 md:col-span-2">
             <Label className="text-[#A3A8C7]">Référent handicap</Label>
             <select
               value={form.referent_handicap_user_id ?? ""}
@@ -181,6 +219,63 @@ export function OfSettingsForm() {
               Donne accès à Qualiopi → Handicap (dossiers RQTH + annuaire partenaires).
             </p>
           </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[#A3A8C7]">Référent signalements sensibles</Label>
+            <select
+              value={form.referent_signalement_user_id ?? ""}
+              onChange={(event) => set("referent_signalement_user_id", event.target.value)}
+              className="w-full rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#F3F4FA]"
+            >
+              <option value="">— Non assigné —</option>
+              {staffOptions.map((opt) => (
+                <option key={opt.userId} value={opt.userId}>
+                  {opt.label}
+                  {opt.email ? ` (${opt.email})` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-[#A3A8C7]">
+              Notifié à chaque dépôt ; accès RLS au registre VHD.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[#A3A8C7]">Référent qualité (optionnel)</Label>
+            <select
+              value={form.referent_qualite_user_id ?? ""}
+              onChange={(event) => set("referent_qualite_user_id", event.target.value)}
+              className="w-full rounded-md border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm text-[#F3F4FA]"
+            >
+              <option value="">— Non assigné —</option>
+              {staffOptions.map((opt) => (
+                <option key={opt.userId} value={opt.userId}>
+                  {opt.label}
+                  {opt.email ? ` (${opt.email})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(
+            [
+              ["lms_inactive_alert_days", "Seuil inactivité LMS (jours)"],
+              ["reclamation_ack_business_days", "Réclamations — accusé (j ouvrés)"],
+              ["reclamation_reply_business_days", "Réclamations — réponse (j ouvrés)"],
+              ["signalement_ack_business_days", "Signalements — accusé (j ouvrés)"],
+            ] as const
+          ).map(([key, label]) => (
+            <div key={key} className="space-y-1.5">
+              <Label className="text-[#A3A8C7]">{label}</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form[key] ?? ""}
+                onChange={(event) => set(key, event.target.value)}
+                className="border-[#262A4A] bg-[#0A0C1B] text-[#F3F4FA]"
+              />
+            </div>
+          ))}
 
           <div className="md:col-span-2">
             <Button

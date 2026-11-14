@@ -295,6 +295,7 @@ export function ExpertShell({
     });
   }
   items.push({ label: "Réclamation", href: "/dashboard/expert/reclamation", icon: MessageSquareWarning });
+  items.push({ label: "Signalement", href: "/dashboard/expert/signalement", icon: MessageSquareWarning });
   items.push({ label: "Paramètres", href: "/dashboard/expert/settings", icon: Settings });
 
   const identity = (

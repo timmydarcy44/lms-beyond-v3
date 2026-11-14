@@ -49,6 +49,7 @@ type Meta = {
   superseded: boolean;
   expired: boolean;
   page_state: "pending" | "accepted" | "expired" | "superseded";
+  is_specimen?: boolean;
   timeline: TimelineStep[];
   account_manager: {
     name: string;
@@ -316,6 +317,19 @@ export function PublicDocumentClient({ token, acceptToken: acceptProp = "" }: Pr
       style={{ background: BG, color: TEXT }}
     >
       <div className="mx-auto w-full space-y-4" style={{ maxWidth: 480 }}>
+        {meta?.is_specimen ? (
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-xl border border-rose-400/40 bg-rose-500/20 px-3 py-2 text-sm text-rose-100"
+          >
+            <span className="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+              SPÉCIMEN
+            </span>
+            <span className="text-xs leading-snug">
+              Document de démonstration — hors indicateurs Qualiopi.
+            </span>
+          </div>
+        ) : null}
         <header className="flex items-center gap-2.5 pt-1">
           <div
             className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-extrabold text-white"

@@ -74,6 +74,24 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
           </div>
         </article>
       ) : null}
+      <article className="mb-4 rounded-[28px] border border-[#8DB8FF]/40 bg-[#1E2130] p-5 text-[#F4F5F7]">
+        <p className="text-sm font-bold text-[#8DB8FF]">Sous-traitance — Qualiopi ind. 27</p>
+        <h2 className="mt-1 text-[18px] font-extrabold tracking-[-0.03em]">
+          Indépendant ou portage : contrat à jour
+        </h2>
+        <p className="mt-2 text-sm text-[#B5BAC6]">
+          Si vous intervenez en indépendant ou portage salarial, déposez le contrat de
+          sous-traitance signé dans Contrats (avec date de fin). L&apos;engagement qualité est
+          validé côté admin Formateurs.
+        </p>
+        <div className="mt-3">
+          <ExpertPrimaryButton
+            onClick={() => router.push("/dashboard/expert/documents?folder=contrat")}
+          >
+            Ouvrir Contrats
+          </ExpertPrimaryButton>
+        </div>
+      </article>
       {oldest ? (
         <article className="rounded-[28px] bg-[#FF4B4B] p-5 text-[#04140C]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

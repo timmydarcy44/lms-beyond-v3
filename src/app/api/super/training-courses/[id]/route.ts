@@ -40,6 +40,13 @@ const UPDATABLE_FIELDS = [
   "trainer_headline",
   "trainer_photo_url",
   "is_active",
+  "recognition_type",
+  "recognition_detail",
+  "pedagogical_modality",
+  "pedagogical_modality_detail",
+  "financing_modalities",
+  "price_on_quote",
+  "results_method_override",
 ] as const;
 
 export async function PATCH(

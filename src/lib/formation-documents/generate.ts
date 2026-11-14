@@ -132,6 +132,23 @@ export async function generateFormationDocuments(
       sealHash: string;
     } | null = null;
 
+    // Filigrane SPÉCIMEN (Lot 7) — avant cachet signature
+    let specimenStamped = false;
+    if (ctx.dossier.is_specimen) {
+      try {
+        const { stampSpecimenOnPdf } = await import(
+          "@/lib/formation-documents/stamp-specimen"
+        );
+        buffer = await stampSpecimenOnPdf(buffer);
+        specimenStamped = true;
+      } catch (err) {
+        console.warn(
+          "[generate] stamp specimen:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+
     // Cachet signature visible sur devis / convention déjà acceptés
     if (isSignedRow) {
       try {
@@ -206,15 +223,20 @@ export async function generateFormationDocuments(
       updated_at: new Date().toISOString(),
       status: row.status === "to_generate" ? "to_generate" : row.status,
     };
-    if (isSignedRow) {
+    if (isSignedRow || specimenStamped) {
       patch.meta = {
         ...prevMeta,
-        acceptance_stamped_at: new Date().toISOString(),
-        ...(acceptanceSeal
+        ...(specimenStamped ? { specimen_stamped_at: new Date().toISOString() } : {}),
+        ...(isSignedRow
           ? {
-              acceptance_tracking_id: acceptanceSeal.trackingId,
-              acceptance_seal_short: acceptanceSeal.sealShort,
-              acceptance_seal_hash: acceptanceSeal.sealHash,
+              acceptance_stamped_at: new Date().toISOString(),
+              ...(acceptanceSeal
+                ? {
+                    acceptance_tracking_id: acceptanceSeal.trackingId,
+                    acceptance_seal_short: acceptanceSeal.sealShort,
+                    acceptance_seal_hash: acceptanceSeal.sealHash,
+                  }
+                : {}),
             }
           : {}),
       };

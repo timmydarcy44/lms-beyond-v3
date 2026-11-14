@@ -22,6 +22,8 @@ export type TransitionDossierInput = {
     trainerAssigned?: boolean;
     /** CV formateur snapshoté dans le coffre (ou déposé côté expert). */
     trainerCvReady?: boolean;
+    /** Contrat SST + engagement qualité OK (indépendant / portage). */
+    trainerSubcontractReady?: boolean;
     /** Tous les créneaux de la session ont une clôture formateur. */
     allSlotsClosed?: boolean;
     /** Pas de créneau (session non programmée) — allSlotsClosed ignoré si true et count=0. */
@@ -51,6 +53,7 @@ export type TransitionDossierErr = {
     | "convention_required"
     | "trainer_required"
     | "trainer_cv_required"
+    | "trainer_subcontract_required"
     | "attendance_incomplete"
     | "invoice_required"
     | "qualiopi_incomplete";
@@ -182,6 +185,14 @@ export function evaluateFormationDossierTransition(
         code: "trainer_cv_required",
         message:
           "CV formateur requis : le formateur doit déposer son CV dans /dashboard/expert/documents avant Session.",
+      };
+    }
+    if (input.dossier.trainerSubcontractReady === false) {
+      return {
+        ok: false,
+        code: "trainer_subcontract_required",
+        message:
+          "Contrat de sous-traitance signé (non expiré) et engagement qualité requis pour un intervenant indépendant / portage.",
       };
     }
   }

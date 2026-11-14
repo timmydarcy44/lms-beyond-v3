@@ -148,6 +148,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     patch.identity_check_first_attendance = Boolean(body.identity_check_first_attendance);
   }
 
+  if (body.is_specimen !== undefined) {
+    patch.is_specimen = Boolean(body.is_specimen);
+  }
+
   if (Array.isArray(body.pending_confirm_fields)) {
     patch.pending_confirm_fields = body.pending_confirm_fields.map(String);
   } else if (body.confirm_fields === true) {
@@ -160,6 +164,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     .eq("id", id)
     .select("*")
     .single();
+
+  if (error && /is_specimen/i.test(error.message) && "is_specimen" in patch) {
+    delete patch.is_specimen;
+    ({ data, error } = await service
+      .from("formation_dossiers")
+      .update(patch)
+      .eq("id", id)
+      .select("*")
+      .single());
+  }
 
   if (error && /opco_name/i.test(error.message) && "opco_name" in patch) {
     delete patch.opco_name;

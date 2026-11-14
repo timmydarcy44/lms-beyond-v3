@@ -1,12 +1,17 @@
 import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
 import { QUALIOPI_RNQ_CRITERIA } from "@/lib/qualiopi/qualiopi-rnq-reference";
+import { QUALIOPI_OF_NA_IDS, qualiopiOfNaNote } from "@/lib/qualiopi/qualiopi-of-b2b";
 import {
   QUALIOPI_CORE_DOCS,
   buildSessionEvidence,
   type QualiopiAuditSignals,
 } from "@/lib/qualiopi/qualiopi-compliance-signals";
 
-export type QualiopiComplianceStatus = "validated" | "partial" | "missing";
+export type QualiopiComplianceStatus =
+  | "validated"
+  | "partial"
+  | "missing"
+  | "not_applicable";
 
 export type QualiopiValidatedSource = "evidence" | "attestation";
 
@@ -17,6 +22,8 @@ export type QualiopiIndicatorCompliance = {
   nextStep?: string;
   validatedSource?: QualiopiValidatedSource;
   attestationNote?: string | null;
+  /** Justification N/A (défaut OF B2B ou note d’attestation). */
+  naJustification?: string | null;
 };
 
 export type QualiopiComplianceSnapshot = {
@@ -25,6 +32,9 @@ export type QualiopiComplianceSnapshot = {
     validated: number;
     partial: number;
     missing: number;
+    notApplicable: number;
+    /** Indicateurs applicables (= total − N/A). */
+    applicable: number;
     total: number;
     readinessPercent: number;
   };
@@ -40,7 +50,10 @@ export type QualiopiComplianceSnapshot = {
   };
 };
 
-type DraftRow = Omit<QualiopiIndicatorCompliance, "validatedSource" | "attestationNote">;
+type DraftRow = Omit<
+  QualiopiIndicatorCompliance,
+  "validatedSource" | "attestationNote" | "naJustification"
+>;
 
 function row(
   id: number,
@@ -51,7 +64,12 @@ function row(
   return { indicatorId: id, status, reason, nextStep };
 }
 
-/** Audit produit + données CRM + attestations super-admin. */
+function naDraft(id: number): DraftRow {
+  const note = qualiopiOfNaNote(id) ?? "N/A OF B2B.";
+  return row(id, "not_applicable", note);
+}
+
+/** Audit produit + données CRM + attestations super-admin (RNQ V10 / 33 ind.). */
 export function assessQualiopiCompliance(input: {
   documents: QualiopiDocument[];
   sessions: QualiopiSession[];
@@ -66,8 +84,13 @@ export function assessQualiopiCompliance(input: {
   const attestationById = new Map(signals.attestations.map((a) => [a.indicatorId, a]));
   const hasCatalogObjectives = signals.coursesWithObjectives > 0;
   const hasExperts = signals.approvedExperts > 0;
+  const handicapReady =
+    Boolean(signals.processDocsReady?.handicap) ||
+    (signals.handicapProfilesCount ?? 0) >= 1 ||
+    (signals.handicapDocsCount ?? 0) >= 1;
 
   const drafts: DraftRow[] = [
+    // —— Critère 1 ——
     ev.coreUploaded === QUALIOPI_CORE_DOCS.length && ev.scheduledSessions >= 1
       ? row(
           1,
@@ -108,72 +131,72 @@ export function assessQualiopiCompliance(input: {
             "Envoyer les questionnaires fin de session ou attester une publication hors site.",
           ),
 
-    row(
-      3,
-      "missing",
-      "Pas de suivi RNCP / taux d’obtention certifications pro dans l’outil.",
-      "Non applicable si vous ne délivrez pas de titres — sinon attester avec preuves.",
-    ),
+    naDraft(3),
 
-    hasCatalogObjectives
-      ? row(
-          4,
-          "validated",
-          `${signals.coursesWithObjectives} formation(s) catalogue avec objectifs pédagogiques renseignés.`,
-        )
-      : row(
-          4,
-          "partial",
-          "Objectifs pédagogiques prévus sur le studio ; aucune formation avec ≥ 3 objectifs détectée.",
-          "Super → Studio : compléter les objectifs sur chaque offre B2B.",
-        ),
-
-    ev.sessionsWithConventionSent >= 1 && ev.sessions.some((s) => (s.attendees?.length ?? 0) > 0)
-      ? row(
-          5,
-          "validated",
-          "Pack d’information envoyé et participants identifiés — adaptation traçable via dossier session / convention.",
-        )
-      : row(
-          5,
-          "partial",
-          "Diagnostics Byound orientent le parcours ; trace « adaptation public » par session à consolider.",
-          "Programmer une session, envoyer le pack admin et archiver le positionnement dans le deal.",
-        ),
-
+    // —— Critère 2 (libellés V10 corrigés) ——
     ev.hasAnySession && ev.sessions.some((s) => (s.attendees?.length ?? 0) > 0)
       ? row(
-          6,
+          4,
           "validated",
-          "Sessions CRM avec participants — besoins identifiés via pipeline et diagnostics associés au parcours.",
+          "Sessions CRM avec participants — analyse du besoin traçable via pipeline / deal / diagnostics associés.",
         )
       : row(
-          6,
+          4,
           "partial",
-          "Positionnement via DISC / IDMC / soft skills ; lier explicitement au dossier Qualiopi du deal.",
+          "Positionnement via diagnostics Byound ; lier explicitement l’analyse de besoin au dossier session.",
           "Créer une session avec participants depuis un deal signé.",
         ),
 
-    row(
-      7,
-      "missing",
-      "Pas de contrôle d’adéquation RNCP/RS dans le produit.",
-      "Attester si certifications délivrées (hors Byound).",
-    ),
-
     hasCatalogObjectives
+      ? row(
+          5,
+          "validated",
+          `${signals.coursesWithObjectives} formation(s) catalogue avec objectifs pédagogiques opérationnels renseignés.`,
+        )
+      : row(
+          5,
+          "partial",
+          "Objectifs pédagogiques prévus sur le studio ; aucune formation avec ≥ 3 objectifs détectée.",
+          "Super → Studio / Catalogue : compléter les objectifs sur chaque offre B2B.",
+        ),
+
+    hasCatalogObjectives && ev.hasAnySession
+      ? row(
+          6,
+          "validated",
+          "Contenus catalogue + modalités de mise en œuvre tracées via sessions CRM.",
+        )
+      : hasCatalogObjectives
+        ? row(
+            6,
+            "partial",
+            "Contenus catalogue renseignés ; programmer une session pour prouver les modalités.",
+            "Pipeline B2B → programmer une formation.",
+          )
+        : row(
+            6,
+            "partial",
+            "Contenus et modalités à aligner sur les objectifs et publics (fiches catalogue).",
+            "Compléter les fiches formation catalogue.",
+          ),
+
+    naDraft(7),
+
+    hasCatalogObjectives ||
+    ev.sessions.some((s) => (s.attendees?.length ?? 0) > 0)
       ? row(
           8,
           "validated",
-          "Modalités d’évaluation décrites via objectifs / parcours formation (quiz, badges, cas).",
+          "Procédures de positionnement / évaluation à l’entrée tracées (diagnostics, objectifs, participants).",
         )
       : row(
           8,
           "partial",
-          "Modalités d’évaluation sur les pages formation à aligner avec les grilles réelles.",
-          "Compléter objectifs et évaluations sur les fiches catalogue.",
+          "Positionnement prévu (diagnostics Byound) ; formaliser la procédure d’entrée sur une session.",
+          "Lier un diagnostic / positionnement à une session B2B.",
         ),
 
+    // —— Critère 3 ——
     ev.sessionsWithInfoPackSent >= 1
       ? row(
           9,
@@ -194,119 +217,88 @@ export function assessQualiopiCompliance(input: {
             "Déposer la convention type dans le coffre Qualiopi.",
           ),
 
-    ev.sessionsWithLivretSent >= 1
+    ev.sessionsWithLivretSent >= 1 && handicapReady
       ? row(
           10,
           "validated",
-          `${ev.sessionsWithLivretSent} session(s) avec livret d’accueil envoyé.`,
+          `Livret d’accueil envoyé + preuves handicap (process / fiches / documents) — adaptation aux publics.`,
         )
-      : ev.hasLivret
+      : ev.sessionsWithLivretSent >= 1 || handicapReady || ev.hasLivret
         ? row(
             10,
             "partial",
-            "Livret modèle déposé ; envoi aux stagiaires à déclencher.",
-            "Démarrer une session B2B pour envoyer le livret.",
+            handicapReady
+              ? "Preuves handicap en place ; finaliser l’envoi du livret d’accueil sur une session."
+              : "Accueil / livret partiel — compléter process handicap et envoi livret.",
+            "Qualiopi → Handicap + démarrer une session pour envoyer le livret.",
           )
         : row(
             10,
             "missing",
-            "Livret modèle non déposé.",
-            "Uploader le livret d’accueil dans le coffre.",
-          ),
-
-    ev.sessions.some((s) => s.status === "in_progress" || s.status === "done")
-      ? row(
-          11,
-          "validated",
-          "Au moins une formation en cours ou terminée — suivi LMS / progression apprenant actif.",
-        )
-      : ev.hasAnySession
-        ? row(
-            11,
-            "partial",
-            "Session programmée ; démarrer la formation pour activer le suivi de progression.",
-            "Passer la session en « en cours » depuis le pipeline.",
-          )
-        : row(
-            11,
-            "partial",
-            "Suivi de progression apprenant disponible — aucune session exploitée.",
-            "Programmer et démarrer une formation B2B.",
-          ),
-
-    row(
-      12,
-      "partial",
-      "Objectif pro + Skills / badges ; pas de module « insertion » dédié.",
-      "Attester l’accompagnement emploi si applicable.",
-    ),
-
-    ev.sessionsWithFullSignature >= 1
-      ? row(
-          13,
-          "validated",
-          `${ev.sessionsWithFullSignature} session(s) avec parcours individualisé (participants + émargement complet).`,
-        )
-      : row(
-          13,
-          "partial",
-          "Parcours personnalisés (diagnostic, recommandations) ; preuve par stagiaire à archiver.",
-          "Compléter émargements sur une session multi-participants.",
-        ),
-
-    hasCatalogObjectives
-      ? row(
-          14,
-          "validated",
-          "Ressources pédagogiques liées aux formations catalogue (studio / Learn).",
-        )
-      : row(
-          14,
-          "partial",
-          "Ressources pédagogiques (Learn, studio) ; inventaire par formation à formaliser.",
-          "Publier ou compléter le contenu des offres catalogue.",
-        ),
-
-    ev.sessionsWithFullSignature >= 1
-      ? row(
-          15,
-          "validated",
-          `${ev.sessionsWithFullSignature} session(s) avec émargement horodaté complet en base.`,
-        )
-      : ev.hasAnySession
-        ? row(
-            15,
-            "partial",
-            "Émargement horodaté disponible ; signatures incomplètes ou absentes.",
-            "Faire signer tous les participants (lien émargement).",
-          )
-        : row(
-            15,
-            "partial",
-            "Fonctionnalité émargement prête ; aucune session exploitée.",
-            "Programmer une formation et envoyer les liens d’émargement.",
+            "Pas de livret envoyé ni de preuves d’adaptation / handicap.",
+            "Uploader le livret + renseigner le module Handicap.",
           ),
 
     ev.sessionsDoneFullySigned >= 1
       ? row(
-          16,
+          11,
           "validated",
-          "Session terminée avec émargement complet — preuve de fin de prestation.",
+          "Session terminée avec émargement complet — évaluation de l’atteinte des objectifs traçable.",
         )
-      : ev.sessionsWithFullSignature >= 1
+      : ev.sessions.some((s) => s.status === "in_progress" || s.status === "done")
         ? row(
-            16,
+            11,
             "partial",
-            "Émargement complet ; clôturer la session (statut terminé) pour la preuve finale.",
-            "Marquer la formation comme terminée dans le pipeline.",
+            "Formation en cours / terminée ; clôturer avec émargement complet pour la preuve d’évaluation.",
+            "Compléter évaluations / émargements puis clôturer la session.",
           )
         : row(
-            16,
+            11,
             "partial",
-            "Open Badges / évaluations possibles ; preuve de fin de prestation à uniformiser.",
-            "Terminer une session avec émargement complet.",
+            "Évaluation des acquis prévue (quiz, badges) ; aucune session exploitée.",
+            "Programmer et clôturer une formation B2B.",
           ),
 
+    (() => {
+      const signalementsOk =
+        Boolean(signals.signalementsProcessReady) ||
+        Boolean(signals.processDocsReady?.signalements);
+      const exits = signals.exitsCount ?? 0;
+      if (signalementsOk) {
+        return row(
+          12,
+          "validated",
+          `Engagement / prévention ruptures + procédure signalements VHD en place${
+            exits > 0 ? ` · ${exits} sortie(s) tracée(s)` : ""
+          }${
+            (signals.signalementsCount ?? 0) > 0
+              ? ` · ${signals.signalementsCount} signalement(s)`
+              : ""
+          }.`,
+        );
+      }
+      if (exits >= 1) {
+        return row(
+          12,
+          "partial",
+          `${exits} sortie(s) tracée(s) — activer la procédure signalements VHD.`,
+          "Qualiopi → Qualité → Signalements + Process docs.",
+        );
+      }
+      return row(
+        12,
+        "missing",
+        "Pas de procédure engagement / signalements violences-harcèlement-discriminations.",
+        "Qualiopi → Qualité → Signalements + Process docs.",
+      );
+    })(),
+
+    naDraft(13),
+    naDraft(14),
+    naDraft(15),
+    naDraft(16),
+
+    // —— Critère 4 ——
     signals.processDocsReady?.moyens
       ? row(17, "validated", "Note moyens matériels / locaux documentée.")
       : row(
@@ -329,28 +321,35 @@ export function assessQualiopiCompliance(input: {
           "Créer une session liée à un deal B2B.",
         ),
 
-    hasCatalogObjectives
+    (signals.lmsEnrollmentsCount ?? 0) >= 1 && hasCatalogObjectives
       ? row(
           19,
           "validated",
-          "Catalogue et ressources studio rattachés aux formations.",
+          `Ressources catalogue + suivi distanciel LMS (${signals.lmsEnrollmentsCount} inscription(s)${
+            (signals.pedagogicalReferentsCount ?? 0) >= 1
+              ? ` · ${signals.pedagogicalReferentsCount} référent(s) pédagogique(s)`
+              : ""
+          }).`,
         )
-      : row(
-          19,
-          "partial",
-          "Catalogue et supports ; liste des ressources par action à compléter.",
-          "Compléter les formations catalogue.",
-        ),
+      : hasCatalogObjectives || (signals.lmsEnrollmentsCount ?? 0) >= 1
+        ? row(
+            19,
+            "partial",
+            hasCatalogObjectives
+              ? "Ressources catalogue OK — lier au moins une inscription LMS pour le suivi distanciel."
+              : "Suivi LMS partiel — compléter les ressources catalogue.",
+            "Dossier formation → Suivi LMS / référent pédagogique.",
+          )
+        : row(
+            19,
+            "partial",
+            "Ressources et suivi distanciel à formaliser (catalogue + enrollments LMS).",
+            "Compléter le catalogue et activer le suivi LMS sur un dossier.",
+          ),
 
-    signals.processDocsReady?.handicap
-      ? row(20, "validated", "Note handicap / référent documentée dans le dossier process Qualiopi.")
-      : row(
-          20,
-          "partial",
-          "Module école handicap + référent sur fiches ; formaliser la note process.",
-          "Qualiopi → Process docs → Handicap, ou attestation.",
-        ),
+    naDraft(20),
 
+    // —— Critère 5 ——
     hasExperts && signals.approvedExperts >= 2
       ? row(
           21,
@@ -391,6 +390,7 @@ export function assessQualiopiCompliance(input: {
             "Rédiger le process Formateurs puis saisir un plan expert.",
           ),
 
+    // —— Critère 6 ——
     (signals.veille?.reglementaireDone ?? 0) >= 1
       ? row(23, "validated", "Au moins une info réglementaire surlignée et traitée (90 j).")
       : (signals.veille?.anySaved ?? 0) >= 1
@@ -439,33 +439,45 @@ export function assessQualiopiCompliance(input: {
             "Surligner une info pédagogie.",
           ),
 
-    signals.processDocsReady?.handicap
-      ? row(26, "validated", "Note handicap / partenariats documentée.")
+    handicapReady
+      ? row(
+          26,
+          "validated",
+          signals.processDocsReady?.handicap
+            ? `Note handicap / partenariats documentée${
+                (signals.handicapProfilesCount ?? 0) > 0
+                  ? ` · ${signals.handicapProfilesCount} fiche(s) PSH`
+                  : ""
+              }.`
+            : `${signals.handicapProfilesCount ?? 0} fiche(s) PSH / documents — formaliser aussi la note process.`,
+        )
       : row(
           26,
           "partial",
-          "Référent handicap sur fiches ; formaliser partenariats.",
-          "Process docs → Handicap.",
+          "Référent handicap sur fiches ; formaliser partenariats et preuves d’accueil.",
+          "Qualiopi → Handicap + Process docs → Handicap.",
         ),
-    row(
-      27,
-      "missing",
-      "Hors scope OF B2B sauf sous-traitance — attester N/A ou contrats.",
-      "Attester N/A OF B2B ou déposer les contrats sous-traitants.",
-    ),
-    row(
-      28,
-      "missing",
-      "Hors périmètre CFA / apprentissage pour l’audit OF B2B.",
-      "Attester N/A OF B2B.",
-    ),
-    row(
-      29,
-      "missing",
-      "Hors périmètre promotion alternance pour l’audit OF B2B.",
-      "Attester N/A OF B2B.",
-    ),
 
+    (signals.subcontractReadyCount ?? 0) >= 1 ||
+    (signals.subcontractExpertsCount ?? 0) >= 1
+      ? row(
+          27,
+          (signals.subcontractReadyCount ?? 0) >= 1 ? "validated" : "partial",
+          (signals.subcontractReadyCount ?? 0) >= 1
+            ? `Sous-traitance cadrée — ${signals.subcontractReadyCount} intervenant(s) conforme(s) (statut + contrat / salarié).`
+            : `${signals.subcontractExpertsCount} expert(s) avec statut d'emploi — compléter contrats SST si indépendant/portage.`,
+        )
+      : row(
+          27,
+          "missing",
+          "Pas de statut d'emploi / contrats de sous-traitance renseignés.",
+          "Qualiopi → Formateurs : renseigner salarié / indépendant / portage + contrats.",
+        ),
+
+    naDraft(28),
+    naDraft(29),
+
+    // —— Critère 7 ——
     ev.sessionsWithFullSatisfaction >= 1
       ? row(
           30,
@@ -503,25 +515,62 @@ export function assessQualiopiCompliance(input: {
 
     signals.actionsReviewed ||
     (signals.actionsDoneCount ?? 0) >= 1 ||
-    signals.processDocsReady?.paq
+    signals.processDocsReady?.paq ||
+    (signals.risksCount ?? 0) >= 1
       ? row(
           32,
           "validated",
-          (signals.actionsDoneCount ?? 0) >= 1
-            ? `Plan d’actions qualité avec ${signals.actionsDoneCount} action(s) clôturée(s) / revue.`
-            : "Comité / plan d’actions documenté.",
+          (signals.risksCount ?? 0) >= 1
+            ? `Registre des risques actif (${signals.risksCount} risque(s)${
+                (signals.risksOpenCount ?? 0) > 0
+                  ? `, ${signals.risksOpenCount} ouvert(s)`
+                  : ""
+              })${
+                (signals.actionsDoneCount ?? 0) >= 1
+                  ? ` · ${signals.actionsDoneCount} action(s) PAQ clôturée(s)`
+                  : ""
+              }.`
+            : (signals.actionsDoneCount ?? 0) >= 1
+              ? `Plan d’actions qualité avec ${signals.actionsDoneCount} action(s) clôturée(s) / revue.`
+              : "Comité / plan d’actions documenté.",
         )
       : row(
           32,
           "missing",
-          "Pas de boucle d’actions correctives liée aux enquêtes.",
-          "Qualiopi → Qualité : créer une revue PAQ ou une action.",
+          "Pas de registre des risques ni de boucle d’actions correctives.",
+          "Qualiopi → Risques : créer le registre, ou Qualité → action PAQ.",
         ),
+
+    naDraft(33),
   ];
 
-  const indicators: QualiopiIndicatorCompliance[] = drafts.map((d) => {
+  // Garde-fou : tout id N/A OF doit rester not_applicable même si draft divergé.
+  const draftsNormalized = drafts.map((d) =>
+    QUALIOPI_OF_NA_IDS.has(d.indicatorId) ? { ...d, status: "not_applicable" as const } : d,
+  );
+
+  const indicators: QualiopiIndicatorCompliance[] = draftsNormalized.map((d) => {
     const att = attestationById.get(d.indicatorId);
-    if (att) {
+    const isNa = QUALIOPI_OF_NA_IDS.has(d.indicatorId) || att?.kind === "na";
+
+    if (isNa) {
+      const justification =
+        (att?.kind === "na" ? att.note : null) ||
+        qualiopiOfNaNote(d.indicatorId) ||
+        att?.note ||
+        d.reason;
+      return {
+        ...d,
+        status: "not_applicable",
+        reason: justification,
+        naJustification: justification,
+        validatedSource: att ? "attestation" : undefined,
+        attestationNote: att?.note ?? null,
+        nextStep: undefined,
+      };
+    }
+
+    if (att && att.kind !== "na") {
       return {
         ...d,
         status: "validated",
@@ -531,8 +580,9 @@ export function assessQualiopiCompliance(input: {
         nextStep: undefined,
       };
     }
+
     if (d.status === "validated") {
-      return { ...d, validatedSource: "evidence" };
+      return { ...d, validatedSource: "evidence" as const };
     }
     return { ...d };
   });
@@ -540,12 +590,22 @@ export function assessQualiopiCompliance(input: {
   const validated = indicators.filter((r) => r.status === "validated").length;
   const partial = indicators.filter((r) => r.status === "partial").length;
   const missing = indicators.filter((r) => r.status === "missing").length;
+  const notApplicable = indicators.filter((r) => r.status === "not_applicable").length;
   const total = indicators.length;
-  const readinessPercent = Math.round(((validated + partial * 0.5) / total) * 100);
+  const applicable = Math.max(1, total - notApplicable);
+  const readinessPercent = Math.round(((validated + partial * 0.5) / applicable) * 100);
 
   return {
     indicators,
-    summary: { validated, partial, missing, total, readinessPercent },
+    summary: {
+      validated,
+      partial,
+      missing,
+      notApplicable,
+      applicable,
+      total,
+      readinessPercent,
+    },
     runtime: {
       coreDocsUploaded: ev.coreUploaded,
       coreDocsTotal: QUALIOPI_CORE_DOCS.length,

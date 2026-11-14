@@ -65,6 +65,8 @@ export type DossierDocContext = {
     opco_name: string | null;
     session_id: string | null;
     status: string;
+    /** Lot 7 — parcours de démonstration. */
+    is_specimen: boolean;
   };
   organization: {
     id: string;
@@ -181,10 +183,19 @@ export async function loadDossierDocContext(
   let dossierQuery = await service
     .from("formation_dossiers")
     .select(
-      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, opco_name, session_id, status, notes",
+      "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, opco_name, session_id, status, notes, is_specimen",
     )
     .eq("id", dossierId)
     .maybeSingle();
+  if (dossierQuery.error && /is_specimen/i.test(dossierQuery.error.message)) {
+    dossierQuery = await service
+      .from("formation_dossiers")
+      .select(
+        "id, organization_id, training_course_id, course_title, amount_ht_cents, amount_tva_cents, amount_ttc_cents, contact_name, contact_email, contact_phone, modality_intra_inter, modality_presence, funding_type, opco_name, session_id, status, notes",
+      )
+      .eq("id", dossierId)
+      .maybeSingle();
+  }
   if (dossierQuery.error && /opco_name/i.test(dossierQuery.error.message)) {
     dossierQuery = await service
       .from("formation_dossiers")
@@ -212,6 +223,7 @@ export async function loadDossierDocContext(
     opco_name?: string | null;
     status?: string;
     notes?: string | null;
+    is_specimen?: boolean | null;
   }) | null;
   if (!dossier) return null;
 
@@ -547,6 +559,7 @@ export async function loadDossierDocContext(
       opco_name: resolvedOpco,
       session_id: dossier.session_id ? String(dossier.session_id) : null,
       status: String(dossier.status),
+      is_specimen: dossier.is_specimen === true,
     },
     organization: {
       id: String(orgRow.id),

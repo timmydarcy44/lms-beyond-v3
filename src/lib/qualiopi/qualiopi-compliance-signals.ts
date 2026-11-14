@@ -1,10 +1,13 @@
 import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
 import { QUALIOPI_CORE_DOCS } from "@/lib/crm/qualiopi-shared";
 
+export type QualiopiAttestationKind = "evidence" | "na";
+
 export type QualiopiIndicatorAttestation = {
   indicatorId: number;
   note: string | null;
   updatedAt: string;
+  kind?: QualiopiAttestationKind;
 };
 
 export type QualiopiVeilleThemeCounts = {
@@ -26,7 +29,24 @@ export type QualiopiAuditSignals = {
   actionsDoneCount?: number;
   formateurPlansCount?: number;
   formateurActionsDoneCount?: number;
-  processDocsReady?: Partial<Record<"reclamations" | "paq" | "formateurs" | "handicap" | "moyens", boolean>>;
+  processDocsReady?: Partial<
+    Record<"reclamations" | "paq" | "formateurs" | "handicap" | "moyens" | "signalements", boolean>
+  >;
+  signalementsProcessReady?: boolean;
+  signalementsCount?: number;
+  risksCount?: number;
+  risksOpenCount?: number;
+  /** Ind. 27 — intervenants avec statut SST renseigné / conformes. */
+  subcontractExpertsCount?: number;
+  subcontractReadyCount?: number;
+  /** Ind. 19 — suivi distanciel LMS. */
+  lmsEnrollmentsCount?: number;
+  pedagogicalReferentsCount?: number;
+  /** Ind. 12 — engagement / ruptures. */
+  exitsCount?: number;
+  /** Ind. 10 / 26 — handicap. */
+  handicapProfilesCount?: number;
+  handicapDocsCount?: number;
 };
 
 export type QualiopiSessionEvidence = {

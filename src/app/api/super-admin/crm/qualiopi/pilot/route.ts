@@ -24,18 +24,36 @@ export async function GET() {
     uploaded: Boolean(docs?.some((row) => row.kind === d.kind && row.file_url)),
   }));
 
-  const { data: sessions } = await supabase
+  const { data: sessionsRaw } = await supabase
     .from("crm_qualiopi_sessions")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(20);
 
-  const sessionIds = (sessions ?? []).map((s) => s.id as string);
+  const specimenSessionIds = new Set<string>();
+  try {
+    const { data: specimenRows, error: specimenErr } = await supabase
+      .from("formation_dossiers")
+      .select("legacy_qualiopi_session_id, session_id")
+      .eq("is_specimen", true);
+    if (!specimenErr) {
+      for (const row of specimenRows ?? []) {
+        if (row.legacy_qualiopi_session_id)
+          specimenSessionIds.add(String(row.legacy_qualiopi_session_id));
+        if (row.session_id) specimenSessionIds.add(String(row.session_id));
+      }
+    }
+  } catch {
+    /* migration Lot 7 absente */
+  }
+  const sessions = (sessionsRaw ?? []).filter((s) => !specimenSessionIds.has(String(s.id)));
+
+  const sessionIds = sessions.map((s) => s.id as string);
   const { data: attendees } = sessionIds.length
     ? await supabase.from("crm_qualiopi_attendees").select("*").in("session_id", sessionIds)
     : { data: [] as Record<string, unknown>[] };
 
-  const enriched = (sessions ?? []).map((s) => {
+  const enriched = sessions.map((s) => {
     const list = (attendees ?? []).filter((a) => a.session_id === s.id);
     const signed = list.filter((a) => a.signed_at).length;
     const satisfied = list.filter((a) => a.satisfaction_at || a.satisfaction_score != null).length;

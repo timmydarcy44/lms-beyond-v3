@@ -118,6 +118,22 @@ describe("evaluateFormationDossierTransition", () => {
     if (!result.ok) expect(result.code).toBe("trainer_cv_required");
   });
 
+  it("exige un contrat SST avant Session si non conforme", () => {
+    const result = evaluateFormationDossierTransition({
+      currentStatus: "mise_en_place",
+      toStatus: "session",
+      dossier: {
+        ...baseDossier,
+        conventionSigned: true,
+        trainerAssigned: true,
+        trainerCvReady: true,
+        trainerSubcontractReady: false,
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("trainer_subcontract_required");
+  });
+
   it("bloque Fin → Clôturé sans facture", () => {
     const result = evaluateFormationDossierTransition({
       currentStatus: "fin",

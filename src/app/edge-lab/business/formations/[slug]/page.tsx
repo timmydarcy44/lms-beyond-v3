@@ -48,6 +48,24 @@ export default async function Page({ params }: Props) {
 
   const badgeMeta = await loadBadgeMeta(course.badge_class_id);
 
+  let resultsIndicatorsMethod: string | null = null;
+  try {
+    const service = await getServiceRoleClientOrFallback();
+    if (service) {
+      const { data: ofRow } = await service
+        .from("of_settings")
+        .select("results_indicators_method")
+        .limit(1)
+        .maybeSingle();
+      resultsIndicatorsMethod =
+        typeof ofRow?.results_indicators_method === "string"
+          ? ofRow.results_indicators_method
+          : null;
+    }
+  } catch {
+    resultsIndicatorsMethod = null;
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Course",
@@ -58,7 +76,11 @@ export default async function Page({ params }: Props) {
   return (
     <EdgePremiumShell overlayNav={false}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <EdgeTrainingDetailPage course={course} badgeMeta={badgeMeta} />
+      <EdgeTrainingDetailPage
+        course={course}
+        badgeMeta={badgeMeta}
+        resultsIndicatorsMethod={resultsIndicatorsMethod}
+      />
     </EdgePremiumShell>
   );
 }

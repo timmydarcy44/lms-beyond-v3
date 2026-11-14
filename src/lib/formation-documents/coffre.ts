@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { downloadFormationPdf } from "@/lib/formation-documents/storage";
 import { buildStoreZip } from "@/lib/formation-documents/zip-store";
+import { dossierHasDistanciel } from "@/lib/formation-documents/suivi-lms";
 
 export type CoffreItemStatus = "ready" | "partial" | "missing" | "not_due";
 
@@ -98,7 +99,9 @@ export async function buildCoffreSnapshot(
 ): Promise<CoffreSnapshot | null> {
   const { data: dossier } = await service
     .from("formation_dossiers")
-    .select("id, course_title, status, session_id, invoice_validated_at, trainer_user_id")
+    .select(
+      "id, course_title, status, session_id, invoice_validated_at, trainer_user_id, modality_presence, training_course_id",
+    )
     .eq("id", dossierId)
     .maybeSingle();
   if (!dossier) return null;
@@ -154,11 +157,31 @@ export async function buildCoffreSnapshot(
   const certificats = docs.filter((d) => d.kind === "certificat" && d.participant_id);
   const attestations = docs.filter((d) => d.kind === "attestation" && d.participant_id);
   const facture = pick(docs, "facture")[0];
+  const suiviLms = docs.filter((d) => d.kind === "suivi_lms" && d.participant_id);
+  const suiviLmsSession = pick(docs, "suivi_lms_session")[0];
 
   const participants = participantCount ?? 0;
   const dossierStatus = String(dossier.status);
   const pastSession = ["session", "fin", "cloture"].includes(dossierStatus);
   const pastFin = ["fin", "cloture"].includes(dossierStatus);
+
+  let hasDistanciel = false;
+  let pedagogicalModality: string | null = null;
+  let lmsCourseId: string | null = null;
+  if (dossier.training_course_id) {
+    const { data: tc } = await service
+      .from("training_courses")
+      .select("lms_course_id, pedagogical_modality")
+      .eq("id", dossier.training_course_id)
+      .maybeSingle();
+    pedagogicalModality = tc?.pedagogical_modality ? String(tc.pedagogical_modality) : null;
+    lmsCourseId = tc?.lms_course_id ? String(tc.lms_course_id) : null;
+  }
+  hasDistanciel = dossierHasDistanciel({
+    modality_presence: dossier.modality_presence ? String(dossier.modality_presence) : null,
+    pedagogical_modality: pedagogicalModality,
+    lms_course_id: lmsCourseId,
+  });
 
   const devisSigned = isSignedDoc(devis);
   const conventionSigned = isSignedDoc(convention);
@@ -362,7 +385,51 @@ export async function buildCoffreSnapshot(
       document_ids: facture ? [facture.id] : [],
       kind: "facture",
     },
+    {
+      key: "suivi_lms",
+      label: "Suivi distanciel LMS",
+      status: (() => {
+        if (!hasDistanciel) return "not_due";
+        if (!lmsCourseId) return pastSession ? "missing" : "not_due";
+        if (participants === 0) return pastSession ? "missing" : "not_due";
+        const learnersOk = suiviLms.length >= participants && suiviLms.every(hasFile);
+        const sessionOk = hasFile(suiviLmsSession);
+        if (learnersOk && sessionOk) return "ready";
+        if (suiviLms.length > 0 || sessionOk) return "partial";
+        return pastSession ? "missing" : "not_due";
+      })(),
+      detail: hasDistanciel
+        ? lmsCourseId
+          ? `${suiviLms.length}/${participants} apprenant(s) · synthèse ${hasFile(suiviLmsSession) ? "ok" : "manquante"}`
+          : "Cours LMS non lié au catalogue"
+        : "Pas de distanciel sur ce dossier",
+      document_ids: [
+        ...suiviLms.map((d) => d.id),
+        ...(suiviLmsSession ? [suiviLmsSession.id] : []),
+      ],
+      kind: "suivi_lms",
+    },
   ];
+
+  // Procédure signalements (OF-level) — preuve ind. 12 visible dans le coffre dossier
+  {
+    const { data: proc } = await service
+      .from("crm_qualiopi_process_docs")
+      .select("id, kind, status, file_url, title")
+      .eq("kind", "signalements")
+      .maybeSingle();
+    const ready = proc && (proc.status === "ready" || proc.status === "attested" || proc.file_url);
+    items.push({
+      key: "procedure_signalements",
+      label: "Procédure signalements (VHD)",
+      status: ready ? "ready" : proc ? "partial" : "missing",
+      detail: proc
+        ? `${proc.title || "Procédure"} · ${proc.status}${proc.file_url ? " · PDF" : " · texte"}`
+        : "À rédiger dans Qualiopi → Process",
+      document_ids: proc?.id ? [String(proc.id)] : [],
+      kind: "signalements",
+    });
+  }
 
   const countable = items.filter((i) => i.status !== "not_due");
   const ready_count = countable.filter((i) => i.status === "ready").length;

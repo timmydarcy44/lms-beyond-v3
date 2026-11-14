@@ -14,6 +14,7 @@ import {
   FORMATION_DOSSIER_STATUS_LABELS,
   type FormationDossierStatus,
 } from "@/lib/formation-dossier/constants";
+import { SpecimenBanner } from "@/components/formation-dossier/specimen-banner";
 
 type DocRow = {
   id: string;
@@ -74,6 +75,7 @@ type DossierDetail = {
   pending_confirm_fields: string[] | null;
   deal_regressed: boolean;
   identity_check_first_attendance: boolean;
+  is_specimen?: boolean;
   formation_documents?: DocRow[];
   formation_events?: EventRow[];
 };
@@ -133,6 +135,24 @@ type Lot5Meta = {
   };
   invoice: { number: string; amount_ttc_cents: number | null } | null;
   trainers: Array<{ id: string; name: string }>;
+  dossier_trainers?: {
+    trainers: Array<{
+      user_id: string;
+      role: "lead" | "co";
+      is_pedagogical_referent: boolean;
+      assigned_at: string;
+      name: string;
+    }>;
+    count: number;
+    needs_pedagogical_referent: boolean;
+    has_pedagogical_referent: boolean;
+    alert: string | null;
+  };
+  suivi_lms?: {
+    has_distanciel: boolean;
+    lms_course_id: string | null;
+    course_title: string | null;
+  };
   catalog?: {
     training_course_id: string | null;
     suggested_ht_cents: number | null;
@@ -158,9 +178,45 @@ export function FormationDossierSheet({
   const [dossier, setDossier] = useState<DossierDetail | null>(null);
   const [orgName, setOrgName] = useState("");
   const [participants, setParticipants] = useState<ParticipantRow[]>([]);
-  const [tab, setTab] = useState<"docs" | "coffre" | "participants" | "bpf" | "historique">(
-    "docs",
-  );
+  const [tab, setTab] = useState<
+    "docs" | "coffre" | "participants" | "engagement" | "bpf" | "historique"
+  >("docs");
+  const [engagementAlerts, setEngagementAlerts] = useState<
+    Array<{
+      id: string;
+      kind: string;
+      status: string;
+      detail: string | null;
+      learner_name?: string | null;
+      detected_at: string;
+      actions?: Array<{ channel: string; result: string; notes: string | null; action_at: string }>;
+    }>
+  >([]);
+  const [exits, setExits] = useState<
+    Array<{
+      id: string;
+      participant_id: string;
+      kind: string;
+      motif_code: string;
+      exited_at: string;
+      learner_name?: string | null;
+      actions_taken?: string | null;
+    }>
+  >([]);
+  const [engagementBusy, setEngagementBusy] = useState(false);
+  const [exitForm, setExitForm] = useState({
+    participant_id: "",
+    kind: "abandon",
+    motif_code: "autre",
+    motif_detail: "",
+    actions_taken: "",
+  });
+  const [relanceForm, setRelanceForm] = useState({
+    alert_id: "",
+    channel: "email",
+    result: "contacte",
+    notes: "",
+  });
   const [coffre, setCoffre] = useState<{
     items: Array<{
       key: string;
@@ -172,6 +228,9 @@ export function FormationDossierSheet({
     total_count: number;
   } | null>(null);
   const [coffreBusy, setCoffreBusy] = useState(false);
+  const [suiviBusy, setSuiviBusy] = useState(false);
+  const [coTrainerId, setCoTrainerId] = useState("");
+  const [trainersBusy, setTrainersBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [participantForm, setParticipantForm] = useState({
     first_name: "",
@@ -325,6 +384,29 @@ export function FormationDossierSheet({
   useEffect(() => {
     if (tab === "coffre" && dossierId) void loadCoffre();
   }, [tab, dossierId, loadCoffre]);
+
+  const loadEngagement = useCallback(async () => {
+    if (!dossierId) return;
+    try {
+      const [aRes, eRes] = await Promise.all([
+        fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/engagement?sync=1`),
+        fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/exits`),
+      ]);
+      const aJson = await parseFetchJson<{
+        alerts?: typeof engagementAlerts;
+        error?: string;
+      }>(aRes);
+      const eJson = await parseFetchJson<{ exits?: typeof exits; error?: string }>(eRes);
+      if (aRes.ok) setEngagementAlerts(aJson.alerts ?? []);
+      if (eRes.ok) setExits(eJson.exits ?? []);
+    } catch {
+      /* ignore */
+    }
+  }, [dossierId]);
+
+  useEffect(() => {
+    if (tab === "engagement" && dossierId) void loadEngagement();
+  }, [tab, dossierId, loadEngagement]);
 
   const exportCoffreZip = async () => {
     if (!dossierId) return;
@@ -567,6 +649,109 @@ export function FormationDossierSheet({
     onChanged();
   };
 
+  const addCoTrainer = async () => {
+    if (!coTrainerId) {
+      toast.error("Sélectionnez un intervenant");
+      return;
+    }
+    setTrainersBusy(true);
+    try {
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/trainers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", user_id: coTrainerId, role: "co" }),
+      });
+      const json = await parseFetchJson<{ error?: string; alert?: string | null }>(res);
+      if (!res.ok) {
+        toast.error(json.error || "Ajout impossible");
+        return;
+      }
+      toast.success(json.alert ? `Ajouté — ${json.alert}` : "Intervenant ajouté");
+      setCoTrainerId("");
+      await load();
+      onChanged();
+    } finally {
+      setTrainersBusy(false);
+    }
+  };
+
+  const setReferent = async (userId: string) => {
+    setTrainersBusy(true);
+    try {
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/trainers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_referent", user_id: userId }),
+      });
+      const json = await parseFetchJson<{ error?: string }>(res);
+      if (!res.ok) {
+        toast.error(json.error || "Désignation impossible");
+        return;
+      }
+      toast.success("Référent pédagogique désigné");
+      await load();
+      onChanged();
+    } finally {
+      setTrainersBusy(false);
+    }
+  };
+
+  const removeTrainer = async (userId: string) => {
+    setTrainersBusy(true);
+    try {
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/trainers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove", user_id: userId }),
+      });
+      const json = await parseFetchJson<{ error?: string }>(res);
+      if (!res.ok) {
+        toast.error(json.error || "Retrait impossible");
+        return;
+      }
+      toast.success("Intervenant retiré");
+      await load();
+      onChanged();
+    } finally {
+      setTrainersBusy(false);
+    }
+  };
+
+  const generateSuiviLms = async () => {
+    setSuiviBusy(true);
+    try {
+      const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/suivi-lms`, {
+        method: "POST",
+      });
+      const json = await parseFetchJson<{
+        error?: string;
+        has_distanciel?: boolean;
+        archived_learners?: number;
+        archived_session?: boolean;
+        skipped_reason?: string;
+      }>(res);
+      if (!res.ok) {
+        toast.error(json.error || "Génération impossible");
+        return;
+      }
+      if (!json.has_distanciel) {
+        toast.message(json.skipped_reason || "Pas de distanciel sur ce dossier");
+      } else if (json.skipped_reason) {
+        toast.message(json.skipped_reason);
+      } else {
+        toast.success(
+          `Relevés LMS archivés : ${json.archived_learners ?? 0} apprenant(s)${
+            json.archived_session ? " + synthèse" : ""
+          }`,
+        );
+      }
+      await loadCoffre();
+      onChanged();
+    } finally {
+      setSuiviBusy(false);
+    }
+  };
+
   const passToSession = async () => {
     if (!dossierId) return;
     const res = await fetch(`/api/super-admin/crm/formation-dossiers/${dossierId}/transition`, {
@@ -645,6 +830,7 @@ export function FormationDossierSheet({
                 : ""}
               {dossier?.funding_type ? ` · ${dossier.funding_type}` : ""}
             </p>
+            {dossier?.is_specimen ? <SpecimenBanner className="mt-3" compact /> : null}
           </div>
           <button
             type="button"
@@ -995,6 +1181,100 @@ export function FormationDossierSheet({
               </div>
             ) : null}
 
+            {["convention", "mise_en_place", "session", "fin"].includes(dossier.status) ? (
+              <div className="space-y-2 rounded-xl border border-[#262A4A] bg-[#141731] p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">Intervenants</p>
+                    <p className="text-xs text-[#A3A8C7]">
+                      {(meta?.dossier_trainers?.count ?? 0)} assigné(s) — au-delà de 8, référent
+                      pédagogique obligatoire.
+                    </p>
+                  </div>
+                  {meta?.dossier_trainers?.alert ? (
+                    <span className="shrink-0 rounded-full bg-[#7F1D1D] px-2.5 py-0.5 text-[11px] font-bold text-white">
+                      {meta.dossier_trainers.alert}
+                    </span>
+                  ) : null}
+                </div>
+                {(meta?.dossier_trainers?.trainers ?? []).length ? (
+                  <ul className="space-y-1.5">
+                    {(meta?.dossier_trainers?.trainers ?? []).map((t) => (
+                      <li
+                        key={t.user_id}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-[#262A4A] bg-[#0A0C1B] px-2.5 py-1.5 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-[#F3F4FA]">{t.name}</p>
+                          <p className="text-[10px] text-[#A3A8C7]">
+                            {t.role === "lead" ? "Lead" : "Co"}
+                            {t.is_pedagogical_referent ? " · Référent pédagogique" : ""}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          {!t.is_pedagogical_referent ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 border-[#262A4A] bg-transparent px-2 text-[10px] text-[#B7AEFF]"
+                              disabled={trainersBusy}
+                              onClick={() => void setReferent(t.user_id)}
+                            >
+                              Référent
+                            </Button>
+                          ) : null}
+                          {t.role !== "lead" ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 border-[#262A4A] bg-transparent px-2 text-[10px] text-[#F87171]"
+                              disabled={trainersBusy}
+                              onClick={() => void removeTrainer(t.user_id)}
+                            >
+                              Retirer
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-[#A3A8C7]">Aucun intervenant multi-assigné.</p>
+                )}
+                <div className="flex gap-2">
+                  <select
+                    value={coTrainerId}
+                    onChange={(e) => setCoTrainerId(e.target.value)}
+                    className="min-w-0 flex-1 rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                  >
+                    <option value="">Ajouter un co-intervenant…</option>
+                    {(meta?.trainers ?? [])
+                      .filter(
+                        (t) =>
+                          !(meta?.dossier_trainers?.trainers ?? []).some(
+                            (d) => d.user_id === t.id,
+                          ),
+                      )
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                  </select>
+                  <Button
+                    type="button"
+                    className="shrink-0 bg-[#6C5CF5] text-white"
+                    disabled={trainersBusy || !coTrainerId}
+                    onClick={() => void addCoTrainer()}
+                  >
+                    Ajouter
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             {dossier.status === "mise_en_place" ? (
               <div className="space-y-2 rounded-xl border border-[#262A4A] bg-[#141731] p-3">
                 <p className="text-sm font-semibold">Passer en Session</p>
@@ -1052,6 +1332,7 @@ export function FormationDossierSheet({
                   ["docs", "Documents"],
                   ["coffre", "Coffre"],
                   ["participants", "Participants"],
+                  ["engagement", "Engagement"],
                   ["bpf", "Données BPF"],
                   ["historique", "Historique"],
                 ] as const
@@ -1071,22 +1352,47 @@ export function FormationDossierSheet({
 
             {tab === "coffre" ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm text-[#A3A8C7]">
                     {coffre
                       ? `${coffre.ready_count}/${coffre.total_count} preuves prêtes`
                       : "Chargement du coffre Qualiopi…"}
                   </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="bg-[#6C5CF5] text-white"
-                    disabled={coffreBusy}
-                    onClick={() => void exportCoffreZip()}
-                  >
-                    {coffreBusy ? "Export…" : "Exporter ZIP"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {meta?.suivi_lms?.has_distanciel ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-[#262A4A] bg-transparent text-[#B7AEFF]"
+                        disabled={suiviBusy}
+                        onClick={() => void generateSuiviLms()}
+                        title={
+                          meta.suivi_lms.lms_course_id
+                            ? "Générer les relevés LMS et les archiver"
+                            : "Liez un cours LMS sur la fiche catalogue"
+                        }
+                      >
+                        {suiviBusy ? "Relevés…" : "Archiver suivi LMS"}
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-[#6C5CF5] text-white"
+                      disabled={coffreBusy}
+                      onClick={() => void exportCoffreZip()}
+                    >
+                      {coffreBusy ? "Export…" : "Exporter ZIP"}
+                    </Button>
+                  </div>
                 </div>
+                {meta?.suivi_lms?.has_distanciel && !meta.suivi_lms.lms_course_id ? (
+                  <p className="rounded-lg border border-[#CA8A04]/40 bg-[#CA8A04]/10 px-3 py-2 text-[11px] text-[#FBBF24]">
+                    Distanciel détecté mais aucun cours LMS lié — renseignez{" "}
+                    <span className="font-semibold">lms_course_id</span> sur la fiche catalogue.
+                  </p>
+                ) : null}
                 <ul className="space-y-2">
                   {(coffre?.items ?? []).map((item) => {
                     const tone =
@@ -1241,6 +1547,281 @@ export function FormationDossierSheet({
                     </li>
                   ))}
                 </ul>
+              </div>
+            ) : null}
+
+            {tab === "engagement" ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-[#A3A8C7]">
+                    Alertes inactivité LMS / absences / positionnement + abandons.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="bg-[#6C5CF5] text-white"
+                    disabled={engagementBusy}
+                    onClick={() => {
+                      setEngagementBusy(true);
+                      void loadEngagement().finally(() => setEngagementBusy(false));
+                    }}
+                  >
+                    {engagementBusy ? "Sync…" : "Synchroniser"}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Alertes ouvertes</p>
+                  {engagementAlerts.filter((a) => a.status === "open" || a.status === "in_progress")
+                    .length === 0 ? (
+                    <p className="text-xs text-[#A3A8C7]">Aucune alerte active.</p>
+                  ) : (
+                    engagementAlerts
+                      .filter((a) => a.status === "open" || a.status === "in_progress")
+                      .map((a) => (
+                        <div
+                          key={a.id}
+                          className="rounded-xl border border-[#262A4A] bg-[#141731] px-3 py-2 text-xs"
+                        >
+                          <p className="font-medium text-[#F3F4FA]">
+                            {a.learner_name || "Apprenant"} · {a.kind}
+                          </p>
+                          <p className="mt-0.5 text-[#A3A8C7]">{a.detail}</p>
+                          {(a.actions ?? []).slice(0, 2).map((act, i) => (
+                            <p key={i} className="mt-1 text-[10px] text-[#A3A8C7]">
+                              Relance {act.channel}/{act.result}
+                              {act.notes ? ` — ${act.notes}` : ""}
+                            </p>
+                          ))}
+                        </div>
+                      ))
+                  )}
+                </div>
+
+                <div className="space-y-2 rounded-xl border border-[#262A4A] bg-[#141731] p-3">
+                  <p className="text-sm font-semibold">Tracer une relance</p>
+                  <select
+                    value={relanceForm.alert_id}
+                    onChange={(e) =>
+                      setRelanceForm((f) => ({ ...f, alert_id: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                  >
+                    <option value="">Alerte…</option>
+                    {engagementAlerts
+                      .filter((a) => a.status === "open" || a.status === "in_progress")
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.learner_name || "Apprenant"} — {a.kind}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={relanceForm.channel}
+                      onChange={(e) =>
+                        setRelanceForm((f) => ({ ...f, channel: e.target.value }))
+                      }
+                      className="rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                    >
+                      {["email", "telephone", "visio", "presentiel", "lms", "autre"].map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={relanceForm.result}
+                      onChange={(e) =>
+                        setRelanceForm((f) => ({ ...f, result: e.target.value }))
+                      }
+                      className="rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                    >
+                      {[
+                        "en_attente",
+                        "contacte",
+                        "repondu",
+                        "sans_reponse",
+                        "abandon_constate",
+                        "resolu",
+                        "autre",
+                      ].map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input
+                    value={relanceForm.notes}
+                    onChange={(e) => setRelanceForm((f) => ({ ...f, notes: e.target.value }))}
+                    placeholder="Notes"
+                    className="border-[#262A4A] bg-[#0A0C1B]"
+                  />
+                  <Button
+                    type="button"
+                    className="w-full bg-[#6C5CF5] text-white"
+                    disabled={!relanceForm.alert_id || engagementBusy}
+                    onClick={() => {
+                      void (async () => {
+                        setEngagementBusy(true);
+                        try {
+                          const res = await fetch(
+                            `/api/super-admin/crm/formation-dossiers/${dossierId}/engagement`,
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                action: "relance",
+                                alert_id: relanceForm.alert_id,
+                                channel: relanceForm.channel,
+                                result: relanceForm.result,
+                                notes: relanceForm.notes || null,
+                              }),
+                            },
+                          );
+                          const json = await parseFetchJson<{
+                            error?: string;
+                            alerts?: typeof engagementAlerts;
+                          }>(res);
+                          if (!res.ok) {
+                            toast.error(json.error || "Relance impossible");
+                            return;
+                          }
+                          toast.success("Relance tracée");
+                          if (json.alerts) setEngagementAlerts(json.alerts);
+                          setRelanceForm((f) => ({ ...f, notes: "" }));
+                        } finally {
+                          setEngagementBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Enregistrer la relance
+                  </Button>
+                </div>
+
+                <div className="space-y-2 rounded-xl border border-[#7F1D1D]/40 bg-[#141731] p-3">
+                  <p className="text-sm font-semibold">Enregistrer un abandon / sortie</p>
+                  {exits.length ? (
+                    <ul className="space-y-1 text-xs text-[#A3A8C7]">
+                      {exits.map((e) => (
+                        <li key={e.id}>
+                          {e.learner_name || e.participant_id.slice(0, 8)} — {e.kind} /{" "}
+                          {e.motif_code} ({e.exited_at})
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <select
+                    value={exitForm.participant_id}
+                    onChange={(e) =>
+                      setExitForm((f) => ({ ...f, participant_id: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                  >
+                    <option value="">Participant…</option>
+                    {participants
+                      .filter((p) => !exits.some((e) => e.participant_id === p.id))
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={exitForm.kind}
+                      onChange={(e) => setExitForm((f) => ({ ...f, kind: e.target.value }))}
+                      className="rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                    >
+                      {["abandon", "annulation", "report", "autre"].map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={exitForm.motif_code}
+                      onChange={(e) =>
+                        setExitForm((f) => ({ ...f, motif_code: e.target.value }))
+                      }
+                      className="rounded-xl border border-[#262A4A] bg-[#0A0C1B] px-3 py-2 text-sm"
+                    >
+                      {[
+                        "personnel",
+                        "professionnel",
+                        "sante",
+                        "inadequation",
+                        "financier",
+                        "demenagement",
+                        "autre",
+                      ].map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Input
+                    value={exitForm.motif_detail}
+                    onChange={(e) =>
+                      setExitForm((f) => ({ ...f, motif_detail: e.target.value }))
+                    }
+                    placeholder="Détail motif"
+                    className="border-[#262A4A] bg-[#0A0C1B]"
+                  />
+                  <Input
+                    value={exitForm.actions_taken}
+                    onChange={(e) =>
+                      setExitForm((f) => ({ ...f, actions_taken: e.target.value }))
+                    }
+                    placeholder="Actions tentées"
+                    className="border-[#262A4A] bg-[#0A0C1B]"
+                  />
+                  <Button
+                    type="button"
+                    className="w-full bg-[#7F1D1D] text-white"
+                    disabled={!exitForm.participant_id || engagementBusy}
+                    onClick={() => {
+                      void (async () => {
+                        setEngagementBusy(true);
+                        try {
+                          const res = await fetch(
+                            `/api/super-admin/crm/formation-dossiers/${dossierId}/exits`,
+                            {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(exitForm),
+                            },
+                          );
+                          const json = await parseFetchJson<{
+                            error?: string;
+                            exits?: typeof exits;
+                          }>(res);
+                          if (!res.ok) {
+                            toast.error(json.error || "Enregistrement impossible");
+                            return;
+                          }
+                          toast.success("Sortie enregistrée");
+                          if (json.exits) setExits(json.exits);
+                          setExitForm({
+                            participant_id: "",
+                            kind: "abandon",
+                            motif_code: "autre",
+                            motif_detail: "",
+                            actions_taken: "",
+                          });
+                          await loadEngagement();
+                        } finally {
+                          setEngagementBusy(false);
+                        }
+                      })();
+                    }}
+                  >
+                    Enregistrer la sortie
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -1511,6 +2092,22 @@ export function FormationDossierSheet({
                     }
                   />
                   Vérification d&apos;identité au 1er émargement
+                </label>
+                <label className="flex items-start gap-2 text-sm text-[#A3A8C7]">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={Boolean(dossier.is_specimen)}
+                    onChange={(e) => void saveBpf({ is_specimen: e.target.checked })}
+                  />
+                  <span>
+                    <span className="font-medium text-rose-200">Dossier spécimen</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed">
+                      Parcours de démonstration — bandeau / filigrane SPÉCIMEN, exclu des
+                      indicateurs Qualiopi, du BPF et des stats de résultats. Régénérer les
+                      PDF après activation.
+                    </span>
+                  </span>
                 </label>
                 {Array.isArray(dossier.pending_confirm_fields) &&
                 dossier.pending_confirm_fields.length > 0 ? (

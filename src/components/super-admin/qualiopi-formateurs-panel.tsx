@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Download, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,11 @@ import {
   QUALIOPI_CARD_INNER,
   QUALIOPI_MUTED,
 } from "@/components/super-admin/qualiopi/qualiopi-audit-styles";
+import {
+  EMPLOYMENT_STATUSES,
+  EMPLOYMENT_STATUS_LABELS,
+  type EmploymentStatus,
+} from "@/lib/expert/subcontracting";
 import { cn } from "@/lib/utils";
 
 type Expert = {
@@ -16,6 +21,21 @@ type Expert = {
   first_name: string | null;
   last_name: string | null;
   headline: string | null;
+};
+
+type IntervenantRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  employment_status: EmploymentStatus | null;
+  employment_label: string;
+  subcontract_signed_at: string | null;
+  subcontract_ends_at: string | null;
+  quality_commitment_at: string | null;
+  has_signed_contract_doc: boolean;
+  ready: boolean;
+  code: string;
+  message: string | null;
 };
 
 type PlanAction = {
@@ -36,20 +56,34 @@ type Plan = {
 export function QualiopiFormateursPanel() {
   const [experts, setExperts] = useState<Expert[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [intervenants, setIntervenants] = useState<IntervenantRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expertId, setExpertId] = useState("");
   const [needs, setNeeds] = useState("");
   const [actionTitle, setActionTitle] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [editId, setEditId] = useState("");
+  const [editForm, setEditForm] = useState({
+    employment_status: "" as "" | EmploymentStatus,
+    subcontract_signed_at: "",
+    subcontract_ends_at: "",
+    quality_commitment: false,
+  });
+  const [sstBusy, setSstBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/super-admin/crm/qualiopi/formateurs");
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Formateurs");
+      const [fRes, cRes] = await Promise.all([
+        fetch("/api/super-admin/crm/qualiopi/formateurs"),
+        fetch("/api/super-admin/crm/qualiopi/formateurs/contractual"),
+      ]);
+      const json = await fRes.json();
+      const cJson = await cRes.json();
+      if (!fRes.ok) throw new Error(json.error || "Formateurs");
       setExperts(json.experts ?? []);
       setPlans(json.plans ?? []);
+      if (cRes.ok) setIntervenants(cJson.intervenants ?? []);
       if (!selectedPlan && json.plans?.[0]?.id) setSelectedPlan(json.plans[0].id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Chargement impossible");
@@ -128,13 +162,65 @@ export function QualiopiFormateursPanel() {
     return `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || id.slice(0, 8);
   };
 
+  const openEdit = (row: IntervenantRow) => {
+    setEditId(row.id);
+    setEditForm({
+      employment_status: row.employment_status ?? "",
+      subcontract_signed_at: row.subcontract_signed_at ?? "",
+      subcontract_ends_at: row.subcontract_ends_at ?? "",
+      quality_commitment: Boolean(row.quality_commitment_at),
+    });
+  };
+
+  const saveContractual = async () => {
+    if (!editId) return;
+    setSstBusy(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/qualiopi/formateurs/contractual", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expert_id: editId,
+          employment_status: editForm.employment_status || null,
+          subcontract_signed_at: editForm.subcontract_signed_at || null,
+          subcontract_ends_at: editForm.subcontract_ends_at || null,
+          quality_commitment: editForm.quality_commitment,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
+      toast.success("Statut contractuel enregistré");
+      setEditId("");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSstBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">Compétences formateurs</h1>
-        <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-          Indicateur 22 — un plan + une action réalisée débloque la preuve auto.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">Formateurs</h1>
+          <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
+            Ind. 22 — plans compétences · Ind. 27 — statut d&apos;emploi et sous-traitance.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="border-white/15 bg-transparent text-white"
+          onClick={() => {
+            window.location.href =
+              "/api/super-admin/crm/qualiopi/formateurs/contractual?format=csv";
+          }}
+        >
+          <Download className="mr-1 h-3.5 w-3.5" />
+          Export CSV SST
+        </Button>
       </div>
 
       {loading ? (
@@ -229,6 +315,146 @@ export function QualiopiFormateursPanel() {
           </section>
         </div>
       )}
+
+      <section className={cn(QUALIOPI_CARD, "space-y-4 p-5")}>
+        <div>
+          <h2 className="text-lg font-semibold text-white">Sous-traitance (ind. 27)</h2>
+          <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
+            Salarié = OK sans contrat SST. Indépendant / portage = contrat signé non expiré +
+            engagement qualité. Blocage à l&apos;assignation session.
+          </p>
+        </div>
+        {loading ? null : (
+          <ul className="max-h-[420px] space-y-2 overflow-y-auto">
+            {intervenants.length === 0 ? (
+              <li className={cn("text-sm", QUALIOPI_MUTED)}>Aucun expert approuvé.</li>
+            ) : (
+              intervenants.map((row) => (
+                <li
+                  key={row.id}
+                  className={cn(
+                    QUALIOPI_CARD_INNER,
+                    "flex flex-wrap items-center justify-between gap-2 p-3",
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">{row.name}</p>
+                    <p className={cn("text-[11px]", QUALIOPI_MUTED)}>
+                      {row.employment_label}
+                      {row.subcontract_signed_at
+                        ? ` · signé ${row.subcontract_signed_at}`
+                        : ""}
+                      {row.subcontract_ends_at ? ` · fin ${row.subcontract_ends_at}` : ""}
+                      {row.has_signed_contract_doc ? " · PDF contrat" : ""}
+                    </p>
+                    {row.message ? (
+                      <p className="mt-0.5 text-[11px] text-amber-200">{row.message}</p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5 text-[11px] font-bold",
+                        row.ready
+                          ? "bg-emerald-500/20 text-emerald-200"
+                          : "bg-[#7F1D1D] text-white",
+                      )}
+                    >
+                      {row.ready ? "Conforme" : "À compléter"}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 border-white/15 bg-transparent text-[11px] text-white"
+                      onClick={() => openEdit(row)}
+                    >
+                      Éditer
+                    </Button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+
+        {editId ? (
+          <div className="space-y-2 rounded-xl border border-[#6E5BFF]/40 bg-[#0B1122] p-3">
+            <p className="text-sm font-semibold text-white">
+              Édition — {intervenants.find((i) => i.id === editId)?.name ?? editId.slice(0, 8)}
+            </p>
+            <select
+              value={editForm.employment_status}
+              onChange={(e) =>
+                setEditForm((f) => ({
+                  ...f,
+                  employment_status: e.target.value as "" | EmploymentStatus,
+                }))
+              }
+              className="w-full rounded-xl border border-white/10 bg-[#12141A] px-3 py-2 text-sm text-white"
+            >
+              <option value="">— Statut emploi —</option>
+              {EMPLOYMENT_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {EMPLOYMENT_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className={cn("text-[11px]", QUALIOPI_MUTED)}>
+                Contrat signé le
+                <input
+                  type="date"
+                  value={editForm.subcontract_signed_at}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, subcontract_signed_at: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#12141A] px-3 py-2 text-sm text-white"
+                />
+              </label>
+              <label className={cn("text-[11px]", QUALIOPI_MUTED)}>
+                Contrat fin
+                <input
+                  type="date"
+                  value={editForm.subcontract_ends_at}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, subcontract_ends_at: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#12141A] px-3 py-2 text-sm text-white"
+                />
+              </label>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-white/80">
+              <input
+                type="checkbox"
+                checked={editForm.quality_commitment}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, quality_commitment: e.target.checked }))
+                }
+              />
+              Engagement respect du référentiel qualité
+            </label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                disabled={sstBusy}
+                className="bg-[#6E5BFF] text-white"
+                onClick={() => void saveContractual()}
+              >
+                Enregistrer
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/15 bg-transparent text-white"
+                onClick={() => setEditId("")}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

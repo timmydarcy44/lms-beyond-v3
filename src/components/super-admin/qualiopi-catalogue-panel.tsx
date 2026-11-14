@@ -17,6 +17,8 @@ type CourseProof = {
   title: string;
   objectives: string[];
   objectivesOk: boolean;
+  compliant?: boolean;
+  missing?: string[];
   onePager: string;
   source: string;
 };
@@ -26,6 +28,7 @@ export function QualiopiCataloguePanel() {
   const [summary, setSummary] = useState({
     coursesTotal: 0,
     withObjectives: 0,
+    compliantCount: 0,
     approvedExperts: 0,
     expertsOk: false,
   });
@@ -70,7 +73,8 @@ export function QualiopiCataloguePanel() {
         <div>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Preuves catalogue</h1>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-            Objectifs ≥3, accessibilité, experts approuvés — export one-pager pour le dossier auditeur.
+            Conformité fiche Qualiopi (ind. 1–2) : objectifs, reconnaissance, modalités,
+            financement, tarif — export one-pager pour le dossier auditeur.
           </p>
         </div>
         <Button asChild variant="outline" className="border-white/15 bg-transparent text-white">
@@ -84,7 +88,13 @@ export function QualiopiCataloguePanel() {
         </p>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className={cn(QUALIOPI_CARD_INNER, "p-4")}>
+              <p className={cn("text-xs", QUALIOPI_MUTED)}>Fiches conformes Lot 1</p>
+              <p className="mt-1 text-2xl font-bold text-white">
+                {summary.compliantCount}/{summary.coursesTotal}
+              </p>
+            </div>
             <div className={cn(QUALIOPI_CARD_INNER, "p-4")}>
               <p className={cn("text-xs", QUALIOPI_MUTED)}>Formations avec ≥3 objectifs</p>
               <p className="mt-1 text-2xl font-bold text-white">
@@ -112,9 +122,13 @@ export function QualiopiCataloguePanel() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">{course.title}</p>
                     <p className={cn("text-xs", QUALIOPI_MUTED)}>
-                      {course.objectivesOk
-                        ? `${course.objectives.length} objectifs`
-                        : "Objectifs incomplets (< 3)"}
+                      {course.compliant
+                        ? `Conforme · ${course.objectives.length} objectifs`
+                        : course.missing?.length
+                          ? `Incomplet · ${course.missing.slice(0, 3).join(", ")}${course.missing.length > 3 ? "…" : ""}`
+                          : course.objectivesOk
+                            ? `${course.objectives.length} objectifs`
+                            : "Objectifs incomplets (< 3)"}
                     </p>
                   </div>
                   <Button

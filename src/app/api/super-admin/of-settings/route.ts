@@ -62,7 +62,32 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   const handicapReferentOptions = await resolveHandicapReferentOptions(service);
-  return NextResponse.json({ settings: data ?? null, handicapReferentOptions });
+
+  const { data: staff } = await service
+    .from("super_admins")
+    .select("user_id")
+    .eq("is_active", true);
+  const staffIds = (staff ?? []).map((s) => String(s.user_id));
+  const { data: staffProfiles } = staffIds.length
+    ? await service
+        .from("profiles")
+        .select("id, full_name, first_name, last_name, email")
+        .in("id", staffIds)
+    : { data: [] as Array<Record<string, unknown>> };
+  const staffOptions = (staffProfiles ?? []).map((p) => ({
+    userId: String(p.id),
+    label:
+      String(p.full_name ?? "").trim() ||
+      [p.first_name, p.last_name].filter(Boolean).join(" ").trim() ||
+      String(p.email ?? p.id),
+    email: String(p.email ?? ""),
+  }));
+
+  return NextResponse.json({
+    settings: data ?? null,
+    handicapReferentOptions,
+    staffOptions,
+  });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -103,12 +128,27 @@ export async function PATCH(req: NextRequest) {
     "fiscal_year_end",
     "bpf_campaign_deadline",
     "referent_handicap_user_id",
+    "results_indicators_method",
+    "referent_qualite_user_id",
+    "referent_signalement_user_id",
   ] as const;
 
   for (const key of fields) {
     if (body[key] !== undefined) {
       const value = body[key];
       patch[key] = value === null || value === "" ? null : String(value);
+    }
+  }
+
+  for (const key of [
+    "lms_inactive_alert_days",
+    "reclamation_ack_business_days",
+    "reclamation_reply_business_days",
+    "signalement_ack_business_days",
+  ] as const) {
+    if (body[key] !== undefined) {
+      const n = Number(body[key]);
+      if (Number.isFinite(n) && n >= 1) patch[key] = Math.floor(n);
     }
   }
 

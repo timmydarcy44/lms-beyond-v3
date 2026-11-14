@@ -88,13 +88,25 @@ export default function EntrepriseAidePage() {
           </Link>
           <Link
             href="/dashboard/entreprise/reclamation"
-            className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/80 p-4 shadow-sm transition hover:border-violet-300 sm:col-span-2"
+            className="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/80 p-4 shadow-sm transition hover:border-violet-300"
           >
             <MessageSquareWarning className="h-5 w-5 text-violet-600" />
             <div>
-              <p className="text-sm font-semibold text-gray-900">Signaler un problème (réclamation)</p>
+              <p className="text-sm font-semibold text-gray-900">Réclamation qualité</p>
               <p className="text-xs text-gray-500">
-                Formation, parcours ou service — registre qualité Qualiopi, réponse sous 15 jours ouvrés
+                Formation, parcours ou service — registre Qualiopi, réponse sous 15 jours ouvrés
+              </p>
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/entreprise/signalement"
+            className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/80 p-4 shadow-sm transition hover:border-rose-300"
+          >
+            <MessageSquareWarning className="h-5 w-5 text-rose-600" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Signalement sensible</p>
+              <p className="text-xs text-gray-500">
+                Violences, harcèlement, discriminations — confidentiel, anonymat possible
               </p>
             </div>
           </Link>

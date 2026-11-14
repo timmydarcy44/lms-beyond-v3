@@ -31,6 +31,7 @@ export function isFormationOnlyAllowedPath(pathname: string): boolean {
     "/dashboard/entreprise/salaries",
     "/dashboard/entreprise/aide",
     "/dashboard/entreprise/reclamation",
+    "/dashboard/entreprise/signalement",
     "/dashboard/entreprise/messages",
   ];
   return allowed.some(

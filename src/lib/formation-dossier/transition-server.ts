@@ -90,6 +90,7 @@ export async function transitionFormationDossier(
   );
 
   let trainerCvReady = true;
+  let trainerSubcontractReady = true;
   if (dossier.trainer_user_id) {
     const { dossierHasTrainerCv, resolveExpertCv } = await import(
       "@/lib/formation-documents/trainer-cv"
@@ -101,6 +102,14 @@ export async function transitionFormationDossier(
       const cv = await resolveExpertCv(service, String(dossier.trainer_user_id));
       trainerCvReady = Boolean(cv);
     }
+
+    const { listDossierTrainersReady } = await import("@/lib/expert/subcontracting");
+    const multi = await listDossierTrainersReady(
+      service,
+      params.dossierId,
+      String(dossier.trainer_user_id),
+    );
+    trainerSubcontractReady = multi.ready;
   } else if (params.toStatus === "session") {
     trainerCvReady = false;
   }
@@ -144,6 +153,7 @@ export async function transitionFormationDossier(
       conventionSigned: locks.conventionSigned,
       trainerAssigned: Boolean(dossier.trainer_user_id),
       trainerCvReady,
+      trainerSubcontractReady,
       allSlotsClosed: locks.allSlotsClosed,
       slotCount: locks.slotCount,
       invoiceValidated: Boolean(dossier.invoice_validated_at),

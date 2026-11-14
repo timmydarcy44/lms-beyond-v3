@@ -183,12 +183,23 @@ export async function computeBpfDraft(
   }));
 
   // --- Dossiers clôturés / fin sur la période ---
-  const { data: dossiers } = await service
+  let dossiersQuery = await service
     .from("formation_dossiers")
     .select(
-      "id, course_title, status, bpf_funder_type, subcontracting, partner_of_name, amount_ht_cents, training_course_id, session_id, organization_id, invoice_validated_at, updated_at, created_at",
+      "id, course_title, status, bpf_funder_type, subcontracting, partner_of_name, amount_ht_cents, training_course_id, session_id, organization_id, invoice_validated_at, updated_at, created_at, is_specimen",
     )
     .in("status", ["fin", "cloture", "session"]);
+  if (dossiersQuery.error && /is_specimen/i.test(dossiersQuery.error.message)) {
+    dossiersQuery = await service
+      .from("formation_dossiers")
+      .select(
+        "id, course_title, status, bpf_funder_type, subcontracting, partner_of_name, amount_ht_cents, training_course_id, session_id, organization_id, invoice_validated_at, updated_at, created_at",
+      )
+      .in("status", ["fin", "cloture", "session"]);
+  }
+  const dossiers = (dossiersQuery.data ?? []).filter(
+    (d) => (d as { is_specimen?: boolean }).is_specimen !== true,
+  );
 
   const dossierIds = (dossiers ?? []).map((d) => String(d.id));
   const sessionIds = Array.from(
@@ -236,11 +247,27 @@ export async function computeBpfDraft(
     : { data: [] as Array<Record<string, unknown>> };
   const courseById = new Map((courses ?? []).map((c) => [String(c.id), c]));
 
-  // Cadre E — formateurs (internes = trainer_user_id staff)
-  const { data: trainers } = await service
+  // Cadre E — formateurs (internes = trainer_user_id staff), hors spécimens
+  const specimenIds = new Set(
+    (dossiersQuery.data ?? [])
+      .filter((d) => (d as { is_specimen?: boolean }).is_specimen === true)
+      .map((d) => String(d.id)),
+  );
+  let trainersQuery = await service
     .from("formation_dossiers")
-    .select("id, trainer_user_id, session_id")
+    .select("id, trainer_user_id, session_id, is_specimen")
     .not("trainer_user_id", "is", null);
+  if (trainersQuery.error && /is_specimen/i.test(trainersQuery.error.message)) {
+    trainersQuery = await service
+      .from("formation_dossiers")
+      .select("id, trainer_user_id, session_id")
+      .not("trainer_user_id", "is", null);
+  }
+  const trainers = (trainersQuery.data ?? []).filter(
+    (t) =>
+      (t as { is_specimen?: boolean }).is_specimen !== true &&
+      !specimenIds.has(String(t.id)),
+  );
 
   const trainerIds = Array.from(
     new Set((trainers ?? []).map((t) => String(t.trainer_user_id)).filter(Boolean)),

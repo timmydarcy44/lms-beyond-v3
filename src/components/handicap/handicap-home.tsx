@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { HandicapPersonCard } from "@/components/handicap/handicap-person-card";
 import type { HandicapHomePayload } from "@/lib/handicap/home-data";
-import { handicapCasePath } from "@/lib/handicap/paths";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 
 const TONE_BAR: Record<string, string> = {
@@ -10,23 +10,6 @@ const TONE_BAR: Record<string, string> = {
   teal: T.accent,
   red: T.red,
   blue: T.blue,
-};
-
-const NEXT_TONE: Record<string, string> = {
-  green: T.green,
-  amber: T.amber,
-  red: T.red,
-  blue: T.blue,
-  muted: T.muted,
-};
-
-const STATUS_PILL: Record<string, { bg: string; color: string }> = {
-  active: { bg: "rgba(107,227,155,0.15)", color: T.green },
-  plan: { bg: "rgba(107,227,155,0.15)", color: T.green },
-  request: { bg: "rgba(242,207,107,0.15)", color: T.amber },
-  interview: { bg: "rgba(141,184,255,0.15)", color: T.blue },
-  review: { bg: "rgba(141,184,255,0.15)", color: T.blue },
-  closed: { bg: "rgba(108,117,147,0.2)", color: T.muted },
 };
 
 type Filter = "cours" | "demandes" | "plans" | "clos";
@@ -150,7 +133,7 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                         className="grid h-[52px] w-[48px] place-content-center rounded-2xl text-center"
                         style={{
                           background: m.isToday ? T.accent : T.inner,
-                          color: m.isToday ? T.bg : T.text,
+                          color: m.isToday ? T.accentOn : T.text,
                         }}
                       >
                         <span className="text-[16px] font-extrabold leading-none">{day}</span>
@@ -178,7 +161,7 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
               <h2 className="text-[16px] font-extrabold">Registre Qualiopi</h2>
               <span
                 className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                style={{ background: "rgba(94,220,195,0.12)", color: T.accent }}
+                style={{ background: T.accentSoft, color: T.accent }}
               >
                 Indicateur 26
               </span>
@@ -207,7 +190,7 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
             <a
               href="/api/handicap/registre?format=pdf"
               className="mt-4 inline-flex rounded-full px-4 py-2.5 text-[13px] font-bold"
-              style={{ background: T.accent, color: T.bg }}
+              style={{ background: T.accent, color: T.accentOn }}
             >
               Exporter le registre (PDF)
             </a>
@@ -237,7 +220,7 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
                 className="rounded-full px-3 py-1.5 text-[12px] font-bold"
                 style={{
                   background: filter === id ? T.accent : "transparent",
-                  color: filter === id ? T.bg : T.muted,
+                  color: filter === id ? T.accentOn : T.muted,
                 }}
               >
                 {label}
@@ -246,98 +229,17 @@ export function HandicapHome({ data }: { data: HandicapHomePayload }) {
           </div>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-[13px]">
-            <thead>
-              <tr style={{ color: T.tertiary }}>
-                <th className="pb-3 font-semibold">Personne</th>
-                <th className="pb-3 font-semibold">Étape</th>
-                <th className="pb-3 font-semibold">Aménagements</th>
-                <th className="pb-3 font-semibold">Prochaine étape</th>
-                <th className="pb-3 font-semibold" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8" style={{ color: T.muted }}>
-                    Aucune personne dans ce filtre.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((p) => {
-                  const pill = STATUS_PILL[p.status] ?? STATUS_PILL.closed;
-                  const shown = p.accommodations.slice(0, 3);
-                  const extra = p.accommodations.length - shown.length;
-                  const href = handicapCasePath(p.id);
-                  return (
-                    <tr
-                      key={p.id}
-                      className="border-t cursor-pointer transition hover:bg-white/[0.02]"
-                      style={{ borderColor: T.border }}
-                      onClick={() => {
-                        window.location.assign(href);
-                      }}
-                    >
-                      <td className="py-3.5 pr-3">
-                        <a href={href} className="font-bold hover:underline" onClick={(e) => e.stopPropagation()}>
-                          {p.personName}
-                        </a>
-                        <p className="text-[12px]" style={{ color: T.muted }}>
-                          {p.roleLine}
-                        </p>
-                      </td>
-                      <td className="py-3.5 pr-3">
-                        <span
-                          className="rounded-full px-2.5 py-1 text-[11px] font-bold"
-                          style={{ background: pill.bg, color: pill.color }}
-                        >
-                          {p.statusLabel}
-                        </span>
-                      </td>
-                      <td className="py-3.5 pr-3">
-                        <div className="flex flex-wrap gap-1">
-                          {shown.length === 0 ? (
-                            <span style={{ color: T.tertiary }}>—</span>
-                          ) : (
-                            shown.map((a) => (
-                              <span
-                                key={a}
-                                className="rounded-full px-2 py-1 text-[11px] font-semibold"
-                                style={{ background: T.inner, color: T.muted }}
-                              >
-                                {a}
-                              </span>
-                            ))
-                          )}
-                          {extra > 0 ? (
-                            <span
-                              className="rounded-full px-2 py-1 text-[11px] font-semibold"
-                              style={{ background: T.inner, color: T.muted }}
-                            >
-                              +{extra}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td
-                        className="py-3.5 pr-3 font-semibold"
-                        style={{ color: NEXT_TONE[p.nextStep.tone] }}
-                      >
-                        {p.nextStep.text}
-                      </td>
-                      <td className="py-3.5 text-right">
-                        <a href={href} className="text-[16px] font-bold" style={{ color: T.muted }}>
-                          ›
-                        </a>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        {filtered.length === 0 ? (
+          <p className="mt-6 text-sm" style={{ color: T.muted }}>
+            Aucune personne dans ce filtre.
+          </p>
+        ) : (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((p) => (
+              <HandicapPersonCard key={p.id} person={p} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

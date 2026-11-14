@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
+import { HandicapPersonCard } from "@/components/handicap/handicap-person-card";
 import { loadHandicapHomeData } from "@/lib/handicap/home-data";
-import { handicapCasePath } from "@/lib/handicap/paths";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -20,7 +20,7 @@ export default async function HandicapDemandesPage() {
   const demandes = data.people.filter((p) => p.status === "request");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
         <h1 className="text-[24px] font-extrabold">Demandes</h1>
         <p className="text-sm" style={{ color: T.muted }}>
@@ -30,37 +30,17 @@ export default async function HandicapDemandesPage() {
 
       {demandes.length === 0 ? (
         <p
-          className="rounded-[24px] border px-5 py-8 text-sm"
+          className="rounded-[24px] border px-5 py-10 text-sm"
           style={{ background: T.card, borderColor: T.border, color: T.muted }}
         >
           Aucune nouvelle demande pour le moment.
         </p>
       ) : (
-        <ul className="space-y-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {demandes.map((p) => (
-            <li key={p.id}>
-              <a
-                href={handicapCasePath(p.id)}
-                className="flex items-center justify-between rounded-[20px] border px-4 py-3"
-                style={{ background: T.card, borderColor: T.border, color: T.text }}
-              >
-                <div>
-                  <p className="font-bold">{p.personName}</p>
-                  <p className="text-xs" style={{ color: T.muted }}>
-                    {p.roleLine}
-                    {p.accommodations[0] ? ` · ${p.accommodations[0]}` : ""}
-                  </p>
-                </div>
-                <span
-                  className="rounded-full px-3 py-1 text-[11px] font-bold"
-                  style={{ background: "rgba(242,207,107,0.15)", color: T.amber }}
-                >
-                  Prendre contact ›
-                </span>
-              </a>
-            </li>
+            <HandicapPersonCard key={p.id} person={p} />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

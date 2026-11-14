@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
+import { HandicapPersonCard } from "@/components/handicap/handicap-person-card";
 import { HandicapPlaceholder } from "@/components/handicap/handicap-placeholder";
 import { loadHandicapHomeData } from "@/lib/handicap/home-data";
-import { handicapCasePath } from "@/lib/handicap/paths";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
 import { HANDICAP_THEME as T } from "@/lib/handicap/theme";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -29,7 +29,7 @@ export default async function HandicapPersonnesPage({
     : data.people;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[24px] font-extrabold" style={{ color: T.text }}>
@@ -46,25 +46,21 @@ export default async function HandicapPersonnesPage({
           </p>
         ) : null}
       </div>
-      <ul className="space-y-2">
-        {people.map((p) => (
-          <li key={p.id}>
-            <a
-              href={handicapCasePath(p.id)}
-              className="flex items-center justify-between rounded-[20px] border px-4 py-3"
-              style={{ background: T.card, borderColor: T.border, color: T.text }}
-            >
-              <div>
-                <p className="font-bold">{p.personName}</p>
-                <p className="text-xs" style={{ color: T.muted }}>
-                  {p.roleLine} · {p.statusLabel}
-                </p>
-              </div>
-              <span style={{ color: T.muted }}>›</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+
+      {people.length === 0 ? (
+        <div
+          className="rounded-[24px] border px-5 py-10 text-sm"
+          style={{ background: T.card, borderColor: T.border, color: T.muted }}
+        >
+          Aucune personne dans ce filtre.
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {people.map((p) => (
+            <HandicapPersonCard key={p.id} person={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

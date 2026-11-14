@@ -51,7 +51,7 @@ export function HandicapShell({
         <div className="mb-8 flex items-center gap-3 px-2">
           <div
             className="grid h-9 w-9 place-items-center rounded-xl text-sm font-extrabold"
-            style={{ background: T.accent, color: T.bg }}
+            style={{ background: T.accent, color: T.accentOn }}
           >
             B
           </div>
@@ -86,7 +86,7 @@ export function HandicapShell({
                 className="flex items-center justify-between rounded-full px-3 py-2.5 text-[13.5px] font-semibold transition"
                 style={{
                   background: active ? T.accent : "transparent",
-                  color: active ? T.bg : T.muted,
+                  color: active ? T.accentOn : T.muted,
                 }}
               >
                 <span>{item.label}</span>
@@ -95,11 +95,11 @@ export function HandicapShell({
                     className="rounded-full px-2 py-0.5 text-[11px] font-bold"
                     style={{
                       background: active
-                        ? "rgba(10,15,30,0.18)"
+                        ? "rgba(255,255,255,0.22)"
                         : item.amber
                           ? "rgba(242,207,107,0.2)"
                           : "rgba(255,255,255,0.08)",
-                      color: active ? T.bg : item.amber ? T.amber : T.text,
+                      color: active ? T.accentOn : item.amber ? T.amber : T.text,
                     }}
                   >
                     {count}
@@ -113,8 +113,8 @@ export function HandicapShell({
         <div
           className="mt-4 rounded-2xl border px-3 py-3 text-[12px] leading-relaxed"
           style={{
-            background: "rgba(94,220,195,0.06)",
-            borderColor: "rgba(94,220,195,0.2)",
+            background: T.accentSoft,
+            borderColor: T.accentSoftBorder,
             color: T.muted,
           }}
         >

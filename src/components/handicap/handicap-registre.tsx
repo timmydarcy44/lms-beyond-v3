@@ -46,7 +46,7 @@ export function HandicapRegistre({ rows }: { rows: Omit<RegistreRow, "caseId">[]
         <div>
           <p
             className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold"
-            style={{ background: "rgba(94,220,195,0.15)", color: T.accent }}
+            style={{ background: T.accentSoft, color: T.accent }}
           >
             Indicateur 26
           </p>
@@ -61,7 +61,7 @@ export function HandicapRegistre({ rows }: { rows: Omit<RegistreRow, "caseId">[]
           disabled={busy}
           onClick={() => void exportPdf()}
           className="rounded-full px-4 py-2.5 text-[13px] font-bold disabled:opacity-60"
-          style={{ background: T.accent, color: T.bg }}
+          style={{ background: T.accent, color: T.accentOn }}
         >
           {busy ? "Export…" : "Exporter le registre (PDF)"}
         </button>

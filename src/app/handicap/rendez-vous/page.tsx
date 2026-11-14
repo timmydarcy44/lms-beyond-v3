@@ -48,7 +48,7 @@ export default async function HandicapRendezVousPage() {
                     className="grid h-[52px] w-12 place-items-center rounded-xl text-center text-[11px] font-bold leading-tight"
                     style={{
                       background: m.isToday ? T.accent : T.inner,
-                      color: m.isToday ? T.bg : T.muted,
+                      color: m.isToday ? T.accentOn : T.muted,
                     }}
                   >
                     <span>

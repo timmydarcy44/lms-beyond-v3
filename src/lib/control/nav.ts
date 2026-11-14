@@ -73,7 +73,7 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
   {
     id: "cfa",
     label: "CFA",
-    dot: "#5EDCC3",
+    dot: "#CE0058",
     items: [
       {
         id: "admissions",

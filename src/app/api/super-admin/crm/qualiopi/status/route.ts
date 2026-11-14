@@ -62,7 +62,10 @@ async function buildStatus(force = false) {
       supabase
         .from("crm_qualiopi_indicator_proofs")
         .select("indicator_id, label, comment, file_url, proof_at, updated_at"),
-      supabase.from("training_courses").select("id, objectives, published, is_public, quality_indicators"),
+      // Colonnes réelles de training_courses (pas published / is_public / quality_indicators)
+      supabase
+        .from("training_courses")
+        .select("id, objectives, is_active, results_method_override"),
     ]),
   );
 
@@ -95,16 +98,23 @@ async function buildStatus(force = false) {
   sessions = sessions.filter((s) => !specimenIds.has(String(s.id)));
 
   const settings = settingsRes.data as Record<string, unknown> | null;
+  const globalResultsMethod = String(settings?.results_indicators_method ?? "").trim();
 
-  const courses = trainingRes.error ? [] : trainingRes.data ?? [];
-  const publicCourses = courses.filter(
-    (c) => c.published === true || c.is_public === true || c.published == null,
-  );
+  const courses = (trainingRes.error ? [] : trainingRes.data ?? []) as Array<{
+    id: string;
+    objectives?: unknown;
+    is_active?: boolean | null;
+    results_method_override?: string | null;
+  }>;
+  if (trainingRes.error) {
+    console.warn("[qualiopi/status] training_courses:", trainingRes.error.message);
+  }
+  const publicCourses = courses.filter((c) => c.is_active !== false);
   const coursesPublicTotal = publicCourses.length || courses.length;
   let coursesWithObjectives = 0;
   let coursesWithResults = 0;
   let coursesPublicWithInfo = 0;
-  for (const row of courses) {
+  for (const row of publicCourses.length ? publicCourses : courses) {
     const objs = row.objectives;
     const hasObj =
       (Array.isArray(objs) && objs.filter((o) => String(o).trim()).length >= 3) ||
@@ -113,8 +123,8 @@ async function buildStatus(force = false) {
       coursesWithObjectives += 1;
       coursesPublicWithInfo += 1;
     }
-    const qi = row.quality_indicators;
-    if (qi && (Array.isArray(qi) ? qi.length > 0 : typeof qi === "object")) {
+    const override = String(row.results_method_override ?? "").trim();
+    if (override || globalResultsMethod) {
       coursesWithResults += 1;
     }
   }

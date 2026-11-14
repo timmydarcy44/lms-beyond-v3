@@ -10,6 +10,7 @@ import {
   type DisabilityCaseTests,
   statusToStepIndex,
 } from "@/lib/handicap/case-types";
+import { ACCOMPANIMENT_PLAN_LABEL, isAccompanimentPlanLabel } from "@/lib/handicap/plan-storage";
 import { STATUS_LABELS } from "@/lib/handicap/theme";
 
 export type { DisabilityCaseDetail } from "@/lib/handicap/case-types";
@@ -277,7 +278,7 @@ export async function loadDisabilityCaseDetail(
     }
   }
 
-  const mappedAcc = (accommodations ?? []).map((a) => ({
+  const mappedAccAll = (accommodations ?? []).map((a) => ({
     id: String(a.id),
     category: String(a.category),
     label: String(a.label),
@@ -286,6 +287,15 @@ export async function loadDisabilityCaseDetail(
       ? String(a.shared_with_trainer_at)
       : null,
   }));
+
+  const planFromAcc = mappedAccAll.find((a) => isAccompanimentPlanLabel(a.label));
+  const accompanimentPlanHtml =
+    (typeof c.accompaniment_plan_html === "string" && c.accompaniment_plan_html.trim()
+      ? String(c.accompaniment_plan_html)
+      : null) ||
+    planFromAcc?.details ||
+    null;
+  const mappedAcc = mappedAccAll.filter((a) => !isAccompanimentPlanLabel(a.label));
 
   if (!context.needsSummary) {
     const demande = mappedAcc.find((a) => a.label === "Demande d'aménagement" && a.details);
@@ -303,6 +313,9 @@ export async function loadDisabilityCaseDetail(
     organizationName,
     consentGivenAt: c.consent_given_at ? String(c.consent_given_at) : null,
     consentMethod: c.consent_method ? String(c.consent_method) : null,
+    consentRequestedAt:
+      c.consent_requested_at != null ? String(c.consent_requested_at) : null,
+    accompanimentPlanHtml,
     rqthValidUntil: c.rqth_valid_until ? String(c.rqth_valid_until) : null,
     companyInformed: Boolean(c.company_informed),
     nextFormation: context.specialization,

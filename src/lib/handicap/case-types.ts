@@ -74,6 +74,10 @@ export type DisabilityCaseDetail = {
   companyInformed: boolean;
   nextFormation: string | null;
   stepIndex: number;
+  /** HTML du plan rédigé (éditeur). */
+  accompanimentPlanHtml: string | null;
+  /** E-mail de consentement envoyé (ISO). */
+  consentRequestedAt: string | null;
   context: DisabilityCaseContext;
   tests: DisabilityCaseTests;
   accommodations: Array<{

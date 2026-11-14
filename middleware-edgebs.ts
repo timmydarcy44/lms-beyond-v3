@@ -52,6 +52,10 @@ export function shouldSkipEdgeBsMiddleware(pathname: string): boolean {
   if (pathname.startsWith("/super")) return true;
   // Espace référente (hors marketing edge-lab) — ne pas réécrire vers /edge-lab.
   if (pathname === "/handicap" || pathname.startsWith("/handicap/")) return true;
+  // Lien public de consentement handicap (JWT).
+  if (pathname === "/consentement-handicap" || pathname.startsWith("/consentement-handicap/")) {
+    return true;
+  }
   if (pathname === "/favicon.ico") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname === "/sitemap.xml") return true;

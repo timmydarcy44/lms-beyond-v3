@@ -9,6 +9,7 @@ import {
   Plus,
   Upload,
 } from "lucide-react";
+import { HandicapPlanEditor } from "@/components/handicap/handicap-plan-editor";
 import {
   ACTION_STATUS_LABEL,
   PIPELINE_STEPS,
@@ -128,6 +129,10 @@ export function HandicapCaseDossier({
   const [showActionForm, setShowActionForm] = useState(false);
   const [showMeetingForm, setShowMeetingForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showPlanUpload, setShowPlanUpload] = useState(false);
+  const [planHtml, setPlanHtml] = useState(initial.case.accompanimentPlanHtml || "");
+  const [planDirty, setPlanDirty] = useState(false);
+  const [consentInfo, setConsentInfo] = useState<string | null>(null);
   const [notesSaved, setNotesSaved] = useState(false);
   const [viewNotesId, setViewNotesId] = useState<string | null>(null);
   const [showAllLog, setShowAllLog] = useState(false);
@@ -136,6 +141,8 @@ export function HandicapCaseDossier({
 
   useEffect(() => {
     setBundle(initial);
+    setPlanHtml(initial.case.accompanimentPlanHtml || "");
+    setPlanDirty(false);
   }, [initial]);
 
   async function mutate(body: Record<string, unknown>) {
@@ -246,7 +253,7 @@ export function HandicapCaseDossier({
                     ✓ Consentement recueilli le {formatDate(c.consentGivenAt)}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-2">
+                  <span className="inline-flex flex-wrap items-center gap-2">
                     <span
                       className="rounded-full px-3 py-1 text-[12px] font-bold"
                       style={{ background: "rgba(255,138,155,0.15)", color: T.red }}
@@ -257,18 +264,45 @@ export function HandicapCaseDossier({
                       type="button"
                       disabled={pending}
                       onClick={() => {
-                        if (confirm("Confirmer le recueil du consentement ?")) {
-                          run({ action: "set_consent", consent_method: "oral" });
-                        }
+                        startTransition(async () => {
+                          setConsentInfo(null);
+                          const ok = await mutate({ action: "request_consent" });
+                          if (ok) {
+                            setConsentInfo(
+                              c.context?.email
+                                ? `E-mail de consentement envoyé à ${c.context.email}.`
+                                : "E-mail de consentement envoyé.",
+                            );
+                          }
+                        });
                       }}
                       className="rounded-full px-3 py-1 text-[12px] font-bold"
                       style={{ background: T.accent, color: T.accentOn }}
                     >
                       Recueillir
                     </button>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      title="Si le consentement a déjà été donné oralement"
+                      onClick={() => {
+                        if (confirm("Marquer le consentement comme recueilli oralement ?")) {
+                          run({ action: "set_consent", consent_method: "oral" });
+                        }
+                      }}
+                      className="rounded-full px-3 py-1 text-[12px] font-bold"
+                      style={{ background: "rgba(255,255,255,0.08)", color: T.muted }}
+                    >
+                      Oral
+                    </button>
                   </span>
                 )}
               </div>
+              {consentInfo ? (
+                <p className="mt-2 text-[12px] font-semibold" style={{ color: T.accent }}>
+                  {consentInfo}
+                </p>
+              ) : null}
               <p className="mt-3 text-[13px]" style={{ color: T.muted }}>
                 {c.roleLine}
                 {c.context?.jobTitle ? ` · Poste : ${c.context.jobTitle}` : ""}
@@ -620,22 +654,111 @@ export function HandicapCaseDossier({
             ) : null}
           </section>
 
-          {/* Actions plan */}
+          {/* Plan rédigé + actions */}
           <section
             className="rounded-[24px] border p-5"
             style={{ background: T.card, borderColor: T.border }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-[16px] font-extrabold">Plan d&apos;accompagnement</h2>
-              <button
-                type="button"
-                onClick={() => setShowActionForm((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold"
-                style={{ background: "rgba(255,255,255,0.06)" }}
-              >
-                <Plus className="h-3.5 w-3.5" /> Action
-              </button>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[16px] font-extrabold">Plan d&apos;accompagnement</h2>
+                <p className="mt-0.5 text-[12px]" style={{ color: T.muted }}>
+                  Rédigez le plan (gras, listes…) ou déposez un PDF signé
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPlanUpload((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold"
+                  style={{ background: "rgba(255,255,255,0.06)" }}
+                >
+                  <Upload className="h-3.5 w-3.5" /> PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowActionForm((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-bold"
+                  style={{ background: "rgba(255,255,255,0.06)" }}
+                >
+                  <Plus className="h-3.5 w-3.5" /> Action
+                </button>
+              </div>
             </div>
+
+            <div className="mt-4 space-y-3">
+              <HandicapPlanEditor
+                content={planHtml}
+                disabled={pending}
+                onChange={(html) => {
+                  setPlanHtml(html);
+                  setPlanDirty(true);
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={pending || !planDirty}
+                  className="rounded-full px-4 py-2 text-[13px] font-bold disabled:opacity-50"
+                  style={{ background: T.accent, color: T.accentOn }}
+                  onClick={() => {
+                    startTransition(async () => {
+                      const ok = await mutate({ action: "save_plan", html: planHtml });
+                      if (ok) setPlanDirty(false);
+                    });
+                  }}
+                >
+                  Enregistrer le plan
+                </button>
+                {planDirty ? (
+                  <span className="text-[12px]" style={{ color: T.amber }}>
+                    Modifications non enregistrées
+                  </span>
+                ) : c.accompanimentPlanHtml ? (
+                  <span className="text-[12px]" style={{ color: T.muted }}>
+                    Plan enregistré
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            {showPlanUpload ? (
+              <UploadForm
+                caseId={c.id}
+                pending={pending}
+                defaultKind="plan_signe"
+                onCancel={() => setShowPlanUpload(false)}
+                onDone={(b) => {
+                  setBundle(b);
+                  setShowPlanUpload(false);
+                }}
+                onError={setError}
+                setPending={startTransition}
+              />
+            ) : null}
+
+            {c.documents.filter((d) => d.kind === "plan_signe").length > 0 ? (
+              <ul className="mt-4 space-y-2">
+                {c.documents
+                  .filter((d) => d.kind === "plan_signe")
+                  .map((d) => (
+                    <li
+                      key={d.id}
+                      className="flex items-center justify-between gap-3 rounded-2xl border px-3 py-2 text-[13px]"
+                      style={{ borderColor: T.borderSoft, background: T.inner }}
+                    >
+                      <span className="font-semibold">{d.title}</span>
+                      <a
+                        href={`/api/handicap/cases/${c.id}/documents/${d.id}`}
+                        className="font-bold"
+                        style={{ color: T.accent }}
+                      >
+                        Ouvrir PDF
+                      </a>
+                    </li>
+                  ))}
+              </ul>
+            ) : null}
 
             {showActionForm ? (
               <ActionForm
@@ -1306,6 +1429,7 @@ function UploadForm({
   onDone,
   onError,
   setPending,
+  defaultKind = "rqth",
 }: {
   caseId: string;
   pending: boolean;
@@ -1313,9 +1437,10 @@ function UploadForm({
   onDone: (b: Bundle) => void;
   onError: (e: string) => void;
   setPending: (fn: () => void) => void;
+  defaultKind?: string;
 }) {
-  const [kind, setKind] = useState("rqth");
-  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState(defaultKind);
+  const [title, setTitle] = useState(defaultKind === "plan_signe" ? "Plan d'accompagnement signé" : "");
   const [validUntil, setValidUntil] = useState("");
   const [file, setFile] = useState<File | null>(null);
 

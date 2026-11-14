@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeDisabilityAccessLog } from "@/lib/handicap/access-log";
 import { loadDisabilityCaseDetail } from "@/lib/handicap/case-data";
+import { sendConsentRequestEmail } from "@/lib/handicap/consent-mail";
+import { signDisabilityConsentToken } from "@/lib/handicap/consent-token";
 import { encryptDisabilityNotes } from "@/lib/handicap/notes-crypto";
+import { ACCOMPANIMENT_PLAN_LABEL } from "@/lib/handicap/plan-storage";
 import { resolveDisabilityCaseId } from "@/lib/handicap/resolve-case";
 import { requireDisabilityStaff } from "@/lib/handicap/staff";
 import { sendEmail } from "@/lib/email/resend-client";
@@ -87,7 +90,51 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     else patch.closed_at = null;
     const { error } = await service.from("disability_cases").update(patch).eq("id", caseId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  } else if (action === "request_consent") {
+    const detail = await loadDisabilityCaseDetail(service, caseId);
+    if (!detail) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
+    const to = detail.context.email?.trim();
+    if (!to?.includes("@")) {
+      return NextResponse.json(
+        { error: "Aucun e-mail connu pour cette personne — impossible d'envoyer la demande." },
+        { status: 400 },
+      );
+    }
+    const token = await signDisabilityConsentToken(caseId);
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://www.byound.fr";
+    const consentUrl = `${appUrl}/consentement-handicap?token=${encodeURIComponent(token)}`;
+    const referentName = gate.firstName?.trim() || "La référente handicap";
+    const sent = await sendConsentRequestEmail({
+      to,
+      personFirstName: detail.personFirstName,
+      referentName,
+      consentUrl,
+    });
+    if (!sent.success) {
+      return NextResponse.json(
+        { error: sent.error || "Envoi de l'e-mail impossible" },
+        { status: 502 },
+      );
+    }
+    // Best-effort : colonne optionnelle si la migration est appliquée.
+    const stamp = await service
+      .from("disability_cases")
+      .update({
+        consent_requested_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", caseId);
+    if (stamp.error && !/consent_requested_at|schema cache|column/i.test(stamp.error.message)) {
+      console.error("[disability] consent_requested_at", stamp.error.message);
+    }
+    await writeDisabilityAccessLog(service, {
+      caseId,
+      actorId: gate.userId,
+      action: "view_case",
+    });
   } else if (action === "set_consent") {
+    // Marquage manuel (ex. oral) — le flux principal est request_consent par e-mail.
     const method = String(body.consent_method ?? "oral").trim() || "oral";
     const { error } = await service
       .from("disability_cases")
@@ -98,6 +145,46 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       })
       .eq("id", caseId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  } else if (action === "save_plan") {
+    const html = String(body.html ?? "").trim();
+    if (!html || html === "<p></p>") {
+      return NextResponse.json({ error: "Le plan est vide" }, { status: 400 });
+    }
+    // Essai colonne dédiée (migration) puis fallback aménagement interne.
+    const col = await service
+      .from("disability_cases")
+      .update({
+        accompaniment_plan_html: html,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", caseId);
+    if (col.error && /accompaniment_plan_html|schema cache|column/i.test(col.error.message)) {
+      const { data: existing } = await service
+        .from("disability_accommodations")
+        .select("id")
+        .eq("case_id", caseId)
+        .eq("label", ACCOMPANIMENT_PLAN_LABEL)
+        .limit(1)
+        .maybeSingle();
+      if (existing?.id) {
+        const { error } = await service
+          .from("disability_accommodations")
+          .update({ details: html.slice(0, 100_000) })
+          .eq("id", existing.id);
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      } else {
+        const { error } = await service.from("disability_accommodations").insert({
+          case_id: caseId,
+          category: "autre",
+          label: ACCOMPANIMENT_PLAN_LABEL,
+          details: html.slice(0, 100_000),
+        });
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      await touchCase(service, caseId);
+    } else if (col.error) {
+      return NextResponse.json({ error: col.error.message }, { status: 400 });
+    }
   } else if (action === "set_company_informed") {
     const informed = Boolean(body.company_informed);
     if (informed && !body.confirmed) {

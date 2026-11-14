@@ -5,8 +5,9 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /**
- * Demande d'aménagement depuis l'espace apprenant (profil connecté).
- * Corps : { needs_text?: string, accommodation_needed: true }
+ * Contact / demande d'aménagement depuis l'espace apprenant ou salarié.
+ * Corps : { contact_referent?: boolean, has_rqth?: boolean, message?: string,
+ *           accommodation_needed?: boolean, needs_text?: string }
  */
 export async function POST(req: NextRequest) {
   const client = await getServerClient();
@@ -17,11 +18,27 @@ export async function POST(req: NextRequest) {
 
   const body = (await req.json().catch(() => null)) as {
     accommodation_needed?: boolean;
+    contact_referent?: boolean;
+    has_rqth?: boolean;
+    message?: string | null;
     needs_text?: string | null;
   } | null;
 
-  if (!body?.accommodation_needed) {
-    return NextResponse.json({ error: "accommodation_needed requis" }, { status: 400 });
+  const contact = Boolean(body?.contact_referent);
+  const accommodation = Boolean(body?.accommodation_needed);
+  if (!contact && !accommodation) {
+    return NextResponse.json(
+      { error: "contact_referent ou accommodation_needed requis" },
+      { status: 400 },
+    );
+  }
+
+  const message = String(body?.message ?? body?.needs_text ?? "").trim() || null;
+  if (contact && body?.has_rqth && !message) {
+    return NextResponse.json(
+      { error: "Un message est requis pour contacter la référente" },
+      { status: 400 },
+    );
   }
 
   const service = getServiceRoleClient();
@@ -39,11 +56,45 @@ export async function POST(req: NextRequest) {
     user.email ||
     null;
 
+  const { data: employee } = await service
+    .from("employees")
+    .select("id, company_id, email")
+    .eq("profile_id", user.id)
+    .limit(1)
+    .maybeSingle();
+
+  const { data: cfaApp } = !employee
+    ? await service
+        .from("cfa_applications")
+        .select("id, email")
+        .eq("profile_id", user.id)
+        .neq("status", "rejected")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  if (employee?.id && body?.has_rqth) {
+    await service
+      .from("employees")
+      .update({
+        rqth: true,
+        rqth_declared_at: new Date().toISOString(),
+        rqth_needs_summary: message,
+      })
+      .eq("id", employee.id);
+  }
+
+  const scope = employee ? "business" : cfaApp ? "school" : "business";
   const result = await ensureDisabilityAccommodationRequest(service, {
-    scope: "business",
+    scope,
+    employeeId: employee?.id ?? null,
+    cfaApplicationId: cfaApp?.id ?? null,
     personProfileId: user.id,
-    needsText: body.needs_text,
-    personEmail: email,
+    organizationId: employee?.company_id ?? null,
+    needsText: message,
+    contactMessage: contact ? message : null,
+    personEmail: email || employee?.email || cfaApp?.email || null,
   });
 
   if (!result) {

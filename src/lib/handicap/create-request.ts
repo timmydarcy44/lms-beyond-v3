@@ -10,6 +10,8 @@ export type DisabilityRequestSource = {
   organizationId?: string | null;
   /** Texte libre — devient une accommodation « autre », jamais un diagnostic. */
   needsText?: string | null;
+  /** Message dédié « Prendre contact avec la référente ». */
+  contactMessage?: string | null;
   personEmail?: string | null;
 };
 
@@ -67,29 +69,16 @@ export async function ensureDisabilityAccommodationRequest(
     created = true;
   }
 
+  const contact = String(source.contactMessage ?? "").trim();
+  if (contact) {
+    await upsertAccommodationNote(service, caseId, "Message à la référente", contact);
+  }
+
   const needs = String(source.needsText ?? "").trim();
-  if (needs) {
-    const { data: dup } = await service
-      .from("disability_accommodations")
-      .select("id")
-      .eq("case_id", caseId)
-      .eq("category", "autre")
-      .eq("label", "Demande d'aménagement")
-      .limit(1)
-      .maybeSingle();
-    if (!dup?.id) {
-      await service.from("disability_accommodations").insert({
-        case_id: caseId,
-        category: "autre",
-        label: "Demande d'aménagement",
-        details: needs.slice(0, 2000),
-      });
-    } else {
-      await service
-        .from("disability_accommodations")
-        .update({ details: needs.slice(0, 2000) })
-        .eq("id", dup.id);
-    }
+  if (needs && needs !== contact) {
+    await upsertAccommodationNote(service, caseId, "Demande d'aménagement", needs);
+  } else if (needs && !contact) {
+    await upsertAccommodationNote(service, caseId, "Demande d'aménagement", needs);
   }
 
   await notifyDisabilityRequest(service, {
@@ -99,6 +88,35 @@ export async function ensureDisabilityAccommodationRequest(
   });
 
   return { caseId, created };
+}
+
+async function upsertAccommodationNote(
+  service: SupabaseClient,
+  caseId: string,
+  label: string,
+  details: string,
+) {
+  const { data: dup } = await service
+    .from("disability_accommodations")
+    .select("id")
+    .eq("case_id", caseId)
+    .eq("category", "autre")
+    .eq("label", label)
+    .limit(1)
+    .maybeSingle();
+  if (!dup?.id) {
+    await service.from("disability_accommodations").insert({
+      case_id: caseId,
+      category: "autre",
+      label,
+      details: details.slice(0, 2000),
+    });
+  } else {
+    await service
+      .from("disability_accommodations")
+      .update({ details: details.slice(0, 2000) })
+      .eq("id", dup.id);
+  }
 }
 
 async function notifyDisabilityRequest(
@@ -123,8 +141,8 @@ async function notifyDisabilityRequest(
     await sendEmail({
       to: referent.email,
       subject: "Nouvelle demande dans votre espace Handicap",
-      html: `<p>Vous avez une nouvelle demande d'aménagement dans votre espace.</p>
-<p><a href="${appUrl}/handicap/demandes">Ouvrir les demandes</a></p>
+      html: `<p>Vous avez une nouvelle demande dans votre espace Handicap.</p>
+<p><a href="${appUrl}/handicap/demandes">Ouvrir les demandes</a> · <a href="${appUrl}/handicap?dossier=${encodeURIComponent(params.caseId)}">Ouvrir le dossier</a></p>
 <p>Ce message ne contient aucune information sensible.</p>`,
       skipBcc: true,
     });

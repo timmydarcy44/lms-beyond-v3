@@ -40,6 +40,25 @@ export const ACTION_STATUS_LABEL: Record<string, string> = {
   planned: "Planifié",
 };
 
+export type DisabilityCaseContext = {
+  email: string | null;
+  jobTitle: string | null;
+  department: string | null;
+  specialization: string | null;
+  alternanceStatus: string | null;
+  hostCompanyName: string | null;
+  rqthDeclared: boolean;
+  needsSummary: string | null;
+  contactMessage: string | null;
+};
+
+export type DisabilityCaseTests = {
+  disc: { D: number; I: number; S: number; C: number } | null;
+  idmcScore: number | null;
+  idmcAxes: Record<string, number> | null;
+  softSkills: Array<{ skill: string; score: number }>;
+};
+
 export type DisabilityCaseDetail = {
   id: string;
   status: string;
@@ -55,6 +74,8 @@ export type DisabilityCaseDetail = {
   companyInformed: boolean;
   nextFormation: string | null;
   stepIndex: number;
+  context: DisabilityCaseContext;
+  tests: DisabilityCaseTests;
   accommodations: Array<{
     id: string;
     category: string;

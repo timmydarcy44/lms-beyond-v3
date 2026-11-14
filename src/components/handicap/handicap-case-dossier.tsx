@@ -199,7 +199,7 @@ export function HandicapCaseDossier({
         style={{
           borderColor: T.border,
           background:
-            "radial-gradient(120% 140% at 0% 0%, #14504A 0%, #12253A 45%, #111831 100%)",
+            "radial-gradient(120% 140% at 0% 0%, #4A1028 0%, #1A1230 45%, #111831 100%)",
         }}
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -241,7 +241,7 @@ export function HandicapCaseDossier({
                 {c.consentGivenAt ? (
                   <span
                     className="rounded-full px-3 py-1 text-[12px] font-bold"
-                    style={{ background: "rgba(107,227,155,0.15)", color: T.green }}
+                    style={{ background: T.accentSoft, color: T.accent }}
                   >
                     ✓ Consentement recueilli le {formatDate(c.consentGivenAt)}
                   </span>
@@ -270,10 +270,13 @@ export function HandicapCaseDossier({
                 )}
               </div>
               <p className="mt-3 text-[13px]" style={{ color: T.muted }}>
-                {c.statusLabel}
-                {c.organizationName ? ` · ${c.organizationName}` : ""}
-                {" · Prochaine formation : "}
-                {c.nextFormation || "—"}
+                {c.roleLine}
+                {c.context?.jobTitle ? ` · Poste : ${c.context.jobTitle}` : ""}
+                {c.context?.specialization
+                  ? ` · Alternance : ${c.context.specialization}`
+                  : c.nextFormation
+                    ? ` · Formation : ${c.nextFormation}`
+                    : ""}
               </p>
             </div>
           </div>
@@ -384,6 +387,125 @@ export function HandicapCaseDossier({
           })}
         </div>
       </header>
+
+      {/* Contexte + tests */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div
+          className="rounded-[24px] border p-5"
+          style={{ background: T.card, borderColor: T.border }}
+        >
+          <h2 className="text-[16px] font-extrabold">Contexte</h2>
+          <dl className="mt-4 space-y-3 text-[13px]">
+            {[
+              ["Organisation", c.organizationName],
+              ["Poste", c.context?.jobTitle],
+              ["Service", c.context?.department],
+              ["Alternance / spécialisation", c.context?.specialization],
+              ["Statut alternance", c.context?.alternanceStatus],
+              ["Entreprise d'accueil", c.context?.hostCompanyName],
+              ["E-mail", c.context?.email],
+              ["RQTH déclarée", c.context?.rqthDeclared ? "Oui" : c.rqthValidUntil ? "Justificatif au dossier" : "Non"],
+            ]
+              .filter(([, v]) => Boolean(v))
+              .map(([label, value]) => (
+                <div key={String(label)} className="flex justify-between gap-4 border-b pb-2" style={{ borderColor: T.border }}>
+                  <dt style={{ color: T.tertiary }}>{label}</dt>
+                  <dd className="text-right font-semibold">{value}</dd>
+                </div>
+              ))}
+          </dl>
+          {c.context?.contactMessage ? (
+            <div className="mt-4 rounded-2xl border p-3" style={{ borderColor: T.accentSoftBorder, background: T.accentSoft }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: T.accent }}>
+                Message reçu
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed">{c.context.contactMessage}</p>
+            </div>
+          ) : null}
+          {c.context?.needsSummary && c.context.needsSummary !== c.context.contactMessage ? (
+            <div className="mt-3 rounded-2xl border p-3" style={{ borderColor: T.border, background: T.inner }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: T.tertiary }}>
+                Besoins déclarés
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed">{c.context.needsSummary}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          className="rounded-[24px] border p-5"
+          style={{ background: T.card, borderColor: T.border }}
+        >
+          <h2 className="text-[16px] font-extrabold">Résultats des tests</h2>
+          {!c.tests?.disc && c.tests?.idmcScore == null && !(c.tests?.softSkills?.length) ? (
+            <p className="mt-4 text-sm" style={{ color: T.muted }}>
+              Aucun test disponible pour ce profil.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {c.tests?.disc ? (
+                <div>
+                  <p className="text-[12px] font-bold" style={{ color: T.accent }}>
+                    DISC
+                  </p>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {(["D", "I", "S", "C"] as const).map((k) => (
+                      <div
+                        key={k}
+                        className="rounded-xl p-2 text-center"
+                        style={{ background: T.inner }}
+                      >
+                        <p className="text-[11px] font-bold" style={{ color: T.muted }}>
+                          {k}
+                        </p>
+                        <p className="text-[18px] font-extrabold">{c.tests.disc?.[k] ?? 0}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {c.tests?.idmcScore != null || c.tests?.idmcAxes ? (
+                <div>
+                  <p className="text-[12px] font-bold" style={{ color: T.accent }}>
+                    IDMC{c.tests.idmcScore != null ? ` · ${c.tests.idmcScore}` : ""}
+                  </p>
+                  {c.tests.idmcAxes ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {Object.entries(c.tests.idmcAxes).map(([axis, score]) => (
+                        <span
+                          key={axis}
+                          className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                          style={{ background: T.inner, color: T.muted }}
+                        >
+                          {axis} {Math.round(score)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {c.tests?.softSkills?.length ? (
+                <div>
+                  <p className="text-[12px] font-bold" style={{ color: T.accent }}>
+                    Soft skills
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {c.tests.softSkills.slice(0, 8).map((s) => (
+                      <span
+                        key={s.skill}
+                        className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        style={{ background: T.inner, color: T.muted }}
+                      >
+                        {s.skill} {Math.round(s.score)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </section>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         {/* Left column */}

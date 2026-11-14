@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  hasAnyTestResults,
+  loadEmployeeTestResults,
+} from "@/lib/entreprise/employee-profile-diagnostics";
 import { decryptDisabilityNotes } from "@/lib/handicap/notes-crypto";
 import {
+  type DisabilityCaseContext,
   type DisabilityCaseDetail,
+  type DisabilityCaseTests,
   statusToStepIndex,
 } from "@/lib/handicap/case-types";
 import { STATUS_LABELS } from "@/lib/handicap/theme";
@@ -13,6 +19,25 @@ export {
   statusToStepIndex,
   ACTION_STATUS_LABEL,
 } from "@/lib/handicap/case-types";
+
+const EMPTY_CONTEXT: DisabilityCaseContext = {
+  email: null,
+  jobTitle: null,
+  department: null,
+  specialization: null,
+  alternanceStatus: null,
+  hostCompanyName: null,
+  rqthDeclared: false,
+  needsSummary: null,
+  contactMessage: null,
+};
+
+const EMPTY_TESTS: DisabilityCaseTests = {
+  disc: null,
+  idmcScore: null,
+  idmcAxes: null,
+  softSkills: [],
+};
 
 export async function loadDisabilityCaseDetail(
   service: SupabaseClient,
@@ -80,17 +105,36 @@ export async function loadDisabilityCaseDetail(
   let organizationName: string | null = null;
   let roleLine =
     c.scope === "school" ? "Alternant · Byound School" : "Salarié · Entreprise · Business";
+  let profileId: string | null = c.person_profile_id ? String(c.person_profile_id) : null;
+  const context: DisabilityCaseContext = { ...EMPTY_CONTEXT };
+
+  const contactFromAcc = (accommodations ?? []).find(
+    (a) => String(a.label ?? "") === "Message à la référente",
+  );
+  if (contactFromAcc?.details) {
+    context.contactMessage = String(contactFromAcc.details);
+  }
 
   if (c.employee_id) {
     const { data: emp } = await service
       .from("employees")
-      .select("first_name, last_name, company_id")
+      .select(
+        "first_name, last_name, company_id, job_title, department, email, profile_id, rqth, rqth_needs_summary",
+      )
       .eq("id", c.employee_id)
       .maybeSingle();
     if (emp) {
       personName =
         [emp.first_name, emp.last_name].filter(Boolean).join(" ").trim() || personName;
       personFirstName = String(emp.first_name ?? "").trim() || personFirstName;
+      profileId = emp.profile_id ? String(emp.profile_id) : profileId;
+      context.email = emp.email ? String(emp.email) : null;
+      context.jobTitle = emp.job_title ? String(emp.job_title) : null;
+      context.department = emp.department ? String(emp.department) : null;
+      context.rqthDeclared = Boolean(emp.rqth);
+      context.needsSummary = emp.rqth_needs_summary
+        ? String(emp.rqth_needs_summary)
+        : context.needsSummary;
       const orgId = c.organization_id || emp.company_id;
       if (orgId) {
         const { data: org } = await service
@@ -100,25 +144,81 @@ export async function loadDisabilityCaseDetail(
           .maybeSingle();
         organizationName = org?.name ? String(org.name) : null;
       }
-      roleLine = ["Salarié", organizationName, "Business"].filter(Boolean).join(" · ");
+      roleLine = [
+        "Salarié",
+        context.jobTitle,
+        organizationName,
+        "Business",
+      ]
+        .filter(Boolean)
+        .join(" · ");
     }
   } else if (c.cfa_application_id) {
-    const { data: app } = await service
-      .from("cfa_applications")
-      .select("first_name, last_name")
-      .eq("id", c.cfa_application_id)
-      .maybeSingle();
+    let app: Record<string, unknown> | null = null;
+    {
+      const full = await service
+        .from("cfa_applications")
+        .select(
+          "first_name, last_name, email, profile_id, specialization, status, alternance_status",
+        )
+        .eq("id", c.cfa_application_id)
+        .maybeSingle();
+      if (full.error) {
+        const basic = await service
+          .from("cfa_applications")
+          .select("first_name, last_name, email, profile_id, specialization, status")
+          .eq("id", c.cfa_application_id)
+          .maybeSingle();
+        app = (basic.data as Record<string, unknown> | null) ?? null;
+      } else {
+        app = (full.data as Record<string, unknown> | null) ?? null;
+      }
+    }
     if (app) {
       personName =
         [app.first_name, app.last_name].filter(Boolean).join(" ").trim() || personName;
       personFirstName = String(app.first_name ?? "").trim() || personFirstName;
+      profileId = app.profile_id ? String(app.profile_id) : profileId;
+      context.email = app.email ? String(app.email) : null;
+      context.specialization = app.specialization ? String(app.specialization) : null;
+      context.alternanceStatus = app.alternance_status
+        ? String(app.alternance_status)
+        : app.status
+          ? String(app.status)
+          : null;
+      roleLine = [
+        "Alternant",
+        context.specialization,
+        "Byound School",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      organizationName = "Byound School";
+
+      try {
+        const { data: placement } = await service
+          .from("apprentice_placements")
+          .select("company_id, status")
+          .eq("apprentice_id", c.cfa_application_id)
+          .in("status", ["pending", "active"])
+          .limit(1)
+          .maybeSingle();
+        if (placement?.company_id) {
+          const { data: host } = await service
+            .from("cfa_companies")
+            .select("company_name")
+            .eq("id", placement.company_id)
+            .maybeSingle();
+          context.hostCompanyName = host?.company_name ? String(host.company_name) : null;
+        }
+      } catch {
+        /* table optionnelle */
+      }
     }
-    roleLine = "Alternant · Byound School";
-    organizationName = "Byound School";
   } else if (c.person_profile_id) {
     const { data: p } = await service
       .from("profiles")
-      .select("first_name, last_name, full_name")
+      .select("first_name, last_name, full_name, email")
       .eq("id", c.person_profile_id)
       .maybeSingle();
     if (p) {
@@ -127,6 +227,23 @@ export async function loadDisabilityCaseDetail(
         [p.first_name, p.last_name].filter(Boolean).join(" ").trim() ||
         personName;
       personFirstName = String(p.first_name ?? "").trim() || personFirstName;
+      context.email = p.email ? String(p.email) : null;
+    }
+    const { data: empByProfile } = await service
+      .from("employees")
+      .select("job_title, department, rqth, rqth_needs_summary, company_id")
+      .eq("profile_id", c.person_profile_id)
+      .limit(1)
+      .maybeSingle();
+    if (empByProfile) {
+      context.jobTitle = empByProfile.job_title ? String(empByProfile.job_title) : null;
+      context.department = empByProfile.department
+        ? String(empByProfile.department)
+        : null;
+      context.rqthDeclared = Boolean(empByProfile.rqth);
+      context.needsSummary = empByProfile.rqth_needs_summary
+        ? String(empByProfile.rqth_needs_summary)
+        : null;
     }
   }
 
@@ -137,6 +254,42 @@ export async function loadDisabilityCaseDetail(
       .eq("id", c.organization_id)
       .maybeSingle();
     organizationName = org?.name ? String(org.name) : null;
+  }
+
+  let tests: DisabilityCaseTests = { ...EMPTY_TESTS };
+  if (profileId) {
+    try {
+      const raw = await loadEmployeeTestResults(service, profileId);
+      if (hasAnyTestResults(raw)) {
+        tests = {
+          disc: raw.disc,
+          idmcScore: raw.idmc_score,
+          idmcAxes: raw.idmc_axes,
+          softSkills: raw.soft_skills,
+        };
+      }
+    } catch (err) {
+      console.error(
+        "[disability] load tests",
+        caseId,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  const mappedAcc = (accommodations ?? []).map((a) => ({
+    id: String(a.id),
+    category: String(a.category),
+    label: String(a.label),
+    details: a.details ? String(a.details) : null,
+    sharedWithTrainerAt: a.shared_with_trainer_at
+      ? String(a.shared_with_trainer_at)
+      : null,
+  }));
+
+  if (!context.needsSummary) {
+    const demande = mappedAcc.find((a) => a.label === "Demande d'aménagement" && a.details);
+    if (demande?.details) context.needsSummary = demande.details;
   }
 
   return {
@@ -152,17 +305,11 @@ export async function loadDisabilityCaseDetail(
     consentMethod: c.consent_method ? String(c.consent_method) : null,
     rqthValidUntil: c.rqth_valid_until ? String(c.rqth_valid_until) : null,
     companyInformed: Boolean(c.company_informed),
-    nextFormation: null,
+    nextFormation: context.specialization,
     stepIndex: statusToStepIndex(String(c.status)),
-    accommodations: (accommodations ?? []).map((a) => ({
-      id: String(a.id),
-      category: String(a.category),
-      label: String(a.label),
-      details: a.details ? String(a.details) : null,
-      sharedWithTrainerAt: a.shared_with_trainer_at
-        ? String(a.shared_with_trainer_at)
-        : null,
-    })),
+    context,
+    tests,
+    accommodations: mappedAcc,
     actions: (actions ?? []).map((a) => ({
       id: String(a.id),
       label: String(a.label),

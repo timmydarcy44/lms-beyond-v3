@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ReferentContactRequestCard } from "@/components/handicap/referent-contact-request-card";
 import { SALARIE_PAGE_SHELL } from "@/lib/salarie/connect-nav";
 
 const ApprenantDashboardClient = dynamic(
@@ -22,6 +23,9 @@ const ApprenantDashboardClient = dynamic(
 export default function SalarieProfilPage() {
   return (
     <div className={SALARIE_PAGE_SHELL}>
+      <div className="mx-auto max-w-5xl px-4 pt-6">
+        <ReferentContactRequestCard audience="salarie" />
+      </div>
       <ApprenantDashboardClient initialView="profil" homeHref="/dashboard/salarie" />
     </div>
   );

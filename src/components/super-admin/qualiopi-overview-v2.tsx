@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { QUALIOPI_CRITERION_NAMES } from "@/lib/qualiopi/indicators";
 import { ACTIVITY_LABELS, type QualiopiActivityKey } from "@/lib/qualiopi/activity-profile";
 import type { QualiopiStatusSnapshot, QualiopiUiStatus } from "@/lib/qualiopi/status-types";
+import { QualiopiPlanExamples } from "@/components/super-admin/qualiopi-plan-examples";
 import { cn } from "@/lib/utils";
 
 const BG = "#0A0F1E";
@@ -356,6 +357,8 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
         emargementsSlot
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-4">
+          <QualiopiPlanExamples />
           {/* Criteria */}
           <section className="rounded-[24px] border p-5" style={{ background: CARD, borderColor: BORDER }}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -548,6 +551,7 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
               </ul>
             )}
           </section>
+          </div>
 
           {/* Right column */}
           <aside className="space-y-3">

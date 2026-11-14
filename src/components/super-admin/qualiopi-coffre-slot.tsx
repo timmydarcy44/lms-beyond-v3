@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight, FileText, ListChecks, Trash2, Upload } from "lucide-react";
+import { ChevronRight, FileText, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { QualiopiPlanExamples } from "@/components/super-admin/qualiopi-plan-examples";
 import type { QualiopiDocument } from "@/lib/crm/qualiopi-shared";
 import type { CoffreAdminSlot, CoffreAdminStatus } from "@/lib/qualiopi/coffre-admin";
 import { cn } from "@/lib/utils";
@@ -16,42 +16,6 @@ type Props = {
   onRemove: (doc: QualiopiDocument) => void;
 };
 
-/** Exemples pédagogiques — pas des preuves déposées. */
-const EXAMPLE_PROCESS = {
-  title: "Exemple de process — mise à jour du coffre",
-  steps: [
-    "Rédiger ou faire valider le modèle (convention, règlement ou livret) par la direction.",
-    "Exporter en PDF versionnée (ex. Convention_OF_2026-v1.pdf).",
-    "Déposer le fichier dans le slot correspondant ci-dessous.",
-    "À chaque révision majeure : remplacer le fichier et noter la date dans le nom.",
-  ],
-};
-
-const EXAMPLE_DOCUMENT = {
-  title: "Exemple de document — convention de formation (trame)",
-  body: `Convention de formation professionnelle
-
-1. Parties
-   - Organisme de formation : Byound / Edge Business School
-   - Client : [Raison sociale]
-
-2. Objet
-   - Intitulé de la formation, objectifs, durée, modalités (présentiel / distanciel / mixte).
-
-3. Conditions financières
-   - Tarif HT, modalités de facturation, prise en charge éventuelle (OPCO, CPF…).
-
-4. Obligations
-   - OF : moyens pédagogiques, émargement, attestation.
-   - Client : désignation des stagiaires, paiement.
-
-5. Accessibilité
-   - Référente handicap : contact OF — étude personnalisée.
-
-6. Signatures
-   - Date, noms, qualités.`,
-};
-
 export function QualiopiCoffreSlot({
   coffre,
   loading,
@@ -60,8 +24,6 @@ export function QualiopiCoffreSlot({
   onDeposit,
   onRemove,
 }: Props) {
-  const [planOpen, setPlanOpen] = useState(coffre.deposited === 0);
-
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -76,60 +38,7 @@ export function QualiopiCoffreSlot({
         </span>
       </div>
 
-      {/* CTA — ce que l’on va faire (exemples, pas des preuves) */}
-      <div className="rounded-[24px] border border-[#26304F] bg-[#111831]">
-        <button
-          type="button"
-          onClick={() => setPlanOpen((o) => !o)}
-          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
-        >
-          <span className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6E5BFF]/20 text-[#C9C2FF]">
-              <ListChecks className="h-4 w-4" />
-            </span>
-            <span>
-              <span className="block text-[15px] font-extrabold text-[#F2F4FA]">
-                Ce que l&apos;on va faire
-              </span>
-              <span className="block text-[12px] text-[#9AA3BD]">
-                Exemple de process + exemple de document — en attendant les vraies preuves
-              </span>
-            </span>
-          </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 text-[#9AA3BD] transition",
-              planOpen ? "rotate-180" : "",
-            )}
-          />
-        </button>
-
-        {planOpen ? (
-          <div className="grid gap-3 border-t border-[#1A2340] px-5 py-4 sm:grid-cols-2">
-            <article className="rounded-2xl border border-[#1A2340] bg-[#0B1122] p-4">
-              <p className="text-[12px] font-semibold text-[#A99BFF]">Exemple de process</p>
-              <h3 className="mt-1 text-[14px] font-extrabold text-[#F2F4FA]">
-                {EXAMPLE_PROCESS.title.replace(/^Exemple de process — /, "")}
-              </h3>
-              <ol className="mt-3 list-decimal space-y-2 pl-4 text-[13px] leading-relaxed text-[#9AA3BD]">
-                {EXAMPLE_PROCESS.steps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
-            </article>
-
-            <article className="rounded-2xl border border-[#1A2340] bg-[#0B1122] p-4">
-              <p className="text-[12px] font-semibold text-[#F2CF6B]">Exemple de document</p>
-              <h3 className="mt-1 text-[14px] font-extrabold text-[#F2F4FA]">
-                Convention de formation (trame)
-              </h3>
-              <pre className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-[#0A0F1E] p-3 font-mono text-[11px] leading-relaxed text-[#9AA3BD]">
-                {EXAMPLE_DOCUMENT.body}
-              </pre>
-            </article>
-          </div>
-        ) : null}
-      </div>
+      <QualiopiPlanExamples />
 
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-3">

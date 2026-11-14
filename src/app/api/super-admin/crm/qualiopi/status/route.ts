@@ -172,12 +172,61 @@ async function buildStatus(force = false) {
   since90.setUTCDate(since90.getUTCDate() - 90);
   const since90Iso = since90.toISOString();
 
+  // Pack information : dossiers (formation_documents) + sessions Qualiopi
+  let infoPackCompleteCount = 0;
+  let infoPackPartialCount = 0;
+  try {
+    const { data: sentDocs } = await supabase
+      .from("formation_documents")
+      .select("dossier_id, kind, sent_at")
+      .in("kind", ["convention", "reglement", "livret", "convocation"])
+      .not("sent_at", "is", null)
+      .limit(500);
+    const byDossier = new Map<string, Set<string>>();
+    for (const row of sentDocs ?? []) {
+      const did = String(row.dossier_id ?? "");
+      if (!did) continue;
+      if (!byDossier.has(did)) byDossier.set(did, new Set());
+      byDossier.get(did)!.add(String(row.kind));
+    }
+    for (const kinds of byDossier.values()) {
+      const hasConv = kinds.has("convention");
+      const hasReg = kinds.has("reglement");
+      const hasLiv = kinds.has("livret") || kinds.has("convocation");
+      if (hasConv || hasReg || hasLiv) infoPackPartialCount += 1;
+      if (hasConv && hasReg && hasLiv) infoPackCompleteCount += 1;
+    }
+  } catch (e) {
+    console.warn("[qualiopi/status] formation_documents pack:", e);
+  }
+  // Fallback sessions CRM (workflow historique)
+  const sessionPackComplete = sessions.filter(
+    (s) => s.convention_sent_at && s.reglement_sent_at && s.livret_sent_at,
+  ).length;
+  const sessionPackPartial = sessions.filter(
+    (s) => s.convention_sent_at || s.reglement_sent_at || s.livret_sent_at,
+  ).length;
+  infoPackCompleteCount = Math.max(infoPackCompleteCount, sessionPackComplete);
+  infoPackPartialCount = Math.max(infoPackPartialCount, sessionPackPartial);
+
+  const disabilityCasesCount = await safeCount(() =>
+    supabase.from("disability_cases").select("id", { count: "exact", head: true }),
+  );
+  const disabilityAccommodationsCount = await safeCount(() =>
+    supabase.from("disability_accommodations").select("id", { count: "exact", head: true }),
+  );
+  const handicapProfilesRaw = await safeCount(() =>
+    supabase.from("handicap_profiles").select("id", { count: "exact", head: true }),
+  );
+
   const signals: QualiopiStatusSignals = {
     coursesPublicWithInfo,
     coursesPublicTotal,
     coursesCompliantCount,
     coursesWithResults,
     coursesWithObjectives,
+    infoPackCompleteCount,
+    infoPackPartialCount,
     approvedExperts: await safeCount(() =>
       supabase
         .from("experts")
@@ -263,8 +312,10 @@ async function buildStatus(force = false) {
         .eq("review_status", "approved")
         .not("employment_status", "is", null),
     ),
-    handicapProfilesCount: await safeCount(() =>
-      supabase.from("handicap_profiles").select("id", { count: "exact", head: true }),
+    handicapProfilesCount: Math.max(
+      handicapProfilesRaw,
+      disabilityCasesCount,
+      disabilityAccommodationsCount,
     ),
     handicapProcessReady: Boolean(processReady.handicap),
     lmsEnrollmentsCount: await safeCount(() =>

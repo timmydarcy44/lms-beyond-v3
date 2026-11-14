@@ -38,6 +38,10 @@ export type QualiopiStatusSignals = {
   coursesCompliantCount: number;
   coursesWithResults: number;
   coursesWithObjectives: number;
+  /** Sessions/dossiers avec pack info envoyé (convention + règlement + livret/convocation). */
+  infoPackCompleteCount: number;
+  /** Au moins un document d’information envoyé (convention / règlement / livret / convocation). */
+  infoPackPartialCount: number;
   approvedExperts: number;
   formateurPlansCount: number;
   formateurActionsDoneCount: number;
@@ -185,21 +189,47 @@ function assessAuto(
     }
     case 9:
     case 10: {
-      const sent = ctx.sessions.filter(
+      const sessionPack = ctx.sessions.filter(
         (s) => s.convention_sent_at && s.reglement_sent_at && s.livret_sent_at,
       ).length;
+      const complete = Math.max(sessionPack, sig.infoPackCompleteCount ?? 0);
+      const partial = Math.max(complete, sig.infoPackPartialCount ?? 0);
+      const handicapOk = sig.handicapProcessReady || sig.handicapProfilesCount >= 1;
       const p = proof(
-        "Pack information / livret",
+        "Pack information (convention / règlement / livret)",
         "/super/crm/formations",
         null,
-        `${sent} / ${Math.max(sessionsTotal, 1)} sessions`,
+        `${complete} dossier(s) complets · ${partial} avec envoi`,
       );
-      if (sent >= 1 || (id === 10 && (sig.handicapProcessReady || sig.handicapProfilesCount >= 1))) {
+      // Ind. 10 : adaptation publics — pack info OU dossier handicap
+      if (complete >= 1 || (id === 10 && handicapOk && partial >= 1)) {
         return withManual({
-          status: sent >= 1 ? "proven" : "todo",
+          status: "proven",
+          proofs: [
+            p,
+            ...(id === 10 && handicapOk
+              ? [
+                  proof(
+                    "Adaptation / handicap",
+                    "/super/crm/qualiopi/handicap",
+                    null,
+                    `${sig.handicapProfilesCount} fiche(s)`,
+                  ),
+                ]
+              : []),
+          ],
+          nextAction: {
+            label: "Voir la preuve",
+            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/formations",
+          },
+        });
+      }
+      if (partial >= 1 || sessionsTotal >= 1 || (id === 10 && handicapOk)) {
+        return withManual({
+          status: "todo",
           proofs: [p],
           nextAction: {
-            label: sent >= 1 ? "Voir la preuve" : "Compléter",
+            label: "Compléter",
             href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/formations",
           },
         });

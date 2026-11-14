@@ -17,8 +17,10 @@ import { buildZipStoreBlob } from "@/lib/zip-store";
 import {
   CATALOGUE_PROOF_FIELDS,
   QUALIOPI_FINANCING_OPTIONS,
+  QUALIOPI_MODALITY_DETAIL_OPTIONS,
   QUALIOPI_PEDAGOGICAL_MODALITIES,
   QUALIOPI_RECOGNITION_TYPES,
+  modalityDetailOptionId,
   sentenceCaseTitle,
   type CatalogueProofFieldId,
 } from "@/lib/training-courses/qualiopi-fiche";
@@ -1048,6 +1050,25 @@ function FieldInput({
           );
         })}
       </div>
+    );
+  }
+  if (fieldId === "pedagogical_modality_detail") {
+    return (
+      <select
+        value={modalityDetailOptionId(value)}
+        onChange={(e) => {
+          const opt = QUALIOPI_MODALITY_DETAIL_OPTIONS.find((o) => o.id === e.target.value);
+          onChange(opt?.text ?? "");
+        }}
+        className="w-full rounded-xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-[13px] text-[#F2F4FA]"
+      >
+        <option value="">Choisir…</option>
+        {QUALIOPI_MODALITY_DETAIL_OPTIONS.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     );
   }
   return (

@@ -43,6 +43,9 @@ import {
 } from "@/components/super-admin/training-cms/training-ai-generate-modal";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import {
+  QUALIOPI_FINANCING_OPTIONS,
+  QUALIOPI_MODALITY_DETAIL_OPTIONS,
+  modalityDetailOptionId,
   QUALIOPI_PEDAGOGICAL_MODALITIES,
   QUALIOPI_RECOGNITION_TYPES,
 } from "@/lib/training-courses/qualiopi-fiche";
@@ -102,8 +105,12 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 const INPUT =
-  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#635BFF]/40 focus:ring-2 focus:ring-[#635BFF]/10";
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#635BFF]/40 focus:ring-2 focus:ring-[#635BFF]/10";
 const TEXTAREA = `${INPUT} min-h-[88px] resize-y`;
+/** Styles forcés clairs — le chrome Control sombre ne doit pas écraser ce bloc. */
+const QUALIOPI_INPUT =
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#635BFF]/40 focus:ring-2 focus:ring-[#635BFF]/10 [color-scheme:light]";
+const QUALIOPI_TEXTAREA = `${QUALIOPI_INPUT} min-h-[72px] resize-y`;
 
 function courseToState(course: TrainingCourseRow): CmsState {
   return {
@@ -1017,18 +1024,18 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                     onChange={(v) => patch("formats", v)}
                   />
 
-                  <div className="rounded-2xl border border-[#E8E6FF] bg-[#F8F7FF] p-5 space-y-4">
+                  <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-5">
                     <div>
-                      <p className="text-sm font-semibold text-[#3D36B0]">Qualiopi — informations fiche</p>
+                      <p className="text-sm font-semibold text-gray-900">Qualiopi — informations fiche</p>
                       <p className="mt-0.5 text-xs text-gray-500">
-                        Indicateurs 1 et 2 — champs obligatoires pour la conformité catalogue.
+                        Indicateurs 1 et 2 — champs visibles sur la fiche publique et le one-pager auditeur.
                       </p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label id="qualiopi-field-recognition_type" className="block text-sm">
-                        <span className="mb-1 block font-medium text-gray-700">Type de reconnaissance</span>
+                        <span className="mb-1 block font-medium text-gray-800">Type de reconnaissance</span>
                         <select
-                          className={INPUT}
+                          className={QUALIOPI_INPUT}
                           value={state.recognition_type}
                           onChange={(e) => patch("recognition_type", e.target.value)}
                         >
@@ -1041,18 +1048,18 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                         </select>
                       </label>
                       <label className="block text-sm">
-                        <span className="mb-1 block font-medium text-gray-700">Précision reconnaissance</span>
+                        <span className="mb-1 block font-medium text-gray-800">Précision reconnaissance</span>
                         <input
-                          className={INPUT}
+                          className={QUALIOPI_INPUT}
                           value={state.recognition_detail}
                           onChange={(e) => patch("recognition_detail", e.target.value)}
-                          placeholder="À rédiger"
+                          placeholder="Ex. Open Badge « Leader Expert »"
                         />
                       </label>
-                      <label id="qualiopi-field-pedagogical_modality" className="block text-sm">
-                        <span className="mb-1 block font-medium text-gray-700">Modalité pédagogique</span>
+                      <label id="qualiopi-field-pedagogical_modality" className="block text-sm sm:col-span-2">
+                        <span className="mb-1 block font-medium text-gray-800">Modalité pédagogique</span>
                         <select
-                          className={INPUT}
+                          className={QUALIOPI_INPUT}
                           value={state.pedagogical_modality}
                           onChange={(e) => patch("pedagogical_modality", e.target.value)}
                         >
@@ -1065,36 +1072,90 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                         </select>
                       </label>
                       <label id="qualiopi-field-pedagogical_modality_detail" className="block text-sm sm:col-span-2">
-                        <span className="mb-1 block font-medium text-gray-700">
+                        <span className="mb-1 block font-medium text-gray-800">
                           Description des modalités pédagogiques
                         </span>
-                        <textarea
-                          className={TEXTAREA}
-                          value={state.pedagogical_modality_detail}
-                          onChange={(e) => patch("pedagogical_modality_detail", e.target.value)}
-                          placeholder="À rédiger"
-                        />
+                        <p className="mb-1.5 text-[12px] leading-snug text-gray-500">
+                          Texte standard OF — choisissez la formulation adaptée au déroulé.
+                        </p>
+                        <select
+                          className={QUALIOPI_INPUT}
+                          value={modalityDetailOptionId(state.pedagogical_modality_detail)}
+                          onChange={(e) => {
+                            const opt = QUALIOPI_MODALITY_DETAIL_OPTIONS.find(
+                              (o) => o.id === e.target.value,
+                            );
+                            patch("pedagogical_modality_detail", opt?.text ?? "");
+                          }}
+                        >
+                          <option value="">— Choisir —</option>
+                          {QUALIOPI_MODALITY_DETAIL_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                        {state.pedagogical_modality_detail.trim() ? (
+                          <p className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-[12px] leading-relaxed text-gray-600">
+                            {state.pedagogical_modality_detail}
+                          </p>
+                        ) : null}
                       </label>
-                      <label id="qualiopi-field-financing_modalities" className="block text-sm sm:col-span-2">
-                        <span className="mb-1 block font-medium text-gray-700">
-                          Modalités de financement
-                        </span>
-                        <textarea
-                          className={TEXTAREA}
-                          value={state.financing_modalities}
-                          onChange={(e) => patch("financing_modalities", e.target.value)}
-                          placeholder="OPCO, plan de développement des compétences, fonds propres…"
-                        />
-                      </label>
+                      <div id="qualiopi-field-financing_modalities" className="sm:col-span-2">
+                        <p className="mb-1 text-sm font-medium text-gray-800">Financements possibles</p>
+                        <p className="mb-2 text-[12px] text-gray-500">
+                          Sélectionnez une ou plusieurs options affichées sur la fiche.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {QUALIOPI_FINANCING_OPTIONS.map((opt) => {
+                            const selected = new Set(
+                              state.financing_modalities
+                                .split(/\s*[·,;]\s*/)
+                                .map((s) => s.trim())
+                                .filter(Boolean),
+                            );
+                            const on = selected.has(opt);
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => {
+                                  const next = new Set(selected);
+                                  if (on) next.delete(opt);
+                                  else next.add(opt);
+                                  patch(
+                                    "financing_modalities",
+                                    Array.from(next).join(" · "),
+                                  );
+                                }}
+                                className={cn(
+                                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                                  on
+                                    ? "border-[#635BFF] bg-[#635BFF] text-white"
+                                    : "border-gray-200 bg-white text-gray-700 hover:border-[#635BFF]/40",
+                                )}
+                              >
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <label className="block text-sm sm:col-span-2">
-                        <span className="mb-1 block font-medium text-gray-700">
-                          Méthode de calcul des indicateurs (surcharge fiche, optionnel)
+                        <span className="mb-1 block font-medium text-gray-800">
+                          Méthode de calcul des indicateurs de résultats
+                          <span className="ml-1 font-normal text-gray-500">(optionnel)</span>
                         </span>
+                        <p className="mb-1.5 text-[12px] leading-snug text-gray-500">
+                          Comment vous calculez satisfaction, réussite, etc. sur <strong>cette</strong>{" "}
+                          fiche. Laissez vide pour reprendre la méthode globale OF (Paramètres).
+                        </p>
                         <textarea
-                          className={TEXTAREA}
+                          className={QUALIOPI_TEXTAREA}
                           value={state.results_method_override}
                           onChange={(e) => patch("results_method_override", e.target.value)}
-                          placeholder="Laisser vide pour utiliser la méthode OF (Paramètres)"
+                          placeholder="Ex. Satisfaction = moyenne des évals à chaud sur 12 mois glissants."
+                          rows={2}
                         />
                       </label>
                     </div>

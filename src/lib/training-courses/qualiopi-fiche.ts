@@ -195,15 +195,51 @@ export function assessQualiopiFicheCompliance(
   };
 }
 
-/** Libellés financement pour saisie en série. */
+/** Libellés financement (fiche catalogue + saisie en série). */
 export const QUALIOPI_FINANCING_OPTIONS = [
-  "Entreprise",
   "OPCO",
   "CPF",
   "France Travail",
-  "Autofinancement",
+  "Fonds propres",
+  "Plan de développement des compétences",
+  "Entreprise",
   "Sur devis",
 ] as const;
+
+/** Descriptions de modalités pédagogiques — sélection unique (texte standard OF). */
+export const QUALIOPI_MODALITY_DETAIL_OPTIONS = [
+  {
+    id: "standard_atelier",
+    label: "Ateliers & mises en situation",
+    text: "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports remis sur le LMS ; temps de questions-réponses en fin de chaque séquence.",
+  },
+  {
+    id: "standard_coaching",
+    label: "Apports + coaching",
+    text: "Séquences d’apports courts, démonstrations et coaching individuel ou en binôme. Plan d’action personnalisé en fin de parcours. Supports et replay disponibles sur le LMS.",
+  },
+  {
+    id: "standard_elearning",
+    label: "Parcours e-learning guidé",
+    text: "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones planifiés.",
+  },
+  {
+    id: "standard_mixte",
+    label: "Parcours mixte (présentiel + digital)",
+    text: "Journées en présentiel pour la pratique et le collectif, complétées par des modules digitaux avant/après. Évaluations formatives tout au long du parcours.",
+  },
+] as const;
+
+/** Exemple / défaut (première option). */
+export const QUALIOPI_MODALITY_DETAIL_EXAMPLE =
+  QUALIOPI_MODALITY_DETAIL_OPTIONS[0].text;
+
+export function modalityDetailOptionId(text: string | null | undefined): string {
+  const t = String(text ?? "").trim();
+  if (!t) return "";
+  const found = QUALIOPI_MODALITY_DETAIL_OPTIONS.find((o) => o.text === t);
+  return found?.id ?? "";
+}
 
 /** Affichage titre en casse de phrase (ne modifie pas la base). */
 export function sentenceCaseTitle(title: string): string {

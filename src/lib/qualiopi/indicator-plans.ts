@@ -74,7 +74,7 @@ Objectifs attendus
 Public concerné · Contraintes
 Proposition pédagogique retenue
 Source : deal pipeline B2B`,
-  };
+  },
   5: {
     processTitle: "Rédiger des objectifs opérationnels",
     processSteps: [

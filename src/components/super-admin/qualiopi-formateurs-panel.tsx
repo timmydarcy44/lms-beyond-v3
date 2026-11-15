@@ -9,11 +9,8 @@ import {
   QUALIOPI_CARD_INNER,
   QUALIOPI_MUTED,
 } from "@/components/super-admin/qualiopi/qualiopi-audit-styles";
-import {
-  EMPLOYMENT_STATUSES,
-  EMPLOYMENT_STATUS_LABELS,
-  type EmploymentStatus,
-} from "@/lib/expert/subcontracting";
+import { QualiopiSubcontractEditor } from "@/components/super-admin/qualiopi-subcontract-editor";
+import type { EmploymentStatus } from "@/lib/expert/subcontracting";
 import { cn } from "@/lib/utils";
 
 type Expert = {
@@ -62,14 +59,8 @@ export function QualiopiFormateursPanel() {
   const [needs, setNeeds] = useState("");
   const [actionTitle, setActionTitle] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<string>("");
-  const [editId, setEditId] = useState("");
-  const [editForm, setEditForm] = useState({
-    employment_status: "" as "" | EmploymentStatus,
-    subcontract_signed_at: "",
-    subcontract_ends_at: "",
-    quality_commitment: false,
-  });
-  const [sstBusy, setSstBusy] = useState(false);
+  const [sstOpen, setSstOpen] = useState(false);
+  const [sstExpertId, setSstExpertId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -162,45 +153,17 @@ export function QualiopiFormateursPanel() {
     return `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || id.slice(0, 8);
   };
 
-  const openEdit = (row: IntervenantRow) => {
-    setEditId(row.id);
-    setEditForm({
-      employment_status: row.employment_status ?? "",
-      subcontract_signed_at: row.subcontract_signed_at ?? "",
-      subcontract_ends_at: row.subcontract_ends_at ?? "",
-      quality_commitment: Boolean(row.quality_commitment_at),
-    });
-  };
-
-  const saveContractual = async () => {
-    if (!editId) return;
-    setSstBusy(true);
-    try {
-      const res = await fetch("/api/super-admin/crm/qualiopi/formateurs/contractual", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expert_id: editId,
-          employment_status: editForm.employment_status || null,
-          subcontract_signed_at: editForm.subcontract_signed_at || null,
-          subcontract_ends_at: editForm.subcontract_ends_at || null,
-          quality_commitment: editForm.quality_commitment,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
-      toast.success("Statut contractuel enregistré");
-      setEditId("");
-      await load();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setSstBusy(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
+      <QualiopiSubcontractEditor
+        open={sstOpen}
+        initialExpertId={sstExpertId}
+        onClose={() => {
+          setSstOpen(false);
+          setSstExpertId(null);
+        }}
+        onSaved={() => void load()}
+      />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Formateurs</h1>
@@ -261,7 +224,7 @@ export function QualiopiFormateursPanel() {
             ) : null}
           </section>
 
-          <section className={cn(QUALIOPI_CARD, "p-5")}>
+          <section id="plans" className={cn(QUALIOPI_CARD, "scroll-mt-24 p-5")}>
             <h2 className="text-lg font-semibold text-white">Actions</h2>
             <select
               value={selectedPlan}
@@ -316,7 +279,7 @@ export function QualiopiFormateursPanel() {
         </div>
       )}
 
-      <section className={cn(QUALIOPI_CARD, "space-y-4 p-5")}>
+      <section id="sous-traitance" className={cn(QUALIOPI_CARD, "scroll-mt-24 space-y-4 p-5")}>
         <div>
           <h2 className="text-lg font-semibold text-white">Sous-traitance (ind. 27)</h2>
           <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
@@ -367,7 +330,10 @@ export function QualiopiFormateursPanel() {
                       size="sm"
                       variant="outline"
                       className="h-7 border-white/15 bg-transparent text-[11px] text-white"
-                      onClick={() => openEdit(row)}
+                      onClick={() => {
+                        setSstExpertId(row.id);
+                        setSstOpen(true);
+                      }}
                     >
                       Éditer
                     </Button>
@@ -377,83 +343,6 @@ export function QualiopiFormateursPanel() {
             )}
           </ul>
         )}
-
-        {editId ? (
-          <div className="space-y-2 rounded-xl border border-[#6E5BFF]/40 bg-[#0B1122] p-3">
-            <p className="text-sm font-semibold text-white">
-              Édition — {intervenants.find((i) => i.id === editId)?.name ?? editId.slice(0, 8)}
-            </p>
-            <select
-              value={editForm.employment_status}
-              onChange={(e) =>
-                setEditForm((f) => ({
-                  ...f,
-                  employment_status: e.target.value as "" | EmploymentStatus,
-                }))
-              }
-              className="w-full rounded-xl border border-white/10 bg-[#12141A] px-3 py-2 text-sm text-white"
-            >
-              <option value="">— Statut emploi —</option>
-              {EMPLOYMENT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {EMPLOYMENT_STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className={cn("text-[11px]", QUALIOPI_MUTED)}>
-                Contrat signé le
-                <input
-                  type="date"
-                  value={editForm.subcontract_signed_at}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, subcontract_signed_at: e.target.value }))
-                  }
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#12141A] px-3 py-2 text-sm text-white"
-                />
-              </label>
-              <label className={cn("text-[11px]", QUALIOPI_MUTED)}>
-                Contrat fin
-                <input
-                  type="date"
-                  value={editForm.subcontract_ends_at}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, subcontract_ends_at: e.target.value }))
-                  }
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#12141A] px-3 py-2 text-sm text-white"
-                />
-              </label>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-white/80">
-              <input
-                type="checkbox"
-                checked={editForm.quality_commitment}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, quality_commitment: e.target.checked }))
-                }
-              />
-              Engagement respect du référentiel qualité
-            </label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                disabled={sstBusy}
-                className="bg-[#6E5BFF] text-white"
-                onClick={() => void saveContractual()}
-              >
-                Enregistrer
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/15 bg-transparent text-white"
-                onClick={() => setEditId("")}
-              >
-                Annuler
-              </Button>
-            </div>
-          </div>
-        ) : null}
       </section>
     </div>
   );

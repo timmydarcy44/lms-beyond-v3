@@ -9,6 +9,7 @@ import { QUALIOPI_CRITERION_NAMES } from "@/lib/qualiopi/indicators";
 import { ACTIVITY_LABELS, type QualiopiActivityKey } from "@/lib/qualiopi/activity-profile";
 import type { QualiopiStatusSnapshot, QualiopiUiStatus } from "@/lib/qualiopi/status-types";
 import { QualiopiPlanExamples } from "@/components/super-admin/qualiopi-plan-examples";
+import { QualiopiSubcontractEditor } from "@/components/super-admin/qualiopi-subcontract-editor";
 import { cn } from "@/lib/utils";
 
 const BG = "#0A0F1E";
@@ -47,6 +48,23 @@ function minutesAgo(iso: string): number {
   return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
 }
 
+/** Préfère un fichier hébergé, sinon la 1re preuve avec href, sinon nextAction. */
+function resolveProofHref(ind: {
+  proofs: Array<{ href: string | null }>;
+  nextAction: { href: string } | null;
+}): string | null {
+  const isFile = (href: string) =>
+    /^https?:\/\//i.test(href) ||
+    href.includes("/storage/") ||
+    href.includes("/object/") ||
+    /\.(pdf|png|jpe?g|webp|md)(\?|#|$)/i.test(href);
+  const file = ind.proofs.find((p) => p.href && isFile(p.href));
+  if (file?.href) return file.href;
+  const first = ind.proofs.find((p) => p.href);
+  if (first?.href) return first.href;
+  return ind.nextAction?.href ?? null;
+}
+
 function criterionGlobalStatus(statuses: QualiopiUiStatus[]): QualiopiUiStatus {
   if (statuses.includes("missing")) return "missing";
   if (statuses.includes("todo")) return "todo";
@@ -62,6 +80,7 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
   const [openCriterion, setOpenCriterion] = useState<number | null>(null);
   const [naEditing, setNaEditing] = useState<number | null>(null);
   const [naDraft, setNaDraft] = useState("");
+  const [sstOpen, setSstOpen] = useState(false);
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -172,6 +191,11 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
 
   return (
     <div className="space-y-5" style={{ color: TEXT }}>
+      <QualiopiSubcontractEditor
+        open={sstOpen}
+        onClose={() => setSstOpen(false)}
+        onSaved={() => void load(true)}
+      />
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -438,7 +462,12 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                         </button>
                         {open ? (
                           <ul className="space-y-2 border-t px-3 py-3" style={{ borderColor: BORDER }}>
-                            {c.inds.map((ind) => (
+                            {c.inds.map((ind) => {
+                              const proofHref = resolveProofHref(ind);
+                              const proofExternal = Boolean(
+                                proofHref && /^https?:\/\//i.test(proofHref),
+                              );
+                              return (
                               <li
                                 key={ind.indicatorId}
                                 className="ml-[80px] rounded-xl px-3 py-2.5"
@@ -517,14 +546,28 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                       >
                                         {ind.naJustification ? "Modifier" : "Justifier"}
                                       </Button>
-                                    ) : ind.status === "proven" && ind.nextAction?.href ? (
-                                      <Link
-                                        href={ind.nextAction.href}
+                                    ) : ind.indicatorId === 27 ? (
+                                      <Button
+                                        size="sm"
+                                        className="h-7 rounded-full px-3 text-[11px] font-semibold"
+                                        style={{
+                                          background: `${STATUS_COLOR[ind.status]}22`,
+                                          color: STATUS_COLOR[ind.status],
+                                        }}
+                                        onClick={() => setSstOpen(true)}
+                                      >
+                                        Éditer
+                                      </Button>
+                                    ) : ind.status === "proven" && proofHref ? (
+                                      <a
+                                        href={proofHref}
+                                        target={proofExternal ? "_blank" : undefined}
+                                        rel={proofExternal ? "noreferrer" : undefined}
                                         className="inline-flex h-7 items-center rounded-full border px-3 text-[11px] font-semibold text-white/80"
                                         style={{ borderColor: BORDER }}
                                       >
                                         Voir la preuve
-                                      </Link>
+                                      </a>
                                     ) : ind.nextAction ? (
                                       <Link
                                         href={ind.nextAction.href}
@@ -546,7 +589,8 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                   />
                                 ) : null}
                               </li>
-                            ))}
+                              );
+                            })}
                           </ul>
                         ) : null}
                       </li>
@@ -584,7 +628,19 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                         {item.nextAction?.label || item.shortTitle}
                       </p>
                     </div>
-                    {item.nextAction ? (
+                    {item.indicatorId === 27 ? (
+                      <button
+                        type="button"
+                        onClick={() => setSstOpen(true)}
+                        className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                        style={{
+                          background: `${STATUS_COLOR[item.status]}22`,
+                          color: STATUS_COLOR[item.status],
+                        }}
+                      >
+                        Éditer
+                      </button>
+                    ) : item.nextAction ? (
                       <Link
                         href={item.nextAction.href}
                         className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"

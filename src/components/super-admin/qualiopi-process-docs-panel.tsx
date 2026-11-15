@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,11 @@ type ProcessDoc = {
 };
 
 export function QualiopiProcessDocsPanel() {
+  const searchParams = useSearchParams();
+  const kindParam = searchParams.get("kind");
   const [docs, setDocs] = useState<ProcessDoc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState<string | null>(null);
+  const [active, setActive] = useState<string | null>(kindParam);
   const [draftBody, setDraftBody] = useState("");
 
   const load = useCallback(async () => {
@@ -34,11 +37,14 @@ export function QualiopiProcessDocsPanel() {
       if (!res.ok) throw new Error(json.error || "Documents process");
       const list = (json.docs ?? []) as ProcessDoc[];
       setDocs(list);
-      if (!active && list[0]) {
-        setActive(list[0].kind);
-        setDraftBody(list[0].body);
-      } else if (active) {
-        const current = list.find((d) => d.kind === active);
+      const preferred =
+        (kindParam && list.find((d) => d.kind === kindParam)?.kind) ||
+        active ||
+        list[0]?.kind ||
+        null;
+      if (preferred) {
+        setActive(preferred);
+        const current = list.find((d) => d.kind === preferred);
         if (current) setDraftBody(current.body);
       }
     } catch (e) {
@@ -46,12 +52,12 @@ export function QualiopiProcessDocsPanel() {
     } finally {
       setLoading(false);
     }
-  }, [active]);
+  }, [active, kindParam]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial load once
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial + kind deep-link
+  }, [kindParam]);
 
   const current = docs.find((d) => d.kind === active) ?? null;
 

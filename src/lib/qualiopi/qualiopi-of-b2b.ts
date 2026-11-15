@@ -113,20 +113,64 @@ Note process + annuaire partenaires + espace Handicap.
     kind: "moyens",
     title: "Moyens matériels et locaux",
     indicatorIds: [17],
-    template: `# Moyens matériels et locaux — Byound
+    template: `# Moyens humains et techniques — Byound (OF)
 
 ## Périmètre
-Formations distancielles / hybrides via plateforme Byound + moyens éventuels en présentiel.
+Document **OF** (pas une fiche par formation). Couvre les moyens mobilisés pour les prestations Business : distanciel / hybride via plateforme Byound, et moyens présentiels éventuels.
+
+## 1. Moyens humains
+- Direction / référent qualité / référent handicap / référent signalements
+- Intervenants (salariés, indépendants, portage) validés avant mission
+- Coordination pédagogique des sessions
+
+## 2. Moyens techniques & plateforme
+- LMS Byound (accès stagiaires, ressources, suivi de progression, émargement numérique)
+- Outils de visioconférence / collaboration le cas échéant
+- Coffre documentaire (conventions, attestations, enquêtes)
+
+## 3. Locaux & accessibilité (si présentiel)
+- Adresse(s) d’accueil
+- Capacité, matériel pédagogique, accessibilité PMR
+- Consignes sécurité / règlement intérieur
+
+## 4. Mise à jour
+Revue annuelle ou à chaque changement majeur d’outil / d’effectif formateurs.
 `,
   },
   {
     kind: "signalements",
     title: "Procédure signalements violences / harcèlement / discriminations",
     indicatorIds: [12],
-    template: `# Procédure signalements sensibles — Byound
+    template: `# Procédure — engagement, prévention des ruptures & signalements VHD
 
-## Objet
-Recueillir et traiter tout signalement de violence, harcèlement ou discrimination lié à une action de formation.
+## 1. Objet
+Prévenir les ruptures de parcours et traiter tout signalement de violence, harcèlement ou discrimination (VHD) lié à une action de formation Byound.
+
+## 2. Canaux de signalement (déjà en place)
+- Formulaire dédié dans les espaces : apprenant, expert / formateur, salarié
+- Contact référent signalements (Paramètres OF)
+- Possibilité d’anonymat selon le formulaire
+
+## 3. Réception & délais
+1. Enregistrement automatique dans le registre Qualité (signalements)
+2. Accusé de réception sous X jours ouvrés (réglage OF)
+3. Qualification (violence / harcèlement / discrimination / autre sensible)
+4. Mesures de protection immédiates si nécessaire
+5. Clôture documentée (sans données inutiles)
+
+## 4. Prévention des ruptures / abandons
+- Détection des difficultés (absences, inactivité LMS, réclamations)
+- Entretien de remobilisation / aménagement si pertinent
+- Traçage des sorties / abandons dans le dossier formation (motif, date, suite)
+
+## 5. Information des parties
+- Stagiaires et intervenants informés des canaux en démarrage de session (pack info / livret)
+- Rappel du règlement intérieur et des sanctions applicables
+
+## 6. Preuves pour l’audit
+- La présente procédure marquée « prêt »
+- Registre des signalements (même si volume = 0)
+- Sorties / abandons tracés dans les dossiers
 `,
   },
 ];

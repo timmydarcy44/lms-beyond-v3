@@ -121,14 +121,26 @@ function assessAuto(
   const withManual = (d: Draft): Draft => {
     if (!manualProofs.length) return d;
     const proofs = [...d.proofs, ...manualProofs];
+    const fileHref =
+      manuals.map((m) => m.fileUrl).find((u) => Boolean(u && String(u).trim())) ?? null;
     if (d.status === "missing" || d.status === "todo") {
       const fresh = manuals.some((m) => !stale(m.proofAt));
       return {
         status: fresh ? "proven" : "todo",
         proofs,
         nextAction: fresh
-          ? d.nextAction
+          ? {
+              label: "Voir la preuve",
+              href: fileHref || d.nextAction?.href || "/super/crm/qualiopi?tab=overview",
+            }
           : { label: "Mettre à jour la preuve", href: "/super/crm/qualiopi?tab=overview" },
+      };
+    }
+    if (fileHref) {
+      return {
+        ...d,
+        proofs,
+        nextAction: { label: "Voir la preuve", href: fileHref },
       };
     }
     return { ...d, proofs };
@@ -296,23 +308,38 @@ function assessAuto(
         return withManual({
           status: "proven",
           proofs: [
-            proof("Procédure signalements VHD", "/super/crm/qualiopi/qualite", null, null),
+            proof(
+              "Procédure signalements VHD",
+              "/super/crm/qualiopi/process?kind=signalements",
+              null,
+              null,
+            ),
             proof("Sorties tracées", "/super/crm/formations", null, `${sig.exitsCount}`),
+            proof("Registre signalements", "/super/crm/qualiopi/qualite#signalements", null, null),
           ],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/qualite" },
+          nextAction: {
+            label: "Voir la preuve",
+            href: "/super/crm/qualiopi/process?kind=signalements",
+          },
         });
       }
       if (sig.exitsCount >= 1) {
         return withManual({
           status: "todo",
           proofs: [proof("Sorties", "/super/crm/formations", null, `${sig.exitsCount}`)],
-          nextAction: { label: "Compléter", href: "/super/crm/qualiopi/qualite" },
+          nextAction: {
+            label: "Compléter",
+            href: "/super/crm/qualiopi/process?kind=signalements",
+          },
         });
       }
       return withManual({
         status: "missing",
         proofs: [],
-        nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/qualite" },
+        nextAction: {
+          label: "Ajouter",
+          href: "/super/crm/qualiopi/process?kind=signalements",
+        },
       });
     }
     case 17:
@@ -320,13 +347,21 @@ function assessAuto(
         sig.meansProcessReady
           ? {
               status: "proven",
-              proofs: [proof("Note moyens", "/super/crm/qualiopi/process", null, null)],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/process" },
+              proofs: [
+                proof("Note moyens", "/super/crm/qualiopi/process?kind=moyens", null, null),
+              ],
+              nextAction: {
+                label: "Voir la preuve",
+                href: "/super/crm/qualiopi/process?kind=moyens",
+              },
             }
           : {
               status: "todo",
               proofs: [],
-              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/process" },
+              nextAction: {
+                label: "Compléter",
+                href: "/super/crm/qualiopi/process?kind=moyens",
+              },
             },
       );
     case 18:
@@ -350,18 +385,18 @@ function assessAuto(
           proofs: [
             proof(
               "Suivi LMS distanciel",
-              "/super/crm/formations",
+              "/super/lms/suivi",
               null,
               `${sig.lmsEnrollmentsCount} inscription(s)`,
             ),
           ],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/formations" },
+          nextAction: { label: "Voir la preuve", href: "/super/lms/suivi" },
         });
       }
       return withManual({
         status: "todo",
         proofs: [],
-        nextAction: { label: "Compléter", href: "/super/crm/formations" },
+        nextAction: { label: "Compléter", href: "/super/lms/suivi" },
       });
     case 21:
       return withManual(
@@ -387,17 +422,23 @@ function assessAuto(
               proofs: [
                 proof(
                   "Plans formateurs",
-                  "/super/crm/qualiopi/formateurs",
+                  "/super/crm/qualiopi/formateurs#plans",
                   null,
                   `${sig.formateurPlansCount} plan(s)`,
                 ),
               ],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/formateurs" },
+              nextAction: {
+                label: "Voir la preuve",
+                href: "/super/crm/qualiopi/formateurs#plans",
+              },
             }
           : {
               status: "todo",
               proofs: [],
-              nextAction: { label: "Compléter", href: "/super/crm/qualiopi/formateurs" },
+              nextAction: {
+                label: "Compléter",
+                href: "/super/crm/qualiopi/formateurs#plans",
+              },
             },
       );
     case 23:
@@ -487,17 +528,23 @@ function assessAuto(
               proofs: [
                 proof(
                   "Contrats / statuts SST",
-                  "/super/crm/qualiopi/formateurs",
+                  "/super/crm/qualiopi/formateurs#sous-traitance",
                   null,
                   `${sig.subcontractReadyCount}`,
                 ),
               ],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/formateurs" },
+              nextAction: {
+                label: "Voir la preuve",
+                href: "/super/crm/qualiopi/formateurs#sous-traitance",
+              },
             }
           : {
               status: "missing",
               proofs: [],
-              nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/formateurs" },
+              nextAction: {
+                label: "Ajouter",
+                href: "/super/crm/qualiopi/formateurs#sous-traitance",
+              },
             },
       );
     case 30: {

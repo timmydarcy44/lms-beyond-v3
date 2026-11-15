@@ -15,7 +15,7 @@ import type {
   QualiopiUiStatus,
 } from "@/lib/qualiopi/status-types";
 import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
-import { TRAINING_PLATFORM_BASE_PATH } from "@/lib/training-courses/types";
+import { TRAINING_FORMATION_BASE_PATH } from "@/lib/training-courses/types";
 
 const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -23,7 +23,7 @@ const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000;
 function publicFormationHref(slug: string | null | undefined, hash?: string): string | null {
   const s = String(slug ?? "").trim();
   if (!s) return null;
-  const path = `${TRAINING_PLATFORM_BASE_PATH}/${encodeURIComponent(s)}`;
+  const path = `${TRAINING_FORMATION_BASE_PATH}/${encodeURIComponent(s)}`;
   const base = `${BYOUND_PUBLIC_ORIGIN}${path}`;
   return hash ? `${base}#${hash}` : base;
 }

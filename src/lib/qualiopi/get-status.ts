@@ -205,10 +205,10 @@ function assessAuto(
       });
     }
     case 4: {
-      // Analyse du besoin = dossier formation (compte-rendu client), pas la fiche catalogue.
-      const href = "/super/crm/programmation";
+      // Analyse du besoin = qualification deal pipeline B2B (training_needs), avant devis.
+      const href = "/super/crm/pipeline";
       const p = proof(
-        "Dossiers formation — analyse du besoin",
+        "Pipeline B2B — besoins identifiés sur le deal",
         href,
         null,
         null,

@@ -61,9 +61,9 @@ Blocs / équivalences / débouchés : …`,
   4: {
     processTitle: "Tracer l’analyse du besoin",
     processSteps: [
-      "Recueillir le besoin (entreprise / financeur / bénéficiaire) avant devis.",
-      "Documenter le diagnostic (objectifs, public, contraintes) dans le dossier CRM.",
-      "Archiver le compte-rendu dans le dossier formation (pas sur la fiche catalogue publique).",
+      "En prospection (pipeline B2B), renseigner Besoin + Besoins identifiés sur le deal.",
+      "Compléter effectif, décideur, budget / financeur avant envoi catalogue ou devis.",
+      "Conserver la trace sur le deal (puis session / dossier une fois signé).",
     ],
     documentTitle: "Compte-rendu d’analyse du besoin",
     documentBody: `Analyse du besoin — [Client]
@@ -72,8 +72,9 @@ Date · Interlocuteurs
 Contexte / métier
 Objectifs attendus
 Public concerné · Contraintes
-Proposition pédagogique retenue`,
-  },
+Proposition pédagogique retenue
+Source : deal pipeline B2B`,
+  };
   5: {
     processTitle: "Rédiger des objectifs opérationnels",
     processSteps: [

@@ -428,7 +428,7 @@ export function EdgeTrainingDetailPage({
 
           {/* 4. OBJECTIFS PÉDAGOGIQUES — deux colonnes */}
           {pedagogicalObjectives.objectives.length > 0 ? (
-            <section className="scroll-mt-40">
+            <section id="objectifs" className="scroll-mt-40">
               <div className="grid gap-8 md:grid-cols-[0.4fr_0.6fr]">
                 <div>
                   <h2 className="text-2xl font-semibold tracking-[-0.03em]">Objectifs pédagogiques</h2>

@@ -9,6 +9,7 @@ import { QUALIOPI_CRITERION_NAMES } from "@/lib/qualiopi/indicators";
 import { ACTIVITY_LABELS, type QualiopiActivityKey } from "@/lib/qualiopi/activity-profile";
 import type { QualiopiStatusSnapshot, QualiopiUiStatus } from "@/lib/qualiopi/status-types";
 import { QualiopiPlanExamples } from "@/components/super-admin/qualiopi-plan-examples";
+import { QualiopiProofGuide } from "@/components/super-admin/qualiopi-proof-guide";
 import { QualiopiSubcontractEditor } from "@/components/super-admin/qualiopi-subcontract-editor";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +82,19 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
   const [naEditing, setNaEditing] = useState<number | null>(null);
   const [naDraft, setNaDraft] = useState("");
   const [sstOpen, setSstOpen] = useState(false);
+  const [proofGuide, setProofGuide] = useState<{
+    indicatorId: number;
+    href: string | null;
+    label: string;
+  } | null>(null);
+
+  const openProofGuide = (
+    indicatorId: number,
+    href: string | null,
+    label = "Ouvrir la preuve",
+  ) => {
+    setProofGuide({ indicatorId, href, label });
+  };
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -195,6 +209,13 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
         open={sstOpen}
         onClose={() => setSstOpen(false)}
         onSaved={() => void load(true)}
+      />
+      <QualiopiProofGuide
+        open={Boolean(proofGuide)}
+        indicatorId={proofGuide?.indicatorId ?? null}
+        proofHref={proofGuide?.href ?? null}
+        actionLabel={proofGuide?.label}
+        onClose={() => setProofGuide(null)}
       />
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -464,9 +485,6 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                           <ul className="space-y-2 border-t px-3 py-3" style={{ borderColor: BORDER }}>
                             {c.inds.map((ind) => {
                               const proofHref = resolveProofHref(ind);
-                              const proofExternal = Boolean(
-                                proofHref && /^https?:\/\//i.test(proofHref),
-                              );
                               return (
                               <li
                                 key={ind.indicatorId}
@@ -559,18 +577,29 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                         Éditer
                                       </Button>
                                     ) : ind.status === "proven" && proofHref ? (
-                                      <a
-                                        href={proofHref}
-                                        target={proofExternal ? "_blank" : undefined}
-                                        rel={proofExternal ? "noreferrer" : undefined}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openProofGuide(ind.indicatorId, proofHref, "Ouvrir la preuve")
+                                        }
                                         className="inline-flex h-7 items-center rounded-full border px-3 text-[11px] font-semibold text-white/80"
                                         style={{ borderColor: BORDER }}
                                       >
                                         Voir la preuve
-                                      </a>
+                                      </button>
                                     ) : ind.nextAction ? (
-                                      <Link
-                                        href={ind.nextAction.href}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openProofGuide(
+                                            ind.indicatorId,
+                                            ind.nextAction!.href,
+                                            ind.nextAction!.label === "Compléter" ||
+                                              ind.nextAction!.label === "Ajouter"
+                                              ? ind.nextAction!.label
+                                              : "Ouvrir la preuve",
+                                          )
+                                        }
                                         className="inline-flex h-7 items-center rounded-full px-3 text-[11px] font-semibold"
                                         style={{
                                           background: `${STATUS_COLOR[ind.status]}22`,
@@ -578,7 +607,7 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                         }}
                                       >
                                         {ind.nextAction.label}
-                                      </Link>
+                                      </button>
                                     ) : null}
                                   </div>
                                 </div>
@@ -641,8 +670,19 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                         Éditer
                       </button>
                     ) : item.nextAction ? (
-                      <Link
-                        href={item.nextAction.href}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openProofGuide(
+                            item.indicatorId,
+                            resolveProofHref(item) ?? item.nextAction!.href,
+                            item.status === "missing"
+                              ? "Ajouter"
+                              : item.nextAction!.label === "Compléter"
+                                ? "Compléter"
+                                : "Ouvrir la preuve",
+                          )
+                        }
                         className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                         style={{
                           background: `${STATUS_COLOR[item.status]}22`,
@@ -650,7 +690,7 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                         }}
                       >
                         {item.status === "missing" ? "Ajouter" : item.nextAction.label}
-                      </Link>
+                      </button>
                     ) : null}
                   </li>
                 ))}

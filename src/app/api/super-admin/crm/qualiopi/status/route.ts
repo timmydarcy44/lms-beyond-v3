@@ -67,7 +67,7 @@ async function buildStatus(force = false) {
       supabase
         .from("training_courses")
         .select(
-          "id, objectives, is_active, results_method_override, formats, badge_name, badge_class_id, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, price_on_quote, intra_price, inter_price",
+          "id, slug, title, objectives, is_active, results_method_override, formats, badge_name, badge_class_id, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, price_on_quote, intra_price, inter_price",
         ),
     ]),
   );
@@ -107,6 +107,8 @@ async function buildStatus(force = false) {
 
   const courses = (trainingRes.error ? [] : trainingRes.data ?? []) as Array<{
     id: string;
+    slug?: string | null;
+    title?: string | null;
     objectives?: unknown;
     is_active?: boolean | null;
     results_method_override?: string | null;
@@ -131,6 +133,8 @@ async function buildStatus(force = false) {
   let coursesWithResults = 0;
   let coursesPublicWithInfo = 0;
   let coursesCompliantCount = 0;
+  let examplePublicFormationSlug: string | null = null;
+  let exampleCompliantSlug: string | null = null;
   for (const row of publicCourses) {
     const objs = Array.isArray(row.objectives)
       ? row.objectives.filter((o) => String(o).trim())
@@ -154,8 +158,14 @@ async function buildStatus(force = false) {
       },
       { accessibilityOk },
     );
-    if (compliance.ok) coursesCompliantCount += 1;
+    const slug = String(row.slug ?? "").trim();
+    if (slug && !examplePublicFormationSlug) examplePublicFormationSlug = slug;
+    if (compliance.ok) {
+      coursesCompliantCount += 1;
+      if (slug && !exampleCompliantSlug) exampleCompliantSlug = slug;
+    }
   }
+  examplePublicFormationSlug = exampleCompliantSlug ?? examplePublicFormationSlug;
 
   const processSafe = await supabase.from("crm_qualiopi_process_docs").select("kind, status");
   const processReady: Record<string, boolean> = {};
@@ -359,6 +369,7 @@ async function buildStatus(force = false) {
         .eq("is_pedagogical_referent", true),
     ),
     meansProcessReady: Boolean(processReady.moyens),
+    examplePublicFormationSlug,
   };
 
   const attestRows = attestRes.error ? [] : attestRes.data ?? [];

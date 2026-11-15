@@ -12,8 +12,8 @@ export const QUALIOPI_INDICATOR_PLANS: Record<number, QualiopiIndicatorPlan> = {
     processTitle: "Publier une fiche formation complète",
     processSteps: [
       "Compléter sur chaque offre publique : objectifs (≥ 3), durée, modalités, tarifs, accessibilité.",
-      "Déposer convention / règlement / livret dans le coffre administratif.",
-      "Contrôler la page publique et archiver un one-pager PDF pour l’auditeur.",
+      "Vérifier la page publique catalogue (/business/formations/…).",
+      "Archiver un one-pager PDF pour l’auditeur si demandé.",
     ],
     documentTitle: "One-pager fiche formation",
     documentBody: `Fiche formation — [Titre]
@@ -32,7 +32,7 @@ Contact référente handicap`,
     processSteps: [
       "Choisir les indicateurs (satisfaction, réussite, insertion…) et la méthode de calcul.",
       "Renseigner la méthode globale OF puis, si besoin, une surcharge par fiche.",
-      "Afficher les résultats sur les fiches publiques et conserver le mode de calcul.",
+      "Contrôler la section « Nos indicateurs qualité » sur la fiche publique (#qualite).",
     ],
     documentTitle: "Note méthode de calcul",
     documentBody: `Indicateurs de résultats — méthode
@@ -62,8 +62,8 @@ Blocs / équivalences / débouchés : …`,
     processTitle: "Tracer l’analyse du besoin",
     processSteps: [
       "Recueillir le besoin (entreprise / financeur / bénéficiaire) avant devis.",
-      "Documenter le diagnostic (objectifs, public, contraintes).",
-      "Archiver le compte-rendu dans le dossier formation.",
+      "Documenter le diagnostic (objectifs, public, contraintes) dans le dossier CRM.",
+      "Archiver le compte-rendu dans le dossier formation (pas sur la fiche catalogue publique).",
     ],
     documentTitle: "Compte-rendu d’analyse du besoin",
     documentBody: `Analyse du besoin — [Client]
@@ -78,7 +78,7 @@ Proposition pédagogique retenue`,
     processTitle: "Rédiger des objectifs opérationnels",
     processSteps: [
       "Formuler ≥ 3 objectifs observables et évaluables par formation.",
-      "Les reporter sur la fiche catalogue et le programme.",
+      "Les publier sur la fiche catalogue publique (section Objectifs).",
       "Les reprendre dans le positionnement / évaluation.",
     ],
     documentTitle: "Objectifs pédagogiques",

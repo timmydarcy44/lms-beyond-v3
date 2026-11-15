@@ -14,8 +14,19 @@ import type {
   QualiopiStatusSnapshot,
   QualiopiUiStatus,
 } from "@/lib/qualiopi/status-types";
+import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
+import { TRAINING_PLATFORM_BASE_PATH } from "@/lib/training-courses/types";
 
 const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000;
+
+/** Fiche publique catalogue (preuve ind. 1 / 2 / 5…). */
+function publicFormationHref(slug: string | null | undefined, hash?: string): string | null {
+  const s = String(slug ?? "").trim();
+  if (!s) return null;
+  const path = `${TRAINING_PLATFORM_BASE_PATH}/${encodeURIComponent(s)}`;
+  const base = `${BYOUND_PUBLIC_ORIGIN}${path}`;
+  return hash ? `${base}#${hash}` : base;
+}
 
 export type QualiopiManualProof = {
   indicatorId: number;
@@ -70,6 +81,11 @@ export type QualiopiStatusSignals = {
   lmsEnrollmentsCount: number;
   pedagogicalReferentsCount: number;
   meansProcessReady: boolean;
+  /**
+   * Exemple de fiche publique (slug) pour deep-link « Voir la preuve »
+   * → /business/formations/{slug} sur le site public.
+   */
+  examplePublicFormationSlug: string | null;
 };
 
 function stale(iso: string | null | undefined): boolean {
@@ -155,9 +171,16 @@ function assessAuto(
     case 2: {
       const published = Math.max(sig.coursesPublicTotal, 0);
       const complete = sig.coursesCompliantCount ?? 0;
+      const publicHref =
+        publicFormationHref(
+          sig.examplePublicFormationSlug,
+          id === 2 ? "qualite" : undefined,
+        ) ?? "/super/crm/qualiopi/catalogue";
       const p = proof(
-        "Fiches catalogue complètes",
-        "/super/crm/qualiopi/catalogue",
+        id === 2
+          ? "Indicateurs de résultats sur fiche publique"
+          : "Fiche formation publique (catalogue)",
+        publicHref,
         null,
         `${complete} / ${Math.max(published, 1)} fiches complètes`,
       );
@@ -165,7 +188,7 @@ function assessAuto(
         return withManual({
           status: "proven",
           proofs: [p],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
+          nextAction: { label: "Voir la preuve", href: publicHref },
         });
       }
       if (complete > 0) {
@@ -181,13 +204,35 @@ function assessAuto(
         nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
       });
     }
-    case 4:
-    case 5:
-    case 6:
-    case 8: {
+    case 4: {
+      // Analyse du besoin = dossier formation (compte-rendu client), pas la fiche catalogue.
+      const href = "/super/crm/formations";
       const p = proof(
-        "Objectifs / contenus catalogue",
-        "/super/crm/qualiopi/catalogue",
+        "Dossiers formation — analyse du besoin",
+        href,
+        null,
+        null,
+      );
+      if (sig.coursesWithObjectives >= 1 || sessionsTotal >= 1) {
+        return withManual({
+          status: "proven",
+          proofs: [p],
+          nextAction: { label: "Voir la preuve", href },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs: [p],
+        nextAction: { label: "Compléter", href },
+      });
+    }
+    case 5: {
+      const publicHref =
+        publicFormationHref(sig.examplePublicFormationSlug, "objectifs") ??
+        "/super/crm/qualiopi/catalogue";
+      const p = proof(
+        "Objectifs pédagogiques (fiche publique)",
+        publicHref,
         null,
         `${sig.coursesWithObjectives} formation(s)`,
       );
@@ -195,7 +240,33 @@ function assessAuto(
         return withManual({
           status: "proven",
           proofs: [p],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi/catalogue" },
+          nextAction: { label: "Voir la preuve", href: publicHref },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs: [p],
+        nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
+      });
+    }
+    case 6:
+    case 8: {
+      const publicHref =
+        publicFormationHref(
+          sig.examplePublicFormationSlug,
+          id === 6 ? "programme" : undefined,
+        ) ?? "/super/crm/qualiopi/catalogue";
+      const p = proof(
+        id === 6 ? "Programme / modalités (fiche publique)" : "Positionnement / contenus",
+        publicHref,
+        null,
+        `${sig.coursesWithObjectives} formation(s)`,
+      );
+      if (sig.coursesWithObjectives >= 1) {
+        return withManual({
+          status: "proven",
+          proofs: [p],
+          nextAction: { label: "Voir la preuve", href: publicHref },
         });
       }
       return withManual({

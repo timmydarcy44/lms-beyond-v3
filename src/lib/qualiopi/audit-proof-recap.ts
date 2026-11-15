@@ -35,7 +35,7 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
     title: "Ressources + suivi distanciel + référent pédagogique",
     where: "Catalogue / LMS + suivi distanciel dossier + multi-intervenants",
     how: "Ouvrir un dossier avec inscription LMS et, si ≥ 8 intervenants, le référent pédagogique coché.",
-    href: "/super/crm/formations",
+    href: "/super/crm/programmation",
   },
   {
     indicatorId: 27,

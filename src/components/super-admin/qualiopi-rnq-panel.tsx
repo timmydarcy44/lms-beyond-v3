@@ -44,7 +44,7 @@ const NEXT_HREF: Record<string, string> = {
   catalogue: "/super/crm/qualiopi/catalogue",
   pilot: "/super/crm/qualiopi/pilote",
   experts: "/super/experts",
-  formations: "/super/crm/formations",
+  formations: "/super/crm/programmation",
   handicap: "/super/crm/qualiopi/handicap",
 };
 

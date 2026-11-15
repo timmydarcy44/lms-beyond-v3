@@ -206,7 +206,7 @@ function assessAuto(
     }
     case 4: {
       // Analyse du besoin = dossier formation (compte-rendu client), pas la fiche catalogue.
-      const href = "/super/crm/formations";
+      const href = "/super/crm/programmation";
       const p = proof(
         "Dossiers formation — analyse du besoin",
         href,
@@ -285,7 +285,7 @@ function assessAuto(
       const handicapOk = sig.handicapProcessReady || sig.handicapProfilesCount >= 1;
       const p = proof(
         "Pack information (convention / règlement / livret)",
-        "/super/crm/formations",
+        "/super/crm/programmation",
         null,
         `${complete} dossier(s) complets · ${partial} avec envoi`,
       );
@@ -308,7 +308,7 @@ function assessAuto(
           ],
           nextAction: {
             label: "Voir la preuve",
-            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/formations",
+            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/programmation",
           },
         });
       }
@@ -318,14 +318,14 @@ function assessAuto(
           proofs: [p],
           nextAction: {
             label: "Compléter",
-            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/formations",
+            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/programmation",
           },
         });
       }
       return withManual({
         status: "missing",
         proofs: [],
-        nextAction: { label: "Ajouter", href: "/super/crm/formations" },
+        nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
       });
     }
     case 11: {
@@ -335,7 +335,7 @@ function assessAuto(
       const templatesOk = Boolean(sig.evalTemplatesReady);
       const p = proof(
         "Évaluations à chaud / à froid",
-        "/super/crm/formations",
+        "/super/crm/programmation",
         null,
         templatesOk
           ? `${responses} réponse(s) · ${chaud} à chaud · ${froid} à froid · gabarits actifs`
@@ -357,7 +357,7 @@ function assessAuto(
                 ]
               : []),
           ],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/formations" },
+          nextAction: { label: "Voir la preuve", href: "/super/crm/programmation" },
         });
       }
       // Dispositif en place (gabarits) mais pas encore de réponses collectées
@@ -365,13 +365,13 @@ function assessAuto(
         return withManual({
           status: "todo",
           proofs: [p],
-          nextAction: { label: "Compléter", href: "/super/crm/formations" },
+          nextAction: { label: "Compléter", href: "/super/crm/programmation" },
         });
       }
       return withManual({
         status: "missing",
         proofs: [],
-        nextAction: { label: "Ajouter", href: "/super/crm/formations" },
+        nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
       });
     }
     case 12: {
@@ -385,7 +385,7 @@ function assessAuto(
               null,
               null,
             ),
-            proof("Sorties tracées", "/super/crm/formations", null, `${sig.exitsCount}`),
+            proof("Sorties tracées", "/super/crm/programmation", null, `${sig.exitsCount}`),
             proof("Registre signalements", "/super/crm/qualiopi/qualite#signalements", null, null),
           ],
           nextAction: {
@@ -397,7 +397,7 @@ function assessAuto(
       if (sig.exitsCount >= 1) {
         return withManual({
           status: "todo",
-          proofs: [proof("Sorties", "/super/crm/formations", null, `${sig.exitsCount}`)],
+          proofs: [proof("Sorties", "/super/crm/programmation", null, `${sig.exitsCount}`)],
           nextAction: {
             label: "Compléter",
             href: "/super/crm/qualiopi/process?kind=signalements",
@@ -440,13 +440,13 @@ function assessAuto(
         sessionsTotal >= 1
           ? {
               status: "proven",
-              proofs: [proof("Sessions / intervenants", "/super/crm/formations", null, `${sessionsTotal}`)],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/formations" },
+              proofs: [proof("Sessions / intervenants", "/super/crm/programmation", null, `${sessionsTotal}`)],
+              nextAction: { label: "Voir la preuve", href: "/super/crm/programmation" },
             }
           : {
               status: "todo",
               proofs: [],
-              nextAction: { label: "Ajouter", href: "/super/crm/formations" },
+              nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
             },
       );
     case 19:

@@ -3,7 +3,14 @@ import { CrmEmailsClient } from "./crm-emails-client";
 export default async function CrmEmailsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ to?: string; name?: string; company?: string }>;
+  searchParams: Promise<{
+    to?: string;
+    name?: string;
+    company?: string;
+    subject?: string;
+    body?: string;
+    title?: string;
+  }>;
 }) {
   const params = await searchParams;
   const to = String(params.to ?? "").trim();
@@ -22,7 +29,12 @@ export default async function CrmEmailsPage({
           {params.company ? ` · ${params.company}` : ""}
         </p>
       </div>
-      <CrmEmailsClient lockedRecipient={lockedRecipient} />
+      <CrmEmailsClient
+        lockedRecipient={lockedRecipient}
+        initialSubject={params.subject ? String(params.subject) : undefined}
+        initialHtml={params.body ? String(params.body) : undefined}
+        initialTitle={params.title ? String(params.title) : params.subject ? String(params.subject) : undefined}
+      />
     </div>
   );
 }

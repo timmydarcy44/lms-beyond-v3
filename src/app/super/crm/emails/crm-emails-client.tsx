@@ -33,6 +33,9 @@ type Props = {
   templates?: ExpertMailTemplate[];
   variables?: Record<string, string>;
   initialTemplateId?: string | null;
+  initialSubject?: string;
+  initialTitle?: string;
+  initialHtml?: string;
   onSent?: () => void;
 };
 
@@ -42,14 +45,17 @@ export function CrmEmailsClient({
   templates,
   variables,
   initialTemplateId,
+  initialSubject,
+  initialTitle,
+  initialHtml,
   onSent,
 }: Props = {}) {
   const [segment, setSegment] = useState<Segment>(lockedRecipient ? "single" : "all");
   const [role, setRole] = useState("learner");
   const [email, setEmail] = useState(lockedRecipient?.email ?? "");
-  const [subject, setSubject] = useState("");
-  const [title, setTitle] = useState("");
-  const [html, setHtml] = useState("");
+  const [subject, setSubject] = useState(initialSubject ?? "");
+  const [title, setTitle] = useState(initialTitle ?? "");
+  const [html, setHtml] = useState(initialHtml ?? "");
   const [sending, setSending] = useState<"live" | "test" | null>(null);
   const [images, setImages] = useState<MailImage[]>([]);
   const [imageHref, setImageHref] = useState("https://www.byound.fr");

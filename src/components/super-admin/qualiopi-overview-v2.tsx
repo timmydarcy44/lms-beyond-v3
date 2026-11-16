@@ -238,6 +238,9 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
           </h1>
           <p className="mt-2 text-sm" style={{ color: MUTED }}>
             Référentiel national qualité · 7 critères · 32 indicateurs
+            {applicable < 32
+              ? ` · ${applicable} applicables pour Byound (${na} hors périmètre)`
+              : null}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -296,9 +299,16 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                 <p className="mt-1 flex flex-wrap items-baseline gap-2">
                   <span className="text-[46px] font-extrabold leading-none tabular-nums">{proven}</span>
                   <span className="text-[26px] font-medium tabular-nums" style={{ color: MUTED }}>
-                    / {applicable} indicateurs prouvés
+                    / {applicable} applicables prouvés
                   </span>
                 </p>
+                {na > 0 ? (
+                  <p className="mt-2 text-xs" style={{ color: MUTED }}>
+                    Score hors N/A · {na} indicateur{na > 1 ? "s" : ""} non
+                    applicable{na > 1 ? "s" : ""} exclu{na > 1 ? "s" : ""} du
+                    dénominateur
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-col items-end gap-2">
                 {snapshot.audit.at ? (

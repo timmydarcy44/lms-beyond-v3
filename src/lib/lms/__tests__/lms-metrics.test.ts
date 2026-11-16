@@ -1,0 +1,107 @@
+import { describe, expect, it } from "vitest";
+import {
+  assertActiveLeqConnected,
+  computeLearnerTimeMetrics,
+  connectedSecondsForSession,
+  activeSecondsFromHeartbeats,
+  metricsFromLegacySessionRows,
+  SESSION_GAP_MS,
+  MAX_CONNECTED_PER_SESSION_MS,
+  MAX_ACTIVE_INTERVAL_MS,
+} from "@/lib/lms/lms-metrics";
+
+describe("lms-metrics", () => {
+  it("calcule le temps connecté : (fin − début) + 1 min, max 4 h", () => {
+    const start = new Date("2026-11-01T10:00:00.000Z");
+    const end = new Date("2026-11-01T10:10:00.000Z");
+    expect(connectedSecondsForSession(start, end)).toBe(11 * 60);
+
+    const longEnd = new Date(start.getTime() + 5 * 60 * 60 * 1000);
+    expect(connectedSecondsForSession(start, longEnd)).toBe(MAX_CONNECTED_PER_SESSION_MS / 1000);
+  });
+
+  it("plafonne chaque intervalle de heartbeat à 2 min", () => {
+    const t0 = Date.parse("2026-11-01T10:00:00.000Z");
+    // 5 min entre deux pings → compte 2 min
+    expect(activeSecondsFromHeartbeats([t0, t0 + 5 * 60 * 1000])).toBe(MAX_ACTIVE_INTERVAL_MS / 1000);
+    // 30 s → 30 s
+    expect(activeSecondsFromHeartbeats([t0, t0 + 30_000])).toBe(30);
+  });
+
+  it("fusionne les événements espacés de moins de 30 min en une seule séance", () => {
+    const base = Date.parse("2026-11-01T10:00:00.000Z");
+    const metrics = computeLearnerTimeMetrics({
+      events: [
+        { at: base, kind: "presence" },
+        { at: base + 10 * 60 * 1000, kind: "heartbeat" },
+        { at: base + 20 * 60 * 1000, kind: "heartbeat" },
+        // même séance (gap 25 min < 30)
+        { at: base + 45 * 60 * 1000, kind: "heartbeat" },
+      ],
+    });
+    expect(metrics.sessionCount).toBe(1);
+  });
+
+  it("crée une nouvelle séance après une interruption > 30 min", () => {
+    const base = Date.parse("2026-11-01T10:00:00.000Z");
+    const metrics = computeLearnerTimeMetrics({
+      events: [
+        { at: base, kind: "presence" },
+        { at: base + 5 * 60 * 1000, kind: "heartbeat" },
+        { at: base + 5 * 60 * 1000 + SESSION_GAP_MS + 1, kind: "presence" },
+        { at: base + 5 * 60 * 1000 + SESSION_GAP_MS + 30_000, kind: "heartbeat" },
+      ],
+    });
+    expect(metrics.sessionCount).toBe(2);
+  });
+
+  it("respecte l’invariant temps actif ≤ temps connecté (heartbeats)", () => {
+    const base = Date.parse("2026-11-01T12:00:00.000Z");
+    // Présence courte, mais heartbeats « absurdes » espacés → actif borné par connecté
+    const metrics = computeLearnerTimeMetrics({
+      events: [
+        { at: base, kind: "presence" },
+        { at: base + 60_000, kind: "presence" },
+        { at: base, kind: "heartbeat" },
+        { at: base + 60_000, kind: "heartbeat" },
+      ],
+    });
+    expect(assertActiveLeqConnected(metrics)).toBe(true);
+    expect(metrics.activeSeconds).toBeLessThanOrEqual(metrics.connectedSeconds);
+  });
+
+  it("respecte l’invariant sur données legacy (actif stocké > connecté)", () => {
+    // Cas Jérôme : 3 s connecté / 1016 s actif stocké
+    const metrics = metricsFromLegacySessionRows([
+      {
+        started_at: "2026-11-10T19:19:40.000Z",
+        ended_at: "2026-11-10T19:25:05.000Z",
+        duration_seconds: 3,
+        duration_active_seconds: 1016,
+      },
+      {
+        started_at: "2026-09-01T12:42:40.000Z",
+        ended_at: null,
+        duration_seconds: 0,
+        duration_active_seconds: 0,
+      },
+    ]);
+    expect(assertActiveLeqConnected(metrics)).toBe(true);
+    expect(metrics.activeSeconds).toBeLessThanOrEqual(metrics.connectedSeconds);
+    // Connecté recalculé depuis timestamps ≈ 5 min + 1 min + séance orpheline 1 min
+    expect(metrics.connectedSeconds).toBeGreaterThan(3);
+  });
+
+  it("ne compte pas 890 lignes orphelines comme 890 séances si gap < 30 min", () => {
+    const base = Date.parse("2026-09-07T09:50:00.000Z");
+    const rows = Array.from({ length: 50 }, (_, i) => ({
+      started_at: new Date(base + i * 5_000).toISOString(),
+      ended_at: null as string | null,
+      duration_seconds: 0,
+      duration_active_seconds: 0,
+    }));
+    const metrics = metricsFromLegacySessionRows(rows);
+    expect(metrics.sessionCount).toBe(1);
+    expect(metrics.connectedSeconds).toBeLessThanOrEqual(MAX_CONNECTED_PER_SESSION_MS / 1000);
+  });
+});

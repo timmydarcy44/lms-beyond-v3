@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { catalogModuleToCourseRow } from "@/lib/training-courses/catalog-fallback";
-import { EDGE_TRAINING_MODULES } from "@/lib/edge-site/training-catalog";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 const SELECT_COLS_LEGACY =
@@ -129,22 +127,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.action === "sync-catalog") {
-      const rows = EDGE_TRAINING_MODULES.map((m) => {
-        const row = catalogModuleToCourseRow(m.id);
-        const { id: _id, created_at: _c, updated_at: _u, ...rest } = row;
-        return { ...rest, updated_at: new Date().toISOString() };
-      });
-
-      const { data, error } = await supabase
-        .from("training_courses")
-        .upsert(rows, { onConflict: "slug" })
-        .select("slug");
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ synced: data?.length ?? 0 });
+      // Désactivé : réactivait le seed EDGE (~80 fiches). Utiliser POST /import (JSON/Excel).
+      return NextResponse.json(
+        {
+          error:
+            "L’import seed catalogue est désactivé. Utilisez « Importer JSON / Excel » pour ajouter des formations.",
+        },
+        { status: 410 },
+      );
     }
 
     const payload = {

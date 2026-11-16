@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   ClipboardList,
@@ -8,11 +8,11 @@ import {
   ExternalLink,
   Loader2,
   Plus,
-  RefreshCw,
   Save,
   Search,
   Sparkles,
   Trash2,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -220,7 +220,6 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
   const [courses, setCourses] = useState<TrainingCourseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [lmsConverting, setLmsConverting] = useState(false);
@@ -241,6 +240,8 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
   );
   const [editingPositionnement, setEditingPositionnement] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const loadCourses = useCallback(async () => {
     setLoading(true);
@@ -471,23 +472,42 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
     }
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
+  const handleImportFile = async (file: File) => {
+    setImporting(true);
     setError(null);
+    setMessage(null);
     try {
-      const res = await fetch("/api/super/training-courses", {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/super/training-courses/import", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "sync-catalog" }),
+        body: form,
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Erreur");
-      setMessage(`${json.synced ?? 0} formations synchronisées.`);
+      if (!res.ok) throw new Error(json.error ?? "Import impossible");
+      const created = json.created ?? 0;
+      const updated = json.updated ?? 0;
+      const errCount = Array.isArray(json.errors) ? json.errors.length : 0;
+      const parts = [
+        created ? `${created} créée${created > 1 ? "s" : ""}` : null,
+        updated ? `${updated} mise${updated > 1 ? "s" : ""} à jour` : null,
+      ].filter(Boolean);
+      setMessage(
+        parts.length
+          ? `Import OK — ${parts.join(", ")}${errCount ? ` (${errCount} erreur${errCount > 1 ? "s" : ""})` : ""}.`
+          : errCount
+            ? `Import échoué — ${errCount} erreur${errCount > 1 ? "s" : ""}.`
+            : "Aucune formation importée.",
+      );
+      if (errCount && json.errors?.[0]?.error) {
+        setError(json.errors.map((e: { error: string }) => e.error).slice(0, 3).join(" · "));
+      }
       await loadCourses();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : "Import impossible");
     } finally {
-      setSyncing(false);
+      setImporting(false);
+      if (importFileRef.current) importFileRef.current.value = "";
     }
   };
 
@@ -722,14 +742,25 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Exporter catalogue
           </button>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json,.xlsx,.xls,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImportFile(file);
+            }}
+          />
           <button
             type="button"
-            onClick={() => void handleSync()}
-            disabled={syncing}
+            onClick={() => importFileRef.current?.click()}
+            disabled={importing}
+            title="Importer 1 ou plusieurs formations (.json / .xlsx)"
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Importer catalogue
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            Importer JSON / Excel
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { assertSignalementStaffAccess } from "@/lib/qualiopi/is-signalement-staff";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import {
   parseSignalementStatus,
@@ -22,11 +22,11 @@ async function actorId(): Promise<string | null> {
 
 /** Transition statut / notes / réponse signalement sensible. */
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  if (!(await isSuperAdmin())) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  const uid = await actorId();
+  const access = await assertSignalementStaffAccess(service, uid);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;

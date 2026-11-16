@@ -524,48 +524,92 @@ export function assessQualiopiCompliance(input: {
             "Clôturer une session et collecter les questionnaires.",
           ),
 
-    signals.reclamationsProcessReady || signals.processDocsReady?.reclamations
-      ? row(
+    (() => {
+      const st = signals.reclamationsIndicatorStatus;
+      if (st === "proven") {
+        return row(31, "validated", signals.reclamationsProofLabel || "Registre réclamations conforme (12 mois).");
+      }
+      if (st === "todo") {
+        return row(
           31,
-          "validated",
-          signals.reclamationsCount
-            ? `Procédure réclamations active — ${signals.reclamationsCount} ticket(s) au registre.`
-            : "Procédure / registre réclamations en place (registre prêt, 0 ticket OK).",
-        )
-      : row(
+          "partial",
+          signals.reclamationsProofLabel || "Réclamation ouverte en retard ou close sans réponse.",
+          "Qualiopi → Qualité : traiter les réclamations en retard / sans réponse.",
+        );
+      }
+      if (st === "missing") {
+        return row(
           31,
           "missing",
           "Pas de workflow réclamations formation dédié.",
           "Qualiopi → Qualité : activer la procédure et le registre.",
-        ),
+        );
+      }
+      return signals.reclamationsProcessReady || signals.processDocsReady?.reclamations
+        ? row(
+            31,
+            "validated",
+            signals.reclamationsCount
+              ? `Procédure réclamations active — ${signals.reclamationsCount} ticket(s) au registre.`
+              : "Procédure / registre réclamations en place (registre prêt, 0 ticket OK).",
+          )
+        : row(
+            31,
+            "missing",
+            "Pas de workflow réclamations formation dédié.",
+            "Qualiopi → Qualité : activer la procédure et le registre.",
+          );
+    })(),
 
-    signals.actionsReviewed ||
-    (signals.actionsDoneCount ?? 0) >= 1 ||
-    signals.processDocsReady?.paq ||
-    (signals.risksCount ?? 0) >= 1
-      ? row(
+    (() => {
+      const st = signals.ameliorationIndicatorStatus;
+      if (st === "proven") {
+        return row(32, "validated", signals.ameliorationProofLabel || "PAQ et revue qualité datée.");
+      }
+      if (st === "todo") {
+        return row(
           32,
-          "validated",
-          (signals.risksCount ?? 0) >= 1
-            ? `Registre des risques actif (${signals.risksCount} risque(s)${
-                (signals.risksOpenCount ?? 0) > 0
-                  ? `, ${signals.risksOpenCount} ouvert(s)`
-                  : ""
-              })${
-                (signals.actionsDoneCount ?? 0) >= 1
-                  ? ` · ${signals.actionsDoneCount} action(s) PAQ clôturée(s)`
-                  : ""
-              }.`
-            : (signals.actionsDoneCount ?? 0) >= 1
-              ? `Plan d’actions qualité avec ${signals.actionsDoneCount} action(s) clôturée(s) / revue.`
-              : "Comité / plan d’actions documenté.",
-        )
-      : row(
+          "partial",
+          signals.ameliorationProofLabel || "Actions ou revue qualité incomplets.",
+          "Qualiopi → Qualité : clôturer une action PAQ et enregistrer une revue.",
+        );
+      }
+      if (st === "missing") {
+        return row(
           32,
           "missing",
           "Pas de registre des risques ni de boucle d’actions correctives.",
           "Qualiopi → Risques : créer le registre, ou Qualité → action PAQ.",
-        ),
+        );
+      }
+      return signals.actionsReviewed ||
+        (signals.actionsDoneCount ?? 0) >= 1 ||
+        signals.processDocsReady?.paq ||
+        (signals.risksCount ?? 0) >= 1
+        ? row(
+            32,
+            "validated",
+            (signals.risksCount ?? 0) >= 1
+              ? `Registre des risques actif (${signals.risksCount} risque(s)${
+                  (signals.risksOpenCount ?? 0) > 0
+                    ? `, ${signals.risksOpenCount} ouvert(s)`
+                    : ""
+                })${
+                  (signals.actionsDoneCount ?? 0) >= 1
+                    ? ` · ${signals.actionsDoneCount} action(s) PAQ clôturée(s)`
+                    : ""
+                }.`
+              : (signals.actionsDoneCount ?? 0) >= 1
+                ? `Plan d’actions qualité avec ${signals.actionsDoneCount} action(s) clôturée(s) / revue.`
+                : "Comité / plan d’actions documenté.",
+          )
+        : row(
+            32,
+            "missing",
+            "Pas de registre des risques ni de boucle d’actions correctives.",
+            "Qualiopi → Risques : créer le registre, ou Qualité → action PAQ.",
+          );
+    })(),
 
   ];
 

@@ -8,6 +8,17 @@ import type {
 import { buildQualiopiGrillePdf } from "@/lib/qualiopi/grille-pdf";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import {
+  scoreIndicator31,
+  scoreIndicator32,
+  type ActionIndicatorRow,
+  type ReclamationIndicatorRow,
+} from "@/lib/qualiopi/reclamation-indicators";
+import {
+  computeDeadlineBadge,
+  DEFAULT_RECLAMATION_DEADLINES,
+} from "@/lib/qualiopi/reclamation-deadlines";
+import { isOpenStep, resolveReclamationStep } from "@/lib/qualiopi/reclamation-status";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +92,26 @@ async function buildSnapshot() {
   const processSafe = await safeSelect(() =>
     supabase.from("crm_qualiopi_process_docs").select("kind, status"),
   );
-  const reclamationsSafe = await safeSelect(() =>
-    supabase.from("crm_qualiopi_reclamations").select("id", { count: "exact", head: true }),
+  let reclamationsRowsSafe = await safeSelect(() =>
+    supabase
+      .from("crm_qualiopi_reclamations")
+      .select("id, status, received_at, ack_at, answered_at, closed_at, response, is_test")
+      .limit(500),
   );
+  if (!reclamationsRowsSafe.data) {
+    reclamationsRowsSafe = await safeSelect(() =>
+      supabase
+        .from("crm_qualiopi_reclamations")
+        .select("id, status, received_at, ack_at, closed_at, response")
+        .limit(500),
+    );
+  }
+  const reclamationsSafe = {
+    data: reclamationsRowsSafe.data,
+    count: Array.isArray(reclamationsRowsSafe.data)
+      ? (reclamationsRowsSafe.data as ReclamationIndicatorRow[]).filter((r) => r.is_test !== true).length
+      : 0,
+  };
   const signalementsSafe = await safeSelect(() =>
     supabase.from("crm_qualiopi_signalements").select("id", { count: "exact", head: true }),
   );
@@ -210,9 +238,36 @@ async function buildSnapshot() {
     }
   }
 
-  const actions = (actionsSafe.data as Array<{ status: string; reviewed_at: string | null }> | null) ?? [];
+  const actions =
+    (actionsSafe.data as Array<{
+      status: string;
+      reviewed_at: string | null;
+      source?: string | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+    }> | null) ?? [];
   const actionsDoneCount = actions.filter((a) => a.status === "done").length;
   const actionsReviewed = actions.some((a) => a.reviewed_at || a.status === "done");
+
+  const recRows = (Array.isArray(reclamationsRowsSafe.data)
+    ? reclamationsRowsSafe.data
+    : []) as ReclamationIndicatorRow[];
+  const nonTestRecs = recRows.filter((r) => r.is_test !== true);
+  const hasOpenOverdue = nonTestRecs.some((r) => {
+    if (!isOpenStep(resolveReclamationStep(r))) return false;
+    const badge = computeDeadlineBadge(r, DEFAULT_RECLAMATION_DEADLINES);
+    return badge.overdue || badge.tone === "red";
+  });
+  const s31 = scoreIndicator31({
+    processReady: Boolean(processDocsReady.reclamations),
+    rows: nonTestRecs,
+    hasOpenOverdue,
+  });
+  const s32 = scoreIndicator32({
+    actions: actions as ActionIndicatorRow[],
+    risksCount: risksSafe.count ?? 0,
+    processPaqReady: Boolean(processDocsReady.paq),
+  });
 
   return assessQualiopiCompliance({
     documents: (docsRes.data ?? []) as Parameters<typeof assessQualiopiCompliance>[0]["documents"],
@@ -230,6 +285,8 @@ async function buildSnapshot() {
       },
       reclamationsProcessReady: Boolean(processDocsReady.reclamations),
       reclamationsCount: reclamationsSafe.count,
+      reclamationsIndicatorStatus: s31.status,
+      reclamationsProofLabel: s31.proofLabel,
       signalementsProcessReady: Boolean(processDocsReady.signalements),
       signalementsCount: signalementsSafe.count,
       risksCount: risksSafe.count,
@@ -239,6 +296,9 @@ async function buildSnapshot() {
         (expertsSalarieSafe.count ?? 0) + (expertsSstMetaSafe.count ?? 0),
       actionsReviewed,
       actionsDoneCount,
+      ameliorationIndicatorStatus: s32.status,
+      ameliorationProofLabel: s32.proofLabel,
+      lastQualityReviewAt: s32.lastReviewAt,
       formateurPlansCount: plansSafe.count,
       formateurActionsDoneCount: formateurActionsSafe.count,
       processDocsReady,

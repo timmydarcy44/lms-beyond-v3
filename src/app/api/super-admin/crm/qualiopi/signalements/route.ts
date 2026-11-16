@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { assertSignalementStaffAccess } from "@/lib/qualiopi/is-signalement-staff";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import {
   createSignalement,
@@ -20,13 +20,13 @@ async function actorId(): Promise<string | null> {
   }
 }
 
-/** Registre signalements sensibles — accès super-admin (service role). */
+/** Registre signalements sensibles — référent signalement ou super-admin. */
 export async function GET() {
-  if (!(await isSuperAdmin())) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  const uid = await actorId();
+  const access = await assertSignalementStaffAccess(service, uid);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const settings = await loadSignalementSettings(service);
   const { data, error } = await service
@@ -57,11 +57,11 @@ export async function GET() {
 
 /** Création manuelle côté staff. */
 export async function POST(req: NextRequest) {
-  if (!(await isSuperAdmin())) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-  }
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+  const uid = await actorId();
+  const access = await assertSignalementStaffAccess(service, uid);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const category = parseSignalementCategory(body?.category);

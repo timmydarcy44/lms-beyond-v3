@@ -5,6 +5,15 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import { getQualiopiStatus, type QualiopiStatusSignals } from "@/lib/qualiopi/get-status";
 import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
 import { assessQualiopiFicheCompliance } from "@/lib/training-courses/qualiopi-fiche";
+import {
+  scoreIndicator31,
+  scoreIndicator32,
+  type ActionIndicatorRow,
+  type ReclamationIndicatorRow,
+} from "@/lib/qualiopi/reclamation-indicators";
+import { computeDeadlineBadge } from "@/lib/qualiopi/reclamation-deadlines";
+import { DEFAULT_RECLAMATION_DEADLINES } from "@/lib/qualiopi/reclamation-deadlines";
+import { isOpenStep, resolveReclamationStep } from "@/lib/qualiopi/reclamation-status";
 
 export const dynamic = "force-dynamic";
 
@@ -345,12 +354,7 @@ async function buildStatus(force = false) {
         .eq("status", "done"),
     ),
     reclamationsProcessReady: Boolean(processReady.reclamations),
-    reclamationsOpenCount: await safeCount(() =>
-      supabase
-        .from("crm_qualiopi_reclamations")
-        .select("id", { count: "exact", head: true })
-        .in("status", ["open", "pending", "nouveau", "en_cours"]),
-    ),
+    reclamationsOpenCount: 0,
     signalementsProcessReady: Boolean(processReady.signalements),
     exitsCount: await safeCount(() =>
       supabase.from("formation_participant_exits").select("id", { count: "exact", head: true }),
@@ -389,6 +393,68 @@ async function buildStatus(force = false) {
     meansProcessReady: Boolean(processReady.moyens),
     examplePublicFormationSlug,
   };
+
+  // Ind. 31 / 32 — brief Qualité v2 (hors is_test)
+  try {
+    const deadlineSettings = {
+      ackBusinessDays:
+        Number((settingsRes.data as { reclamation_ack_business_days?: number } | null)?.reclamation_ack_business_days) ||
+        DEFAULT_RECLAMATION_DEADLINES.ackBusinessDays,
+      replyBusinessDays:
+        Number((settingsRes.data as { reclamation_reply_business_days?: number } | null)?.reclamation_reply_business_days) ||
+        DEFAULT_RECLAMATION_DEADLINES.replyBusinessDays,
+    };
+
+    let recRes = await supabase
+      .from("crm_qualiopi_reclamations")
+      .select(
+        "id, status, received_at, ack_at, answered_at, closed_at, response, is_test",
+      )
+      .order("received_at", { ascending: false })
+      .limit(500);
+    if (recRes.error && /is_test|answered_at|column/i.test(recRes.error.message)) {
+      recRes = await supabase
+        .from("crm_qualiopi_reclamations")
+        .select("id, status, received_at, ack_at, closed_at, response")
+        .order("received_at", { ascending: false })
+        .limit(500);
+    }
+    const recRows = (recRes.error ? [] : recRes.data ?? []) as ReclamationIndicatorRow[];
+    const nonTest = recRows.filter((r) => r.is_test !== true);
+    const openNonTest = nonTest.filter((r) => isOpenStep(resolveReclamationStep(r)));
+    signals.reclamationsOpenCount = openNonTest.length;
+
+    const hasOpenOverdue = openNonTest.some((r) => {
+      const badge = computeDeadlineBadge(r, deadlineSettings);
+      return badge.overdue || badge.tone === "red";
+    });
+    const s31 = scoreIndicator31({
+      processReady: Boolean(processReady.reclamations),
+      rows: nonTest,
+      hasOpenOverdue,
+    });
+    signals.reclamationsTreatedCount = s31.treatedCount;
+    signals.reclamationsAvgReplyLabel = s31.avgReplyHours != null ? String(s31.avgReplyHours) : null;
+    signals.reclamationsIndicatorStatus = s31.status;
+    signals.reclamationsProofLabel = s31.proofLabel;
+
+    const actRes = await supabase
+      .from("crm_qualiopi_actions")
+      .select("id, status, reviewed_at, source, created_at, updated_at")
+      .limit(500);
+    const actRows = (actRes.error ? [] : actRes.data ?? []) as ActionIndicatorRow[];
+    const s32 = scoreIndicator32({
+      actions: actRows,
+      risksCount: signals.risksCount,
+      processPaqReady: Boolean(processReady.paq),
+    });
+    signals.actionsDoneLast12Count = s32.actionsDoneCount;
+    signals.lastQualityReviewAt = s32.lastReviewAt;
+    signals.ameliorationIndicatorStatus = s32.status;
+    signals.ameliorationProofLabel = s32.proofLabel;
+  } catch (e) {
+    console.warn("[qualiopi/status] ind 31/32:", e);
+  }
 
   const attestRows = attestRes.error ? [] : attestRes.data ?? [];
   const naAttestations = attestRows

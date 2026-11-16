@@ -25,8 +25,15 @@ export type QualiopiAuditSignals = {
   veille?: QualiopiVeilleThemeCounts;
   reclamationsProcessReady?: boolean;
   reclamationsCount?: number;
+  /** Ind. 31 brief (hors is_test). */
+  reclamationsIndicatorStatus?: "proven" | "todo" | "missing";
+  reclamationsProofLabel?: string | null;
   actionsReviewed?: boolean;
   actionsDoneCount?: number;
+  /** Ind. 32 brief. */
+  ameliorationIndicatorStatus?: "proven" | "todo" | "missing";
+  ameliorationProofLabel?: string | null;
+  lastQualityReviewAt?: string | null;
   formateurPlansCount?: number;
   formateurActionsDoneCount?: number;
   processDocsReady?: Partial<

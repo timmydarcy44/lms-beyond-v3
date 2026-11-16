@@ -71,10 +71,20 @@ export type QualiopiStatusSignals = {
   veilleAnyDone: number;
   reclamationsProcessReady: boolean;
   reclamationsOpenCount: number;
+  /** Ind. 31 brief — hors is_test, 12 mois. */
+  reclamationsTreatedCount?: number;
+  reclamationsAvgReplyLabel?: string | null;
+  reclamationsIndicatorStatus?: "proven" | "todo" | "missing";
+  reclamationsProofLabel?: string | null;
   signalementsProcessReady: boolean;
   exitsCount: number;
   risksCount: number;
   actionsDoneCount: number;
+  /** Ind. 32 brief. */
+  actionsDoneLast12Count?: number;
+  lastQualityReviewAt?: string | null;
+  ameliorationIndicatorStatus?: "proven" | "todo" | "missing";
+  ameliorationProofLabel?: string | null;
   subcontractReadyCount: number;
   handicapProfilesCount: number;
   handicapProcessReady: boolean;
@@ -639,7 +649,36 @@ function assessAuto(
             },
       );
     }
-    case 31:
+    case 31: {
+      const ind31 = sig.reclamationsIndicatorStatus;
+      if (ind31 === "proven" || ind31 === "todo" || ind31 === "missing") {
+        return withManual(
+          ind31 === "missing"
+            ? {
+                status: "missing",
+                proofs: [],
+                nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/qualite" },
+              }
+            : {
+                status: ind31 === "proven" ? "proven" : "todo",
+                proofs: [
+                  proof(
+                    "Registre réclamations",
+                    "/super/crm/qualiopi/qualite",
+                    null,
+                    sig.reclamationsProofLabel ??
+                      (sig.reclamationsTreatedCount != null
+                        ? `${sig.reclamationsTreatedCount} réclamations traitées`
+                        : null),
+                  ),
+                ],
+                nextAction: {
+                  label: ind31 === "proven" ? "Voir la preuve" : "Traiter",
+                  href: "/super/crm/qualiopi/qualite",
+                },
+              },
+        );
+      }
       return withManual(
         sig.reclamationsProcessReady
           ? {
@@ -665,7 +704,44 @@ function assessAuto(
               nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/qualite" },
             },
       );
-    case 32:
+    }
+    case 32: {
+      const ind32 = sig.ameliorationIndicatorStatus;
+      if (ind32 === "proven" || ind32 === "todo" || ind32 === "missing") {
+        return withManual(
+          ind32 === "missing"
+            ? {
+                status: "missing",
+                proofs: [],
+                nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/qualite?tab=paq" },
+              }
+            : {
+                status: ind32 === "proven" ? "proven" : "todo",
+                proofs: [
+                  proof(
+                    "Plan d’amélioration",
+                    "/super/crm/qualiopi/qualite?tab=paq",
+                    null,
+                    sig.ameliorationProofLabel ?? null,
+                  ),
+                  ...(sig.risksCount >= 1
+                    ? [
+                        proof(
+                          "Registre des risques",
+                          "/super/crm/qualiopi/risques",
+                          null,
+                          `${sig.risksCount}`,
+                        ),
+                      ]
+                    : []),
+                ],
+                nextAction: {
+                  label: ind32 === "proven" ? "Voir la preuve" : "Compléter",
+                  href: "/super/crm/qualiopi/qualite?tab=paq",
+                },
+              },
+        );
+      }
       return withManual(
         sig.risksCount >= 1 || sig.actionsDoneCount >= 1
           ? {
@@ -682,6 +758,7 @@ function assessAuto(
               nextAction: { label: "Ajouter", href: "/super/crm/qualiopi/risques" },
             },
       );
+    }
     // CFA / certifying / PFST without auto source yet → dépôt manuel
     default:
       return withManual(

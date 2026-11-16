@@ -43,11 +43,14 @@ import {
 } from "@/components/super-admin/training-cms/training-ai-generate-modal";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import {
+  assessQualiopiFicheCompliance,
+  QUALIOPI_FICHE_STATUS_DOT,
   QUALIOPI_FINANCING_OPTIONS,
   QUALIOPI_MODALITY_DETAIL_OPTIONS,
   modalityDetailOptionId,
   QUALIOPI_PEDAGOGICAL_MODALITIES,
   QUALIOPI_RECOGNITION_TYPES,
+  qualiopiFicheStatusTone,
 } from "@/lib/training-courses/qualiopi-fiche";
 
 type CmsState = {
@@ -762,24 +765,46 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
               </option>
             ))}
           </select>
+          <p className="flex flex-wrap items-center gap-3 px-1 text-[11px] text-gray-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#22C55E]" /> Qualiopi OK
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#F59E0B]" /> En cours
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Rien
+            </span>
+          </p>
           <div className="max-h-[60vh] space-y-1 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2">
             {loading ? (
               <p className="p-4 text-sm text-gray-400">Chargement…</p>
             ) : (
-              filtered.map((course) => (
-                <button
-                  key={course.id}
-                  type="button"
-                  onClick={() => setSelectedId(course.id)}
-                  className={cn(
-                    "w-full rounded-xl px-3 py-3 text-left transition",
-                    selectedId === course.id ? "bg-[#635BFF]/10 text-[#635BFF]" : "hover:bg-gray-50",
-                  )}
-                >
-                  <p className="text-sm font-semibold">{course.title}</p>
-                  <p className="text-xs text-gray-400">{course.domain ?? course.slug}</p>
-                </button>
-              ))
+              filtered.map((course) => {
+                const tone = qualiopiFicheStatusTone(assessQualiopiFicheCompliance(course));
+                const dot = QUALIOPI_FICHE_STATUS_DOT[tone];
+                return (
+                  <button
+                    key={course.id}
+                    type="button"
+                    onClick={() => setSelectedId(course.id)}
+                    className={cn(
+                      "w-full rounded-xl px-3 py-3 text-left transition",
+                      selectedId === course.id ? "bg-[#635BFF]/10 text-[#635BFF]" : "hover:bg-gray-50",
+                    )}
+                  >
+                    <p className="flex items-center gap-2 text-sm font-semibold" title={dot.label}>
+                      <span
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: dot.color }}
+                        aria-label={dot.label}
+                      />
+                      <span className="min-w-0 truncate">{course.title}</span>
+                    </p>
+                    <p className="pl-[18px] text-xs text-gray-400">{course.domain ?? course.slug}</p>
+                  </button>
+                );
+              })
             )}
           </div>
         </aside>

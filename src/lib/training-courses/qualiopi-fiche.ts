@@ -195,6 +195,26 @@ export function assessQualiopiFicheCompliance(
   };
 }
 
+/** Repère visuel catalogue : vert OK · orange en cours · rouge rien. */
+export type QualiopiFicheStatusTone = "ok" | "progress" | "empty";
+
+export function qualiopiFicheStatusTone(
+  compliance: Pick<QualiopiFicheCompliance, "ok" | "filledIds">,
+): QualiopiFicheStatusTone {
+  if (compliance.ok) return "ok";
+  if (compliance.filledIds.length === 0) return "empty";
+  return "progress";
+}
+
+export const QUALIOPI_FICHE_STATUS_DOT: Record<
+  QualiopiFicheStatusTone,
+  { color: string; label: string }
+> = {
+  ok: { color: "#22C55E", label: "Qualiopi OK" },
+  progress: { color: "#F59E0B", label: "Qualiopi en cours" },
+  empty: { color: "#EF4444", label: "Qualiopi : rien de saisi" },
+};
+
 /** Libellés financement (fiche catalogue + saisie en série). */
 export const QUALIOPI_FINANCING_OPTIONS = [
   "OPCO",

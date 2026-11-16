@@ -21,6 +21,8 @@ import {
   QUALIOPI_PEDAGOGICAL_MODALITIES,
   QUALIOPI_RECOGNITION_TYPES,
   modalityDetailOptionId,
+  QUALIOPI_FICHE_STATUS_DOT,
+  qualiopiFicheStatusTone,
   sentenceCaseTitle,
   type CatalogueProofFieldId,
 } from "@/lib/training-courses/qualiopi-fiche";
@@ -367,6 +369,17 @@ export function QualiopiCataloguePanel() {
                 <h2 className="mr-auto text-[16px] font-extrabold text-[#F2F4FA]">
                   Fiches formation
                 </h2>
+                <span className="flex items-center gap-3 text-[11px] text-[#6C7593]">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-[#22C55E]" /> OK
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-[#F59E0B]" /> En cours
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-[#EF4444]" /> Rien
+                  </span>
+                </span>
                 <button
                   type="button"
                   onClick={() => {
@@ -438,6 +451,11 @@ export function QualiopiCataloguePanel() {
                   const firstMissing = course.missingIds[0];
                   const extra = Math.max(0, course.missingIds.length - 1);
                   const filled = course.filledIds.length;
+                  const tone = qualiopiFicheStatusTone({
+                    ok: course.compliant,
+                    filledIds: course.filledIds,
+                  });
+                  const dot = QUALIOPI_FICHE_STATUS_DOT[tone];
                   return (
                     <li
                       key={course.id}
@@ -445,10 +463,15 @@ export function QualiopiCataloguePanel() {
                     >
                       <div className="min-w-0">
                         <p
-                          className="truncate text-[14px] font-extrabold text-[#F2F4FA]"
-                          title={course.title}
+                          className="flex items-center gap-2 truncate text-[14px] font-extrabold text-[#F2F4FA]"
+                          title={`${course.title} — ${dot.label}`}
                         >
-                          {sentenceCaseTitle(course.title)}
+                          <span
+                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ background: dot.color }}
+                            aria-label={dot.label}
+                          />
+                          <span className="truncate">{sentenceCaseTitle(course.title)}</span>
                         </p>
                         <p className="truncate text-[12px] text-[#6C7593]">
                           {course.domain || "Sans thématique"}

@@ -456,6 +456,28 @@ async function buildStatus(force = false) {
     console.warn("[qualiopi/status] ind 31/32:", e);
   }
 
+  // Procédures validées → preuves par indicateur
+  try {
+    const procRes = await supabase
+      .from("crm_qualiopi_procedures")
+      .select("id, title, current_version, validated_at, indicators, status, next_review_at")
+      .eq("status", "validated");
+    if (!procRes.error && procRes.data) {
+      signals.validatedProcedures = procRes.data.map((p) => ({
+        id: String(p.id),
+        title: String(p.title),
+        current_version: String(p.current_version ?? "1.0"),
+        validated_at: p.validated_at ? String(p.validated_at) : null,
+        indicators: Array.isArray(p.indicators) ? (p.indicators as number[]) : [],
+      }));
+      signals.procedureReviewOverdue = procRes.data.some(
+        (p) => p.next_review_at && new Date(String(p.next_review_at)).getTime() < Date.now(),
+      );
+    }
+  } catch (e) {
+    console.warn("[qualiopi/status] procedures:", e);
+  }
+
   const attestRows = attestRes.error ? [] : attestRes.data ?? [];
   const naAttestations = attestRows
     .filter((r) => r.kind === "na" || !r.kind)

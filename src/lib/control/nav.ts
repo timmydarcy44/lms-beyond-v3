@@ -215,7 +215,7 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
       },
       {
         id: "qualiopi-process",
-        label: "Process",
+        label: "Procédures",
         href: "/super/crm/qualiopi/process",
         match: under("/super/crm/qualiopi/process"),
       },

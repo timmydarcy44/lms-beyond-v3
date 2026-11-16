@@ -146,7 +146,7 @@ const CRM_LINKS: CrmNavLink[] = [
   { href: "/super/crm/qualiopi/veilles", label: "Veilles", icon: Newspaper, section: "certification" },
   { href: "/super/crm/qualiopi/qualite", label: "Qualité", icon: ClipboardList, section: "certification" },
   { href: "/super/qualite/bpf", label: "BPF", icon: FileBadge, section: "certification" },
-  { href: "/super/crm/qualiopi/process", label: "Process", icon: ClipboardList, section: "certification" },
+  { href: "/super/crm/qualiopi/process", label: "Procédures", icon: ClipboardList, section: "certification" },
   { href: "/super/crm/qualiopi/formateurs", label: "Formateurs", icon: UserCheck, section: "certification" },
   { href: "/super/crm/qualiopi/catalogue", label: "Preuves catalogue", icon: GraduationCap, section: "certification" },
   { href: "/super/crm/qualiopi/pilote", label: "Session pilote", icon: Rocket, section: "certification" },

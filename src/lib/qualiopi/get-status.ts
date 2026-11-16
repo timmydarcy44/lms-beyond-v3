@@ -96,6 +96,15 @@ export type QualiopiStatusSignals = {
    * → /business/formations/{slug} sur le site public.
    */
   examplePublicFormationSlug: string | null;
+  /** Procédures qualité validées (preuves PDF). */
+  validatedProcedures?: Array<{
+    id: string;
+    title: string;
+    current_version: string;
+    validated_at: string | null;
+    indicators: number[] | null;
+  }>;
+  procedureReviewOverdue?: boolean;
 };
 
 function stale(iso: string | null | undefined): boolean {
@@ -829,13 +838,33 @@ export function getQualiopiStatus(input: {
       manuals,
     });
 
+    const procProofs = (input.signals.validatedProcedures ?? [])
+      .filter((p) => Array.isArray(p.indicators) && p.indicators.includes(def.id))
+      .map((p) =>
+        proof(
+          `Procédure ${p.title} · v${p.current_version}${
+            p.validated_at ? ` du ${String(p.validated_at).slice(0, 10)}` : ""
+          }`,
+          `/super/crm/qualiopi/process?id=${p.id}`,
+          p.validated_at,
+          null,
+        ),
+      );
+
+    const proofs = [...procProofs, ...draft.proofs];
+    let status = draft.status;
+    if (procProofs.length && status === "missing") status = "proven";
+    if (input.signals.procedureReviewOverdue && procProofs.length && status === "proven") {
+      status = "todo";
+    }
+
     return {
       indicatorId: def.id,
       criterionId: def.criterionId,
       shortTitle: def.shortTitle,
       scopeTag: def.scopeTag,
-      status: draft.status,
-      proofs: draft.proofs,
+      status,
+      proofs,
       nextAction: draft.nextAction,
       naJustification: null,
       helpWhere: help.where,

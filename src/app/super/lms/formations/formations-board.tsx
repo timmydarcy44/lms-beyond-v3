@@ -15,7 +15,8 @@ type CourseCard = {
 type Cursus = { id: string; name: string; modules: { onlineCourseId: string | null }[] };
 type Candidate = { id: string; name: string; email: string; status: string };
 
-export function SuperLmsFormationsBoard({ courses }: { courses: CourseCard[] }) {
+export function SuperLmsFormationsBoard({ courses: initialCourses }: { courses: CourseCard[] }) {
+  const [courses, setCourses] = useState(initialCourses);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "published" | "draft">("all");
   const [cursus, setCursus] = useState<Cursus[]>([]);
@@ -25,6 +26,11 @@ export function SuperLmsFormationsBoard({ courses }: { courses: CourseCard[] }) 
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCourses(initialCourses);
+  }, [initialCourses]);
 
   useEffect(() => {
     void fetch("/api/super/cfa/cursus", { cache: "no-store" })
@@ -76,6 +82,31 @@ export function SuperLmsFormationsBoard({ courses }: { courses: CourseCard[] }) 
     const payload = await response.json().catch(() => ({}));
     setBusy(false);
     setMessage(response.ok ? `${payload.name || "Apprenant"} est assigné.` : payload.error || "Assignation impossible");
+  };
+
+  const removeCourse = async (course: CourseCard) => {
+    const ok = window.confirm(
+      `Supprimer « ${course.title} » du LMS Byound ?\n\nSans inscription : suppression définitive.\nSinon : archivage (retirée de la liste).`,
+    );
+    if (!ok) return;
+    setDeletingId(course.id);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/super/lms/formations/${course.id}`, { method: "DELETE" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Suppression impossible");
+      setCourses((prev) => prev.filter((c) => c.id !== course.id));
+      if (active?.id === course.id) setActive(null);
+      setMessage(
+        payload.mode === "soft"
+          ? payload.reason || "Formation archivée et retirée de la liste."
+          : "Formation supprimée.",
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Suppression impossible");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -150,12 +181,24 @@ export function SuperLmsFormationsBoard({ courses }: { courses: CourseCard[] }) 
                       Voir la carte
                     </Link>
                   ) : null}
+                  <button
+                    type="button"
+                    disabled={deletingId === course.id || busy}
+                    onClick={() => void removeCourse(course)}
+                    className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {deletingId === course.id ? "Suppression…" : "Supprimer"}
+                  </button>
                 </div>
               </li>
             );
           })}
         </ul>
       )}
+
+      {message && !active ? (
+        <p className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">{message}</p>
+      ) : null}
 
       {active ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

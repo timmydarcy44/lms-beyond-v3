@@ -102,8 +102,8 @@ export function QualiopiCataloguePanel() {
   const [bulkField, setBulkField] = useState<CatalogueProofFieldId | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const res = await fetch("/api/super-admin/crm/qualiopi/catalog-proofs", {
         cache: "no-store",
@@ -115,14 +115,32 @@ export function QualiopiCataloguePanel() {
       setExperts(json.experts ?? []);
       setDuplicates(json.expertDuplicates ?? []);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Chargement impossible");
+      if (!opts?.silent) {
+        toast.error(e instanceof Error ? e.message : "Chargement impossible");
+      }
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // Rafraîchir dès que l’onglet redevient visible / focus (suppressions CMS, imports…).
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      void load({ silent: true });
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    const timer = window.setInterval(refresh, 12_000);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+      window.clearInterval(timer);
+    };
   }, [load]);
 
   const domains = useMemo(() => {
@@ -287,7 +305,10 @@ export function QualiopiCataloguePanel() {
                   </span>
                 </p>
                 <p className="mt-2 text-[13px] text-[#9AA3BD]">
-                  {excluded} brouillons et formations archivées ne sont pas comptés
+                  Catalogue OF uniquement — hors sur-mesure client
+                  {excluded > 0
+                    ? ` · ${excluded} inactive${excluded > 1 ? "s" : ""} exclue${excluded > 1 ? "s" : ""}`
+                    : ""}
                 </p>
               </div>
               {showSameFieldsHint ? (

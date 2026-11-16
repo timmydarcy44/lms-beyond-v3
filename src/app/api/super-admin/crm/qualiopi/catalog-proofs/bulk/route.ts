@@ -47,13 +47,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "fieldId et courseIds requis" }, { status: 400 });
   }
 
-  const { data: rows, error } = await service
+  let { data: rows, error } = await service
     .from("training_courses")
     .select(
-      "id, title, domain, objectives, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, intra_price, inter_price, price_on_quote",
+      "id, title, domain, objectives, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, intra_price, inter_price, price_on_quote, organization_id, source",
     )
     .in("id", courseIds)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .is("organization_id", null);
+
+  if (error && /organization_id/i.test(error.message)) {
+    ({ data: rows, error } = await service
+      .from("training_courses")
+      .select(
+        "id, title, domain, objectives, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, intra_price, inter_price, price_on_quote, organization_id, source",
+      )
+      .in("id", courseIds)
+      .eq("is_active", true));
+  }
+
+  rows = (rows ?? []).filter(
+    (r: { organization_id?: string | null; source?: string | null }) =>
+      !r.organization_id && (r.source == null || r.source === "catalogue"),
+  );
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

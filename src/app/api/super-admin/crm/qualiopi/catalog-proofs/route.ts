@@ -35,7 +35,16 @@ type CourseRow = {
   results_method_override?: string | null;
   is_active?: boolean | null;
   updated_at?: string | null;
+  organization_id?: string | null;
+  source?: string | null;
 };
+
+/** Catalogue OF Qualiopi uniquement — exclut sur-mesure client / hors catalogue. */
+function isOfCatalogueCourse(row: CourseRow): boolean {
+  if (row.organization_id) return false;
+  if (row.source != null && row.source !== "catalogue") return false;
+  return true;
+}
 
 type ExpertRow = {
   id: string;
@@ -147,8 +156,16 @@ export async function GET() {
   const supabase = getServiceRoleClient();
   if (!supabase) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  const [trainingRes, expertsRes, ofRes, handicapContact] = await Promise.all([
-    supabase.from("training_courses").select("*").limit(300),
+  let trainingRes = await supabase
+    .from("training_courses")
+    .select("*")
+    .is("organization_id", null)
+    .limit(400);
+  if (trainingRes.error && /organization_id/i.test(trainingRes.error.message)) {
+    trainingRes = await supabase.from("training_courses").select("*").limit(400);
+  }
+
+  const [expertsRes, ofRes, handicapContact] = await Promise.all([
     supabase
       .from("experts")
       .select(
@@ -168,7 +185,7 @@ export async function GET() {
   const accessibilityOk = Boolean(handicapContact.email);
   const accessibilityLine = `${handicapContact.publicLine} — étude personnalisée de chaque situation.`;
 
-  const allCourses = (trainingRes.data ?? []) as CourseRow[];
+  const allCourses = ((trainingRes.data ?? []) as CourseRow[]).filter(isOfCatalogueCourse);
   const published = allCourses.filter((c) => c.is_active === true);
   const excludedDrafts = allCourses.length - published.length;
 
@@ -360,7 +377,7 @@ export async function GET() {
       rawTrainingCourses: allCourses.length,
       publishedActive: published.length,
       inactiveOrArchived: excludedDrafts,
-      note: "Le compteur public exclut is_active=false. Pas de colonne is_test sur training_courses.",
+      note: "Catalogue OF uniquement (organization_id null). Exclut is_active=false et fiches sur-mesure client.",
     },
   });
 }

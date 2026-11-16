@@ -127,6 +127,19 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      void load(true);
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
+
   const criteria = useMemo(() => {
     if (!snapshot) return [];
     return ([1, 2, 3, 4, 5, 6, 7] as const).map((id) => {

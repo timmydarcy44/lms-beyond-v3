@@ -67,8 +67,9 @@ async function buildStatus(force = false) {
       supabase
         .from("training_courses")
         .select(
-          "id, slug, title, objectives, is_active, results_method_override, formats, badge_name, badge_class_id, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, price_on_quote, intra_price, inter_price",
-        ),
+          "id, slug, title, objectives, is_active, results_method_override, formats, badge_name, badge_class_id, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, price_on_quote, intra_price, inter_price, organization_id, source",
+        )
+        .is("organization_id", null),
     ]),
   );
 
@@ -105,7 +106,7 @@ async function buildStatus(force = false) {
   const handicapContact = await loadDisabilityReferentContact(supabase);
   const accessibilityOk = Boolean(handicapContact.email);
 
-  const courses = (trainingRes.error ? [] : trainingRes.data ?? []) as Array<{
+  type StatusCourseRow = {
     id: string;
     slug?: string | null;
     title?: string | null;
@@ -123,11 +124,28 @@ async function buildStatus(force = false) {
     price_on_quote?: boolean | null;
     intra_price?: number | null;
     inter_price?: number | null;
-  }>;
+    organization_id?: string | null;
+    source?: string | null;
+  };
+  let courses = (trainingRes.error ? [] : trainingRes.data ?? []) as StatusCourseRow[];
   if (trainingRes.error) {
     console.warn("[qualiopi/status] training_courses:", trainingRes.error.message);
+    // Fallback si filtre organization_id non supporté
+    if (/organization_id/i.test(trainingRes.error.message)) {
+      const fallback = await supabase
+        .from("training_courses")
+        .select(
+          "id, slug, title, objectives, is_active, results_method_override, formats, badge_name, badge_class_id, recognition_type, pedagogical_modality, pedagogical_modality_detail, financing_modalities, duration, price_on_quote, intra_price, inter_price, organization_id, source",
+        );
+      courses = (fallback.data ?? []) as StatusCourseRow[];
+    }
   }
-  const publicCourses = courses.filter((c) => c.is_active === true);
+  const publicCourses = courses.filter(
+    (c) =>
+      c.is_active === true &&
+      !c.organization_id &&
+      (c.source == null || c.source === "catalogue"),
+  );
   const coursesPublicTotal = publicCourses.length;
   let coursesWithObjectives = 0;
   let coursesWithResults = 0;

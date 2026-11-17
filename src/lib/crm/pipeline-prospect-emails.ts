@@ -14,7 +14,7 @@ type NewProspectEmailInput = {
   deal_id: string;
 };
 
-const NOTIFY_RECIPIENTS = ["jerome.picot@edgebs.fr", "timmydarcy44@gmail.com"] as const;
+const NOTIFY_RECIPIENTS = ["jerome.picot@byound.fr", "timmydarcy44@gmail.com"] as const;
 
 export async function sendNewPipelineProspectNotification(
   input: NewProspectEmailInput,

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSupabase } from "@/components/providers/supabase-provider";
+import { isJeromePicotEmail } from "@/lib/auth/jerome-picot";
 import { isPipelinePrescripteurUser } from "@/lib/crm/pipeline-prescripteur-access";
 
 type CrmNavIcon = ComponentType<{ className?: string }>;
@@ -290,7 +291,7 @@ export function CrmSidebar() {
     };
   }, []);
 
-  const isJerome = userEmail === "jerome.picot@edgebs.fr";
+  const isJerome = isJeromePicotEmail(userEmail);
 
   const isCfa = pathname.startsWith("/super/crm/cfa") || pathname.startsWith("/super/experts");
 

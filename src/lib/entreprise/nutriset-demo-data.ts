@@ -3,14 +3,14 @@
 export const NUTRISET_ORG_ID = "163c8e74-b648-4792-9167-2b4031a888b3";
 
 export const NUTRISET_DEMO_VIEWER_EMAILS = new Set([
-  "jerome.picot@edgebs.fr",
+  "jerome.picot@byound.fr",
   "demo@entreprise.fr",
   "contact@edgebs.fr",
 ]);
 
 /** Comptes salarié à enrichir pour les démos /dashboard/salarie. */
 export const SALARIE_DEMO_EMAILS = new Set([
-  "jerome.picot@edgebs.fr",
+  "jerome.picot@byound.fr",
   "demoapprenant@psg.fr",
   "demosalarie@edgebs.fr",
 ]);

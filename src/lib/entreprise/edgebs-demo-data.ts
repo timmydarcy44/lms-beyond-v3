@@ -7,7 +7,7 @@ export const EDGEBS_DEMO_VIEWER_EMAILS = new Set([
   "demoentreprise@edgebs.fr",
   "demosalarie@edgebs.fr",
   "timmydarcy44@gmail.com",
-  "jerome.picot@edgebs.fr",
+  "jerome.picot@byound.fr",
   "contact@edgebs.fr",
 ]);
 

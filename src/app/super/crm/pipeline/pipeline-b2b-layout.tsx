@@ -14,6 +14,7 @@ import {
   isNextActionOverdue,
 } from "@/lib/crm/pipeline-btob-commercial-options";
 import { PIPELINE_BTOB_CONTACT_OWNERS, pipelineOwnerLabel } from "@/lib/crm/pipeline-btob-owners";
+import { isJeromePicotEmail } from "@/lib/auth/jerome-picot";
 import { looksLikeTestDeal } from "@/lib/control/test-account";
 import { columnIdentifiedCents, isWonRevenueStage } from "@/lib/crm/pipeline-opportunity-ca";
 import { resolvePartyKind } from "@/lib/crm/pipeline-quoted-products";
@@ -69,7 +70,7 @@ export function PipelineB2bLayout({
   onRename: (stage: PipelineStage) => void;
 }) {
   const [view, setView] = useState("tableau");
-  const [scope, setScope] = useState<"all" | "mine">(currentUserEmail === "jerome.picot@edgebs.fr" ? "mine" : "all");
+  const [scope, setScope] = useState<"all" | "mine">(isJeromePicotEmail(currentUserEmail) ? "mine" : "all");
   const [sector, setSector] = useState("all");
   const [owner, setOwner] = useState("all");
   const [lateOnly, setLateOnly] = useState(false);
@@ -90,10 +91,18 @@ export function PipelineB2bLayout({
   const scoped = useMemo(() => {
     let list = showTests ? deals : deals.filter((deal) => !looksLikeTestDeal(deal));
     if (scope === "mine" && currentUserEmail) {
-      list = list.filter((deal) => (deal.contact_owner_email ?? "").trim().toLowerCase() === currentUserEmail);
+      list = list.filter((deal) => {
+        const ownerEmail = (deal.contact_owner_email ?? "").trim().toLowerCase();
+        if (isJeromePicotEmail(currentUserEmail)) return isJeromePicotEmail(ownerEmail);
+        return ownerEmail === currentUserEmail;
+      });
     }
     if (owner !== "all") {
-      list = list.filter((deal) => (deal.contact_owner_email ?? "").trim().toLowerCase() === owner);
+      list = list.filter((deal) => {
+        const ownerEmail = (deal.contact_owner_email ?? "").trim().toLowerCase();
+        if (isJeromePicotEmail(owner)) return isJeromePicotEmail(ownerEmail);
+        return ownerEmail === owner;
+      });
     }
     if (sector !== "all") list = list.filter((deal) => (deal.sector ?? "") === sector);
     return list;

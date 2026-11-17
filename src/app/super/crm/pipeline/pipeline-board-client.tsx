@@ -50,6 +50,7 @@ import {
   PIPELINE_BTOB_CONTACT_OWNERS,
   pipelineOwnerLabel,
 } from "@/lib/crm/pipeline-btob-owners";
+import { isJeromePicotEmail, JEROME_PICOT_EMAIL } from "@/lib/auth/jerome-picot";
 import { Users } from "lucide-react";
 import { PipelineCollapsibleSection } from "@/components/crm/pipeline-collapsible-section";
 import { PipelineDealSheet, PipelineDealSheetFooter } from "@/components/crm/pipeline-deal-sheet";
@@ -135,7 +136,7 @@ export const PipelineBoardClient = forwardRef<
   const isBtoc = pipelineType === "btoc";
   const defaultStage = isBtoc ? "inscription" : "a_appeler";
   const normUserEmail = currentUserEmail?.trim().toLowerCase() ?? null;
-  const isJerome = normUserEmail === "jerome.picot@edgebs.fr";
+  const isJerome = isJeromePicotEmail(normUserEmail);
 
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [deals, setDeals] = useState<PipelineDeal[]>([]);
@@ -187,7 +188,7 @@ export const PipelineBoardClient = forwardRef<
   useEffect(() => {
     if (isBtoc) return;
     // Par défaut: Jérôme voit ses deals uniquement; Timmy voit tout.
-    if (isJerome) setOwnerFilter("jerome.picot@edgebs.fr");
+    if (isJerome) setOwnerFilter(JEROME_PICOT_EMAIL);
     else setOwnerFilter("all");
   }, [isBtoc, isJerome]);
 
@@ -269,7 +270,11 @@ export const PipelineBoardClient = forwardRef<
     let list = deals;
     if (ownerFilter !== "all") {
       const norm = ownerFilter.trim().toLowerCase();
-      list = list.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === norm);
+      list = list.filter((d) => {
+        const owner = (d.contact_owner_email ?? "").trim().toLowerCase();
+        if (isJeromePicotEmail(norm)) return isJeromePicotEmail(owner);
+        return owner === norm;
+      });
     }
     if (nextActionFilter === "only_with_date") {
       list = list.filter((d) => Boolean(d.next_action_date));
@@ -296,7 +301,11 @@ export const PipelineBoardClient = forwardRef<
     if (isBtoc) return null;
     const totalProspects = filteredDeals.length;
     const myProspects = normUserEmail
-      ? filteredDeals.filter((d) => (d.contact_owner_email ?? "").trim().toLowerCase() === normUserEmail).length
+      ? filteredDeals.filter((d) => {
+          const owner = (d.contact_owner_email ?? "").trim().toLowerCase();
+          if (isJeromePicotEmail(normUserEmail)) return isJeromePicotEmail(owner);
+          return owner === normUserEmail;
+        }).length
       : 0;
     const overdue = filteredDeals.filter((d) => isNextActionOverdue(d.next_action_date)).length;
     const today = new Date().toISOString().slice(0, 10);
@@ -804,7 +813,7 @@ export const PipelineBoardClient = forwardRef<
                   <option
                     key={o.email}
                     value={o.email}
-                    disabled={isJerome && o.email !== "jerome.picot@edgebs.fr" && o.email !== "timmydarcy44@gmail.com"}
+                    disabled={isJerome && !isJeromePicotEmail(o.email) && o.email !== "timmydarcy44@gmail.com"}
                   >
                     {o.label}
                   </option>

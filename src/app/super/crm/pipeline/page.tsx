@@ -1,4 +1,5 @@
 import type { PipelineType } from "@/lib/crm/pipeline-shared";
+import { isJeromePicotEmail } from "@/lib/auth/jerome-picot";
 import { getServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -20,7 +21,7 @@ export default async function CrmPipelinePage({
   } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
   const userEmail = user?.email?.trim().toLowerCase() ?? null;
 
-  if (pipelineType === "btoc" && userEmail === "jerome.picot@edgebs.fr") {
+  if (pipelineType === "btoc" && isJeromePicotEmail(userEmail)) {
     redirect("/super/crm/pipeline");
   }
 

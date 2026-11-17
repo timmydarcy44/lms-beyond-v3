@@ -27,6 +27,7 @@ import {
   displayProcedureStatus,
   nextMajorVersion,
 } from "@/lib/qualiopi/procedure-status";
+import { PROCEDURE_VIDEO_SLOTS } from "@/lib/qualiopi/procedure-videos";
 import { formatFrDateShort, formatRelativeFr } from "@/lib/qualiopi/reclamation-format";
 
 type Section = {
@@ -66,6 +67,7 @@ const TEXT = "#F2F4FA";
 const MUTED = "#9AA3BD";
 const TERT = "#6C7593";
 const VIOLET = "#6E5BFF";
+const VIOLET_SOFT = "#A99BFF";
 const GREEN = "#6BE39B";
 const AMBER = "#F2CF6B";
 const RED = "#FF8A9B";
@@ -378,6 +380,80 @@ export function QualiopiProceduresV2Panel() {
           </div>
         ))}
       </div>
+
+      <section
+        className="rounded-[24px] p-5"
+        style={{ background: CARD, border: `1px solid ${BORDER}` }}
+      >
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-[18px] font-extrabold" style={{ color: TEXT }}>
+              Vidéos
+            </h2>
+            <p className="mt-1 text-[13px]" style={{ color: MUTED }}>
+              Tutos courts pour présenter chaque procédure à l&apos;équipe et à l&apos;auditeur.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {PROCEDURE_VIDEO_SLOTS.map((slot) => {
+            const match = procedures.find((p) => p.slug === slot.slug);
+            return (
+              <div
+                key={slot.slug}
+                className="overflow-hidden rounded-[20px]"
+                style={{ background: INNER, border: `1px solid ${BORDER2}` }}
+              >
+                {slot.videoUrl ? (
+                  <video
+                    className="aspect-video w-full bg-black object-contain"
+                    controls
+                    preload="metadata"
+                    src={slot.videoUrl}
+                  >
+                    Votre navigateur ne lit pas la vidéo.
+                  </video>
+                ) : (
+                  <div
+                    className="flex aspect-video items-center justify-center"
+                    style={{ background: "#080C18" }}
+                  >
+                    <span
+                      className="rounded-full px-3 py-1 text-[12px] font-bold"
+                      style={{
+                        background: "rgba(242,207,107,.12)",
+                        color: AMBER,
+                        border: "1px solid rgba(242,207,107,.35)",
+                      }}
+                    >
+                      À venir
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-start justify-between gap-2 px-3.5 py-3">
+                  <p className="text-[13.5px] font-bold leading-snug" style={{ color: TEXT }}>
+                    {slot.title}
+                  </p>
+                  {match ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuery({ id: match.id });
+                        setMode("preview");
+                        setEditKey(null);
+                      }}
+                      className="shrink-0 text-[12px] font-semibold"
+                      style={{ color: VIOLET_SOFT }}
+                    >
+                      Ouvrir ›
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {loading ? (
         <div className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)_300px]">

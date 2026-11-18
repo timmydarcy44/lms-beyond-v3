@@ -38,7 +38,8 @@ export const PROCEDURE_VIDEO_SLOTS: ProcedureVideoSlot[] = [
   {
     slug: "formateurs",
     title: "Plan de développement des compétences des formateurs",
-    videoUrl: null,
+    videoUrl:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/tuto_competences_formateurs_voixoff.mp4",
   },
   {
     slug: "signalements",

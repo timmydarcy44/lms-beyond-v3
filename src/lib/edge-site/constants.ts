@@ -33,7 +33,7 @@ export const EDGE_HREFS = {
   /** Inscription entreprise — essai 30 jours (edgebs.fr/entreprises/connexion) */
   entrepriseSignup: "/entreprises/connexion",
   candidater: "/postuler/commercial-ia",
-  ecole: "#ecole",
+  ecole: "/ecole",
   aPropos: "#a-propos",
 } as const;
 

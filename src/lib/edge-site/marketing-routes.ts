@@ -9,10 +9,15 @@ export const EDGE_MARKETING_PATHS = {
   formationsBts: "/formations/bts",
   formationsBachelor: "/formations/bachelor",
   formationsMastere: "/formations/mastere",
+  /** Hub marque Byound School (landing campagne). */
+  ecole: "/ecole",
   ecoleNtcAiBusiness: "/ecole/ntc/ai-business",
   ecoleNtcBusinessSport: "/ecole/ntc/business-sport",
   ecoleNtcRealEstate: "/ecole/ntc/real-estate",
   ecoleCandidater: "/ecole/candidater",
+  /** Chooser 3 portes (École / Entreprise / Particulier) — CTA header ambigu. */
+  rejoindre: "/rejoindre",
+  /** Legacy : redirige vers /ecole (contenu « comprendre l’alternance » dans le hub). */
   alternance: "/alternance",
   admissions: "/admissions",
   financement: "/financement",

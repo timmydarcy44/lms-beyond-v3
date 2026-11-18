@@ -57,6 +57,8 @@ export type NeoBarAction = {
 export type NeoMegaMenuConfig = {
   id: "ecole" | "entreprises" | "particuliers" | "plateforme";
   label: string;
+  /** Si défini, le label du nav est un lien (hover ouvre toujours le mega). */
+  href?: string;
   tiles: [NeoTile, NeoTile];
   side: NeoTextSection[];
   bar: {
@@ -70,6 +72,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
   const school: NeoMegaMenuConfig = {
     id: "ecole",
     label: "École",
+    href: routes.ecole,
     tiles: [
       {
         id: "bachelor",
@@ -155,10 +158,10 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
       },
     ],
     bar: {
-      textLink: { label: "Découvrir Byound School →", href: routes.alternance },
+      textLink: { label: "Découvrir Byound School →", href: routes.ecole },
       actions: [
         { label: "Accéder à mon espace", href: "/particuliers/login", variant: "secondary" },
-        { label: "Créer un compte", href: routes.ecoleCandidater, variant: "primary" },
+        { label: "Candidater", href: routes.ecoleCandidater, variant: "primary" },
       ],
     },
   };
@@ -166,6 +169,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
   const business: NeoMegaMenuConfig = {
     id: "entreprises",
     label: "Entreprises",
+    href: routes.business,
     tiles: [
       {
         id: "former",
@@ -219,6 +223,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
   const particuliers: NeoMegaMenuConfig = {
     id: "particuliers",
     label: "Particuliers",
+    href: routes.particulier,
     tiles: [
       {
         id: "courtes",
@@ -269,6 +274,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
   const plateforme: NeoMegaMenuConfig = {
     id: "plateforme",
     label: "La plateforme",
+    href: routes.businessPlateformeCompetences,
     tiles: [
       {
         id: "profil",

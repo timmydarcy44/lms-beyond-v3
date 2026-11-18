@@ -20,6 +20,7 @@ type Props = {
   config: EdgePremiumConfig;
   loginHref: string;
   discoverHref: string;
+  discoverLabel?: string;
   light?: boolean;
 };
 
@@ -29,6 +30,7 @@ export function EdgePremiumMobileMenu({
   config,
   loginHref,
   discoverHref,
+  discoverLabel = "Créer un compte",
   light = false,
 }: Props) {
   const tabs = getMobileRevolutTabs(config).filter(
@@ -92,21 +94,51 @@ export function EdgePremiumMobileMenu({
         {neoMenus.map((menu) => {
           const open = openPanel === menu.id;
           const current =
-            (menu.id === "entreprises" && pathname.includes("/business/open-badges")) ||
+            (menu.id === "ecole" &&
+              (pathname.includes("/ecole") || pathname.includes("/alternance"))) ||
+            (menu.id === "entreprises" &&
+              (pathname.includes("/business") || pathname.includes("/entreprises"))) ||
+            (menu.id === "particuliers" && pathname.includes("/particuliers")) ||
             (menu.id === "plateforme" && pathname.includes("/business/diagnostics"));
           return (
             <div key={menu.id} className="border-b border-white/10">
-              <button
-                type="button"
-                className={cn("flex min-h-14 w-full items-center justify-between py-4 text-left text-[17px] font-bold", current ? "text-[#A99BFF]" : "text-white")}
-                aria-current={current ? "page" : undefined}
-                aria-expanded={open}
-                aria-controls={`mobile-mega-${menu.id}`}
-                onClick={() => setOpenPanel((current) => (current === menu.id ? null : menu.id))}
-              >
-                {menu.label}
-                <ChevronRight className={cn("transition-transform", open && "rotate-90")} size={18} aria-hidden />
-              </button>
+              <div className="flex min-h-14 items-center gap-2">
+                {menu.href ? (
+                  <Link
+                    href={menu.href}
+                    className={cn(
+                      "flex-1 py-4 text-left text-[17px] font-bold",
+                      current ? "text-[#A99BFF]" : "text-white",
+                    )}
+                    aria-current={current ? "page" : undefined}
+                    onClick={onClose}
+                  >
+                    {menu.label}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex-1 py-4 text-left text-[17px] font-bold",
+                      current ? "text-[#A99BFF]" : "text-white",
+                    )}
+                    aria-current={current ? "page" : undefined}
+                    onClick={() => setOpenPanel((current) => (current === menu.id ? null : menu.id))}
+                  >
+                    {menu.label}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="inline-flex h-14 w-12 items-center justify-center text-white"
+                  aria-expanded={open}
+                  aria-controls={`mobile-mega-${menu.id}`}
+                  aria-label={`Ouvrir le menu ${menu.label}`}
+                  onClick={() => setOpenPanel((current) => (current === menu.id ? null : menu.id))}
+                >
+                  <ChevronRight className={cn("transition-transform", open && "rotate-90")} size={18} aria-hidden />
+                </button>
+              </div>
               {open ? (
                 <div id={`mobile-mega-${menu.id}`} className="pb-5">
                   <MegaMenu menu={menu} id={`mobile-panel-${menu.id}`} onNavigate={onClose} mobile />
@@ -185,7 +217,7 @@ export function EdgePremiumMobileMenu({
             className="w-full"
             onClick={onClose}
           >
-            Créer un compte
+            {discoverLabel}
           </EdgePremiumButton>
         </div>
       </div>

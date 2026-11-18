@@ -30,7 +30,7 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
     {
       id: "alternants",
       label: "École",
-      discoverHref: routes.alternance,
+      discoverHref: routes.ecole,
       discoverLabel: megaApprenants.headerTitle,
       sections: megaApprenants.columns.flatMap((col) => {
         const groups = "groups" in col ? col.groups : [];
@@ -47,9 +47,9 @@ export function getMobileRevolutTabs(config: EdgePremiumConfig): MobileRevolutTa
           },
         ];
       }),
-      editorialTitle: "CFA Byound — rentrée 2027",
-      editorialCtaLabel: "Manifestez votre intérêt",
-      editorialCtaHref: routes.contact,
+      editorialTitle: "Byound School — inscriptions ouvertes",
+      editorialCtaLabel: "Candidater",
+      editorialCtaHref: routes.ecoleCandidater,
     },
     {
       id: "entreprises",

@@ -73,13 +73,13 @@ export function getHomeContent(routes: EdgeMarketingRoutes, host?: string | null
   );
   return {
     hero: {
-      school: routes.alternance,
+      school: routes.ecole,
       business: routes.business,
     },
     formations: visible,
     moreFormations: more,
     moreHref: routes.formations,
-    schoolHref: routes.alternance,
+    schoolHref: routes.ecole,
     businessHref: routes.business,
     tests: [
       {

@@ -14,6 +14,7 @@ export const EDGE_BS_LEGACY_PUBLIC_PREFIXES = [
   "/votre-orientation",
   "/postuler",
   "/ecole",
+  "/rejoindre",
   "/financer-ma-formation",
 ] as const;
 

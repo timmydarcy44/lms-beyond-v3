@@ -36,7 +36,7 @@ export default async function Page() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
       <div className={manrope.className}>
         <FinancementPage
-          schoolHref={routes.alternance}
+          schoolHref={routes.ecole}
           contactHref={routes.contact}
           offresHref="/offres"
           entreprisesHref={routes.entreprises}

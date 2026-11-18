@@ -57,7 +57,7 @@ export function EdgePremiumHero() {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <EdgePremiumButton
-              href={routes.alternance}
+              href={routes.ecole}
               variant="white"
               className="sm:min-w-[200px]"
             >

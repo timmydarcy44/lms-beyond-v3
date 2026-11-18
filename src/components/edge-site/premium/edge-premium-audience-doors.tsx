@@ -14,7 +14,7 @@ export function EdgePremiumAudienceDoors() {
       title: "Construisez votre avenir.",
       description: "École, alternance et reconversion à Caen.",
       cta: "Explorer School",
-      href: routes.alternance,
+      href: routes.ecole,
       image: EDGE_PREMIUM_IMAGES.apprenants,
       imagePosition: "center",
     },

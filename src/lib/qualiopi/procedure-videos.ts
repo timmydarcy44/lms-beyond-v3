@@ -32,7 +32,8 @@ export const PROCEDURE_VIDEO_SLOTS: ProcedureVideoSlot[] = [
   {
     slug: "moyens",
     title: "Moyens matériels et locaux",
-    videoUrl: null,
+    videoUrl:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/tuto_moyens_locaux_voixoff.mp4",
   },
   {
     slug: "formateurs",

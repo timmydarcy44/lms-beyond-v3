@@ -26,7 +26,8 @@ export const PROCEDURE_VIDEO_SLOTS: ProcedureVideoSlot[] = [
   {
     slug: "paq",
     title: "Comité qualité et plan d’amélioration",
-    videoUrl: null,
+    videoUrl:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/tuto_comite_qualite_voixoff.mp4",
   },
   {
     slug: "moyens",

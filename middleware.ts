@@ -455,10 +455,13 @@ async function runMiddleware(request: NextRequest) {
   const clubDashboardPath = isClubDashboardPath(url.pathname);
   const partenaireDashboardPath = isPartenaireDashboardPath(url.pathname);
 
-  // Club / partenaire : beyondcenter.fr uniquement (jamais sur EDGE).
+  // Club / partenaire : beyondcenter.fr uniquement (jamais sur EDGE),
+  // sauf Jade démo et super-admins allowlistés (ex. timmydarcy44@gmail.com).
   if ((clubDashboardPath || partenaireDashboardPath) && !canServeClubPartenaireDashboards(hostWithoutPort)) {
     const clubProfile = await fetchProfileForRequest(request);
-    if (!isJadeDemoEmail(clubProfile?.email)) {
+    const privileged =
+      isJadeDemoEmail(clubProfile?.email) || isSuperAdminEmailAllowlisted(clubProfile?.email);
+    if (!privileged) {
       return NextResponse.redirect(new URL("/", request.url));
     }
   }

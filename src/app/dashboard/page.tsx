@@ -12,6 +12,8 @@ import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 import { requireSession } from "@/lib/auth/session";
 import { headers } from "next/headers";
 import { canServeClubPartenaireDashboards } from "@/lib/auth/beyond-center-host";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 
 type ProfileAccessRow = {
   id: string;
@@ -52,7 +54,12 @@ export default async function DashboardPage() {
 
   const roleKeys = collectProfileRoleKeys(profile);
   const isDemoOnly = roleKeys.length === 1 && roleKeys[0] === "demo";
-  const clubPartenaireEnabled = canServeClubPartenaireDashboards((await headers()).get("host"));
+  const clubPartenaireEnabled =
+    canServeClubPartenaireDashboards((await headers()).get("host")) ||
+    isSuperAdminEmailAllowlisted(session.email) ||
+    isJadeDemoEmail(session.email) ||
+    isSuperAdminEmailAllowlisted(profile?.email) ||
+    isJadeDemoEmail(profile?.email);
   const isClubPartenaireHref = (href: string) =>
     href === "/dashboard/club" ||
     href.startsWith("/dashboard/club/") ||

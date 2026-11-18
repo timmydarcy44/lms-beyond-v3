@@ -10,6 +10,8 @@ import {
   isClubDashboardPath,
   isPartenaireDashboardPath,
 } from "@/lib/auth/beyond-center-host";
+import { isSuperAdminEmailAllowlisted } from "@/lib/auth/super-admin-email-allowlist";
+import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { afterSuccessfulAuth } from "@/lib/cfa/sync-tutor-assignment";
 import { getServerClient, getServiceRoleClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
@@ -58,7 +60,12 @@ export async function POST(request: Request) {
   }
 
   const host = request.headers.get("host");
-  const clubPartenaireEnabled = canServeClubPartenaireDashboards(host);
+  const clubPartenaireEnabled =
+    canServeClubPartenaireDashboards(host) ||
+    isSuperAdminEmailAllowlisted(emailValue) ||
+    isJadeDemoEmail(emailValue) ||
+    isSuperAdminEmailAllowlisted(profile?.email) ||
+    isJadeDemoEmail(profile?.email);
   const isClubPartenaireHref = (href: string) =>
     isClubDashboardPath(href) || isPartenaireDashboardPath(href);
 

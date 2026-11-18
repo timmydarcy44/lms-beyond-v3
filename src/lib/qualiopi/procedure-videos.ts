@@ -18,6 +18,12 @@ export const PROCEDURE_VIDEO_SLOTS: ProcedureVideoSlot[] = [
       "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/tuto_reclamation_voixoff.mp4",
   },
   {
+    slug: "handicap",
+    title: "Accueil des personnes en situation de handicap",
+    videoUrl:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/tuto_accueil_handicap_epure.mp4",
+  },
+  {
     slug: "paq",
     title: "Comité qualité et plan d’amélioration",
     videoUrl: null,

@@ -163,18 +163,14 @@ export default async function MemRetailExperiencePage() {
     <EdgePremiumShell overlayNav showTopBar={false}>
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
         <div
-          className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-30 lg:w-[58%]"
+          className="absolute inset-y-0 right-0 w-full bg-cover bg-center lg:w-[62%]"
           style={{
             backgroundImage: `url("${facts.heroImageUrl || EDGE_PREMIUM_IMAGES.business}")`,
           }}
           aria-hidden
         />
         <div
-          className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.96)_40%,rgba(7,11,31,.38)_78%,rgba(7,11,31,.7)_100%)]"
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_28%_34%,rgba(83,72,255,.42),transparent_42%),radial-gradient(ellipse_at_78%_74%,rgba(30,104,255,.22),transparent_46%)]"
+          className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.92)_34%,rgba(7,11,31,.45)_58%,rgba(7,11,31,.12)_78%,transparent_100%)]"
           aria-hidden
         />
 

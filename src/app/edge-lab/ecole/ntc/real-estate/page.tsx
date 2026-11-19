@@ -104,53 +104,51 @@ export default async function NtcRealEstatePage() {
   return (
     <EdgePremiumShell overlayNav showTopBar={false}>
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
-        <div className="absolute inset-y-0 right-0 w-full bg-cover bg-center opacity-35 lg:w-[58%]" style={{ backgroundImage: `url("${facts.heroImageUrl || HERO}")` }} aria-hidden />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.96)_40%,rgba(7,11,31,.38)_78%,rgba(7,11,31,.7)_100%)]" aria-hidden />
+        <div
+          className="absolute inset-y-0 right-0 w-full bg-cover bg-center lg:w-[62%]"
+          style={{ backgroundImage: `url("${facts.heroImageUrl || HERO}")` }}
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.92)_34%,rgba(7,11,31,.45)_58%,rgba(7,11,31,.12)_78%,transparent_100%)]"
+          aria-hidden
+        />
         <div className="relative mx-auto flex min-h-[92svh] max-w-7xl items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20 lg:px-10 lg:pb-24">
-          <div className="grid w-full items-end gap-10 lg:grid-cols-[1.15fr_.85fr]">
-            <div className="max-w-3xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-white/55">Byound School · Alternance</p>
-              <h1 className="mt-7 text-[clamp(3.7rem,8vw,7.5rem)] font-semibold leading-[0.84] tracking-[-0.065em]">
-                Real Estate
-              </h1>
-              <p className="mt-4 text-[clamp(1.15rem,2vw,1.65rem)] font-medium tracking-[-0.03em] text-white/90">
-                Négociateur technico-commercial
-              </p>
-              <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">
-                Niveau Bac+2 · Titre du Ministère du Travail
-              </p>
-              <p className="mt-8 text-[clamp(1.25rem,2.4vw,2rem)] font-medium tracking-[-0.03em]">
-                L’immobilier évolue.
-                <br />
-                Apprenez à en développer le business.
-              </p>
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
-                Préparez le titre professionnel Négociateur technico-commercial et développez une expertise du développement commercial appliqué à l’écosystème immobilier.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-2">
-                {["Niveau Bac+2", "Alternance", "Caen", "Real Estate"].map((item) => (
-                  <span key={item} className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium backdrop-blur">
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-5 text-sm text-white/55">1 titre professionnel + une spécialisation validée par des Open Badges.</p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/ecole/candidater?track=ntc&specialization=real_estate" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-[#070b1f] transition hover:bg-white/90">
-                  Candidater
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="#programme" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-7 text-sm font-semibold transition hover:bg-white/[0.1]">
-                  Découvrir le programme
-                </Link>
-              </div>
+          <div className="max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-white/55">Byound School · Alternance</p>
+            <h1 className="mt-7 text-[clamp(3.7rem,8vw,7.5rem)] font-semibold leading-[0.84] tracking-[-0.065em]">
+              Real Estate
+            </h1>
+            <p className="mt-4 text-[clamp(1.15rem,2vw,1.65rem)] font-medium tracking-[-0.03em] text-white/90">
+              Négociateur technico-commercial
+            </p>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">
+              Niveau Bac+2 · Titre du Ministère du Travail
+            </p>
+            <p className="mt-8 text-[clamp(1.25rem,2.4vw,2rem)] font-medium tracking-[-0.03em]">
+              L’immobilier évolue.
+              <br />
+              Apprenez à en développer le business.
+            </p>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+              Préparez le titre professionnel Négociateur technico-commercial et développez une expertise du développement commercial appliqué à l’écosystème immobilier.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-2">
+              {["Niveau Bac+2", "Alternance", "Caen", "Real Estate"].map((item) => (
+                <span key={item} className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium backdrop-blur">
+                  {item}
+                </span>
+              ))}
             </div>
-            <div className="hidden rounded-[28px] border border-white/10 bg-white/[0.06] p-6 backdrop-blur lg:block">
-              <div className="relative mx-auto aspect-square w-full max-w-[220px]">
-                <Image src={badges[3].image} alt="Open Badge PropTech & Digital Business" fill sizes="220px" className="object-contain" />
-              </div>
-              <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">Alternance · Caen</p>
-              <p className="mt-2 text-xl font-semibold tracking-[-0.03em]">Développer le business de l’immobilier.</p>
+            <p className="mt-5 text-sm text-white/55">1 titre professionnel + une spécialisation validée par des Open Badges.</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/ecole/candidater?track=ntc&specialization=real_estate" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold text-[#070b1f] transition hover:bg-white/90">
+                Candidater
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="#programme" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-7 text-sm font-semibold transition hover:bg-white/[0.1]">
+                Découvrir le programme
+              </Link>
             </div>
           </div>
         </div>

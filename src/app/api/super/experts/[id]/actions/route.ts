@@ -155,6 +155,7 @@ export async function POST(
       revalidatePath("/ecole/mem/merchandising");
       revalidatePath("/ecole/mem/luxury-premium");
       revalidatePath("/ecole/mem/sport-retail");
+      revalidatePath("/ecole/rdc/growth-acquisition");
       revalidatePath("/edge-lab/ecole/ntc/ai-business");
       revalidatePath("/edge-lab/ecole/ntc/business-sport");
       revalidatePath("/edge-lab/ecole/ntc/real-estate");
@@ -162,6 +163,7 @@ export async function POST(
       revalidatePath("/edge-lab/ecole/mem/merchandising");
       revalidatePath("/edge-lab/ecole/mem/luxury-premium");
       revalidatePath("/edge-lab/ecole/mem/sport-retail");
+      revalidatePath("/edge-lab/ecole/rdc/growth-acquisition");
       revalidatePath("/");
       revalidatePath("/edge-lab");
     }

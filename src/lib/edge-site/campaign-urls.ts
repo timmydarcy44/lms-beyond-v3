@@ -12,6 +12,7 @@
  * - https://edgebs.fr/ecole/mem/merchandising?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/mem/luxury-premium?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/mem/sport-retail?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
+ * - https://edgebs.fr/ecole/rdc/growth-acquisition?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  *
  * Ne pas envoyer la campagne sur la home ni sur « Créer un compte » entreprise.
  */

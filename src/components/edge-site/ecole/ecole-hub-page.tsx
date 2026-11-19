@@ -54,6 +54,13 @@ const CURSUS = [
     body: "Manager d’établissement marchand avec une spécialisation magasin de sport et boutique de club.",
     hrefKey: "ecoleMemSportRetail" as const,
   },
+  {
+    slug: "growth-acquisition",
+    title: "Growth & Acquisition",
+    eyebrow: "Bac+3 · RDC",
+    body: "Responsable de développement commercial avec une spécialisation acquisition, expérimentation et croissance.",
+    hrefKey: "ecoleRdcGrowthAcquisition" as const,
+  },
 ] as const;
 
 const STEPS = [

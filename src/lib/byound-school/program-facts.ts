@@ -28,6 +28,12 @@ export type ByoundProgramFacts = {
 
 const NTC = new Set(["ai_business", "sport_business", "real_estate"]);
 const MEM = new Set(["retail_experience", "merchandising", "luxury_premium", "sport_retail"]);
+const RDC = new Set([
+  "growth_acquisition",
+  "entrepreneurship",
+  "international_business",
+  "strategic_partnerships",
+]);
 
 function familyLevel(specialization: CfaSpecialization): string {
   if (NTC.has(specialization) || MEM.has(specialization)) {
@@ -40,6 +46,7 @@ function candidaterHref(specialization: CfaSpecialization): string {
   const params = new URLSearchParams({ specialization });
   if (NTC.has(specialization)) params.set("track", "ntc");
   if (MEM.has(specialization)) params.set("track", "mem");
+  if (RDC.has(specialization)) params.set("track", "rdc");
   return `/ecole/candidater?${params.toString()}`;
 }
 
@@ -52,6 +59,7 @@ export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, stri
   merchandising: "/ecole/mem/merchandising",
   luxury_premium: "/ecole/mem/luxury-premium",
   sport_retail: "/ecole/mem/sport-retail",
+  growth_acquisition: "/ecole/rdc/growth-acquisition",
 };
 
 export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {

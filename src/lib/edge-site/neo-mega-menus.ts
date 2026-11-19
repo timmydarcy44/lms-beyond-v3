@@ -123,8 +123,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
             label: "Business Development",
             href: routes.formationsMastere,
             pills: [
-              // TODO: aucune page Growth & Acquisition
-              { label: "Growth & Acquisition", href: MISSING_ROUTE },
+              { label: "Growth & Acquisition", href: routes.ecoleRdcGrowthAcquisition },
               // TODO: aucune page Entrepreneurship
               { label: "Entrepreneurship", href: MISSING_ROUTE },
               // TODO: aucune page International Business

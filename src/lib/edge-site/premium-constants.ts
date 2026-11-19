@@ -191,7 +191,7 @@ export function getEdgePremiumConfig(host?: string | null) {
             {
               title: "Business Development",
               links: [
-                { label: "Growth & Acquisition", href: `${R.alternance}#rdc-growth-acquisition` },
+                { label: "Growth & Acquisition", href: R.ecoleRdcGrowthAcquisition },
                 { label: "Entrepreneurship", href: `${R.alternance}#rdc-entrepreneurship` },
                 { label: "International Business", href: `${R.alternance}#rdc-international-business` },
                 { label: "Strategic Partnerships", href: `${R.alternance}#rdc-strategic-partnerships` },

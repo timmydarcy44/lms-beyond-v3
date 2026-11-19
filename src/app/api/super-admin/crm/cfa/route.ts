@@ -68,6 +68,44 @@ export async function PATCH(request: NextRequest) {
   }
   const body = await request.json().catch(() => null);
   const action = body && typeof body === "object" && "action" in body ? String((body as { action?: unknown }).action ?? "") : "";
+  const rawId =
+    body && typeof body === "object" && "id" in body ? String((body as { id?: unknown }).id ?? "").trim() : "";
+
+  if (action === "save_jury_scores" && rawId) {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const scores = (body as { scores?: Record<string, unknown> }).scores ?? {};
+    const actor = await getServerClient();
+    const actorUser = actor ? await actor.auth.getUser() : null;
+    const payload = {
+      ...scores,
+      evaluatorId: actorUser?.data.user?.id ?? null,
+      evaluatorName: actorUser?.data.user?.email ?? null,
+      evaluatedAt: new Date().toISOString(),
+    };
+    const { error } = await db.from("cfa_applications").update({ jury_scores: payload }).eq("id", rawId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true, jury_scores: payload });
+  }
+
+  if (action === "mark_interview_realized" && rawId) {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const realizedAt = new Date().toISOString();
+    const { error } = await db
+      .from("cfa_applications")
+      .update({ interview_realized_at: realizedAt, status: "interview" })
+      .eq("id", rawId);
+    if (error && /interview_realized_at|schema cache/i.test(error.message)) {
+      return NextResponse.json(
+        { error: "Appliquez la migration interview_realized_at (20261119120000)." },
+        { status: 400 },
+      );
+    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true, interview_realized_at: realizedAt });
+  }
+
   const schema = action === "save_cerfa"
     ? saveCerfaSchema
     : action === "mark_fee"
@@ -112,8 +150,33 @@ export async function PATCH(request: NextRequest) {
   if (input.action === "mark_fee") {
     const db = getServiceRoleClient();
     if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const current = await db
+      .from("cfa_applications")
+      .select("cerfa_data, financing_path")
+      .eq("id", id)
+      .maybeSingle();
+    const financing = String(current.data?.financing_path ?? "alternance");
+    if (financing === "alternance") {
+      return NextResponse.json(
+        {
+          error:
+            "Frais d’inscription désactivés pour l’apprentissage tant que la validation métier n’est pas faite.",
+        },
+        { status: 409 },
+      );
+    }
+    const feeSettings = await db
+      .from("admission_fee_settings")
+      .select("fees_applicable")
+      .eq("financing_path", financing)
+      .maybeSingle();
+    if (feeSettings.data && feeSettings.data.fees_applicable === false) {
+      return NextResponse.json(
+        { error: "Frais d’inscription non applicables pour ce parcours." },
+        { status: 409 },
+      );
+    }
     const method = input.method;
-    const current = await db.from("cfa_applications").select("cerfa_data").eq("id", id).maybeSingle();
     const cerfa = { ...((current.data?.cerfa_data ?? {}) as Record<string, string>), _fee_method: method };
     const { error } = await db
       .from("cfa_applications")
@@ -167,8 +230,28 @@ export async function PATCH(request: NextRequest) {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  const previous = await db.from("cfa_applications").select("status").eq("id", id).maybeSingle();
+  let previous = await db
+    .from("cfa_applications")
+    .select("status, interview_realized_at, interview_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (previous.error && /interview_realized_at|schema cache/i.test(previous.error.message)) {
+    previous = await db.from("cfa_applications").select("status, interview_at").eq("id", id).maybeSingle();
+  }
   const previousStatus = String((previous.data as { status?: string } | null)?.status ?? "");
+  const interviewRealizedAt = (previous.data as { interview_realized_at?: string | null } | null)
+    ?.interview_realized_at;
+  const interviewRealizedColumnReady = !previous.error;
+
+  if (status === "review" && interviewRealizedColumnReady && !interviewRealizedAt) {
+    return NextResponse.json(
+      {
+        error:
+          "Passez d’abord l’entretien en « réalisé » avant l’étape Décision.",
+      },
+      { status: 409 },
+    );
+  }
 
   if (status === "contract") {
     if (previousStatus !== "admitted" && previousStatus !== "contract") {

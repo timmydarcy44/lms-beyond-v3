@@ -6,8 +6,17 @@ import { Building2, Calendar, ClipboardList, FolderOpen, ListChecks, Mail } from
 import { Manrope } from "next/font/google";
 
 import { CfaJuryChallengePanel } from "@/components/control/cfa-jury-challenge-panel";
+import { computeAdmissionEligibility } from "@/lib/cfa/admission-eligibility";
+import { isResponseComplete } from "@/lib/cfa/admission-challenge";
 import {
-  CFA_CHALLENGE_QUESTIONS,
+  ADMISSION_STAGES,
+  admissionStageFromApplication,
+  dbStatusForStage,
+  type AdmissionStageId,
+} from "@/lib/cfa/admission-stages";
+import { formatPersonName } from "@/lib/cfa/format-org-name";
+import { prefillFromParcours } from "@/lib/cfa/inscription-prefill";
+import {
   getCfaSpecializationLabel,
   type CfaApplication,
   type CfaApplicationStatus,
@@ -15,17 +24,15 @@ import {
 
 const manrope = Manrope({ subsets: ["latin"] });
 
-const STEPS: Array<{ id: CfaApplicationStatus; label: string }> = [
-  { id: "brochure", label: "Fiche cursus" },
-  { id: "profile", label: "Candidature" },
-  { id: "challenge", label: "Challenge" },
-  { id: "dossier", label: "Dossier" },
-  { id: "interview", label: "Entretien" },
-  { id: "review", label: "Revue" },
-  { id: "administrative", label: "Administratif" },
-  { id: "admitted", label: "Admis" },
-  { id: "contract", label: "En contrat" },
-];
+const BYOUND_COMPANY_EXCLUSIONS = [/byound/i, /byound business/i, /byound school/i];
+
+function isExcludedCompany(name: string) {
+  const n = name.trim();
+  if (!n) return true;
+  if (BYOUND_COMPANY_EXCLUSIONS.some((re) => re.test(n))) return true;
+  if (/\btest\b/i.test(n) || /@byound\.test/i.test(n)) return true;
+  return false;
+}
 
 const CERFA_FIELDS = [
   ["lastName", "Nom"],
@@ -138,18 +145,42 @@ type Tutor = { id: string; company_id: string; user_id: string | null; first_nam
 type Placement = { id: string; company_id: string; tutor_id: string | null; status: string; started_at: string | null; ended_at: string | null };
 
 function ageLabel(application: CfaApplication, cerfa: Record<string, string>) {
-  const birth = cerfa.birthDate;
-  if (birth) {
-    const date = new Date(birth);
-    if (!Number.isNaN(date.getTime())) {
-      const now = new Date();
-      let age = now.getFullYear() - date.getFullYear();
-      const month = now.getMonth() - date.getMonth();
-      if (month < 0 || (month === 0 && now.getDate() < date.getDate())) age -= 1;
-      if (age >= 0 && age < 120) return `${age} ans`;
-    }
+  const birth =
+    cerfa.birthDate ||
+    (application as { birth_date?: string | null }).birth_date ||
+    "";
+  if (!birth) return null;
+  const date = new Date(birth);
+  if (Number.isNaN(date.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const month = now.getMonth() - date.getMonth();
+  if (month < 0 || (month === 0 && now.getDate() < date.getDate())) age -= 1;
+  if (age >= 0 && age < 120) return `${age} ans`;
+  return null;
+}
+
+function diplomaPill(application: CfaApplication) {
+  const parcours = (application.parcours ?? {}) as { diploma?: string; diplomaYear?: string };
+  const map: Record<string, string> = {
+    brevet: "Brevet",
+    cap_bep: "CAP / BEP",
+    bac_general: "Bac général",
+    bac_techno: "Bac techno",
+    bac_pro: "Bac pro",
+    bac_plus_1: "Bac+1",
+    bac_plus_2: "Bac+2",
+    bac_plus_3: "Bac+3 et plus",
+    aucun: "Aucun diplôme",
+  };
+  if (parcours.diploma && map[parcours.diploma]) {
+    return parcours.diplomaYear
+      ? `${map[parcours.diploma]} · ${parcours.diplomaYear}`
+      : map[parcours.diploma];
   }
-  return application.age != null ? `${application.age} ans` : null;
+  const edu = (application.education_level || "").trim();
+  if (!edu || /bac en cours/i.test(edu)) return null;
+  return edu;
 }
 
 function createdLabel(iso: string) {
@@ -225,6 +256,22 @@ export function FicheApprenant({ id }: { id: string }) {
         next.firstNames = next.firstNames || found.first_name;
         next.email = next.email || found.email;
         next.phone = next.phone || found.phone || "";
+        const hints = prefillFromParcours(found.parcours as Record<string, unknown> | null);
+        if (!next.highestDiploma && hints.highestDiploma) {
+          next.highestDiploma = hints.highestDiploma;
+          next._prefill_highestDiploma = "1";
+        }
+        if (!next.priorSituation && hints.priorSituation) {
+          next.priorSituation = hints.priorSituation;
+          next._prefill_priorSituation = "1";
+        }
+        if (!next.lastClass && hints.lastClass) {
+          next.lastClass = hints.lastClass;
+          next._prefill_lastClass = "1";
+        }
+        if (!next.birthDate && (found as { birth_date?: string | null }).birth_date) {
+          next.birthDate = String((found as { birth_date?: string | null }).birth_date);
+        }
       }
       loadedCerfa.current = JSON.stringify(next);
       setShowNss(false);
@@ -292,28 +339,78 @@ export function FicheApprenant({ id }: { id: string }) {
   const tutor = tutors.find((item) => item.id === currentPlacement?.tutor_id) ?? null;
   const companyTutors = tutors.filter((item) => item.company_id === company?.id);
   const placed = Boolean(currentPlacement?.status === "active" && tutor);
-  const visibleCompanies = companies.filter((item) => {
-    const query = companyQuery.trim().toLowerCase();
-    if (!query) return true;
-    return [item.company_name, item.siret, item.city].filter(Boolean).join(" ").toLowerCase().includes(query);
-  });
+  const candidateCompanyName = String(
+    ((application?.parcours ?? {}) as { companyName?: string }).companyName || "",
+  ).trim();
+  const visibleCompanies = companies
+    .filter((item) => !isExcludedCompany(item.company_name))
+    .filter((item) => {
+      const query = companyQuery.trim().toLowerCase();
+      if (!query) return true;
+      return [item.company_name, item.siret, item.city].filter(Boolean).join(" ").toLowerCase().includes(query);
+    })
+    .sort((a, b) => {
+      if (!candidateCompanyName) return 0;
+      const aMatch = a.company_name.toLowerCase().includes(candidateCompanyName.toLowerCase());
+      const bMatch = b.company_name.toLowerCase().includes(candidateCompanyName.toLowerCase());
+      if (aMatch === bMatch) return 0;
+      return aMatch ? -1 : 1;
+    });
 
-  const filledCerfa = CERFA_FIELDS.filter(([key]) => key === "socialSecurityNumber" ? Boolean((cerfa[key] ?? "").trim() || cerfa.socialSecurityNumberMask) : key === "rqth" ? Boolean((cerfa[key] ?? "").trim() || cerfa.rqthPresent) : Boolean((cerfa[key] ?? "").trim())).length;
-  const challengeCount = application ? CFA_CHALLENGE_QUESTIONS.filter((question) => (application.challenge_answers?.[question.id] ?? "").trim()).length : 0;
+  const showRqthField = Boolean(
+    application &&
+      (application.status === "administrative" ||
+        application.status === "admitted" ||
+        application.status === "contract"),
+  );
+  const feesApplicable = Boolean(
+    application &&
+      application.financing_path &&
+      application.financing_path !== "alternance",
+  );
+
+  const filledCerfa = CERFA_FIELDS.filter(([key]) => {
+    if (key === "rqth" && !showRqthField) return true; // hors sélection : ne pénalise pas le compteur
+    if (key === "socialSecurityNumber") return Boolean((cerfa[key] ?? "").trim() || cerfa.socialSecurityNumberMask);
+    if (key === "rqth") return Boolean((cerfa[key] ?? "").trim() || cerfa.rqthPresent);
+    return Boolean((cerfa[key] ?? "").trim());
+  }).length;
+  const challengeResponses = (application?.challenge_v2?.responses ?? []) as Array<{
+    format?: string;
+    text?: string;
+    mediaPath?: string;
+    mediaDurationSec?: number;
+  }>;
+  const challengeCount = challengeResponses.filter((r) =>
+    isResponseComplete({
+      questionId: "",
+      versionId: "",
+      slug: "",
+      label: "",
+      prompt: "",
+      format: (r.format as "text" | "audio" | "video") || "text",
+      text: r.text,
+      mediaPath: r.mediaPath,
+      mediaDurationSec: r.mediaDurationSec,
+    }),
+  ).length;
   const docsReceived = application ? DOCS.filter(([kind]) => application.administrative_document_urls?.[kind]).length : 0;
 
   const checks = useMemo(() => {
     if (!application) return [];
-    return [
-      { label: "Réponses au challenge", done: challengeCount === 4 },
+    const items = [
+      { label: "Réponses au challenge", done: challengeCount >= 3 },
       { label: "CV déposé", done: Boolean(application.cv_url) },
       { label: "Coordonnées", done: Boolean(application.email && application.phone) },
       { label: "Inscription complète", done: filledCerfa === CERFA_FIELDS.length },
       { label: "Entreprise et tuteur", done: placed },
       { label: "Pièces justificatives", done: docsReceived === DOCS.length },
-      { label: "Frais d'inscription", done: Boolean(application.registration_fee_paid_at) },
     ];
-  }, [application, challengeCount, filledCerfa, placed, docsReceived]);
+    if (feesApplicable) {
+      items.push({ label: "Frais d'inscription", done: Boolean(application.registration_fee_paid_at) });
+    }
+    return items;
+  }, [application, challengeCount, filledCerfa, placed, docsReceived, feesApplicable]);
 
   async function send(url: string, method: "POST" | "PATCH", body: unknown) {
     setBusy(true);
@@ -341,6 +438,7 @@ export function FicheApprenant({ id }: { id: string }) {
       return;
     }
     if (status === "contract" && !placed) return;
+    if (!window.confirm("Changer l’étape de cette candidature ?")) return;
     const response = await fetch("/api/super-admin/crm/cfa", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -356,6 +454,20 @@ export function FicheApprenant({ id }: { id: string }) {
     setMessage("Statut mis à jour.");
   }
 
+  async function changeStage(stageId: AdmissionStageId) {
+    const realized = (application as { interview_realized_at?: string | null } | null)?.interview_realized_at;
+    if (stageId === "decision" && !realized) {
+      setMessage("Marquez d’abord l’entretien comme réalisé avant l’étape Décision.");
+      return;
+    }
+    if (stageId === "submitted" || stageId === "interview") {
+      const status = dbStatusForStage(stageId);
+      await changeStatus(status);
+      return;
+    }
+    await changeStatus(dbStatusForStage(stageId));
+  }
+
   if (loading) {
     return <main className={`${manrope.className} min-h-screen bg-[#0A0F1E] px-6 py-10`}><div className="h-28 animate-pulse rounded-[26px] bg-[#111831]" /></main>;
   }
@@ -368,11 +480,26 @@ export function FicheApprenant({ id }: { id: string }) {
     );
   }
 
-  const stepIndex = STEPS.findIndex((step) => step.id === application.status);
+  const stageCtx = {
+    status: application.status,
+    interviewAt: application.interview_at,
+    interviewRealizedAt: (application as { interview_realized_at?: string | null }).interview_realized_at,
+  };
+  const currentStage = admissionStageFromApplication(stageCtx);
+  const stepIndex = currentStage ? ADMISSION_STAGES.findIndex((s) => s.id === currentStage) : -1;
+  const displayName = formatPersonName(`${application.first_name} ${application.last_name}`);
   const initials = `${application.first_name.charAt(0)}${application.last_name.charAt(0)}`.toUpperCase();
   const age = ageLabel(application, cerfa);
+  const diploma = diplomaPill(application);
+  const eligibility = computeAdmissionEligibility({
+    birthDate: cerfa.birthDate || (application as { birth_date?: string | null }).birth_date,
+    age: application.age,
+    parcoursDiploma: String((application.parcours as { diploma?: string } | null)?.diploma ?? ""),
+    hasRqth: null, // jamais révélé au jury ; serveur pourra enrichir plus tard
+  });
   const existingAccount = application.origin === "existing_account" || Boolean(application.profile_id);
   const placementLabel = !company ? "Sans entreprise" : placed ? "Placé" : "Tuteur à assigner";
+  const cerfaFieldTotal = showRqthField ? CERFA_FIELDS.length : CERFA_FIELDS.filter(([key]) => key !== "rqth").length;
 
   return (
     <main className={`${manrope.className} min-h-screen bg-[#0A0F1E] px-4 py-6 text-[#EEF1F8] sm:px-6`}>
@@ -384,17 +511,32 @@ export function FicheApprenant({ id }: { id: string }) {
           <div className="flex gap-4">
             <span className="flex h-[68px] w-[68px] items-center justify-center rounded-full bg-[#6E5BFF] text-xl font-extrabold">{initials}</span>
             <div>
-              <h1 className="text-[32px] font-extrabold leading-none">{application.first_name} {application.last_name}</h1>
+              <h1 className="text-[32px] font-extrabold leading-none">{displayName}</h1>
               <p className="mt-2 text-sm text-[#AEB6CC]">
                 {getCfaSpecializationLabel(application.specialization)} · {application.email}
                 {application.phone ? ` · ${application.phone}` : ""}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className={existingAccount ? "rounded-full bg-[#0E2A1D] px-3 py-1 font-semibold text-[#6BE3C0]" : "rounded-full bg-[#1A2340] px-3 py-1 font-semibold text-[#AEB6CC]"}>
-                  {existingAccount ? "Compte existant" : "Nouveau candidat"}
-                </span>
+                {currentStage ? (
+                  <span
+                    className="rounded-full px-3 py-1 font-semibold"
+                    style={{
+                      background: `${ADMISSION_STAGES.find((s) => s.id === currentStage)?.color}24`,
+                      color: ADMISSION_STAGES.find((s) => s.id === currentStage)?.color,
+                    }}
+                  >
+                    {ADMISSION_STAGES.find((s) => s.id === currentStage)?.label}
+                  </span>
+                ) : null}
                 {age ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-[#AEB6CC]">{age}</span> : null}
-                {application.education_level ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-[#AEB6CC]">{application.education_level}</span> : null}
+                {diploma ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-[#AEB6CC]">{diploma}</span> : null}
+                <span
+                  className={`rounded-full px-3 py-1 font-semibold ${
+                    eligibility.ok ? "bg-[#0E2A1D] text-[#6BE3C0]" : "bg-[#3A2A0E] text-[#F6D68B]"
+                  }`}
+                >
+                  {eligibility.label}
+                </span>
                 <span className="text-[#5D6785]">Fiche créée le {createdLabel(application.created_at)}</span>
                 {application.status === "rejected" ? <span className="rounded-full border border-[#FF8A98] px-3 py-1 font-semibold text-[#FF8A98]">Non retenu</span> : null}
               </div>
@@ -408,12 +550,12 @@ export function FicheApprenant({ id }: { id: string }) {
         </div>
         <div className="mt-6">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[#5D6785]">
-            <span>Étape actuelle : <strong className="font-extrabold text-[#EEF1F8]">{STEPS[stepIndex]?.label ?? "Non retenu"}</strong></span>
+            <span>Étape actuelle : <strong className="font-extrabold text-[#EEF1F8]">{ADMISSION_STAGES[stepIndex]?.label ?? "Non retenu"}</strong></span>
             <span>Cliquer sur une étape pour changer le statut</span>
           </div>
           <div role="radiogroup" aria-label="Statut de la candidature" className="flex items-center overflow-x-auto pb-1">
-            {STEPS.map((step, index) => {
-              const active = step.id === application.status;
+            {ADMISSION_STAGES.map((step, index) => {
+              const active = step.id === currentStage;
               const past = stepIndex >= 0 && index < stepIndex;
               const contractReady = application.status === "admitted" && placed;
               const locked = step.id === "contract" && application.status !== "contract" && !contractReady;
@@ -430,7 +572,7 @@ export function FicheApprenant({ id }: { id: string }) {
                     aria-checked={active}
                     disabled={busy || locked}
                     title={locked ? lockTitle : step.label}
-                    onClick={() => void changeStatus(step.id)}
+                    onClick={() => void changeStage(step.id)}
                     className={`h-9 shrink-0 rounded-full px-3 text-[11px] font-extrabold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6E5BFF] ${active ? "bg-[#6E5BFF] text-white" : past ? "bg-[#241C4A] text-[#B9AFFF]" : "bg-[#0B1122] text-[#5D6785]"} ${locked ? "cursor-not-allowed opacity-45" : ""}`}
                   >
                     {step.label}
@@ -445,10 +587,10 @@ export function FicheApprenant({ id }: { id: string }) {
       <nav aria-label="Sommaire" className="sticky top-3 z-20 mt-4 flex gap-2 overflow-x-auto min-[900px]:grid min-[900px]:grid-cols-5">
         {[
           { id: "entreprise", label: "Entreprise et tuteur", state: placementLabel, color: "#6E5BFF", done: placed },
-          { id: "candidature", label: "Candidature", state: `${challengeCount} / 4 réponses`, color: "#2F7CF6", done: challengeCount === 4 },
-          { id: "inscription", label: "Inscription", state: `${filledCerfa} / 17 champs`, color: "#14A37F", done: filledCerfa === CERFA_FIELDS.length },
+          { id: "candidature", label: "Candidature", state: `${challengeCount} / 3 réponses`, color: "#2F7CF6", done: challengeCount >= 3 },
+          { id: "inscription", label: "Inscription", state: `${filledCerfa} / ${cerfaFieldTotal} champs`, color: "#14A37F", done: filledCerfa >= cerfaFieldTotal },
           { id: "documents", label: "Documents", state: `${docsReceived} / 3 reçus`, color: "#E7A92C", done: docsReceived === DOCS.length },
-          { id: "entretien", label: "Entretien", state: application.interview_at ? "Planifié" : "À planifier", color: "#D9459E", done: Boolean(application.interview_at) },
+          { id: "entretien", label: "Entretien", state: (application as { interview_realized_at?: string | null }).interview_realized_at ? "Réalisé" : application.interview_at ? "Planifié" : "À planifier", color: "#D9459E", done: Boolean((application as { interview_realized_at?: string | null }).interview_realized_at || application.interview_at) },
         ].map((tile) => (
           <a key={tile.id} href={`#${tile.id}`} onClick={() => setOpenSections((current) => ({ ...current, [tile.id]: true }))} className={`min-w-[180px] rounded-[20px] border bg-[#111831] px-3 py-3 text-sm min-[900px]:min-w-0 ${visibleSection === tile.id ? "border-[#6E5BFF]" : "border-[#1A2340]"}`}>
             <span className="flex items-center gap-2 font-extrabold">
@@ -547,8 +689,17 @@ export function FicheApprenant({ id }: { id: string }) {
                 ) : (
                   <div className="mt-3 space-y-2">
                     <input value={companyQuery} onChange={(event) => setCompanyQuery(event.target.value)} placeholder="Nom, SIRET, ville" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
+                    {candidateCompanyName && application.alternance_status === "company_found" ? (
+                      <p className="rounded-2xl border border-[#5EDCC3]/30 bg-[#5EDCC3]/10 px-3 py-2 text-xs text-[#5EDCC3]">
+                        Indiquée par le candidat : {candidateCompanyName}
+                      </p>
+                    ) : null}
                     <ul className="max-h-48 overflow-auto rounded-2xl border border-[#1A2340]">
-                      {visibleCompanies.map((item) => (
+                      {visibleCompanies.map((item) => {
+                        const indicated =
+                          Boolean(candidateCompanyName) &&
+                          item.company_name.toLowerCase().includes(candidateCompanyName.toLowerCase());
+                        return (
                         <li key={item.id}>
                           <button type="button" className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[#0B1122]" onClick={() => {
                             if (currentPlacement && !window.confirm("Le rattachement actuel sera clos. L'ancien tuteur n'aura plus accès à cet alternant.")) return;
@@ -557,11 +708,13 @@ export function FicheApprenant({ id }: { id: string }) {
                             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#241C4A] text-[10px] font-extrabold">{initialsOf(item.company_name)}</span>
                             <span>
                             <span className="font-semibold">{item.company_name}</span>
+                            {indicated ? <span className="ml-2 text-[11px] font-semibold text-[#5EDCC3]">Indiquée par le candidat</span> : null}
                             <span className="mt-0.5 block text-xs text-[#5D6785]">{[item.siret, item.city, `${item.apprenticeCount} alternants`].filter(Boolean).join(" · ")}</span>
                             </span>
                           </button>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                     <button type="button" className="text-sm font-semibold text-[#B9AFFF]" onClick={() => setShowCompanyForm((value) => !value)}>+ Créer une entreprise</button>
                     {showCompanyForm ? (
@@ -653,16 +806,7 @@ export function FicheApprenant({ id }: { id: string }) {
           </section>
 
           <section id="candidature" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#2F7CF6] bg-[#111831] p-5 ${openSections.candidature ? "" : "[&>*:not(header)]:hidden"}`}>
-            <SectionHead step="2 · Candidature" title="Dossier et challenge" explain="Ce que le candidat a écrit pour se présenter." pill={`${challengeCount} / 4 réponses`} color="#2F7CF6" soft="#8DB8FF" icon={<ClipboardList className="h-5 w-5" />} expanded={openSections.candidature} onToggle={() => setOpenSections((current) => ({ ...current, candidature: !current.candidature }))} />
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              {[["Parcours", application.school_background], ["Expériences", application.experiences], ["Motivation", application.motivation_text]].map(([label, value]) => (
-                <div key={label} className="rounded-2xl bg-[#0B1122] p-4">
-                  <p className="text-xs text-[#5D6785]">{label}</p>
-                  <p className="mt-2 text-sm">{value || "Non renseigné"}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-sm">{application.cv_url ? <a className="text-[#8DB8FF]" href={application.cv_url} target="_blank" rel="noreferrer">CV déposé</a> : <span className="text-[#5D6785]">CV non déposé</span>}</p>
+            <SectionHead step="2 · Candidature" title="Candidature" explain="Challenge, parcours et grille d’évaluation." pill={`${challengeCount} / 3 réponses`} color="#2F7CF6" soft="#8DB8FF" icon={<ClipboardList className="h-5 w-5" />} expanded={openSections.candidature} onToggle={() => setOpenSections((current) => ({ ...current, candidature: !current.candidature }))} />
             {profileSends.length ? (
               <ul className="mt-3 space-y-1 text-sm">
                 {profileSends.map((send) => (
@@ -670,32 +814,32 @@ export function FicheApprenant({ id }: { id: string }) {
                 ))}
               </ul>
             ) : null}
-            <div className="mt-4 space-y-2">
-              {CFA_CHALLENGE_QUESTIONS.map((question) => {
-                const answer = application.challenge_answers?.[question.id]?.trim() ?? "";
-                const tone = question.eyebrow === "Raisonnement" ? "bg-[#10284d] text-[#8DB8FF]" : question.eyebrow === "Projection" ? "bg-[#0E2A1D] text-[#6BE3C0]" : question.eyebrow === "Motivation" ? "bg-[#3A2A0E] text-[#F6D68B]" : "bg-[#241C4A] text-[#B9AFFF]";
-                return (
-                  <details key={question.id} className="rounded-2xl bg-[#0B1122] p-4">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-extrabold ${tone}`}>{question.eyebrow}</span>
-                        <span className="text-sm font-bold">{question.question}</span>
-                      </span>
-                      <span className="shrink-0 text-xs text-[#5D6785]">{answer ? `${answer.slice(0, 42)}${answer.length > 42 ? "…" : ""}` : "Sans réponse"}</span>
-                    </summary>
-                    {answer ? <p className="mt-3 text-sm text-[#AEB6CC]">{answer}</p> : null}
-                  </details>
-                );
-              })}
-            </div>
-            <div className="mt-6 rounded-2xl bg-[#0B1122] p-4">
+            <div className="mt-4">
               <CfaJuryChallengePanel
                 applicationId={application.id}
-                challengeV2={application.challenge_v2}
+                specialization={application.specialization}
+                challengeV2={application.challenge_v2 as {
+                  responses?: Array<{
+                    label?: string;
+                    prompt?: string;
+                    format?: string;
+                    text?: string;
+                    mediaPath?: string;
+                    mediaSignedUrl?: string | null;
+                    mediaDurationSec?: number;
+                    versionId?: string;
+                  }>;
+                } | null}
                 legacyAnswers={application.challenge_answers}
                 schoolBackground={application.school_background}
                 experiences={application.experiences}
                 motivationText={application.motivation_text}
+                parcours={application.parcours}
+                alternanceStatus={application.alternance_status}
+                companyNameFromParcours={candidateCompanyName}
+                shareWithCompanies={(application as { share_with_companies?: boolean | null }).share_with_companies}
+                shareWithCompaniesAt={(application as { share_with_companies_at?: string | null }).share_with_companies_at}
+                cvUrl={application.cv_url}
                 juryScores={application.jury_scores as {
                   curiosite?: number;
                   logique?: number;
@@ -704,13 +848,23 @@ export function FicheApprenant({ id }: { id: string }) {
                   comment?: string;
                 } | null}
                 prerequisitesFlag={application.prerequisites_flag}
+                onSaveScores={async (scores) => {
+                  const response = await fetch("/api/super-admin/crm/cfa", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "save_jury_scores", id, scores }),
+                  });
+                  const result = await response.json();
+                  if (!response.ok) throw new Error(result.error || "Grille impossible");
+                  await load(true);
+                }}
               />
             </div>
           </section>
 
           <section id="inscription" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#14A37F] bg-[#111831] p-5 ${openSections.inscription ? "" : "[&>*:not(header)]:hidden"}`}>
-            <SectionHead step="3 · Inscription" title="Informations administratives" explain="Nécessaires au contrat d'apprentissage. Enregistrement automatique." pill={saveHint || `${filledCerfa} / 17 champs`} color="#14A37F" soft="#6BE3C0" icon={<ListChecks className="h-5 w-5" />} expanded={openSections.inscription} onToggle={() => setOpenSections((current) => ({ ...current, inscription: !current.inscription }))} />
-            <Segments filled={filledCerfa} total={17} color="#14A37F" />
+            <SectionHead step="3 · Inscription" title="Informations administratives" explain="Nécessaires au contrat d'apprentissage. Enregistrement automatique." pill={saveHint || `${filledCerfa} / ${cerfaFieldTotal} champs`} color="#14A37F" soft="#6BE3C0" icon={<ListChecks className="h-5 w-5" />} expanded={openSections.inscription} onToggle={() => setOpenSections((current) => ({ ...current, inscription: !current.inscription }))} />
+            <Segments filled={filledCerfa} total={cerfaFieldTotal} color="#14A37F" />
             {([
               ["Identité", [
                 ["lastName", "Nom", "text"],
@@ -735,7 +889,7 @@ export function FicheApprenant({ id }: { id: string }) {
                 ["lastClass", "Dernière classe suivie", "class"],
                 ["highestDiploma", "Diplôme le plus élevé", "diploma"],
                 ["highLevelAthlete", "Sportif de haut niveau", "yesno"],
-                ["rqth", "RQTH", "rqth"],
+                ...(showRqthField ? [["rqth", "RQTH", "rqth"] as const] : []),
               ]],
             ] as const).map(([title, fields]) => (
               <div key={title} className="mt-5">
@@ -743,7 +897,15 @@ export function FicheApprenant({ id }: { id: string }) {
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {fields.map(([key, label, kind]) => (
                     <label key={key} className="text-xs text-[#AEB6CC]">
-                      <span className="flex items-center gap-2">{label}{kind === "rqth" ? <span className="rounded-full bg-[#1A2340] px-2 py-0.5 text-[10px] font-extrabold text-[#F6D68B]">accès restreint</span> : null}</span>
+                      <span className="flex items-center gap-2">
+                        {label}
+                        {kind === "rqth" ? <span className="rounded-full bg-[#1A2340] px-2 py-0.5 text-[10px] font-extrabold text-[#F6D68B]">accès restreint</span> : null}
+                        {cerfa[`_prefill_${key}`] === "1" ? (
+                          <span className="rounded-full bg-[#1A2340] px-2 py-0.5 text-[10px] font-semibold text-[#8DB8FF]">
+                            Repris de la candidature
+                          </span>
+                        ) : null}
+                      </span>
                       {kind === "nss" && (cerfa.socialSecurityNumberMask || cerfa.socialSecurityNumber) && !showNss ? (
                         <span className="mt-1 flex h-11 items-center justify-between rounded-2xl border border-[#1E2848] bg-[#0B1122] px-3 text-sm">
                           <span>{cerfa.socialSecurityNumberMask || maskNss(cerfa.socialSecurityNumber ?? "")}</span>
@@ -876,8 +1038,8 @@ export function FicheApprenant({ id }: { id: string }) {
         <aside className="space-y-4 min-[1200px]:sticky min-[1200px]:top-4">
           <section className="rounded-[26px] border border-[#1A2340] bg-[#111831] p-5">
             <p className="text-sm text-[#AEB6CC]">Dossier complet</p>
-            <p className="text-3xl font-extrabold">{checks.filter((item) => item.done).length}<span className="text-base text-[#5D6785]"> / 7</span></p>
-            <Segments filled={checks.filter((item) => item.done).length} total={7} color="#6E5BFF" />
+            <p className="text-3xl font-extrabold">{checks.filter((item) => item.done).length}<span className="text-base text-[#5D6785]"> / {checks.length}</span></p>
+            <Segments filled={checks.filter((item) => item.done).length} total={checks.length} color="#6E5BFF" />
             <ul className="mt-3 space-y-2 text-sm">
               {checks.map((item) => (
                 <li key={item.label} className={item.done ? "text-[#6BE3C0]" : "text-[#5D6785]"}>{item.done ? "✓" : "○"} {item.label}</li>
@@ -885,11 +1047,33 @@ export function FicheApprenant({ id }: { id: string }) {
             </ul>
           </section>
           <section id="entretien" className={`scroll-mt-28 overflow-hidden rounded-[26px] border border-[#1A2340] border-t-4 border-t-[#D9459E] bg-[#111831] p-5 ${openSections.entretien ? "" : "[&>*:not(header)]:hidden"}`}>
-            <SectionHead step="5 · Entretien" title="Planifier l'entretien" explain="La date et le message partent au candidat." pill={application.interview_at ? "Planifié" : "À planifier"} color="#D9459E" soft="#F29BCB" icon={<Calendar className="h-5 w-5" />} expanded={openSections.entretien} onToggle={() => setOpenSections((current) => ({ ...current, entretien: !current.entretien }))} />
+            <SectionHead step="5 · Entretien" title="Planifier l'entretien" explain="La date et le message partent au candidat." pill={(application as { interview_realized_at?: string | null }).interview_realized_at ? "Réalisé" : application.interview_at ? "Planifié" : "À planifier"} color="#D9459E" soft="#F29BCB" icon={<Calendar className="h-5 w-5" />} expanded={openSections.entretien} onToggle={() => setOpenSections((current) => ({ ...current, entretien: !current.entretien }))} />
+            {(application as { interview_accommodation_needed?: boolean }).interview_accommodation_needed ? (
+              <p className="mt-3 rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-xs text-[#AEB6CC]">
+                Aménagement prévu pour l’entretien : voir avec la référente handicap
+              </p>
+            ) : null}
             {application.interview_at && !editingInterview ? (
               <div className="mt-3">
                 <p className="text-sm">{createdLabel(application.interview_at)}</p>
-                <button type="button" className="mt-3 h-10 rounded-full border border-[#26304F] px-4 text-sm font-semibold" onClick={() => setEditingInterview(true)}>Modifier</button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" className="h-10 rounded-full border border-[#26304F] px-4 text-sm font-semibold" onClick={() => setEditingInterview(true)}>Modifier</button>
+                  {!(application as { interview_realized_at?: string | null }).interview_realized_at ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"
+                      onClick={() =>
+                        void send("/api/super-admin/crm/cfa", "PATCH", {
+                          action: "mark_interview_realized",
+                          id,
+                        })
+                      }
+                    >
+                      Marquer réalisé
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ) : (
               <>
@@ -910,6 +1094,7 @@ export function FicheApprenant({ id }: { id: string }) {
               </>
             )}
           </section>
+          {feesApplicable ? (
           <section className={`rounded-[26px] p-5 ${application.registration_fee_paid_at ? "bg-[#0E2A1D] text-[#6BE3C0]" : "bg-[#3A2A0E] text-[#F6D68B]"}`}>
             <p className="text-sm font-extrabold">Frais d'inscription</p>
             <p className="mt-1 text-xs">{application.registration_fee_paid_at ? `Payé le ${createdLabel(application.registration_fee_paid_at)} · ${{ cheque: "Chèque", transfer: "Virement", card: "CB", cash: "Espèces", covered: "Prise en charge (OPCO / employeur)" }[application.cerfa_data?._fee_method ?? ""] ?? "Moyen non précisé"}` : "En attente"}</p>
@@ -926,6 +1111,12 @@ export function FicheApprenant({ id }: { id: string }) {
               </div>
             )}
           </section>
+          ) : (
+            <section className="rounded-[26px] border border-[#1A2340] bg-[#111831] p-5 text-[#AEB6CC]">
+              <p className="text-sm font-extrabold text-[#EEF1F8]">Frais d&apos;inscription</p>
+              <p className="mt-1 text-xs">Non applicables pour l’apprentissage (désactivés par défaut — en attente de votre validation métier).</p>
+            </section>
+          )}
         </aside>
       </div>
 

@@ -34,6 +34,7 @@ type AccessibilityState = {
 
 type Props = {
   specialization: string;
+  resumeToken: string;
   questions: ChallengeQuestionRow[];
   challenge: ChallengeV2State;
   parcours: ParcoursState;
@@ -211,7 +212,11 @@ export function ChallengeParcoursStep(props: Props) {
                       <ChallengeMediaRecorder
                         mode={response.format}
                         busy={props.busy}
-                        existingUrl={response.mediaPath ? undefined : undefined}
+                        existingUrl={
+                          response.mediaPath
+                            ? `/api/cfa/applications/media?token=${encodeURIComponent(props.resumeToken)}&path=${encodeURIComponent(response.mediaPath)}&bucket=admission-media`
+                            : null
+                        }
                         existingDurationSec={response.mediaDurationSec}
                         onRecorded={async (file, durationSec) => {
                           const path = await props.onUploadMedia(file, q.id);

@@ -22,6 +22,36 @@ function formatSec(sec: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function pickRecorderMime(mode: Mode): string | undefined {
+  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+    return undefined;
+  }
+  const candidates =
+    mode === "video"
+      ? [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm",
+          "video/mp4;codecs=avc1,mp4a.40.2",
+          "video/mp4",
+        ]
+      : ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type));
+}
+
+function extensionForMime(mime: string, mode: Mode) {
+  if (mime.includes("mp4")) return ".mp4";
+  if (mime.includes("ogg")) return ".ogg";
+  if (mime.includes("webm")) return ".webm";
+  return mode === "video" ? ".webm" : ".webm";
+}
+
+function baseMime(mime: string | undefined, mode: Mode) {
+  if (mime?.startsWith("video/")) return mime.split(";")[0] || "video/webm";
+  if (mime?.startsWith("audio/")) return mime.split(";")[0] || "audio/webm";
+  return mode === "video" ? "video/webm" : "audio/webm";
+}
+
 export function ChallengeMediaRecorder({
   mode,
   busy,
@@ -41,6 +71,7 @@ export function ChallengeMediaRecorder({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAt = useRef(0);
   const liveVideoRef = useRef<HTMLVideoElement | null>(null);
+  const mimeRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     setPreviewUrl(existingUrl ?? null);
@@ -59,37 +90,70 @@ export function ChallengeMediaRecorder({
   async function start() {
     setError("");
     try {
+      if (typeof MediaRecorder === "undefined") {
+        setError(
+          mode === "audio"
+            ? "Enregistrement audio non supporté sur ce navigateur. Passe à l’écrit."
+            : "Enregistrement vidéo non supporté sur ce navigateur. Passe à l’écrit ou à l’audio.",
+        );
+        return;
+      }
+
+      const mimeType = pickRecorderMime(mode);
+      if (mode === "video" && !mimeType) {
+        setError("Vidéo non supportée sur ce navigateur. Passe à l’audio ou à l’écrit.");
+        return;
+      }
+      mimeRef.current = mimeType;
+
       const stream = await navigator.mediaDevices.getUserMedia(
-        mode === "audio" ? { audio: true } : { audio: true, video: true },
+        mode === "audio" ? { audio: true } : { audio: true, video: { facingMode: "user" } },
       );
       streamRef.current = stream;
       if (mode === "video" && liveVideoRef.current) {
         liveVideoRef.current.srcObject = stream;
-        void liveVideoRef.current.play();
+        void liveVideoRef.current.play().catch(() => undefined);
       }
-      const recorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-          ? mode === "video"
-            ? "video/webm;codecs=vp9,opus"
-            : "audio/webm"
-          : undefined,
-        audioBitsPerSecond: 128000,
-        videoBitsPerSecond: mode === "video" ? 1_500_000 : undefined,
-      });
+
+      const options: MediaRecorderOptions = {};
+      if (mimeType) options.mimeType = mimeType;
+      options.audioBitsPerSecond = 128_000;
+      if (mode === "video") options.videoBitsPerSecond = 1_500_000;
+
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(stream, options);
+      } catch {
+        recorder = new MediaRecorder(stream);
+      }
+
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
-        if (event.data.size) chunksRef.current.push(event.data);
+        if (event.data && event.data.size > 0) chunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        setError("Enregistrement interrompu. Réessaie ou passe à l’écrit.");
+        stop();
       };
       recorder.onstop = async () => {
         const duration = Math.max(1, Math.round((Date.now() - startedAt.current) / 1000));
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
-        const blob = new Blob(chunksRef.current, {
-          type: mode === "video" ? "video/webm" : "audio/webm",
-        });
-        const file = new File([blob], `challenge-${mode}-${Date.now()}.webm`, {
-          type: blob.type,
-        });
+        const recordedMime = baseMime(
+          mimeRef.current || chunksRef.current[0]?.type || recorder.mimeType,
+          mode,
+        );
+        const blob = new Blob(chunksRef.current, { type: recordedMime });
+        if (!blob.size) {
+          setError("Fichier vide. Réessaie l’enregistrement.");
+          setRecording(false);
+          return;
+        }
+        const file = new File(
+          [blob],
+          `challenge-${mode}-${Date.now()}${extensionForMime(recordedMime, mode)}`,
+          { type: recordedMime },
+        );
         const localUrl = URL.createObjectURL(blob);
         setPreviewUrl(localUrl);
         setDurationSec(duration);
@@ -100,17 +164,23 @@ export function ChallengeMediaRecorder({
       startedAt.current = Date.now();
       setElapsed(0);
       setRecording(true);
-      recorder.start(250);
+      // Request data every second — more reliable for video than 250ms on Safari/Chrome.
+      recorder.start(1_000);
       timerRef.current = setInterval(() => {
         const next = Math.round((Date.now() - startedAt.current) / 1000);
         setElapsed(next);
         if (next >= maxSec) stop();
       }, 250);
-    } catch {
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "";
       setError(
-        mode === "audio"
-          ? "Micro inaccessible. Autorise l’accès ou passe à l’écrit."
-          : "Caméra inaccessible. Autorise l’accès ou passe à l’écrit.",
+        /Permission|NotAllowed|denied/i.test(message)
+          ? mode === "audio"
+            ? "Micro inaccessible. Autorise l’accès ou passe à l’écrit."
+            : "Caméra inaccessible. Autorise l’accès ou passe à l’écrit."
+          : mode === "audio"
+            ? "Micro inaccessible. Autorise l’accès ou passe à l’écrit."
+            : "Caméra inaccessible ou format vidéo non supporté. Passe à l’audio ou à l’écrit.",
       );
     }
   }
@@ -120,6 +190,11 @@ export function ChallengeMediaRecorder({
     timerRef.current = null;
     setRecording(false);
     if (mediaRef.current && mediaRef.current.state !== "inactive") {
+      try {
+        if (mediaRef.current.state === "recording") mediaRef.current.requestData();
+      } catch {
+        /* ignore */
+      }
       mediaRef.current.stop();
     }
   }
@@ -142,7 +217,7 @@ export function ChallengeMediaRecorder({
           {mode === "audio" ? (
             <audio controls src={previewUrl} className="w-full" />
           ) : (
-            <video controls src={previewUrl} className="aspect-video w-full rounded-xl bg-black" />
+            <video controls playsInline src={previewUrl} className="aspect-video w-full rounded-xl bg-black" />
           )}
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-sm text-[#9AA3BD]">{formatSec(durationSec)}</p>

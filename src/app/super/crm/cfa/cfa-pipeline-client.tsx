@@ -15,7 +15,7 @@ import { formatPersonName, formatCompanyName } from "@/lib/cfa/format-org-name";
 import {
   ADMISSION_BLOCKED_DAYS,
   ADMISSION_STAGES,
-  admissionStageFromStatus,
+  admissionStageFromApplication,
   admissionStatusColor,
   admissionStatusLabel,
   daysInCurrentStatus,
@@ -26,6 +26,14 @@ import {
 import { hostStageFromStatus, shortFrDate } from "@/lib/cfa/host-company-stages";
 import { getCfaSpecializationLabel, type CfaApplication } from "@/lib/cfa-applications";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
+
+function stageOf(item: CfaApplication): AdmissionStageId | null {
+  return admissionStageFromApplication({
+    status: item.status,
+    interviewAt: item.interview_at,
+    interviewRealizedAt: (item as { interview_realized_at?: string | null }).interview_realized_at,
+  });
+}
 
 type HostCompany = {
   id: string;
@@ -200,7 +208,7 @@ export function CfaPipelineClient({
   const stageCounts = useMemo(() => {
     const map = Object.fromEntries(ADMISSION_STAGES.map((s) => [s.id, 0])) as Record<AdmissionStageId, number>;
     for (const item of pool) {
-      const stage = admissionStageFromStatus(item.status);
+      const stage = stageOf(item);
       if (stage) map[stage] += 1;
     }
     return map;
@@ -216,7 +224,7 @@ export function CfaPipelineClient({
         /* keep rejected in "all" */
       }
       if (stageFilter !== "all") {
-        const stage = admissionStageFromStatus(item.status);
+        const stage = stageOf(item);
         if (stage !== stageFilter) return false;
       }
       const hay = `${item.first_name} ${item.last_name} ${item.email}`.toLowerCase();
@@ -385,9 +393,13 @@ export function CfaPipelineClient({
             const name = formatPersonName(`${item.first_name} ${item.last_name}`);
             const days = daysInCurrentStatus(item.updated_at);
             const blocked = isBlocked(item);
-            const color = admissionStatusColor(item.status);
-            const label = admissionStatusLabel(item.status);
-            const progress = stageProgressIndex(item.status);
+            const stageCtx = {
+              interviewAt: item.interview_at,
+              interviewRealizedAt: (item as { interview_realized_at?: string | null }).interview_realized_at,
+            };
+            const color = admissionStatusColor(item.status, stageCtx);
+            const label = admissionStatusLabel(item.status, stageCtx);
+            const progress = stageProgressIndex(item.status, stageCtx);
             const missing = missingAdminDocs(item.administrative_documents);
             const action = nextAction(item);
             const track = getCfaSpecializationLabel(item.specialization);
@@ -609,7 +621,7 @@ function BoardView({
   return (
     <div className="flex gap-3 overflow-x-auto pb-3">
       {ADMISSION_STAGES.map((stage) => {
-        const rows = applications.filter((item) => admissionStageFromStatus(item.status) === stage.id);
+        const rows = applications.filter((item) => stageOf(item) === stage.id);
         return (
           <div key={stage.id} className="w-[240px] shrink-0 rounded-[22px] border border-[#1A2340] bg-[#0D1326] p-3">
             <div className="mb-3 flex items-center gap-2">

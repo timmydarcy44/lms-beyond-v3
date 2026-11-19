@@ -40,7 +40,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Fichier ou candidature invalide." }, { status: 400 });
   }
   const sizeLimit = kind === "cv" ? MAX_CV_SIZE : MAX_FILE_SIZE;
-  if (file.size > sizeLimit || !ALLOWED_TYPES.has(file.type)) {
+  const lowerName = file.name.toLowerCase();
+  const inferredType =
+    file.type ||
+    (lowerName.endsWith(".mp4")
+      ? lowerName.includes("audio")
+        ? "audio/mp4"
+        : "video/mp4"
+      : lowerName.endsWith(".webm")
+        ? lowerName.includes("audio")
+          ? "audio/webm"
+          : "video/webm"
+        : lowerName.endsWith(".ogg")
+          ? "audio/ogg"
+          : lowerName.endsWith(".wav")
+            ? "audio/wav"
+            : "");
+  if (file.size > sizeLimit || !ALLOWED_TYPES.has(inferredType)) {
     return NextResponse.json(
       {
         error:
@@ -79,7 +95,7 @@ export async function POST(request: Request) {
   const bytes = await file.arrayBuffer();
   const { error: uploadError } = await db.storage
     .from(bucket)
-    .upload(path, bytes, { contentType: file.type, upsert: false });
+    .upload(path, bytes, { contentType: inferredType || file.type || "application/octet-stream", upsert: false });
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 });
 
@@ -90,7 +106,7 @@ export async function POST(request: Request) {
       path,
       bucket,
       original_name: file.name.slice(0, 240),
-      mime_type: file.type,
+      mime_type: inferredType || file.type,
       size_bytes: file.size,
       uploaded_at: new Date().toISOString(),
     },

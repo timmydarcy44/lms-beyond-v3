@@ -1,33 +1,55 @@
 import type { CfaApplicationStatus } from "@/lib/cfa-applications";
 
+/**
+ * Étapes affichées (page publique, liste Admissions, fiche candidat).
+ * Les valeurs DB restent inchangées ; le regroupement est purement UI.
+ *
+ * Mapping ancien → nouveau :
+ * - brochure, profile → Profil
+ * - challenge, dossier → Challenge et parcours
+ * - interview sans entretien planifié → Envoyée
+ * - interview avec entretien planifié → Entretien
+ * - review → Décision
+ * - admitted → Admis
+ * - administrative → Dossier administratif
+ * - contract → En contrat
+ */
 export type AdmissionStageId =
-  | "brochure"
-  | "candidature"
+  | "profile"
+  | "challenge"
+  | "submitted"
   | "interview"
-  | "review"
+  | "decision"
+  | "admitted"
   | "administrative"
-  | "admitted";
+  | "contract";
 
 export type AdmissionStage = {
   id: AdmissionStageId;
   label: string;
   color: string;
+  /** Statuts DB couverts (pour filtres larges). Affinage via interview_at. */
   dbStatuses: CfaApplicationStatus[];
 };
 
-/** Mapping affichage — les valeurs DB ne changent pas. */
 export const ADMISSION_STAGES: AdmissionStage[] = [
   {
-    id: "brochure",
-    label: "Fiche cursus",
+    id: "profile",
+    label: "Profil",
     color: "#9AA3BD",
-    dbStatuses: ["brochure"],
+    dbStatuses: ["brochure", "profile"],
   },
   {
-    id: "candidature",
-    label: "Candidature",
+    id: "challenge",
+    label: "Challenge et parcours",
     color: "#8DB8FF",
-    dbStatuses: ["profile", "challenge", "dossier"],
+    dbStatuses: ["challenge", "dossier"],
+  },
+  {
+    id: "submitted",
+    label: "Envoyée",
+    color: "#5EDCC3",
+    dbStatuses: ["interview"],
   },
   {
     id: "interview",
@@ -36,10 +58,16 @@ export const ADMISSION_STAGES: AdmissionStage[] = [
     dbStatuses: ["interview"],
   },
   {
-    id: "review",
-    label: "À relire",
+    id: "decision",
+    label: "Décision",
     color: "#F2CF6B",
     dbStatuses: ["review"],
+  },
+  {
+    id: "admitted",
+    label: "Admis",
+    color: "#6BE39B",
+    dbStatuses: ["admitted"],
   },
   {
     id: "administrative",
@@ -48,46 +76,113 @@ export const ADMISSION_STAGES: AdmissionStage[] = [
     dbStatuses: ["administrative"],
   },
   {
-    id: "admitted",
-    label: "Admis",
-    color: "#6BE39B",
-    dbStatuses: ["admitted", "contract"],
+    id: "contract",
+    label: "En contrat",
+    color: "#6BE3C0",
+    dbStatuses: ["contract"],
   },
 ];
+
+/** Frise principale (sélection) — sans la suite admin. */
+export const ADMISSION_SELECTION_STAGES = ADMISSION_STAGES.filter((s) =>
+  ["profile", "challenge", "submitted", "interview", "decision", "admitted"].includes(s.id),
+);
 
 export const ADMISSION_REJECTED_LABEL = "Non retenu";
 export const ADMISSION_BLOCKED_DAYS = 30;
 
-const BY_STATUS = new Map<CfaApplicationStatus, AdmissionStageId>();
-for (const stage of ADMISSION_STAGES) {
-  for (const status of stage.dbStatuses) BY_STATUS.set(status, stage.id);
+export type AdmissionStageContext = {
+  status: string | null | undefined;
+  interviewAt?: string | null;
+  interviewRealizedAt?: string | null;
+};
+
+export function admissionStageFromApplication(ctx: AdmissionStageContext): AdmissionStageId | null {
+  const status = String(ctx.status ?? "");
+  if (status === "rejected") return null;
+  if (status === "brochure" || status === "profile") return "profile";
+  if (status === "challenge" || status === "dossier") return "challenge";
+  if (status === "interview") {
+    return ctx.interviewAt ? "interview" : "submitted";
+  }
+  if (status === "review") {
+    // Décision uniquement si entretien réalisé ; sinon on reste sur Entretien.
+    if (ctx.interviewRealizedAt) return "decision";
+    return "interview";
+  }
+  if (status === "admitted") return "admitted";
+  if (status === "administrative") return "administrative";
+  if (status === "contract") return "contract";
+  return null;
 }
 
+/** @deprecated Préférer admissionStageFromApplication avec le contexte entretien. */
 export function admissionStageFromStatus(status: string | null | undefined): AdmissionStageId | null {
-  if (status === "rejected") return null;
-  return BY_STATUS.get(String(status ?? "") as CfaApplicationStatus) ?? null;
+  return admissionStageFromApplication({ status });
 }
 
 export function admissionStageMeta(stageId: AdmissionStageId): AdmissionStage {
   return ADMISSION_STAGES.find((s) => s.id === stageId)!;
 }
 
-export function admissionStatusLabel(status: string | null | undefined): string {
+export function admissionStatusLabel(
+  status: string | null | undefined,
+  ctx?: Omit<AdmissionStageContext, "status">,
+): string {
   if (status === "rejected") return ADMISSION_REJECTED_LABEL;
-  const stage = admissionStageFromStatus(status);
+  const stage = admissionStageFromApplication({ status, ...ctx });
   return stage ? admissionStageMeta(stage).label : String(status ?? "");
 }
 
-export function admissionStatusColor(status: string | null | undefined): string {
+export function admissionStatusColor(
+  status: string | null | undefined,
+  ctx?: Omit<AdmissionStageContext, "status">,
+): string {
   if (status === "rejected") return "#6C7593";
-  const stage = admissionStageFromStatus(status);
+  const stage = admissionStageFromApplication({ status, ...ctx });
   return stage ? admissionStageMeta(stage).color : "#6C7593";
 }
 
-export function stageProgressIndex(status: string | null | undefined): number {
-  const stage = admissionStageFromStatus(status);
+export function stageProgressIndex(
+  status: string | null | undefined,
+  ctx?: Omit<AdmissionStageContext, "status">,
+): number {
+  const stage = admissionStageFromApplication({ status, ...ctx });
   if (!stage) return -1;
   return ADMISSION_STAGES.findIndex((s) => s.id === stage);
+}
+
+/** Statut DB cible quand on clique une étape affichée. */
+export function dbStatusForStage(
+  stageId: AdmissionStageId,
+  current?: { interviewAt?: string | null; interviewRealizedAt?: string | null },
+): CfaApplicationStatus {
+  switch (stageId) {
+    case "profile":
+      return "profile";
+    case "challenge":
+      return "challenge";
+    case "submitted":
+      return "interview";
+    case "interview":
+      return "interview";
+    case "decision":
+      return "review";
+    case "admitted":
+      return "admitted";
+    case "administrative":
+      return "administrative";
+    case "contract":
+      return "contract";
+    default:
+      return "challenge";
+  }
+}
+
+export function canMoveToDecision(ctx: {
+  interviewRealizedAt?: string | null;
+}): boolean {
+  return Boolean(ctx.interviewRealizedAt);
 }
 
 const DOC_LABELS: Record<string, string> = {

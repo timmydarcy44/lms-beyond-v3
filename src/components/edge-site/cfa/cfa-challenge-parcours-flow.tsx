@@ -310,6 +310,7 @@ export function CfaChallengeParcoursFlow({
       ) : (
         <ChallengeParcoursStep
           specialization={app.specialization}
+          resumeToken={token}
           questions={questions}
           challenge={challenge}
           parcours={parcours}

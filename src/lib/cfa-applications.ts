@@ -115,6 +115,10 @@ export type CfaApplication = {
   alternance_status: "company_found" | "searching" | null;
   interview_notes?: string | null;
   interview_at?: string | null;
+  interview_realized_at?: string | null;
+  birth_date?: string | null;
+  share_with_companies?: boolean | null;
+  share_with_companies_at?: string | null;
   admission_decision_notes?: string | null;
   cerfa_data?: Record<string, string> | null;
   administrative_documents?: Record<string, string> | null;

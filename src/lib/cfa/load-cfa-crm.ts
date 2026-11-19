@@ -1,3 +1,4 @@
+import { withSignedChallengeResponses } from "@/lib/cfa/sign-challenge-media";
 import { hasSensitiveKey, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -14,14 +15,27 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
     return { error: error.message };
   }
 
+  // Corrige les dossiers en « Revue / Décision » sans entretien réalisé → Entretien.
+  for (const row of data ?? []) {
+    const status = String((row as { status?: string }).status ?? "");
+    const realized = (row as { interview_realized_at?: string | null }).interview_realized_at;
+    if (status === "review" && !realized) {
+      const { error: fixError } = await db
+        .from("cfa_applications")
+        .update({ status: "interview" })
+        .eq("id", (row as { id: string }).id);
+      if (!fixError) (row as { status: string }).status = "interview";
+    }
+  }
+
   const applications = await Promise.all(
     (data ?? []).map(async (application) => {
       const documents = (application.administrative_documents ?? {}) as Record<string, string>;
       const privateFiles = (application.private_files ?? {}) as Record<
         string,
-        { path?: string; [key: string]: unknown }
+        { path?: string; bucket?: string; [key: string]: unknown }
       >;
-      const [cvSigned, motivationSigned, documentEntries, privateFileEntries] = await Promise.all([
+      const [cvSigned, motivationSigned, documentEntries, privateFileEntries, challengeV2Signed] = await Promise.all([
         application.cv_path
           ? String(application.cv_path).startsWith("http")
             ? Promise.resolve({ data: { signedUrl: String(application.cv_path) } })
@@ -38,12 +52,14 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
         ),
         Promise.all(
           Object.entries(privateFiles).map(async ([kind, metadata]) => {
+            const bucket = String(metadata.bucket || "cfa-applications");
             const signed = metadata.path
-              ? await db.storage.from("cfa-applications").createSignedUrl(String(metadata.path), 3600)
+              ? await db.storage.from(bucket).createSignedUrl(String(metadata.path), 3600)
               : { data: null };
             return [kind, { ...metadata, signed_url: signed.data?.signedUrl ?? null }] as const;
           }),
         ),
+        withSignedChallengeResponses(db, application.challenge_v2 as Record<string, unknown> | null),
       ]);
       const storedCerfa = (application.cerfa_data ?? {}) as Record<string, string>;
       const merged = mergeSealedCerfa(storedCerfa, {});
@@ -55,6 +71,7 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
       }
       return {
         ...application,
+        challenge_v2: challengeV2Signed,
         cerfa_data: presentCerfa(merged.cerfa, access),
         cv_url: cvSigned.data?.signedUrl ?? null,
         motivation_media_signed_url: motivationSigned.data?.signedUrl ?? application.motivation_media_url ?? null,
@@ -65,6 +82,21 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
   );
 
   const appIds = applications.map((row) => String((row as { id: string }).id));
+  const accessibilityQuery = appIds.length
+    ? await db
+        .from("admission_accessibility")
+        .select("application_id, needs_accommodation")
+        .in("application_id", appIds)
+    : { data: [], error: null };
+  // Ignore missing table until migration applied.
+  const accommodationByApp = new Map<string, boolean>();
+  for (const row of (accessibilityQuery.error ? [] : accessibilityQuery.data ?? []) as Array<{
+    application_id: string;
+    needs_accommodation: boolean | null;
+  }>) {
+    // Flag booléen uniquement — jamais de motif ni RQTH vers le jury.
+    if (row.needs_accommodation === true) accommodationByApp.set(row.application_id, true);
+  }
   const placementsQuery = appIds.length
     ? await db
         .from("apprentice_placements")
@@ -103,6 +135,7 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
     return {
       ...application,
       placement,
+      interview_accommodation_needed: accommodationByApp.get(id) === true,
     };
   });
 

@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ChallengeQuestionRow } from "@/lib/cfa/admission-challenge";
-import { resolveQuestionSpecialization } from "@/lib/cfa/admission-challenge";
 import { getFallbackQuestionsForSpecialization } from "@/lib/cfa/admission-challenge-fallback";
 
 type QuestionRow = {
@@ -15,30 +14,21 @@ type QuestionRow = {
   active: boolean;
 };
 
-export async function loadAdmissionQuestionsForSpecialization(
-  db: SupabaseClient,
-  specialization: string,
-): Promise<ChallengeQuestionRow[]> {
-  const track = resolveQuestionSpecialization(specialization);
+async function loadActiveBySpecs(db: SupabaseClient, specs: string[]) {
   const { data, error } = await db
     .from("admission_challenge_questions")
     .select("id, specialization, slug, label, prompt, starter_hint, sort_order, active")
     .eq("active", true)
-    .in("specialization", ["common", track])
+    .in("specialization", specs)
     .order("sort_order", { ascending: true });
+  if (error) return [] as QuestionRow[];
+  return (data ?? []) as QuestionRow[];
+}
 
-  if (error || !data?.length) {
-    return getFallbackQuestionsForSpecialization(specialization);
-  }
-
-  const rows = data as QuestionRow[];
-  const common = rows.filter((r) => r.specialization === "common");
-  const own = rows.filter((r) => r.specialization === track);
-  const selected = [...common, ...own].slice(0, 3);
-  if (selected.length < 3) {
-    return getFallbackQuestionsForSpecialization(specialization);
-  }
-
+async function withLatestVersions(
+  db: SupabaseClient,
+  selected: QuestionRow[],
+): Promise<ChallengeQuestionRow[]> {
   const withVersions: ChallengeQuestionRow[] = [];
   for (const q of selected) {
     const { data: version } = await db
@@ -62,6 +52,48 @@ export async function loadAdmissionQuestionsForSpecialization(
     });
   }
   return withVersions;
+}
+
+/**
+ * 1 commune + 2 propres à la filière.
+ * Si la filière n’a pas encore 2 questions actives → secours `_fallback`.
+ */
+export async function loadAdmissionQuestionsBundle(
+  db: SupabaseClient,
+  specialization: string,
+): Promise<{ questions: ChallengeQuestionRow[]; usedFallback: boolean }> {
+  const track = String(specialization || "").trim();
+  const commonAndOwn = await loadActiveBySpecs(db, ["common", track]);
+  const common = commonAndOwn.filter((r) => r.specialization === "common");
+  let own = commonAndOwn.filter((r) => r.specialization === track);
+  let usedFallback = false;
+
+  if (own.length < 2) {
+    const fallback = await loadActiveBySpecs(db, ["_fallback"]);
+    own = fallback.filter((r) => r.specialization === "_fallback");
+    usedFallback = true;
+  }
+
+  const selected = [...common, ...own].slice(0, 3);
+  if (selected.length < 3) {
+    return {
+      questions: getFallbackQuestionsForSpecialization(specialization),
+      usedFallback: true,
+    };
+  }
+
+  return {
+    questions: await withLatestVersions(db, selected),
+    usedFallback,
+  };
+}
+
+export async function loadAdmissionQuestionsForSpecialization(
+  db: SupabaseClient,
+  specialization: string,
+): Promise<ChallengeQuestionRow[]> {
+  const bundle = await loadAdmissionQuestionsBundle(db, specialization);
+  return bundle.questions;
 }
 
 export async function loadPrerequisiteLabel(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { loadAdmissionQuestionsForSpecialization, loadPrerequisiteLabel } from "@/lib/cfa/load-admission-questions";
+import { loadAdmissionQuestionsBundle, loadPrerequisiteLabel } from "@/lib/cfa/load-admission-questions";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -12,10 +12,14 @@ export async function GET(request: NextRequest) {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
 
-  const [questions, prerequisiteLabel] = await Promise.all([
-    loadAdmissionQuestionsForSpecialization(db, specialization),
+  const [bundle, prerequisiteLabel] = await Promise.all([
+    loadAdmissionQuestionsBundle(db, specialization),
     loadPrerequisiteLabel(db, specialization),
   ]);
 
-  return NextResponse.json({ questions, prerequisiteLabel });
+  return NextResponse.json({
+    questions: bundle.questions,
+    usedFallback: bundle.usedFallback,
+    prerequisiteLabel,
+  });
 }

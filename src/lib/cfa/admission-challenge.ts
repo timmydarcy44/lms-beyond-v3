@@ -1,4 +1,4 @@
-import type { CfaSpecialization } from "@/lib/cfa-applications";
+import { CFA_SPECIALIZATIONS, type CfaSpecialization } from "@/lib/cfa-applications";
 
 export type ChallengeAnswerFormat = "text" | "audio" | "video";
 
@@ -110,10 +110,12 @@ export const DIPLOMAS_MEETING_BAC: ParcoursDiploma[] = [
   "bac_plus_3",
 ];
 
+/** Toute filière catalogue peut avoir ses questions ; le loader DB tranche. */
 export function specializationHasCustomQuestions(spec: string): boolean {
-  return ["ai_business", "sport_business", "retail_experience"].includes(spec);
+  return CFA_SPECIALIZATIONS.some((item) => item.value === spec);
 }
 
+/** @deprecated Préférer le loader DB (track puis `_fallback`). */
 export function resolveQuestionSpecialization(spec: CfaSpecialization | string): string {
   if (specializationHasCustomQuestions(spec)) return spec;
   return "_fallback";

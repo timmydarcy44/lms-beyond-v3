@@ -1,5 +1,5 @@
 import type { ChallengeQuestionRow } from "@/lib/cfa/admission-challenge";
-import { resolveQuestionSpecialization } from "@/lib/cfa/admission-challenge";
+import { ADMISSION_CHALLENGE_PROPOSALS } from "@/lib/cfa/admission-challenge-proposals";
 
 /** Banque locale (miroir du seed SQL) si la DB n’est pas encore migrée. */
 const FALLBACK_BANK: Omit<ChallengeQuestionRow, "versionId" | "version">[] = [
@@ -100,15 +100,32 @@ const FALLBACK_BANK: Omit<ChallengeQuestionRow, "versionId" | "version">[] = [
     sort_order: 2,
     active: true,
   },
+  ...ADMISSION_CHALLENGE_PROPOSALS.filter(
+    (q) => !["ai_business", "sport_business", "retail_experience"].includes(q.specialization),
+  ).map((q) => ({
+    id: `local-${q.slug}`,
+    specialization: q.specialization,
+    slug: q.slug,
+    label: q.label,
+    prompt: q.prompt,
+    starter_hint: q.starter_hint,
+    sort_order: q.sort_order,
+    active: true,
+  })),
 ];
 
 export function getFallbackQuestionsForSpecialization(spec: string): ChallengeQuestionRow[] {
-  const track = resolveQuestionSpecialization(spec);
+  const track = String(spec || "").trim();
   const common = FALLBACK_BANK.find((q) => q.specialization === "common")!;
-  const own = FALLBACK_BANK.filter((q) => q.specialization === track).sort(
+  let own = FALLBACK_BANK.filter((q) => q.specialization === track).sort(
     (a, b) => a.sort_order - b.sort_order,
   );
-  return [common, ...own].map((q) => ({
+  if (own.length < 2) {
+    own = FALLBACK_BANK.filter((q) => q.specialization === "_fallback").sort(
+      (a, b) => a.sort_order - b.sort_order,
+    );
+  }
+  return [common, ...own].slice(0, 3).map((q) => ({
     ...q,
     versionId: `${q.id}-v1`,
     version: 1,

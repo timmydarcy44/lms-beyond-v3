@@ -19,10 +19,12 @@ function revalidateProgramPages() {
     "/ecole/ntc/business-sport",
     "/ecole/ntc/real-estate",
     "/ecole/mem/retail-experience",
+    "/ecole/mem/merchandising",
     "/edge-lab/ecole/ntc/ai-business",
     "/edge-lab/ecole/ntc/business-sport",
     "/edge-lab/ecole/ntc/real-estate",
     "/edge-lab/ecole/mem/retail-experience",
+    "/edge-lab/ecole/mem/merchandising",
   ]) {
     revalidatePath(path);
   }

@@ -1,3 +1,8 @@
+type MemEvaluationSectionProps = {
+  specialization?: string;
+  practiceLine?: string;
+};
+
 const TITLE_BLOCKS = [
   [
     "Étude de cas",
@@ -8,13 +13,16 @@ const TITLE_BLOCKS = [
   ["Entretien final", "Présentation du parcours et du projet professionnel"],
 ] as const;
 
-const LEVELS = [
-  ["1. Compétences", "Ateliers, cas d’enseigne, labo retail et challenges terrain", "Progression pédagogique"],
-  ["2. Spécialisation", "Projet Retail Experience et Open Badges Byound", "Preuves partageables"],
-  ["3. Titre professionnel", "Épreuves réglementaires devant un jury habilité", "3 CCP · MEM Niveau 5"],
-] as const;
+export function MemEvaluationSection({
+  specialization = "Retail Experience",
+  practiceLine = "Ateliers, cas d’enseigne, labo retail et challenges terrain",
+}: MemEvaluationSectionProps) {
+  const levels = [
+    ["1. Compétences", practiceLine, "Progression pédagogique"],
+    ["2. Spécialisation", `Projet ${specialization} et Open Badges Byound`, "Preuves partageables"],
+    ["3. Titre professionnel", "Épreuves réglementaires devant un jury habilité", "3 CCP · MEM Niveau 5"],
+  ] as const;
 
-export function MemEvaluationSection() {
   return (
     <div className="mt-16">
       <div className="max-w-3xl">
@@ -30,8 +38,8 @@ export function MemEvaluationSection() {
           partiels scolaires.
         </p>
         <p className="mt-3 text-base leading-relaxed text-black/55">
-          Les 3 CCP sont validables séparément. La spécialisation Retail Experience est distincte
-          de la certification RNCP et se valide par Open Badges.
+          Les 3 CCP sont validables séparément. La spécialisation {specialization} est distincte de
+          la certification RNCP et se valide par Open Badges.
         </p>
       </div>
 
@@ -59,7 +67,7 @@ export function MemEvaluationSection() {
       </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {LEVELS.map(([title, text, caption]) => (
+        {levels.map(([title, text, caption]) => (
           <article
             key={title}
             className="rounded-[24px] border border-black/[0.07] bg-[#f7f7f5] p-6"

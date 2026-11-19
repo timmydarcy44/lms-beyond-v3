@@ -9,6 +9,7 @@
  * - https://edgebs.fr/ecole/candidater?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/ntc/ai-business?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/mem/retail-experience?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
+ * - https://edgebs.fr/ecole/mem/merchandising?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  *
  * Ne pas envoyer la campagne sur la home ni sur « Créer un compte » entreprise.
  */

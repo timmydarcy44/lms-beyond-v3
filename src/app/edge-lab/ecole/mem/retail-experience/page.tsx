@@ -431,7 +431,7 @@ export default async function MemRetailExperiencePage() {
               </article>
             ))}
           </div>
-          <MemEvaluationSection />
+          <MemEvaluationSection specialization="Retail Experience" />
         </div>
       </section>
 

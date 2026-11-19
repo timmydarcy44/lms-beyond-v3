@@ -49,6 +49,7 @@ export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, stri
   sport_business: "/ecole/ntc/business-sport",
   real_estate: "/ecole/ntc/real-estate",
   retail_experience: "/ecole/mem/retail-experience",
+  merchandising: "/ecole/mem/merchandising",
 };
 
 export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {

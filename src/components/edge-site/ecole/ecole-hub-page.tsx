@@ -33,6 +33,13 @@ const CURSUS = [
     body: "Manager d’établissement marchand avec une spécialisation expérience client en magasin et en ligne.",
     hrefKey: "ecoleMemRetailExperience" as const,
   },
+  {
+    slug: "merchandising",
+    title: "Merchandising",
+    eyebrow: "Bachelor · MEM",
+    body: "Manager d’établissement marchand avec une spécialisation mise en scène de l’offre et performance de l’espace.",
+    hrefKey: "ecoleMemMerchandising" as const,
+  },
 ] as const;
 
 const STEPS = [

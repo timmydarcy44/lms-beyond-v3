@@ -47,6 +47,13 @@ const CURSUS = [
     body: "Manager d’établissement marchand avec une spécialisation codes du luxe et relation client d’exception.",
     hrefKey: "ecoleMemLuxuryPremium" as const,
   },
+  {
+    slug: "sport-retail",
+    title: "Sport Retail",
+    eyebrow: "Bachelor · MEM",
+    body: "Manager d’établissement marchand avec une spécialisation magasin de sport et boutique de club.",
+    hrefKey: "ecoleMemSportRetail" as const,
+  },
 ] as const;
 
 const STEPS = [

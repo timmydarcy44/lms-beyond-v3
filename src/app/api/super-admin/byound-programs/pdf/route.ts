@@ -21,12 +21,14 @@ function revalidateProgramPages() {
     "/ecole/mem/retail-experience",
     "/ecole/mem/merchandising",
     "/ecole/mem/luxury-premium",
+    "/ecole/mem/sport-retail",
     "/edge-lab/ecole/ntc/ai-business",
     "/edge-lab/ecole/ntc/business-sport",
     "/edge-lab/ecole/ntc/real-estate",
     "/edge-lab/ecole/mem/retail-experience",
     "/edge-lab/ecole/mem/merchandising",
     "/edge-lab/ecole/mem/luxury-premium",
+    "/edge-lab/ecole/mem/sport-retail",
   ]) {
     revalidatePath(path);
   }

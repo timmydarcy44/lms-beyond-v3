@@ -17,6 +17,7 @@ export const EDGE_MARKETING_PATHS = {
   ecoleMemRetailExperience: "/ecole/mem/retail-experience",
   ecoleMemMerchandising: "/ecole/mem/merchandising",
   ecoleMemLuxuryPremium: "/ecole/mem/luxury-premium",
+  ecoleMemSportRetail: "/ecole/mem/sport-retail",
   ecoleCandidater: "/ecole/candidater",
   /** Chooser 3 portes (École / Entreprise / Particulier) — CTA header ambigu. */
   rejoindre: "/rejoindre",

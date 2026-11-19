@@ -5,6 +5,7 @@ export const CFA_SPECIALIZATIONS = [
   { value: "retail_experience", label: "Retail Experience", group: "MEM · Retail & Luxury" },
   { value: "merchandising", label: "Merchandising", group: "MEM · Retail & Luxury" },
   { value: "luxury_premium", label: "Luxury & Premium", group: "MEM · Retail & Luxury" },
+  { value: "sport_retail", label: "Sport Retail", group: "MEM · Retail & Luxury" },
   { value: "ai_management", label: "AI Management", group: "REM · Management" },
   { value: "business_performance", label: "Business Performance", group: "REM · Management" },
   { value: "transition_innovation", label: "Transition & Innovation", group: "REM · Management" },

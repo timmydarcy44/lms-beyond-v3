@@ -102,6 +102,7 @@ const TRACK_COLORS: Record<string, string> = {
   retail_experience: "#6BE39B",
   merchandising: "#F2CF6B",
   luxury_premium: "#C9C2FF",
+  sport_retail: "#5EDCC3",
   ai_management: "#A99BFF",
   business_performance: "#FFB86B",
   transition_innovation: "#5EDCC3",

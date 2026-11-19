@@ -16,7 +16,12 @@ import { CfaChallengeParcoursFlow } from "@/components/edge-site/cfa/cfa-challen
 
 const TOKEN_KEY = "byound_cfa_application_token";
 const NTC_SPECIALIZATIONS = new Set(["ai_business", "sport_business", "real_estate"]);
-const MEM_SPECIALIZATIONS = new Set(["retail_experience", "merchandising", "luxury_premium"]);
+const MEM_SPECIALIZATIONS = new Set([
+  "retail_experience",
+  "merchandising",
+  "luxury_premium",
+  "sport_retail",
+]);
 const control =
   "w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#7770ff]";
 

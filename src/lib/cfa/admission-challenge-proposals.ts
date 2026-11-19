@@ -122,6 +122,24 @@ export const ADMISSION_CHALLENGE_PROPOSALS: ProposedChallengeQuestion[] = [
     sort_order: 2,
   },
   {
+    specialization: "sport_retail",
+    slug: "sr_advice",
+    label: "Conseil",
+    prompt:
+      "Un client hésite entre deux chaussures running. Comment l’aiderais-tu à choisir sans juste vendre la plus chère ?",
+    starter_hint: "Je lui demanderais d’abord…",
+    sort_order: 1,
+  },
+  {
+    specialization: "sport_retail",
+    slug: "sr_matchday",
+    label: "Jour de match",
+    prompt:
+      "C’est jour de match et la boutique du club est pleine. Que ferais-tu pour garder une expérience fluide ?",
+    starter_hint: "Je…",
+    sort_order: 2,
+  },
+  {
     specialization: "ai_management",
     slug: "aim_priority",
     label: "Priorisation",

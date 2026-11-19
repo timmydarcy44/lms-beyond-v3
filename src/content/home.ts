@@ -47,8 +47,7 @@ export function getHomeFormations(routes: EdgeMarketingRoutes): HomeFormation[] 
     { label: "Transition & Innovation", href: MISSING_ROUTE },
     { label: "Retail Experience", href: routes.ecoleMemRetailExperience },
     { label: "Merchandising", href: routes.ecoleMemMerchandising },
-    // TODO: aucune page Sport Retail
-    { label: "Sport Retail", href: MISSING_ROUTE },
+    { label: "Sport Retail", href: routes.ecoleMemSportRetail },
     // TODO: aucune page Growth & Acquisition
     { label: "Growth & Acquisition", href: MISSING_ROUTE },
     // TODO: aucune page Entrepreneurship

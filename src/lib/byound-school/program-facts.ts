@@ -27,7 +27,7 @@ export type ByoundProgramFacts = {
 };
 
 const NTC = new Set(["ai_business", "sport_business", "real_estate"]);
-const MEM = new Set(["retail_experience", "merchandising", "luxury_premium"]);
+const MEM = new Set(["retail_experience", "merchandising", "luxury_premium", "sport_retail"]);
 
 function familyLevel(specialization: CfaSpecialization): string {
   if (NTC.has(specialization) || MEM.has(specialization)) {
@@ -51,6 +51,7 @@ export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, stri
   retail_experience: "/ecole/mem/retail-experience",
   merchandising: "/ecole/mem/merchandising",
   luxury_premium: "/ecole/mem/luxury-premium",
+  sport_retail: "/ecole/mem/sport-retail",
 };
 
 export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {

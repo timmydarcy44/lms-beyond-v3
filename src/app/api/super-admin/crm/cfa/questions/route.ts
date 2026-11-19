@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { isCurrentUserSuperAdmin } from "@/lib/auth/super-admin";
+import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 
 export async function GET() {
-  if (!(await isCurrentUserSuperAdmin())) {
+  if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const db = getServiceRoleClient();
@@ -31,7 +31,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!(await isCurrentUserSuperAdmin())) {
+  if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;

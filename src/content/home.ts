@@ -38,8 +38,7 @@ export function getHomeFormations(routes: EdgeMarketingRoutes): HomeFormation[] 
     { label: "AI Business", href: routes.ecoleNtcAiBusiness, featured: true },
     { label: "Business Sport", href: routes.ecoleNtcBusinessSport },
     { label: "Real Estate", href: routes.ecoleNtcRealEstate },
-    // TODO: aucune page Luxury & Premium
-    { label: "Luxury & Premium", href: MISSING_ROUTE },
+    { label: "Luxury & Premium", href: routes.ecoleMemLuxuryPremium },
     // TODO: aucune page AI Management
     { label: "AI Management", href: MISSING_ROUTE },
     // TODO: aucune page Business Performance

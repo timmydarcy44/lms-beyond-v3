@@ -40,6 +40,13 @@ const CURSUS = [
     body: "Manager d’établissement marchand avec une spécialisation mise en scène de l’offre et performance de l’espace.",
     hrefKey: "ecoleMemMerchandising" as const,
   },
+  {
+    slug: "luxury-premium",
+    title: "Luxury & Premium",
+    eyebrow: "Bachelor · MEM",
+    body: "Manager d’établissement marchand avec une spécialisation codes du luxe et relation client d’exception.",
+    hrefKey: "ecoleMemLuxuryPremium" as const,
+  },
 ] as const;
 
 const STEPS = [

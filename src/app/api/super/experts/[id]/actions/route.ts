@@ -153,11 +153,13 @@ export async function POST(
       revalidatePath("/ecole/ntc/real-estate");
       revalidatePath("/ecole/mem/retail-experience");
       revalidatePath("/ecole/mem/merchandising");
+      revalidatePath("/ecole/mem/luxury-premium");
       revalidatePath("/edge-lab/ecole/ntc/ai-business");
       revalidatePath("/edge-lab/ecole/ntc/business-sport");
       revalidatePath("/edge-lab/ecole/ntc/real-estate");
       revalidatePath("/edge-lab/ecole/mem/retail-experience");
       revalidatePath("/edge-lab/ecole/mem/merchandising");
+      revalidatePath("/edge-lab/ecole/mem/luxury-premium");
       revalidatePath("/");
       revalidatePath("/edge-lab");
     }

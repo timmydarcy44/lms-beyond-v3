@@ -95,8 +95,7 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
             pills: [
               { label: "Retail Experience", href: routes.ecoleMemRetailExperience },
               { label: "Merchandising", href: routes.ecoleMemMerchandising },
-              // TODO: aucune page Luxury & Premium
-              { label: "Luxury & Premium", href: MISSING_ROUTE },
+              { label: "Luxury & Premium", href: routes.ecoleMemLuxuryPremium },
               // TODO: aucune page Sport Retail
               { label: "Sport Retail", href: MISSING_ROUTE },
             ],

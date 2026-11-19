@@ -170,7 +170,7 @@ export function getEdgePremiumConfig(host?: string | null) {
               links: [
                 { label: "Retail Experience", href: R.ecoleMemRetailExperience },
                 { label: "Merchandising", href: R.ecoleMemMerchandising },
-                { label: "Luxury & Premium", href: `${R.alternance}#mem-luxury-premium` },
+                { label: "Luxury & Premium", href: R.ecoleMemLuxuryPremium },
                 { label: "Sport Retail", href: `${R.alternance}#mem-sport-retail` },
               ],
             },

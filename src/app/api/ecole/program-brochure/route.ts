@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Lead capture is best-effort: never block the PDF if the CRM insert fails
+  // (e.g. outdated cfa_applications_specialization_check on MEM/REM/RDC).
   const { error } = await db.from("cfa_applications").insert({
     status: "brochure",
     first_name: firstName,
@@ -70,15 +72,11 @@ export async function POST(request: NextRequest) {
   });
 
   if (error && error.code !== "23505") {
-    const statusBlocked = error.message.includes("cfa_applications_status_check");
-    return NextResponse.json(
-      {
-        error: statusBlocked
-          ? "Appliquez la migration 20261010220000_cfa_brochure_and_hero.sql pour enregistrer ce téléchargement."
-          : "Enregistrement impossible.",
-      },
-      { status: 400 },
-    );
+    console.error("[program-brochure] lead insert failed", {
+      specialization,
+      code: error.code,
+      message: error.message,
+    });
   }
 
   const cursus = getCfaSpecializationLabel(specialization);

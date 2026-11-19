@@ -8,12 +8,14 @@ import { CareAudienceProvider, CareHostProvider } from "@/components/care/care-h
 export function CareChrome({ children, publicHost = false }: { children: React.ReactNode; publicHost?: boolean }) {
   const pathname = usePathname();
   const tunnel = /\/reserver(\/|$)/.test(pathname) || /\/reservation(\/|$)/.test(pathname);
+  const maintenance = /\/maintenance(\/|$)/.test(pathname);
+  const bare = tunnel || maintenance;
   return (
     <CareHostProvider publicHost={publicHost}>
       <CareAudienceProvider>
-        {tunnel ? null : <CareHeader />}
+        {bare ? null : <CareHeader />}
         {children}
-        {tunnel ? null : <CareFooter />}
+        {bare ? null : <CareFooter />}
       </CareAudienceProvider>
     </CareHostProvider>
   );

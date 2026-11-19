@@ -21,7 +21,7 @@ import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server"
 import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 
 export const metadata: Metadata = {
-  title: "NTC · AI Business — Byound School",
+  title: "AI Business — Byound School",
   description:
     "Préparez le titre professionnel Négociateur technico-commercial et développez une spécialisation en intelligence artificielle appliquée au business.",
 };
@@ -155,14 +155,17 @@ export default async function NtcAiBusinessPage() {
         <div className="relative mx-auto flex min-h-[92svh] max-w-7xl items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20 lg:px-10 lg:pb-24">
           <div className="max-w-3xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-white/55">
-              Byound School · Bac+2 · Alternance
+              Byound School · Alternance
             </p>
             <h1 className="mt-7 text-[clamp(3.7rem,8vw,7.5rem)] font-semibold leading-[0.84] tracking-[-0.065em]">
-              NTC
-              <span className="text-[#7770ff]">·</span>
-              <br />
               AI Business
             </h1>
+            <p className="mt-4 text-[clamp(1.15rem,2vw,1.65rem)] font-medium tracking-[-0.03em] text-white/90">
+              Négociateur technico-commercial
+            </p>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">
+              Niveau Bac+2 · Titre du Ministère du Travail
+            </p>
             <p className="mt-8 text-[clamp(1.25rem,2.4vw,2rem)] font-medium tracking-[-0.03em]">
               Le commerce entre dans une nouvelle ère.
             </p>
@@ -172,7 +175,7 @@ export default async function NtcAiBusinessPage() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-2">
-              {["Bac+2", "Alternance", "Caen", "Rentrée 2027", "AI Business"].map((item) => (
+              {["Niveau Bac+2", "Alternance", "Caen", "AI Business"].map((item) => (
                 <span
                   key={item}
                   className="rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium backdrop-blur"

@@ -20,7 +20,7 @@ import { EDGE_PREMIUM_IMAGES } from "@/lib/edge-site/premium-constants";
 import { getProgramContributors } from "@/lib/expert/program-contributors";
 
 export const metadata: Metadata = {
-  title: "MEM · Retail Experience — Byound School",
+  title: "Retail Experience — Byound School",
   description:
     "Préparez le titre professionnel Manager d’établissement marchand et apprenez à concevoir des expériences client qui font revenir, en magasin comme en ligne.",
 };
@@ -181,14 +181,17 @@ export default async function MemRetailExperiencePage() {
         <div className="relative mx-auto flex min-h-[92svh] max-w-7xl items-end px-5 pb-16 pt-32 sm:px-8 sm:pb-20 lg:px-10 lg:pb-24">
           <div className="max-w-3xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-white/55">
-              Byound School · Bac+2 · Alternance · Caen
+              Byound School · Alternance
             </p>
             <h1 className="mt-7 text-[clamp(3.4rem,7.5vw,7rem)] font-semibold leading-[0.86] tracking-[-0.065em]">
-              MEM
-              <span className="text-[#7770ff]">·</span>
-              <br />
               Retail Experience
             </h1>
+            <p className="mt-4 text-[clamp(1.15rem,2vw,1.65rem)] font-medium tracking-[-0.03em] text-white/90">
+              Manager d’établissement marchand
+            </p>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">
+              Niveau Bac+2 · Titre du Ministère du Travail
+            </p>
             <p className="mt-8 text-[clamp(1.25rem,2.4vw,2rem)] font-medium tracking-[-0.03em]">
               Le magasin n’est plus un lieu de vente.
               <br />
@@ -200,7 +203,7 @@ export default async function MemRetailExperiencePage() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-2">
-              {["Bac+2", "Alternance", "Caen", "Rentrée sept. 2027", "Retail Experience"].map(
+              {["Niveau Bac+2", "Alternance", "Caen", "Retail Experience"].map(
                 (item) => (
                   <span
                     key={item}

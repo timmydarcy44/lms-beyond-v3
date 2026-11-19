@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { Manrope } from "next/font/google";
 
 import { CfaApplicationFlow } from "@/components/edge-site/cfa/cfa-application-flow";
-import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
+
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
   title: "Candidater — Byound School",
   description:
-    "Créez votre profil, passez le Byound Challenge et rejoignez la prochaine promotion Byound School.",
+    "Crée ton profil, passe le Byound Challenge et rejoins la prochaine promotion Byound School.",
 };
 
 export default function CfaApplyPage() {
   return (
-    <EdgePremiumShell overlayNav={false} showTopBar={false}>
-      <Suspense fallback={<div className="min-h-screen bg-[#070b1f]" />}>
+    <div className={manrope.className}>
+      <Suspense fallback={<div className="min-h-screen bg-[#070C1C]" />}>
         <CfaApplicationFlow />
       </Suspense>
-    </EdgePremiumShell>
+    </div>
   );
 }

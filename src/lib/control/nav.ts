@@ -133,6 +133,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         match: under("/super/crm/cfa/cursus"),
       },
       {
+        id: "admission-questions",
+        label: "Questions candidature",
+        href: "/super/admissions/questions",
+        match: under("/super/admissions/questions"),
+      },
+      {
         id: "experts",
         label: "Formateurs et experts",
         href: "/super/experts",

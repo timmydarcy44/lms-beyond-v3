@@ -2,16 +2,21 @@ import { NextResponse } from "next/server";
 
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_CV_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
+  "image/webp",
   "audio/mpeg",
   "audio/mp4",
   "audio/webm",
+  "audio/ogg",
+  "audio/wav",
   "video/mp4",
   "video/webm",
+  "video/quicktime",
 ]);
 
 function safeExtension(file: File): string {
@@ -26,16 +31,23 @@ export async function POST(request: Request) {
   const file = formData?.get("file");
 
   const documentKinds = ["identity", "social_security", "diploma"];
+  const challengeKinds = ["cv", "motivation", "challenge_media"];
   if (
     !token ||
-    !["cv", "motivation", ...documentKinds].includes(kind) ||
+    ![...challengeKinds, ...documentKinds].includes(kind) ||
     !(file instanceof File)
   ) {
     return NextResponse.json({ error: "Fichier ou candidature invalide." }, { status: 400 });
   }
-  if (file.size > MAX_FILE_SIZE || !ALLOWED_TYPES.has(file.type)) {
+  const sizeLimit = kind === "cv" ? MAX_CV_SIZE : MAX_FILE_SIZE;
+  if (file.size > sizeLimit || !ALLOWED_TYPES.has(file.type)) {
     return NextResponse.json(
-      { error: "Format non accepté ou fichier supérieur à 25 Mo." },
+      {
+        error:
+          kind === "cv"
+            ? "Format non accepté ou CV supérieur à 10 Mo."
+            : "Format non accepté ou fichier supérieur à 50 Mo.",
+      },
       { status: 400 },
     );
   }
@@ -49,25 +61,34 @@ export async function POST(request: Request) {
     .eq("resume_token", token)
     .maybeSingle();
 
-  const dossierUpload = ["cv", "motivation"].includes(kind) && application?.status === "dossier";
+  const candidatureUpload =
+    challengeKinds.includes(kind) &&
+    (application?.status === "dossier" || application?.status === "challenge");
   const administrativeUpload =
     documentKinds.includes(kind) && application?.status === "administrative";
-  if (!application || (!dossierUpload && !administrativeUpload)) {
+  if (!application || (!candidatureUpload && !administrativeUpload)) {
     return NextResponse.json({ error: "Téléversement non autorisé." }, { status: 403 });
   }
 
-  const path = `${application.id}/${kind}-${crypto.randomUUID()}${safeExtension(file)}`;
+  const bucket = kind === "challenge_media" ? "admission-media" : "cfa-applications";
+  const questionId = String(formData?.get("questionId") ?? "").trim().slice(0, 80);
+  const path =
+    kind === "challenge_media"
+      ? `${application.id}/${questionId || "q"}-${crypto.randomUUID()}${safeExtension(file)}`
+      : `${application.id}/${kind}-${crypto.randomUUID()}${safeExtension(file)}`;
   const bytes = await file.arrayBuffer();
   const { error: uploadError } = await db.storage
-    .from("cfa-applications")
+    .from(bucket)
     .upload(path, bytes, { contentType: file.type, upsert: false });
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 });
 
+  const fileKey = kind === "challenge_media" ? `challenge_${questionId || "media"}` : kind;
   const privateFiles = {
     ...(application.private_files as Record<string, unknown> | null),
-    [kind]: {
+    [fileKey]: {
       path,
+      bucket,
       original_name: file.name.slice(0, 240),
       mime_type: file.type,
       size_bytes: file.size,
@@ -90,5 +111,5 @@ export async function POST(request: Request) {
     .eq("id", application.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  return NextResponse.json({ path, file: privateFiles[kind] });
+  return NextResponse.json({ path, bucket, file: privateFiles[fileKey] });
 }

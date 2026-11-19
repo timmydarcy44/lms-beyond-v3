@@ -13,6 +13,7 @@ import { sendAccessCode } from "@/lib/cfa/access-code";
 import { grantCfaAssessmentShares } from "@/lib/cfa/assessment-shares";
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
 import { getSession } from "@/lib/auth/session";
+import { looksLikeTestCfaEmail } from "@/lib/cfa/admission-draft";
 import { ensureDisabilityAccommodationRequest } from "@/lib/handicap/create-request";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
@@ -347,6 +348,64 @@ export async function PATCH(request: Request) {
     patch.financing_path = financingPath;
     patch.alternance_status = financingPath === "alternance" ? "company_found" : "searching";
     patch.career_center_activated_at = new Date().toISOString();
+  } else if (
+    (action === "save_draft_v2" || action === "submit_v2" || action === "continue_later") &&
+    (current.status === "challenge" || current.status === "dossier")
+  ) {
+    const { applyAdmissionDraftPatch, finalizeAdmissionSubmit, sendContinueLaterEmail } = await import(
+      "@/lib/cfa/admission-draft"
+    );
+    const draftResult = await applyAdmissionDraftPatch(db, current, body);
+    if (!draftResult.ok) {
+      return NextResponse.json({ error: draftResult.error }, { status: draftResult.status });
+    }
+    Object.assign(patch, draftResult.patch);
+    nextStatus = current.status as CfaApplicationStatus;
+
+    if (action === "submit_v2") {
+      const finalize = await finalizeAdmissionSubmit(db, {
+        ...current,
+        ...draftResult.patch,
+      }, body);
+      if (!finalize.ok) {
+        return NextResponse.json({ error: finalize.error }, { status: finalize.status });
+      }
+      Object.assign(patch, finalize.patch);
+      nextStatus = "interview";
+    }
+
+    if (action === "continue_later") {
+      await sendContinueLaterEmail({
+        email: String(current.email),
+        firstName: String(current.first_name),
+        resumeToken: token,
+        isTest: looksLikeTestCfaEmail(String(current.email)),
+      });
+    }
+  } else if (
+    action === "change_specialization" &&
+    (current.status === "challenge" || current.status === "dossier")
+  ) {
+    const specialization = clean(body.specialization, 60);
+    if (!isSpecialization(specialization)) {
+      return NextResponse.json({ error: "Spécialisation invalide." }, { status: 400 });
+    }
+    const previous = String(current.specialization);
+    if (previous !== specialization) {
+      const challengeV2 = (current.challenge_v2 ?? {}) as Record<string, unknown>;
+      const responses = Array.isArray(challengeV2.responses) ? challengeV2.responses : [];
+      const hidden = {
+        ...((challengeV2.hiddenBySpecializationChange as Record<string, unknown>) ?? {}),
+        [previous]: responses,
+      };
+      patch.specialization = specialization;
+      patch.challenge_v2 = {
+        ...challengeV2,
+        responses: [],
+        hiddenBySpecializationChange: hidden,
+      };
+    }
+    nextStatus = current.status;
   } else {
     return NextResponse.json(
       { error: "Cette étape n’est pas disponible pour cette candidature." },
@@ -365,6 +424,15 @@ export async function PATCH(request: Request) {
   if (error && /share_with_companies/i.test(error.message)) {
     delete patch.share_with_companies;
     delete patch.share_with_companies_at;
+    const retry = await db.from("cfa_applications").update(patch).eq("id", current.id).select("*").single();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error && /challenge_v2|parcours|prerequisites_flag|jury_scores|schema cache/i.test(error.message)) {
+    delete patch.challenge_v2;
+    delete patch.parcours;
+    delete patch.prerequisites_flag;
+    delete patch.jury_scores;
     const retry = await db.from("cfa_applications").update(patch).eq("id", current.id).select("*").single();
     data = retry.data;
     error = retry.error;

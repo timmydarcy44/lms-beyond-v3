@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Building2, Calendar, ClipboardList, FolderOpen, ListChecks, Mail } from "lucide-react";
 import { Manrope } from "next/font/google";
 
+import { CfaJuryChallengePanel } from "@/components/control/cfa-jury-challenge-panel";
 import {
   CFA_CHALLENGE_QUESTIONS,
   getCfaSpecializationLabel,
@@ -686,6 +687,24 @@ export function FicheApprenant({ id }: { id: string }) {
                   </details>
                 );
               })}
+            </div>
+            <div className="mt-6 rounded-2xl bg-[#0B1122] p-4">
+              <CfaJuryChallengePanel
+                applicationId={application.id}
+                challengeV2={application.challenge_v2}
+                legacyAnswers={application.challenge_answers}
+                schoolBackground={application.school_background}
+                experiences={application.experiences}
+                motivationText={application.motivation_text}
+                juryScores={application.jury_scores as {
+                  curiosite?: number;
+                  logique?: number;
+                  communication?: number;
+                  motivation?: number;
+                  comment?: string;
+                } | null}
+                prerequisitesFlag={application.prerequisites_flag}
+              />
             </div>
           </section>
 

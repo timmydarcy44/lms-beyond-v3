@@ -95,6 +95,15 @@ export type CfaApplication = {
   education_level: string | null;
   specialization: CfaSpecialization;
   challenge_answers: Record<string, string>;
+  /** Challenge v2 (questions versionnées + médias). */
+  challenge_v2?: {
+    responses?: Array<Record<string, unknown>>;
+    hiddenBySpecializationChange?: Record<string, unknown>;
+  } | null;
+  /** Parcours structuré v2. */
+  parcours?: Record<string, unknown> | null;
+  prerequisites_flag?: string | null;
+  jury_scores?: Record<string, unknown> | null;
   challenge_completed_at: string | null;
   school_background: string | null;
   experiences: string | null;

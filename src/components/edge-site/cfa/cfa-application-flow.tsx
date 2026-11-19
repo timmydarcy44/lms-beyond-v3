@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, CircleStop, Loader2, Mic, Sparkles, Upload, Video } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
-  CFA_CHALLENGE_QUESTIONS,
   CFA_SPECIALIZATIONS,
   getCfaSpecializationLabel,
   type CfaApplication,
 } from "@/lib/cfa-applications";
 import { cn } from "@/lib/utils";
 import { COUNTRY_OPTIONS } from "@/lib/country-options";
+import { AdmissionFrieze, friezeFromStatus } from "@/components/edge-site/cfa/admission-frieze";
+import { AdmissionShell } from "@/components/edge-site/cfa/admission-shell";
+import { CfaChallengeParcoursFlow } from "@/components/edge-site/cfa/cfa-challenge-parcours-flow";
 
 const TOKEN_KEY = "byound_cfa_application_token";
 const NTC_SPECIALIZATIONS = new Set(["ai_business", "sport_business", "real_estate"]);
@@ -43,14 +45,6 @@ export function CfaApplicationFlow() {
     specialization: specializationOptions.some((item) => item.value === requested)
       ? requested!
       : "",
-  });
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [dossier, setDossier] = useState({
-    schoolBackground: "",
-    experiences: "",
-    motivationText: "",
-    motivationMediaUrl: "",
-    alternanceStatus: "",
   });
   const [connected, setConnected] = useState(false);
   const [availableTests, setAvailableTests] = useState<Array<"disc" | "idmc" | "soft">>([]);
@@ -89,14 +83,6 @@ export function CfaApplicationFlow() {
         if (!response.ok) throw new Error();
         const data = await response.json();
         setApp(data.application);
-        setAnswers(data.application.challenge_answers ?? {});
-        setDossier({
-          schoolBackground: data.application.school_background ?? "",
-          experiences: data.application.experiences ?? "",
-          motivationText: data.application.motivation_text ?? "",
-          motivationMediaUrl: data.application.motivation_media_url ?? "",
-          alternanceStatus: data.application.alternance_status ?? "",
-        });
         setShareCompanies(Boolean(data.application.share_with_companies));
       } catch {
         localStorage.removeItem(TOKEN_KEY);
@@ -173,23 +159,48 @@ export function CfaApplicationFlow() {
   }
 
   if (loading) {
-    return <div className="flex min-h-[70vh] items-center justify-center bg-[#070b1f]"><Loader2 className="h-7 w-7 animate-spin text-[#7770ff]" /></div>;
+    return <div className="flex min-h-[70vh] items-center justify-center bg-[#070C1C]"><Loader2 className="h-7 w-7 animate-spin text-[#6E5BFF]" /></div>;
+  }
+
+  if (app && (app.status === "challenge" || app.status === "dossier")) {
+    return (
+      <CfaChallengeParcoursFlow
+        app={app as CfaApplication & { parcours?: Record<string, unknown>; challenge_v2?: { responses?: unknown[] } }}
+        token={token}
+        cvName={cvName}
+        setCvName={setCvName}
+        onApplication={setApp}
+        onRequestChangeSpecialization={() => {
+          localStorage.removeItem(TOKEN_KEY);
+          setApp(null);
+          setToken("");
+        }}
+      />
+    );
   }
 
   return (
-    <div className="min-h-screen bg-[#070b1f] px-5 pb-24 pt-28 text-white sm:px-8">
-      <div className="mx-auto max-w-5xl">
-        <p className="text-sm font-semibold text-[#8c86ff]">Byound School · Admission</p>
-        <h1 className="mt-4 text-[clamp(2.7rem,6vw,5rem)] font-semibold leading-[.93] tracking-[-.055em]">Candidater à Byound School</h1>
-        <p className="mt-4 text-white/50">Votre potentiel d’abord. L’entreprise et le financement viennent après l’admission.</p>
-        <Stepper status={app?.status ?? "profile"} />
+    <AdmissionShell
+      saveState="idle"
+      onContinueLater={() => {
+        if (!token) return;
+        void send("PATCH", { token, action: "continue_later" });
+      }}
+    >
+      <div className="mx-auto max-w-5xl text-[#F2F4FA]">
+        <p className="text-sm font-semibold text-[#A99BFF]">Byound School · Admission</p>
+        <h1 className="mt-3 text-[clamp(2.2rem,5vw,3.25rem)] font-extrabold leading-[1.05] tracking-[-0.04em]">
+          {app ? "Ta candidature Byound School" : "Crée ton profil Byound."}
+        </h1>
+        <p className="mt-3 text-[#9AA3BD]">Ton potentiel d’abord. L’entreprise et le financement viennent après l’admission.</p>
+        <AdmissionFrieze current={friezeFromStatus(app?.status ?? "profile")} />
 
-        <main className="mt-10 rounded-[32px] border border-white/10 bg-white/[.045] p-6 backdrop-blur-xl sm:p-10">
+        <main className="mt-10 rounded-[28px] border border-[#1F2850] bg-[#0E1430] p-6 sm:p-10">
           {!app ? (
             <form onSubmit={(event) => {
               event.preventDefault();
               if (!profile.specialization) {
-                setError("Choisissez une spécialisation.");
+                setError("Choisis une spécialisation.");
                 return;
               }
               const born = new Date(profile.birthDate);
@@ -198,8 +209,8 @@ export function CfaApplicationFlow() {
               if (today.getMonth() < born.getMonth() || (today.getMonth() === born.getMonth() && today.getDate() < born.getDate())) age -= 1;
               void send("POST", { ...profile, age, shareTests });
             }}>
-              <Title overline="Étape 1 · 2 minutes">Créez votre profil Byound.</Title>
-              <p className="mt-3 text-sm text-white/45">{connected ? "Votre compte Byound a rempli le nom, l’e-mail et le téléphone. Vous pouvez les corriger." : "Aucune entreprise n’est demandée à cette étape."}</p>
+              <Title overline="Profil · environ 2 minutes">Dis-nous qui tu es.</Title>
+              <p className="mt-3 text-sm text-[#9AA3BD]">{connected ? "Ton compte Byound a rempli le nom, l’e-mail et le téléphone. Tu peux les corriger." : "Aucune entreprise n’est demandée à cette étape."}</p>
               <div className="mt-8 grid gap-5 sm:grid-cols-2">
                 <Input label="Prénom" value={profile.firstName} onChange={(value) => setProfile({ ...profile, firstName: value })} />
                 <Input label="Nom" value={profile.lastName} onChange={(value) => setProfile({ ...profile, lastName: value })} />
@@ -240,35 +251,6 @@ export function CfaApplicationFlow() {
             </form>
           ) : null}
 
-          {app?.status === "challenge" ? (
-            <form onSubmit={(event) => { event.preventDefault(); void send("PATCH", { token, action: "challenge", answers }); }}>
-              <Title overline="Étape 2 · 10 à 15 minutes">Le Byound Challenge.</Title>
-              <p className="mt-3 text-sm text-white/45">Il n’y a pas une seule bonne réponse. Nous cherchons votre façon de raisonner.</p>
-              <div className="mt-8 space-y-7">{CFA_CHALLENGE_QUESTIONS.map((question, index) => <label key={question.id} className="block"><span className="text-xs font-semibold uppercase tracking-wider text-[#8c86ff]">{index + 1} · {question.eyebrow}</span><span className="my-3 block text-lg font-medium">{question.question}</span><textarea className={control} rows={5} value={answers[question.id] ?? ""} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} required /></label>)}</div>
-              <Submit busy={busy} error={error}>Valider mon challenge</Submit>
-            </form>
-          ) : null}
-
-          {app?.status === "dossier" ? (
-            <form onSubmit={(event) => { event.preventDefault(); void send("PATCH", { token, action: "dossier", ...dossier, shareWithCompanies: shareCompanies }); }}>
-              <Title overline="Étape 3 · Dossier candidat">Votre parcours, sans lettre formatée.</Title>
-              <div className="mt-8 space-y-6">
-                <Area label="Parcours scolaire" value={dossier.schoolBackground} onChange={(value) => setDossier({ ...dossier, schoolBackground: value })} />
-                <Area label="Expériences (optionnel)" value={dossier.experiences} onChange={(value) => setDossier({ ...dossier, experiences: value })} required={false} />
-                <label className="block text-sm text-white/80">CV (optionnel)<span className="mt-2 flex min-h-14 cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-white/15 px-4 text-white/50"><Upload className="h-4 w-4" />{cvName || "Choisir un PDF ou une image"}<input type="file" className="sr-only" accept=".pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file, "cv"); }} /></span></label>
-                <Area label="Pourquoi Byound ? Écrivez, parlez ou filmez-vous." value={dossier.motivationText} onChange={(value) => setDossier({ ...dossier, motivationText: value })} required={false} />
-                <Recorder busy={busy} onFile={async (file) => { const path = await upload(file, "motivation"); if (!path) return false; setDossier((current) => ({ ...current, motivationMediaUrl: path })); return true; }} />
-                <p className="text-sm text-white/80">Situation vis-à-vis de l’alternance</p>
-                <div className="grid gap-3 sm:grid-cols-2">{((app as { origin?: string }).origin === "existing_account" ? [["searching", "Ce poste est en alternance"]] : [["company_found", "J’ai déjà une entreprise"], ["searching", "Je recherche une entreprise"]]).map(([value, label]) => <button key={value} type="button" onClick={() => setDossier({ ...dossier, alternanceStatus: value })} className={cn("min-h-14 rounded-2xl border text-sm font-semibold", dossier.alternanceStatus === value ? "border-[#7770ff] bg-[#7770ff]/20" : "border-white/10 text-white/50")}>{label}</button>)}</div>
-                <label className="flex items-start gap-3 text-sm text-white/80">
-                  <input type="checkbox" checked={shareCompanies} onChange={(event) => setShareCompanies(event.target.checked)} className="mt-1 h-4 w-4" />
-                  <span>J'accepte que mon profil soit transmis aux entreprises partenaires de Byound School. <span className="block text-white/45">Facultatif. La case est décochée par défaut, et vous pourrez la modifier ensuite.</span></span>
-                </label>
-              </div>
-              <Submit busy={busy} error={error}>Envoyer mon dossier</Submit>
-            </form>
-          ) : null}
-
           {app && !["profile", "challenge", "brochure", "dossier"].includes(app.status) ? (
             <label className="mb-8 flex items-start gap-3 rounded-2xl border border-white/10 p-4 text-sm text-white/80">
               <input type="checkbox" checked={shareCompanies} onChange={(event) => { const next = event.target.checked; setShareCompanies(next); void send("PATCH", { token, action: "share_companies", shareWithCompanies: next }); }} className="mt-1 h-4 w-4" />
@@ -289,26 +271,12 @@ export function CfaApplicationFlow() {
           {app?.status === "admitted" ? <Admitted app={app} busy={busy} error={error} choose={(financingPath) => void send("PATCH", { token, action: "financing", financingPath })} /> : null}
         </main>
       </div>
-    </div>
+    </AdmissionShell>
   );
 }
 
-function Stepper({ status }: { status: string }) {
-  const labels = [
-    ["profile", "Profil"],
-    ["challenge", "Challenge"],
-    ["dossier", "Dossier"],
-    ["interview", "Entretien"],
-    ["review", "Revue"],
-    ["administrative", "Administratif"],
-    ["admitted", "Admis"],
-  ] as const;
-  const current = Math.max(labels.findIndex(([value]) => value === status), 0);
-  return <div className="mt-10 flex overflow-x-auto">{labels.map(([value, label], index) => <div key={value} className="flex min-w-28 flex-1 items-center gap-2 text-xs"><span className={cn("flex h-7 w-7 items-center justify-center rounded-full border", index < current ? "border-[#7770ff] bg-[#7770ff]" : index === current ? "bg-white text-[#070b1f]" : "border-white/15 text-white/30")}>{index < current ? <Check className="h-3 w-3" /> : index + 1}</span><span className="text-white/70">{label}</span></div>)}</div>;
-}
-
 function Title({ overline, children }: { overline: string; children: React.ReactNode }) {
-  return <><p className="text-xs font-semibold uppercase tracking-[.2em] text-white/35">{overline}</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.04em]">{children}</h2></>;
+  return <><p className="text-xs font-semibold text-[#A99BFF]">{overline}</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.04em]">{children}</h2></>;
 }
 
 function Input({ label, value, onChange, type = "text", required = true }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {

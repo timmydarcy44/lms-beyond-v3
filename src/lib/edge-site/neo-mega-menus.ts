@@ -91,11 +91,9 @@ export function getNeoMegaMenus(routes: EdgeMarketingRoutes): NeoMegaMenuConfig[
           },
           {
             label: "Retail et luxury",
-            // TODO: aucune page filière Retail et luxury
-            href: MISSING_ROUTE,
+            href: routes.ecoleMemRetailExperience,
             pills: [
-              // TODO: aucune page Retail Experience
-              { label: "Retail Experience", href: MISSING_ROUTE },
+              { label: "Retail Experience", href: routes.ecoleMemRetailExperience },
               // TODO: aucune page Merchandising
               { label: "Merchandising", href: MISSING_ROUTE },
               // TODO: aucune page Luxury & Premium

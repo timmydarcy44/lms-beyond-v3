@@ -26,6 +26,13 @@ const CURSUS = [
     body: "Négociation et relation client appliquées à l’immobilier et aux projets immobiliers.",
     hrefKey: "ecoleNtcRealEstate" as const,
   },
+  {
+    slug: "retail-experience",
+    title: "Retail Experience",
+    eyebrow: "Bachelor · MEM",
+    body: "Manager d’établissement marchand avec une spécialisation expérience client en magasin et en ligne.",
+    hrefKey: "ecoleMemRetailExperience" as const,
+  },
 ] as const;
 
 const STEPS = [
@@ -165,10 +172,10 @@ export function EcoleHubPage({ routes }: Props) {
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Les cursus ouverts</h2>
           <p className="mt-3 max-w-2xl text-white/65">
-            Trois spécialisations live. D’autres filières arrivent — candidater reste le meilleur
+            Quatre spécialisations live. D’autres filières arrivent — candidater reste le meilleur
             moyen d’être informé.
           </p>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {CURSUS.map((item) => (
               <Link
                 key={item.slug}

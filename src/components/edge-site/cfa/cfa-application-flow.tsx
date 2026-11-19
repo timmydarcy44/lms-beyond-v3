@@ -16,6 +16,7 @@ import { CfaChallengeParcoursFlow } from "@/components/edge-site/cfa/cfa-challen
 
 const TOKEN_KEY = "byound_cfa_application_token";
 const NTC_SPECIALIZATIONS = new Set(["ai_business", "sport_business", "real_estate"]);
+const MEM_SPECIALIZATIONS = new Set(["retail_experience", "merchandising", "luxury_premium"]);
 const control =
   "w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#7770ff]";
 
@@ -24,9 +25,12 @@ export function CfaApplicationFlow() {
   const resume = params.get("resume");
   const requested = params.get("specialization");
   const ntcOnly = params.get("track") === "ntc";
+  const memOnly = params.get("track") === "mem";
   const specializationOptions = ntcOnly
     ? CFA_SPECIALIZATIONS.filter((item) => NTC_SPECIALIZATIONS.has(item.value))
-    : CFA_SPECIALIZATIONS;
+    : memOnly
+      ? CFA_SPECIALIZATIONS.filter((item) => MEM_SPECIALIZATIONS.has(item.value))
+      : CFA_SPECIALIZATIONS;
   const specializationGroups = [...new Set(specializationOptions.map((item) => item.group))];
   const [app, setApp] = useState<CfaApplication | null>(null);
   const [token, setToken] = useState("");

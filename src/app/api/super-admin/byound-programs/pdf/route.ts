@@ -18,9 +18,11 @@ function revalidateProgramPages() {
     "/ecole/ntc/ai-business",
     "/ecole/ntc/business-sport",
     "/ecole/ntc/real-estate",
+    "/ecole/mem/retail-experience",
     "/edge-lab/ecole/ntc/ai-business",
     "/edge-lab/ecole/ntc/business-sport",
     "/edge-lab/ecole/ntc/real-estate",
+    "/edge-lab/ecole/mem/retail-experience",
   ]) {
     revalidatePath(path);
   }

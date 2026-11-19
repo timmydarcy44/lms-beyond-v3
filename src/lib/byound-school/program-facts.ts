@@ -39,6 +39,7 @@ function familyLevel(specialization: CfaSpecialization): string {
 function candidaterHref(specialization: CfaSpecialization): string {
   const params = new URLSearchParams({ specialization });
   if (NTC.has(specialization)) params.set("track", "ntc");
+  if (MEM.has(specialization)) params.set("track", "mem");
   return `/ecole/candidater?${params.toString()}`;
 }
 
@@ -47,6 +48,7 @@ export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, stri
   ai_business: "/ecole/ntc/ai-business",
   sport_business: "/ecole/ntc/business-sport",
   real_estate: "/ecole/ntc/real-estate",
+  retail_experience: "/ecole/mem/retail-experience",
 };
 
 export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {

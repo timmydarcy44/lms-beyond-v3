@@ -1,9 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { FileUp, GraduationCap, ImagePlus, Loader2, Save } from "lucide-react";
+import { ExternalLink, FileUp, GraduationCap, ImagePlus, Loader2, Save } from "lucide-react";
 
-import type { ByoundProgramFacts } from "@/lib/byound-school/program-facts";
+import {
+  byoundProgramPublicHref,
+  type ByoundProgramFacts,
+} from "@/lib/byound-school/program-facts";
 import { cn } from "@/lib/utils";
 
 const FIELDS: { key: keyof ByoundProgramFacts; label: string }[] = [
@@ -143,10 +147,10 @@ export function ByoundFormationsAdminClient() {
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-400">
           Byound School
         </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Formation Byound</h1>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Pages cursus</h1>
         <p className="mt-2 max-w-2xl text-sm text-white/55">
-          Cliquez sur une carte pour modifier le rythme, le lieu, les places et les autres
-          éléments affichés sur la fiche publique.
+          Modifiez les infos affichées sur chaque page cursus publique, déposez la fiche
+          PDF à télécharger, et changez l’image de couverture.
         </p>
       </div>
 
@@ -189,6 +193,9 @@ export function ByoundFormationsAdminClient() {
                       <p className="mt-1 text-xs text-white/45">
                         {program.seatsAvailable} places · {program.location}
                       </p>
+                      <p className="mt-3 text-[11px] font-semibold text-indigo-300">
+                        {program.programPdfUrl ? "Fiche cursus PDF prête" : "PDF à déposer"}
+                      </p>
                     </button>
                   ))}
               </div>
@@ -202,9 +209,20 @@ export function ByoundFormationsAdminClient() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-400">
-                Éléments administratifs
+                Page cursus
               </p>
               <h2 className="mt-1 text-2xl font-semibold">{draft.title}</h2>
+              {byoundProgramPublicHref(draft.specialization) ? (
+                <Link
+                  href={byoundProgramPublicHref(draft.specialization)!}
+                  target="_blank"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200"
+                >
+                  Voir la page publique <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs text-white/40">Page publique pas encore en ligne pour cette filière.</p>
+              )}
             </div>
             <button
               type="button"
@@ -231,14 +249,14 @@ export function ByoundFormationsAdminClient() {
               </label>
             ))}
             <label className="text-sm text-white/70 sm:col-span-2">
-              Lien de téléchargement PDF
+              Fiche cursus (PDF à télécharger)
               <span className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
                 {uploadingPdf ? (
                   <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />
                 ) : (
                   <FileUp className="h-4 w-4 text-indigo-300" />
                 )}
-                {uploadingPdf ? "Envoi du PDF…" : "Choisir un fichier PDF"}
+                {uploadingPdf ? "Envoi du PDF…" : "Déposer la fiche cursus PDF"}
                 <input
                   type="file"
                   accept="application/pdf,.pdf"
@@ -253,9 +271,19 @@ export function ByoundFormationsAdminClient() {
               </span>
               <span className="mt-2 block text-xs text-white/45">
                 {draft.programPdfUrl
-                  ? "Lien créé. Le bouton public proposera ce fichier après les coordonnées."
-                  : "Aucun PDF pour le moment."}
+                  ? "Fiche prête. Sur la page publique, le jeune laisse ses coordonnées puis télécharge ce PDF."
+                  : "Sans PDF, le bouton « Télécharger la fiche » reste indisponible sur la page."}
               </span>
+              {draft.programPdfUrl ? (
+                <a
+                  href={draft.programPdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200"
+                >
+                  Prévisualiser le PDF <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
             </label>
             <label className="text-sm text-white/70 sm:col-span-2">
               Image de couverture

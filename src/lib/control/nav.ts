@@ -87,6 +87,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
           pathname.startsWith("/super/crm/cfa/demandes"),
       },
       {
+        id: "pages-cursus",
+        label: "Pages cursus",
+        href: "/super/formations-byound",
+        match: under("/super/formations-byound"),
+      },
+      {
         id: "accueil",
         label: "Entreprises d'accueil",
         href: "/super/crm/cfa/entreprises",
@@ -128,7 +134,7 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
       },
       {
         id: "cursus",
-        label: "Cursus",
+        label: "Cursus LMS",
         href: "/super/crm/cfa/cursus",
         match: under("/super/crm/cfa/cursus"),
       },

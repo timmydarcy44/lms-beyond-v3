@@ -42,6 +42,17 @@ function candidaterHref(specialization: CfaSpecialization): string {
   return `/ecole/candidater?${params.toString()}`;
 }
 
+/** Pages marketing publiques déjà en ligne (les autres filières suivront). */
+export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, string>> = {
+  ai_business: "/ecole/ntc/ai-business",
+  sport_business: "/ecole/ntc/business-sport",
+  real_estate: "/ecole/ntc/real-estate",
+};
+
+export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {
+  return BYOUND_PROGRAM_PUBLIC_PATHS[specialization] ?? null;
+}
+
 export function defaultByoundProgramFacts(
   specialization: CfaSpecialization,
 ): ByoundProgramFacts {

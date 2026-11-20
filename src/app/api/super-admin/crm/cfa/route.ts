@@ -438,11 +438,14 @@ export async function PATCH(request: NextRequest) {
       .select("administrative_documents_submitted_at")
       .eq("id", id)
       .maybeSingle();
-    if (!eligibility?.administrative_documents_submitted_at) {
+    const docsReady = Boolean(eligibility?.administrative_documents_submitted_at);
+    const forceAdmit = "forceAdmit" in input && input.forceAdmit === true;
+    if (!docsReady && !forceAdmit) {
       return NextResponse.json(
         {
           error:
-            "Les informations administratives et les justificatifs doivent être déposés avant l’admission. Le paiement des frais peut être encaissé ensuite, y compris par chèque.",
+            "Les informations administratives et les justificatifs ne sont pas encore déposés. Confirmez l’admission forcée si vous voulez créer le compte maintenant.",
+          needsForceAdmit: true,
         },
         { status: 409 },
       );

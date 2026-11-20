@@ -206,6 +206,8 @@ export function FicheApprenant({ id }: { id: string }) {
   const [companyDraft, setCompanyDraft] = useState({ name: "", siret: "", city: "" });
   const [tutorDraft, setTutorDraft] = useState({ firstName: "", lastName: "", email: "", jobTitle: "" });
   const [confirmAdmit, setConfirmAdmit] = useState(false);
+  const [forceAdmit, setForceAdmit] = useState(false);
+  const [admitBusy, setAdmitBusy] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
   const [pickingCompany, setPickingCompany] = useState(false);
@@ -435,6 +437,7 @@ export function FicheApprenant({ id }: { id: string }) {
 
   async function changeStatus(status: CfaApplicationStatus) {
     if (status === "admitted") {
+      setForceAdmit(false);
       setConfirmAdmit(true);
       return;
     }
@@ -581,6 +584,18 @@ export function FicheApprenant({ id }: { id: string }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {application.status !== "admitted" && application.status !== "contract" && application.status !== "rejected" ? (
+              <button
+                type="button"
+                className="h-11 rounded-full bg-[#6BE39B] px-4 text-sm font-extrabold text-[#062816]"
+                onClick={() => {
+                  setForceAdmit(false);
+                  setConfirmAdmit(true);
+                }}
+              >
+                Passer en Admis
+              </button>
+            ) : null}
             <button type="button" className="h-11 rounded-full border border-[#FF8A98] px-4 text-sm font-semibold text-[#FF8A98]" onClick={() => setRejectOpen(true)}>Marquer non retenu</button>
             <a href={`mailto:${application.email}`} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#26304F] px-4 text-sm font-semibold"><Mail className="h-4 w-4" />Envoyer un email</a>
             <a href="#entretien" onClick={() => setOpenSections((current) => ({ ...current, entretien: true }))} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"><Calendar className="h-4 w-4" />Planifier l'entretien</a>
@@ -1165,11 +1180,72 @@ export function FicheApprenant({ id }: { id: string }) {
             <p className="mt-3 text-sm text-[#AEB6CC]">
               {existingAccount
                 ? "Le rôle apprenant sera ajouté au compte existant. Un e-mail d'information part, sans nouveau code."
-                : "Un compte apprenant sera créé. Un code de connexion part par e-mail."}
+                : "Un compte apprenant sera créé s’il n’existe pas. Un code OTP part par e-mail, puis le candidat définit son mot de passe."}
             </p>
+            {!application.administrative_documents_submitted_at ? (
+              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-[#E7A92C]/40 bg-[#3A2A0E] p-4 text-sm text-[#F6D68B]">
+                <input
+                  type="checkbox"
+                  checked={forceAdmit}
+                  onChange={(event) => setForceAdmit(event.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  Dossier administratif incomplet : j’admets quand même (création du compte maintenant, justificatifs à compléter ensuite).
+                </span>
+              </label>
+            ) : null}
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" className="h-10 rounded-full px-4 text-sm" onClick={() => setConfirmAdmit(false)}>Annuler</button>
-              <button type="button" className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white" onClick={() => { setConfirmAdmit(false); void fetch("/api/super-admin/crm/cfa", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "admitted" }) }).then(async (response) => { const result = await response.json(); if (!response.ok) setMessage(result.error || "Admission impossible"); else await load(); }); }}>Confirmer</button>
+              <button
+                type="button"
+                className="h-10 rounded-full px-4 text-sm"
+                onClick={() => {
+                  setConfirmAdmit(false);
+                  setForceAdmit(false);
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={admitBusy || (!application.administrative_documents_submitted_at && !forceAdmit)}
+                className="h-10 rounded-full bg-[#6BE39B] px-4 text-sm font-extrabold text-[#062816] disabled:opacity-40"
+                onClick={() => {
+                  setAdmitBusy(true);
+                  void fetch("/api/super-admin/crm/cfa", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      id,
+                      status: "admitted",
+                      forceAdmit: !application.administrative_documents_submitted_at && forceAdmit,
+                    }),
+                  })
+                    .then(async (response) => {
+                      const result = await response.json();
+                      if (!response.ok) {
+                        if (result.needsForceAdmit) {
+                          setForceAdmit(false);
+                          setMessage(result.error || "Cochez l’admission forcée pour continuer.");
+                          return;
+                        }
+                        setMessage(result.error || "Admission impossible");
+                        return;
+                      }
+                      setConfirmAdmit(false);
+                      setForceAdmit(false);
+                      setMessage(
+                        existingAccount
+                          ? "Admis · compte existant informé."
+                          : "Admis · compte créé, OTP envoyé.",
+                      );
+                      await load(true);
+                    })
+                    .finally(() => setAdmitBusy(false));
+                }}
+              >
+                {admitBusy ? "Admission…" : "Confirmer l’admission"}
+              </button>
             </div>
           </div>
         </div>

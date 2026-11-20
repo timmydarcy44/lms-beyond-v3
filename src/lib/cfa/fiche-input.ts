@@ -56,6 +56,8 @@ export const statusSchema = z.object({
     .optional(),
   interviewNotes: z.string().max(8000, "Le message est trop long.").optional(),
   decisionNotes: z.string().max(4000, "Le motif est trop long.").optional(),
+  /** Super-admin : admettre même si le dossier administratif n’est pas complet. */
+  forceAdmit: z.boolean().optional(),
 });
 
 const leadSourceValues = CFA_LEAD_SOURCES.map((item) => item.value) as [

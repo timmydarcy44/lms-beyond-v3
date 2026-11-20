@@ -21,6 +21,16 @@ const FIELDS: { key: keyof ByoundProgramFacts; label: string }[] = [
   { key: "seatsAvailable", label: "Places disponibles" },
 ];
 
+function fileLabelFromUrl(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    const name = decodeURIComponent(path.split("/").pop() || "");
+    return name || url;
+  } catch {
+    return url;
+  }
+}
+
 export function ByoundFormationsAdminClient() {
   const [programs, setPrograms] = useState<ByoundProgramFacts[]>([]);
   const [selected, setSelected] = useState<ByoundProgramFacts | null>(null);
@@ -180,22 +190,39 @@ export function ByoundFormationsAdminClient() {
                       type="button"
                       onClick={() => open(program)}
                       className={cn(
-                        "super-glass-panel rounded-2xl border border-white/10 p-5 text-left transition hover:-translate-y-0.5 hover:border-indigo-400/40",
+                        "super-glass-panel overflow-hidden rounded-2xl border border-white/10 text-left transition hover:-translate-y-0.5 hover:border-indigo-400/40",
                         selected?.specialization === program.specialization &&
                           "border-indigo-400/70",
                       )}
                     >
-                      <GraduationCap className="h-5 w-5 text-indigo-400" />
-                      <h2 className="mt-4 text-lg font-semibold">{program.title}</h2>
-                      <p className="mt-2 text-xs text-white/45">
-                        {program.format} · {program.nextIntake}
-                      </p>
-                      <p className="mt-1 text-xs text-white/45">
-                        {program.seatsAvailable} places · {program.location}
-                      </p>
-                      <p className="mt-3 text-[11px] font-semibold text-indigo-300">
-                        {program.programPdfUrl ? "Fiche cursus PDF prête" : "PDF à déposer"}
-                      </p>
+                      <div className="relative aspect-[16/7] bg-[#0b1020]">
+                        {program.heroImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- admin list thumb
+                          <img
+                            src={program.heroImageUrl}
+                            alt=""
+                            className="h-full w-full object-cover opacity-90"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <GraduationCap className="h-6 w-6 text-indigo-400/70" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-5">
+                        <h2 className="text-lg font-semibold">{program.title}</h2>
+                        <p className="mt-2 text-xs text-white/45">
+                          {program.format} · {program.nextIntake}
+                        </p>
+                        <p className="mt-1 text-xs text-white/45">
+                          {program.seatsAvailable} places · {program.location}
+                        </p>
+                        <p className="mt-3 text-[11px] font-semibold text-indigo-300">
+                          {program.programPdfUrl ? "Fiche cursus PDF prête" : "PDF à déposer"}
+                          {" · "}
+                          {program.heroImageUrl ? "Hero OK" : "Hero à déposer"}
+                        </p>
+                      </div>
                     </button>
                   ))}
               </div>
@@ -248,9 +275,9 @@ export function ByoundFormationsAdminClient() {
                 />
               </label>
             ))}
-            <label className="text-sm text-white/70 sm:col-span-2">
-              Fiche cursus (PDF à télécharger)
-              <span className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
+            <div className="sm:col-span-2">
+              <p className="text-sm text-white/70">Fiche cursus (PDF à télécharger)</p>
+              <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
                 {uploadingPdf ? (
                   <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />
                 ) : (
@@ -268,26 +295,39 @@ export function ByoundFormationsAdminClient() {
                     void uploadPdf(file);
                   }}
                 />
-              </span>
-              <span className="mt-2 block text-xs text-white/45">
+              </label>
+              <p className="mt-2 text-xs text-white/45">
                 {draft.programPdfUrl
                   ? "Fiche prête. Sur la page publique, le jeune laisse ses coordonnées puis télécharge ce PDF."
                   : "Sans PDF, le bouton « Télécharger la fiche » reste indisponible sur la page."}
-              </span>
+              </p>
               {draft.programPdfUrl ? (
-                <a
-                  href={draft.programPdfUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200"
-                >
-                  Prévisualiser le PDF <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020]">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5">
+                    <p className="truncate text-xs text-white/50">
+                      {fileLabelFromUrl(draft.programPdfUrl)}
+                    </p>
+                    <a
+                      href={draft.programPdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200"
+                    >
+                      Ouvrir <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                  <iframe
+                    key={draft.programPdfUrl}
+                    title={`Aperçu PDF ${draft.title}`}
+                    src={`${draft.programPdfUrl}#toolbar=0&navpanes=0`}
+                    className="h-[28rem] w-full bg-white"
+                  />
+                </div>
               ) : null}
-            </label>
-            <label className="text-sm text-white/70 sm:col-span-2">
-              Image de couverture
-              <span className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
+            </div>
+            <div className="sm:col-span-2">
+              <p className="text-sm text-white/70">Image de couverture (hero)</p>
+              <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-white/20 bg-white/5 px-3 py-2 text-sm text-white">
                 {uploadingHero ? (
                   <Loader2 className="h-4 w-4 animate-spin text-indigo-300" />
                 ) : (
@@ -305,13 +345,39 @@ export function ByoundFormationsAdminClient() {
                     void uploadHero(file);
                   }}
                 />
-              </span>
-              <span className="mt-2 block text-xs text-white/45">
+              </label>
+              <p className="mt-2 text-xs text-white/45">
                 {draft.heroImageUrl
                   ? "Cette image remplace le visuel en transparence de la page."
                   : "Sans image, la page garde son visuel actuel."}
-              </span>
-            </label>
+              </p>
+              {draft.heroImageUrl ? (
+                <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0b1020]">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5">
+                    <p className="truncate text-xs text-white/50">
+                      {fileLabelFromUrl(draft.heroImageUrl)}
+                    </p>
+                    <a
+                      href={draft.heroImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex shrink-0 items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200"
+                    >
+                      Ouvrir <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                  <div className="relative aspect-[16/9] w-full bg-[#070b1f]">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of remote storage URL */}
+                    <img
+                      key={draft.heroImageUrl}
+                      src={draft.heroImageUrl}
+                      alt={`Hero ${draft.title}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

@@ -24,6 +24,7 @@ function revalidateProgramPages() {
     "/ecole/mem/sport-retail",
     "/ecole/rdc/growth-acquisition",
     "/ecole/rdc/entrepreneurship",
+    "/ecole/rdc/international-business",
     "/edge-lab/ecole/ntc/ai-business",
     "/edge-lab/ecole/ntc/business-sport",
     "/edge-lab/ecole/ntc/real-estate",
@@ -33,6 +34,7 @@ function revalidateProgramPages() {
     "/edge-lab/ecole/mem/sport-retail",
     "/edge-lab/ecole/rdc/growth-acquisition",
     "/edge-lab/ecole/rdc/entrepreneurship",
+    "/edge-lab/ecole/rdc/international-business",
   ]) {
     revalidatePath(path);
   }

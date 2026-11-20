@@ -50,8 +50,7 @@ export function getHomeFormations(routes: EdgeMarketingRoutes): HomeFormation[] 
     { label: "Sport Retail", href: routes.ecoleMemSportRetail },
     { label: "Growth & Acquisition", href: routes.ecoleRdcGrowthAcquisition },
     { label: "Entrepreneurship", href: routes.ecoleRdcEntrepreneurship },
-    // TODO: aucune page International Business
-    { label: "International Business", href: MISSING_ROUTE },
+    { label: "International Business", href: routes.ecoleRdcInternationalBusiness },
     // TODO: aucune page Strategic Partnerships
     { label: "Strategic Partnerships", href: MISSING_ROUTE },
   ];

@@ -193,7 +193,7 @@ export function getEdgePremiumConfig(host?: string | null) {
               links: [
                 { label: "Growth & Acquisition", href: R.ecoleRdcGrowthAcquisition },
                 { label: "Entrepreneurship", href: R.ecoleRdcEntrepreneurship },
-                { label: "International Business", href: `${R.alternance}#rdc-international-business` },
+                { label: "International Business", href: R.ecoleRdcInternationalBusiness },
                 { label: "Strategic Partnerships", href: `${R.alternance}#rdc-strategic-partnerships` },
               ],
             },

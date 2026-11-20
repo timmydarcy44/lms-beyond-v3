@@ -68,6 +68,13 @@ const CURSUS = [
     body: "Responsable de développement commercial avec une spécialisation création, financement et lancement de projet.",
     hrefKey: "ecoleRdcEntrepreneurship" as const,
   },
+  {
+    slug: "international-business",
+    title: "International Business",
+    eyebrow: "Bac+3 · RDC",
+    body: "Responsable de développement commercial avec une spécialisation export, implantation et opérations internationales.",
+    hrefKey: "ecoleRdcInternationalBusiness" as const,
+  },
 ] as const;
 
 const STEPS = [

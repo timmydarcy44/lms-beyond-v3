@@ -61,6 +61,7 @@ export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, stri
   sport_retail: "/ecole/mem/sport-retail",
   growth_acquisition: "/ecole/rdc/growth-acquisition",
   entrepreneurship: "/ecole/rdc/entrepreneurship",
+  international_business: "/ecole/rdc/international-business",
 };
 
 export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {

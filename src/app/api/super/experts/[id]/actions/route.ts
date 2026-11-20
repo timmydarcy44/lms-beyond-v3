@@ -158,6 +158,7 @@ export async function POST(
       revalidatePath("/ecole/rdc/growth-acquisition");
       revalidatePath("/ecole/rdc/entrepreneurship");
       revalidatePath("/ecole/rdc/international-business");
+      revalidatePath("/ecole/rdc/strategic-partnerships");
       revalidatePath("/edge-lab/ecole/ntc/ai-business");
       revalidatePath("/edge-lab/ecole/ntc/business-sport");
       revalidatePath("/edge-lab/ecole/ntc/real-estate");
@@ -168,6 +169,7 @@ export async function POST(
       revalidatePath("/edge-lab/ecole/rdc/growth-acquisition");
       revalidatePath("/edge-lab/ecole/rdc/entrepreneurship");
       revalidatePath("/edge-lab/ecole/rdc/international-business");
+      revalidatePath("/edge-lab/ecole/rdc/strategic-partnerships");
       revalidatePath("/");
       revalidatePath("/edge-lab");
     }

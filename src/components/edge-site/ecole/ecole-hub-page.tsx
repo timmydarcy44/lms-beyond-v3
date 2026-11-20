@@ -75,6 +75,13 @@ const CURSUS = [
     body: "Responsable de développement commercial avec une spécialisation export, implantation et opérations internationales.",
     hrefKey: "ecoleRdcInternationalBusiness" as const,
   },
+  {
+    slug: "strategic-partnerships",
+    title: "Strategic Partnerships",
+    eyebrow: "Bac+3 · RDC",
+    body: "Responsable de développement commercial avec une spécialisation alliances, mécénat et réseaux d’affaires.",
+    hrefKey: "ecoleRdcStrategicPartnerships" as const,
+  },
 ] as const;
 
 const STEPS = [

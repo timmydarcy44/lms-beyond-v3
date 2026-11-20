@@ -25,6 +25,7 @@ function revalidateProgramPages() {
     "/ecole/rdc/growth-acquisition",
     "/ecole/rdc/entrepreneurship",
     "/ecole/rdc/international-business",
+    "/ecole/rdc/strategic-partnerships",
     "/edge-lab/ecole/ntc/ai-business",
     "/edge-lab/ecole/ntc/business-sport",
     "/edge-lab/ecole/ntc/real-estate",
@@ -35,6 +36,7 @@ function revalidateProgramPages() {
     "/edge-lab/ecole/rdc/growth-acquisition",
     "/edge-lab/ecole/rdc/entrepreneurship",
     "/edge-lab/ecole/rdc/international-business",
+    "/edge-lab/ecole/rdc/strategic-partnerships",
   ]) {
     revalidatePath(path);
   }

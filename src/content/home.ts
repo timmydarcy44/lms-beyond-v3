@@ -51,8 +51,7 @@ export function getHomeFormations(routes: EdgeMarketingRoutes): HomeFormation[] 
     { label: "Growth & Acquisition", href: routes.ecoleRdcGrowthAcquisition },
     { label: "Entrepreneurship", href: routes.ecoleRdcEntrepreneurship },
     { label: "International Business", href: routes.ecoleRdcInternationalBusiness },
-    // TODO: aucune page Strategic Partnerships
-    { label: "Strategic Partnerships", href: MISSING_ROUTE },
+    { label: "Strategic Partnerships", href: routes.ecoleRdcStrategicPartnerships },
   ];
 }
 

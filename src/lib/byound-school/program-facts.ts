@@ -60,6 +60,7 @@ export const BYOUND_PROGRAM_PUBLIC_PATHS: Partial<Record<CfaSpecialization, stri
   luxury_premium: "/ecole/mem/luxury-premium",
   sport_retail: "/ecole/mem/sport-retail",
   growth_acquisition: "/ecole/rdc/growth-acquisition",
+  entrepreneurship: "/ecole/rdc/entrepreneurship",
 };
 
 export function byoundProgramPublicHref(specialization: CfaSpecialization): string | null {

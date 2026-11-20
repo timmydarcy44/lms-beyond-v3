@@ -23,6 +23,7 @@ function revalidateProgramPages() {
     "/ecole/mem/luxury-premium",
     "/ecole/mem/sport-retail",
     "/ecole/rdc/growth-acquisition",
+    "/ecole/rdc/entrepreneurship",
     "/edge-lab/ecole/ntc/ai-business",
     "/edge-lab/ecole/ntc/business-sport",
     "/edge-lab/ecole/ntc/real-estate",
@@ -31,6 +32,7 @@ function revalidateProgramPages() {
     "/edge-lab/ecole/mem/luxury-premium",
     "/edge-lab/ecole/mem/sport-retail",
     "/edge-lab/ecole/rdc/growth-acquisition",
+    "/edge-lab/ecole/rdc/entrepreneurship",
   ]) {
     revalidatePath(path);
   }

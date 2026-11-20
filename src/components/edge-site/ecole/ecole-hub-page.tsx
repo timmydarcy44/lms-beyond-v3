@@ -61,6 +61,13 @@ const CURSUS = [
     body: "Responsable de développement commercial avec une spécialisation acquisition, expérimentation et croissance.",
     hrefKey: "ecoleRdcGrowthAcquisition" as const,
   },
+  {
+    slug: "entrepreneurship",
+    title: "Entrepreneurship",
+    eyebrow: "Bac+3 · RDC",
+    body: "Responsable de développement commercial avec une spécialisation création, financement et lancement de projet.",
+    hrefKey: "ecoleRdcEntrepreneurship" as const,
+  },
 ] as const;
 
 const STEPS = [

@@ -11,6 +11,7 @@ import type { EdgePremiumConfig } from "@/lib/edge-site/premium-constants";
 import { EDGE_LOGO_BLACK_PATH, EDGE_LOGO_PATH } from "@/lib/edge-site/premium-constants";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { MegaMenu } from "@/components/edge-site/premium/mega-menu";
+import { EcoleMobileAccordion } from "@/components/edge-site/premium/ecole-mega-menu";
 import { getMobileRevolutTabs } from "@/lib/edge-site/mobile-revolut-nav";
 import { getNeoMegaMenus } from "@/lib/edge-site/neo-mega-menus";
 
@@ -141,7 +142,11 @@ export function EdgePremiumMobileMenu({
               </div>
               {open ? (
                 <div id={`mobile-mega-${menu.id}`} className="pb-5">
-                  <MegaMenu menu={menu} id={`mobile-panel-${menu.id}`} onNavigate={onClose} mobile />
+                  {menu.id === "ecole" ? (
+                    <EcoleMobileAccordion routes={config.routes} onNavigate={onClose} />
+                  ) : (
+                    <MegaMenu menu={menu} id={`mobile-panel-${menu.id}`} onNavigate={onClose} mobile />
+                  )}
                 </div>
               ) : null}
             </div>

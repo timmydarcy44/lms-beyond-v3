@@ -9,6 +9,7 @@ import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premiu
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
 import { EdgePremiumLogo } from "@/components/edge-site/premium/edge-premium-logo";
 import { MegaMenu } from "@/components/edge-site/premium/mega-menu";
+import { EcoleMegaMenu } from "@/components/edge-site/premium/ecole-mega-menu";
 import { EdgePremiumMobileMenu } from "@/components/edge-site/premium/edge-premium-mobile-menu";
 import { getNeoMegaMenus, type NeoMegaMenuConfig } from "@/lib/edge-site/neo-mega-menus";
 import {
@@ -152,7 +153,9 @@ export function EdgePremiumNavbar({
               open || current
                 ? light
                   ? "bg-black/5 px-3 py-2 font-bold text-neutral-950"
-                  : "bg-white/10 px-3 py-2 font-bold text-white"
+                  : key === "ecole" && open
+                    ? "bg-white/[0.08] px-3 py-2 font-bold text-white"
+                    : "bg-white/10 px-3 py-2 font-bold text-white"
                 : light
                   ? "px-2.5 py-2 font-medium text-neutral-700 hover:text-neutral-950 xl:px-3"
                   : "px-2.5 py-2 font-medium text-white/60 hover:text-white xl:px-3",
@@ -309,16 +312,27 @@ export function EdgePremiumNavbar({
 
       {neoMenu ? (
         <div
-          className="absolute left-0 right-0 top-full z-50 hidden pt-3 lg:block"
+          className={cn(
+            "absolute left-0 right-0 top-full z-50 hidden lg:block",
+            openMega === "ecole" ? "px-12 pt-[14px]" : "pt-3",
+          )}
           onMouseEnter={cancelMegaClose}
         >
-          <div className="neo-mega-panel mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-            <MegaMenu
-              menu={neoMenu}
-              id={`mega-${openMega}`}
+          {openMega === "ecole" ? (
+            <EcoleMegaMenu
+              routes={routes}
+              id="mega-ecole"
               onNavigate={() => setOpenMega(null)}
             />
-          </div>
+          ) : (
+            <div className="neo-mega-panel mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+              <MegaMenu
+                menu={neoMenu}
+                id={`mega-${openMega}`}
+                onNavigate={() => setOpenMega(null)}
+              />
+            </div>
+          )}
         </div>
       ) : null}
 

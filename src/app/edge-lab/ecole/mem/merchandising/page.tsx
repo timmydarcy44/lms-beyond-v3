@@ -163,14 +163,14 @@ export default async function MemMerchandisingPage() {
     <EdgePremiumShell overlayNav showTopBar={false}>
       <section className="relative isolate min-h-[92svh] overflow-hidden bg-[#070b1f] text-white">
         <div
-          className="absolute inset-y-0 right-0 w-full bg-cover bg-center lg:w-[62%]"
+          className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: `url("${facts.heroImageUrl || EDGE_PREMIUM_IMAGES.business}")`,
           }}
           aria-hidden
         />
         <div
-          className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.92)_34%,rgba(7,11,31,.45)_58%,rgba(7,11,31,.12)_78%,transparent_100%)]"
+          className="absolute inset-0 bg-[linear-gradient(90deg,#070b1f_0%,rgba(7,11,31,.82)_22%,rgba(7,11,31,.55)_42%,rgba(7,11,31,.28)_62%,rgba(7,11,31,.1)_78%,transparent_100%)]"
           aria-hidden
         />
 

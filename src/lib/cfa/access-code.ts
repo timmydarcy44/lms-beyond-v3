@@ -16,10 +16,17 @@ export type AccessContext =
   | "tuteur_login"
   | "apprenant_admitted_new"
   | "apprenant_admitted_existing"
+  | "apprenant_login"
   | "application_linked"
   | "candidat";
 
-const CODE_CONTEXTS = new Set<AccessContext>(["tuteur_new", "tuteur_login", "apprenant_admitted_new", "candidat"]);
+const CODE_CONTEXTS = new Set<AccessContext>([
+  "tuteur_new",
+  "tuteur_login",
+  "apprenant_admitted_new",
+  "apprenant_login",
+  "candidat",
+]);
 
 function escapeHtml(value: string) {
   return value
@@ -76,7 +83,12 @@ function message(input: {
   if (input.context === "tuteur_login") {
     return {
       subject: "Votre code pour l'espace tuteur",
-      html: shell("Votre code", "<p>Utilisez ce code pour ouvrir votre espace tuteur.</p>", input.code),
+      html: shell(
+        "Votre code",
+        "<p>Utilisez ce code pour ouvrir votre espace tuteur.</p>",
+        input.code,
+        input.accessUrl ? { label: "Ouvrir mon espace tuteur", href: input.accessUrl } : undefined,
+      ),
     };
   }
   if (input.context === "tuteur_existing") {
@@ -88,24 +100,55 @@ function message(input: {
   if (input.context === "apprenant_admitted_new") {
     return {
       subject: "Vous êtes admis chez Byound School",
-      html: shell("Vous êtes admis chez Byound School", `<p>Bonjour ${escapeHtml(input.firstName)}, votre espace est prêt.</p>`, input.code),
+      html: shell(
+        "Vous êtes admis chez Byound School",
+        `<p>Bonjour ${escapeHtml(input.firstName)}, votre espace est prêt.</p><p style="margin:12px 0 0;color:#5C6370;">Entrez ce code sur la page de connexion pour accéder à votre espace, puis définissez votre mot de passe.</p>`,
+        input.code,
+        { label: "Accéder à mon espace", href: input.accessUrl || "https://www.byound.fr/apprenant/connexion" },
+      ),
+    };
+  }
+  if (input.context === "apprenant_login") {
+    return {
+      subject: "Votre code pour l’espace apprenant Byound",
+      html: shell(
+        "Votre code",
+        `<p>Bonjour ${escapeHtml(input.firstName)}, utilisez ce code pour ouvrir votre espace apprenant.</p>`,
+        input.code,
+        { label: "Accéder à mon espace", href: input.accessUrl || "https://www.byound.fr/apprenant/connexion" },
+      ),
     };
   }
   if (input.context === "candidat") {
     return {
       subject: "Votre code pour créer votre espace Byound",
-      html: shell("Votre code", `<p>Bonjour ${escapeHtml(input.firstName)}, utilisez ce code pour ouvrir votre espace et poursuivre votre candidature.</p>`, input.code),
+      html: shell(
+        "Votre code",
+        `<p>Bonjour ${escapeHtml(input.firstName)}, utilisez ce code pour ouvrir votre espace et poursuivre votre candidature.</p>`,
+        input.code,
+        input.accessUrl ? { label: "Entrer mon code", href: input.accessUrl } : undefined,
+      ),
     };
   }
   if (input.context === "apprenant_admitted_existing") {
     return {
       subject: "Votre parcours Byound School est disponible",
-      html: shell("Parcours disponible", `<p>Votre parcours est disponible dans votre espace.</p>`),
+      html: shell(
+        "Parcours disponible",
+        `<p>Votre parcours est disponible dans votre espace.</p>`,
+        undefined,
+        { label: "Ouvrir mon espace", href: input.accessUrl || "https://www.byound.fr/dashboard/apprenant" },
+      ),
     };
   }
   return {
     subject: "Votre candidature est rattachée à votre compte Byound",
-    html: shell("Candidature rattachée", `<p>Votre candidature est rattachée à votre compte Byound.</p>`),
+    html: shell(
+      "Candidature rattachée",
+      `<p>Votre candidature est rattachée à votre compte Byound.</p>`,
+      undefined,
+      { label: "Ouvrir mon espace", href: input.accessUrl || "https://www.byound.fr/dashboard/apprenant" },
+    ),
   };
 }
 
@@ -210,6 +253,15 @@ export async function sendAccessCode(
     if (existingId) await grantUserRole(db, existingId, input.role);
   }
 
+  const learnerAccessUrl = `${publicAppUrl()}/apprenant/connexion?email=${encodeURIComponent(email)}`;
+  const tutorAccessUrl = `${publicAppUrl()}/tuteur/connexion?email=${encodeURIComponent(email)}`;
+  const accessUrl =
+    input.context === "tuteur_notice" || input.context === "tuteur_login" || input.context === "tuteur_new"
+      ? tutorAccessUrl
+      : input.context === "apprenant_admitted_existing" || input.context === "application_linked"
+        ? `${publicAppUrl()}/dashboard/apprenant`
+        : learnerAccessUrl;
+
   const copy = message({
     context: input.context,
     firstName: input.firstName,
@@ -219,7 +271,7 @@ export async function sendAccessCode(
     companyName: input.companyName || "",
     cfaName: input.cfaName || "Byound School",
     code,
-    accessUrl: `${publicAppUrl()}/tuteur/connexion?email=${encodeURIComponent(email)}`,
+    accessUrl,
   });
   const sent = await sendEmail({ to: email, subject: copy.subject, html: copy.html, from: EDGE_COCKPIT_FROM, skipBcc: true });
   if (!sent.success) return { ok: false, error: "L'email n'a pas pu être envoyé." };

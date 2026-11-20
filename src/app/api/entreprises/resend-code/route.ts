@@ -47,6 +47,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ step: "code", digits: sent.digits || 8 });
   }
 
+  if (String(open.company ?? "") === "context:apprenant") {
+    const sent = await sendAccessCode(db, {
+      email,
+      role: "apprenant",
+      context: "apprenant_login",
+      firstName: String(open.first_name ?? ""),
+      lastName: String(open.last_name ?? ""),
+    });
+    if (!sent.ok) {
+      return NextResponse.json({ error: sent.error, retryAfter: sent.retryAfter }, { status: sent.retryAfter ? 429 : 502 });
+    }
+    return NextResponse.json({ step: "code", digits: sent.digits || 8 });
+  }
+
   const issued = await issueEntrepriseCode(db, {
     email,
     firstName: String(open.first_name ?? ""),

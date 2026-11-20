@@ -39,12 +39,9 @@ export function getHomeFormations(routes: EdgeMarketingRoutes): HomeFormation[] 
     { label: "Business Sport", href: routes.ecoleNtcBusinessSport },
     { label: "Real Estate", href: routes.ecoleNtcRealEstate },
     { label: "Luxury & Premium", href: routes.ecoleMemLuxuryPremium },
-    // TODO: aucune page AI Management
-    { label: "AI Management", href: MISSING_ROUTE },
-    // TODO: aucune page Business Performance
-    { label: "Business Performance", href: MISSING_ROUTE },
-    // TODO: aucune page Transition & Innovation
-    { label: "Transition & Innovation", href: MISSING_ROUTE },
+    { label: "AI Management", href: routes.ecoleRemAiManagement },
+    { label: "Business Performance", href: routes.ecoleRemBusinessPerformance },
+    { label: "Transition & Innovation", href: routes.ecoleRemTransitionInnovation },
     { label: "Retail Experience", href: routes.ecoleMemRetailExperience },
     { label: "Merchandising", href: routes.ecoleMemMerchandising },
     { label: "Sport Retail", href: routes.ecoleMemSportRetail },

@@ -55,6 +55,27 @@ const CURSUS = [
     hrefKey: "ecoleMemSportRetail" as const,
   },
   {
+    slug: "ai-management",
+    title: "AI Management",
+    eyebrow: "Bac+3 · REM",
+    body: "Responsable de développement commercial avec une spécialisation déploiement et adoption de l’IA.",
+    hrefKey: "ecoleRemAiManagement" as const,
+  },
+  {
+    slug: "business-performance",
+    title: "Business Performance",
+    eyebrow: "Bac+3 · REM",
+    body: "Responsable de développement commercial avec une spécialisation chiffres, processus et data.",
+    hrefKey: "ecoleRemBusinessPerformance" as const,
+  },
+  {
+    slug: "transition-innovation",
+    title: "Transition & Innovation",
+    eyebrow: "Bac+3 · REM",
+    body: "Responsable de développement commercial avec une spécialisation RSE, innovation et transformation.",
+    hrefKey: "ecoleRemTransitionInnovation" as const,
+  },
+  {
     slug: "growth-acquisition",
     title: "Growth & Acquisition",
     eyebrow: "Bac+3 · RDC",

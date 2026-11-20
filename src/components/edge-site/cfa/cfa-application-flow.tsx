@@ -22,6 +22,11 @@ const MEM_SPECIALIZATIONS = new Set([
   "luxury_premium",
   "sport_retail",
 ]);
+const REM_SPECIALIZATIONS = new Set([
+  "ai_management",
+  "business_performance",
+  "transition_innovation",
+]);
 const RDC_SPECIALIZATIONS = new Set([
   "growth_acquisition",
   "entrepreneurship",
@@ -37,14 +42,17 @@ export function CfaApplicationFlow() {
   const requested = params.get("specialization");
   const ntcOnly = params.get("track") === "ntc";
   const memOnly = params.get("track") === "mem";
+  const remOnly = params.get("track") === "rem";
   const rdcOnly = params.get("track") === "rdc";
   const specializationOptions = ntcOnly
     ? CFA_SPECIALIZATIONS.filter((item) => NTC_SPECIALIZATIONS.has(item.value))
     : memOnly
       ? CFA_SPECIALIZATIONS.filter((item) => MEM_SPECIALIZATIONS.has(item.value))
-      : rdcOnly
-        ? CFA_SPECIALIZATIONS.filter((item) => RDC_SPECIALIZATIONS.has(item.value))
-        : CFA_SPECIALIZATIONS;
+      : remOnly
+        ? CFA_SPECIALIZATIONS.filter((item) => REM_SPECIALIZATIONS.has(item.value))
+        : rdcOnly
+          ? CFA_SPECIALIZATIONS.filter((item) => RDC_SPECIALIZATIONS.has(item.value))
+          : CFA_SPECIALIZATIONS;
   const specializationGroups = [...new Set(specializationOptions.map((item) => item.group))];
   const [app, setApp] = useState<CfaApplication | null>(null);
   const [token, setToken] = useState("");

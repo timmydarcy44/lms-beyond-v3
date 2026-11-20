@@ -183,9 +183,9 @@ export function getEdgePremiumConfig(host?: string | null) {
             {
               title: "Management",
               links: [
-                { label: "AI Management", href: `${R.alternance}#rem-ai-management` },
-                { label: "Business Performance", href: `${R.alternance}#rem-business-performance` },
-                { label: "Transition & Innovation", href: `${R.alternance}#rem-transition-innovation` },
+                { label: "AI Management", href: R.ecoleRemAiManagement },
+                { label: "Business Performance", href: R.ecoleRemBusinessPerformance },
+                { label: "Transition & Innovation", href: R.ecoleRemTransitionInnovation },
               ],
             },
             {

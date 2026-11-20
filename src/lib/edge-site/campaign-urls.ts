@@ -12,6 +12,9 @@
  * - https://edgebs.fr/ecole/mem/merchandising?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/mem/luxury-premium?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/mem/sport-retail?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
+ * - https://edgebs.fr/ecole/rem/ai-management?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
+ * - https://edgebs.fr/ecole/rem/business-performance?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
+ * - https://edgebs.fr/ecole/rem/transition-innovation?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/rdc/growth-acquisition?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/rdc/entrepreneurship?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026
  * - https://edgebs.fr/ecole/rdc/international-business?utm_source=meta&utm_medium=paid&utm_campaign=alternance_2026

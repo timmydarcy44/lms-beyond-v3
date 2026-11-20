@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "FA",
     title: "Financial Acumen",
     description: "Lire les chiffres d’une entreprise et comprendre ce qu’ils disent.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Business%20performance/01-Financial-Acumen.png",
     skills:
       "Bilan et compte de résultat · Trésorerie · Besoin en fonds de roulement · Coûts complets · Rentabilité des activités",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "OE",
     title: "Operational Excellence",
     description: "Rendre les processus plus simples, plus rapides et plus fiables.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Business%20performance/02-Operational-Excellence.png",
     skills:
       "Cartographie des processus · Méthode Lean · Amélioration continue · Réduction des gaspillages · Qualité",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "DA",
     title: "Data Analytics",
     description: "Transformer les données en décisions.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Business%20performance/03-Data-Analytics.png",
     skills:
       "Tableur avancé · Outils d’informatique décisionnelle · Modélisation des données · Visualisation · Analyse des écarts",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI for Performance",
     description: "Utiliser l’IA pour anticiper et décider plus vite.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Business%20performance/04-AI-For-Performance.png",
     skills:
       "Prévisions par l’IA · Détection d’anomalies · Automatisation des rapports · Aide à la décision · Usage responsable",
-  }
+  },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Business%20performance/05-Business-Performance.png";
 
 const projectSteps = [
   "Diagnostiquer",
@@ -328,8 +340,14 @@ export default async function RemBusinessPerformancePage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  BP
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Business Performance"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -357,10 +375,14 @@ export default async function RemBusinessPerformancePage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "VD",
     title: "Venture Design",
     description: "Construire un modèle économique solide et le confronter au terrain.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Entrepreneurship/01-Venture-Design.png",
     skills:
       "Proposition de valeur · Modèle économique · Entretiens de découverte · Validation du problème · Pivot",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "FP",
     title: "Funding & Pitch",
     description: "Financer son projet et convaincre ceux qui peuvent le soutenir.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Entrepreneurship/02-Funding-Pitch.png",
     skills:
       "Prévisionnel financier · Prêt d’honneur et aides publiques · Banques · Levée de fonds · Pitch investisseurs",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "CL",
     title: "Company Launch",
     description: "Créer et structurer l’entreprise sur des bases saines.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Entrepreneurship/03-Company-Launch.png",
     skills:
       "Statut juridique · Formalités de création · Propriété intellectuelle · Protection du dirigeant · Incubateurs et réseaux d’accompagnement",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI-Powered Founder",
     description: "Entreprendre plus vite et plus loin grâce à l’IA.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Entrepreneurship/04-AI-Powered-Founder.png",
     skills:
       "Assistants IA · Prototypage sans code · Automatisation administrative · Agents · Contenus · Usage responsable",
   },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Entrepreneurship/05-Entrepreneurship.png";
 
 const projectSteps = [
   "Explorer",
@@ -330,8 +342,14 @@ export default async function RdcEntrepreneurshipPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  EN
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Entrepreneurship"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -364,10 +382,14 @@ export default async function RdcEntrepreneurshipPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "CJ",
     title: "Customer Journey Design",
     description: "Concevoir et améliorer le parcours client, du premier contact à l’après-achat.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Retail%20experience/customer-journey-design.png",
     skills:
       "Parcours client · Profils clients · Moments clés · Points de friction · Observation terrain · Plan d’amélioration",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "PR",
     title: "Phygital Retail",
     description: "Relier le magasin et le digital pour une expérience sans couture.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Retail%20experience/phygital-retail.png",
     skills:
       "Click & collect · Réservation en ligne · Paiement mobile · Réseaux sociaux du magasin · Vente en direct · Cohérence entre canaux",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "CC",
     title: "Clienteling & Community",
     description: "Connaître ses clients, les fidéliser et faire du magasin un lieu de vie.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Retail%20experience/clienteling-community.png",
     skills:
       "Fichier client · Relation personnalisée · Relance · Événements · Ateliers · Communauté locale · RGPD",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI & Customer Insights",
     description: "Utiliser l’IA et les données pour comprendre et améliorer l’expérience client.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Retail%20experience/ai-customer-insights.png",
     skills:
       "Avis clients · Satisfaction · Questionnaires · Analyse par l’IA · Réponses personnalisées · Contenus · Usage responsable",
   },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Retail%20experience/retail-experience-gold-shine.png";
 
 const projectSteps = [
   "Observer",
@@ -317,8 +329,14 @@ export default async function MemRetailExperiencePage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  RE
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Retail Experience"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -350,10 +368,14 @@ export default async function MemRetailExperiencePage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

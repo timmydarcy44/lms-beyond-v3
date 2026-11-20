@@ -14,6 +14,7 @@ import { grantCfaAssessmentShares } from "@/lib/cfa/assessment-shares";
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/sensitive";
 import { getSession } from "@/lib/auth/session";
 import { looksLikeTestCfaEmail } from "@/lib/cfa/admission-draft";
+import { isCfaLeadSource } from "@/lib/cfa/lead-sources";
 import { ensureDisabilityAccommodationRequest } from "@/lib/handicap/create-request";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
@@ -123,6 +124,9 @@ export async function POST(request: Request) {
   const canShare = Boolean(session?.id && session.id === profileId);
   const origin = profileId ? "existing_account" : "direct";
   const cvPath = canShare ? String(matched?.cv_url ?? "").trim() || null : null;
+  const leadSourceRaw = clean(body.leadSource, 40).toLowerCase();
+  const leadSource = isCfaLeadSource(leadSourceRaw) ? leadSourceRaw : "website";
+
   const inserted = await db
     .from("cfa_applications")
     .insert({
@@ -137,11 +141,32 @@ export async function POST(request: Request) {
       profile_id: profileId || null,
       origin,
       cv_path: cvPath,
+      lead_source: leadSource,
     })
     .select("*")
     .single();
+  const retryWithoutLead =
+    inserted.error && /lead_source|schema cache/i.test(inserted.error.message)
+      ? await db
+          .from("cfa_applications")
+          .insert({
+            status: "challenge",
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone: phone || null,
+            age,
+            education_level: educationLevel,
+            specialization,
+            profile_id: profileId || null,
+            origin,
+            cv_path: cvPath,
+          })
+          .select("*")
+          .single()
+      : inserted;
   const retry =
-    inserted.error && /profile_id|origin|schema cache/i.test(inserted.error.message)
+    retryWithoutLead.error && /profile_id|origin|schema cache/i.test(retryWithoutLead.error.message)
       ? await db
           .from("cfa_applications")
           .insert({
@@ -156,7 +181,7 @@ export async function POST(request: Request) {
           })
           .select("*")
           .single()
-      : inserted;
+      : retryWithoutLead;
   const data = retry.data;
   const error = retry.error;
   const birthDate = clean(body.birthDate, 12);

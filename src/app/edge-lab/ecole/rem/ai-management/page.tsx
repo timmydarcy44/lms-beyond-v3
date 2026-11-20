@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "AS",
     title: "AI Strategy",
     description: "Choisir les usages de l’IA qui créent vraiment de la valeur.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/AI%20Management/01-AI-Strategy.png",
     skills:
       "Cartographie des usages · Cas d’usage prioritaires · Feuille de route IA · Choix des outils · Retour sur investissement de l’IA",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "WA",
     title: "AI Workflows & Agents",
     description: "Automatiser les processus et déployer des agents utiles.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/AI%20Management/02-AI-Workflows-Agents.png",
     skills:
       "Automatisation des processus · Agents IA · Assistants métiers · Outils sans code · Intégration aux outils existants",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "AD",
     title: "AI Adoption",
     description: "Faire adopter l’IA par les équipes, durablement.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/AI%20Management/03-AI-Adoption.png",
     skills:
       "Acculturation à l’IA · Conduite du changement · Nouveaux rôles et nouvelles pratiques · Communication interne · Mesure de l’adoption",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "RA",
     title: "Responsible AI",
     description: "Encadrer l’IA : règles, risques et éthique.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/AI%20Management/04-Responsible-AI.png",
     skills:
       "Règlement européen sur l’IA · Protection des données · Biais et éthique · Sécurité · Charte d’usage",
-  }
+  },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/AI%20Management/05-AI-Management.png";
 
 const projectSteps = [
   "Cartographier",
@@ -328,8 +340,14 @@ export default async function RemAiManagementPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  AI
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound AI Management"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -357,10 +375,14 @@ export default async function RemAiManagementPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

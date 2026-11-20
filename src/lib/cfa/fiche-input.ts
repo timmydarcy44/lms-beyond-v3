@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { CFA_APPLICATION_STATUSES } from "@/lib/cfa-applications";
+import { CFA_APPLICATION_STATUSES, CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
+import { CFA_EDUCATION_LEVELS, CFA_LEAD_SOURCES } from "@/lib/cfa/lead-sources";
 
 const dossierId = z.string().trim().min(1, "Dossier requis.").max(80, "Dossier invalide.");
 
@@ -57,11 +58,47 @@ export const statusSchema = z.object({
   decisionNotes: z.string().max(4000, "Le motif est trop long.").optional(),
 });
 
+const leadSourceValues = CFA_LEAD_SOURCES.map((item) => item.value) as [
+  (typeof CFA_LEAD_SOURCES)[number]["value"],
+  ...(typeof CFA_LEAD_SOURCES)[number]["value"][],
+];
+const specializationValues = CFA_SPECIALIZATIONS.map((item) => item.value) as [
+  (typeof CFA_SPECIALIZATIONS)[number]["value"],
+  ...(typeof CFA_SPECIALIZATIONS)[number]["value"][],
+];
+const educationValues = CFA_EDUCATION_LEVELS as unknown as [
+  (typeof CFA_EDUCATION_LEVELS)[number],
+  ...(typeof CFA_EDUCATION_LEVELS)[number][],
+];
+
+export const saveLeadSourceSchema = z.object({
+  action: z.literal("save_lead_source"),
+  id: dossierId,
+  leadSource: z.enum(leadSourceValues, { error: "Provenance invalide." }),
+});
+
+export const createManualApplicationSchema = z.object({
+  action: z.literal("create_manual"),
+  firstName: z.string().trim().min(1, "Le prénom est requis.").max(100),
+  lastName: z.string().trim().min(1, "Le nom est requis.").max(100),
+  email: z.string().trim().toLowerCase().email("L'e-mail n'est pas valide.").max(240),
+  phone: z.string().trim().max(40).optional(),
+  birthDate: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La date de naissance est invalide."),
+  educationLevel: z.enum(educationValues, { error: "Niveau scolaire invalide." }),
+  specialization: z.enum(specializationValues, { error: "Spécialisation invalide." }),
+  leadSource: z.enum(leadSourceValues, { error: "Provenance invalide." }),
+  notifyCandidate: z.boolean().optional(),
+});
+
 export const fichePatchSchema = z.union([
   saveCerfaSchema,
   markFeeSchema,
   revealFieldSchema,
   reviewDocumentSchema,
+  saveLeadSourceSchema,
   statusSchema,
 ]);
 

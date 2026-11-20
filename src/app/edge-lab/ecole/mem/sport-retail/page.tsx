@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "SE",
     title: "Sport Expert Advice",
     description: "Structurer le conseil technique et faire monter son équipe en compétence produit.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Sport%20retail/sport-expert-advice.png",
     skills:
       "Analyse du besoin du pratiquant · Niveau et fréquence de pratique · Lecture d’une fiche technique · Matières et technologies · Formation produit de l’équipe · Veille innovation",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "FR",
     title: "Fan Retail & Community",
     description: "Faire vivre la boutique d’un club et la communauté de supporters et de pratiquants.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Sport%20retail/fan-retail-community.png",
     skills:
       "Boutiques officielles · Produits sous licence · Maillots et flocage · Jours de match · Lancements de saison · E-shop du club · Communauté de supporters · Événements",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "OM",
     title: "Omnichannel Sport Retail",
     description: "Relier le magasin, l’appli et les nouveaux usages du sport.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Sport%20retail/omnichannel-sport-retail.png",
     skills:
       "Click & collect · Appli de l’enseigne · Location · Seconde main et reconditionné · Réparation · Cohérence entre canaux",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI & Sport Retail Analytics",
     description: "Utiliser l’IA et les données pour vendre au bon moment.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Sport%20retail/ai-sport-retail-analytics.png",
     skills:
       "Saisonnalité et calendrier sportif · Prévisions · Analyse des ventes · Recommandations personnalisées · Contenus · Usage responsable",
   },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Sport%20retail/sport-retail.png";
 
 const projectSteps = [
   "Analyser",
@@ -316,8 +328,14 @@ export default async function MemSportRetailPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  SR
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Sport Retail"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -349,10 +367,14 @@ export default async function MemSportRetailPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

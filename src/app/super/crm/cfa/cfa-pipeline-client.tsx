@@ -10,8 +10,10 @@ import {
   TestToggle,
   ViewSwitch,
 } from "@/components/control/cfa-board-chrome";
+import { CfaCreateProspectModal } from "@/components/control/cfa-create-prospect-modal";
 import { EmptyState } from "@/components/control/chrome";
 import { formatPersonName, formatCompanyName } from "@/lib/cfa/format-org-name";
+import { getCfaLeadSourceLabel } from "@/lib/cfa/lead-sources";
 import {
   ADMISSION_BLOCKED_DAYS,
   ADMISSION_STAGES,
@@ -141,6 +143,7 @@ export function CfaPipelineClient({
   );
   const [proposeCompany, setProposeCompany] = useState<HostCompany | null>(null);
   const [remindTarget, setRemindTarget] = useState<CfaApplication | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -273,8 +276,31 @@ export function CfaPipelineClient({
       <PageTitle
         title="Admissions"
         subtitle={`${inProgress.length} candidature${inProgress.length > 1 ? "s" : ""} en cours · ${blockedPool.length} bloquée${blockedPool.length > 1 ? "s" : ""} depuis plus de 30 jours`}
-        actions={<ViewSwitch value={view === "board" ? "board" : "list"} onChange={setView} boardLabel="Tableau" listLabel="Liste" />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {!readOnly ? (
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"
+              >
+                + Ajouter un apprenant
+              </button>
+            ) : null}
+            <ViewSwitch value={view === "board" ? "board" : "list"} onChange={setView} boardLabel="Tableau" listLabel="Liste" />
+          </div>
+        }
       />
+      {!readOnly ? (
+        <CfaCreateProspectModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={(id) => {
+            setCreateOpen(false);
+            router.push(`/super/crm/cfa/apprenants/${id}`);
+          }}
+        />
+      ) : null}
 
       {migrationRequired ? (
         <p className="rounded-[24px] border border-[#3A3320] bg-[#15182A] px-4 py-3 text-sm text-[#F2CF6B]">
@@ -357,9 +383,18 @@ export function CfaPipelineClient({
           <EmptyState
             title="Aucune candidature pour l'instant"
             action={
-              <Link href="/ecole/candidater" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">
-                Formulaire public d&apos;admission
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCreateOpen(true)}
+                  className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Ajouter un apprenant
+                </button>
+                <Link href="/ecole/candidater" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">
+                  Formulaire public d&apos;admission
+                </Link>
+              </div>
             }
           />
         ) : (
@@ -422,6 +457,7 @@ export function CfaPipelineClient({
                     <span className="block truncate text-[15px] font-extrabold text-[#F2F4FA]">{name}</span>
                     <span className="block truncate text-xs text-[#9AA3BD]">
                       {track}
+                      {item.lead_source ? ` · ${getCfaLeadSourceLabel(item.lead_source)}` : ""}
                       {created ? ` · ${created}` : ""}
                     </span>
                   </span>

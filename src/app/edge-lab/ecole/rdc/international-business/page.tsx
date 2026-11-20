@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "ME",
     title: "Market Entry Strategy",
     description: "Choisir les bons pays et la bonne façon de s’y implanter.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Commerce%20international/Badge%20Byound%20emeraude%2C%20porte%20vers%20le%20marche-3.png",
     skills:
       "Sélection des pays cibles · Modes d’entrée · Distributeurs et agents · Salons internationaux · Dispositifs d’accompagnement à l’export",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "TO",
     title: "International Trade Operations",
     description: "Vendre à l’étranger en toute sécurité, de la commande à la livraison.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Commerce%20international/Badge%20Byound%20emeraude%2C%20avion%20et%20globe-4.png",
     skills:
       "Incoterms · Logistique internationale · Douane · Paiements internationaux · Risque de change · Contrats internationaux",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "CC",
     title: "Cross-Cultural Business",
     description: "Travailler efficacement avec d’autres cultures.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Commerce%20international/Badge%20Byound%20du%20dialogue%20interculturel-5.png",
     skills:
       "Codes culturels · Communication interculturelle · Anglais des affaires · Usages professionnels · Équipes à distance",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI & Global Intelligence",
     description: "Utiliser l’IA pour comprendre et conquérir les marchés étrangers.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Commerce%20international/Badge%20Byound%2C%20intelligence%20globale-6.png",
     skills:
       "Traduction et localisation · Veille internationale · Données douanières et de marché · Assistants multilingues · Usage responsable",
   },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Commerce%20international/Badge%20Byound%20vert%20emeraude%20du%20commerce%20international-2.png";
 
 const projectSteps = [
   "Choisir le pays",
@@ -329,8 +341,14 @@ export default async function RdcInternationalBusinessPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  IB
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound International Business"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -363,10 +381,14 @@ export default async function RdcInternationalBusinessPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

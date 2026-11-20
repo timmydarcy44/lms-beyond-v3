@@ -135,6 +135,8 @@ export type CfaApplication = {
   updated_at: string;
   profile_id?: string | null;
   origin?: "direct" | "existing_account" | null;
+  /** Canal d’acquisition (JPO, Site web, SEA, SEO…). */
+  lead_source?: string | null;
   placement?: {
     companyId: string;
     companyName: string;

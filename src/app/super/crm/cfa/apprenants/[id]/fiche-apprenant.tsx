@@ -16,6 +16,7 @@ import {
 } from "@/lib/cfa/admission-stages";
 import { formatPersonName } from "@/lib/cfa/format-org-name";
 import { prefillFromParcours } from "@/lib/cfa/inscription-prefill";
+import { CFA_LEAD_SOURCES, getCfaLeadSourceLabel } from "@/lib/cfa/lead-sources";
 import {
   getCfaSpecializationLabel,
   type CfaApplication,
@@ -530,6 +531,43 @@ export function FicheApprenant({ id }: { id: string }) {
                 ) : null}
                 {age ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-[#AEB6CC]">{age}</span> : null}
                 {diploma ? <span className="rounded-full bg-[#1A2340] px-3 py-1 text-[#AEB6CC]">{diploma}</span> : null}
+                {application.education_level ? (
+                  <span className="rounded-full bg-[#1A2340] px-3 py-1 text-[#AEB6CC]">{application.education_level}</span>
+                ) : null}
+                <label className="inline-flex items-center gap-2 rounded-full bg-[#241C4A] px-3 py-1 font-semibold text-[#B9AFFF]">
+                  <span className="text-[#8B84C9]">Provenance</span>
+                  <select
+                    aria-label="Provenance du prospect"
+                    value={application.lead_source ?? ""}
+                    onChange={(event) => {
+                      const leadSource = event.target.value;
+                      if (!leadSource) return;
+                      void fetch("/api/super-admin/crm/cfa", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "save_lead_source", id, leadSource }),
+                      }).then(async (response) => {
+                        const result = await response.json();
+                        if (!response.ok) {
+                          setMessage(result.error || "Provenance impossible à enregistrer");
+                          return;
+                        }
+                        setMessage(`Provenance : ${getCfaLeadSourceLabel(leadSource)}`);
+                        await load(true);
+                      });
+                    }}
+                    className="bg-transparent text-[#EEF1F8] outline-none"
+                  >
+                    <option value="" className="bg-[#111831] text-[#AEB6CC]">
+                      Non renseignée
+                    </option>
+                    {CFA_LEAD_SOURCES.map((source) => (
+                      <option key={source.value} value={source.value} className="bg-[#111831]">
+                        {source.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <span
                   className={`rounded-full px-3 py-1 font-semibold ${
                     eligibility.ok ? "bg-[#0E2A1D] text-[#6BE3C0]" : "bg-[#3A2A0E] text-[#F6D68B]"

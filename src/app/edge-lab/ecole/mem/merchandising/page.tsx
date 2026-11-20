@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "VM",
     title: "Visual Merchandising",
     description: "Créer des vitrines et des mises en scène qui attirent et racontent une histoire.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Merchandising/visual-merchandising.png",
     skills:
       "Vitrines · Mise en scène · Ambiance et lumière · Couleurs et matières · Signalétique · Théâtralisation · Saisonnalité",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "SA",
     title: "Space & Assortment",
     description: "Implanter l’offre et optimiser l’espace pour guider le client et vendre plus.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Merchandising/space-assortment.png",
     skills:
       "Implantation · Planogrammes · Assortiment · Flux clients · Zones chaudes et froides · Performance au m² · Promotions",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "DM",
     title: "Digital Merchandising",
     description: "Mettre en valeur l’offre en ligne, en cohérence avec le magasin.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Merchandising/digital-merchandising.png",
     skills:
       "Merchandising e-commerce · Fiches produits · Photos et visuels · Réseaux sociaux · Cohérence magasin et en ligne · Nouveautés",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI & Retail Analytics",
     description: "Utiliser l’IA et les données pour piloter et tester l’offre.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Merchandising/ai-retail-analytics.png",
     skills:
       "Analyse des ventes · Rotation des produits · Prévisions · Simulation d’implantations · Visuels générés par l’IA · Usage responsable",
   },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Merchandising/merchandising.png";
 
 const projectSteps = [
   "Observer",
@@ -318,8 +330,14 @@ export default async function MemMerchandisingPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  ME
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Merchandising"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -352,10 +370,14 @@ export default async function MemMerchandisingPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

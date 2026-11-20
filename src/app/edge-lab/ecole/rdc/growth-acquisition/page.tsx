@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "GM",
     title: "Growth Model",
     description: "Comprendre la mécanique de la croissance et la piloter par les indicateurs.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Growth%20et%20acquisitions/01-Growth-Model.png",
     skills:
       "Tunnel de conversion · Boucles de croissance · Indicateur clé de croissance · Coût d’acquisition client · Valeur vie client · Rentabilité de l’acquisition",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "DA",
     title: "Digital Acquisition",
     description: "Attirer des prospects qualifiés grâce aux canaux numériques.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Growth%20et%20acquisitions/02-Digital-Acquisition.png",
     skills:
       "Référencement naturel et payant · Publicité sur les réseaux sociaux · Campagnes LinkedIn · Séquences d’e-mails automatisées · Contenu · Pages d’atterrissage",
   },
@@ -80,16 +85,23 @@ const badges = [
     code: "GE",
     title: "Growth Experimentation",
     description: "Tester vite, mesurer juste et garder ce qui fonctionne.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Growth%20et%20acquisitions/03-Growth-Experimentation.png",
     skills: "Hypothèses · Tests comparatifs · Taux de conversion · Priorisation des tests · Itérations rapides",
   },
   {
     code: "AI",
     title: "AI & Growth Analytics",
     description: "Utiliser l’IA et les données pour décider et accélérer.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Growth%20et%20acquisitions/04-AI-Growth-Analytics.png",
     skills:
       "Attribution des ventes · Segmentation par l’IA · Prévisions · Contenus générés par l’IA · Agents et automatisations · Usage responsable",
   },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Growth%20et%20acquisitions/05-Growth-Acquisition.png";
 
 const projectSteps = [
   "Diagnostiquer",
@@ -329,8 +341,14 @@ export default async function RdcGrowthAcquisitionPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  GA
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Growth & Acquisition"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -362,10 +380,14 @@ export default async function RdcGrowthAcquisitionPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

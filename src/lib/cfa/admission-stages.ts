@@ -10,8 +10,8 @@ import type { CfaApplicationStatus } from "@/lib/cfa-applications";
  * - interview sans entretien planifié → Envoyée
  * - interview avec entretien planifié → Entretien
  * - review → Décision
+ * - administrative → Dossier administratif (mail + parcours inscription)
  * - admitted → Admis
- * - administrative → Dossier administratif
  * - contract → En contrat
  */
 export type AdmissionStageId =
@@ -64,16 +64,16 @@ export const ADMISSION_STAGES: AdmissionStage[] = [
     dbStatuses: ["review"],
   },
   {
-    id: "admitted",
-    label: "Admis",
-    color: "#6BE39B",
-    dbStatuses: ["admitted"],
-  },
-  {
     id: "administrative",
     label: "Dossier administratif",
     color: "#FFB86B",
     dbStatuses: ["administrative"],
+  },
+  {
+    id: "admitted",
+    label: "Admis",
+    color: "#6BE39B",
+    dbStatuses: ["admitted"],
   },
   {
     id: "contract",
@@ -83,9 +83,9 @@ export const ADMISSION_STAGES: AdmissionStage[] = [
   },
 ];
 
-/** Frise principale (sélection) — sans la suite admin. */
+/** Frise principale (sélection) — jusqu’à l’acceptation / dossier admin. */
 export const ADMISSION_SELECTION_STAGES = ADMISSION_STAGES.filter((s) =>
-  ["profile", "challenge", "submitted", "interview", "decision", "admitted"].includes(s.id),
+  ["profile", "challenge", "submitted", "interview", "decision", "administrative"].includes(s.id),
 );
 
 export const ADMISSION_REJECTED_LABEL = "Non retenu";

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -66,6 +67,8 @@ const badges = [
     code: "SB",
     title: "Sustainable Business",
     description: "Faire de la transition écologique un levier de performance.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Transition%20et%20innovation/01-Sustainable-Business.png",
     skills:
       "Stratégie RSE · Bilan carbone · Économie circulaire · Achats responsables · Réglementation extra-financière",
   },
@@ -73,6 +76,8 @@ const badges = [
     code: "IM",
     title: "Innovation Management",
     description: "Faire émerger et développer de nouvelles idées.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Transition%20et%20innovation/02-Innovation-Management.png",
     skills:
       "Veille et tendances · Design thinking · Idéation · Prototypage · Innovation participative",
   },
@@ -80,6 +85,8 @@ const badges = [
     code: "TM",
     title: "Transformation Management",
     description: "Conduire une entreprise d’un modèle à un autre.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Transition%20et%20innovation/03-Transformation-Management.png",
     skills:
       "Diagnostic de transformation · Feuille de route · Conduite du changement · Gestion des résistances · Mesure d’impact",
   },
@@ -87,10 +94,15 @@ const badges = [
     code: "AI",
     title: "AI & Innovation",
     description: "Innover plus vite et plus sobrement grâce à l’IA.",
+    image:
+      "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Transition%20et%20innovation/04-AI-Innovation.png",
     skills:
       "Veille augmentée · Génération d’idées · Prototypage rapide · Sobriété numérique · Usage responsable",
-  }
+  },
 ] as const;
+
+const SPECIALIZATION_BADGE =
+  "https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Badges/Transition%20et%20innovation/05-Transition-Innovation.png";
 
 const projectSteps = [
   "Diagnostiquer",
@@ -328,8 +340,14 @@ export default async function RemTransitionInnovationPage() {
                 Spécialisation Byound
               </p>
               <div className="mt-5 flex items-center gap-5">
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.06] text-2xl font-semibold tracking-tight text-[#8c86ff] sm:h-28 sm:w-28">
-                  TI
+                <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                  <Image
+                    src={SPECIALIZATION_BADGE}
+                    alt="Badge de spécialisation Byound Transition & Innovation"
+                    fill
+                    sizes="112px"
+                    className="object-contain drop-shadow-[0_14px_28px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <div>
                   <h2 className="text-[clamp(2.3rem,4.5vw,4.4rem)] font-semibold leading-[0.94] tracking-[-0.055em]">
@@ -357,10 +375,14 @@ export default async function RemTransitionInnovationPage() {
                 key={badge.code}
                 className="rounded-[24px] border border-white/10 bg-white/[0.05] p-5 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]"
               >
-                <div className="flex h-[120px] items-center justify-center rounded-2xl bg-white/[0.04]">
-                  <span className="text-3xl font-semibold tracking-tight text-[#8c86ff]">
-                    {badge.code}
-                  </span>
+                <div className="relative mx-auto aspect-square w-full max-w-[120px]">
+                  <Image
+                    src={badge.image}
+                    alt={`Open Badge Byound ${badge.title}`}
+                    fill
+                    sizes="120px"
+                    className="object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)]"
+                  />
                 </div>
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8c86ff]">
                   Open Badge · {badge.code}

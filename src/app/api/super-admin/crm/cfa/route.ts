@@ -5,11 +5,13 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 import { admitCfaApplication, recordCfaAudit } from "@/lib/cfa/admit-application";
 import {
+  createManualApplicationSchema,
   markFeeSchema,
   parseInput,
   revealFieldSchema,
   reviewDocumentSchema,
   saveCerfaSchema,
+  saveLeadSourceSchema,
   statusSchema,
 } from "@/lib/cfa/fiche-input";
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, revealCerfaField } from "@/lib/cfa/sensitive";
@@ -60,6 +62,131 @@ export async function GET() {
   const board = await loadCfaApplicationBoard(db, "admin");
   if ("error" in board && board.error) return NextResponse.json({ error: board.error }, { status: 400 });
   return NextResponse.json(board);
+}
+
+function ageFromBirthDate(birthDate: string): number | null {
+  const born = new Date(`${birthDate}T12:00:00`);
+  if (Number.isNaN(born.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - born.getFullYear();
+  if (
+    today.getMonth() < born.getMonth() ||
+    (today.getMonth() === born.getMonth() && today.getDate() < born.getDate())
+  ) {
+    age -= 1;
+  }
+  if (!Number.isInteger(age) || age < 15 || age > 99) return null;
+  return age;
+}
+
+/** Création manuelle d’un prospect (profil solo sans challenge). */
+export async function POST(request: NextRequest) {
+  if (!(await isSuperAdmin())) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+  const body = await request.json().catch(() => null);
+  const parsed = parseInput(createManualApplicationSchema, body, "Complétez le profil du prospect.");
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const input = parsed.data;
+
+  const age = ageFromBirthDate(input.birthDate);
+  if (age == null) {
+    return NextResponse.json({ error: "La date de naissance doit correspondre à un âge entre 15 et 99 ans." }, { status: 400 });
+  }
+
+  const db = getServiceRoleClient();
+  if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const existing = await db
+    .from("profiles")
+    .select("id")
+    .ilike("email", input.email)
+    .maybeSingle();
+  const profileId = String((existing.data as { id?: string } | null)?.id ?? "").trim() || null;
+
+  const insertPayload: Record<string, unknown> = {
+    status: "interview",
+    first_name: input.firstName,
+    last_name: input.lastName,
+    email: input.email,
+    phone: input.phone?.trim() || null,
+    age,
+    birth_date: input.birthDate,
+    education_level: input.educationLevel,
+    specialization: input.specialization,
+    lead_source: input.leadSource,
+    profile_id: profileId,
+    origin: profileId ? "existing_account" : "direct",
+    challenge_answers: {},
+  };
+
+  let { data, error } = await db.from("cfa_applications").insert(insertPayload).select("*").single();
+  if (error && /lead_source|schema cache/i.test(error.message)) {
+    delete insertPayload.lead_source;
+    const retry = await db.from("cfa_applications").insert(insertPayload).select("*").single();
+    data = retry.data;
+    error = retry.error;
+    if (!error && data?.id) {
+      return NextResponse.json(
+        {
+          error:
+            "Appliquez la migration lead_source (20261120180000) pour enregistrer la provenance.",
+          application: data,
+        },
+        { status: 400 },
+      );
+    }
+  }
+  if (error && /birth_date|schema cache/i.test(error.message)) {
+    delete insertPayload.birth_date;
+    const retry = await db.from("cfa_applications").insert(insertPayload).select("*").single();
+    data = retry.data;
+    error = retry.error;
+  }
+  if (error && /profile_id|origin|schema cache/i.test(error.message)) {
+    delete insertPayload.profile_id;
+    delete insertPayload.origin;
+    const retry = await db.from("cfa_applications").insert(insertPayload).select("*").single();
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        { error: "Une candidature active existe déjà avec cette adresse e-mail." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  const actor = await getServerClient();
+  const actorUser = actor ? await actor.auth.getUser() : null;
+  await recordCfaAudit(db, {
+    actorId: actorUser?.data.user?.id ?? null,
+    applicationId: String(data.id),
+    action: "create_manual",
+    oldValue: null,
+    newValue: input.leadSource,
+  });
+
+  let emailSent = false;
+  if (input.notifyCandidate) {
+    const resumeUrl = `${publicAppUrl()}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
+    emailSent = await sendCandidateEmail({
+      to: input.email,
+      subject: "Votre dossier d’admission Byound School",
+      html: cfaEmailTemplate({
+        eyebrow: "Admission",
+        title: "Votre dossier est ouvert.",
+        body: `<p>Bonjour ${escapeHtml(input.firstName)},</p><p>L’équipe Byound School a ouvert votre dossier d’admission. Vous pouvez le consulter et compléter les prochaines étapes via votre lien personnel.</p>`,
+        cta: { label: "Ouvrir mon dossier", href: resumeUrl },
+      }),
+    });
+  }
+
+  return NextResponse.json({ application: data, emailSent }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -114,14 +241,47 @@ export async function PATCH(request: NextRequest) {
         ? revealFieldSchema
         : action === "review_document"
           ? reviewDocumentSchema
-          : action
-            ? null
-            : statusSchema;
+          : action === "save_lead_source"
+            ? saveLeadSourceSchema
+            : action
+              ? null
+              : statusSchema;
   if (!schema) return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
   const parsed = parseInput(schema, body, action ? "Requête invalide." : "Statut invalide.");
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const input = parsed.data;
   const id = input.id;
+
+  if ("action" in input && input.action === "save_lead_source") {
+    const db = getServiceRoleClient();
+    if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+    const { data: previous } = await db
+      .from("cfa_applications")
+      .select("lead_source")
+      .eq("id", id)
+      .maybeSingle();
+    const { error } = await db
+      .from("cfa_applications")
+      .update({ lead_source: input.leadSource })
+      .eq("id", id);
+    if (error && /lead_source|schema cache/i.test(error.message)) {
+      return NextResponse.json(
+        { error: "Appliquez la migration lead_source (20261120180000)." },
+        { status: 400 },
+      );
+    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    const actor = await getServerClient();
+    const actorUser = actor ? await actor.auth.getUser() : null;
+    await recordCfaAudit(db, {
+      actorId: actorUser?.data.user?.id ?? null,
+      applicationId: id,
+      action: "lead_source",
+      oldValue: String((previous as { lead_source?: string | null } | null)?.lead_source ?? ""),
+      newValue: input.leadSource,
+    });
+    return NextResponse.json({ ok: true, lead_source: input.leadSource });
+  }
   if (input.action === "save_cerfa") {
     const db = getServiceRoleClient();
     if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
@@ -349,7 +509,7 @@ export async function PATCH(request: NextRequest) {
       html: cfaEmailTemplate({
         eyebrow: "Dernière étape",
         title: "Finalisez votre inscription.",
-        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Complétez les informations nécessaires au CERFA, puis déposez :</p><ul style="padding-left:20px;line-height:1.8"><li>votre pièce d’identité ;</li><li>votre attestation de droits à la Sécurité sociale ou votre carte Vitale ;</li><li>votre relevé de notes du bac, votre attestation de réussite ou votre dernier diplôme.</li></ul><p>Les frais d’inscription sont de <strong>250 €</strong>. Ils seront remboursés à la signature de votre contrat d’alternance, après validation de la période d’essai.</p>`,
+        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Votre candidature est acceptée. Finalisez votre inscription en complétant les éléments manquants (numéro de sécurité sociale, état civil, adresse…) puis en déposant :</p><ul style="padding-left:20px;line-height:1.8"><li>votre pièce d’identité ;</li><li>votre attestation de droits à la Sécurité sociale ou votre carte Vitale ;</li><li>votre relevé de notes du bac, votre attestation de réussite ou votre dernier diplôme.</li></ul><p>Les frais d’inscription sont de <strong>250 €</strong>. Ils seront remboursés à la signature de votre contrat d’alternance, après validation de la période d’essai.</p>`,
         cta: { label: "Finaliser mon inscription", href: resumeUrl },
       }),
     });

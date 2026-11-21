@@ -8,7 +8,7 @@ export type NeedAnalysisStatus = "draft" | "complete";
 
 export type OrganizationNeedAnalysis = {
   id: string;
-  organization_id: string;
+  organization_id: string | null;
   deal_id: string | null;
   title: string;
   context_problem: string;
@@ -80,7 +80,7 @@ export function normalizeRecommendations(raw: unknown): NeedAnalysisRecommendati
 export function mapNeedAnalysisRow(row: Record<string, unknown>): OrganizationNeedAnalysis {
   return {
     id: String(row.id),
-    organization_id: String(row.organization_id),
+    organization_id: row.organization_id ? String(row.organization_id) : null,
     deal_id: row.deal_id ? String(row.deal_id) : null,
     title: String(row.title ?? ""),
     context_problem: String(row.context_problem ?? ""),

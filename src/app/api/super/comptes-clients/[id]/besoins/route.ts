@@ -22,19 +22,43 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   const auth = await requireStaff();
   if (!auth?.service) return NextResponse.json({ error: "Réservé au staff Byound" }, { status: 403 });
 
-  const [{ data, error }, dealsRes] = await Promise.all([
-    auth.service
+  const dealsRes = await auth.service
+    .from("crm_pipeline_deals")
+    .select("id, company_name, stage_slug, updated_at")
+    .eq("organization_id", orgId)
+    .order("updated_at", { ascending: false })
+    .limit(40);
+
+  const deals = (dealsRes.error ? [] : dealsRes.data ?? []).map((row) => ({
+    id: String(row.id),
+    label: String(row.company_name || "Deal").trim() || "Deal",
+    stage: row.stage_slug ? String(row.stage_slug) : null,
+  }));
+  const dealIds = deals.map((d) => d.id);
+
+  // Rattacher les analyses créées sur le deal avant le compte client.
+  if (dealIds.length) {
+    await auth.service
       .from("organization_need_analyses")
-      .select(NEED_ANALYSIS_SELECT)
-      .eq("organization_id", orgId)
-      .order("updated_at", { ascending: false }),
-    auth.service
-      .from("crm_pipeline_deals")
-      .select("id, company_name, stage_slug, updated_at")
-      .eq("organization_id", orgId)
-      .order("updated_at", { ascending: false })
-      .limit(40),
-  ]);
+      .update({ organization_id: orgId, updated_at: new Date().toISOString() })
+      .in("deal_id", dealIds)
+      .is("organization_id", null);
+  }
+
+  let query = auth.service
+    .from("organization_need_analyses")
+    .select(NEED_ANALYSIS_SELECT)
+    .order("updated_at", { ascending: false });
+
+  if (dealIds.length) {
+    query = query.or(
+      `organization_id.eq.${orgId},deal_id.in.(${dealIds.join(",")})`,
+    );
+  } else {
+    query = query.eq("organization_id", orgId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     if (/organization_need_analyses|schema cache|does not exist/i.test(error.message)) {
@@ -47,12 +71,6 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const deals = (dealsRes.error ? [] : dealsRes.data ?? []).map((row) => ({
-    id: String(row.id),
-    label: String(row.company_name || "Deal").trim() || "Deal",
-    stage: row.stage_slug ? String(row.stage_slug) : null,
-  }));
 
   return NextResponse.json({
     analyses: (data ?? []).map((row) => mapNeedAnalysisRow(row as Record<string, unknown>)),

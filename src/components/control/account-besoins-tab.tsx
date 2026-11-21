@@ -5,31 +5,78 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { EmptyState } from "./chrome";
 import { AccountBesoinDialog } from "./account-besoin-dialog";
 import type { OrganizationNeedAnalysis } from "@/lib/control/need-analyses";
+import { surmesureNewHref } from "@/lib/training-courses/surmesure-ui";
 
 type DealOption = { id: string; label: string; stage: string | null };
+
+type Scope =
+  | { kind: "organization"; organizationId: string; dealId?: string | null }
+  | { kind: "deal"; dealId: string; organizationId?: string | null };
+
+function listUrl(scope: Scope) {
+  if (scope.kind === "organization") {
+    return `/api/super/comptes-clients/${scope.organizationId}/besoins`;
+  }
+  return `/api/super-admin/crm/pipeline/deals/${scope.dealId}/besoins`;
+}
+
+function itemUrl(scope: Scope, analysisId: string) {
+  if (scope.kind === "organization") {
+    return `/api/super/comptes-clients/${scope.organizationId}/besoins/${analysisId}`;
+  }
+  return `/api/super-admin/crm/pipeline/deals/${scope.dealId}/besoins/${analysisId}`;
+}
 
 export function AccountBesoinsTab({
   organizationId,
   organizationName,
+  dealId,
+  scopeKind = "organization",
   initialDealId,
 }: {
-  organizationId: string;
+  organizationId?: string | null;
   organizationName: string;
-  /** Ouvre directement une nouvelle analyse liée à ce deal (depuis le pipeline). */
+  /** Mode pipeline : analyses liées au deal (org optionnelle). */
+  dealId?: string | null;
+  scopeKind?: "organization" | "deal";
+  /** Ouvre directement une nouvelle analyse liée à ce deal. */
   initialDealId?: string | null;
 }) {
+  const scope: Scope | null =
+    scopeKind === "deal" && dealId
+      ? { kind: "deal", dealId, organizationId: organizationId ?? null }
+      : organizationId
+        ? { kind: "organization", organizationId, dealId: dealId ?? initialDealId ?? null }
+        : null;
+
   const [analyses, setAnalyses] = useState<OrganizationNeedAnalysis[]>([]);
   const [deals, setDeals] = useState<DealOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<OrganizationNeedAnalysis | null | "new">(null);
-  const [prefillDealId, setPrefillDealId] = useState<string | null>(initialDealId ?? null);
+  const [prefillDealId, setPrefillDealId] = useState<string | null>(
+    initialDealId ?? dealId ?? null,
+  );
 
   const reload = useCallback(async () => {
+    if (scopeKind === "deal" && !dealId) {
+      setLoading(false);
+      setError("Enregistrez la fiche pour créer une analyse.");
+      return;
+    }
+    if (scopeKind === "organization" && !organizationId) {
+      setLoading(false);
+      setError("Impossible de charger les besoins sans compte client.");
+      return;
+    }
+    const nextScope: Scope =
+      scopeKind === "deal" && dealId
+        ? { kind: "deal", dealId, organizationId: organizationId ?? null }
+        : { kind: "organization", organizationId: organizationId as string, dealId: dealId ?? null };
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/super/comptes-clients/${organizationId}/besoins`);
+      const res = await fetch(listUrl(nextScope));
       const json = (await res.json()) as {
         analyses?: OrganizationNeedAnalysis[];
         deals?: DealOption[];
@@ -44,26 +91,23 @@ export function AccountBesoinsTab({
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [scopeKind, dealId, organizationId]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
   useEffect(() => {
-    if (initialDealId) {
-      setPrefillDealId(initialDealId);
-      setEditing("new");
+    if (initialDealId || (scopeKind === "deal" && dealId)) {
+      setPrefillDealId(initialDealId ?? dealId ?? null);
     }
-  }, [initialDealId]);
+  }, [initialDealId, dealId, scopeKind]);
 
   async function removeAnalysis(row: OrganizationNeedAnalysis) {
+    if (!scope) return;
     if (!confirm(`Supprimer « ${row.title || "Analyse"} » ?`)) return;
     try {
-      const res = await fetch(
-        `/api/super/comptes-clients/${organizationId}/besoins/${row.id}`,
-        { method: "DELETE" },
-      );
+      const res = await fetch(itemUrl(scope, row.id), { method: "DELETE" });
       const json = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(json.error || "Suppression impossible");
       setAnalyses((prev) => prev.filter((a) => a.id !== row.id));
@@ -73,6 +117,7 @@ export function AccountBesoinsTab({
   }
 
   const completeCount = analyses.filter((a) => a.status === "complete").length;
+  const surMesureOrgId = organizationId ?? null;
 
   return (
     <div className="mt-5 space-y-4">
@@ -92,7 +137,7 @@ export function AccountBesoinsTab({
         <button
           type="button"
           onClick={() => {
-            setPrefillDealId(null);
+            setPrefillDealId(dealId ?? initialDealId ?? null);
             setEditing("new");
           }}
           className="inline-flex items-center gap-2 rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold"
@@ -109,7 +154,7 @@ export function AccountBesoinsTab({
         </p>
       ) : analyses.length === 0 ? (
         <EmptyState
-          title="Aucune analyse du besoin pour ce compte."
+          title="Aucune analyse du besoin pour cette fiche."
           action={
             <button
               type="button"
@@ -171,16 +216,17 @@ export function AccountBesoinsTab({
         </div>
       )}
 
-      {editing !== null ? (
+      {editing !== null && scope ? (
         <AccountBesoinDialog
-          organizationId={organizationId}
+          scope={scope}
           analysis={editing === "new" ? null : editing}
           deals={deals}
           prefillDealId={editing === "new" ? prefillDealId : null}
+          surMesureHref={surMesureOrgId ? surmesureNewHref(surMesureOrgId) : null}
           onClose={() => {
             setEditing(null);
             setPrefillDealId(null);
-            if (initialDealId) {
+            if (initialDealId && typeof window !== "undefined") {
               const url = new URL(window.location.href);
               url.searchParams.delete("dealId");
               window.history.replaceState(null, "", `${url.pathname}${url.search}`);

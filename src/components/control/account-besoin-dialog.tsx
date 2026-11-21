@@ -11,9 +11,12 @@ import {
   type NeedAnalysisRecommendation,
   type OrganizationNeedAnalysis,
 } from "@/lib/control/need-analyses";
-import { surmesureNewHref } from "@/lib/training-courses/surmesure-ui";
 
 type DealOption = { id: string; label: string; stage: string | null };
+
+type Scope =
+  | { kind: "organization"; organizationId: string; dealId?: string | null }
+  | { kind: "deal"; dealId: string; organizationId?: string | null };
 
 type Draft = {
   title: string;
@@ -58,18 +61,31 @@ function analysisToDraft(analysis: OrganizationNeedAnalysis | null, prefillDealI
   };
 }
 
+function saveUrl(scope: Scope, analysisId?: string) {
+  if (scope.kind === "organization") {
+    return analysisId
+      ? `/api/super/comptes-clients/${scope.organizationId}/besoins/${analysisId}`
+      : `/api/super/comptes-clients/${scope.organizationId}/besoins`;
+  }
+  return analysisId
+    ? `/api/super-admin/crm/pipeline/deals/${scope.dealId}/besoins/${analysisId}`
+    : `/api/super-admin/crm/pipeline/deals/${scope.dealId}/besoins`;
+}
+
 export function AccountBesoinDialog({
-  organizationId,
+  scope,
   analysis,
   deals,
   prefillDealId,
+  surMesureHref,
   onClose,
   onSaved,
 }: {
-  organizationId: string;
+  scope: Scope;
   analysis: OrganizationNeedAnalysis | null;
   deals: DealOption[];
   prefillDealId?: string | null;
+  surMesureHref?: string | null;
   onClose: () => void;
   onSaved: (analysis: OrganizationNeedAnalysis) => void;
 }) {
@@ -82,6 +98,7 @@ export function AccountBesoinDialog({
   }, [analysis, prefillDealId]);
 
   const completeReady = isNeedAnalysisComplete(draft);
+  const showDealPicker = scope.kind === "organization" && deals.length > 0;
 
   function patch<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -93,7 +110,7 @@ export function AccountBesoinDialog({
     try {
       const payload = {
         title: draft.title.trim() || "Analyse du besoin",
-        deal_id: draft.deal_id || null,
+        deal_id: scope.kind === "deal" ? scope.dealId : draft.deal_id || null,
         context_problem: draft.context_problem,
         expected_outcomes: draft.expected_outcomes,
         audience: draft.audience,
@@ -103,10 +120,7 @@ export function AccountBesoinDialog({
         recommendations: draft.recommendations.filter((r) => r.label.trim()),
         markComplete,
       };
-      const url = analysis
-        ? `/api/super/comptes-clients/${organizationId}/besoins/${analysis.id}`
-        : `/api/super/comptes-clients/${organizationId}/besoins`;
-      const res = await fetch(url, {
+      const res = await fetch(saveUrl(scope, analysis?.id), {
         method: analysis ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -167,7 +181,7 @@ export function AccountBesoinDialog({
             />
           </Field>
 
-          {deals.length > 0 ? (
+          {showDealPicker ? (
             <Field label="Deal pipeline (optionnel)">
               <select
                 className={fieldClass}
@@ -300,13 +314,19 @@ export function AccountBesoinDialog({
         {error ? <p className="mt-4 text-sm text-[#FF8A9B]">{error}</p> : null}
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#1A2340] pt-4">
-          <Link
-            href={surmesureNewHref(organizationId)}
-            onClick={openSurMesure}
-            className="text-sm font-semibold text-[#A99BFF] hover:underline"
-          >
-            Ouvrir Sur-mesure avec ce brief →
-          </Link>
+          {surMesureHref ? (
+            <Link
+              href={surMesureHref}
+              onClick={openSurMesure}
+              className="text-sm font-semibold text-[#A99BFF] hover:underline"
+            >
+              Ouvrir Sur-mesure avec ce brief →
+            </Link>
+          ) : (
+            <span className="text-xs text-[#6C7593]">
+              Sur-mesure disponible une fois le compte client créé.
+            </span>
+          )}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

@@ -49,8 +49,8 @@ type NavId =
 
 const NAV_ITEMS: Array<{ id: NavId; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
-  { id: "formations", label: "Formations" },
   { id: "besoins", label: "Besoins" },
+  { id: "formations", label: "Formations" },
   { id: "members", label: "Membres" },
   { id: "saas", label: "Produits SaaS" },
   { id: "revenue", label: "Chiffre d'affaires" },

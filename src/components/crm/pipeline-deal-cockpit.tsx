@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { PipelineDealActionsSection } from "@/components/crm/pipeline-deal-actions-section";
 import { PipelineQuoteFormationsCompact } from "@/components/crm/pipeline-quote-formations";
 import { PipelineDealFormationDossiers } from "@/components/crm/pipeline-deal-formation-dossiers";
+import { AccountBesoinsTab } from "@/components/control/account-besoins-tab";
 import type { PipelineQuotedProductLine } from "@/lib/crm/pipeline-quoted-products";
 import {
   computeDealIntelligence,
@@ -51,7 +52,7 @@ import {
 import { PIPELINE_OPPORTUNITY_TYPE_OPTIONS } from "@/lib/crm/pipeline-opportunity-ca";
 import { canCreateOrganisation, hasOrganisationLink } from "@/lib/onboarding/deal-stages";
 
-type CockpitTab = "overview" | "contacts" | "entreprise" | "activity" | "formation";
+type CockpitTab = "overview" | "besoins" | "contacts" | "entreprise" | "activity" | "formation";
 
 export type DealCockpitForm = {
   id?: string;
@@ -265,6 +266,7 @@ export function PipelineDealCockpit({
 
   const tabs: Array<{ id: CockpitTab; label: string }> = [
     { id: "overview", label: "Aperçu" },
+    { id: "besoins", label: "Besoins" },
     { id: "contacts", label: `Contacts${people.length ? ` (${people.length})` : ""}` },
     { id: "entreprise", label: "Entreprise" },
     { id: "activity", label: "Activité" },
@@ -666,7 +668,11 @@ export function PipelineDealCockpit({
                       className="shrink-0 text-xs font-semibold text-indigo-300 hover:text-indigo-200"
                       onClick={() =>
                         setActiveTab(
-                          item.key === "decideur" || item.key === "besoin" ? "contacts" : "entreprise",
+                          item.key === "besoin"
+                            ? "besoins"
+                            : item.key === "decideur"
+                              ? "contacts"
+                              : "entreprise",
                         )
                       }
                     >
@@ -788,17 +794,15 @@ export function PipelineDealCockpit({
               }}
             />
             <p className="mt-2 text-xs text-slate-400">
-              Tags commerciaux — la preuve Qualiopi (analyse structurée) se remplit sur le compte
-              client.
+              Tags commerciaux rapides. L’analyse structurée Qualiopi est dans l’onglet Besoins.
             </p>
-            {showOpenOrg && form.organization_id && form.id ? (
-              <Link
-                href={`/super/organisations/${form.organization_id}?tab=besoins&dealId=${encodeURIComponent(form.id)}`}
-                className="mt-3 inline-flex text-sm font-semibold text-indigo-300 hover:text-indigo-200"
-              >
-                Ouvrir / créer l’analyse sur le compte client →
-              </Link>
-            ) : null}
+            <button
+              type="button"
+              className="mt-3 inline-flex text-sm font-semibold text-indigo-300 hover:text-indigo-200"
+              onClick={() => setActiveTab("besoins")}
+            >
+              Ouvrir l’onglet Besoins →
+            </button>
 
             <div className="mt-5 border-t border-white/10 pt-4">
               <p className="text-sm font-semibold text-white">Offre formation</p>
@@ -875,6 +879,23 @@ export function PipelineDealCockpit({
             </div>
           </section>
         </div>
+      ) : null}
+
+      {activeTab === "besoins" ? (
+        form.id ? (
+          <section className="rounded-xl border border-white/10 bg-[#0B1122]/80 p-4">
+            <AccountBesoinsTab
+              scopeKind="deal"
+              dealId={form.id}
+              organizationId={form.organization_id}
+              organizationName={form.company_name || "cette entreprise"}
+            />
+          </section>
+        ) : (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
+            Enregistrez la fiche pour créer une analyse du besoin.
+          </section>
+        )
       ) : null}
 
       {activeTab === "activity" ? (

@@ -5,6 +5,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import { AlternanceCalendarEditor } from "@/components/ecole/alternance-calendar-editor";
+
 type StudentRow = {
   id: string;
   first_name: string | null;
@@ -117,6 +119,8 @@ export function SchoolClassDetailClient({
           </div>
         </div>
       </div>
+
+      <AlternanceCalendarEditor classId={classId} />
 
       <section className="rounded-3xl border border-[#E5E5EA] bg-white p-6 shadow-sm md:p-8">
         <h2 className="text-lg font-semibold text-[#1D1D1F]">Référentiel & IA</h2>

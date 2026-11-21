@@ -10,9 +10,15 @@ function capitalizeWord(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 }
 
+/** Ne garder que le premier mot : « Ines Salmon » → « Ines ». */
+function firstWordOnly(value: string): string {
+  return value.trim().split(/\s+/)[0] ?? value.trim();
+}
+
 /**
  * Prénom affiché dans le dashboard apprenant (salutation « Bonjour … »).
  * Priorité : profil → métadonnées auth → heuristique e-mail (ex. timmydarcy44 → Timmy).
+ * Jamais le nom de famille : uniquement le prénom.
  */
 export function resolveLearnerDisplayFirstName(opts: {
   profileFirstName?: string | null;
@@ -27,7 +33,7 @@ export function resolveLearnerDisplayFirstName(opts: {
     (isUsableName(opts.metadataPrenom) && opts.metadataPrenom.trim()) ||
     (isUsableName(opts.metadataGivenName) && opts.metadataGivenName.trim()) ||
     "";
-  if (direct) return direct;
+  if (direct) return firstWordOnly(direct);
 
   const local = opts.email?.split("@")[0]?.trim().toLowerCase();
   if (!local) return "Apprenant";

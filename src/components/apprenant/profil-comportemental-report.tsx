@@ -45,9 +45,7 @@ export function ProfilComportementalReport() {
     data.matching?.compatibilityScore != null
       ? Math.round(data.matching.compatibilityScore)
       : null;
-  const firstName = data.firstName;
-  const lastName = data.lastName?.trim() ?? "";
-  const displayName = [firstName, lastName].filter(Boolean).join(" ") || "vous";
+  const firstName = data.firstName?.trim() || "toi";
   const proved = countProvedSkills(data.hardSkills, data.skillsMetadata);
   const inDev = countInDevelopment(data.hardSkills, data.skillsMetadata);
 
@@ -166,7 +164,7 @@ export function ProfilComportementalReport() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 space-y-2">
               <h1 className="text-[2rem] font-bold tracking-[-0.04em] text-white sm:text-[2.4rem]">
-                Bonjour {displayName}.
+                Bonjour {firstName}.
               </h1>
               <button
                 type="button"
@@ -184,7 +182,7 @@ export function ProfilComportementalReport() {
                 />
               </button>
               <p className="max-w-xl text-[14px] leading-relaxed text-white/45">
-                Votre profil évolue avec vos apprentissages, vos compétences et vos expériences.
+                Ton profil évolue avec tes apprentissages, tes compétences et tes expériences.
               </p>
             </div>
           </div>

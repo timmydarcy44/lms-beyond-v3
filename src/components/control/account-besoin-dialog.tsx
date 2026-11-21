@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Field, fieldClass } from "./chrome";
 import {
+  EMPTY_NEED_ANALYSIS_DETAILS,
   NEED_ANALYSIS_SURMESURE_STORAGE_KEY,
   isNeedAnalysisComplete,
   needAnalysisToSurMesureBrief,
+  normalizeNeedAnalysisDetails,
+  type NeedAnalysisDetails,
+  type NeedAnalysisFunding,
+  type NeedAnalysisPlaceMode,
   type NeedAnalysisRecommendation,
   type OrganizationNeedAnalysis,
 } from "@/lib/control/need-analyses";
@@ -23,10 +28,9 @@ type Draft = {
   deal_id: string;
   context_problem: string;
   expected_outcomes: string;
-  audience: string;
-  constraints: string;
   disability_accommodations: string;
   decided_adaptations: string;
+  details: NeedAnalysisDetails;
   recommendations: NeedAnalysisRecommendation[];
 };
 
@@ -35,26 +39,39 @@ const EMPTY_DRAFT: Draft = {
   deal_id: "",
   context_problem: "",
   expected_outcomes: "",
-  audience: "",
-  constraints: "",
   disability_accommodations: "",
   decided_adaptations: "",
+  details: { ...EMPTY_NEED_ANALYSIS_DETAILS },
   recommendations: [],
 };
 
+const PLACE_MODE_OPTIONS: { value: NeedAnalysisPlaceMode; label: string }[] = [
+  { value: "", label: "À préciser" },
+  { value: "presentiel", label: "Présentiel" },
+  { value: "visio", label: "Visio" },
+  { value: "mixte", label: "Mixte" },
+];
+
+const FUNDING_OPTIONS: { value: NeedAnalysisFunding; label: string }[] = [
+  { value: "", label: "À préciser" },
+  { value: "opco", label: "OPCO" },
+  { value: "entreprise", label: "Entreprise" },
+  { value: "mixte", label: "Mixte OPCO / entreprise" },
+  { value: "inconnu", label: "Inconnu" },
+];
+
 function analysisToDraft(analysis: OrganizationNeedAnalysis | null, prefillDealId?: string | null): Draft {
   if (!analysis) {
-    return { ...EMPTY_DRAFT, deal_id: prefillDealId ?? "", recommendations: [] };
+    return { ...EMPTY_DRAFT, deal_id: prefillDealId ?? "", details: { ...EMPTY_NEED_ANALYSIS_DETAILS }, recommendations: [] };
   }
   return {
     title: analysis.title,
     deal_id: analysis.deal_id ?? "",
     context_problem: analysis.context_problem,
     expected_outcomes: analysis.expected_outcomes,
-    audience: analysis.audience,
-    constraints: analysis.constraints,
     disability_accommodations: analysis.disability_accommodations,
     decided_adaptations: analysis.decided_adaptations,
+    details: normalizeNeedAnalysisDetails(analysis.details),
     recommendations: analysis.recommendations.length
       ? analysis.recommendations.map((r) => ({ ...r }))
       : [],
@@ -70,6 +87,14 @@ function saveUrl(scope: Scope, analysisId?: string) {
   return analysisId
     ? `/api/super-admin/crm/pipeline/deals/${scope.dealId}/besoins/${analysisId}`
     : `/api/super-admin/crm/pipeline/deals/${scope.dealId}/besoins`;
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="pt-2 text-[13px] font-bold uppercase tracking-[0.08em] text-[#7B849F]">
+      {children}
+    </h3>
+  );
 }
 
 export function AccountBesoinDialog({
@@ -97,11 +122,21 @@ export function AccountBesoinDialog({
     setDraft(analysisToDraft(analysis, prefillDealId));
   }, [analysis, prefillDealId]);
 
-  const completeReady = isNeedAnalysisComplete(draft);
+  const completeReady = isNeedAnalysisComplete({
+    context_problem: draft.context_problem,
+    expected_outcomes: draft.expected_outcomes,
+    disability_accommodations: draft.disability_accommodations,
+    decided_adaptations: draft.decided_adaptations,
+    details: draft.details,
+  });
   const showDealPicker = scope.kind === "organization" && deals.length > 0;
 
   function patch<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function patchDetail<K extends keyof NeedAnalysisDetails>(key: K, value: NeedAnalysisDetails[K]) {
+    setDraft((prev) => ({ ...prev, details: { ...prev.details, [key]: value } }));
   }
 
   async function save(markComplete: boolean) {
@@ -113,10 +148,9 @@ export function AccountBesoinDialog({
         deal_id: scope.kind === "deal" ? scope.dealId : draft.deal_id || null,
         context_problem: draft.context_problem,
         expected_outcomes: draft.expected_outcomes,
-        audience: draft.audience,
-        constraints: draft.constraints,
         disability_accommodations: draft.disability_accommodations,
         decided_adaptations: draft.decided_adaptations,
+        details: draft.details,
         recommendations: draft.recommendations.filter((r) => r.label.trim()),
         markComplete,
       };
@@ -140,10 +174,11 @@ export function AccountBesoinDialog({
       title: draft.title.trim() || "Analyse du besoin",
       context_problem: draft.context_problem,
       expected_outcomes: draft.expected_outcomes,
-      audience: draft.audience,
-      constraints: draft.constraints,
+      audience: "",
+      constraints: "",
       disability_accommodations: draft.disability_accommodations,
       decided_adaptations: draft.decided_adaptations,
+      details: draft.details,
       recommendations: draft.recommendations.filter((r) => r.label.trim()),
     });
     try {
@@ -162,8 +197,8 @@ export function AccountBesoinDialog({
               {analysis ? "Modifier l’analyse" : "Nouvelle analyse du besoin"}
             </h2>
             <p className="mt-1 text-sm text-[#8A93AE]">
-              Compte-rendu structuré — preuve Qualiopi indicateur 4. Les 6 blocs sont requis pour
-              marquer l’analyse complète.
+              Prise de notes structurée — preuve Qualiopi indicateur 4. Remplissez les cases au fil
+              de l’échange ; les 6 blocs restent requis pour marquer l’analyse complète.
             </p>
           </div>
           <button type="button" onClick={onClose} className="text-sm text-[#8A93AE] hover:text-white">
@@ -199,6 +234,7 @@ export function AccountBesoinDialog({
             </Field>
           ) : null}
 
+          <SectionTitle>Contexte</SectionTitle>
           <Field label="Le contexte et le problème — pourquoi cette formation, maintenant ?">
             <textarea
               className={`${fieldClass} min-h-[88px]`}
@@ -216,22 +252,125 @@ export function AccountBesoinDialog({
             />
           </Field>
 
-          <Field label="Le public — qui, combien, quels postes, quel niveau, quelle expérience">
+          <SectionTitle>Public</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Effectif">
+              <input
+                className={fieldClass}
+                value={draft.details.headcount}
+                placeholder="Ex. 12 personnes"
+                onChange={(e) => patchDetail("headcount", e.target.value)}
+              />
+            </Field>
+            <Field label="Postes / métiers">
+              <input
+                className={fieldClass}
+                value={draft.details.roles}
+                placeholder="Ex. managers de proximité"
+                onChange={(e) => patchDetail("roles", e.target.value)}
+              />
+            </Field>
+            <Field label="Niveau">
+              <input
+                className={fieldClass}
+                value={draft.details.level}
+                placeholder="Ex. junior / confirmé"
+                onChange={(e) => patchDetail("level", e.target.value)}
+              />
+            </Field>
+            <Field label="Expérience">
+              <input
+                className={fieldClass}
+                value={draft.details.experience}
+                placeholder="Ex. 2–5 ans d’encadrement"
+                onChange={(e) => patchDetail("experience", e.target.value)}
+              />
+            </Field>
+          </div>
+          <Field label="Notes public (optionnel)">
             <textarea
-              className={`${fieldClass} min-h-[80px]`}
-              value={draft.audience}
-              onChange={(e) => patch("audience", e.target.value)}
+              className={`${fieldClass} min-h-[64px]`}
+              value={draft.details.audience_notes}
+              placeholder="Précisions sur le groupe, mixité, turnover…"
+              onChange={(e) => patchDetail("audience_notes", e.target.value)}
             />
           </Field>
 
-          <Field label="Les contraintes — dates, lieu, durée, budget, financement (OPCO ou non)">
+          <SectionTitle>Cadre & contraintes</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Modalité">
+              <select
+                className={fieldClass}
+                value={draft.details.place_mode}
+                onChange={(e) =>
+                  patchDetail("place_mode", e.target.value as NeedAnalysisPlaceMode)
+                }
+              >
+                {PLACE_MODE_OPTIONS.map((opt) => (
+                  <option key={opt.value || "empty"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Lieu">
+              <input
+                className={fieldClass}
+                value={draft.details.place}
+                placeholder="Ex. Paris 8e / locaux client"
+                onChange={(e) => patchDetail("place", e.target.value)}
+              />
+            </Field>
+            <Field label="Durée">
+              <input
+                className={fieldClass}
+                value={draft.details.duration}
+                placeholder="Ex. 2 jours / 14 h"
+                onChange={(e) => patchDetail("duration", e.target.value)}
+              />
+            </Field>
+            <Field label="Dates / période">
+              <input
+                className={fieldClass}
+                value={draft.details.dates}
+                placeholder="Ex. mars 2026 / avant Q2"
+                onChange={(e) => patchDetail("dates", e.target.value)}
+              />
+            </Field>
+            <Field label="Budget">
+              <input
+                className={fieldClass}
+                value={draft.details.budget}
+                placeholder="Ex. 8–12 k€ HT"
+                onChange={(e) => patchDetail("budget", e.target.value)}
+              />
+            </Field>
+            <Field label="Financement">
+              <select
+                className={fieldClass}
+                value={draft.details.funding}
+                onChange={(e) =>
+                  patchDetail("funding", e.target.value as NeedAnalysisFunding)
+                }
+              >
+                {FUNDING_OPTIONS.map((opt) => (
+                  <option key={opt.value || "empty"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="Autres contraintes (optionnel)">
             <textarea
-              className={`${fieldClass} min-h-[80px]`}
-              value={draft.constraints}
-              onChange={(e) => patch("constraints", e.target.value)}
+              className={`${fieldClass} min-h-[64px]`}
+              value={draft.details.constraints_notes}
+              placeholder="Planning, matériel, contraintes internes…"
+              onChange={(e) => patchDetail("constraints_notes", e.target.value)}
             />
           </Field>
 
+          <SectionTitle>Handicap & adaptations</SectionTitle>
           <Field label="Situations de handicap et aménagements éventuels">
             <textarea
               className={`${fieldClass} min-h-[72px]`}

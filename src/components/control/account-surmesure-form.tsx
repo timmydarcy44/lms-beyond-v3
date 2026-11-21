@@ -84,8 +84,8 @@ export function AccountSurMesureForm({
   const [notice, setNotice] = useState<string | null>(null);
 
   async function autofill() {
-    if (prompt.trim().length < 20) {
-      setError("Le prompt global doit contenir au moins 20 caractères.");
+    if (prompt.trim().length < 8) {
+      setError("Ajoutez au moins quelques mots pour décrire le besoin.");
       return;
     }
     setAutofilling(true);
@@ -190,8 +190,15 @@ export function AccountSurMesureForm({
             body: JSON.stringify({ brief: prompt.trim() || undefined }),
           },
         );
-        const genJson = (await gen.json()) as { error?: string };
+        const genJson = (await gen.json()) as { error?: string; warning?: string };
         if (!gen.ok) throw new Error(genJson.error || "Génération de structure impossible");
+        if (genJson.warning) {
+          try {
+            sessionStorage.setItem("byound.surmesure.densityWarning", genJson.warning);
+          } catch {
+            /* ignore */
+          }
+        }
       }
 
       onSaved(id!);

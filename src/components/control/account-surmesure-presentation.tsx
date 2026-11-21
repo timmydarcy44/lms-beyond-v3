@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, Loader2, Pencil, Presentation, Sparkles } from "lucide-react";
@@ -220,6 +220,18 @@ export function AccountSurMesurePresentation({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  useEffect(() => {
+    try {
+      const warning = sessionStorage.getItem("byound.surmesure.densityWarning");
+      if (warning?.trim()) {
+        setNotice(warning.trim());
+        sessionStorage.removeItem("byound.surmesure.densityWarning");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const prerequisites = splitPrerequisites(course.prerequisites).filter(Boolean);
   const sectionsCount = structure.length;
   const chaptersCount = structure.reduce((n, s) => n + s.chapters.length, 0);
@@ -267,12 +279,13 @@ export function AccountSurMesurePresentation({
         course?: SurMesureCourse;
         program_structure?: TrainingProgramSection[];
         error?: string;
+        warning?: string;
       };
       if (!res.ok) throw new Error(json.error || "Génération impossible");
       const next = json.program_structure ?? json.course?.program_structure ?? [];
       setStructure(next);
       if (json.course) setCourse(json.course);
-      setNotice("Structure régénérée.");
+      setNotice(json.warning?.trim() || "Structure régénérée.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Génération impossible");
     } finally {

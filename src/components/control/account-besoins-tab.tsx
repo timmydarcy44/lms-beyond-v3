@@ -192,6 +192,37 @@ export function AccountBesoinsTab({
                   {row.status === "complete" ? "Complète" : "Brouillon"}
                 </span>
               </div>
+              {(row.details?.place ||
+                row.details?.duration ||
+                row.details?.place_mode ||
+                row.details?.headcount) && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {row.details.place_mode ? (
+                    <span className="rounded-full bg-[#1A2340] px-2.5 py-0.5 text-[11px] text-[#C9D2E8]">
+                      {row.details.place_mode === "presentiel"
+                        ? "Présentiel"
+                        : row.details.place_mode === "visio"
+                          ? "Visio"
+                          : "Mixte"}
+                    </span>
+                  ) : null}
+                  {row.details.place ? (
+                    <span className="rounded-full bg-[#1A2340] px-2.5 py-0.5 text-[11px] text-[#C9D2E8]">
+                      {row.details.place}
+                    </span>
+                  ) : null}
+                  {row.details.duration ? (
+                    <span className="rounded-full bg-[#1A2340] px-2.5 py-0.5 text-[11px] text-[#C9D2E8]">
+                      {row.details.duration}
+                    </span>
+                  ) : null}
+                  {row.details.headcount ? (
+                    <span className="rounded-full bg-[#1A2340] px-2.5 py-0.5 text-[11px] text-[#C9D2E8]">
+                      {row.details.headcount}
+                    </span>
+                  ) : null}
+                </div>
+              )}
               <p className="mt-3 line-clamp-3 text-sm text-[#9AA3BD]">
                 {row.context_problem || row.expected_outcomes || "Pas encore de contenu."}
               </p>

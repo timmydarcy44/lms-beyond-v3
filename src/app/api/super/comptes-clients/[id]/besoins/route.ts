@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import {
   NEED_ANALYSIS_SELECT,
+  buildNeedAnalysisWritePayload,
   isNeedAnalysisComplete,
   mapNeedAnalysisRow,
-  normalizeRecommendations,
 } from "@/lib/control/need-analyses";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -85,24 +85,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const title = String(body.title ?? "").trim() || "Analyse du besoin";
-  const context_problem = String(body.context_problem ?? "").trim();
-  const expected_outcomes = String(body.expected_outcomes ?? "").trim();
-  const audience = String(body.audience ?? "").trim();
-  const constraints = String(body.constraints ?? "").trim();
-  const disability_accommodations = String(body.disability_accommodations ?? "").trim();
-  const decided_adaptations = String(body.decided_adaptations ?? "").trim();
-  const recommendations = normalizeRecommendations(body.recommendations);
   const deal_id = body.deal_id ? String(body.deal_id) : null;
+  const fields = buildNeedAnalysisWritePayload(body);
   const wantComplete = body.markComplete === true;
-  const complete = wantComplete &&
-    isNeedAnalysisComplete({
-      context_problem,
-      expected_outcomes,
-      audience,
-      constraints,
-      disability_accommodations,
-      decided_adaptations,
-    });
+  const complete = wantComplete && isNeedAnalysisComplete(fields);
 
   if (wantComplete && !complete) {
     return NextResponse.json(
@@ -115,13 +101,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     organization_id: orgId,
     deal_id,
     title,
-    context_problem,
-    expected_outcomes,
-    audience,
-    constraints,
-    disability_accommodations,
-    decided_adaptations,
-    recommendations,
+    ...fields,
     status: complete ? "complete" : "draft",
     completed_at: complete ? new Date().toISOString() : null,
     created_by: auth.userId,

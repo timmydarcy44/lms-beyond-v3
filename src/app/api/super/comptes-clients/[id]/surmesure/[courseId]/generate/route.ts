@@ -96,7 +96,7 @@ export async function POST(request: NextRequest, context: Ctx) {
     "Chaque sous-chapitre = une activité, cas pratique, outil ou compétence mesurable. " +
     "Ancre les titres dans le secteur d'activité du client (vocabulaire métier). " +
     "Inclure naturellement des points d'évaluation (quiz) et d'ancrage (entretien) via le libellé des sous-chapitres. " +
-    "IMPORTANT densite : un programme trop léger est REFUSÉ. " +
+    "Vise une densité élevée, mais un programme partiel reste acceptable : l’équipe Byound complétera ensuite. " +
     densityRules;
 
   const userPrompt = `Génère un programme DÉTAILLÉ et DENSE (Section → Chapitre → Sous-chapitre) pour cette formation Sur-mesure Byound.
@@ -131,38 +131,30 @@ Retourne { "program": [ ... ] }. PAS de contenu de chapitre.`;
   }
 
   const program_structure = normalizeAiProgramStructure(result.program ?? result.program_structure);
+  if (!program_structure.length) {
+    return NextResponse.json(
+      { error: "L’IA n’a renvoyé aucune structure. Relancez ou saisissez manuellement." },
+      { status: 422 },
+    );
+  }
+
   const chapterCount = program_structure.reduce((n, s) => n + s.chapters.length, 0);
   const subCount = program_structure.reduce(
     (n, s) => n + s.chapters.reduce((m, c) => m + c.subchapters.length, 0),
     0,
   );
 
-  // Seuil un peu souple (90 %) pour éviter les faux négatifs IA, mais bien au-dessus de l'ancien 2/4/8.
+  // Densité cible : on enregistre quand même si léger — l’équipe enrichit ensuite.
   const minSectionsOk = Math.max(3, Math.floor(targets.minSections * 0.9));
   const minChaptersOk = Math.max(6, Math.floor(targets.minChaptersTotal * 0.85));
   const minSubsOk = Math.max(18, Math.floor(targets.minSubchaptersTotal * 0.8));
-
-  if (
+  const light =
     program_structure.length < minSectionsOk ||
     chapterCount < minChaptersOk ||
-    subCount < minSubsOk
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          `Programme trop léger pour ${duration.hours} h (${program_structure.length} sections / ${chapterCount} chapitres / ${subCount} sous-chapitres). ` +
-          `Attendu ≈ ${targets.minSections}+ sections, ${targets.minChaptersTotal}+ chapitres, ${targets.minSubchaptersTotal}+ sous-chapitres. Relancez.`,
-        debug: {
-          sections: program_structure.length,
-          chapters: chapterCount,
-          subchapters: subCount,
-          targets,
-          duration,
-        },
-      },
-      { status: 422 },
-    );
-  }
+    subCount < minSubsOk;
+  const densityWarning = light
+    ? `Structure enregistrée mais encore légère pour ${duration.hours} h (${program_structure.length} sections / ${chapterCount} chapitres / ${subCount} sous-chapitres — cible ≈ ${targets.minSections}+ / ${targets.minChaptersTotal}+ / ${targets.minSubchaptersTotal}+). Complétez-la ensuite.`
+    : null;
 
   const { data: updated, error: updateError } = await service
     .from("training_courses")
@@ -178,5 +170,12 @@ Retourne { "program": [ ... ] }. PAS de contenu de chapitre.`;
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
-  return NextResponse.json({ course: updated, program_structure, duration, targets });
+  return NextResponse.json({
+    course: updated,
+    program_structure,
+    duration,
+    targets,
+    warning: densityWarning,
+    light,
+  });
 }

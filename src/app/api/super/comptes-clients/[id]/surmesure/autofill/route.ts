@@ -53,9 +53,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     company?: { name?: string; siret?: string; sector?: string; naf?: string; city?: string };
   };
   const prompt = String(body.prompt ?? "").trim();
-  if (prompt.length < 20) {
+  if (prompt.length < 8) {
     return NextResponse.json(
-      { error: "Décrivez le besoin client en au moins 20 caractères." },
+      { error: "Décrivez le besoin client en quelques mots au minimum." },
       { status: 400 },
     );
   }

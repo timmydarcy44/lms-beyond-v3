@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import {
   NEED_ANALYSIS_SELECT,
+  buildNeedAnalysisWritePayload,
   isNeedAnalysisComplete,
   mapNeedAnalysisRow,
-  normalizeRecommendations,
+  normalizeNeedAnalysisDetails,
 } from "@/lib/control/need-analyses";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -62,33 +63,35 @@ export async function PATCH(
   const current = scoped.analysis!;
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const mergedBody = {
+    context_problem:
+      body.context_problem !== undefined ? body.context_problem : current.context_problem,
+    expected_outcomes:
+      body.expected_outcomes !== undefined ? body.expected_outcomes : current.expected_outcomes,
+    audience: body.audience !== undefined ? body.audience : current.audience,
+    constraints: body.constraints !== undefined ? body.constraints : current.constraints,
+    disability_accommodations:
+      body.disability_accommodations !== undefined
+        ? body.disability_accommodations
+        : current.disability_accommodations,
+    decided_adaptations:
+      body.decided_adaptations !== undefined
+        ? body.decided_adaptations
+        : current.decided_adaptations,
+    recommendations:
+      body.recommendations !== undefined ? body.recommendations : current.recommendations,
+    details:
+      body.details !== undefined
+        ? normalizeNeedAnalysisDetails(body.details)
+        : current.details,
+  };
+  const fields = buildNeedAnalysisWritePayload(mergedBody);
+
   const next = {
     title: body.title !== undefined ? String(body.title).trim() || current.title : current.title,
     deal_id: dealId,
     organization_id: scoped.orgId ?? current.organization_id,
-    context_problem:
-      body.context_problem !== undefined
-        ? String(body.context_problem).trim()
-        : current.context_problem,
-    expected_outcomes:
-      body.expected_outcomes !== undefined
-        ? String(body.expected_outcomes).trim()
-        : current.expected_outcomes,
-    audience: body.audience !== undefined ? String(body.audience).trim() : current.audience,
-    constraints:
-      body.constraints !== undefined ? String(body.constraints).trim() : current.constraints,
-    disability_accommodations:
-      body.disability_accommodations !== undefined
-        ? String(body.disability_accommodations).trim()
-        : current.disability_accommodations,
-    decided_adaptations:
-      body.decided_adaptations !== undefined
-        ? String(body.decided_adaptations).trim()
-        : current.decided_adaptations,
-    recommendations:
-      body.recommendations !== undefined
-        ? normalizeRecommendations(body.recommendations)
-        : current.recommendations,
+    ...fields,
   };
 
   const wantComplete = body.markComplete === true || current.status === "complete";

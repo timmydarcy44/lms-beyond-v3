@@ -4,6 +4,7 @@ import { sendAccessCode } from "@/lib/cfa/access-code";
 import { recordCfaAudit } from "@/lib/cfa/admit-application";
 import { logCompanyEvent } from "@/lib/cfa/company-events";
 import { parseInput, placementSchema } from "@/lib/cfa/fiche-input";
+import { activateAlternanceContract } from "@/lib/cfa/alternance-contract-lifecycle";
 import { syncTutorAssignment } from "@/lib/cfa/sync-tutor-assignment";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -227,21 +228,35 @@ export async function POST(request: NextRequest) {
     if (!sent.ok) return NextResponse.json({ error: sent.error, retryAfter: sent.retryAfter }, { status: sent.retryAfter ? 429 : 502 });
 
     await closeOpen();
-    const placed = await db.from("apprentice_placements").insert({
-      apprentice_id: applicationId,
-      company_id: companyId,
-      tutor_id: tutorId,
-      status: "active",
-      started_at: new Date().toISOString(),
-      created_by: await actorId(),
-    });
-    if (placed.error) return NextResponse.json({ error: placed.error.message }, { status: 400 });
+    const actor = await actorId();
+    const placed = await db
+      .from("apprentice_placements")
+      .insert({
+        apprentice_id: applicationId,
+        company_id: companyId,
+        tutor_id: tutorId,
+        status: "active",
+        started_at: new Date().toISOString(),
+        created_by: actor,
+      })
+      .select("id")
+      .single();
+    if (placed.error || !placed.data) {
+      return NextResponse.json({ error: placed.error?.message ?? "Placement impossible" }, { status: 400 });
+    }
     await db.from("company_tutors").update({
       last_code_sent_at: new Date().toISOString(),
       ...(alreadyActive ? {} : { invited_at: new Date().toISOString() }),
     }).eq("id", tutorId);
-    await syncTutorAssignment(db, applicationId);
-    await recordCfaAudit(db, { actorId: await actorId(), applicationId, action: "placement_tutor", newValue: tutorId });
+    await activateAlternanceContract(db, {
+      applicationId,
+      companyId,
+      companyTutorId: tutorId,
+      placementId: String((placed.data as { id: string }).id),
+      createdBy: actor,
+      status: "active",
+    });
+    await recordCfaAudit(db, { actorId: actor, applicationId, action: "placement_tutor", newValue: tutorId });
     return NextResponse.json({ ok: true });
   }
 

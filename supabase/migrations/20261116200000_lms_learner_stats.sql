@@ -1,12 +1,15 @@
 -- LMS metrics v2 : signaux d’activité + agrégats apprenant.
 -- Ne supprime aucune ligne de learning_sessions.
 -- Définition : voir src/lib/lms/lms-metrics.ts
+-- Idempotent : relançable sans erreur.
 
 -- Flag compte de test sur profiles (si absent)
 alter table public.profiles
   add column if not exists is_test boolean not null default false;
 
-create index if not exists profiles_is_test_idx on public.profiles (is_test) where is_test = true;
+create index if not exists profiles_is_test_idx
+  on public.profiles (is_test)
+  where is_test = true;
 
 -- Heartbeats / interactions (une ligne ≈ un ping 30 s)
 create table if not exists public.learning_activity_signals (
@@ -39,7 +42,7 @@ create policy learning_activity_signals_self_insert on public.learning_activity_
 drop policy if exists learning_activity_signals_admin_select on public.learning_activity_signals;
 create policy learning_activity_signals_admin_select on public.learning_activity_signals
   for select using (
-    public.user_has_role(auth.uid(), array['admin','instructor','super_admin'])
+    public.user_has_role(auth.uid(), array['admin', 'instructor', 'super_admin'])
   );
 
 -- Journal des relances pédagogiques
@@ -62,13 +65,12 @@ alter table public.learner_relances enable row level security;
 drop policy if exists learner_relances_admin on public.learner_relances;
 create policy learner_relances_admin on public.learner_relances
   for all using (
-    public.user_has_role(auth.uid(), array['admin','instructor','super_admin'])
+    public.user_has_role(auth.uid(), array['admin', 'instructor', 'super_admin'])
   ) with check (
-    public.user_has_role(auth.uid(), array['admin','instructor','super_admin'])
+    public.user_has_role(auth.uid(), array['admin', 'instructor', 'super_admin'])
   );
 
--- Agrégats par apprenant (rafraîchis toutes les heures via pg_cron si dispo,
--- sinon via l’API / le panel qui recalcule côté app avec lms-metrics).
+-- Agrégats par apprenant (rafraîchis côté app avec lms-metrics ; pg_cron optionnel)
 create table if not exists public.lms_learner_stats (
   user_id uuid primary key references public.profiles(id) on delete cascade,
   session_count integer not null default 0,
@@ -94,23 +96,24 @@ create policy lms_learner_stats_self on public.lms_learner_stats
 drop policy if exists lms_learner_stats_admin on public.lms_learner_stats;
 create policy lms_learner_stats_admin on public.lms_learner_stats
   for select using (
-    public.user_has_role(auth.uid(), array['admin','instructor','super_admin'])
+    public.user_has_role(auth.uid(), array['admin', 'instructor', 'super_admin'])
   );
 
 comment on table public.learning_activity_signals is
   'Heartbeats LMS (30 s, onglet visible + interaction < 2 min). Voir lms-metrics.ts.';
+
 comment on table public.lms_learner_stats is
   'Agrégats apprenant (séances / connecté / actif) selon lms-metrics.ts. Refresh horaire.';
 
--- Visibilité suivi : self + admin/instructor déjà en place (002_lms…).
--- Ajoute lecture pour tuteurs / RH sur leurs apprenants (si tables de lien présentes).
-do $$
+-- Visibilité suivi : lecture tuteurs (si tutor_assignments existe)
+do $lms_tutor$
 begin
   drop policy if exists learning_sessions_tutor_select on public.learning_sessions;
   create policy learning_sessions_tutor_select on public.learning_sessions
     for select using (
       exists (
-        select 1 from public.tutor_assignments ta
+        select 1
+        from public.tutor_assignments ta
         where ta.tutor_id = auth.uid()
           and ta.learner_id = learning_sessions.user_id
       )
@@ -118,9 +121,10 @@ begin
 exception
   when undefined_table then null;
   when others then null;
-end $$;
+end $lms_tutor$;
 
-do $$
+-- Visibilité suivi : lecture RH / entreprise sur leurs apprenants
+do $lms_hr$
 begin
   drop policy if exists learning_sessions_org_hr_select on public.learning_sessions;
   create policy learning_sessions_org_hr_select on public.learning_sessions
@@ -140,23 +144,27 @@ begin
     );
 exception
   when others then null;
-end $$;
+end $lms_hr$;
 
--- Rafraîchissement horaire si pg_cron est disponible (no-op sinon)
-do $$
+-- Rafraîchissement horaire si pg_cron est disponible (no-op sinon).
+-- Tags dollar distincts : ne jamais imbriquer $$ dans un do $$.
+do $lms_cron$
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    perform cron.unschedule('refresh_lms_learner_stats')
-      from cron.job where jobname = 'refresh_lms_learner_stats';
-    -- Le recalcul exact (clustering 30 min) est fait côté app ;
-    -- ici on pose un marqueur pour un job externe / edge function.
+    begin
+      perform cron.unschedule(jobid)
+      from cron.job
+      where jobname = 'refresh_lms_learner_stats';
+    exception
+      when others then null;
+    end;
+
     perform cron.schedule(
       'refresh_lms_learner_stats',
       '5 * * * *',
-      $$update public.lms_learner_stats set refreshed_at = now() where false$$
+      $cron_sql$update public.lms_learner_stats set refreshed_at = now() where false$cron_sql$
     );
   end if;
 exception
-  when others then
-    null;
-end $$;
+  when others then null;
+end $lms_cron$;

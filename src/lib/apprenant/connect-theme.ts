@@ -51,7 +51,7 @@ const EDGE_THEME: ConnectShellTheme = {
   brandCollapsedLetter: "E",
   brandCollapsedClass: "mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-[#3D7BFF]/15 text-xs font-semibold text-[#3D7BFF]",
   sidebarClass:
-    "no-dyslexia sticky left-0 top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-white/[0.03] bg-transparent backdrop-blur-[20px] backdrop-saturate-[140%] lg:flex",
+    "no-dyslexia sticky left-0 top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-white/[0.03] bg-[#05080F] lg:flex",
   sidebarHeaderBorder: "border-b border-white/[0.03]",
   sidebarFooterClass: "shrink-0 space-y-2 border-t border-white/[0.03] p-2",
   collapseBtnClass:

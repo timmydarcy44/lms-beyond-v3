@@ -12,14 +12,12 @@ import {
   type ApprenantConnectVariant,
 } from "@/lib/apprenant/connect-theme";
 import {
-  EDGE_APP_BY_ID,
-  getEdgeAppLabel,
-  getEdgeAppNavItems,
-  getEdgeAppTransitionName,
-  resolveEdgeAppFromPathname,
-  setStoredEdgeAppId,
-  type EdgeAppId,
-} from "@/lib/apprenant/edge-apps";
+  buildUnifiedLearnerNav,
+  flattenUnifiedNav,
+  isUnifiedNavItemActive,
+  type UnifiedNavGroup,
+} from "@/lib/apprenant/unified-nav";
+import type { LearnerSituation } from "@/lib/apprenant/learner-situation";
 import { edgePerfMark } from "@/lib/edge/perf-marks";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
 import {
@@ -30,8 +28,6 @@ import { ApprenantProfileEditModal } from "@/components/apprenant/apprenant-prof
 import { ObjectiveDetailStepModal } from "@/components/apprenant/objective-detail-step-modal";
 import { ConnectCockpitBackdrop } from "@/components/apprenant/connect-cockpit-backdrop";
 import { ApprenantShellProvider } from "@/components/apprenant/apprenant-shell-context";
-import { EdgeAppSwitcher } from "@/components/apprenant/edge-app-switcher";
-import { AppTransition } from "@/components/apprenant/edge-app-transition";
 import { LearnerSnapshotProvider } from "@/components/learner/learner-snapshot-provider";
 import { ProfilEdgeHubProvider } from "@/components/apprenant/profil-edge/profil-edge-hub-provider";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -84,9 +80,11 @@ export function ApprenantConnectShell({
     logoUrl: null,
     name: null,
   });
-  const [activeAppId, setActiveAppId] = useState<EdgeAppId>("profil");
-  const [pendingAppId, setPendingAppId] = useState<EdgeAppId | null>(null);
-  const useEdgeApps = variant === "edge";
+  const useUnifiedNav = variant === "edge";
+  const [situation, setSituation] = useState<LearnerSituation>("learner");
+  const [showAlternanceNav, setShowAlternanceNav] = useState(false);
+  const [profileMissingCount, setProfileMissingCount] = useState(0);
+  const carePathActive = Boolean(pathname?.startsWith("/dashboard/apprenant/care"));
 
   useEffect(() => {
     if (variant === "jessica") return;
@@ -177,53 +175,42 @@ export function ApprenantConnectShell({
   }, [router, searchParams]);
 
   useEffect(() => {
-    if (!useEdgeApps) return;
-    if (pendingAppId) return; // ne pas écraser pendant la transition de marque
-    try {
-      const fromPath = resolveEdgeAppFromPathname(pathname);
-      setActiveAppId(fromPath);
-      setStoredEdgeAppId(fromPath);
-    } catch {
-      setActiveAppId("profil");
-    }
-  }, [pathname, useEdgeApps, pendingAppId]);
+    if (!useUnifiedNav) return;
+    let cancelled = false;
+    fetch("/api/dashboard/apprenant/situation", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled || !json?.situation) return;
+        setSituation(json.situation as LearnerSituation);
+        setShowAlternanceNav(Boolean(json.showAlternanceNav));
+      })
+      .catch(() => {});
+    fetch("/api/dashboard/apprenant/home-v2", { credentials: "include" })
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled || !json?.profile) return;
+        const missing = Math.max(0, Number(json.profile.total) - Number(json.profile.filled));
+        setProfileMissingCount(missing);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [useUnifiedNav, snippetVersion]);
+
+  const unifiedGroups: UnifiedNavGroup[] = useMemo(() => {
+    if (!useUnifiedNav) return [];
+    return buildUnifiedLearnerNav({
+      situation,
+      showAlternanceNav,
+      profileMissingCount,
+    });
+  }, [useUnifiedNav, situation, showAlternanceNav, profileMissingCount]);
 
   const navItems = useMemo(() => {
-    if (useEdgeApps) return getEdgeAppNavItems(activeAppId);
+    if (useUnifiedNav) return flattenUnifiedNav(unifiedGroups);
     return buildApprenantNavItems(hasOrganisation, variant, isParticulier);
-  }, [activeAppId, hasOrganisation, isParticulier, useEdgeApps, variant]);
-
-  const handleAppChange = useCallback(
-    (id: EdgeAppId) => {
-      edgePerfMark("app-switch-start", { id });
-      // Sidebar + nav cible immédiatement ; l’overlay reste opaque jusqu’à destinationReady
-      setActiveAppId(id);
-      setStoredEdgeAppId(id);
-      setPendingAppId(id);
-      const href = EDGE_APP_BY_ID[id]?.homeHref;
-      if (href) router.push(href);
-      setMobileOpen(false);
-    },
-    [router],
-  );
-
-  let destinationReady = false;
-  try {
-    destinationReady = Boolean(
-      pendingAppId && resolveEdgeAppFromPathname(pathname) === pendingAppId,
-    );
-  } catch {
-    destinationReady = false;
-  }
-
-  const completeAppTransition = useCallback(() => {
-    if (!pendingAppId) return;
-    const next = pendingAppId;
-    setActiveAppId(next);
-    setStoredEdgeAppId(next);
-    setPendingAppId(null);
-    edgePerfMark("app-switch-complete", { id: next });
-  }, [pendingAppId]);
+  }, [unifiedGroups, hasOrganisation, isParticulier, useUnifiedNav, variant]);
 
   const handleProfileSaved = useCallback(() => {
     setSnippetVersion((v) => v + 1);
@@ -369,7 +356,7 @@ export function ApprenantConnectShell({
   }
 
   const hubWrap = (node: ReactNode) =>
-    useEdgeApps ? <ProfilEdgeHubProvider>{node}</ProfilEdgeHubProvider> : node;
+    useUnifiedNav ? <ProfilEdgeHubProvider>{node}</ProfilEdgeHubProvider> : node;
 
   return (
     <LearnerSnapshotProvider>
@@ -398,7 +385,7 @@ export function ApprenantConnectShell({
                     : "h-[52px]"
               }`}
             >
-              {orgBranding.logoUrl && variant !== "jessica" && !(useEdgeApps && activeAppId === "care") ? (
+              {orgBranding.logoUrl && variant !== "jessica" && (!carePathActive) ? (
                 <div className="w-full">
                   <OrgSidebarBrand
                     logoUrl={orgBranding.logoUrl}
@@ -408,7 +395,7 @@ export function ApprenantConnectShell({
                 </div>
               ) : !isSidebarCollapsed ? (
                 <div className="min-w-0 flex-1 leading-tight">
-                  {useEdgeApps && activeAppId === "care" ? (
+                  {carePathActive ? (
                     <div className="min-w-0">
                       <div className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-white">
                         Byound <span className="text-[#FF5C8A]">Care</span>
@@ -431,7 +418,7 @@ export function ApprenantConnectShell({
                       {theme.brandTitle}
                     </div>
                   )}
-                  {!(useEdgeApps && activeAppId === "care") ? (
+                  {(!carePathActive) ? (
                     <p
                       className={`mt-1 text-[9px] tracking-[0.1em] ${
                         variant === "jessica" ? "text-[#8B4513]/55" : "text-white/20"
@@ -472,118 +459,74 @@ export function ApprenantConnectShell({
                 isSidebarCollapsed ? "px-1.5" : "px-2"
               } [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.12)_transparent]`}
             >
-              {useEdgeApps && navItems.length === 0 ? (
-                <div
-                  className={`px-2 py-4 ${isSidebarCollapsed ? "sr-only" : ""}`}
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/25">
-                    {getEdgeAppLabel(activeAppId)}
-                  </p>
-                  <p className="mt-2 text-[12px] leading-relaxed text-white/35">
-                    Aucune section interne — le planning s’affiche dans la zone principale.
-                  </p>
-                </div>
-              ) : (
-              <div className="space-y-0.5">
-                {navItems.map((item) => {
-                  const isParcoursGalaxy = item.label === "Parcours" || item.label === "Mes parcours";
-                  const isMonAccompagnementEntry = item.label === "Mon accompagnement";
-                  const isParcoursGuide = item.label === "Parcours guidé";
-                  const isShareProfile = item.action === "share-profile";
-                  const isExternal = item.external === true;
-                  const careNav = useEdgeApps && activeAppId === "care";
-                  const longerMatchExists = Boolean(
-                    pathname &&
-                      navItems.some(
-                        (other) =>
-                          !other.external &&
-                          other.href !== item.href &&
-                          other.href.length > item.href.length &&
-                          (pathname === other.href || pathname.startsWith(`${other.href}/`)),
-                      ),
-                  );
-                  const active =
-                    !isShareProfile &&
-                    !isExternal &&
-                    !longerMatchExists &&
-                    (pathname === item.href ||
-                      pathname?.startsWith(`${item.href}/`) ||
-                      (isParcoursGalaxy && Boolean(pathname?.startsWith("/g/edgelab"))) ||
-                      (isMonAccompagnementEntry &&
-                        Boolean(
-                          pathname?.startsWith("/dashboard/apprenant/coaching") ||
-                            pathname?.startsWith("/dashboard/accompagnement"),
-                        )) ||
-                      (isParcoursGuide && Boolean(pathname?.includes("/parcours-guide"))));
-                  const itemClass = `group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
-                    isSidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
-                  } ${
-                    active
-                      ? isSidebarCollapsed
-                        ? careNav
-                          ? "bg-[#3A0F22] text-white ring-1 ring-[#FF5C8A]/25"
-                          : "bg-[rgba(37,99,235,0.15)] text-white ring-1 ring-[rgba(37,99,235,0.25)]"
-                        : careNav
-                          ? "bg-[#3A0F22] text-white"
-                          : "bg-[rgba(37,99,235,0.15)] text-white"
-                      : "text-white/45 hover:bg-white/[0.04] hover:text-white"
-                  }`;
-                  const iconClass = `h-[18px] w-[18px] shrink-0 ${
-                    active
-                      ? careNav
-                        ? "text-[#FF5C8A]"
-                        : theme.navIconActive
-                      : theme.navIconInactive
-                  }`;
-
-                  if (isShareProfile) {
+              <div className="space-y-4">
+                {(useUnifiedNav ? unifiedGroups : [{ id: "legacy", label: null, items: navItems }]).map(
+                  (group) => {
+                    const allHrefs = navItems.map((i) => i.href);
                     return (
-                      <button
-                        key={item.label}
-                        type="button"
-                        title={isSidebarCollapsed ? item.label : undefined}
-                        onClick={() => void handleShareProfile()}
-                        className={itemClass}
-                      >
-                        <item.icon className={`h-[18px] w-[18px] shrink-0 ${theme.navIconInactive}`} />
-                        <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
-                      </button>
-                    );
-                  }
+                      <div key={group.id} className="space-y-0.5">
+                        {group.label && !isSidebarCollapsed ? (
+                          <p className="px-3 pb-1 pt-1 text-[12px] font-bold text-[#6C7593]">
+                            {group.label}
+                          </p>
+                        ) : null}
+                        {group.items.map((item) => {
+                          const careItem = Boolean(
+                            "careActive" in item && item.careActive && carePathActive,
+                          );
+                          const active = isUnifiedNavItemActive(pathname, item.href, allHrefs);
+                          const itemClass = `group relative flex w-full items-center rounded-xl text-[13px] font-medium transition ${
+                            isSidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
+                          } ${
+                            active
+                              ? careItem || (carePathActive && item.href.includes("/care"))
+                                ? "bg-[#3A0F22] text-white"
+                                : "bg-[#1B2350] text-white"
+                              : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                          }`;
+                          const iconClass = `h-[18px] w-[18px] shrink-0 ${
+                            active
+                              ? carePathActive && item.href.includes("/care")
+                                ? "text-[#FF5C8A]"
+                                : "text-[#C9C2FF]"
+                              : "text-white/45 group-hover:text-white/70"
+                          }`;
+                          const badge =
+                            "badgeCount" in item && item.badgeCount
+                              ? item.badgeCount
+                              : undefined;
+                          const careDot = "careDot" in item && item.careDot && !active;
 
-                  if (isExternal) {
-                    return (
-                      <a
-                        key={item.label + item.href}
-                        href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={isSidebarCollapsed ? item.label : undefined}
-                        className={itemClass}
-                      >
-                        <item.icon className={iconClass} />
-                        <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>
-                          {item.label}
-                          <span className="ml-1 opacity-70">↗</span>
-                        </span>
-                      </a>
+                          return (
+                            <Link
+                              key={item.label + item.href}
+                              href={item.href}
+                              title={isSidebarCollapsed ? item.label : undefined}
+                              className={itemClass}
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              <span className="relative shrink-0">
+                                <item.icon className={iconClass} />
+                                {careDot ? (
+                                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#FF5C8A]" />
+                                ) : null}
+                              </span>
+                              <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>
+                                {item.label}
+                              </span>
+                              {badge && !isSidebarCollapsed ? (
+                                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E5BFF] px-1.5 text-[10px] font-bold text-white">
+                                  {badge}
+                                </span>
+                              ) : null}
+                            </Link>
+                          );
+                        })}
+                      </div>
                     );
-                  }
-
-                  return (
-                    <Link
-                      key={item.label + item.href}
-                      href={item.href}
-                      title={isSidebarCollapsed ? item.label : undefined}
-                      className={itemClass}
-                    >
-                      <item.icon className={iconClass} />
-                      <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
-                    </Link>
-                  );
-                })}
+                  },
+                )}
               </div>
-              )}
             </nav>
 
             <div className={theme.sidebarFooterClass}>
@@ -679,7 +622,7 @@ export function ApprenantConnectShell({
           </aside>
 
           <main data-connect-main className={theme.mainClass}>
-            {useEdgeApps ? (
+            {useUnifiedNav ? (
               <div
                 data-connect-topbar
                 className="sticky top-0 z-30 hidden px-5 py-3 sm:px-8 lg:block lg:pl-8 lg:pr-10"
@@ -701,7 +644,6 @@ export function ApprenantConnectShell({
                   >
                     <Bell className="h-4 w-4" />
                   </button>
-                  <EdgeAppSwitcher activeAppId={activeAppId} onAppChange={handleAppChange} />
                   <button
                     type="button"
                     onClick={openEditProfile}
@@ -741,14 +683,12 @@ export function ApprenantConnectShell({
                     <SheetContent side="left" className={theme.mobileSheetClass}>
                       <SheetHeader className={`flex flex-row items-center justify-between pb-4 text-left ${variant === "jessica" ? "border-b border-[#D2B48C]/40" : "border-b border-white/10"}`}>
                         <SheetTitle className={variant === "jessica" ? "text-[#2F2A25]" : "text-white"}>
-                          {useEdgeApps && activeAppId === "care" ? (
+                          {carePathActive ? (
                             <>
                               Byound <span className="text-[#FF5C8A]">Care</span>
                             </>
-                          ) : useEdgeApps ? (
-                            getEdgeAppLabel(activeAppId)
                           ) : (
-                            "Navigation"
+                            "Byound"
                           )}
                         </SheetTitle>
                         <button
@@ -761,92 +701,58 @@ export function ApprenantConnectShell({
                         </button>
                       </SheetHeader>
 
-                      <div className="mt-4 space-y-1 pb-6">
-                        {navItems.length === 0 && useEdgeApps ? (
-                          <p className="px-1 text-[13px] text-white/40">
-                            Aucune section interne pour cette application.
-                          </p>
-                        ) : null}
-                        {navItems.map((item) => {
-                          const isShareProfile = item.action === "share-profile";
-                          const isExternal = item.external === true;
-                          const careNav = useEdgeApps && activeAppId === "care";
-                          const longerMatchExists = Boolean(
-                            pathname &&
-                              navItems.some(
-                                (other) =>
-                                  !other.external &&
-                                  other.href !== item.href &&
-                                  other.href.length > item.href.length &&
-                                  (pathname === other.href || pathname.startsWith(`${other.href}/`)),
-                              ),
-                          );
-                          const active =
-                            !isShareProfile &&
-                            !isExternal &&
-                            !longerMatchExists &&
-                            (pathname === item.href || pathname?.startsWith(`${item.href}/`));
-                          const itemClass = `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
-                            active
-                              ? careNav
-                                ? "bg-[#3A0F22] text-white ring-1 ring-[#FF5C8A]/25"
-                                : theme.mobileNavActive
-                              : theme.mobileNavInactive
-                          }`;
-                          const iconClass = `h-[18px] w-[18px] shrink-0 ${
-                            active
-                              ? careNav
-                                ? "text-[#FF5C8A]"
-                                : theme.mobileNavIconActive
-                              : theme.mobileNavIconInactive
-                          }`;
-
-                          if (isShareProfile) {
-                            return (
-                              <button
-                                key={item.label}
-                                type="button"
-                                onClick={() => {
-                                  handleNavigateMobile();
-                                  void handleShareProfile();
-                                }}
-                                className={itemClass}
-                              >
-                                <item.icon className={`h-[18px] w-[18px] shrink-0 ${theme.mobileNavIconInactive}`} />
-                                <span className="truncate">{item.label}</span>
-                              </button>
-                            );
-                          }
-
-                          if (isExternal) {
-                            return (
-                              <a
-                                key={item.label + item.href}
-                                href={item.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={handleNavigateMobile}
-                                className={itemClass}
-                              >
-                                <item.icon className={iconClass} />
-                                <span className="truncate">
-                                  {item.label}
-                                  <span className="ml-1 opacity-70">↗</span>
-                                </span>
-                              </a>
-                            );
-                          }
-
+                      <div className="mt-4 space-y-4 pb-6">
+                        {(useUnifiedNav
+                          ? unifiedGroups
+                          : [{ id: "legacy", label: null as string | null, items: navItems }]
+                        ).map((group) => {
+                          const allHrefs = navItems.map((i) => i.href);
                           return (
-                            <Link
-                              key={item.label + item.href}
-                              href={item.href}
-                              onClick={handleNavigateMobile}
-                              className={itemClass}
-                            >
-                              <item.icon className={iconClass} />
-                              <span className="truncate">{item.label}</span>
-                            </Link>
+                            <div key={group.id} className="space-y-0.5">
+                              {group.label ? (
+                                <p className="px-3 pb-1 text-[12px] font-bold text-[#6C7593]">
+                                  {group.label}
+                                </p>
+                              ) : null}
+                              {group.items.map((item) => {
+                                const active = isUnifiedNavItemActive(
+                                  pathname,
+                                  item.href,
+                                  allHrefs,
+                                );
+                                const careItem = carePathActive && item.href.includes("/care");
+                                return (
+                                  <Link
+                                    key={item.label + item.href}
+                                    href={item.href}
+                                    onClick={handleNavigateMobile}
+                                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
+                                      active
+                                        ? careItem
+                                          ? "bg-[#3A0F22] text-white"
+                                          : "bg-[#1B2350] text-white"
+                                        : "text-white/55 hover:bg-white/[0.04] hover:text-white"
+                                    }`}
+                                  >
+                                    <item.icon
+                                      className={`h-[18px] w-[18px] shrink-0 ${
+                                        active
+                                          ? careItem
+                                            ? "text-[#FF5C8A]"
+                                            : "text-[#C9C2FF]"
+                                          : "text-white/40"
+                                      }`}
+                                    />
+                                    <span className="truncate">{item.label}</span>
+                                    {"badgeCount" in item && item.badgeCount ? (
+                                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E5BFF] px-1.5 text-[10px] font-bold text-white">
+                                        {item.badgeCount}
+                                      </span>
+                                    ) : null}
+                                  </Link>
+                                );
+                              })}
+                            </div>
                           );
                         })}
                       </div>
@@ -892,26 +798,17 @@ export function ApprenantConnectShell({
 
                 <div className="min-w-0 flex-1">
                   <div className={theme.mobileTitleClass}>
-                    {activeNavLabel || (useEdgeApps ? getEdgeAppLabel(activeAppId) : theme.mobileBrandFallback)}
+                    {activeNavLabel || theme.mobileBrandFallback}
                   </div>
                 </div>
 
                 <div className="flex w-auto shrink-0 items-center justify-end gap-1.5">
-                  {useEdgeApps ? (
-                    <EdgeAppSwitcher activeAppId={activeAppId} onAppChange={handleAppChange} />
-                  ) : (
-                    <div className="w-10" />
-                  )}
+                  <div className="w-10" />
                 </div>
               </div>
             </div>
 
-            <div
-              className={`relative z-10 px-5 py-6 sm:px-8 lg:pl-8 lg:pr-10 lg:py-8 ${
-                pendingAppId ? "invisible" : ""
-              }`}
-              aria-hidden={pendingAppId ? true : undefined}
-            >
+            <div className="relative z-10 px-5 py-6 sm:px-8 lg:pl-8 lg:pr-10 lg:py-8">
               {children}
             </div>
           </main>
@@ -931,15 +828,6 @@ export function ApprenantConnectShell({
           onSaved={handleObjectiveSaved}
           onClose={() => setObjectiveModalOpen(false)}
         />
-
-        {useEdgeApps ? (
-          <AppTransition
-            appName={pendingAppId ? getEdgeAppTransitionName(pendingAppId) : ""}
-            open={Boolean(pendingAppId)}
-            destinationReady={destinationReady}
-            onComplete={completeAppTransition}
-          />
-        ) : null}
 
         {shareCopied ? (
           <div

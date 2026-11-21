@@ -10,10 +10,10 @@ export default async function EntreprisePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ partie?: string; tab?: string }>;
+  searchParams: Promise<{ partie?: string; tab?: string; dealId?: string }>;
 }) {
   const { id } = await params;
-  const { partie, tab } = await searchParams;
+  const { partie, tab, dealId } = await searchParams;
   const directory = await loadCompanyDirectory();
   const company = directory.items.find((item) => item.id === id);
   if (!company) notFound();
@@ -27,5 +27,13 @@ export default async function EntreprisePage({
   }
 
   const detail = company.organizationId ? await loadAccountDetail(company.organizationId) : null;
-  return <CompanyFile company={company} detail={detail} initialPart={partie} initialTab={tab} />;
+  return (
+    <CompanyFile
+      company={company}
+      detail={detail}
+      initialPart={partie}
+      initialTab={tab}
+      initialDealId={dealId}
+    />
+  );
 }

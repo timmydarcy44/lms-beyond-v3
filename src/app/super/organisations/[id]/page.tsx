@@ -13,17 +13,22 @@ export default async function CompteClientPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; dealId?: string }>;
 }) {
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, dealId } = await searchParams;
   const companyId = await findCompanyBySource("organization", id);
-  if (companyId) redirect(`/super/entreprises/${companyId}?partie=business${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`);
+  if (companyId) {
+    const qs = new URLSearchParams({ partie: "business" });
+    if (tab) qs.set("tab", tab);
+    if (dealId) qs.set("dealId", dealId);
+    redirect(`/super/entreprises/${companyId}?${qs.toString()}`);
+  }
   const detail = await loadAccountDetail(id);
   if (!detail.account) notFound();
   return (
     <div className={manrope.className} style={{ background: "#0A0F1E", color: "#F4F7FF", minHeight: "100vh" }}>
-      <AccountFile detail={detail} initialTab={tab} />
+      <AccountFile detail={detail} initialTab={tab} initialDealId={dealId} />
     </div>
   );
 }

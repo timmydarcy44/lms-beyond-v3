@@ -61,19 +61,22 @@ Blocs / équivalences / débouchés : …`,
   4: {
     processTitle: "Tracer l’analyse du besoin",
     processSteps: [
-      "En prospection (pipeline B2B), renseigner Besoin + Besoins identifiés sur le deal.",
-      "Compléter effectif, décideur, budget / financeur avant envoi catalogue ou devis.",
-      "Conserver la trace sur le deal (puis session / dossier une fois signé).",
+      "Sur le compte client, ouvrir l’onglet Besoins et créer une analyse par demande.",
+      "Renseigner les 6 blocs : contexte, résultats attendus, public, contraintes, handicap/aménagements, adaptations décidées.",
+      "Marquer l’analyse complète ; lier un deal pipeline si besoin ; co-construire en Sur-mesure si la formation n’existe pas encore.",
     ],
     documentTitle: "Compte-rendu d’analyse du besoin",
     documentBody: `Analyse du besoin — [Client]
 
 Date · Interlocuteurs
-Contexte / métier
-Objectifs attendus
-Public concerné · Contraintes
-Proposition pédagogique retenue
-Source : deal pipeline B2B`,
+Contexte et problème
+Résultats attendus
+Public concerné
+Contraintes (dates, lieu, durée, budget, OPCO)
+Handicap / aménagements
+Adaptations décidées
+Préconisations de formation
+Source : compte client → onglet Besoins`,
   },
   5: {
     processTitle: "Rédiger des objectifs opérationnels",

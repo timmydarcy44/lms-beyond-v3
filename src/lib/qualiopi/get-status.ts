@@ -96,6 +96,10 @@ export type QualiopiStatusSignals = {
    * → /business/formations/{slug} sur le site public.
    */
   examplePublicFormationSlug: string | null;
+  /** Analyses du besoin complètes (compte client) — ind. 4. */
+  needAnalysesCompleteCount?: number;
+  /** Exemple d’org avec analyse complète pour deep-link preuve. */
+  exampleNeedAnalysisOrgId?: string | null;
   /** Procédures qualité validées (preuves PDF). */
   validatedProcedures?: Array<{
     id: string;
@@ -224,15 +228,19 @@ function assessAuto(
       });
     }
     case 4: {
-      // Analyse du besoin = qualification deal pipeline B2B (training_needs), avant devis.
-      const href = "/super/crm/pipeline";
+      // Analyse du besoin = fiche structurée sur compte client (organization_need_analyses).
+      const completeCount = sig.needAnalysesCompleteCount ?? 0;
+      const orgId = sig.exampleNeedAnalysisOrgId;
+      const href = orgId
+        ? `/super/organisations/${orgId}?tab=besoins`
+        : "/super/organisations";
       const p = proof(
-        "Pipeline B2B — besoins identifiés sur le deal",
+        "Compte client — analyse du besoin complète",
         href,
         null,
-        null,
+        completeCount > 0 ? `${completeCount} analyse(s) complète(s)` : null,
       );
-      if (sig.coursesWithObjectives >= 1 || sessionsTotal >= 1) {
+      if (completeCount >= 1) {
         return withManual({
           status: "proven",
           proofs: [p],
@@ -240,9 +248,9 @@ function assessAuto(
         });
       }
       return withManual({
-        status: "todo",
+        status: "missing",
         proofs: [p],
-        nextAction: { label: "Compléter", href },
+        nextAction: { label: "Ouvrir un compte client", href: "/super/organisations" },
       });
     }
     case 5: {

@@ -17,11 +17,13 @@ export function CompanyFile({
   detail,
   initialPart,
   initialTab,
+  initialDealId,
 }: {
   company: CompanyListItem;
   detail: Detail | null;
   initialPart?: string;
   initialTab?: string;
+  initialDealId?: string | null;
 }) {
   const router = useRouter();
   const both = company.roleBusiness && company.roleCfa;
@@ -84,7 +86,12 @@ export function CompanyFile({
 
       {part === "business" ? (
         detail?.account ? (
-          <AccountFile detail={detail} embedded initialTab={initialTab} />
+          <AccountFile
+            detail={detail}
+            embedded
+            initialTab={initialTab}
+            initialDealId={initialDealId}
+          />
         ) : (
           <EmptyState title={company.roleBusiness ? `${company.businessLabel}. Le compte client n'est pas encore ouvert.` : "Cette fiche n'a pas le rôle Business."} />
         )

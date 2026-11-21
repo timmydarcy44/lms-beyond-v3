@@ -787,6 +787,18 @@ export function PipelineDealCockpit({
                 }
               }}
             />
+            <p className="mt-2 text-xs text-slate-400">
+              Tags commerciaux — la preuve Qualiopi (analyse structurée) se remplit sur le compte
+              client.
+            </p>
+            {showOpenOrg && form.organization_id && form.id ? (
+              <Link
+                href={`/super/organisations/${form.organization_id}?tab=besoins&dealId=${encodeURIComponent(form.id)}`}
+                className="mt-3 inline-flex text-sm font-semibold text-indigo-300 hover:text-indigo-200"
+              >
+                Ouvrir / créer l’analyse sur le compte client →
+              </Link>
+            ) : null}
 
             <div className="mt-5 border-t border-white/10 pt-4">
               <p className="text-sm font-semibold text-white">Offre formation</p>

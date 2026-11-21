@@ -15,6 +15,7 @@ import { AccountOverview, accountHeaderMeta, useAccountKpis } from "./account-ov
 import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { AccountMembersTab } from "./account-members-tab";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
+import { AccountBesoinsTab } from "./account-besoins-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
 import { formatPersonName } from "@/lib/control/account-participants-format";
 
@@ -27,6 +28,7 @@ type Tab =
   | "courses"
   | "dossiers"
   | "surmesure"
+  | "besoins"
   | "badges"
   | "revenue"
   | "funding"
@@ -35,11 +37,20 @@ type Tab =
   | "modules"
   | "tests";
 
-type NavId = "overview" | "formations" | "saas" | "members" | "revenue" | "documents" | "journal";
+type NavId =
+  | "overview"
+  | "formations"
+  | "besoins"
+  | "saas"
+  | "members"
+  | "revenue"
+  | "documents"
+  | "journal";
 
 const NAV_ITEMS: Array<{ id: NavId; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "formations", label: "Formations" },
+  { id: "besoins", label: "Besoins" },
   { id: "members", label: "Membres" },
   { id: "saas", label: "Produits SaaS" },
   { id: "revenue", label: "Chiffre d'affaires" },
@@ -65,6 +76,7 @@ const LEGACY_TAB_IDS: Tab[] = [
   "courses",
   "dossiers",
   "surmesure",
+  "besoins",
   "badges",
   "revenue",
   "funding",
@@ -76,6 +88,7 @@ const LEGACY_TAB_IDS: Tab[] = [
 
 function navFromTab(tab: Tab): NavId {
   if (tab === "dossiers" || tab === "surmesure" || tab === "courses" || tab === "badges") return "formations";
+  if (tab === "besoins") return "besoins";
   if (tab === "modules") return "saas";
   if (tab === "revenue" || tab === "funding") return "revenue";
   if (tab === "members") return "members";
@@ -86,6 +99,7 @@ function navFromTab(tab: Tab): NavId {
 
 function defaultTabForNav(nav: NavId): Tab {
   if (nav === "formations") return "dossiers";
+  if (nav === "besoins") return "besoins";
   if (nav === "saas") return "modules";
   if (nav === "revenue") return "revenue";
   if (nav === "members") return "members";
@@ -94,9 +108,21 @@ function defaultTabForNav(nav: NavId): Tab {
   return "overview";
 }
 
-export function AccountFile({ detail, initialTab, embedded = false }: { detail: Detail; initialTab?: string; embedded?: boolean }) {
+export function AccountFile({
+  detail,
+  initialTab,
+  embedded = false,
+  initialDealId,
+}: {
+  detail: Detail;
+  initialTab?: string;
+  embedded?: boolean;
+  /** Deal pipeline à lier lors de l’ouverture de l’onglet Besoins. */
+  initialDealId?: string | null;
+}) {
   const account = detail.account;
   const router = useRouter();
+  const [besoinDealId, setBesoinDealId] = useState<string | null>(initialDealId ?? null);
   const [tab, setTab] = useState<Tab>(() => {
     if (isTab(initialTab)) {
       if (initialTab === "tests") return "overview";
@@ -114,6 +140,19 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
   const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const kpis = useAccountKpis(detail);
+
+  useEffect(() => {
+    if (initialDealId) {
+      setBesoinDealId(initialDealId);
+      return;
+    }
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get("dealId");
+      if (fromUrl) setBesoinDealId(fromUrl);
+    } catch {
+      /* ignore */
+    }
+  }, [initialDealId]);
 
   const activeNav = navFromTab(tab);
   const hasAdmin = detail.members.some((member) => member.role === "admin" && member.email.includes("@"));
@@ -330,6 +369,13 @@ export function AccountFile({ detail, initialTab, embedded = false }: { detail: 
       {tab === "surmesure" ? (
         <AccountSurMesureTab organizationId={account.id} organizationName={account.name} />
       ) : null}
+      {tab === "besoins" ? (
+        <AccountBesoinsTab
+          organizationId={account.id}
+          organizationName={account.name}
+          initialDealId={besoinDealId}
+        />
+      ) : null}
       {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
       {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
       {tab === "funding" ? <EmptyState title="Aucun dossier de financement pour ce compte." /> : null}
@@ -425,7 +471,9 @@ function TabBar({
               ? counts.formations
               : item.id === "members"
                 ? counts.members
-                : undefined;
+                : item.id === "besoins"
+                  ? counts.besoins
+                  : undefined;
           return (
             <button
               key={item.id}

@@ -392,7 +392,33 @@ async function buildStatus(force = false) {
     ),
     meansProcessReady: Boolean(processReady.moyens),
     examplePublicFormationSlug,
+    needAnalysesCompleteCount: 0,
+    exampleNeedAnalysisOrgId: null as string | null,
   };
+
+  try {
+    const needRes = await supabase
+      .from("organization_need_analyses")
+      .select("id, organization_id")
+      .eq("status", "complete")
+      .order("completed_at", { ascending: false })
+      .limit(50);
+    if (!needRes.error && needRes.data) {
+      signals.needAnalysesCompleteCount = needRes.data.length;
+      signals.exampleNeedAnalysisOrgId = needRes.data[0]?.organization_id
+        ? String(needRes.data[0].organization_id)
+        : null;
+      if (needRes.data.length >= 50) {
+        const { count } = await supabase
+          .from("organization_need_analyses")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "complete");
+        if (typeof count === "number") signals.needAnalysesCompleteCount = count;
+      }
+    }
+  } catch (e) {
+    console.warn("[qualiopi/status] need analyses:", e);
+  }
 
   // Ind. 31 / 32 — brief Qualité v2 (hors is_test)
   try {

@@ -11,7 +11,8 @@ function asText(value: unknown) {
   return value == null ? "" : String(value);
 }
 
-async function loadCareDirectoryRows(): Promise<CareDirectoryRow[]> {
+/** Annuaire public Byound Care (care_profiles publiés, hors comptes de test). */
+export async function loadCareDirectoryRows(): Promise<CareDirectoryRow[]> {
   const db = getServiceRoleClient();
   if (!db) return [];
   const columns =

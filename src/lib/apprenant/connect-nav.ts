@@ -39,6 +39,8 @@ export type ApprenantNavItem = {
   href: string;
   icon: LucideIcon;
   action?: "share-profile";
+  /** Lien hors LMS (nouvel onglet). */
+  external?: boolean;
 };
 
 const PARCOURS_HREF = "/dashboard/apprenant/parcours";

@@ -19,6 +19,7 @@ import {
   Sparkles,
   TrendingUp,
   UserCircle,
+  ExternalLink,
 } from "lucide-react";
 
 import type { ApprenantNavItem } from "@/lib/apprenant/connect-nav";
@@ -140,6 +141,12 @@ const RECRUTEMENT_NAV: ApprenantNavItem[] = [
 
 const CARE_NAV: ApprenantNavItem[] = [
   { label: "Accueil Care", href: "/dashboard/apprenant/care", icon: HeartPulse },
+  {
+    label: "Mon espace Byound Care",
+    href: "https://byoundcare.fr/?utm_source=byound-lms",
+    icon: ExternalLink,
+    external: true,
+  },
 ];
 
 /**

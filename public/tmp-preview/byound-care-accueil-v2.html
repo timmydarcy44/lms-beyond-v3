@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Byound Care — accueil apprenant v2 (preview)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --care-bg: #070B18;
+      --care-card: #0F1428;
+      --care-border: #1C2443;
+      --care-text: #F2F4FA;
+      --care-text-secondary: #9AA3BD;
+      --care-text-muted: #DADFEC;
+      --care-accent: #FF5C8A;
+      --care-nav-active: #3A0F22;
+      --care-hero-border: #4A1E36;
+      --care-emergency-border: #3A4566;
+      --s-stress: #FF5C8A;
+      --s-decision: #8DB8FF;
+      --s-confiance: #F2CF6B;
+      --s-equilibre: #FFB86B;
+      --s-apprendre: #C9C2FF;
+      --s-orienter: #9AA3BD;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Manrope, system-ui, sans-serif;
+      background: var(--care-bg);
+      color: var(--care-text);
+    }
+    .shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 250px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,.03);
+      padding: 22px 14px; display: flex; flex-direction: column; gap: 18px;
+    }
+    .brand { font-size: 15px; font-weight: 800; }
+    .brand span { color: var(--care-accent); }
+    .brand-sub { margin-top: 4px; font-size: 9px; color: rgba(255,255,255,.2); }
+    .nav a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 12px; color: rgba(255,255,255,.45);
+      text-decoration: none; font-size: 13px; font-weight: 600;
+    }
+    .nav a.active { background: var(--care-nav-active); color: #fff; }
+    .main { flex: 1; min-width: 0; }
+    .grid {
+      display: grid; grid-template-columns: minmax(0,1fr) 340px;
+      gap: 26px; padding: 34px 40px; max-width: 1280px;
+    }
+    .hero {
+      position: relative; height: 340px; border-radius: 30px; overflow: hidden;
+      border: 1px solid var(--care-hero-border);
+      background: radial-gradient(70% 90% at 72% 40%, #C9686F 0%, #6A2140 50%, #2A1026 100%);
+    }
+    .hero.with-photo {
+      background-image:
+        linear-gradient(90deg, #1A0814 0%, #2A0C20F2 34%, #3A0F2899 58%, transparent 82%),
+        linear-gradient(180deg, transparent 60%, #0F142899 100%),
+        url("https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/Byound%20Care/Sourire%20au%20coucher%20du%20soleil.png");
+      background-size: cover;
+      background-position: right center;
+    }
+    .hero-copy {
+      position: absolute; left: 36px; top: 50%; transform: translateY(-50%);
+      width: 470px;
+    }
+    .eyebrow { color: var(--care-accent); font-size: 14px; font-weight: 700; margin: 0; }
+    .hero h1 { margin: 8px 0 0; font-size: 38px; font-weight: 800; line-height: 1.15; letter-spacing: -.03em; }
+    .hero p.lead { margin: 12px 0 0; color: var(--care-text-muted); font-size: 14px; line-height: 1.55; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .pill {
+      background: #FFFFFF1A; backdrop-filter: blur(8px); border-radius: 999px;
+      padding: 6px 12px; font-size: 12px; font-weight: 600;
+    }
+    .float {
+      position: absolute; right: 22px; bottom: 22px; width: 270px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 18px;
+      background: #0F1428CC; backdrop-filter: blur(14px); border: 1px solid #FFFFFF1F;
+    }
+    .avatar {
+      width: 38px; height: 38px; border-radius: 999px;
+      display: grid; place-items: center; font-size: 12px; font-weight: 800;
+      background: linear-gradient(135deg, #FF5C8A, #6A2140);
+    }
+    .float strong { display: block; font-size: 13.5px; }
+    .float small { color: var(--care-text-secondary); font-size: 12px; }
+    .badge-priv {
+      margin-left: auto; background: #FFFFFF14; border-radius: 999px;
+      padding: 4px 8px; font-size: 10px; font-weight: 600;
+    }
+    .photo-hint { position: absolute; right: 20px; top: 16px; font-size: 11px; color: rgba(255,255,255,.35); }
+    .minor { color: var(--care-text-secondary); font-size: 13px; margin: 0; }
+    .section-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 14px; }
+    .subjects { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .tile {
+      border-radius: 20px; border: 1px solid var(--care-border); background: var(--care-card);
+      padding: 16px; text-align: left;
+    }
+    .tile.selected { border-color: var(--tile); background: color-mix(in srgb, var(--tile) 10%, transparent); }
+    .icon {
+      width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center;
+      background: color-mix(in srgb, var(--tile) 14%, transparent); color: var(--tile); font-weight: 800;
+    }
+    .tile h3 { margin: 12px 0 4px; font-size: 15px; font-weight: 800; }
+    .tile p { margin: 0; font-size: 12.5px; color: var(--care-text-secondary); line-height: 1.35; }
+    .prac-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 14px; }
+    .prac-head a { color: var(--care-accent); font-size: 13px; font-weight: 600; text-decoration: none; }
+    .prac { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card {
+      background: var(--care-card); border: 1px solid var(--care-border);
+      border-radius: 24px; padding: 22px; text-decoration: none; color: inherit;
+    }
+    .card-top { display: flex; gap: 12px; }
+    .card-avatar {
+      width: 56px; height: 56px; border-radius: 999px; flex-shrink: 0;
+      display: grid; place-items: center; font-weight: 800;
+      background: linear-gradient(135deg, #FF5C8A, #6A2140);
+    }
+    .name { font-size: 17px; font-weight: 800; margin: 0; }
+    .job { margin: 2px 0 0; color: var(--care-text-secondary); font-size: 13px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tag { background: #FFFFFF0F; color: var(--care-text-secondary); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 600; }
+    .card-foot {
+      margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--care-border);
+      display: flex; justify-content: space-between; align-items: end; gap: 12px;
+    }
+    .fmt { font-size: 13px; font-weight: 600; margin: 0; }
+    .avail { margin: 2px 0 0; color: var(--care-accent); font-size: 12.5px; font-weight: 600; }
+    .btn {
+      background: #fff; color: #0F1428; border-radius: 999px; padding: 8px 14px;
+      font-size: 12px; font-weight: 800; white-space: nowrap;
+    }
+    .side { display: flex; flex-direction: column; gap: 16px; }
+    .panel { background: var(--care-card); border: 1px solid var(--care-border); border-radius: 24px; padding: 20px; }
+    .panel.emergency { background: #FFFFFF08; border-color: var(--care-emergency-border); }
+    .panel h3 { margin: 0; font-size: 16px; font-weight: 800; }
+    .panel p { margin: 8px 0 0; color: var(--care-text-secondary); font-size: 13.5px; line-height: 1.5; }
+    .panel a.link { color: var(--care-accent); font-weight: 600; font-size: 13.5px; text-decoration: none; display: inline-block; margin-top: 12px; }
+    .step { display: flex; gap: 12px; margin-top: 14px; }
+    .num {
+      width: 28px; height: 28px; border-radius: 999px; background: var(--care-accent);
+      display: grid; place-items: center; font-size: 12px; font-weight: 800; flex-shrink: 0;
+    }
+    .step strong { display: block; font-size: 13.5px; }
+    .step span { color: var(--care-text-secondary); font-size: 12.5px; }
+    .toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 40px 0; font-size: 12px;
+    }
+    .toolbar button {
+      background: #0F1428; border: 1px solid var(--care-border); color: var(--care-text);
+      border-radius: 999px; padding: 6px 12px; cursor: pointer; font-family: inherit;
+    }
+    .toolbar button.on { border-color: var(--care-accent); color: var(--care-accent); }
+    .mobile-only { display: none; }
+    @media (max-width: 899px) {
+      .sidebar { display: none; }
+      .grid { grid-template-columns: 1fr; padding: 20px; gap: 20px; }
+      .hero { height: 460px; }
+      .hero-copy { position: absolute; left: 24px; right: 24px; bottom: 28px; top: auto; transform: none; width: auto; }
+      .hero h1 { font-size: 28px; }
+      .float, .photo-hint { display: none; }
+      .subjects { grid-template-columns: 1fr 1fr; }
+      .prac { grid-template-columns: 1fr; }
+      .desktop-side { display: none; }
+      .mobile-only { display: block; }
+      .order-emergency { order: 2; }
+      .order-subjects { order: 3; }
+      .order-prac { order: 4; }
+      .order-rdv { order: 5; }
+      .order-how { order: 6; }
+      .left { display: contents; }
+      .grid { display: flex; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" id="btn-photo" class="on">Sans photo définitive</button>
+    <button type="button" id="btn-minor">Apprenant mineur</button>
+    <span style="color:#9AA3BD;align-self:center">Preview statique — pas d’auth, pas d’écriture DB</span>
+  </div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div>
+        <div class="brand">Byound <span>Care</span></div>
+        <div class="brand-sub">Propulsé par Beyond</div>
+      </div>
+      <nav class="nav">
+        <a class="active" href="#">Accueil Care</a>
+        <a href="https://byoundcare.fr/?utm_source=byound-lms" target="_blank" rel="noopener noreferrer">Mon espace Byound Care ↗</a>
+      </nav>
+      <div style="margin-top:auto;font-size:11px;color:rgba(255,255,255,.35);display:grid;gap:8px">
+        <div>Premiers pas</div>
+        <div>Aide et ressources</div>
+        <div>Neuro adaptation</div>
+        <div>Se déconnecter</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="grid">
+        <div class="left">
+          <section class="hero" id="hero">
+            <p class="photo-hint" id="photo-hint">Photo à intégrer</p>
+            <div class="hero-copy">
+              <p class="eyebrow">Byound Care</p>
+              <h1>Besoin de souffler ou d’y voir plus clair ?</h1>
+              <p class="lead">Des professionnels t’accompagnent sur les sujets qui pèsent ou qui bloquent. Ni ton école ni ton entreprise ne savent que tu as pris rendez-vous.</p>
+              <div class="pills">
+                <span class="pill">🔒 Confidentiel</span>
+                <span class="pill">◉ En visio ou en cabinet</span>
+                <span class="pill">€ Tarifs sur chaque profil</span>
+              </div>
+            </div>
+            <div class="float">
+              <div class="avatar">JC</div>
+              <div>
+                <strong>Séance en visio</strong>
+                <small>Jessica Contentin · 1 h</small>
+              </div>
+              <span class="badge-priv">🔒 Privé</span>
+            </div>
+          </section>
+
+          <p class="minor" id="minor-line" hidden>Tu as moins de 18 ans ? Parles-en à tes parents : ils pourront t’aider à réserver et régler la séance.</p>
+
+          <section class="panel emergency mobile-only order-emergency">
+            <h3>Si ça ne va vraiment pas</h3>
+            <p>Tu peux appeler le <strong>3114</strong>, gratuitement, 24 h/24 et 7 j/7. En cas d’urgence, appelle le <strong>15</strong> ou le <strong>112</strong>.</p>
+          </section>
+
+          <section class="order-subjects">
+            <h2 class="section-title">De quoi as-tu besoin ?</h2>
+            <div class="subjects">
+              <div class="tile selected" style="--tile:var(--s-stress)"><div class="icon">◎</div><h3>Stress et charge mentale</h3><p>Trop de choses à gérer, du mal à décrocher</p></div>
+              <div class="tile" style="--tile:var(--s-decision)"><div class="icon">◎</div><h3>Une décision à prendre</h3><p>Orientation, projet pro, suite du parcours</p></div>
+              <div class="tile" style="--tile:var(--s-confiance)"><div class="icon">◎</div><h3>Confiance et prise de parole</h3><p>Entretien, oral, réunion qui stresse</p></div>
+              <div class="tile" style="--tile:var(--s-equilibre)"><div class="icon">◎</div><h3>Équilibre vie perso et formation</h3><p>Famille, rythme, organisation</p></div>
+              <div class="tile" style="--tile:var(--s-apprendre)"><div class="icon">◎</div><h3>Apprendre autrement</h3><p>Concentration, mémoire, DYS, méthodes</p></div>
+              <div class="tile" style="--tile:var(--s-orienter)"><div class="icon">◎</div><h3>Je ne sais pas trop</h3><p>Un premier échange pour t’orienter</p></div>
+            </div>
+          </section>
+
+          <section class="order-prac">
+            <div class="prac-head">
+              <h2 class="section-title" style="margin:0">Pour « Stress et charge mentale »</h2>
+              <a href="https://byoundcare.fr/praticiens?utm_source=byound-lms" target="_blank" rel="noopener noreferrer">Voir tous les professionnels →</a>
+            </div>
+            <div class="prac">
+              <a class="card" href="https://byoundcare.fr/praticiens/jessica-contentin?utm_source=byound-lms" target="_blank" rel="noopener noreferrer">
+                <div class="card-top">
+                  <div class="card-avatar">JC</div>
+                  <div>
+                    <p class="name">Jessica Contentin</p>
+                    <p class="job">Psychopédagogue certifiée en neuroéducation</p>
+                    <div class="tags">
+                      <span class="tag">Stress</span>
+                      <span class="tag">Concentration</span>
+                      <span class="tag">Méthodes d’apprentissage</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-foot">
+                  <div>
+                    <p class="fmt">Visio ou cabinet à Caen · 1 h</p>
+                  </div>
+                  <span class="btn">Voir le profil ↗</span>
+                </div>
+              </a>
+              <a class="card" href="https://byoundcare.fr/praticiens/timmy-darcy?utm_source=byound-lms" target="_blank" rel="noopener noreferrer">
+                <div class="card-top">
+                  <div class="card-avatar" style="background:url(https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/Public/experts/00ad40d7-2cd9-4da0-bfb7-c4672f4952f4/photo.jpg) center/cover"></div>
+                  <div>
+                    <p class="name">Timmy Darcy</p>
+                    <p class="job">Fondateur de Byound</p>
+                    <div class="tags">
+                      <span class="tag">Performance</span>
+                      <span class="tag">Orientation</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-foot">
+                  <div>
+                    <p class="fmt">Visio · 1 h</p>
+                  </div>
+                  <span class="btn">Voir le profil ↗</span>
+                </div>
+              </a>
+            </div>
+          </section>
+
+          <section class="panel mobile-only order-rdv">
+            <h3>Mes rendez-vous</h3>
+            <p>Tes réservations, paiements et messages se trouvent dans ton espace sur byoundcare.fr.</p>
+            <a class="link" href="https://byoundcare.fr/?utm_source=byound-lms" target="_blank" rel="noopener noreferrer">Ouvrir byoundcare.fr ↗</a>
+          </section>
+          <section class="panel mobile-only order-how">
+            <h3>Comment ça marche</h3>
+            <div class="step"><div class="num">1</div><div><strong>Choisis un sujet</strong><span>Et un professionnel qui te correspond.</span></div></div>
+            <div class="step"><div class="num">2</div><div><strong>Découvre son profil</strong><span>Sur byoundcare.fr : parcours, tarifs, créneaux.</span></div></div>
+            <div class="step"><div class="num">3</div><div><strong>Réserve et règle en ligne</strong><span>Toi ou tes parents. Ce que tu dis reste entre toi et le professionnel.</span></div></div>
+          </section>
+        </div>
+
+        <aside class="side desktop-side">
+          <section class="panel">
+            <h3>Mes rendez-vous</h3>
+            <p>Tes réservations, paiements et messages se trouvent dans ton espace sur byoundcare.fr.</p>
+            <a class="link" href="https://byoundcare.fr/?utm_source=byound-lms" target="_blank" rel="noopener noreferrer">Ouvrir byoundcare.fr ↗</a>
+          </section>
+          <section class="panel">
+            <h3>Comment ça marche</h3>
+            <div class="step"><div class="num">1</div><div><strong>Choisis un sujet</strong><span>Et un professionnel qui te correspond.</span></div></div>
+            <div class="step"><div class="num">2</div><div><strong>Découvre son profil</strong><span>Sur byoundcare.fr : parcours, tarifs, créneaux.</span></div></div>
+            <div class="step"><div class="num">3</div><div><strong>Réserve et règle en ligne</strong><span>Toi ou tes parents. Ce que tu dis reste entre toi et le professionnel.</span></div></div>
+          </section>
+          <section class="panel emergency">
+            <h3>Si ça ne va vraiment pas</h3>
+            <p>Tu peux appeler le <strong style="color:#F2F4FA">3114</strong>, gratuitement, 24 h/24 et 7 j/7. En cas d’urgence, appelle le <strong style="color:#F2F4FA">15</strong> ou le <strong style="color:#F2F4FA">112</strong>.</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script>
+    const hero = document.getElementById("hero");
+    const hint = document.getElementById("photo-hint");
+    const minor = document.getElementById("minor-line");
+    const btnPhoto = document.getElementById("btn-photo");
+    const btnMinor = document.getElementById("btn-minor");
+    let withPhoto = false;
+    let isMinor = false;
+    btnPhoto.onclick = () => {
+      withPhoto = !withPhoto;
+      hero.classList.toggle("with-photo", withPhoto);
+      hint.hidden = withPhoto;
+      btnPhoto.textContent = withPhoto ? "Avec photo (ex. Care)" : "Sans photo définitive";
+      btnPhoto.classList.toggle("on", !withPhoto);
+    };
+    btnMinor.onclick = () => {
+      isMinor = !isMinor;
+      minor.hidden = !isMinor;
+      btnMinor.classList.toggle("on", isMinor);
+      btnMinor.textContent = isMinor ? "Mineur (ligne visible)" : "Apprenant mineur";
+    };
+  </script>
+</body>
+</html>

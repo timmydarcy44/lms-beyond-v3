@@ -398,7 +398,7 @@ export function ApprenantConnectShell({
                     : "h-[52px]"
               }`}
             >
-              {orgBranding.logoUrl && variant !== "jessica" ? (
+              {orgBranding.logoUrl && variant !== "jessica" && !(useEdgeApps && activeAppId === "care") ? (
                 <div className="w-full">
                   <OrgSidebarBrand
                     logoUrl={orgBranding.logoUrl}
@@ -408,7 +408,14 @@ export function ApprenantConnectShell({
                 </div>
               ) : !isSidebarCollapsed ? (
                 <div className="min-w-0 flex-1 leading-tight">
-                  {variant === "edge" ? (
+                  {useEdgeApps && activeAppId === "care" ? (
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-white">
+                        Byound <span className="text-[#FF5C8A]">Care</span>
+                      </div>
+                      <p className="mt-1 text-[9px] text-white/20">{theme.brandSubtitle}</p>
+                    </div>
+                  ) : variant === "edge" ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src="https://zmcefidiiqqppowymoqb.supabase.co/storage/v1/object/public/App/Byound/Logo_byound_blanc_sans_fond.png"
@@ -424,13 +431,15 @@ export function ApprenantConnectShell({
                       {theme.brandTitle}
                     </div>
                   )}
-                  <p
-                    className={`mt-1 text-[9px] tracking-[0.1em] ${
-                      variant === "jessica" ? "text-[#8B4513]/55" : "text-white/20"
-                    }`}
-                  >
-                    {theme.brandSubtitle}
-                  </p>
+                  {!(useEdgeApps && activeAppId === "care") ? (
+                    <p
+                      className={`mt-1 text-[9px] tracking-[0.1em] ${
+                        variant === "jessica" ? "text-[#8B4513]/55" : "text-white/20"
+                      }`}
+                    >
+                      {theme.brandSubtitle}
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <div className={theme.brandCollapsedClass}>
@@ -481,10 +490,13 @@ export function ApprenantConnectShell({
                   const isMonAccompagnementEntry = item.label === "Mon accompagnement";
                   const isParcoursGuide = item.label === "Parcours guidé";
                   const isShareProfile = item.action === "share-profile";
+                  const isExternal = item.external === true;
+                  const careNav = useEdgeApps && activeAppId === "care";
                   const longerMatchExists = Boolean(
                     pathname &&
                       navItems.some(
                         (other) =>
+                          !other.external &&
                           other.href !== item.href &&
                           other.href.length > item.href.length &&
                           (pathname === other.href || pathname.startsWith(`${other.href}/`)),
@@ -492,6 +504,7 @@ export function ApprenantConnectShell({
                   );
                   const active =
                     !isShareProfile &&
+                    !isExternal &&
                     !longerMatchExists &&
                     (pathname === item.href ||
                       pathname?.startsWith(`${item.href}/`) ||
@@ -507,9 +520,20 @@ export function ApprenantConnectShell({
                   } ${
                     active
                       ? isSidebarCollapsed
-                        ? "bg-[rgba(37,99,235,0.15)] text-white ring-1 ring-[rgba(37,99,235,0.25)]"
-                        : "bg-[rgba(37,99,235,0.15)] text-white"
+                        ? careNav
+                          ? "bg-[#3A0F22] text-white ring-1 ring-[#FF5C8A]/25"
+                          : "bg-[rgba(37,99,235,0.15)] text-white ring-1 ring-[rgba(37,99,235,0.25)]"
+                        : careNav
+                          ? "bg-[#3A0F22] text-white"
+                          : "bg-[rgba(37,99,235,0.15)] text-white"
                       : "text-white/45 hover:bg-white/[0.04] hover:text-white"
+                  }`;
+                  const iconClass = `h-[18px] w-[18px] shrink-0 ${
+                    active
+                      ? careNav
+                        ? "text-[#FF5C8A]"
+                        : theme.navIconActive
+                      : theme.navIconInactive
                   }`;
 
                   if (isShareProfile) {
@@ -527,6 +551,25 @@ export function ApprenantConnectShell({
                     );
                   }
 
+                  if (isExternal) {
+                    return (
+                      <a
+                        key={item.label + item.href}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={isSidebarCollapsed ? item.label : undefined}
+                        className={itemClass}
+                      >
+                        <item.icon className={iconClass} />
+                        <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>
+                          {item.label}
+                          <span className="ml-1 opacity-70">↗</span>
+                        </span>
+                      </a>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.label + item.href}
@@ -534,11 +577,7 @@ export function ApprenantConnectShell({
                       title={isSidebarCollapsed ? item.label : undefined}
                       className={itemClass}
                     >
-                      <item.icon
-                        className={`h-[18px] w-[18px] shrink-0 ${
-                          active ? theme.navIconActive : theme.navIconInactive
-                        }`}
-                      />
+                      <item.icon className={iconClass} />
                       <span className={`truncate ${isSidebarCollapsed ? "sr-only" : ""}`}>{item.label}</span>
                     </Link>
                   );
@@ -702,7 +741,15 @@ export function ApprenantConnectShell({
                     <SheetContent side="left" className={theme.mobileSheetClass}>
                       <SheetHeader className={`flex flex-row items-center justify-between pb-4 text-left ${variant === "jessica" ? "border-b border-[#D2B48C]/40" : "border-b border-white/10"}`}>
                         <SheetTitle className={variant === "jessica" ? "text-[#2F2A25]" : "text-white"}>
-                          {useEdgeApps ? getEdgeAppLabel(activeAppId) : "Navigation"}
+                          {useEdgeApps && activeAppId === "care" ? (
+                            <>
+                              Byound <span className="text-[#FF5C8A]">Care</span>
+                            </>
+                          ) : useEdgeApps ? (
+                            getEdgeAppLabel(activeAppId)
+                          ) : (
+                            "Navigation"
+                          )}
                         </SheetTitle>
                         <button
                           type="button"
@@ -722,10 +769,13 @@ export function ApprenantConnectShell({
                         ) : null}
                         {navItems.map((item) => {
                           const isShareProfile = item.action === "share-profile";
+                          const isExternal = item.external === true;
+                          const careNav = useEdgeApps && activeAppId === "care";
                           const longerMatchExists = Boolean(
                             pathname &&
                               navItems.some(
                                 (other) =>
+                                  !other.external &&
                                   other.href !== item.href &&
                                   other.href.length > item.href.length &&
                                   (pathname === other.href || pathname.startsWith(`${other.href}/`)),
@@ -733,10 +783,22 @@ export function ApprenantConnectShell({
                           );
                           const active =
                             !isShareProfile &&
+                            !isExternal &&
                             !longerMatchExists &&
                             (pathname === item.href || pathname?.startsWith(`${item.href}/`));
                           const itemClass = `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
-                            active ? theme.mobileNavActive : theme.mobileNavInactive
+                            active
+                              ? careNav
+                                ? "bg-[#3A0F22] text-white ring-1 ring-[#FF5C8A]/25"
+                                : theme.mobileNavActive
+                              : theme.mobileNavInactive
+                          }`;
+                          const iconClass = `h-[18px] w-[18px] shrink-0 ${
+                            active
+                              ? careNav
+                                ? "text-[#FF5C8A]"
+                                : theme.mobileNavIconActive
+                              : theme.mobileNavIconInactive
                           }`;
 
                           if (isShareProfile) {
@@ -756,6 +818,25 @@ export function ApprenantConnectShell({
                             );
                           }
 
+                          if (isExternal) {
+                            return (
+                              <a
+                                key={item.label + item.href}
+                                href={item.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={handleNavigateMobile}
+                                className={itemClass}
+                              >
+                                <item.icon className={iconClass} />
+                                <span className="truncate">
+                                  {item.label}
+                                  <span className="ml-1 opacity-70">↗</span>
+                                </span>
+                              </a>
+                            );
+                          }
+
                           return (
                             <Link
                               key={item.label + item.href}
@@ -763,11 +844,7 @@ export function ApprenantConnectShell({
                               onClick={handleNavigateMobile}
                               className={itemClass}
                             >
-                              <item.icon
-                                className={`h-[18px] w-[18px] shrink-0 ${
-                                  active ? theme.mobileNavIconActive : theme.mobileNavIconInactive
-                                }`}
-                              />
+                              <item.icon className={iconClass} />
                               <span className="truncate">{item.label}</span>
                             </Link>
                           );

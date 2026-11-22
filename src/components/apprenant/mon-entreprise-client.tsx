@@ -35,6 +35,8 @@ type Mission = {
   late: boolean;
   deliverable: string | null;
   tutorComment: string | null;
+  learnerNote: string | null;
+  proofUrl: string | null;
 };
 
 type LivretPeriod = {
@@ -94,6 +96,10 @@ export function MonEntrepriseClient() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Payload | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [submitId, setSubmitId] = useState<string | null>(null);
+  const [learnerNote, setLearnerNote] = useState("");
+  const [proofUrl, setProofUrl] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/dashboard/apprenant/entreprise", { credentials: "include" });
@@ -116,17 +122,45 @@ export function MonEntrepriseClient() {
     };
   }, [load]);
 
-  const actMission = async (id: string, action: "start" | "submit") => {
+  const openSubmit = (id: string) => {
+    setSubmitId(id);
+    setLearnerNote("");
+    setProofUrl("");
+    setProofFile(null);
+    setError(null);
+  };
+
+  const actMission = async (id: string, action: "start" | "submit" | "update_proof") => {
     setBusyId(id);
     setError(null);
     try {
-      const r = await fetch(`/api/dashboard/apprenant/entreprise/missions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
+      let r: Response;
+      if (action === "submit" || action === "update_proof") {
+        if (!learnerNote.trim() && !proofUrl.trim() && !proofFile) {
+          throw new Error("Ajoute un commentaire, un lien ou un document pour prouver ton travail.");
+        }
+        const form = new FormData();
+        form.set("action", action);
+        if (learnerNote.trim()) form.set("learnerNote", learnerNote.trim());
+        if (proofUrl.trim()) form.set("proofUrl", proofUrl.trim());
+        if (proofFile) form.set("file", proofFile);
+        r = await fetch(`/api/dashboard/apprenant/entreprise/missions/${id}`, {
+          method: "PATCH",
+          body: form,
+        });
+      } else {
+        r = await fetch(`/api/dashboard/apprenant/entreprise/missions/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+      }
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Mise à jour impossible");
+      setSubmitId(null);
+      setLearnerNote("");
+      setProofUrl("");
+      setProofFile(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -250,6 +284,16 @@ export function MonEntrepriseClient() {
                     Pour le {formatDue(m.dueDate)}
                   </p>
                 ) : null}
+                {m.learnerNote || m.proofUrl ? (
+                  <div className="mt-3 space-y-1 text-sm" style={{ color: C.secondary }}>
+                    {m.learnerNote ? <p>Ta note : {m.learnerNote}</p> : null}
+                    {m.proofUrl ? (
+                      <a href={m.proofUrl} target="_blank" rel="noreferrer" className="underline" style={{ color: C.blue }}>
+                        Voir ta preuve
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {["todo", "correction_requested"].includes(m.status) ? (
                     <button
@@ -262,23 +306,91 @@ export function MonEntrepriseClient() {
                       {busyId === m.id ? "…" : "Je commence"}
                     </button>
                   ) : null}
-                  {["todo", "in_progress", "correction_requested"].includes(m.status) ? (
+                  {["todo", "in_progress", "correction_requested"].includes(m.status) && submitId !== m.id ? (
                     <button
                       type="button"
                       disabled={busyId === m.id}
-                      onClick={() => void actMission(m.id, "submit")}
+                      onClick={() => openSubmit(m.id)}
                       className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#0A0F1E] disabled:opacity-40"
                     >
                       <Check className="h-3.5 w-3.5" />
-                      {busyId === m.id ? "…" : "Envoyer au tuteur"}
+                      Déposer mon travail
                     </button>
                   ) : null}
                   {m.status === "submitted" ? (
-                    <p className="text-sm" style={{ color: C.blue }}>
-                      En attente de validation par ton tuteur.
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm" style={{ color: C.blue }}>
+                        En attente de validation par ton tuteur.
+                      </p>
+                      {submitId !== m.id ? (
+                        <button
+                          type="button"
+                          onClick={() => openSubmit(m.id)}
+                          className="rounded-full border px-3 py-1.5 text-xs font-semibold"
+                          style={{ borderColor: C.border }}
+                        >
+                          {m.learnerNote || m.proofUrl ? "Compléter la preuve" : "Ajouter une preuve"}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
+                {submitId === m.id ? (
+                  <div className="mt-4 space-y-3 rounded-2xl border p-4" style={{ borderColor: C.border }}>
+                    <p className="text-sm font-semibold">Prouve ton travail</p>
+                    <p className="text-xs" style={{ color: C.tertiary }}>
+                      Écris ce que tu as fait, et ajoute un lien et/ou un document. Ton tuteur s’appuiera dessus pour valider.
+                    </p>
+                    <textarea
+                      value={learnerNote}
+                      onChange={(e) => setLearnerNote(e.target.value)}
+                      rows={4}
+                      placeholder="Ex. J’ai réalisé… voici ce que j’ai produit…"
+                      className="w-full rounded-xl border bg-transparent p-3 text-sm outline-none"
+                      style={{ borderColor: C.border }}
+                    />
+                    <input
+                      type="url"
+                      value={proofUrl}
+                      onChange={(e) => setProofUrl(e.target.value)}
+                      placeholder="Lien (Drive, Notion, site…)"
+                      className="w-full rounded-xl border bg-transparent px-3 py-2 text-sm outline-none"
+                      style={{ borderColor: C.border }}
+                    />
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip"
+                      onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                      className="block w-full text-sm"
+                      style={{ color: C.secondary }}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={busyId === m.id}
+                        onClick={() =>
+                          void actMission(m.id, m.status === "submitted" ? "update_proof" : "submit")
+                        }
+                        className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#0A0F1E] disabled:opacity-40"
+                      >
+                        {busyId === m.id
+                          ? "Envoi…"
+                          : m.status === "submitted"
+                            ? "Mettre à jour la preuve"
+                            : "Envoyer au tuteur"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === m.id}
+                        onClick={() => setSubmitId(null)}
+                        className="rounded-full border px-4 py-2 text-sm font-semibold"
+                        style={{ borderColor: C.border }}
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

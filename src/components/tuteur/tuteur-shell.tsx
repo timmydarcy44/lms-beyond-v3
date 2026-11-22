@@ -69,6 +69,7 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState(navBadges);
   const [name, setName] = useState(tutorName);
+  const [switches, setSwitches] = useState<Array<{ href: string; label: string }>>([]);
   const pathname = usePathname();
   useEffect(() => {
     void fetch("/api/tuteur/nav-counts", { cache: "no-store" })
@@ -77,6 +78,17 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
         if (!json) return;
         setCounts(json);
         if (json.tutorName) setName(String(json.tutorName));
+        if (Array.isArray(json.switches)) {
+          setSwitches(
+            json.switches
+              .filter((row: unknown) => row && typeof row === "object")
+              .map((row: { href?: string; label?: string }) => ({
+                href: String(row.href ?? ""),
+                label: String(row.label ?? ""),
+              }))
+              .filter((row: { href: string; label: string }) => row.href && row.label),
+          );
+        }
       })
       .catch(() => undefined);
   }, [pathname]);
@@ -91,6 +103,19 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
               <NavLink key={item.href} item={item} />
             ))}
           </nav>
+          {switches.length ? (
+            <div className="mt-4 space-y-1 border-t border-[#262A36] px-1 pt-4">
+              {switches.map((sw) => (
+                <Link
+                  key={sw.href}
+                  href={sw.href}
+                  className="block rounded-full px-4 py-2.5 text-[12px] font-semibold text-[#B5BAC6] transition hover:bg-[#12141A] hover:text-white"
+                >
+                  {sw.label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <p className="truncate px-4 pt-4 text-sm font-semibold text-[#DADDE4]">{name}</p>
         </aside>
         <div className="min-w-0 flex-1">
@@ -114,6 +139,20 @@ export function TuteurShell({ children, tutorName, navBadges }: Props) {
                 <NavLink key={item.href} item={item} onNavigate={() => setOpen(false)} />
               ))}
             </nav>
+            {switches.length ? (
+              <div className="mt-4 space-y-1 border-t border-[#262A36] px-1 pt-4">
+                {switches.map((sw) => (
+                  <Link
+                    key={sw.href}
+                    href={sw.href}
+                    onClick={() => setOpen(false)}
+                    className="block rounded-full px-4 py-2.5 text-[12px] font-semibold text-[#B5BAC6] transition hover:bg-[#12141A] hover:text-white"
+                  >
+                    {sw.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </aside>
         </div>
       ) : null}

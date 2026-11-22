@@ -25,6 +25,8 @@ export type MissionRow = {
   submittedAt: string | null;
   validatedAt: string | null;
   tutorComment: string | null;
+  learnerNote: string | null;
+  proofUrl: string | null;
 };
 
 export function missionBucket(row: { status: string; late: boolean }) {
@@ -73,10 +75,10 @@ export async function listTutorMissions(supabase: SupabaseClient, tutorId: strin
   const learnerOf = new Map(assignments.map((row) => [String(row.id), String(row.learner_id)]));
   const rich = await supabase
     .from("tutor_missions")
-    .select("id, assignment_id, title, instructions, status, due_date, completed_at, competency_code, competency_block_id, deliverable, submitted_at, validated_at, tutor_comment")
+    .select("id, assignment_id, title, instructions, status, due_date, completed_at, competency_code, competency_block_id, deliverable, submitted_at, validated_at, tutor_comment, learner_note, proof_url")
     .in("assignment_id", ids);
   const rows = relationMissing(rich.error)
-    ? (await supabase.from("tutor_missions").select("id, assignment_id, title, instructions, status, due_date, completed_at, competency_code").in("assignment_id", ids)).data
+    ? (await supabase.from("tutor_missions").select("id, assignment_id, title, instructions, status, due_date, completed_at, competency_code, deliverable, submitted_at, validated_at, tutor_comment").in("assignment_id", ids)).data
     : rich.data;
   const people = await names(supabase, [...new Set(assignments.map((row) => String(row.learner_id)))]);
   const now = Date.now();
@@ -102,6 +104,8 @@ export async function listTutorMissions(supabase: SupabaseClient, tutorId: strin
       submittedAt: "submitted_at" in row && row.submitted_at ? String(row.submitted_at) : null,
       validatedAt: "validated_at" in row && row.validated_at ? String(row.validated_at) : row.completed_at ? String(row.completed_at) : null,
       tutorComment: "tutor_comment" in row && row.tutor_comment ? String(row.tutor_comment) : null,
+      learnerNote: "learner_note" in row && row.learner_note ? String(row.learner_note) : null,
+      proofUrl: "proof_url" in row && row.proof_url ? String(row.proof_url) : null,
     };
   });
 }

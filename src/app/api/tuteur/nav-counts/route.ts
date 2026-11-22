@@ -1,15 +1,30 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+import { resolveDashboardSpaces } from "@/lib/auth/dashboard-routing";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { listEvaluations, listTutorMissions, missionBucket, relationMissing } from "@/lib/tuteur/followup-server";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
+import { getServiceRoleClient } from "@/lib/supabase/server";
+
+function spaceSwitchLabel(href: string): string | null {
+  if (href === "/dashboard/entreprise") return "Accès à mon dashboard RH";
+  if (href === "/dashboard/salarie") return "Accès à mon dashboard salarié";
+  return null;
+}
 
 export async function GET() {
   const auth = await requireTutorClient();
-  if (!auth.ok) return NextResponse.json({ missions: 0, evaluations: 0, livrets: 0, messages: 0 });
+  if (!auth.ok) return NextResponse.json({ missions: 0, evaluations: 0, livrets: 0, messages: 0, switches: [] });
   if (isJadeDemoEmail(auth.ctx.email)) {
-    return NextResponse.json({ tutorName: "Jade Martin", missions: 2, evaluations: 1, livrets: 1, messages: 3 });
+    return NextResponse.json({
+      tutorName: "Jade Martin",
+      missions: 2,
+      evaluations: 1,
+      livrets: 1,
+      messages: 3,
+      switches: [{ href: "/dashboard/entreprise", label: "Accès à mon dashboard RH" }],
+    });
   }
   const missions = await listTutorMissions(auth.ctx.supabase, auth.ctx.userId);
   const evaluations = await listEvaluations(auth.ctx.supabase, auth.ctx.userId);
@@ -27,12 +42,44 @@ export async function GET() {
     }
   }
   const messages = await unreadForTutor(auth.ctx.supabase, auth.ctx.userId);
+
+  let switches: Array<{ href: string; label: string }> = [];
+  const service = getServiceRoleClient();
+  if (service) {
+    const { data: profile } = await service
+      .from("profiles")
+      .select("id, email, role, role_type, school_id, company_id")
+      .eq("id", auth.ctx.userId)
+      .maybeSingle();
+    const { spaces } = await resolveDashboardSpaces(
+      service,
+      auth.ctx.userId,
+      auth.ctx.email,
+      (profile as {
+        id: string;
+        email?: string | null;
+        role?: string | null;
+        role_type?: string | null;
+        school_id?: string | null;
+        company_id?: string | null;
+      } | null) ?? { id: auth.ctx.userId, email: auth.ctx.email },
+    );
+    switches = spaces
+      .filter((s) => s.href !== "/dashboard/tuteur")
+      .map((s) => {
+        const label = spaceSwitchLabel(s.href);
+        return label ? { href: s.href, label } : null;
+      })
+      .filter((row): row is { href: string; label: string } => Boolean(row));
+  }
+
   return NextResponse.json({
     tutorName: auth.ctx.tutorName,
     missions: missions.filter((row) => missionBucket(row) === "a_valider").length,
     evaluations: evaluations.filter((row) => row.status === "to_fill").length,
     livrets: livretCount,
     messages,
+    switches,
   });
 }
 

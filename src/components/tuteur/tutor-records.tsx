@@ -20,6 +20,9 @@ type MissionRow = {
   deliverable: string | null;
   submittedAt: string | null;
   validatedAt: string | null;
+  learnerNote?: string | null;
+  proofUrl?: string | null;
+  tutorComment?: string | null;
 };
 
 function missionBucket(row: { status: string; late: boolean }) {
@@ -242,9 +245,35 @@ export function TutorMissionsPage() {
       {selected ? (
         <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-md overflow-y-auto border-l border-[var(--tutor-border)] bg-[var(--tutor-hero)] p-5">
           <h2 className="text-xl font-extrabold">{selected.title}</h2>
-          <p className="mt-2 text-sm text-[var(--tutor-text-3)]">{selected.deliverable || selected.instructions || "Aucun livrable déposé."}</p>
-          <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Commentaire" className="mt-4 w-full rounded-2xl bg-[var(--tutor-surface)] p-3 text-sm" />
-          <div className="mt-4 flex gap-2">
+          <p className="mt-1 text-sm text-[var(--tutor-text-4)]">{selected.learnerName}</p>
+          {selected.instructions || selected.deliverable ? (
+            <div className="mt-4 space-y-1">
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--tutor-text-3)]">Attendu</p>
+              <p className="text-sm text-[var(--tutor-text-3)]">{selected.instructions || selected.deliverable}</p>
+            </div>
+          ) : null}
+          <div className="mt-4 space-y-2 rounded-2xl bg-[var(--tutor-surface)] p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-[var(--tutor-text-3)]">Dépôt de l’alternant</p>
+            {selected.learnerNote ? (
+              <p className="whitespace-pre-wrap text-sm text-[var(--tutor-text-2)]">{selected.learnerNote}</p>
+            ) : (
+              <p className="text-sm text-[var(--tutor-text-3)]">Aucun commentaire écrit.</p>
+            )}
+            {selected.proofUrl ? (
+              <a
+                href={selected.proofUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex text-sm font-semibold text-[var(--tutor-accent-text)] underline"
+              >
+                Ouvrir la preuve
+              </a>
+            ) : (
+              <p className="text-sm text-[var(--tutor-text-3)]">Aucun document / lien joint.</p>
+            )}
+          </div>
+          <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Commentaire tuteur" className="mt-4 w-full rounded-2xl bg-[var(--tutor-surface)] p-3 text-sm" />
+          <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#07080B]" onClick={() => void act("VALIDEE")}>Valider</button>
             <button type="button" className="rounded-full bg-[var(--tutor-alert-bg)] px-4 py-2 text-sm font-bold text-[var(--tutor-alert)]" onClick={() => void act("CORRECTION_REQUESTED")}>Demander une correction</button>
             <button type="button" className="rounded-full bg-[var(--tutor-surface-2)] px-4 py-2 text-sm" onClick={() => setSelected(null)}>Fermer</button>

@@ -138,13 +138,15 @@ export async function GET() {
     late: boolean;
     deliverable: string | null;
     tutorComment: string | null;
+    learnerNote: string | null;
+    proofUrl: string | null;
   }> = [];
 
   if (activeAssignment?.id) {
     const rich = await db
       .from("tutor_missions")
       .select(
-        "id, title, instructions, status, due_date, deliverable, tutor_comment, submitted_at, validated_at, completed_at",
+        "id, title, instructions, status, due_date, deliverable, tutor_comment, learner_note, proof_url, submitted_at, validated_at, completed_at",
       )
       .eq("assignment_id", activeAssignment.id)
       .order("due_date", { ascending: true, nullsFirst: false });
@@ -153,7 +155,7 @@ export async function GET() {
       ? (
           await db
             .from("tutor_missions")
-            .select("id, title, instructions, status, due_date")
+            .select("id, title, instructions, status, due_date, deliverable, tutor_comment")
             .eq("assignment_id", activeAssignment.id)
         ).data
       : rich.data;
@@ -180,6 +182,12 @@ export async function GET() {
           : null,
         tutorComment: (row as { tutor_comment?: string | null }).tutor_comment
           ? String((row as { tutor_comment: string }).tutor_comment)
+          : null,
+        learnerNote: (row as { learner_note?: string | null }).learner_note
+          ? String((row as { learner_note: string }).learner_note)
+          : null,
+        proofUrl: (row as { proof_url?: string | null }).proof_url
+          ? String((row as { proof_url: string }).proof_url)
           : null,
       };
     });

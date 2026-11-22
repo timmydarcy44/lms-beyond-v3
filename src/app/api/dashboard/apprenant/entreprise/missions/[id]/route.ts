@@ -4,6 +4,17 @@ import { getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const PROOF_BUCKET = "public";
+
+function sanitizeFileName(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 80);
+}
+
 /** L'alternant démarre ou soumet une mission assignée par son tuteur. */
 export async function PATCH(
   request: NextRequest,
@@ -16,13 +27,39 @@ export async function PATCH(
   if (!db) return NextResponse.json({ error: "NO_DB_CLIENT" }, { status: 500 });
 
   const { id: missionId } = await params;
-  const body = (await request.json().catch(() => null)) as { action?: string } | null;
-  const action = String(body?.action ?? "");
+
+  const contentType = request.headers.get("content-type") ?? "";
+  let action = "";
+  let learnerNote = "";
+  let proofUrl = "";
+  let file: File | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData();
+    action = String(form.get("action") ?? "");
+    learnerNote = String(form.get("learnerNote") ?? "").trim();
+    proofUrl = String(form.get("proofUrl") ?? "").trim();
+    const raw = form.get("file");
+    file = raw instanceof File && raw.size > 0 ? raw : null;
+  } else {
+    const body = (await request.json().catch(() => null)) as {
+      action?: string;
+      learnerNote?: string;
+      proofUrl?: string;
+    } | null;
+    action = String(body?.action ?? "");
+    learnerNote = String(body?.learnerNote ?? "").trim();
+    proofUrl = String(body?.proofUrl ?? "").trim();
+  }
 
   const nextStatus =
-    action === "start" ? "in_progress" : action === "submit" ? "submitted" : null;
+    action === "start"
+      ? "in_progress"
+      : action === "submit" || action === "update_proof"
+        ? "submitted"
+        : null;
   if (!nextStatus) {
-    return NextResponse.json({ error: "Action inconnue (start | submit)" }, { status: 400 });
+    return NextResponse.json({ error: "Action inconnue (start | submit | update_proof)" }, { status: 400 });
   }
 
   const { data: mission } = await db
@@ -50,8 +87,47 @@ export async function PATCH(
   if (action === "start" && !["todo", "correction_requested"].includes(current)) {
     return NextResponse.json({ error: "Cette mission n’est plus à démarrer." }, { status: 400 });
   }
-  if (action === "submit" && !["todo", "in_progress", "correction_requested"].includes(current)) {
+  if (
+    action === "submit" &&
+    !["todo", "in_progress", "correction_requested"].includes(current)
+  ) {
     return NextResponse.json({ error: "Cette mission n’est plus à envoyer." }, { status: 400 });
+  }
+  if (action === "update_proof" && current !== "submitted") {
+    return NextResponse.json(
+      { error: "Tu ne peux compléter la preuve que sur une mission déjà envoyée." },
+      { status: 400 },
+    );
+  }
+
+  if (action === "submit" || action === "update_proof") {
+    if (!learnerNote && !proofUrl && !file) {
+      return NextResponse.json(
+        { error: "Ajoute un commentaire, un lien ou un document pour prouver ton travail." },
+        { status: 400 },
+      );
+    }
+  }
+
+  if (file && (action === "submit" || action === "update_proof")) {
+    if (file.size > 12 * 1024 * 1024) {
+      return NextResponse.json({ error: "Fichier trop volumineux (max 12 Mo)." }, { status: 400 });
+    }
+    const safeName = sanitizeFileName(file.name || "preuve");
+    const path = `tutor-missions/${missionId}/${Date.now()}-${safeName}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { error: uploadErr } = await db.storage.from(PROOF_BUCKET).upload(path, buffer, {
+      contentType: file.type || "application/octet-stream",
+      upsert: true,
+    });
+    if (uploadErr) {
+      return NextResponse.json(
+        { error: `Upload impossible : ${uploadErr.message}` },
+        { status: 400 },
+      );
+    }
+    const { data: pub } = db.storage.from(PROOF_BUCKET).getPublicUrl(path);
+    proofUrl = pub?.publicUrl || proofUrl;
   }
 
   const payload: Record<string, unknown> = {
@@ -59,10 +135,40 @@ export async function PATCH(
   };
   if (nextStatus === "submitted") {
     payload.submitted_at = new Date().toISOString();
+    if (learnerNote) payload.learner_note = learnerNote;
+    if (proofUrl) payload.proof_url = proofUrl;
   }
 
   const { error } = await db.from("tutor_missions").update(payload).eq("id", missionId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    // Colonnes absentes (migration pas encore appliquée) → status + log de preuve
+    if (/learner_note|proof_url|column/i.test(error.message)) {
+      const fallback: Record<string, unknown> = {
+        status: nextStatus,
+      };
+      if (nextStatus === "submitted") {
+        fallback.submitted_at = new Date().toISOString();
+      }
+      const retry = await db.from("tutor_missions").update(fallback).eq("id", missionId);
+      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 400 });
+      const composed = [learnerNote, proofUrl ? `Preuve : ${proofUrl}` : ""].filter(Boolean).join("\n\n");
+      if (composed) {
+        await db.from("tutor_mission_logs").insert({
+          mission_id: missionId,
+          author_id: session.id,
+          entry_type: "comment",
+          content: composed.slice(0, 4000),
+        });
+      }
+      return NextResponse.json({
+        ok: true,
+        status: nextStatus,
+        proofUrl: proofUrl || null,
+        warning: "Colonnes preuve absentes — appliquez la migration learner_note/proof_url.",
+      });
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
 
-  return NextResponse.json({ ok: true, status: nextStatus });
+  return NextResponse.json({ ok: true, status: nextStatus, proofUrl: proofUrl || null });
 }

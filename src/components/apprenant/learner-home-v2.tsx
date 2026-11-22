@@ -210,7 +210,7 @@ export function LearnerHomeV2() {
             </p>
             <p className="mt-3 text-lg font-extrabold">{data.alternance?.companyName || "—"}</p>
             <Link href="/dashboard/apprenant/entreprise" className="mt-4 inline-block text-sm font-semibold text-[#A99BFF]">
-              Voir mes missions →
+              Voir la fiche →
             </Link>
           </article>
         </section>

@@ -30,8 +30,10 @@ export type MissionRow = {
 };
 
 export function missionBucket(row: { status: string; late: boolean }) {
-  if (row.status === "validated" || row.status === "done") return "validees";
-  if (row.status === "submitted") return "a_valider";
+  const s = String(row.status ?? "").toLowerCase();
+  if (s === "validated" || s === "done") return "validees";
+  if (s === "submitted") return "a_valider";
+  if (s === "changes_requested" || s === "correction_requested") return "en_cours";
   if (row.late) return "en_retard";
   return "en_cours";
 }

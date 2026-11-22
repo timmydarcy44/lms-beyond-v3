@@ -228,18 +228,22 @@ export function FicheApprenant({ id }: { id: string }) {
   const [linkPending, setLinkPending] = useState<{ id: string; label: string } | null>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ entreprise: true, candidature: true, inscription: true, documents: true, entretien: true });
   const [saveHint, setSaveHint] = useState("");
+  const [curricula, setCurricula] = useState<Array<{ id: string; name: string; code?: string | null }>>([]);
+  const [curriculumBusy, setCurriculumBusy] = useState(false);
   const loadedCerfa = useRef("");
 
   async function load(quiet = false) {
     if (!quiet) setLoading(true);
     setMessage("");
     try {
-      const [boardRes, placeRes] = await Promise.all([
+      const [boardRes, placeRes, cursusRes] = await Promise.all([
         fetch("/api/super-admin/crm/cfa", { cache: "no-store" }),
         fetch(`/api/super-admin/crm/cfa/placements?applicationId=${encodeURIComponent(id)}`, { cache: "no-store" }),
+        fetch("/api/super/cfa/cursus", { cache: "no-store" }),
       ]);
       const board = await boardRes.json();
       const place = await placeRes.json();
+      const cursusJson = await cursusRes.json().catch(() => ({}));
       if (!boardRes.ok) throw new Error(board.error || "Chargement impossible");
       if (!placeRes.ok) throw new Error(place.error || "Rattachements indisponibles");
       const found = ((board.applications ?? []) as CfaApplication[]).find((item) => item.id === id) ?? null;
@@ -248,6 +252,9 @@ export function FicheApprenant({ id }: { id: string }) {
       setTutors(place.tutors ?? []);
       setPlacements(place.placements ?? []);
       setProfileSends(place.profileSends ?? []);
+      if (cursusRes.ok && Array.isArray(cursusJson.curricula)) {
+        setCurricula(cursusJson.curricula);
+      }
       const stored = found?.cerfa_data ?? {};
       const next: Record<string, string> = {};
       for (const [key] of CERFA_FIELDS) next[key] = stored[key] ?? "";
@@ -725,6 +732,66 @@ export function FicheApprenant({ id }: { id: string }) {
                     </ul>
                   </div>
                 ) : null}
+              </div>
+              <div className="rounded-2xl bg-[#0B1122] p-4 md:col-span-2">
+                <p className="text-sm font-extrabold">Cursus suivi</p>
+                <p className="mt-1 text-xs text-[#AEB6CC]">
+                  Indique le parcours que {application.first_name} suit — utilisé pour le catalogue missions tuteur.
+                </p>
+                <select
+                  value={String(application.cerfa_data?._staff_curriculum_id ?? "")}
+                  disabled={curriculumBusy || curricula.length === 0}
+                  onChange={(event) => {
+                    const curriculumId = event.target.value;
+                    setCurriculumBusy(true);
+                    void (async () => {
+                      try {
+                        const response = await fetch("/api/super/cfa/admis", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id, curriculumId }),
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                          setMessage(payload.error || "Cursus non enregistré");
+                          return;
+                        }
+                        if (curriculumId && application.email) {
+                          const assigned = await fetch("/api/super/cfa/cursus", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              action: "assign_learner",
+                              email: application.email,
+                              curriculumId,
+                            }),
+                          });
+                          const assignedPayload = await assigned.json().catch(() => ({}));
+                          if (!assigned.ok) {
+                            setMessage(
+                              assignedPayload.error ||
+                                "Cursus enregistré sur le dossier. Le compte apprenant n'est pas encore relié.",
+                            );
+                          } else {
+                            setMessage("Cursus enregistré.");
+                          }
+                        }
+                        await load(true);
+                      } finally {
+                        setCurriculumBusy(false);
+                      }
+                    })();
+                  }}
+                  className="mt-3 h-11 w-full rounded-2xl border border-[#26304F] bg-[#111831] px-3 text-sm"
+                >
+                  <option value="">{curricula.length ? "Choisir un cursus" : "Aucun cursus disponible"}</option>
+                  {curricula.map((curriculum) => (
+                    <option key={curriculum.id} value={curriculum.id}>
+                      {curriculum.name}
+                      {curriculum.code ? ` (${curriculum.code})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <p className="text-sm font-extrabold">Entreprise d'accueil</p>

@@ -26,8 +26,9 @@ type MissionRow = {
 };
 
 function missionBucket(row: { status: string; late: boolean }) {
-  if (row.status === "validated" || row.status === "done") return "validees";
-  if (row.status === "submitted") return "a_valider";
+  const s = String(row.status ?? "").toLowerCase();
+  if (s === "validated" || s === "done") return "validees";
+  if (s === "submitted") return "a_valider";
   if (row.late) return "en_retard";
   return "en_cours";
 }
@@ -80,6 +81,9 @@ export function TutorMissionsPage() {
     deliverable: string;
     competency: string;
   }> | null>(null);
+  const [skillQuery, setSkillQuery] = useState("");
+  const [skillOptions, setSkillOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [pickedSkill, setPickedSkill] = useState<{ id: string; label: string } | null>(null);
 
   async function load() {
     const res = await fetch("/api/tuteur/missions-board", { cache: "no-store" });
@@ -94,6 +98,34 @@ export function TutorMissionsPage() {
   }
 
   useEffect(() => { void load(); }, []);
+
+  useEffect(() => {
+    if (skillQuery.trim().length < 2) {
+      setSkillOptions([]);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      void fetch(`/api/skills/catalog?q=${encodeURIComponent(skillQuery.trim())}`, { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          const domains = Array.isArray(json?.domains) ? json.domains : [];
+          const soft = Array.isArray(json?.softSkills) ? json.softSkills : [];
+          const flat: Array<{ id: string; label: string }> = [];
+          for (const d of domains) {
+            for (const s of d.skills ?? []) {
+              flat.push({ id: String(s.id), label: String(s.label) });
+            }
+          }
+          for (const s of soft) flat.push({ id: String(s.id), label: String(s.label) });
+          const q = skillQuery.trim().toLowerCase();
+          setSkillOptions(
+            flat.filter((s) => s.label.toLowerCase().includes(q)).slice(0, 12),
+          );
+        })
+        .catch(() => setSkillOptions([]));
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [skillQuery]);
 
   const counts = {
     a_valider: missions.filter((row) => missionBucket(row) === "a_valider").length,
@@ -203,6 +235,7 @@ export function TutorMissionsPage() {
           blockId: "",
           blockCode: "",
           blockTitle: "",
+          skillId: pickedSkill?.id ?? "",
         }];
     if (!assignmentId) {
       setCreateError("Choisissez un alternant.");
@@ -287,8 +320,26 @@ export function TutorMissionsPage() {
             {mission.blockCode ? <span className="rounded-full bg-[var(--tutor-surface-2)] px-3 py-1 text-xs font-bold text-[var(--tutor-accent-text)]">{mission.blockCode}</span> : null}
             {missionBucket(mission) === "a_valider" ? (
               <div className="flex gap-2">
-                <button type="button" className="rounded-full border border-[var(--tutor-border)] px-3 py-2 text-sm" onClick={() => setSelected(mission)}>Voir le livrable</button>
-                <button type="button" className="rounded-full bg-white px-3 py-2 text-sm font-bold text-[#07080B]" onClick={() => setSelected(mission)}>Valider</button>
+                <button
+                  type="button"
+                  className="rounded-full border border-[var(--tutor-border)] px-3 py-2 text-sm"
+                  onClick={() => {
+                    setSelected(mission);
+                    void fetch(`/api/tuteur/missions/${mission.id}`, { cache: "no-store" });
+                  }}
+                >
+                  Voir le livrable
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full bg-white px-3 py-2 text-sm font-bold text-[#07080B]"
+                  onClick={() => {
+                    setSelected(mission);
+                    void fetch(`/api/tuteur/missions/${mission.id}`, { cache: "no-store" });
+                  }}
+                >
+                  Valider
+                </button>
               </div>
             ) : (
               <span className={`rounded-full px-3 py-1 text-xs font-bold ${missionBucket(mission) === "validees" ? "bg-[var(--tutor-success-bg)] text-[var(--tutor-success)]" : missionBucket(mission) === "en_retard" ? "bg-[var(--tutor-alert-bg)] text-[var(--tutor-alert)]" : "bg-[var(--tutor-surface-2)] text-[var(--tutor-text-3)]"}`}>
@@ -434,6 +485,39 @@ export function TutorMissionsPage() {
               <>
                 <input name="title" required placeholder="Titre" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
                 <textarea name="description" placeholder="Description" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />
+                <div className="space-y-2">
+                  <input
+                    value={skillQuery}
+                    onChange={(e) => setSkillQuery(e.target.value)}
+                    placeholder="Lier une compétence du référentiel (recherche)"
+                    className="w-full rounded-xl bg-[var(--tutor-hero)] p-2"
+                  />
+                  {pickedSkill ? (
+                    <p className="text-xs text-[var(--tutor-accent-text)]">
+                      Compétence : {pickedSkill.label}{" "}
+                      <button type="button" className="underline" onClick={() => setPickedSkill(null)}>retirer</button>
+                    </p>
+                  ) : null}
+                  {skillOptions.length ? (
+                    <ul className="max-h-32 overflow-y-auto rounded-xl bg-[var(--tutor-hero)] p-2 text-sm">
+                      {skillOptions.map((s) => (
+                        <li key={s.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded-lg px-2 py-1 text-left hover:bg-[var(--tutor-surface-2)]"
+                            onClick={() => {
+                              setPickedSkill(s);
+                              setSkillQuery(s.label);
+                              setSkillOptions([]);
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               </>
             )}
             <input name="dueDate" type="date" className="w-full rounded-xl bg-[var(--tutor-hero)] p-2" />

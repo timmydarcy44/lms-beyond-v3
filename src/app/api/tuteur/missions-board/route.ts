@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       blockId: item?.blockId ? String(item.blockId) : "",
       blockCode: item?.blockCode ? String(item.blockCode) : "",
       blockTitle: item?.blockTitle ? String(item.blockTitle) : "",
+      skillId: item?.skillId ? String(item.skillId) : "",
       };
     })
     .filter((item) => item.title);
@@ -75,17 +76,25 @@ export async function POST(request: NextRequest) {
       title: item.title,
       instructions: item.description || null,
       due_date: item.dueDate ? new Date(item.dueDate).toISOString() : null,
-      status: "todo",
+      status: "assigned",
       competency_block_id: item.blockId || null,
       competency_code: item.blockCode || null,
       competency_label: item.blockTitle || null,
       deliverable: item.deliverable || null,
+      skill_id: item.skillId || null,
     };
     let inserted = await auth.ctx.supabase.from("tutor_missions").insert(payload).select("id").single();
-    if (relationMissing(inserted.error)) {
+    if (relationMissing(inserted.error) || (inserted.error && /status|skill_id|check|column/i.test(inserted.error.message))) {
       inserted = await auth.ctx.supabase
         .from("tutor_missions")
-        .insert({ assignment_id: assignmentId, title: item.title, instructions: payload.instructions, due_date: payload.due_date, status: "todo" })
+        .insert({
+          assignment_id: assignmentId,
+          title: item.title,
+          instructions: payload.instructions,
+          due_date: payload.due_date,
+          status: "todo",
+          deliverable: payload.deliverable,
+        })
         .select("id")
         .single();
     }

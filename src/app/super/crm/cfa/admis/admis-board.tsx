@@ -143,7 +143,7 @@ export function AdmisBoard() {
           <h1 className="text-3xl font-bold tracking-tight">Apprentis</h1>
           <div className="mt-4 space-y-2">
             {loading ? <p className="text-sm text-slate-400">Chargement…</p> : null}
-            {!loading && students.length === 0 ? <p className="rounded-2xl bg-white px-4 py-8 text-center text-sm text-slate-400">Aucun étudiant admis.</p> : null}
+            {!loading && students.length === 0 ? <p className="rounded-2xl bg-white px-4 py-8 text-center text-sm text-slate-400">Aucun apprenti (admis / contrat).</p> : null}
             {students.map((student) => (
               <button
                 key={student.id}
@@ -155,7 +155,10 @@ export function AdmisBoard() {
                 className={`w-full rounded-2xl px-4 py-3 text-left ${student.id === selectedId ? "bg-slate-900 text-white" : "bg-white"}`}
               >
                 <p className="font-semibold">{student.first_name} {student.last_name}</p>
-                <p className={`text-sm ${student.id === selectedId ? "text-white/70" : "text-slate-500"}`}>{getCfaSpecializationLabel(student.specialization)}</p>
+                <p className={`text-sm ${student.id === selectedId ? "text-white/70" : "text-slate-500"}`}>
+                  {getCfaSpecializationLabel(student.specialization)}
+                  {student.status === "contract" ? " · contrat" : student.status === "admitted" ? " · admis" : ""}
+                </p>
               </button>
             ))}
           </div>
@@ -170,7 +173,10 @@ export function AdmisBoard() {
             </div>
 
             <div className="rounded-2xl bg-white p-5">
-              <h3 className="text-sm font-semibold text-slate-400">Cursus</h3>
+              <h3 className="text-sm font-semibold text-slate-400">Cursus suivi</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Choisis le parcours que {selected.first_name} suit. Ça alimente le référentiel missions côté tuteur.
+              </p>
               <select
                 value={cursusId}
                 onChange={(event) => void saveStaff({ curriculumId: event.target.value })}
@@ -180,12 +186,14 @@ export function AdmisBoard() {
                 {curricula.map((curriculum) => (
                   <option key={curriculum.id} value={curriculum.id}>
                     {curriculum.name}
+                    {curriculum.code ? ` (${curriculum.code})` : ""}
                   </option>
                 ))}
               </select>
+              {message ? <p className="mt-2 text-xs text-slate-500">{message}</p> : null}
             </div>
 
-            {alternance ? (
+            {alternance || selected.status === "contract" || selected.status === "admitted" ? (
               <div className="rounded-2xl bg-white p-5">
                 <h3 className="text-sm font-semibold text-slate-400">Alternance d’accueil</h3>
                 <select

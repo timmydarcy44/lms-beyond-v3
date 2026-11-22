@@ -29,7 +29,11 @@ export async function GET() {
     db.from("school_curricula").select("id, name, code").order("name"),
   ]);
   if ("error" in board && board.error) return NextResponse.json({ error: board.error }, { status: 400 });
-  const students = (board.applications ?? []).filter((row) => row.status === "admitted");
+  // Apprentis = admis OU déjà en contrat (sinon ils disparaissent dès le passage en "contract")
+  const APPRENTICE_STATUSES = new Set(["admitted", "contract"]);
+  const students = (board.applications ?? []).filter((row) =>
+    APPRENTICE_STATUSES.has(String((row as { status?: string }).status ?? "")),
+  );
   return NextResponse.json({
     students,
     companies: "companies" in companies ? companies.companies : [],

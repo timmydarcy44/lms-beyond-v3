@@ -5,6 +5,7 @@ import { recordCfaAudit } from "@/lib/cfa/admit-application";
 import { logCompanyEvent } from "@/lib/cfa/company-events";
 import { parseInput, placementSchema } from "@/lib/cfa/fiche-input";
 import { activateAlternanceContract } from "@/lib/cfa/alternance-contract-lifecycle";
+import { linkTutorToApprentice } from "@/lib/cfa/link-tutor-to-apprentice";
 import { syncTutorAssignment } from "@/lib/cfa/sync-tutor-assignment";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -242,6 +243,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ce tuteur n'appartient pas à l'entreprise d'accueil." }, { status: 400 });
     }
 
+    const actor = await actorId();
+    // Placement + contrat AVANT l'e-mail : le lien ne dépend plus de l'envoi du mail.
+    const linked = await linkTutorToApprentice(db, {
+      applicationId,
+      companyId,
+      companyTutorId: tutorId,
+      createdBy: actor,
+    });
+    if (linked.error) {
+      return NextResponse.json({ error: linked.error }, { status: 400 });
+    }
+
     const company = await db.from("cfa_companies").select("company_name").eq("id", companyId).maybeSingle();
     const companyName = String((company.data as { company_name?: string } | null)?.company_name ?? "");
     const alreadyActive = Boolean(row.user_id && row.activated_at);
@@ -254,39 +267,22 @@ export async function POST(request: NextRequest) {
       learnerName,
       companyName,
     });
-    if (!sent.ok) return NextResponse.json({ error: sent.error, retryAfter: sent.retryAfter }, { status: sent.retryAfter ? 429 : 502 });
-
-    await closeOpen();
-    const actor = await actorId();
-    const placed = await db
-      .from("apprentice_placements")
-      .insert({
-        apprentice_id: applicationId,
-        company_id: companyId,
-        tutor_id: tutorId,
-        status: "active",
-        started_at: new Date().toISOString(),
-        created_by: actor,
-      })
-      .select("id")
-      .single();
-    if (placed.error || !placed.data) {
-      return NextResponse.json({ error: placed.error?.message ?? "Placement impossible" }, { status: 400 });
-    }
     await db.from("company_tutors").update({
-      last_code_sent_at: new Date().toISOString(),
-      ...(alreadyActive ? {} : { invited_at: new Date().toISOString() }),
+      ...(sent.ok ? { last_code_sent_at: new Date().toISOString() } : {}),
+      ...(alreadyActive || !sent.ok ? {} : { invited_at: new Date().toISOString() }),
     }).eq("id", tutorId);
-    await activateAlternanceContract(db, {
-      applicationId,
-      companyId,
-      companyTutorId: tutorId,
-      placementId: String((placed.data as { id: string }).id),
-      createdBy: actor,
-      status: "active",
-    });
     await recordCfaAudit(db, { actorId: actor, applicationId, action: "placement_tutor", newValue: tutorId });
-    return NextResponse.json({ ok: true });
+
+    if (!sent.ok) {
+      return NextResponse.json({
+        ok: true,
+        linked: true,
+        emailSent: false,
+        warning: `Tuteur lié à l'alternant. L'e-mail n'a pas pu être envoyé : ${sent.error}`,
+        retryAfter: sent.retryAfter,
+      });
+    }
+    return NextResponse.json({ ok: true, linked: true, emailSent: true });
   }
 
   if (action === "resend_code") {

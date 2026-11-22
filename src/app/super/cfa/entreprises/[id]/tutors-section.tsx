@@ -111,6 +111,9 @@ export function TutorsSection({
     setBusy(true);
     onMessage("");
     try {
+      const autoAssignId =
+        designating ||
+        (unassigned.length === 1 ? unassigned[0].applicationId : undefined);
       const response = await fetch(`/api/super-admin/crm/cfa/companies/${companyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -120,12 +123,23 @@ export function TutorsSection({
           lastName: formatPersonName(draft.lastName),
           email: draft.email,
           jobTitle: formatPersonName(draft.jobTitle),
+          ...(autoAssignId ? { applicationId: autoAssignId } : {}),
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Création impossible");
       setDraft({ firstName: "", lastName: "", email: "", jobTitle: "" });
       setOpen(false);
+      setDesignating(null);
+      if (result.needsAssignment) {
+        onMessage(
+          result.message ||
+            "Tuteur créé. Clique « Désigner un tuteur » sur l'alternant pour finaliser le lien.",
+        );
+        if (unassigned[0]?.applicationId) setDesignating(unassigned[0].applicationId);
+      } else if (result.warning) {
+        onMessage(String(result.warning));
+      }
       await onChanged();
     } catch (error) {
       onMessage(error instanceof Error ? error.message : "Création impossible");
@@ -298,7 +312,14 @@ export function TutorsSection({
           <input required aria-label="Nom" value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} onBlur={() => setDraft({ ...draft, lastName: formatPersonName(draft.lastName) })} placeholder="Nom" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
           <input required aria-label="E-mail professionnel" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} placeholder="E-mail professionnel" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
           <input aria-label="Poste" value={draft.jobTitle} onChange={(event) => setDraft({ ...draft, jobTitle: event.target.value })} placeholder="Poste" className="h-11 w-full rounded-2xl border border-[#26304F] bg-[#0B1122] px-3 text-sm" />
-          <p className="text-xs text-[#AEB6CC]">{draft.firstName || "Le tuteur"} recevra un e-mail pour indiquer son adresse et recevoir un code.</p>
+          <p className="text-xs text-[#AEB6CC]">
+            {draft.firstName || "Le tuteur"} recevra un e-mail avec un code.
+            {designating || unassigned.length === 1
+              ? " Il sera aussi rattaché à l'alternant concerné."
+              : unassigned.length > 1
+                ? " Ensuite, assigne-le à un alternant (sinon il ne verra personne)."
+                : " Sans alternant rattaché, son espace tuteur restera vide."}
+          </p>
           <button type="submit" disabled={busy} className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white">
             Créer et prévenir
           </button>

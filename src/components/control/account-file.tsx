@@ -16,6 +16,7 @@ import { AccountQualiopiCoffre } from "./account-qualiopi-coffre";
 import { AccountMembersTab } from "./account-members-tab";
 import { AccountSurMesureTab } from "./account-surmesure-tab";
 import { AccountBesoinsTab } from "./account-besoins-tab";
+import { AccountAlternanceTab } from "./account-alternance-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
 import { formatPersonName } from "@/lib/control/account-participants-format";
 
@@ -29,6 +30,7 @@ type Tab =
   | "dossiers"
   | "surmesure"
   | "besoins"
+  | "alternance"
   | "badges"
   | "revenue"
   | "funding"
@@ -41,6 +43,7 @@ type NavId =
   | "overview"
   | "formations"
   | "besoins"
+  | "alternance"
   | "saas"
   | "members"
   | "revenue"
@@ -50,6 +53,7 @@ type NavId =
 const NAV_ITEMS: Array<{ id: NavId; label: string }> = [
   { id: "overview", label: "Vue d'ensemble" },
   { id: "besoins", label: "Besoins" },
+  { id: "alternance", label: "Alternance" },
   { id: "formations", label: "Formations" },
   { id: "members", label: "Membres" },
   { id: "saas", label: "Produits SaaS" },
@@ -77,6 +81,7 @@ const LEGACY_TAB_IDS: Tab[] = [
   "dossiers",
   "surmesure",
   "besoins",
+  "alternance",
   "badges",
   "revenue",
   "funding",
@@ -89,6 +94,7 @@ const LEGACY_TAB_IDS: Tab[] = [
 function navFromTab(tab: Tab): NavId {
   if (tab === "dossiers" || tab === "surmesure" || tab === "courses" || tab === "badges") return "formations";
   if (tab === "besoins") return "besoins";
+  if (tab === "alternance") return "alternance";
   if (tab === "modules") return "saas";
   if (tab === "revenue" || tab === "funding") return "revenue";
   if (tab === "members") return "members";
@@ -100,6 +106,7 @@ function navFromTab(tab: Tab): NavId {
 function defaultTabForNav(nav: NavId): Tab {
   if (nav === "formations") return "dossiers";
   if (nav === "besoins") return "besoins";
+  if (nav === "alternance") return "alternance";
   if (nav === "saas") return "modules";
   if (nav === "revenue") return "revenue";
   if (nav === "members") return "members";
@@ -376,6 +383,7 @@ export function AccountFile({
           initialDealId={besoinDealId}
         />
       ) : null}
+      {tab === "alternance" ? <AccountAlternanceTab organizationId={account.id} /> : null}
       {tab === "badges" ? <BadgesTab detail={detail} onCreate={() => setPanel("badge")} /> : null}
       {tab === "revenue" ? <RevenueTab detail={detail} /> : null}
       {tab === "funding" ? <EmptyState title="Aucun dossier de financement pour ce compte." /> : null}

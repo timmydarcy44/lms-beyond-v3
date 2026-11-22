@@ -41,6 +41,10 @@ export async function syncTutorAssignment(
 
   if (!learnerId) return;
 
+  // Placement actif avec tuteur désigné mais compte pas encore activé :
+  // on ne touche pas aux assignments — afterSuccessfulAuth créera le lien.
+  if (tutorId && !tutorUserId) return;
+
   if (!tutorUserId) {
     await db
       .from("tutor_assignments")
@@ -95,26 +99,39 @@ export async function afterSuccessfulAuth(
 
   const tutors = await db.from("company_tutors").select("id, user_id").ilike("email", email);
   if (tutors.error || !tutors.data?.length) return { activatedTutor: false };
-  const pending = (tutors.data as Array<{ id: string; user_id?: string | null }>).filter((row) => !row.user_id);
-  if (!pending.length) return { activatedTutor: false };
+
+  const rows = tutors.data as Array<{ id: string; user_id?: string | null }>;
+  const pending = rows.filter((row) => !row.user_id);
+  const allIds = rows.map((row) => row.id);
 
   const now = new Date().toISOString();
-  await db
-    .from("company_tutors")
-    .update({ user_id: userId, activated_at: now })
-    .ilike("email", email)
-    .is("user_id", null);
+  if (pending.length) {
+    await db
+      .from("company_tutors")
+      .update({ user_id: userId, activated_at: now })
+      .ilike("email", email)
+      .is("user_id", null);
+  } else {
+    // Compte déjà lié : s'assurer que activated_at est posé
+    await db
+      .from("company_tutors")
+      .update({ user_id: userId, activated_at: now })
+      .ilike("email", email)
+      .is("activated_at", null);
+  }
+
   await grantUserRole(db, userId, "tuteur");
 
+  // Sync tous les placements actifs pour ces fiches tuteur (pas seulement les pending)
   const placements = await db
     .from("apprentice_placements")
     .select("apprentice_id")
-    .in("tutor_id", pending.map((row) => row.id))
+    .in("tutor_id", allIds)
     .eq("status", "active");
   for (const row of placements.data ?? []) {
     await syncTutorAssignment(db, String((row as { apprentice_id: string }).apprentice_id));
   }
-  return { activatedTutor: true };
+  return { activatedTutor: Boolean(pending.length || allIds.length) };
 }
 
 export async function activateTutorByEmail(db: SupabaseClient, email: string, userId: string): Promise<boolean> {

@@ -11,6 +11,7 @@ import { publicAppUrl } from "@/lib/env";
 import { isOpcoContractReady, refreshCompanyOpco, resolveOpcoForEnteredIdcc, shouldAutoLookupOpco } from "@/lib/cfa/company-opco";
 import { zodMessage } from "@/lib/cfa/fiche-input";
 import { linkCompanyByExactSiret } from "@/lib/cfa/link-company-organization";
+import { linkTutorToApprentice } from "@/lib/cfa/link-tutor-to-apprentice";
 import { cleanSiret, isValidSiret } from "@/lib/cfa/siret";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
@@ -133,6 +134,8 @@ const tutorSchema = z.object({
   lastName: z.string().trim().min(1, "Le nom du tuteur est requis.").max(80),
   email: z.string().trim().toLowerCase().email("L'e-mail professionnel n'est pas valide.").max(240),
   jobTitle: z.string().trim().max(120).default(""),
+  /** Si fourni : rattache aussi l'alternant (placement + contrat + assignment). */
+  applicationId: z.string().uuid().optional(),
 });
 
 const accountManagerSchema = z.object({
@@ -556,32 +559,81 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
       const duplicate = created.error?.code === "23505";
       return NextResponse.json({ error: duplicate ? "Ce tuteur existe déjà dans cette entreprise." : created.error?.message ?? "Création impossible" }, { status: 400 });
     }
+    const tutorId = String(created.data.id);
+
+    let linked = false;
+    let learnerName = "";
+    if (input.applicationId) {
+      const app = await db
+        .from("cfa_applications")
+        .select("first_name, last_name")
+        .eq("id", input.applicationId)
+        .maybeSingle();
+      learnerName = app.data
+        ? `${(app.data as { first_name?: string }).first_name ?? ""} ${(app.data as { last_name?: string }).last_name ?? ""}`.trim()
+        : "";
+      const link = await linkTutorToApprentice(db, {
+        applicationId: input.applicationId,
+        companyId: id,
+        companyTutorId: tutorId,
+        createdBy: actor,
+      });
+      if (link.error) {
+        return NextResponse.json({
+          error: `Tuteur créé, mais rattachement impossible : ${link.error}`,
+          tutorId,
+        }, { status: 400 });
+      }
+      linked = true;
+    }
+
     const sent = await sendAccessCode(db, {
       email: input.email,
       role: "tuteur",
       context: "tuteur_notice",
       firstName: input.firstName,
       lastName: input.lastName,
-      learnerName: "",
+      learnerName,
       companyName: String((current.data as { company_name?: string }).company_name ?? ""),
     });
-    if (!sent.ok) {
-      return NextResponse.json({ error: `Le tuteur est créé, mais l'e-mail n'a pas pu être envoyé. ${sent.error}`, retryAfter: sent.retryAfter }, { status: sent.retryAfter ? 429 : 502 });
-    }
     await db.from("company_tutors").update({
       invited_at: new Date().toISOString(),
-      last_code_sent_at: new Date().toISOString(),
-    }).eq("id", created.data.id);
+      ...(sent.ok ? { last_code_sent_at: new Date().toISOString() } : {}),
+    }).eq("id", tutorId);
     const logged = await logCompanyEvent(db, {
       companyId: id,
       actorId: actor,
       action: "tutor_created",
-      body: `Tuteur ${input.firstName} ${input.lastName} ajouté, e-mail envoyé.`,
-      newValue: created.data.id,
+      body: linked
+        ? `Tuteur ${input.firstName} ${input.lastName} ajouté et rattaché à ${learnerName || "un alternant"}.`
+        : `Tuteur ${input.firstName} ${input.lastName} ajouté (pas encore rattaché à un alternant).`,
+      newValue: tutorId,
       activityType: "note",
     });
     if (logged && !logged.includes("20261026160000")) return NextResponse.json({ error: logged }, { status: 400 });
-    return NextResponse.json({ ok: true });
+
+    if (!sent.ok) {
+      return NextResponse.json({
+        ok: true,
+        tutorId,
+        linked,
+        emailSent: false,
+        needsAssignment: !linked,
+        warning: linked
+          ? `Tuteur lié. L'e-mail n'a pas pu être envoyé : ${sent.error}`
+          : `Tuteur créé. Assigne-le à un alternant. E-mail non envoyé : ${sent.error}`,
+      });
+    }
+    return NextResponse.json({
+      ok: true,
+      tutorId,
+      linked,
+      emailSent: true,
+      needsAssignment: !linked,
+      message: linked
+        ? undefined
+        : "Tuteur créé. Assigne-le maintenant à un alternant pour qu'il apparaisse dans son espace.",
+    });
   }
 
   if (parsed.data.action === "save_need") {

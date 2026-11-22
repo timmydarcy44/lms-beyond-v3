@@ -61,6 +61,39 @@ export function skillsFromReferential(
   }));
 }
 
+/** Compétences par défaut quand le cursus site n’a ni PDF référentiel ni modules. */
+const SPECIALIZATION_SKILLS: Record<string, string[]> = {
+  ai_business: ["Utiliser l'IA au quotidien", "Rédiger des prompts", "Automatiser des tâches", "Prospection à froid"],
+  sport_business: ["Recherche de sponsors", "Dossier de partenariat", "Activation des partenaires", "Prospection à froid"],
+  real_estate: ["Prise de mandat", "Visites et négociation immobilière", "Estimation d'un bien", "Prospection à froid"],
+  retail_experience: ["Parcours client en magasin", "Merchandising de rayon", "Accueil et conseil", "Prospection à froid"],
+  merchandising: ["Implantation de rayon", "Analyse des ventes", "Planogrammes", "Prospection à froid"],
+  luxury_premium: ["Expérience client premium", "Storytelling de marque", "Relation VIP", "Prospection à froid"],
+  sport_retail: ["Conseil produit sport", "Animation de rayon", "Fidélisation club", "Prospection à froid"],
+  ai_management: ["Pilotage d'équipe avec l'IA", "Tableaux de bord", "Priorisation", "Animation d'équipe"],
+  business_performance: ["Suivi d'indicateurs", "Plan d'action commercial", "Reporting", "Animation d'équipe"],
+  transition_innovation: ["Diagnostic de process", "Conduite du changement", "Veille innovation", "Restitution"],
+  growth_acquisition: ["Acquisition de leads", "Tunnel de conversion", "Campagnes digitales", "Prospection à froid"],
+  entrepreneurship: ["Validation d'offre", "Pitch commercial", "Suivi de trésorerie", "Prospection à froid"],
+  international_business: ["Prospection export", "Dossier marché", "Négociation interculturelle", "Prospection à froid"],
+  strategic_partnerships: ["Cartographie partenaires", "Dossier de partenariat", "Suivi d'alliance", "Prospection à froid"],
+};
+
+export function defaultSkillsForSpecialization(code: string | null | undefined): CursusSkill[] {
+  const key = String(code ?? "")
+    .trim()
+    .toLowerCase();
+  const labels =
+    SPECIALIZATION_SKILLS[key] ??
+    ["Prospection à froid", "Découverte des besoins", "Utilisation d'un CRM", "Fixer des objectifs"];
+  return labels.map((title, index) => ({
+    id: `spec-${key || "default"}-${index + 1}`,
+    code: `C${index + 1}`,
+    title,
+    brief: title,
+  }));
+}
+
 export function proposeCursusMissions(skills: CursusSkill[], company: CompanyContext | null): ProposedMission[] {
   const sector = company?.sector?.trim() || "";
   const practice = sector ? sectorPractice(sector) : "les usages réels du métier exercé dans l'entreprise";

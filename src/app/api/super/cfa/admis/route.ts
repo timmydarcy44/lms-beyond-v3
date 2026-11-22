@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { resolveSchoolIdForEcoleDashboard } from "@/lib/auth/school-access";
+import { getSession } from "@/lib/auth/session";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { documentUploadSchema, parseInput } from "@/lib/cfa/fiche-input";
 import { loadCfaApplicationBoard, loadCfaCompanies } from "@/lib/cfa/load-cfa-crm";
-import { getServiceRoleClient } from "@/lib/supabase/server";
+import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +16,32 @@ async function authorize() {
   if (!(await isSuperAdmin())) {
     return { error: NextResponse.json({ error: "Accès refusé" }, { status: 403 }) };
   }
+  const session = await getSession();
+  const supabase = await getServerClient();
   const db = getServiceRoleClient();
-  if (!db) return { error: NextResponse.json({ error: "Service indisponible" }, { status: 503 }) };
-  return { db };
+  if (!session?.id || !supabase || !db) {
+    return { error: NextResponse.json({ error: "Service indisponible" }, { status: 503 }) };
+  }
+  const schoolId = await resolveSchoolIdForEcoleDashboard(session.id, session.email, supabase);
+  return { db, schoolId };
 }
 
 export async function GET() {
   const ctx = await authorize();
   if ("error" in ctx) return ctx.error;
-  const { db } = ctx;
+  const { db, schoolId } = ctx;
+  const curriculaQuery = schoolId
+    ? db
+        .from("school_curricula")
+        .select("id, name, code")
+        .eq("school_id", schoolId)
+        .neq("status", "archived")
+        .order("name")
+    : db.from("school_curricula").select("id, name, code").neq("status", "archived").order("name");
   const [board, companies, curricula] = await Promise.all([
     loadCfaApplicationBoard(db, "admin"),
     loadCfaCompanies(db),
-    db.from("school_curricula").select("id, name, code").order("name"),
+    curriculaQuery,
   ]);
   if ("error" in board && board.error) return NextResponse.json({ error: board.error }, { status: 400 });
   // Apprentis = admis OU déjà en contrat (sinon ils disparaissent dès le passage en "contract")
@@ -34,10 +49,18 @@ export async function GET() {
   const students = (board.applications ?? []).filter((row) =>
     APPRENTICE_STATUSES.has(String((row as { status?: string }).status ?? "")),
   );
+  // Filet anti-doublons : même code/nom seedé sur plusieurs écoles (si schoolId introuvable)
+  const seen = new Set<string>();
+  const uniqueCurricula = (curricula.data ?? []).filter((row) => {
+    const key = String(row.code ?? row.name ?? row.id).trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   return NextResponse.json({
     students,
     companies: "companies" in companies ? companies.companies : [],
-    curricula: curricula.data ?? [],
+    curricula: uniqueCurricula,
   });
 }
 

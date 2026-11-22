@@ -146,7 +146,7 @@ export async function GET() {
     const rich = await db
       .from("tutor_missions")
       .select(
-        "id, title, instructions, status, due_date, deliverable, tutor_comment, learner_note, proof_url, submitted_at, validated_at, completed_at",
+        "id, title, instructions, status, due_date, deliverable, tutor_comment, invalidation_reason, learner_note, proof_url, submitted_at, validated_at, completed_at",
       )
       .eq("assignment_id", activeAssignment.id)
       .order("due_date", { ascending: true, nullsFirst: false });
@@ -182,7 +182,9 @@ export async function GET() {
           : null,
         tutorComment: (row as { tutor_comment?: string | null }).tutor_comment
           ? String((row as { tutor_comment: string }).tutor_comment)
-          : null,
+          : (row as { invalidation_reason?: string | null }).invalidation_reason
+            ? String((row as { invalidation_reason: string }).invalidation_reason)
+            : null,
         learnerNote: (row as { learner_note?: string | null }).learner_note
           ? String((row as { learner_note: string }).learner_note)
           : null,

@@ -69,6 +69,8 @@ export function TutorMissionsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [selected, setSelected] = useState<MissionRow | null>(null);
   const [comment, setComment] = useState("");
+  const [actError, setActError] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
 
   async function load() {
     const res = await fetch("/api/tuteur/missions-board", { cache: "no-store" });
@@ -100,15 +102,29 @@ export function TutorMissionsPage() {
 
   async function act(status: "VALIDEE" | "CORRECTION_REQUESTED") {
     if (!selected) return;
-    if (status === "CORRECTION_REQUESTED" && !comment.trim()) return;
-    await fetch(`/api/tuteur/missions/${selected.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ statut: status, motif: comment }),
-    });
-    setSelected(null);
-    setComment("");
-    await load();
+    if (status === "CORRECTION_REQUESTED" && !comment.trim()) {
+      setActError("Écris un message pour l’alternant avant de demander une correction.");
+      return;
+    }
+    setActing(true);
+    setActError(null);
+    try {
+      const res = await fetch(`/api/tuteur/missions/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statut: status, motif: comment }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        setActError(typeof json?.error === "string" ? json.error : "Action impossible.");
+        return;
+      }
+      setSelected(null);
+      setComment("");
+      await load();
+    } finally {
+      setActing(false);
+    }
   }
 
   function missionsOf(assignmentId: string) {
@@ -272,11 +288,27 @@ export function TutorMissionsPage() {
               <p className="text-sm text-[var(--tutor-text-3)]">Aucun document / lien joint.</p>
             )}
           </div>
-          <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Commentaire tuteur" className="mt-4 w-full rounded-2xl bg-[var(--tutor-surface)] p-3 text-sm" />
+          <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-[var(--tutor-text-3)]">
+            Message pour l’alternant
+          </label>
+          <textarea
+            value={comment}
+            onChange={(event) => {
+              setComment(event.target.value);
+              if (actError) setActError(null);
+            }}
+            placeholder="Obligatoire pour une demande de correction — il recevra ce message par e-mail."
+            className="mt-2 w-full rounded-2xl bg-[var(--tutor-surface)] p-3 text-sm"
+          />
+          {actError ? <p className="mt-2 text-sm text-[var(--tutor-alert)]">{actError}</p> : null}
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#07080B]" onClick={() => void act("VALIDEE")}>Valider</button>
-            <button type="button" className="rounded-full bg-[var(--tutor-alert-bg)] px-4 py-2 text-sm font-bold text-[var(--tutor-alert)]" onClick={() => void act("CORRECTION_REQUESTED")}>Demander une correction</button>
-            <button type="button" className="rounded-full bg-[var(--tutor-surface-2)] px-4 py-2 text-sm" onClick={() => setSelected(null)}>Fermer</button>
+            <button type="button" disabled={acting} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#07080B] disabled:opacity-50" onClick={() => void act("VALIDEE")}>
+              {acting ? "…" : "Valider"}
+            </button>
+            <button type="button" disabled={acting} className="rounded-full bg-[var(--tutor-alert-bg)] px-4 py-2 text-sm font-bold text-[var(--tutor-alert)] disabled:opacity-50" onClick={() => void act("CORRECTION_REQUESTED")}>
+              Demander une correction
+            </button>
+            <button type="button" disabled={acting} className="rounded-full bg-[var(--tutor-surface-2)] px-4 py-2 text-sm" onClick={() => { setSelected(null); setActError(null); }}>Fermer</button>
           </div>
         </aside>
       ) : null}
@@ -302,7 +334,14 @@ export function TutorMissionsPage() {
               <div className="space-y-3 rounded-xl bg-[var(--tutor-hero)] p-3">
                 {(() => {
                   const linked = referentials.find((row) => row.assignmentId === createAssignment)?.referential;
-                  if (!linked) return <p className="text-sm">Aucun référentiel n'est rattaché au cursus de cet alternant.</p>;
+                  if (!linked) {
+                    return (
+                      <p className="text-sm text-[var(--tutor-text-3)]">
+                        Aucune fiche cursus / structure référentielle n’est rattachée à cet alternant.
+                        Tu peux créer la mission « à partir de zéro », ou faire renseigner la fiche cursus côté école.
+                      </p>
+                    );
+                  }
                   return (
                     <>
                       <p className="text-sm font-semibold">Cursus · {linked.title}</p>

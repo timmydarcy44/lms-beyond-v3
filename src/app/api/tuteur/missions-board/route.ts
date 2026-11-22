@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { jadeMissionsBoard } from "@/lib/demo/jade-tutor-pages";
 import { listBlocks, listLearnerReferentials, listTutorMissions, relationMissing } from "@/lib/tuteur/followup-server";
+import { notifyLearnerMissionAssigned } from "@/lib/tuteur/mission-emails";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const auth = await requireTutorClient();
@@ -90,5 +92,14 @@ export async function POST(request: NextRequest) {
     if (inserted.error || !inserted.data) return NextResponse.json({ error: "Création impossible" }, { status: 500 });
     ids.push(String(inserted.data.id));
   }
+
+  const mailDb = getServiceRoleClient() ?? auth.ctx.supabase;
+  void notifyLearnerMissionAssigned({
+    db: mailDb,
+    learnerId: String((owned.data as { learner_id: string }).learner_id),
+    tutorName: auth.ctx.tutorName,
+    missions: items.map((item) => ({ title: item.title, dueDate: item.dueDate || null })),
+  }).catch((err) => console.warn("[tuteur/missions-board] mail assign", err));
+
   return NextResponse.json({ ids });
 }

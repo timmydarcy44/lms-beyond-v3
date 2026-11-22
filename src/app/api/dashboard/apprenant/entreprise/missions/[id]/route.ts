@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
+import { notifyTutorMissionSubmitted } from "@/lib/tuteur/mission-emails";
 
 export const dynamic = "force-dynamic";
 
@@ -64,14 +65,14 @@ export async function PATCH(
 
   const { data: mission } = await db
     .from("tutor_missions")
-    .select("id, assignment_id, status")
+    .select("id, assignment_id, status, title")
     .eq("id", missionId)
     .maybeSingle();
   if (!mission) return NextResponse.json({ error: "Mission introuvable" }, { status: 404 });
 
   const { data: assignment } = await db
     .from("tutor_assignments")
-    .select("id, learner_id, status")
+    .select("id, learner_id, tutor_id, status")
     .eq("id", (mission as { assignment_id: string }).assignment_id)
     .maybeSingle();
 
@@ -160,14 +161,38 @@ export async function PATCH(
           content: composed.slice(0, 4000),
         });
       }
-      return NextResponse.json({
-        ok: true,
-        status: nextStatus,
-        proofUrl: proofUrl || null,
-        warning: "Colonnes preuve absentes — appliquez la migration learner_note/proof_url.",
-      });
+    } else {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  if (action === "submit" || action === "update_proof") {
+    const tutorId = String((assignment as { tutor_id?: string | null }).tutor_id ?? "");
+    if (tutorId) {
+      const { data: learnerProfile } = await db
+        .from("profiles")
+        .select("full_name, first_name, last_name, email")
+        .eq("id", session.id)
+        .maybeSingle();
+      const learnerName =
+        String((learnerProfile as { full_name?: string | null } | null)?.full_name ?? "").trim() ||
+        [
+          (learnerProfile as { first_name?: string | null } | null)?.first_name,
+          (learnerProfile as { last_name?: string | null } | null)?.last_name,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
+        String((learnerProfile as { email?: string | null } | null)?.email ?? "Alternant");
+      void notifyTutorMissionSubmitted({
+        db,
+        tutorId,
+        learnerName,
+        missionTitle: String((mission as { title?: string }).title ?? "Mission"),
+        learnerNote: learnerNote || null,
+        proofUrl: proofUrl || null,
+      }).catch((err) => console.warn("[apprenant/missions] mail tutor submit", err));
+    }
   }
 
   return NextResponse.json({ ok: true, status: nextStatus, proofUrl: proofUrl || null });

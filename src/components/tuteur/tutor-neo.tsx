@@ -188,18 +188,29 @@ export function TutorHome() {
                           void validate(action);
                         }}
                       >
-                        <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Commentaire" className="w-full rounded-xl bg-[#07080B] p-2 text-sm" />
+                        <textarea
+                          value={comment}
+                          onChange={(event) => setComment(event.target.value)}
+                          placeholder="Message pour l’alternant (obligatoire pour une correction)"
+                          className="w-full rounded-xl bg-[#07080B] p-2 text-sm"
+                        />
                         <div className="mt-2 flex gap-2">
                           <button type="submit" className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#07080B]">Valider</button>
                           <button
                             type="button"
                             className="rounded-full bg-[#3A1418] px-3 py-1 text-xs font-bold text-[#FF7A85]"
                             onClick={() => {
+                              const motif = comment.trim();
+                              if (!motif) return;
                               void fetch(`/api/tuteur/missions/${action.missionId}`, {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ statut: "INVALIDEE", motif: comment || "Correction demandée" }),
-                              }).then(() => setDone((current) => [...current, action.id]));
+                                body: JSON.stringify({ statut: "CORRECTION_REQUESTED", motif }),
+                              }).then(() => {
+                                setDone((current) => [...current, action.id]);
+                                setComment("");
+                                setOpenId(null);
+                              });
                             }}
                           >
                             Demander une correction

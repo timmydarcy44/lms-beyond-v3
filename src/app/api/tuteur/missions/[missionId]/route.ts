@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  notifyLearnerCorrectionRequested,
+  notifyLearnerMissionValidated,
+} from "@/lib/tuteur/mission-emails";
 import { recordTutorValidatedProof } from "@/lib/tuteur/skill-proof";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
 function mapBodyStatutToDb(statut: string): "todo" | "in_progress" | "done" | "invalid" | "validated" | "correction_requested" | null {
   const v = String(statut ?? "").toUpperCase().replace(/\s/g, "_");
@@ -95,8 +100,11 @@ export async function PATCH(
     updatePayload.tutor_comment = String(body.motif ?? "").trim() || null;
     updatePayload.invalidation_reason = null;
   } else if (correction) {
-    updatePayload.invalidation_reason = String(body.motif ?? "").trim();
+    const motif = String(body.motif ?? "").trim();
+    updatePayload.invalidation_reason = motif;
+    updatePayload.tutor_comment = motif;
     updatePayload.completed_at = null;
+    updatePayload.validated_at = null;
   } else {
     updatePayload.invalidation_reason = null;
     updatePayload.completed_at = null;
@@ -144,11 +152,15 @@ export async function PATCH(
     content: logContent,
   });
 
+  const mailDb = getServiceRoleClient() ?? supabase;
+  const missionTitle = String(existing.title ?? "Mission").trim() || "Mission";
+  const motif = String(body.motif ?? "").trim();
+
   if (validated) {
-    let label = String(existing.title ?? "").trim();
+    let label = missionTitle;
     const labeled = await supabase.from("tutor_missions").select("competency_label").eq("id", missionId).maybeSingle();
     if (!labeled.error && labeled.data?.competency_label) label = String(labeled.data.competency_label);
-    const note = String(body.motif ?? "").trim() || "Validée par le tuteur";
+    const note = motif || "Validée par le tuteur";
     await recordTutorValidatedProof(String(assignment.learner_id), label, note);
     await supabase.from("notifications").insert({
       user_id: assignment.learner_id,
@@ -157,14 +169,28 @@ export async function PATCH(
       message: `${label} a été validée par votre tuteur.`,
       read: false,
     });
+    void notifyLearnerMissionValidated({
+      db: mailDb,
+      learnerId: String(assignment.learner_id),
+      tutorName: auth.ctx.tutorName,
+      missionTitle: label,
+      message: motif || null,
+    }).catch((err) => console.warn("[tuteur/missions] mail validation", err));
   } else if (correction) {
     await supabase.from("notifications").insert({
       user_id: assignment.learner_id,
       type: "info",
       title: "Correction demandée",
-      message: String(body.motif ?? "").trim() || "Votre tuteur demande une correction.",
+      message: motif || "Votre tuteur demande une correction.",
       read: false,
     });
+    void notifyLearnerCorrectionRequested({
+      db: mailDb,
+      learnerId: String(assignment.learner_id),
+      tutorName: auth.ctx.tutorName,
+      missionTitle,
+      message: motif,
+    }).catch((err) => console.warn("[tuteur/missions] mail correction", err));
   }
 
   return NextResponse.json({

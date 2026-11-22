@@ -148,6 +148,14 @@ export function getCfaSpecializationLabel(value: string): string {
   return CFA_SPECIALIZATIONS.find((item) => item.value === value)?.label ?? value;
 }
 
+/** Libellé formation côté admissions / tuteur : « NTC AI Business ». */
+export function getCfaSpecializationFullLabel(value: string): string {
+  const item = CFA_SPECIALIZATIONS.find((entry) => entry.value === value);
+  if (!item) return value;
+  const prefix = item.group.split("·")[0]?.trim() || "CFA";
+  return `${prefix} ${item.label}`;
+}
+
 export type CfaProgramDownload = {
   id: string;
   first_name: string;

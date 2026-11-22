@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { uploadWithBucketFallback } from "@/lib/storage/ensure-bucket";
 import { getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
 import { notifyTutorMissionSubmitted } from "@/lib/tuteur/mission-emails";
 import {
@@ -11,6 +12,31 @@ export const dynamic = "force-dynamic";
 
 const PROOF_BUCKET = "tutor-mission-proofs";
 const MAX_FILE = 20 * 1024 * 1024;
+
+async function uploadMissionProof(
+  db: NonNullable<ReturnType<typeof getServiceRoleClient>>,
+  path: string,
+  buffer: Buffer,
+  contentType: string,
+) {
+  return uploadWithBucketFallback(db, {
+    preferredBucket: PROOF_BUCKET,
+    path,
+    buffer,
+    contentType,
+    preferredPublic: false,
+    fallbacks: [
+      { bucket: "cfa-applications", pathPrefix: "tutor-mission-proofs", public: false },
+      { bucket: "public", pathPrefix: "tutor-missions", public: true },
+    ],
+  });
+}
+
+function storePathRef(uploaded: { bucket: string; path: string; public: boolean }) {
+  if (uploaded.bucket === PROOF_BUCKET) return uploaded.path;
+  if (uploaded.public) return `public:${uploaded.path}`;
+  return `${uploaded.bucket}:${uploaded.path}`;
+}
 
 function sanitizeFileName(name: string) {
   return name
@@ -134,39 +160,24 @@ export async function PATCH(
       const safe = sanitizeFileName(file.name || "preuve");
       const path = `${session.id}/${missionId}/${Date.now()}-${safe}`;
       const buffer = Buffer.from(await file.arrayBuffer());
-      const { error: uploadErr } = await db.storage.from(PROOF_BUCKET).upload(path, buffer, {
-        contentType: file.type || "application/octet-stream",
-        upsert: true,
-      });
-      if (uploadErr) {
-        // Fallback bucket public si le privé n'existe pas encore
-        const alt = await db.storage.from("public").upload(`tutor-missions/${path}`, buffer, {
-          contentType: file.type || "application/octet-stream",
-          upsert: true,
-        });
-        if (alt.error) {
-          return NextResponse.json({ error: `Upload impossible : ${uploadErr.message}` }, { status: 400 });
-        }
-        files = [
-          ...existingFiles,
-          {
-            path: `public:tutor-missions/${path}`,
-            name: file.name,
-            size: file.size,
-            mime: file.type || "application/octet-stream",
-          },
-        ];
-      } else {
-        files = [
-          ...existingFiles,
-          {
-            path,
-            name: file.name,
-            size: file.size,
-            mime: file.type || "application/octet-stream",
-          },
-        ];
+      const uploaded = await uploadMissionProof(
+        db,
+        path,
+        buffer,
+        file.type || "application/octet-stream",
+      );
+      if ("error" in uploaded) {
+        return NextResponse.json({ error: `Upload impossible : ${uploaded.error}` }, { status: 400 });
       }
+      files = [
+        ...existingFiles,
+        {
+          path: storePathRef(uploaded),
+          name: file.name,
+          size: file.size,
+          mime: file.type || "application/octet-stream",
+        },
+      ];
     }
     const links = proofLinks.length ? proofLinks : existingLinks;
     const patch: Record<string, unknown> = {
@@ -204,16 +215,24 @@ export async function PATCH(
       const safe = sanitizeFileName(file.name || "preuve");
       const path = `${session.id}/${missionId}/${Date.now()}-${safe}`;
       const buffer = Buffer.from(await file.arrayBuffer());
-      const up = await db.storage.from(PROOF_BUCKET).upload(path, buffer, {
-        contentType: file.type || "application/octet-stream",
-        upsert: true,
-      });
-      if (!up.error) {
-        files = [
-          ...existingFiles,
-          { path, name: file.name, size: file.size, mime: file.type || "application/octet-stream" },
-        ];
+      const uploaded = await uploadMissionProof(
+        db,
+        path,
+        buffer,
+        file.type || "application/octet-stream",
+      );
+      if ("error" in uploaded) {
+        return NextResponse.json({ error: `Upload impossible : ${uploaded.error}` }, { status: 400 });
       }
+      files = [
+        ...existingFiles,
+        {
+          path: storePathRef(uploaded),
+          name: file.name,
+          size: file.size,
+          mime: file.type || "application/octet-stream",
+        },
+      ];
     }
     const links = proofLinks.length
       ? proofLinks
@@ -370,13 +389,23 @@ export async function GET(
     }
   }
 
-  if (path.startsWith("public:")) {
-    const publicPath = path.slice("public:".length);
-    const { data } = db.storage.from("public").getPublicUrl(publicPath);
+  let bucket = PROOF_BUCKET;
+  let objectPath = path;
+  const knownBuckets = ["public", "cfa-applications", "tutor-mission-proofs"] as const;
+  for (const name of knownBuckets) {
+    if (path.startsWith(`${name}:`)) {
+      bucket = name;
+      objectPath = path.slice(name.length + 1);
+      break;
+    }
+  }
+
+  if (bucket === "public") {
+    const { data } = db.storage.from("public").getPublicUrl(objectPath);
     return NextResponse.json({ url: data.publicUrl, expiresIn: null });
   }
 
-  const signed = await db.storage.from(PROOF_BUCKET).createSignedUrl(path, 60 * 10);
+  const signed = await db.storage.from(bucket).createSignedUrl(objectPath, 60 * 10);
   if (signed.error || !signed.data?.signedUrl) {
     return NextResponse.json({ error: signed.error?.message || "Signature impossible" }, { status: 400 });
   }

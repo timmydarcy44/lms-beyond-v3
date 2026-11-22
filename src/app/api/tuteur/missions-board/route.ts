@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { jadeMissionsBoard } from "@/lib/demo/jade-tutor-pages";
-import { listBlocks, listLearnerReferentials, listTutorMissions, relationMissing } from "@/lib/tuteur/followup-server";
+import { listBlocks, listLearnerReferentials, listTutorMissions } from "@/lib/tuteur/followup-server";
 import { notifyLearnerMissionAssigned } from "@/lib/tuteur/mission-emails";
 import { requireTutorClient } from "@/lib/tuteur/require-tutor";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -69,23 +69,33 @@ export async function POST(request: NextRequest) {
     .eq("tutor_id", auth.ctx.userId)
     .maybeSingle();
   if (!owned.data) return NextResponse.json({ error: "Alternant introuvable" }, { status: 404 });
+
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  const db = getServiceRoleClient() ?? auth.ctx.supabase;
   const ids: string[] = [];
   for (const item of items) {
+    const dueDate = item.dueDate ? new Date(item.dueDate) : null;
+    const dueIso =
+      dueDate && !Number.isNaN(dueDate.getTime()) ? dueDate.toISOString() : null;
+    const blockId = item.blockId && isUuid(item.blockId) ? item.blockId : null;
+    const skillId = item.skillId && isUuid(item.skillId) ? item.skillId : null;
     const payload = {
       assignment_id: assignmentId,
       title: item.title,
       instructions: item.description || null,
-      due_date: item.dueDate ? new Date(item.dueDate).toISOString() : null,
+      due_date: dueIso,
       status: "assigned",
-      competency_block_id: item.blockId || null,
+      competency_block_id: blockId,
       competency_code: item.blockCode || null,
       competency_label: item.blockTitle || null,
       deliverable: item.deliverable || null,
-      skill_id: item.skillId || null,
+      skill_id: skillId,
     };
-    let inserted = await auth.ctx.supabase.from("tutor_missions").insert(payload).select("id").single();
-    if (relationMissing(inserted.error) || (inserted.error && /status|skill_id|check|column/i.test(inserted.error.message))) {
-      inserted = await auth.ctx.supabase
+    let inserted = await db.from("tutor_missions").insert(payload).select("id").single();
+    if (inserted.error) {
+      // Status v2/v3, colonnes optionnelles, ou FK UUID absentes
+      inserted = await db
         .from("tutor_missions")
         .insert({
           assignment_id: assignmentId,
@@ -93,12 +103,18 @@ export async function POST(request: NextRequest) {
           instructions: payload.instructions,
           due_date: payload.due_date,
           status: "todo",
+          competency_code: payload.competency_code,
           deliverable: payload.deliverable,
         })
         .select("id")
         .single();
     }
-    if (inserted.error || !inserted.data) return NextResponse.json({ error: "Création impossible" }, { status: 500 });
+    if (inserted.error || !inserted.data) {
+      return NextResponse.json(
+        { error: inserted.error?.message || "Création impossible" },
+        { status: 500 },
+      );
+    }
     ids.push(String(inserted.data.id));
   }
 

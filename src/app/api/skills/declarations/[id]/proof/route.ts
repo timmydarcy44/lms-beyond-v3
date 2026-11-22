@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { uploadWithBucketFallback } from "@/lib/storage/ensure-bucket";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import {
   analyzeSkillProof,
@@ -8,7 +9,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const PROOF_BUCKET = "public";
+const PROOF_BUCKET = "skill-proofs";
 
 function sanitizeFileName(name: string) {
   return name
@@ -82,19 +83,34 @@ export async function POST(
       return NextResponse.json({ error: "Fichier trop volumineux (max 80 Mo)." }, { status: 400 });
     }
     const safe = sanitizeFileName(file.name || "preuve");
-    const path = `skill-proofs/${session.id}/${id}/${Date.now()}-${safe}`;
+    const path = `${session.id}/${id}/${Date.now()}-${safe}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { error: uploadErr } = await db.storage.from(PROOF_BUCKET).upload(path, buffer, {
+    const uploaded = await uploadWithBucketFallback(db, {
+      preferredBucket: PROOF_BUCKET,
+      path,
+      buffer,
       contentType: file.type || "application/octet-stream",
-      upsert: true,
+      preferredPublic: false,
+      fallbacks: [
+        { bucket: "cfa-applications", pathPrefix: "skill-proofs", public: false },
+        { bucket: "public", pathPrefix: "skill-proofs", public: true },
+      ],
     });
-    if (uploadErr) {
-      return NextResponse.json({ error: `Upload impossible : ${uploadErr.message}` }, { status: 400 });
+    if ("error" in uploaded) {
+      return NextResponse.json({ error: `Upload impossible : ${uploaded.error}` }, { status: 400 });
     }
-    proofFilePath = path;
+    proofFilePath =
+      uploaded.bucket === PROOF_BUCKET
+        ? uploaded.path
+        : `${uploaded.bucket}:${uploaded.path}`;
     if (!proofUrl) {
-      const { data: pub } = db.storage.from(PROOF_BUCKET).getPublicUrl(path);
-      proofUrl = pub?.publicUrl || "";
+      if (uploaded.public) {
+        const { data: pub } = db.storage.from(uploaded.bucket).getPublicUrl(uploaded.path);
+        proofUrl = pub?.publicUrl || "";
+      } else {
+        const signed = await db.storage.from(uploaded.bucket).createSignedUrl(uploaded.path, 60 * 60 * 24 * 7);
+        proofUrl = signed.data?.signedUrl || "";
+      }
     }
   }
 

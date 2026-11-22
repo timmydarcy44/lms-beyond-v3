@@ -26,7 +26,11 @@ import {
   type AdmissionStageId,
 } from "@/lib/cfa/admission-stages";
 import { hostStageFromStatus, shortFrDate } from "@/lib/cfa/host-company-stages";
-import { getCfaSpecializationLabel, type CfaApplication } from "@/lib/cfa-applications";
+import {
+  getCfaSpecializationFullLabel,
+  getCfaSpecializationLabel,
+  type CfaApplication,
+} from "@/lib/cfa-applications";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 
 function stageOf(item: CfaApplication): AdmissionStageId | null {
@@ -437,7 +441,7 @@ export function CfaPipelineClient({
             const progress = stageProgressIndex(item.status, stageCtx);
             const missing = missingAdminDocs(item.administrative_documents);
             const action = nextAction(item);
-            const track = getCfaSpecializationLabel(item.specialization);
+            const track = getCfaSpecializationFullLabel(item.specialization);
             const created = shortFrDate(item.created_at);
             return (
               <button
@@ -679,7 +683,7 @@ function BoardView({
                     {formatPersonName(`${item.first_name} ${item.last_name}`)}
                   </p>
                   <p className="truncate text-xs text-[#9AA3BD]">
-                    {getCfaSpecializationLabel(item.specialization)}
+                    {getCfaSpecializationFullLabel(item.specialization)}
                   </p>
                 </button>
               ))}
@@ -729,7 +733,7 @@ function ProposeModal({
             {candidates.map((c) => (
               <option key={c.id} value={c.id}>
                 {formatPersonName(`${c.first_name} ${c.last_name}`)} ·{" "}
-                {getCfaSpecializationLabel(c.specialization)}
+                {getCfaSpecializationFullLabel(c.specialization)}
               </option>
             ))}
           </select>

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Situation calculée côté serveur — jamais choisie par l'apprenant.
- * - apprentice : contrat d'alternance actif
+ * - apprentice : contrat d'alternance actif OU placement CFA ouvert (entreprise assignée)
  * - employee   : salarié formé par son entreprise (espace Business)
  * - candidate  : candidature Byound School en cours
  * - learner    : défaut
@@ -45,6 +45,83 @@ function normalizeRole(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+async function loadApplicationIds(
+  db: SupabaseClient,
+  userId: string,
+): Promise<string[]> {
+  const byProfile = await db
+    .from("cfa_applications")
+    .select("id")
+    .eq("profile_id", userId)
+    .limit(30);
+  const ids = new Set(
+    (byProfile.data ?? []).map((a) => String((a as { id: string }).id)),
+  );
+
+  const emailRes = await db.from("profiles").select("email").eq("id", userId).maybeSingle();
+  const mail = String((emailRes.data as { email?: string } | null)?.email ?? "")
+    .trim()
+    .toLowerCase();
+  if (mail) {
+    const byEmail = await db
+      .from("cfa_applications")
+      .select("id")
+      .ilike("email", mail)
+      .limit(30);
+    for (const row of byEmail.data ?? []) {
+      ids.add(String((row as { id: string }).id));
+    }
+  }
+  return [...ids];
+}
+
+async function resolveFromPlacement(
+  db: SupabaseClient,
+  userId: string,
+): Promise<LearnerSituationDetails | null> {
+  const appIds = await loadApplicationIds(db, userId);
+  if (!appIds.length) return null;
+
+  const placement = await db
+    .from("apprentice_placements")
+    .select("id, company_id, tutor_id, apprentice_id, status")
+    .in("apprentice_id", appIds)
+    .in("status", ["active", "pending"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (placement.error || !placement.data) return null;
+
+  const p = placement.data as {
+    company_id: string;
+    tutor_id: string | null;
+    apprentice_id: string;
+    status: string;
+  };
+
+  let tutorUserId: string | null = null;
+  if (p.tutor_id) {
+    const tutor = await db
+      .from("company_tutors")
+      .select("user_id")
+      .eq("id", p.tutor_id)
+      .maybeSingle();
+    tutorUserId = tutor.data
+      ? String((tutor.data as { user_id?: string | null }).user_id ?? "") || null
+      : null;
+  }
+
+  return {
+    situation: "apprentice",
+    activeContractId: null,
+    companyId: p.company_id,
+    tutorId: tutorUserId,
+    applicationId: p.apprentice_id,
+    showAlternanceNav: true,
+  };
+}
+
 export async function resolveLearnerSituation(
   db: SupabaseClient,
   userId: string,
@@ -84,51 +161,21 @@ export async function resolveLearnerSituation(
     };
   }
 
-  // Fallback placements si migration contrats pas encore appliquée
-  if (contractRes.error && /alternance_contracts|schema cache|does not exist/i.test(contractRes.error.message)) {
-    const apps = await db
-      .from("cfa_applications")
-      .select("id")
-      .eq("profile_id", userId)
-      .limit(20);
-    const appIds = (apps.data ?? []).map((a) => String((a as { id: string }).id));
-    if (appIds.length) {
-      const placement = await db
-        .from("apprentice_placements")
-        .select("id, company_id, tutor_id, apprentice_id")
-        .in("apprentice_id", appIds)
-        .eq("status", "active")
-        .maybeSingle();
-      if (placement.data) {
-        const p = placement.data as {
-          company_id: string;
-          tutor_id: string | null;
-          apprentice_id: string;
-        };
-        let tutorUserId: string | null = null;
-        if (p.tutor_id) {
-          const tutor = await db
-            .from("company_tutors")
-            .select("user_id")
-            .eq("id", p.tutor_id)
-            .maybeSingle();
-          tutorUserId = tutor.data
-            ? String((tutor.data as { user_id?: string | null }).user_id ?? "") || null
-            : null;
-        }
-        return {
-          situation: "apprentice",
-          activeContractId: null,
-          companyId: p.company_id,
-          tutorId: tutorUserId,
-          applicationId: p.apprentice_id,
-          showAlternanceNav: true,
-        };
-      }
-    }
+  // 2) Placement CFA ouvert (entreprise assignée, même sans tuteur / contrat encore)
+  //    Couvre aussi le cas où la table contrats existe mais n'a pas encore de ligne.
+  const fromPlacement = await resolveFromPlacement(db, userId);
+  if (fromPlacement) return fromPlacement;
+
+  // Ancien fallback si la table contrats n'existe pas encore (erreur schéma)
+  if (
+    contractRes.error &&
+    /alternance_contracts|schema cache|does not exist/i.test(contractRes.error.message)
+  ) {
+    const again = await resolveFromPlacement(db, userId);
+    if (again) return again;
   }
 
-  // 2) Salarié entreprise (Business) → employee
+  // 3) Salarié entreprise (Business) → employee
   const profile = await db
     .from("profiles")
     .select("role, role_type, company_id, entreprise_id")
@@ -147,7 +194,7 @@ export async function resolveLearnerSituation(
     return { ...empty, situation: "employee" };
   }
 
-  // 3) Candidature Byound School ouverte → candidate
+  // 4) Candidature Byound School ouverte → candidate
   const candidature = await db
     .from("cfa_applications")
     .select("id, status")

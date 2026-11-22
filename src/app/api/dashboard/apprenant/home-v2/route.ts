@@ -211,7 +211,7 @@ export async function GET() {
     badgeReadyName: skills.toStrengthen[0]?.name ?? null,
   });
 
-  // Alternance bandeau (si contrat actif)
+  // Alternance bandeau (contrat actif OU entreprise d'accueil déjà assignée)
   let alternance: null | {
     mode: "entreprise" | "ecole" | "vacances";
     companyName: string | null;
@@ -221,38 +221,47 @@ export async function GET() {
     daysUntil: number | null;
   } = null;
 
-  if (situation.showAlternanceNav && situation.activeContractId) {
-    const { data: contract } = await db
-      .from("alternance_contracts")
-      .select("company_id, tutor_id")
-      .eq("id", situation.activeContractId)
-      .maybeSingle();
+  if (situation.showAlternanceNav && situation.companyId) {
     let companyName: string | null = null;
     let tutorName: string | null = null;
-    if (contract) {
-      const companyId = String((contract as { company_id: string }).company_id);
-      const tutorId = (contract as { tutor_id?: string | null }).tutor_id;
-      const { data: company } = await db
-        .from("cfa_companies")
-        .select("company_name")
-        .eq("id", companyId)
+    const companyId = situation.companyId;
+    const tutorId = situation.tutorId;
+
+    const { data: company } = await db
+      .from("cfa_companies")
+      .select("company_name")
+      .eq("id", companyId)
+      .maybeSingle();
+    companyName = company
+      ? String((company as { company_name?: string }).company_name ?? "") || null
+      : null;
+
+    if (tutorId) {
+      const { data: tutor } = await db
+        .from("profiles")
+        .select("first_name, last_name, full_name")
+        .eq("id", tutorId)
         .maybeSingle();
-      companyName = company
-        ? String((company as { company_name?: string }).company_name ?? "")
-        : null;
-      if (tutorId) {
-        const { data: tutor } = await db
-          .from("profiles")
-          .select("first_name, last_name, full_name")
-          .eq("id", tutorId)
+      if (tutor) {
+        tutorName =
+          [tutor.first_name, tutor.last_name].filter(Boolean).join(" ").trim() ||
+          String(tutor.full_name ?? "") ||
+          null;
+      }
+      if (!tutorName) {
+        const { data: companyTutor } = await db
+          .from("company_tutors")
+          .select("first_name, last_name")
+          .eq("user_id", tutorId)
           .maybeSingle();
-        if (tutor) {
+        if (companyTutor) {
           tutorName =
-            [tutor.first_name, tutor.last_name].filter(Boolean).join(" ").trim() ||
-            String(tutor.full_name ?? "");
+            [companyTutor.first_name, companyTutor.last_name].filter(Boolean).join(" ").trim() ||
+            null;
         }
       }
     }
+
     alternance = {
       mode: "entreprise",
       companyName,

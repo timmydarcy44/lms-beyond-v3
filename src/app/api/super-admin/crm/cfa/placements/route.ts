@@ -143,15 +143,29 @@ export async function POST(request: NextRequest) {
     const city = body.city ?? "";
     const created = await db.from("cfa_companies").insert({ company_name: companyName, siret: siret || null, city: city || null, status: "to_contact" }).select("id").single();
     if (created.error || !created.data) return NextResponse.json({ error: created.error?.message ?? "Création impossible" }, { status: 400 });
+    const actor = await actorId();
     await closeOpen();
-    const placed = await db.from("apprentice_placements").insert({
-      apprentice_id: applicationId,
-      company_id: created.data.id,
-      status: "pending",
-      created_by: await actorId(),
+    const placed = await db
+      .from("apprentice_placements")
+      .insert({
+        apprentice_id: applicationId,
+        company_id: created.data.id,
+        status: "pending",
+        created_by: actor,
+      })
+      .select("id")
+      .single();
+    if (placed.error || !placed.data) {
+      return NextResponse.json({ error: placed.error?.message ?? "Placement impossible" }, { status: 400 });
+    }
+    await activateAlternanceContract(db, {
+      applicationId,
+      companyId: created.data.id,
+      placementId: String((placed.data as { id: string }).id),
+      createdBy: actor,
+      status: "active",
     });
-    if (placed.error) return NextResponse.json({ error: placed.error.message }, { status: 400 });
-    await recordCfaAudit(db, { actorId: await actorId(), applicationId, action: "placement_company", newValue: created.data.id });
+    await recordCfaAudit(db, { actorId: actor, applicationId, action: "placement_company", newValue: created.data.id });
     return NextResponse.json({ ok: true, companyId: created.data.id });
   }
 
@@ -160,13 +174,28 @@ export async function POST(request: NextRequest) {
     const companyId = body.companyId;
     const actor = await actorId();
     await closeOpen();
-    const placed = await db.from("apprentice_placements").insert({
-      apprentice_id: applicationId,
-      company_id: companyId,
-      status: "pending",
-      created_by: actor,
+    const placed = await db
+      .from("apprentice_placements")
+      .insert({
+        apprentice_id: applicationId,
+        company_id: companyId,
+        status: "pending",
+        created_by: actor,
+      })
+      .select("id")
+      .single();
+    if (placed.error || !placed.data) {
+      return NextResponse.json({ error: placed.error?.message ?? "Placement impossible" }, { status: 400 });
+    }
+    // Dès l'entreprise assignée, activer le contrat pour que le dashboard apprenant
+    // affiche l'entreprise d'accueil (le tuteur pourra être ajouté ensuite).
+    await activateAlternanceContract(db, {
+      applicationId,
+      companyId,
+      placementId: String((placed.data as { id: string }).id),
+      createdBy: actor,
+      status: "active",
     });
-    if (placed.error) return NextResponse.json({ error: placed.error.message }, { status: 400 });
     await syncTutorAssignment(db, applicationId);
     await recordCfaAudit(db, { actorId: actor, applicationId, action: "placement_company", newValue: companyId });
     await logCompanyEvent(db, {

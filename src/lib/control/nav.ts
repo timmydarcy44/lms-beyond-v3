@@ -93,6 +93,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         match: under("/super/formations-byound"),
       },
       {
+        id: "skills-review",
+        label: "Compétences à classer",
+        href: "/super/competences-a-classer",
+        match: under("/super/competences-a-classer"),
+      },
+      {
         id: "accueil",
         label: "Entreprises d'accueil",
         href: "/super/crm/cfa/entreprises",

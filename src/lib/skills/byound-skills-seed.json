@@ -1,0 +1,1350 @@
+{
+  "domains": [
+    {
+      "slug": "vente-et-relation-client",
+      "label": "Vente et relation client",
+      "position": 1
+    },
+    {
+      "slug": "commerce-en-boutique",
+      "label": "Commerce en boutique",
+      "position": 2
+    },
+    {
+      "slug": "marketing-et-communication",
+      "label": "Marketing et communication",
+      "position": 3
+    },
+    {
+      "slug": "management-et-encadrement",
+      "label": "Management et encadrement",
+      "position": 4
+    },
+    {
+      "slug": "gestion-et-organisation",
+      "label": "Gestion et organisation",
+      "position": 5
+    },
+    {
+      "slug": "sport-business",
+      "label": "Sport business",
+      "position": 6
+    },
+    {
+      "slug": "immobilier",
+      "label": "Immobilier",
+      "position": 7
+    },
+    {
+      "slug": "sante-et-medico-social",
+      "label": "Santé et médico-social",
+      "position": 8
+    },
+    {
+      "slug": "numerique-et-ia",
+      "label": "Numérique et IA",
+      "position": 9
+    },
+    {
+      "slug": "developpement-web-profils-techniques",
+      "label": "Développement web (profils techniques)",
+      "position": 10
+    },
+    {
+      "slug": "soft-skills",
+      "label": "Soft skills",
+      "position": 11
+    }
+  ],
+  "skills": [
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "prospection-a-froid",
+      "label": "Prospection à froid",
+      "description": "Contacter des personnes qui ne te connaissent pas encore",
+      "aliases": [
+        "phoning",
+        "appeler des prospects",
+        "démarchage",
+        "cold call",
+        "cold email",
+        "trouver des nouveaux clients",
+        "LinkedIn prospection",
+        "Prospection téléphonique",
+        "Cold emailing (délivrabilité)",
+        "Social selling (LinkedIn)",
+        "Multi-channel sequencing",
+        "Account-based marketing (ABM)",
+        "Scripts de vente directe",
+        "Cold Calling"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "prospection-a-chaud",
+      "label": "Prospection à chaud",
+      "description": "Relancer des personnes déjà intéressées",
+      "aliases": [
+        "relance",
+        "leads chauds",
+        "suivi des contacts",
+        "nurturing",
+        "Gestion de volume de leads",
+        "Lead scoring",
+        "Lead nurturing"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "prise-de-rendez-vous",
+      "label": "Prise de rendez-vous",
+      "description": "Décrocher un rendez-vous par téléphone ou par message",
+      "aliases": [
+        "prise de RDV",
+        "qualification",
+        "setting"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "decouverte-des-besoins",
+      "label": "Découverte des besoins",
+      "description": "Poser les bonnes questions pour comprendre le client",
+      "aliases": [
+        "questionnement",
+        "écoute client",
+        "SPIN",
+        "questions ouvertes",
+        "questions calibrées",
+        "Empathie tactique",
+        "Étiquetage émotionnel (labeling)",
+        "Miroir (mirroring)",
+        "SPIN selling"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "argumentation",
+      "label": "Argumentation",
+      "description": "Présenter une offre de façon convaincante",
+      "aliases": [
+        "pitch",
+        "présentation commerciale",
+        "vente de valeur",
+        "Vente de valeur (value-based)",
+        "Preuve sociale",
+        "Réciprocité",
+        "Créer une urgence légitime",
+        "Gestion de l'Urgence (FOMO)",
+        "Biais de décision",
+        "Biais Cognitifs"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "traitement-des-objections",
+      "label": "Traitement des objections",
+      "description": "Répondre aux « c'est trop cher », « je vais réfléchir »…",
+      "aliases": [
+        "objections",
+        "gérer les refus",
+        "Traitement des objections complexes (pant)"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "negociation",
+      "label": "Négociation",
+      "description": "Trouver un accord gagnant-gagnant sur le prix et les conditions",
+      "aliases": [
+        "négocier",
+        "négociation commerciale",
+        "ancrage de prix",
+        "négociation de contrat",
+        "Gestion du silence",
+        "Négociation de contrat (legal/procurement)"
+      ],
+      "is_soft": false,
+      "position": 7
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "closing",
+      "label": "Closing",
+      "description": "Conclure une vente et faire signer",
+      "aliases": [
+        "conclure",
+        "signer",
+        "finaliser une vente",
+        "closer",
+        "Closing assomptif",
+        "Closing téléphonique"
+      ],
+      "is_soft": false,
+      "position": 8
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "fidelisation-client",
+      "label": "Fidélisation client",
+      "description": "Garder ses clients et les faire revenir",
+      "aliases": [
+        "suivi client",
+        "satisfaction client",
+        "rétention",
+        "relation client"
+      ],
+      "is_soft": false,
+      "position": 9
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "vente-aux-entreprises-b2b",
+      "label": "Vente aux entreprises (B2B)",
+      "description": "Vendre à des professionnels, souvent sur un cycle long",
+      "aliases": [
+        "B2B",
+        "grands comptes",
+        "vente complexe",
+        "cycle de vente long",
+        "Vente en B2B",
+        "Gestion du cycle de vente long"
+      ],
+      "is_soft": false,
+      "position": 10
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "gestion-d-un-portefeuille-clients",
+      "label": "Gestion d'un portefeuille clients",
+      "description": "Suivre et développer un ensemble de clients",
+      "aliases": [
+        "account management",
+        "comptes clients"
+      ],
+      "is_soft": false,
+      "position": 11
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "utilisation-d-un-crm",
+      "label": "Utilisation d'un CRM",
+      "description": "Tenir à jour ses contacts et ses ventes dans un outil",
+      "aliases": [
+        "CRM",
+        "HubSpot",
+        "Salesforce",
+        "Pipedrive",
+        "pipeline",
+        "Hygiène CRM (Salesforce/HubSpot)",
+        "Automatisation de pipeline"
+      ],
+      "is_soft": false,
+      "position": 12
+    },
+    {
+      "domain_slug": "vente-et-relation-client",
+      "slug": "suivi-des-resultats-commerciaux",
+      "label": "Suivi des résultats commerciaux",
+      "description": "Suivre ses chiffres et ses objectifs",
+      "aliases": [
+        "KPI",
+        "reporting",
+        "tableau de bord commercial",
+        "Reporting & KPIs"
+      ],
+      "is_soft": false,
+      "position": 13
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "accueil-client-en-magasin",
+      "label": "Accueil client en magasin",
+      "description": "Accueillir et conseiller en boutique",
+      "aliases": [
+        "vente en magasin",
+        "conseil client",
+        "retail"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "merchandising",
+      "label": "Merchandising",
+      "description": "Mettre les produits en valeur dans le magasin",
+      "aliases": [
+        "visuel merchandising",
+        "mise en rayon",
+        "vitrine",
+        "implantation"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "vente-additionnelle",
+      "label": "Vente additionnelle",
+      "description": "Proposer un produit en plus ou mieux adapté",
+      "aliases": [
+        "upsell",
+        "cross-sell",
+        "panier moyen"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "gestion-des-stocks",
+      "label": "Gestion des stocks",
+      "description": "Commander, ranger et suivre les produits",
+      "aliases": [
+        "inventaire",
+        "réassort",
+        "réception marchandise"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "encaissement",
+      "label": "Encaissement",
+      "description": "Tenir la caisse et les paiements",
+      "aliases": [
+        "caisse",
+        "encaisser"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "animation-commerciale",
+      "label": "Animation commerciale",
+      "description": "Organiser une opération pour attirer les clients",
+      "aliases": [
+        "promotion",
+        "animation magasin",
+        "événement boutique"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "commerce-en-boutique",
+      "slug": "vente-de-produits-haut-de-gamme",
+      "label": "Vente de produits haut de gamme",
+      "description": "Vendre dans le luxe et le premium",
+      "aliases": [
+        "luxe",
+        "premium",
+        "clientèle exigeante"
+      ],
+      "is_soft": false,
+      "position": 7
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "marketing-d-influence",
+      "label": "Marketing d'influence",
+      "description": "Travailler avec des créateurs de contenu",
+      "aliases": [
+        "influenceurs",
+        "partenariats influence"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "seo",
+      "label": "SEO",
+      "description": "Être bien placé sur Google sans payer",
+      "aliases": [
+        "référencement naturel",
+        "SEO sémantique",
+        "SEO sémantique (bottom of funnel)"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "sea",
+      "label": "SEA",
+      "description": "Faire de la publicité sur Google",
+      "aliases": [
+        "Google Ads",
+        "référencement payant"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "smo",
+      "label": "SMO",
+      "description": "Faire connaître une marque sur les réseaux sociaux",
+      "aliases": [
+        "réseaux sociaux",
+        "présence sociale",
+        "Instagram",
+        "TikTok",
+        "LinkedIn"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "sma",
+      "label": "SMA",
+      "description": "Faire de la publicité sur les réseaux sociaux",
+      "aliases": [
+        "Meta Ads",
+        "publicité Facebook",
+        "publicité Instagram",
+        "LinkedIn Ads"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "community-management",
+      "label": "Community management",
+      "description": "Animer une communauté en ligne",
+      "aliases": [
+        "CM",
+        "community manager",
+        "modération"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "creation-de-contenu",
+      "label": "Création de contenu",
+      "description": "Créer des posts, vidéos, visuels",
+      "aliases": [
+        "contenu",
+        "content marketing",
+        "ghostwriting",
+        "vidéo",
+        "reels",
+        "Gestion de l'image (personal branding) des athlètes",
+        "Stratégie de content marketing",
+        "Lead magnets",
+        "Ghostwriting LinkedIn",
+        "Storytelling de marque"
+      ],
+      "is_soft": false,
+      "position": 7
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "redaction-web",
+      "label": "Rédaction web",
+      "description": "Écrire des textes pour le web",
+      "aliases": [
+        "copywriting",
+        "rédaction",
+        "storytelling",
+        "micro-copy",
+        "Frameworks AIDA/PAS",
+        "Micro-copy de conversion (CTA)"
+      ],
+      "is_soft": false,
+      "position": 8
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "e-mailing",
+      "label": "E-mailing",
+      "description": "Envoyer des campagnes par e-mail",
+      "aliases": [
+        "newsletter",
+        "emailing",
+        "lead nurturing"
+      ],
+      "is_soft": false,
+      "position": 9
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "analyse-des-statistiques",
+      "label": "Analyse des statistiques",
+      "description": "Lire les chiffres d'un site ou d'une campagne",
+      "aliases": [
+        "Google Analytics",
+        "A/B test",
+        "taux de conversion",
+        "Neuromarketing",
+        "Analyse des parcours d'achat",
+        "Psychologie des prix",
+        "Étude des motivations profondes (jobs-to-be-done)",
+        "Détection des signaux faibles (tendances émergentes)",
+        "Social listening",
+        "Veille concurrentielle de niche",
+        "Framework AARRR",
+        "A/b testing",
+        "Analyse de churn"
+      ],
+      "is_soft": false,
+      "position": 10
+    },
+    {
+      "domain_slug": "marketing-et-communication",
+      "slug": "organisation-d-evenements",
+      "label": "Organisation d'événements",
+      "description": "Préparer et animer un événement",
+      "aliases": [
+        "événementiel",
+        "salon",
+        "séminaire"
+      ],
+      "is_soft": false,
+      "position": 11
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "animer-une-equipe",
+      "label": "Animer une équipe",
+      "description": "Motiver et faire avancer un groupe",
+      "aliases": [
+        "manager",
+        "encadrer",
+        "leadership d'équipe"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "deleguer",
+      "label": "Déléguer",
+      "description": "Confier une tâche et suivre sa réalisation",
+      "aliases": [
+        "délégation"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "fixer-des-objectifs",
+      "label": "Fixer des objectifs",
+      "description": "Donner un cap clair et mesurable",
+      "aliases": [
+        "objectifs",
+        "OKR",
+        "Méthode OKR"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "conduire-un-entretien-annuel",
+      "label": "Conduire un entretien annuel",
+      "description": "Préparer et mener l'échange annuel",
+      "aliases": [
+        "entretien individuel",
+        "entretien professionnel"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "recruter",
+      "label": "Recruter",
+      "description": "Trouver et choisir les bonnes personnes",
+      "aliases": [
+        "recrutement",
+        "entretien d'embauche",
+        "Recrutement de talents"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "integrer-un-nouvel-arrivant",
+      "label": "Intégrer un nouvel arrivant",
+      "description": "Accueillir et former un nouveau collègue",
+      "aliases": [
+        "onboarding",
+        "intégration"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "gerer-les-plannings",
+      "label": "Gérer les plannings",
+      "description": "Organiser les présences et les remplacements",
+      "aliases": [
+        "planning",
+        "emploi du temps",
+        "roulement"
+      ],
+      "is_soft": false,
+      "position": 7
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "accompagner-le-changement",
+      "label": "Accompagner le changement",
+      "description": "Aider une équipe à changer ses habitudes",
+      "aliases": [
+        "conduite du changement",
+        "transformation",
+        "management de transition"
+      ],
+      "is_soft": false,
+      "position": 8
+    },
+    {
+      "domain_slug": "management-et-encadrement",
+      "slug": "tutorat",
+      "label": "Tutorat",
+      "description": "Transmettre son savoir-faire à un apprenant",
+      "aliases": [
+        "mentorat",
+        "maître d'apprentissage",
+        "tuteur"
+      ],
+      "is_soft": false,
+      "position": 9
+    },
+    {
+      "domain_slug": "gestion-et-organisation",
+      "slug": "gestion-de-projet",
+      "label": "Gestion de projet",
+      "description": "Planifier et piloter un projet jusqu'au bout",
+      "aliases": [
+        "chef de projet",
+        "rétroplanning"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "gestion-et-organisation",
+      "slug": "methode-agile",
+      "label": "Méthode agile",
+      "description": "Avancer par petites étapes avec des points réguliers",
+      "aliases": [
+        "agile",
+        "scrum",
+        "sprint",
+        "kanban",
+        "Méthode agile/scrum",
+        "Gestion de roadmap (Linear)",
+        "User stories"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "gestion-et-organisation",
+      "slug": "gestion-d-un-budget",
+      "label": "Gestion d'un budget",
+      "description": "Prévoir et suivre les dépenses",
+      "aliases": [
+        "budget",
+        "pilotage budgétaire"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "gestion-et-organisation",
+      "slug": "tableaux-de-bord",
+      "label": "Tableaux de bord",
+      "description": "Suivre des indicateurs",
+      "aliases": [
+        "reporting",
+        "KPI",
+        "indicateurs"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "gestion-et-organisation",
+      "slug": "tableur",
+      "label": "Tableur",
+      "description": "Utiliser Excel ou Google Sheets",
+      "aliases": [
+        "Excel",
+        "Google Sheets",
+        "tableau croisé dynamique"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "gestion-et-organisation",
+      "slug": "organisation-administrative",
+      "label": "Organisation administrative",
+      "description": "Gérer les dossiers et les démarches",
+      "aliases": [
+        "administratif",
+        "classement"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "recherche-de-sponsors",
+      "label": "Recherche de sponsors",
+      "description": "Trouver des entreprises partenaires pour un club",
+      "aliases": [
+        "sponsoring",
+        "partenaires",
+        "commercialisation de sponsoring",
+        "Commercialisation de sponsoring (B2B)",
+        "Prospection de grands comptes sportifs",
+        "Networking B2B en environnement sportif"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "dossier-de-partenariat",
+      "label": "Dossier de partenariat",
+      "description": "Rédiger une proposition de partenariat",
+      "aliases": [
+        "plaquette partenaire",
+        "dossier sponsor",
+        "Rédaction de dossiers de partenariat"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "activation-des-partenaires",
+      "label": "Activation des partenaires",
+      "description": "Faire vivre un partenariat (visibilité, événements)",
+      "aliases": [
+        "activation",
+        "dispositif 360",
+        "Activation partenaire (dispositifs 360°)",
+        "Suivi opérationnel de contrat",
+        "Gestion de portefeuille partenaires",
+        "Gestion de Portefeuille Partenaires (Fidélisation & Rétention)",
+        "Gestion de la relation partenaire"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "hospitalites-et-loges",
+      "label": "Hospitalités et loges",
+      "description": "Accueillir les partenaires les jours de match",
+      "aliases": [
+        "loges VIP",
+        "réceptif",
+        "matchday",
+        "Gestion de loges VIP",
+        "Expérience client jour de match (matchday experience)",
+        "Upsell de prestations de services"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "billetterie",
+      "label": "Billetterie",
+      "description": "Vendre et gérer les places",
+      "aliases": [
+        "billets",
+        "abonnements"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "mecenat",
+      "label": "Mécénat",
+      "description": "Monter un soutien d'entreprise avec avantage fiscal",
+      "aliases": [
+        "mécénat",
+        "fondation",
+        "Ingénierie du mécénat (fiscalité & éthique)"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "sport-business",
+      "slug": "bilan-d-un-partenariat",
+      "label": "Bilan d'un partenariat",
+      "description": "Mesurer ce que le partenariat a rapporté",
+      "aliases": [
+        "ROI partenaire",
+        "reporting d'impact",
+        "Analyse du ROI partenaire (visibilité/engagement/data)",
+        "Reporting d'impact (social & business)",
+        "Étude de notoriété de marque"
+      ],
+      "is_soft": false,
+      "position": 7
+    },
+    {
+      "domain_slug": "immobilier",
+      "slug": "estimation-d-un-bien",
+      "label": "Estimation d'un bien",
+      "description": "Donner la valeur d'un logement ou d'un local",
+      "aliases": [
+        "estimation",
+        "évaluation immobilière"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "immobilier",
+      "slug": "prise-de-mandat",
+      "label": "Prise de mandat",
+      "description": "Convaincre un propriétaire de confier son bien",
+      "aliases": [
+        "mandat",
+        "rentrer des mandats",
+        "prospection immobilière"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "immobilier",
+      "slug": "visites-et-negociation-immobiliere",
+      "label": "Visites et négociation immobilière",
+      "description": "Faire visiter et négocier l'offre",
+      "aliases": [
+        "visite",
+        "offre d'achat"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "immobilier",
+      "slug": "gestion-locative",
+      "label": "Gestion locative",
+      "description": "Gérer un bien en location",
+      "aliases": [
+        "location",
+        "bail",
+        "état des lieux"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "immobilier",
+      "slug": "reglementation-immobiliere",
+      "label": "Réglementation immobilière",
+      "description": "Connaître les règles (loi Alur, diagnostics…)",
+      "aliases": [
+        "loi Alur",
+        "réglementation",
+        "compromis de vente"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "sante-et-medico-social",
+      "slug": "cadre-reglementaire-du-medico-social",
+      "label": "Cadre réglementaire du médico-social",
+      "description": "Connaître les règles d'un établissement",
+      "aliases": [
+        "réglementation",
+        "ESMS",
+        "loi 2002-2",
+        "ARS"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "sante-et-medico-social",
+      "slug": "bientraitance",
+      "label": "Bientraitance",
+      "description": "Garantir un accompagnement respectueux",
+      "aliases": [
+        "bientraitance",
+        "éthique du soin"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "sante-et-medico-social",
+      "slug": "accompagnement-des-familles",
+      "label": "Accompagnement des familles",
+      "description": "Informer et rassurer les proches",
+      "aliases": [
+        "familles",
+        "aidants"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "sante-et-medico-social",
+      "slug": "qualite-et-securite",
+      "label": "Qualité et sécurité",
+      "description": "Suivre les procédures et les indicateurs qualité",
+      "aliases": [
+        "démarche qualité",
+        "évaluation HAS",
+        "sécurité des soins"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "sante-et-medico-social",
+      "slug": "coordination-d-equipe-soignante",
+      "label": "Coordination d'équipe soignante",
+      "description": "Organiser le travail entre soignants",
+      "aliases": [
+        "coordination des soins",
+        "transmissions"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "utiliser-l-ia-au-quotidien",
+      "label": "Utiliser l'IA au quotidien",
+      "description": "Se servir de ChatGPT, Claude… pour son travail",
+      "aliases": [
+        "IA",
+        "ChatGPT",
+        "Claude",
+        "Copilot",
+        "IA générative"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "rediger-des-prompts",
+      "label": "Rédiger des prompts",
+      "description": "Bien formuler ses demandes à une IA",
+      "aliases": [
+        "prompt",
+        "prompt engineering",
+        "Prompt engineering avancé"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "automatiser-des-taches",
+      "label": "Automatiser des tâches",
+      "description": "Relier des outils pour gagner du temps",
+      "aliases": [
+        "automatisation",
+        "Make",
+        "Zapier",
+        "n8n",
+        "Automatisation (Make/Zapier)",
+        "Automatisation IA (n8n)"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "outils-bureautiques",
+      "label": "Outils bureautiques",
+      "description": "Word, PowerPoint, Google Docs…",
+      "aliases": [
+        "bureautique",
+        "Office",
+        "Google Workspace"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "creation-graphique",
+      "label": "Création graphique",
+      "description": "Créer des visuels simples",
+      "aliases": [
+        "Canva",
+        "Figma",
+        "design graphique"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "creer-un-site-sans-coder",
+      "label": "Créer un site sans coder",
+      "description": "Monter un site avec un outil simple",
+      "aliases": [
+        "no-code",
+        "Wix",
+        "Webflow",
+        "WordPress"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "numerique-et-ia",
+      "slug": "analyse-de-donnees",
+      "label": "Analyse de données",
+      "description": "Faire parler des chiffres",
+      "aliases": [
+        "data",
+        "analyse",
+        "statistiques",
+        "Analyse de données prédictives"
+      ],
+      "is_soft": false,
+      "position": 7
+    },
+    {
+      "domain_slug": "developpement-web-profils-techniques",
+      "slug": "developpement-web-front",
+      "label": "Développement web (front)",
+      "description": "Créer l'interface d'un site ou d'une appli",
+      "aliases": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "React",
+        "Next.js",
+        "Tailwind",
+        "TypeScript",
+        "React.js",
+        "Next.js (app router)",
+        "Tailwind CSS",
+        "Framer motion"
+      ],
+      "is_soft": false,
+      "position": 1
+    },
+    {
+      "domain_slug": "developpement-web-profils-techniques",
+      "slug": "developpement-web-back",
+      "label": "Développement web (back)",
+      "description": "Créer le serveur et la logique d'une appli",
+      "aliases": [
+        "Node.js",
+        "Python",
+        "API",
+        "serverless",
+        "Python (FastAPI)",
+        "Serverless functions",
+        "Edge computing"
+      ],
+      "is_soft": false,
+      "position": 2
+    },
+    {
+      "domain_slug": "developpement-web-profils-techniques",
+      "slug": "bases-de-donnees",
+      "label": "Bases de données",
+      "description": "Stocker et interroger des données",
+      "aliases": [
+        "SQL",
+        "PostgreSQL",
+        "Supabase",
+        "Redis",
+        "Redis (cache)",
+        "Pinecone/Chroma"
+      ],
+      "is_soft": false,
+      "position": 3
+    },
+    {
+      "domain_slug": "developpement-web-profils-techniques",
+      "slug": "design-d-interface-ux-ui",
+      "label": "Design d'interface (UX/UI)",
+      "description": "Concevoir des écrans faciles à utiliser",
+      "aliases": [
+        "UX",
+        "UI",
+        "Figma",
+        "prototypage",
+        "design system",
+        "accessibilité",
+        "Analyse de feedback (Hotjar)",
+        "UX research",
+        "UI design (Figma)",
+        "Design systems",
+        "Web accessibility (a11y)"
+      ],
+      "is_soft": false,
+      "position": 4
+    },
+    {
+      "domain_slug": "developpement-web-profils-techniques",
+      "slug": "developper-avec-l-ia",
+      "label": "Développer avec l'IA",
+      "description": "Intégrer une IA dans une application",
+      "aliases": [
+        "API OpenAI",
+        "API Anthropic",
+        "RAG",
+        "LangChain",
+        "fine-tuning",
+        "Intégration APIs OpenAI",
+        "Intégration APIs Anthropic",
+        "RAG (retrieval-augmented generation)",
+        "Vercel ai SDK",
+        "Fine-tuning de modèles"
+      ],
+      "is_soft": false,
+      "position": 5
+    },
+    {
+      "domain_slug": "developpement-web-profils-techniques",
+      "slug": "mise-en-production",
+      "label": "Mise en production",
+      "description": "Déployer et faire tourner une application",
+      "aliases": [
+        "Docker",
+        "Kubernetes",
+        "déploiement",
+        "CI/CD"
+      ],
+      "is_soft": false,
+      "position": 6
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "communication",
+      "label": "Communication",
+      "description": "Soft skill",
+      "aliases": [
+        "Communication interpersonnelle",
+        "Communication asynchrone"
+      ],
+      "is_soft": true,
+      "position": 1
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "ecoute-active",
+      "label": "Écoute active",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 2
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "empathie",
+      "label": "Empathie",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 3
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "gestion-des-conflits",
+      "label": "Gestion des conflits",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 4
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "leadership",
+      "label": "Leadership",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 5
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "travail-en-equipe",
+      "label": "Travail en équipe",
+      "description": "Soft skill",
+      "aliases": [
+        "Collaboration et travail en équipe",
+        "Culture d'entreprise"
+      ],
+      "is_soft": true,
+      "position": 6
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "adaptabilite",
+      "label": "Adaptabilité",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 7
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "gestion-du-stress",
+      "label": "Gestion du stress",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 8
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "intelligence-emotionnelle",
+      "label": "Intelligence émotionnelle",
+      "description": "Soft skill",
+      "aliases": [
+        "Analyse comportementale (DISC, IDMC)",
+        "Analyse des types de personnalités (DISC)",
+        "Profilage DISC & IDMC Appliqué",
+        "Analyse Comportementale (Profilage)"
+      ],
+      "is_soft": true,
+      "position": 9
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "confiance-en-soi",
+      "label": "Confiance en soi",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 10
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "resolution-de-problemes",
+      "label": "Résolution de problèmes",
+      "description": "Soft skill",
+      "aliases": [
+        "Résolution des problèmes"
+      ],
+      "is_soft": true,
+      "position": 11
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "prise-de-decision",
+      "label": "Prise de décision",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 12
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "gestion-du-temps",
+      "label": "Gestion du temps",
+      "description": "Soft skill",
+      "aliases": [
+        "GTD (getting things done)",
+        "Deep work"
+      ],
+      "is_soft": true,
+      "position": 13
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "perseverance",
+      "label": "Persévérance",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 14
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "esprit-critique",
+      "label": "Esprit critique",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 15
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "creativite",
+      "label": "Créativité",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 16
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "proactivite",
+      "label": "Proactivité",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 17
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "sens-de-l-organisation",
+      "label": "Sens de l'organisation",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 18
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "ouverture-d-esprit",
+      "label": "Ouverture d'esprit",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 19
+    },
+    {
+      "domain_slug": "soft-skills",
+      "slug": "sens-des-responsabilites",
+      "label": "Sens des responsabilités",
+      "description": "Soft skill",
+      "aliases": [],
+      "is_soft": true,
+      "position": 20
+    }
+  ]
+}

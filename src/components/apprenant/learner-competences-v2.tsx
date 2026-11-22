@@ -91,7 +91,7 @@ export function LearnerCompetencesV2() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16 pt-2 text-[#F2F4FA] sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl space-y-8 pb-16 pt-1 text-[#F2F4FA]">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-[34px] font-extrabold tracking-tight sm:text-[40px]">Mes compétences</h1>
@@ -109,7 +109,7 @@ export function LearnerCompetencesV2() {
 
       {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {[
           { n: provedCount, label: "Prouvées", hint: "avec une preuve", color: C.green },
           { n: declaredCount, label: "Déclarées", hint: "à appuyer par une preuve", color: C.blue },
@@ -120,11 +120,7 @@ export function LearnerCompetencesV2() {
             color: C.amber,
           },
         ].map((c) => (
-          <article
-            key={c.label}
-            className="rounded-3xl border p-4"
-            style={{ background: C.card, borderColor: C.border }}
-          >
+          <div key={c.label}>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
               <span className="text-3xl font-extrabold tabular-nums">{c.n}</span>
@@ -133,61 +129,53 @@ export function LearnerCompetencesV2() {
             <p className="text-xs" style={{ color: C.tertiary }}>
               {c.hint}
             </p>
-          </article>
+          </div>
         ))}
       </section>
 
-      <article className="rounded-3xl border p-5" style={{ background: C.card, borderColor: C.border }}>
+      <section>
         <h2 className="text-lg font-extrabold">Mon capital de compétences</h2>
         {rows.length === 0 ? (
           <p className="mt-6 text-sm" style={{ color: C.secondary }}>
             Aucune compétence pour l’instant. Déclare-en une pour démarrer.
           </p>
         ) : (
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-4 divide-y divide-[#1C2443]">
             {rows.map((r) => (
-              <li key={r.id}>
-                <div
-                  className="flex items-center gap-3 rounded-2xl border px-3 py-3"
-                  style={{ borderColor: C.border, background: "#151C3A" }}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{r.pending ? r.raw : r.name}</p>
-                    {r.showRaw && !r.pending ? (
-                      <p className="text-xs" style={{ color: C.tertiary }}>
-                        Tes mots : {r.raw}
-                      </p>
-                    ) : null}
-                    {r.pending ? (
-                      <p className="text-xs" style={{ color: C.amber }}>
-                        en cours de classement
-                      </p>
-                    ) : null}
-                    <div className="mt-2 flex gap-1">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="h-1.5 w-5 rounded-full"
-                          style={{ background: i < r.bars ? C.blue : "#1A2340" }}
-                        />
-                      ))}
-                    </div>
+              <li key={r.id} className="flex items-center gap-3 py-3.5">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold">{r.pending ? r.raw : r.name}</p>
+                  {r.showRaw && !r.pending ? (
+                    <p className="text-xs" style={{ color: C.tertiary }}>
+                      Tes mots : {r.raw}
+                    </p>
+                  ) : null}
+                  {r.pending ? (
+                    <p className="text-xs" style={{ color: C.amber }}>
+                      en cours de classement
+                    </p>
+                  ) : null}
+                  <div className="mt-2 flex gap-1">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className="h-1.5 w-5 rounded-full"
+                        style={{ background: i < r.bars ? C.blue : "#1A2340" }}
+                      />
+                    ))}
                   </div>
-                  <span
-                    className="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                    style={{
-                      background: "#1A2340",
-                      color: r.status === "proved" ? C.green : C.blue,
-                    }}
-                  >
-                    {r.status === "proved" ? "Prouvée" : "Déclarée"}
-                  </span>
                 </div>
+                <span
+                  className="text-[11px] font-semibold"
+                  style={{ color: r.status === "proved" ? C.green : C.blue }}
+                >
+                  {r.status === "proved" ? "Prouvée" : "Déclarée"}
+                </span>
               </li>
             ))}
           </ul>
         )}
-      </article>
+      </section>
     </div>
   );
 }

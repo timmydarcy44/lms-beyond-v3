@@ -456,43 +456,41 @@ export function DeclareSkillFlow() {
           : "Une preuve rend ta compétence plus crédible. Elle reste facultative.";
 
   return (
-    <div className="min-h-[100dvh] px-4 pb-24 pt-8 sm:px-8" style={{ background: C.bg }}>
-      <div className="mx-auto w-full max-w-[1040px]">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 text-[13px]">
+    <div className="mx-auto w-full max-w-[1040px] pb-20 pt-1">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 text-[13px]">
+        <button
+          type="button"
+          onClick={() => router.push(SKILLS_HOME)}
+          className="text-white/55 transition hover:text-white"
+        >
+          ‹ Mes compétences
+        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-white/45">
+            {draftSaved ? "Enregistré en brouillon" : "Brouillon non enregistré"}
+          </span>
           <button
             type="button"
+            aria-label="Fermer"
             onClick={() => router.push(SKILLS_HOME)}
-            className="text-white/55 transition hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/70 transition hover:bg-white/[0.06] hover:text-white"
           >
-            ‹ Mes compétences
+            <X className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-3">
-            <span className="text-white/45">
-              {draftSaved ? "Enregistré en brouillon" : "Brouillon non enregistré"}
-            </span>
-            <button
-              type="button"
-              aria-label="Fermer"
-              onClick={() => router.push(SKILLS_HOME)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border text-white/70 transition hover:text-white"
-              style={{ borderColor: C.border, background: C.card }}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
         </div>
+      </div>
 
-        {/* Title */}
-        <div className="mt-8">
-          <p className="text-[12px] font-medium" style={{ color: C.blue }}>
-            Déclarer une compétence · étape {step} sur 4
-          </p>
-          <h1 className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-white sm:text-[34px]">
-            {stepTitle}
-          </h1>
-          <p className="mt-1 text-[14px] text-white/50">{stepSubtitle}</p>
-        </div>
+      {/* Title */}
+      <div className="mt-7">
+        <p className="text-[12px] font-medium" style={{ color: C.blue }}>
+          Déclarer une compétence · étape {step} sur 4
+        </p>
+        <h1 className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-white sm:text-[34px]">
+          {stepTitle}
+        </h1>
+        <p className="mt-1 text-[14px] text-white/50">{stepSubtitle}</p>
+      </div>
 
         {/* Progress */}
         <div className="mt-6 grid grid-cols-4 gap-3">
@@ -584,10 +582,23 @@ export function DeclareSkillFlow() {
                         setSkill(null);
                         setMatchStatus(null);
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && rawLabel.trim().length >= 3 && !matching) {
+                          e.preventDefault();
+                          if (hasMatchBest && match?.best) {
+                            acceptSkill(
+                              { id: match.best.skill_id, label: match.best.label },
+                              match.best.confidence,
+                            );
+                          } else {
+                            keepRawWords();
+                          }
+                        }
+                      }}
                       placeholder={
                         kind === "soft"
                           ? "ex. je sais bien écouter les gens"
-                          : "ex. je fais de la prospection à froid"
+                          : "ex. accueil client en restaurant"
                       }
                       className="w-full rounded-2xl border py-4 pl-12 pr-12 text-[16px] text-white outline-none placeholder:text-white/25 focus:border-[#6E5BFF]"
                       style={{ background: C.card, borderColor: C.border }}
@@ -636,39 +647,50 @@ export function DeclareSkillFlow() {
                       On ne l&apos;a pas encore dans notre liste…
                     </p>
                     <p className="mt-1 text-[13px] text-white/50">
-                      Pas de souci : tu peux garder tes mots, on les étudiera pour enrichir le catalogue.
+                      Pas de souci : tu peux déclarer exactement ce que tu as vécu (ex. accueil en restaurant).
+                      On classera ça ensuite.
                     </p>
+                    <button type="button" className={cn(primaryBtn, "mt-4")} onClick={keepRawWords}>
+                      Continuer avec mes mots <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 ) : null}
 
-                {match && (alternatives.length > 0 || hasMatchBest || lowConfidence) ? (
+                {alternatives.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    {alternatives.length > 0 ? (
-                      <>
-                        <span className="text-[13px] text-white/50">Ou plutôt :</span>
-                        {alternatives.map((alt) => (
-                          <button
-                            key={alt.skill_id}
-                            type="button"
-                            onClick={() =>
-                              acceptSkill({ id: alt.skill_id, label: alt.label }, alt.confidence)
-                            }
-                            className="rounded-full border px-3.5 py-1.5 text-[13px] text-white transition hover:border-[#6E5BFF]"
-                            style={{ background: C.card, borderColor: C.border }}
-                          >
-                            {alt.label}
-                          </button>
-                        ))}
-                      </>
+                    <span className="text-[13px] text-white/50">Ou plutôt :</span>
+                    {alternatives.map((alt) => (
+                      <button
+                        key={alt.skill_id}
+                        type="button"
+                        onClick={() =>
+                          acceptSkill({ id: alt.skill_id, label: alt.label }, alt.confidence)
+                        }
+                        className="rounded-full border px-3.5 py-1.5 text-[13px] text-white transition hover:border-[#6E5BFF]"
+                        style={{ background: C.card, borderColor: C.border }}
+                      >
+                        {alt.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* Toujours possible de sortir du référentiel dès 3 caractères */}
+                {rawLabel.trim().length >= 3 && !lowConfidence ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {hasMatchBest ? (
+                      <button
+                        type="button"
+                        onClick={keepRawWords}
+                        className="text-[13px] font-medium text-white/55 underline-offset-4 hover:text-white hover:underline"
+                      >
+                        Non, garder exactement mes mots
+                      </button>
+                    ) : !matching ? (
+                      <button type="button" className={cn(primaryBtn)} onClick={keepRawWords}>
+                        Continuer avec mes mots <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={keepRawWords}
-                      className="rounded-full border border-dashed px-3.5 py-1.5 text-[13px] text-white/70 transition hover:text-white"
-                      style={{ borderColor: C.border }}
-                    >
-                      Garder mes mots
-                    </button>
                   </div>
                 ) : null}
 
@@ -885,13 +907,12 @@ export function DeclareSkillFlow() {
               <span aria-hidden>💡</span>
               <p>
                 {step === 2
-                  ? "Écris comme tu parles : on retrouve la compétence correspondante, et tu gardes la main."
+                  ? "Tu n’es pas limité au catalogue. Si on ne trouve pas, tu continues avec tes mots : ta déclaration reste visible, on la classera ensuite."
                   : "Une compétence avec une preuve (attestation, document, vidéo) devient « Prouvée » et compte davantage pour les entreprises."}
               </p>
             </div>
           </aside>
         </div>
-      </div>
 
       {browserOpen ? (
         <CatalogBrowser

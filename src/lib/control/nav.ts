@@ -99,6 +99,12 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         match: under("/super/competences-a-classer"),
       },
       {
+        id: "skills-proofs",
+        label: "Preuves compétences",
+        href: "/super/competences-preuves",
+        match: under("/super/competences-preuves"),
+      },
+      {
         id: "accueil",
         label: "Entreprises d'accueil",
         href: "/super/crm/cfa/entreprises",

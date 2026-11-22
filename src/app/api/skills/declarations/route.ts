@@ -15,16 +15,28 @@ export async function GET() {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "NO_DB" }, { status: 503 });
 
-  const { data, error } = await db
+  const rich = await db
     .from("skill_declarations")
     .select(
-      "id, skill_id, raw_label, match_confidence, match_status, kind, level, context, proof_url, proof_note, status, updated_at, skills(id, label, description, is_soft, skill_domains(label))",
+      "id, skill_id, raw_label, match_confidence, match_status, kind, level, context, proof_url, proof_note, proof_review_status, proof_review_note, status, updated_at, skills(id, label, description, is_soft, skill_domains(label))",
     )
     .eq("user_id", session.id)
     .order("updated_at", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ declarations: data ?? [] });
+  if (rich.error && /proof_review/i.test(rich.error.message)) {
+    const fallback = await db
+      .from("skill_declarations")
+      .select(
+        "id, skill_id, raw_label, match_confidence, match_status, kind, level, context, proof_url, proof_note, status, updated_at, skills(id, label, description, is_soft, skill_domains(label))",
+      )
+      .eq("user_id", session.id)
+      .order("updated_at", { ascending: false });
+    if (fallback.error) return NextResponse.json({ error: fallback.error.message }, { status: 400 });
+    return NextResponse.json({ declarations: fallback.data ?? [] });
+  }
+
+  if (rich.error) return NextResponse.json({ error: rich.error.message }, { status: 400 });
+  return NextResponse.json({ declarations: rich.data ?? [] });
 }
 
 export async function POST(request: NextRequest) {
@@ -41,32 +53,47 @@ export async function POST(request: NextRequest) {
     : "pending_review";
   const level = LEVELS.has(String(body?.level)) ? String(body?.level) : "intermediaire";
   const context = CONTEXTS.has(String(body?.context ?? "")) ? String(body?.context) : null;
-  const status = STATUS.has(String(body?.status)) ? String(body?.status) : "draft";
+  // Jamais « proven » côté client : seule l’analyse Byound (ou le BO) peut valider.
+  let status = STATUS.has(String(body?.status)) ? String(body?.status) : "draft";
+  if (status === "proven") status = "declared";
   const skill_id = body?.skill_id ? String(body.skill_id) : null;
   const match_confidence =
     body?.match_confidence == null || body.match_confidence === ""
       ? null
       : Number(body.match_confidence);
+  const proof_url = body?.proof_url ? String(body.proof_url).trim() : null;
+  const proof_note = body?.proof_note ? String(body.proof_note).trim() : null;
 
-  const { data, error } = await db
+  const baseInsert = {
+    user_id: session.id,
+    skill_id,
+    raw_label,
+    match_confidence: Number.isFinite(match_confidence) ? match_confidence : null,
+    match_status,
+    kind,
+    level,
+    context,
+    proof_url,
+    proof_note,
+    status,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { data, error } = await db
     .from("skill_declarations")
     .insert({
-      user_id: session.id,
-      skill_id,
-      raw_label,
-      match_confidence: Number.isFinite(match_confidence) ? match_confidence : null,
-      match_status,
-      kind,
-      level,
-      context,
-      proof_url: body?.proof_url ? String(body.proof_url).trim() : null,
-      proof_note: body?.proof_note ? String(body.proof_note).trim() : null,
-      status,
-      updated_at: new Date().toISOString(),
+      ...baseInsert,
+      proof_review_status: proof_url || proof_note ? "pending" : "none",
     })
     .select("id")
     .single();
 
+  if (error && /proof_review/i.test(error.message)) {
+    const retry = await db.from("skill_declarations").insert(baseInsert).select("id").single();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ id: data!.id });
 }

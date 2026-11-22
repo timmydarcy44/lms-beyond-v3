@@ -37,9 +37,20 @@ export async function PATCH(
   if ("context" in body) {
     patch.context = CONTEXTS.has(String(body.context ?? "")) ? String(body.context) : null;
   }
-  if ("status" in body && STATUS.has(String(body.status))) patch.status = String(body.status);
+  if ("status" in body && STATUS.has(String(body.status))) {
+    // Le client ne peut pas s’auto-valider « proven »
+    const next = String(body.status);
+    patch.status = next === "proven" ? "declared" : next;
+  }
   if ("proof_url" in body) patch.proof_url = body.proof_url ? String(body.proof_url).trim() : null;
   if ("proof_note" in body) patch.proof_note = body.proof_note ? String(body.proof_note).trim() : null;
+  if ("proof_url" in body || "proof_note" in body) {
+    const hasProof = Boolean(patch.proof_url || patch.proof_note);
+    if (hasProof) {
+      patch.proof_review_status = "pending";
+      if (patch.status === "proven") patch.status = "declared";
+    }
+  }
 
   const { data, error } = await db
     .from("skill_declarations")

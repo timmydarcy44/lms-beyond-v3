@@ -14,6 +14,7 @@ const C = {
   green: "#6BE39B",
   amber: "#F2CF6B",
   blue: "#8DB8FF",
+  framboise: "#FF5C8A",
 };
 
 type Declaration = {
@@ -23,6 +24,8 @@ type Declaration = {
   level: string;
   status: string;
   kind: string;
+  proof_review_status?: string | null;
+  proof_review_note?: string | null;
   skills: null | {
     id: string;
     label: string;
@@ -32,8 +35,34 @@ type Declaration = {
   };
 };
 
+type RowStatus = "proved" | "declared" | "pending_proof" | "needs_more" | "refused";
+
 function levelBars(level: string) {
   return DECLARE_LEVELS.find((l) => l.id === level)?.bars ?? 2;
+}
+
+function resolveProofStatus(d: Declaration): RowStatus {
+  const review = String(d.proof_review_status ?? "none");
+  if (d.status === "proven" || review === "validated") return "proved";
+  if (review === "pending") return "pending_proof";
+  if (review === "needs_more") return "needs_more";
+  if (review === "refused") return "refused";
+  return "declared";
+}
+
+function statusMeta(status: RowStatus) {
+  switch (status) {
+    case "proved":
+      return { label: "Prouvée", color: C.green };
+    case "pending_proof":
+      return { label: "Preuve en analyse", color: C.amber };
+    case "needs_more":
+      return { label: "Complément demandé", color: C.amber };
+    case "refused":
+      return { label: "Preuve refusée", color: C.framboise };
+    default:
+      return { label: "Déclarée", color: C.blue };
+  }
 }
 
 export function LearnerCompetencesV2() {
@@ -66,13 +95,15 @@ export function LearnerCompetencesV2() {
       .map((d) => {
         const name = d.skills?.label || d.raw_label;
         const pending = d.match_status === "pending_review";
+        const status = resolveProofStatus(d);
         return {
           id: d.id,
           name,
           raw: d.raw_label,
           showRaw: Boolean(d.skills?.label && d.raw_label && d.skills.label !== d.raw_label),
           pending,
-          status: d.status === "proven" ? ("proved" as const) : ("declared" as const),
+          status,
+          reviewNote: d.proof_review_note || null,
           bars: levelBars(d.level),
           level: d.level,
         };
@@ -81,6 +112,9 @@ export function LearnerCompetencesV2() {
 
   const provedCount = rows.filter((r) => r.status === "proved").length;
   const declaredCount = rows.filter((r) => r.status === "declared").length;
+  const reviewCount = rows.filter((r) =>
+    ["pending_proof", "needs_more", "refused"].includes(r.status),
+  ).length;
 
   if (loading) {
     return (
@@ -96,7 +130,7 @@ export function LearnerCompetencesV2() {
         <div>
           <h1 className="text-[34px] font-extrabold tracking-tight sm:text-[40px]">Mes compétences</h1>
           <p className="mt-1 text-sm" style={{ color: C.secondary }}>
-            Ce que tu sais faire, et ce que tu peux prouver
+            Ce que tu sais faire — « Prouvée » seulement après validation Byound
           </p>
         </div>
         <Link
@@ -109,15 +143,16 @@ export function LearnerCompetencesV2() {
 
       {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}
 
-      <section className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { n: provedCount, label: "Prouvées", hint: "avec une preuve", color: C.green },
-          { n: declaredCount, label: "Déclarées", hint: "à appuyer par une preuve", color: C.blue },
+          { n: provedCount, label: "Prouvées", hint: "validées par Byound", color: C.green },
+          { n: declaredCount, label: "Déclarées", hint: "sans preuve validée", color: C.blue },
+          { n: reviewCount, label: "Preuves", hint: "en analyse / complément / refus", color: C.amber },
           {
             n: rows.filter((r) => r.pending).length,
             label: "En classement",
-            hint: "tes mots, en cours de rattachement",
-            color: C.amber,
+            hint: "tes mots, rattachement",
+            color: C.violet,
           },
         ].map((c) => (
           <div key={c.label}>
@@ -141,38 +176,43 @@ export function LearnerCompetencesV2() {
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-[#1C2443]">
-            {rows.map((r) => (
-              <li key={r.id} className="flex items-center gap-3 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{r.pending ? r.raw : r.name}</p>
-                  {r.showRaw && !r.pending ? (
-                    <p className="text-xs" style={{ color: C.tertiary }}>
-                      Tes mots : {r.raw}
-                    </p>
-                  ) : null}
-                  {r.pending ? (
-                    <p className="text-xs" style={{ color: C.amber }}>
-                      en cours de classement
-                    </p>
-                  ) : null}
-                  <div className="mt-2 flex gap-1">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="h-1.5 w-5 rounded-full"
-                        style={{ background: i < r.bars ? C.blue : "#1A2340" }}
-                      />
-                    ))}
+            {rows.map((r) => {
+              const meta = statusMeta(r.status);
+              return (
+                <li key={r.id} className="flex items-center gap-3 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{r.pending ? r.raw : r.name}</p>
+                    {r.showRaw && !r.pending ? (
+                      <p className="text-xs" style={{ color: C.tertiary }}>
+                        Tes mots : {r.raw}
+                      </p>
+                    ) : null}
+                    {r.pending ? (
+                      <p className="text-xs" style={{ color: C.amber }}>
+                        en cours de classement
+                      </p>
+                    ) : null}
+                    {r.reviewNote && r.status !== "proved" && r.status !== "declared" ? (
+                      <p className="mt-1 text-xs leading-relaxed" style={{ color: C.secondary }}>
+                        {r.reviewNote}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 flex gap-1">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="h-1.5 w-5 rounded-full"
+                          style={{ background: i < r.bars ? C.blue : "#1A2340" }}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <span
-                  className="text-[11px] font-semibold"
-                  style={{ color: r.status === "proved" ? C.green : C.blue }}
-                >
-                  {r.status === "proved" ? "Prouvée" : "Déclarée"}
-                </span>
-              </li>
-            ))}
+                  <span className="shrink-0 text-[11px] font-semibold" style={{ color: meta.color }}>
+                    {meta.label}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

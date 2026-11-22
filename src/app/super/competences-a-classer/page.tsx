@@ -72,7 +72,10 @@ export default function SkillsReviewPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9AA3BD]">Référentiel</p>
         <h1 className="mt-1 text-3xl font-extrabold">À classer</h1>
         <p className="mt-2 text-sm text-[#9AA3BD]">
-          Formulations libres des apprenants, regroupées. Invisible côté apprenant.
+          Formulations libres des apprenants, regroupées. Invisible côté apprenant.{" "}
+          <a href="/super/competences-preuves" className="font-semibold text-[#8DB8FF]">
+            Preuves à revoir →
+          </a>
         </p>
       </div>
       {error ? <p className="text-sm text-[#FF8A9B]">{error}</p> : null}

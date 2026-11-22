@@ -1,0 +1,171 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
+import { getServiceRoleClient } from "@/lib/supabase/server";
+import {
+  analyzeSkillProof,
+  statusesFromProofDecision,
+} from "@/lib/skills/analyze-skill-proof";
+
+export const dynamic = "force-dynamic";
+
+const PROOF_BUCKET = "public";
+
+function sanitizeFileName(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 80);
+}
+
+/** Dépose / met à jour une preuve et lance l’analyse Byound. */
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const session = await getSession();
+  if (!session?.id) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const db = getServiceRoleClient();
+  if (!db) return NextResponse.json({ error: "NO_DB" }, { status: 503 });
+
+  const { id } = await context.params;
+  const { data: decl } = await db
+    .from("skill_declarations")
+    .select("id, user_id, raw_label, level, context, skill_id, proof_url, proof_note")
+    .eq("id", id)
+    .eq("user_id", session.id)
+    .maybeSingle();
+
+  if (!decl) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+
+  let skillLabel = String(decl.raw_label ?? "Compétence");
+  if (decl.skill_id) {
+    const { data: skill } = await db
+      .from("skills")
+      .select("label")
+      .eq("id", decl.skill_id)
+      .maybeSingle();
+    if (skill?.label) skillLabel = String(skill.label);
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  let proofUrl = "";
+  let proofNote = "";
+  let file: File | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData();
+    proofUrl = String(form.get("proofUrl") ?? "").trim();
+    proofNote = String(form.get("proofNote") ?? "").trim();
+    const raw = form.get("file");
+    file = raw instanceof File && raw.size > 0 ? raw : null;
+  } else {
+    const body = (await request.json().catch(() => null)) as {
+      proofUrl?: string;
+      proofNote?: string;
+    } | null;
+    proofUrl = String(body?.proofUrl ?? "").trim();
+    proofNote = String(body?.proofNote ?? "").trim();
+  }
+
+  if (!proofUrl && !proofNote && !file) {
+    return NextResponse.json(
+      { error: "Ajoute un lien, une note ou un fichier comme preuve." },
+      { status: 400 },
+    );
+  }
+
+  let proofFilePath: string | null = null;
+  if (file) {
+    if (file.size > 80 * 1024 * 1024) {
+      return NextResponse.json({ error: "Fichier trop volumineux (max 80 Mo)." }, { status: 400 });
+    }
+    const safe = sanitizeFileName(file.name || "preuve");
+    const path = `skill-proofs/${session.id}/${id}/${Date.now()}-${safe}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { error: uploadErr } = await db.storage.from(PROOF_BUCKET).upload(path, buffer, {
+      contentType: file.type || "application/octet-stream",
+      upsert: true,
+    });
+    if (uploadErr) {
+      return NextResponse.json({ error: `Upload impossible : ${uploadErr.message}` }, { status: 400 });
+    }
+    proofFilePath = path;
+    if (!proofUrl) {
+      const { data: pub } = db.storage.from(PROOF_BUCKET).getPublicUrl(path);
+      proofUrl = pub?.publicUrl || "";
+    }
+  }
+
+  // Marque en attente pendant l’analyse
+  await db
+    .from("skill_declarations")
+    .update({
+      status: "declared",
+      proof_url: proofUrl || null,
+      proof_note: proofNote || null,
+      proof_file_path: proofFilePath,
+      proof_review_status: "pending",
+      proof_review_note: "Analyse Byound en cours…",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", session.id);
+
+  const analysis = await analyzeSkillProof({
+    skillLabel,
+    rawLabel: String(decl.raw_label ?? ""),
+    level: String(decl.level ?? "intermediaire"),
+    context: decl.context ? String(decl.context) : null,
+    proofUrl: proofUrl || null,
+    proofNote: proofNote || null,
+    hasFile: Boolean(proofFilePath),
+    fileName: file?.name ?? null,
+  });
+
+  const next = statusesFromProofDecision(analysis.decision);
+  const patch: Record<string, unknown> = {
+    status: next.status,
+    proof_review_status: next.proof_review_status,
+    proof_review_note: analysis.note,
+    proof_url: proofUrl || null,
+    proof_note: proofNote || null,
+    updated_at: new Date().toISOString(),
+  };
+  if (proofFilePath) patch.proof_file_path = proofFilePath;
+
+  let { data, error } = await db
+    .from("skill_declarations")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", session.id)
+    .select("id, status, proof_review_status, proof_review_note, proof_url, proof_note")
+    .maybeSingle();
+
+  // Colonnes absentes → fallback sans review columns
+  if (error && /proof_review|proof_file|column/i.test(error.message)) {
+    const fallbackStatus = next.status === "proven" ? "declared" : next.status;
+    const retry = await db
+      .from("skill_declarations")
+      .update({
+        status: fallbackStatus,
+        proof_url: proofUrl || null,
+        proof_note: proofNote || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("user_id", session.id)
+      .select("id, status, proof_url, proof_note")
+      .maybeSingle();
+    if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 400 });
+    return NextResponse.json({
+      declaration: retry.data,
+      analysis,
+      warning: "Colonnes proof_review absentes — appliquez la migration 20261122200000.",
+    });
+  }
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ declaration: data, analysis });
+}

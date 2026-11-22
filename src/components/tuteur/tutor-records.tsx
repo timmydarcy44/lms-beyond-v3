@@ -71,6 +71,15 @@ export function TutorMissionsPage() {
   const [comment, setComment] = useState("");
   const [actError, setActError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMissions, setAiMissions] = useState<Array<{
+    id: string;
+    code: string;
+    title: string;
+    description: string;
+    deliverable: string;
+    competency: string;
+  }> | null>(null);
 
   async function load() {
     const res = await fetch("/api/tuteur/missions-board", { cache: "no-store" });
@@ -128,13 +137,44 @@ export function TutorMissionsPage() {
   }
 
   function missionsOf(assignmentId: string) {
+    if (aiMissions?.length) return aiMissions;
     return referentials.find((row) => row.assignmentId === assignmentId)?.referential?.missions ?? [];
   }
 
   function selectLearner(assignmentId: string) {
     setCreateAssignment(assignmentId);
-    setPickedBlocks(missionsOf(assignmentId).map((mission) => mission.id));
+    setAiMissions(null);
+    const base =
+      referentials.find((row) => row.assignmentId === assignmentId)?.referential?.missions ?? [];
+    setPickedBlocks(base.map((mission) => mission.id));
     setCreateError(null);
+  }
+
+  async function generateAiCatalog() {
+    if (!createAssignment) {
+      setCreateError("Choisissez un alternant.");
+      return;
+    }
+    setAiBusy(true);
+    setCreateError(null);
+    try {
+      const res = await fetch("/api/tuteur/missions-propose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId: createAssignment }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        setCreateError(typeof json?.error === "string" ? json.error : "Proposition IA impossible.");
+        return;
+      }
+      const missions = Array.isArray(json?.missions) ? json.missions : [];
+      setAiMissions(missions);
+      setPickedBlocks(missions.map((m: { id: string }) => m.id));
+      setCreateMode("referential");
+    } finally {
+      setAiBusy(false);
+    }
   }
 
   async function create(event: FormEvent<HTMLFormElement>) {
@@ -143,8 +183,8 @@ export function TutorMissionsPage() {
     const assignmentId = String(form.get("assignmentId") || createAssignment);
     const dueDate = String(form.get("dueDate") ?? "");
     const deliverable = String(form.get("deliverable") ?? "");
-    const linked = referentials.find((row) => row.assignmentId === assignmentId)?.referential;
-    const chosen = (linked?.missions ?? []).filter((mission) => pickedBlocks.includes(mission.id));
+    const catalog = missionsOf(assignmentId);
+    const chosen = catalog.filter((mission) => pickedBlocks.includes(mission.id));
     const items = createMode === "referential"
       ? chosen.map((mission) => ({
           title: mission.title,
@@ -169,7 +209,7 @@ export function TutorMissionsPage() {
       return;
     }
     if (!items.length || items.some((item) => !item.title.trim())) {
-      setCreateError(createMode === "referential" ? "Cochez au moins une mission du référentiel." : "Indiquez un titre.");
+      setCreateError(createMode === "referential" ? "Cochez au moins une mission du catalogue." : "Indiquez un titre.");
       return;
     }
     const res = await fetch("/api/tuteur/missions-board", {
@@ -316,9 +356,22 @@ export function TutorMissionsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <form onSubmit={create} className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-[28px] bg-[var(--tutor-surface)] p-5">
             <h2 className="text-lg font-extrabold">Créer une mission</h2>
-            <div className="flex gap-2">
-              <button type="button" className={`rounded-full px-3 py-1.5 text-sm font-semibold ${createMode === "scratch" ? "bg-[var(--tutor-accent)] text-[var(--tutor-on-accent)]" : "bg-[var(--tutor-surface-2)]"}`} onClick={() => setCreateMode("scratch")}>À partir de zéro</button>
-              <button type="button" className={`rounded-full px-3 py-1.5 text-sm font-semibold ${createMode === "referential" ? "bg-[var(--tutor-accent)] text-[var(--tutor-on-accent)]" : "bg-[var(--tutor-surface-2)]"}`} onClick={() => { setCreateMode("referential"); setPickedBlocks(missionsOf(createAssignment).map((mission) => mission.id)); }}>Depuis le référentiel</button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={`rounded-full px-3 py-1.5 text-sm font-semibold ${createMode === "scratch" ? "bg-[var(--tutor-accent)] text-[var(--tutor-on-accent)]" : "bg-[var(--tutor-surface-2)]"}`} onClick={() => { setCreateMode("scratch"); setAiMissions(null); }}>À partir de zéro</button>
+              <button type="button" className={`rounded-full px-3 py-1.5 text-sm font-semibold ${createMode === "referential" && !aiMissions ? "bg-[var(--tutor-accent)] text-[var(--tutor-on-accent)]" : "bg-[var(--tutor-surface-2)]"}`} onClick={() => {
+                setCreateMode("referential");
+                setAiMissions(null);
+                const base = referentials.find((row) => row.assignmentId === createAssignment)?.referential?.missions ?? [];
+                setPickedBlocks(base.map((mission) => mission.id));
+              }}>Catalogue référentiel</button>
+              <button
+                type="button"
+                disabled={aiBusy || !createAssignment}
+                className="rounded-full bg-[var(--tutor-surface-2)] px-3 py-1.5 text-sm font-semibold disabled:opacity-40"
+                onClick={() => void generateAiCatalog()}
+              >
+                {aiBusy ? "IA…" : "Proposer avec l’IA (secteur)"}
+              </button>
             </div>
             <select
               name="assignmentId"
@@ -334,7 +387,8 @@ export function TutorMissionsPage() {
               <div className="space-y-3 rounded-xl bg-[var(--tutor-hero)] p-3">
                 {(() => {
                   const linked = referentials.find((row) => row.assignmentId === createAssignment)?.referential;
-                  if (!linked) {
+                  const catalog = missionsOf(createAssignment);
+                  if (!linked && !catalog.length) {
                     return (
                       <p className="text-sm text-[var(--tutor-text-3)]">
                         Aucune fiche cursus / structure référentielle n’est rattachée à cet alternant.
@@ -344,13 +398,16 @@ export function TutorMissionsPage() {
                   }
                   return (
                     <>
-                      <p className="text-sm font-semibold">Cursus · {linked.title}</p>
+                      <p className="text-sm font-semibold">
+                        {aiMissions ? "Catalogue proposé par l’IA" : `Cursus · ${linked?.title ?? "Référentiel"}`}
+                      </p>
                       <p className="text-sm text-[var(--tutor-text-3)]">
-                        {linked.company
+                        {linked?.company
                           ? `${linked.company.name}${linked.company.city ? ` · ${linked.company.city}` : ""} · ${linked.company.sector}`
                           : "Entreprise non renseignée"}
+                        {" · "}Coche les missions à assigner (tu peux en retirer).
                       </p>
-                      {linked.missions.map((mission) => (
+                      {catalog.map((mission) => (
                         <label key={mission.id} className="flex items-start gap-2 text-sm">
                           <input
                             type="checkbox"
@@ -361,6 +418,11 @@ export function TutorMissionsPage() {
                           <span>
                             <span className="font-semibold">{mission.code} · {mission.title}</span>
                             <span className="mt-1 block text-[var(--tutor-text-3)]">{mission.description}</span>
+                            {"deliverable" in mission && mission.deliverable ? (
+                              <span className="mt-1 block text-xs text-[var(--tutor-accent-text)]">
+                                Livrable : {mission.deliverable}
+                              </span>
+                            ) : null}
                           </span>
                         </label>
                       ))}

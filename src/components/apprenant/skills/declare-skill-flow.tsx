@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Briefcase, Check, Link2, Loader2, Search, Sparkles, X } from "lucide-react";
+import { ArrowRight, Briefcase, Check, FileUp, Link2, Loader2, Search, Sparkles, X } from "lucide-react";
 
 import {
   DECLARE_CONTEXTS,
@@ -179,6 +179,7 @@ export function DeclareSkillFlow() {
   const [context, setContext] = useState<DeclareContextId | null>(null);
   const [proofUrl, setProofUrl] = useState("");
   const [proofNote, setProofNote] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [match, setMatch] = useState<MatchResponse | null>(null);
@@ -408,31 +409,48 @@ export function DeclareSkillFlow() {
     if (!level || submitting) return;
     setSubmitting(true);
     setSoftError(null);
-    const hasProof = withProof && (proofUrl.trim().length > 0 || proofNote.trim().length > 0);
-    const status = hasProof ? "proven" : "declared";
+    const hasProof =
+      withProof &&
+      (proofUrl.trim().length > 0 || proofNote.trim().length > 0 || Boolean(proofFile));
 
-    let result = await persist({
-      status,
-      ...(hasProof
-        ? { proof_url: proofUrl.trim() || undefined, proof_note: proofNote.trim() || undefined }
-        : {}),
-    });
-    // If the API rejects unknown proof fields, retry the status update alone.
-    if (!result.ok && hasProof) {
-      result = await persist({ status });
+    // Jamais « proven » ici : Byound analyse la preuve ensuite.
+    let result = await persist({ status: "declared" });
+    if (!result.ok) {
+      setSubmitting(false);
+      setSoftError("Enregistrement impossible. Réessaie.");
+      return;
     }
-    if (draftIdRef.current && result.ok && !result.offline) {
-      // POST (first creation) may have been sent as draft-only for older flows: ensure final status.
-      await api(`/api/skills/declarations/${draftIdRef.current}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
+
+    if (hasProof && draftIdRef.current && !result.offline) {
+      const form = new FormData();
+      if (proofUrl.trim()) form.set("proofUrl", proofUrl.trim());
+      if (proofNote.trim()) form.set("proofNote", proofNote.trim());
+      if (proofFile) form.set("file", proofFile);
+      const proofRes = await fetch(`/api/skills/declarations/${draftIdRef.current}/proof`, {
+        method: "POST",
+        body: form,
+        credentials: "include",
       });
+      const proofJson = await proofRes.json().catch(() => null);
+      if (!proofRes.ok) {
+        setSubmitting(false);
+        setSoftError(
+          typeof proofJson?.error === "string"
+            ? proofJson.error
+            : "Preuve non analysée — ta déclaration est enregistrée, tu pourras compléter.",
+        );
+        // Déclaration déjà sauvée : on laisse accéder à la liste
+        setTimeout(() => {
+          router.push(SKILLS_HOME);
+          router.refresh();
+        }, 1600);
+        return;
+      }
     }
+
     setSubmitting(false);
-    if (result.ok) {
-      router.push(SKILLS_HOME);
-      router.refresh();
-    }
+    router.push(SKILLS_HOME);
+    router.refresh();
   };
 
   /* ───────── Render ───────── */
@@ -815,10 +833,32 @@ export function DeclareSkillFlow() {
                 <div className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
                   <p className="text-[15px] font-semibold text-white">Ajoute une preuve</p>
                   <p className="mt-1 text-[13px] text-white/50">
-                    Un lien vers un document, une attestation ou une vidéo. Tu peux aussi laisser une note.
+                    PDF, vidéo, image, lien ou note — Byound analyse ensuite et valide, refuse ou demande un complément.
+                    Une note seule du type « je ne sais pas » ne suffit pas.
                   </p>
 
-                  <label htmlFor="declare-proof-url" className="mt-5 block text-[12px] text-white/50">
+                  <label htmlFor="declare-proof-file" className="mt-5 block text-[12px] text-white/50">
+                    Fichier (PDF, vidéo, image…)
+                  </label>
+                  <label
+                    htmlFor="declare-proof-file"
+                    className="mt-1.5 flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-4 py-3 text-[13px] text-white/60 transition hover:border-[#6E5BFF]/60"
+                    style={{ borderColor: C.border, background: C.bg }}
+                  >
+                    <FileUp className="h-4 w-4 shrink-0 text-white/40" />
+                    <span className="min-w-0 truncate">
+                      {proofFile ? proofFile.name : "Choisir un fichier (max 80 Mo)"}
+                    </span>
+                    <input
+                      id="declare-proof-file"
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.mp4,.webm,.mov,.doc,.docx,.ppt,.pptx"
+                      className="sr-only"
+                      onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+
+                  <label htmlFor="declare-proof-url" className="mt-4 block text-[12px] text-white/50">
                     Lien (URL)
                   </label>
                   <div className="relative mt-1.5">
@@ -836,14 +876,14 @@ export function DeclareSkillFlow() {
                   </div>
 
                   <label htmlFor="declare-proof-note" className="mt-4 block text-[12px] text-white/50">
-                    Note (facultatif)
+                    Note (explique ce que la preuve montre)
                   </label>
                   <textarea
                     id="declare-proof-note"
                     rows={3}
                     value={proofNote}
                     onChange={(e) => setProofNote(e.target.value)}
-                    placeholder="Explique en quelques mots ce que cette preuve montre."
+                    placeholder="Ex. Attestation de stage signée — mission X réalisée en 2025."
                     className="mt-1.5 w-full resize-none rounded-xl border px-4 py-3 text-[14px] text-white outline-none placeholder:text-white/25 focus:border-[#6E5BFF]"
                     style={{ background: C.bg, borderColor: C.border }}
                   />
@@ -866,11 +906,13 @@ export function DeclareSkillFlow() {
                     <button
                       type="button"
                       className={primaryBtn}
-                      disabled={submitting || (!proofUrl.trim() && !proofNote.trim())}
+                      disabled={
+                        submitting || (!proofUrl.trim() && !proofNote.trim() && !proofFile)
+                      }
                       onClick={() => void finish(true)}
                     >
                       {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                      Déclarer avec preuve
+                      Envoyer pour analyse Byound
                     </button>
                   </div>
                 </div>
@@ -897,7 +939,13 @@ export function DeclareSkillFlow() {
               <RecapRow label="Pratiquée" value={declareContextLabel(context)} />
               <RecapRow
                 label="Preuve"
-                value={proofUrl.trim() || proofNote.trim() ? "Ajoutée" : null}
+                value={
+                  proofUrl.trim() || proofNote.trim() || proofFile
+                    ? proofFile
+                      ? `Fichier · ${proofFile.name}`
+                      : "Prête à analyser"
+                    : null
+                }
               />
             </div>
             <div
@@ -908,7 +956,7 @@ export function DeclareSkillFlow() {
               <p>
                 {step === 2
                   ? "Tu n’es pas limité au catalogue. Si on ne trouve pas, tu continues avec tes mots : ta déclaration reste visible, on la classera ensuite."
-                  : "Une compétence avec une preuve (attestation, document, vidéo) devient « Prouvée » et compte davantage pour les entreprises."}
+                  : "Byound analyse ta preuve. Elle devient « Prouvée » seulement si elle est validée — sinon on refuse ou on demande un complément."}
               </p>
             </div>
           </aside>

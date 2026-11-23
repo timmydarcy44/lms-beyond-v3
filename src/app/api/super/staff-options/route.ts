@@ -4,7 +4,12 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type StaffOption = { id: string; label: string; email: string | null; is_pedagogical_manager: boolean };
+type StaffOption = {
+  id: string;
+  label: string;
+  email: string | null;
+  is_pedagogical_manager: boolean;
+};
 
 /** Liste du staff Byound (super_admins actifs + profils) pour les sélecteurs « menée par » / « validée par ». */
 export async function GET() {
@@ -24,7 +29,13 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const ids = [...new Set((admins ?? []).map((row) => String(row.user_id)).filter(Boolean))];
-  if (!ids.length) return NextResponse.json({ users: [], current_user_id: authData.user.id });
+  if (!ids.length) {
+    return NextResponse.json({
+      users: [],
+      current_user_id: authData.user.id,
+      current_is_pedagogical_manager: false,
+    });
+  }
 
   let profileRows: Array<Record<string, unknown>> = [];
   let hasManagerColumn = true;
@@ -33,7 +44,6 @@ export async function GET() {
     .select("id, full_name, first_name, last_name, email, is_pedagogical_manager")
     .in("id", ids);
   if (withFlag.error) {
-    // Colonne absente (migration non appliquée) → tous considérés comme responsables.
     hasManagerColumn = false;
     const fallback = await service
       .from("profiles")
@@ -58,10 +68,19 @@ export async function GET() {
         id,
         label,
         email,
-        is_pedagogical_manager: hasManagerColumn ? Boolean(p?.is_pedagogical_manager) : true,
+        // Pas de repli « tout le staff » : sans colonne / sans flag → false.
+        is_pedagogical_manager: hasManagerColumn
+          ? Boolean(p?.is_pedagogical_manager)
+          : false,
       };
     })
     .sort((a, b) => a.label.localeCompare(b.label, "fr"));
 
-  return NextResponse.json({ users, current_user_id: authData.user.id });
+  const me = users.find((u) => u.id === authData.user.id);
+
+  return NextResponse.json({
+    users,
+    current_user_id: authData.user.id,
+    current_is_pedagogical_manager: Boolean(me?.is_pedagogical_manager),
+  });
 }

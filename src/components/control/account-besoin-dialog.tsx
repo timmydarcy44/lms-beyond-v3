@@ -29,6 +29,10 @@ type DealOption = { id: string; label: string; stage: string | null };
 
 type StaffOption = { id: string; label: string; is_pedagogical_manager: boolean };
 
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 type Scope =
   | { kind: "organization"; organizationId: string; dealId?: string | null }
   | { kind: "deal"; dealId: string; organizationId?: string | null };
@@ -50,6 +54,7 @@ type Draft = {
   decided_adaptations: string;
   validated_by: string;
   client_validated_at: string;
+  client_validation_proof: string;
   details: NeedAnalysisDetails;
   recommendations: NeedAnalysisRecommendation[];
 };
@@ -58,7 +63,7 @@ const EMPTY_DRAFT: Draft = {
   title: "",
   deal_id: "",
   request_type: "entreprise",
-  exchange_date: "",
+  exchange_date: todayIsoDate(),
   exchange_mode: "",
   interlocutor_name: "",
   interlocutor_role: "",
@@ -71,6 +76,7 @@ const EMPTY_DRAFT: Draft = {
   decided_adaptations: "",
   validated_by: "",
   client_validated_at: "",
+  client_validation_proof: "",
   details: { ...EMPTY_NEED_ANALYSIS_DETAILS },
   recommendations: [],
 };
@@ -129,9 +135,13 @@ function analysisToDraft(analysis: OrganizationNeedAnalysis | null, prefillDealI
   if (!analysis) {
     return {
       ...EMPTY_DRAFT,
+      exchange_date: todayIsoDate(),
       deal_id: prefillDealId ?? "",
       details: { ...EMPTY_NEED_ANALYSIS_DETAILS },
       recommendations: [],
+      // Jamais préremplir la date de validation client.
+      client_validated_at: "",
+      client_validation_proof: "",
     };
   }
   return {
@@ -150,7 +160,12 @@ function analysisToDraft(analysis: OrganizationNeedAnalysis | null, prefillDealI
     disability_accommodations: analysis.disability_accommodations,
     decided_adaptations: analysis.decided_adaptations,
     validated_by: analysis.validated_by ?? "",
-    client_validated_at: analysis.client_validated_at ?? "",
+    // Afficher seulement si tracée (lien ou manuel) — sinon vide.
+    client_validated_at:
+      analysis.client_validated_at && analysis.client_validation_source
+        ? analysis.client_validated_at
+        : "",
+    client_validation_proof: analysis.client_validation_proof ?? "",
     details: normalizeNeedAnalysisDetails(analysis.details),
     recommendations: analysis.recommendations.length
       ? analysis.recommendations.map((r) => ({ ...r }))
@@ -223,6 +238,7 @@ export function AccountBesoinDialog({
   const [notice, setNotice] = useState<string | null>(null);
   const [staff, setStaff] = useState<StaffOption[]>([]);
   const [staffLoaded, setStaffLoaded] = useState(false);
+  const [currentIsRp, setCurrentIsRp] = useState(false);
   const [interlocutorEmail, setInterlocutorEmail] = useState("");
 
   useEffect(() => {
@@ -238,10 +254,12 @@ export function AccountBesoinDialog({
         const json = (await res.json().catch(() => null)) as {
           users?: StaffOption[];
           current_user_id?: string;
+          current_is_pedagogical_manager?: boolean;
         } | null;
         if (cancelled) return;
         if (res.ok && json?.users) {
           setStaff(json.users);
+          setCurrentIsRp(Boolean(json.current_is_pedagogical_manager));
           // Nouvelle analyse : l'utilisateur courant mène l'analyse par défaut.
           const me = json.current_user_id;
           if (!analysis && me && json.users.some((u) => u.id === me)) {
@@ -264,6 +282,12 @@ export function AccountBesoinDialog({
   const locked = current?.status === "complete";
   const showDealPicker = scope.kind === "organization" && deals.length > 0;
 
+  const exchangeMaxDate = useMemo(() => {
+    const today = todayIsoDate();
+    const created = current?.created_at ? current.created_at.slice(0, 10) : today;
+    return created < today ? created : today;
+  }, [current?.created_at]);
+
   const completeness = useMemo(
     () =>
       assessNeedAnalysisCompleteness({
@@ -283,17 +307,34 @@ export function AccountBesoinDialog({
       }),
     [draft],
   );
-  const completeReady = completeness.ready;
 
   const staffNames = useMemo(() => new Map(staff.map((u) => [u.id, u.label])), [staff]);
   const managers = useMemo(() => staff.filter((u) => u.is_pedagogical_manager), [staff]);
   const hasFlaggedManager = managers.length > 0;
-  const validatorOptions = hasFlaggedManager ? managers : staff;
+  /** Un RP ne peut pas valider une analyse qu’il a lui-même menée. */
+  const validatorOptions = useMemo(
+    () => managers.filter((u) => u.id !== draft.conducted_by),
+    [managers, draft.conducted_by],
+  );
 
-  const showDisabilityFields =
-    draft.accessibility_needed === "oui" ||
-    (draft.accessibility_needed === "" &&
-      Boolean(draft.disability_accommodations.trim() || draft.decided_adaptations.trim()));
+  const missingExtra = useMemo(() => {
+    const extra: string[] = [];
+    if (staffLoaded && !hasFlaggedManager) {
+      extra.push("Désignez un Responsable pédagogique dans Paramètres > Équipe");
+    }
+    return extra;
+  }, [staffLoaded, hasFlaggedManager]);
+
+  const allMissing = useMemo(
+    () => [...completeness.missing, ...missingExtra],
+    [completeness.missing, missingExtra],
+  );
+  const completeReady = completeness.ready && missingExtra.length === 0;
+
+  const showDisabilityFields = draft.accessibility_asked && draft.accessibility_needed === "oui";
+  const clientDateLocked =
+    Boolean(current?.client_validated_at && current.client_validation_source === "link") ||
+    !currentIsRp;
 
   const fundingOrder = isParticulier ? FUNDING_ORDER_PARTICULIER : FUNDING_ORDER_ENTREPRISE;
 
@@ -306,8 +347,8 @@ export function AccountBesoinDialog({
   }
 
   function buildPayload(markComplete?: boolean) {
-    const needsDisability = draft.accessibility_needed !== "non";
-    return {
+    const needsDisability = draft.accessibility_needed === "oui";
+    const payload: Record<string, unknown> = {
       title: draft.title.trim() || "Analyse du besoin",
       deal_id: scope.kind === "deal" ? scope.dealId : draft.deal_id || null,
       request_type: draft.request_type,
@@ -317,17 +358,27 @@ export function AccountBesoinDialog({
       interlocutor_role: isParticulier ? "" : draft.interlocutor_role,
       conducted_by: draft.conducted_by || null,
       accessibility_asked: draft.accessibility_asked,
-      accessibility_needed: draft.accessibility_needed,
+      accessibility_needed: draft.accessibility_asked ? draft.accessibility_needed : "",
       context_problem: draft.context_problem,
       expected_outcomes: draft.expected_outcomes,
       disability_accommodations: needsDisability ? draft.disability_accommodations : "",
       decided_adaptations: needsDisability ? draft.decided_adaptations : "",
       validated_by: draft.validated_by || null,
-      client_validated_at: draft.client_validated_at || null,
       details: draft.details,
       recommendations: draft.recommendations.filter((r) => r.label.trim()),
       ...(markComplete === undefined ? {} : { markComplete }),
     };
+    // Saisie manuelle date client : uniquement RP + preuve (sinon le serveur ignore / refuse).
+    if (
+      currentIsRp &&
+      draft.client_validated_at &&
+      draft.client_validation_proof.trim() &&
+      current?.client_validation_source !== "link"
+    ) {
+      payload.client_validated_at = draft.client_validated_at;
+      payload.client_validation_proof = draft.client_validation_proof.trim();
+    }
+    return payload;
   }
 
   /** Enregistre (POST/PATCH) et renvoie l'analyse sauvegardée. */
@@ -484,9 +535,11 @@ export function AccountBesoinDialog({
                 type="date"
                 className={`${fieldClass} disabled:opacity-60`}
                 value={draft.exchange_date}
+                max={exchangeMaxDate}
                 disabled={locked}
                 onChange={(e) => patch("exchange_date", e.target.value)}
               />
+              <p className="mt-1 text-xs text-[#6C7593]">Vérifiez la date réelle de l’échange.</p>
             </Field>
             <Field label="Mode d’échange">
               <select
@@ -526,7 +579,14 @@ export function AccountBesoinDialog({
               <select
                 className={fieldClass}
                 value={draft.conducted_by}
-                onChange={(e) => patch("conducted_by", e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setDraft((prev) => ({
+                    ...prev,
+                    conducted_by: next,
+                    validated_by: prev.validated_by === next ? "" : prev.validated_by,
+                  }));
+                }}
               >
                 <option value="">{staffLoaded ? "Choisir…" : "Chargement…"}</option>
                 {draft.conducted_by && !staffNames.has(draft.conducted_by) ? (
@@ -825,27 +885,36 @@ export function AccountBesoinDialog({
               type="checkbox"
               className="h-4 w-4 accent-[#6E5BFF]"
               checked={draft.accessibility_asked}
-              onChange={(e) => patch("accessibility_asked", e.target.checked)}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setDraft((prev) => ({
+                  ...prev,
+                  accessibility_asked: checked,
+                  accessibility_needed: checked ? prev.accessibility_needed : "",
+                }));
+              }}
             />
             La question des besoins d’aménagement (handicap) a été posée
           </label>
-          <Field label="Besoin d’aménagement exprimé ?">
-            <select
-              className={fieldClass}
-              value={draft.accessibility_needed}
-              onChange={(e) =>
-                patch("accessibility_needed", e.target.value as "oui" | "non" | "")
-              }
-            >
-              <option value="">Non renseigné</option>
-              <option value="oui">Oui</option>
-              <option value="non">Non</option>
-            </select>
-          </Field>
+          {draft.accessibility_asked ? (
+            <Field label="Besoin d’aménagement exprimé ?">
+              <select
+                className={fieldClass}
+                value={draft.accessibility_needed}
+                onChange={(e) =>
+                  patch("accessibility_needed", e.target.value as "oui" | "non" | "")
+                }
+              >
+                <option value="">Non renseigné</option>
+                <option value="oui">Oui</option>
+                <option value="non">Non</option>
+              </select>
+            </Field>
+          ) : null}
 
           {showDisabilityFields ? (
             <>
-              <Field label="Situations de handicap et aménagements éventuels">
+              <Field label="Situations et aménagements">
                 <textarea
                   className={`${fieldClass} min-h-[72px]`}
                   value={draft.disability_accommodations}
@@ -931,13 +1000,14 @@ export function AccountBesoinDialog({
               <select
                 className={fieldClass}
                 value={draft.validated_by}
+                disabled={!hasFlaggedManager}
                 onChange={(e) => patch("validated_by", e.target.value)}
               >
                 <option value="">{staffLoaded ? "Choisir…" : "Chargement…"}</option>
                 {draft.validated_by &&
                 !validatorOptions.some((u) => u.id === draft.validated_by) ? (
                   <option value={draft.validated_by}>
-                    {staffLabel(draft.validated_by) ?? "Utilisateur enregistré"}
+                    {staffLabel(draft.validated_by) ?? "Utilisateur enregistré (hors liste RP)"}
                   </option>
                 ) : null}
                 {validatorOptions.map((u) => (
@@ -950,16 +1020,57 @@ export function AccountBesoinDialog({
             <Field label="Validée par le client le">
               <input
                 type="date"
-                className={fieldClass}
+                className={`${fieldClass} disabled:opacity-60`}
                 value={draft.client_validated_at}
+                disabled={clientDateLocked}
                 onChange={(e) => patch("client_validated_at", e.target.value)}
               />
+              {current?.client_validation_source === "link" ? (
+                <p className="mt-1 text-xs text-[#6C7593]">
+                  Remplie automatiquement via le lien de validation
+                  {current.client_validated_by_email
+                    ? ` (${current.client_validated_by_email})`
+                    : ""}
+                  .
+                </p>
+              ) : currentIsRp ? (
+                <p className="mt-1 text-xs text-[#6C7593]">
+                  Saisie manuelle réservée au Responsable pédagogique — preuve obligatoire.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-[#6C7593]">
+                  Remplie quand le client clique le lien reçu par e-mail.
+                </p>
+              )}
             </Field>
           </div>
-          {staffLoaded && staff.length > 0 && !hasFlaggedManager ? (
-            <p className="text-xs text-[#6C7593]">
-              Aucun Responsable pédagogique n’est désigné (profil « is_pedagogical_manager »). Tout le
-              staff est proposé en attendant.
+          {currentIsRp &&
+          current?.client_validation_source !== "link" &&
+          (draft.client_validated_at || draft.client_validation_proof) ? (
+            <Field label="Preuve de validation (obligatoire si saisie manuelle)">
+              <input
+                className={fieldClass}
+                value={draft.client_validation_proof}
+                placeholder="Ex. mail du client du 12/03 — objet « OK analyse »"
+                onChange={(e) => patch("client_validation_proof", e.target.value)}
+              />
+            </Field>
+          ) : null}
+          {staffLoaded && !hasFlaggedManager ? (
+            <p className="rounded-2xl border border-[#3A1820] bg-[#2A1520] px-3 py-2 text-xs text-[#FF8A9B]">
+              Désignez un Responsable pédagogique dans{" "}
+              <Link href="/super/parametres" className="underline">
+                Paramètres &gt; Équipe
+              </Link>{" "}
+              pour pouvoir valider et marquer l’analyse complète.
+            </p>
+          ) : null}
+          {draft.conducted_by &&
+          draft.validated_by &&
+          draft.conducted_by === draft.validated_by ? (
+            <p className="text-xs text-[#FF8A9B]">
+              La personne qui mène l’analyse ne peut pas la valider — choisissez un autre Responsable
+              pédagogique.
             </p>
           ) : null}
           {current?.validated_at ? (
@@ -1035,9 +1146,7 @@ export function AccountBesoinDialog({
                 type="button"
                 disabled={saving || sending || !completeReady}
                 title={
-                  completeReady
-                    ? undefined
-                    : `Il manque : ${completeness.missing.join(", ")}`
+                  completeReady ? undefined : `Il manque : ${allMissing.join(", ")}`
                 }
                 onClick={() => void save(true)}
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] disabled:opacity-40"
@@ -1051,7 +1160,7 @@ export function AccountBesoinDialog({
             <div className="text-xs text-[#6C7593]">
               <p className="font-semibold text-[#8A93AE]">Pour marquer complète, il manque :</p>
               <ul className="mt-1 list-inside list-disc space-y-0.5">
-                {completeness.missing.map((item) => (
+                {allMissing.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>

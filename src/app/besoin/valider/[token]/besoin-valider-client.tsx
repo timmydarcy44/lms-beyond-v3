@@ -20,6 +20,7 @@ export function BesoinValiderClient({ token }: { token: string }) {
   const [status, setStatus] = useState<"loading" | "ready" | "done" | "error">("loading");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -51,11 +52,18 @@ export function BesoinValiderClient({ token }: { token: string }) {
   }, [token]);
 
   async function validate() {
+    const trimmed = email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setMessage("Indiquez votre e-mail pour tracer la validation.");
+      return;
+    }
     setBusy(true);
     setMessage(null);
     try {
       const res = await fetch(`/api/besoin/valider/${encodeURIComponent(token)}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
       });
       const json = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) throw new Error(json?.error || "Validation impossible");
@@ -103,14 +111,29 @@ export function BesoinValiderClient({ token }: { token: string }) {
         ) : null}
 
         {status === "ready" ? (
-          <button
-            type="button"
-            disabled={busy}
-            className="mt-6 w-full rounded-full bg-[#CE0058] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
-            onClick={() => void validate()}
-          >
-            {busy ? "Enregistrement…" : "Je valide l’analyse du besoin"}
-          </button>
+          <div className="mt-6 space-y-3">
+            <label className="block text-sm font-medium text-[#0A0F1E]">
+              Votre e-mail
+              <input
+                type="email"
+                className="mt-1 w-full rounded-2xl border border-[#E8E4E1] bg-white px-3 py-2 text-sm outline-none focus:border-[#CE0058]"
+                value={email}
+                placeholder="prenom.nom@entreprise.fr"
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            {message && status === "ready" ? (
+              <p className="text-sm text-rose-700">{message}</p>
+            ) : null}
+            <button
+              type="button"
+              disabled={busy}
+              className="w-full rounded-full bg-[#CE0058] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+              onClick={() => void validate()}
+            >
+              {busy ? "Enregistrement…" : "Je valide l’analyse du besoin"}
+            </button>
+          </div>
         ) : null}
       </section>
     </main>

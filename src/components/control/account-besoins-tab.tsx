@@ -276,9 +276,9 @@ export function AccountBesoinsTab({
               <p className="mt-3 line-clamp-3 text-sm text-[#9AA3BD]">
                 {row.context_problem || row.expected_outcomes || "Pas encore de contenu."}
               </p>
-              {row.client_validated_at || row.client_sent_at ? (
+              {(row.client_validated_at && row.client_validation_source) || row.client_sent_at ? (
                 <p className="mt-2 text-xs text-[#6C7593]">
-                  {row.client_validated_at
+                  {row.client_validated_at && row.client_validation_source
                     ? `Validée par le client le ${fmtDay(row.client_validated_at)}`
                     : `Envoyée au client le ${fmtDay(row.client_sent_at)}`}
                 </p>

@@ -121,6 +121,11 @@ export type OrganizationNeedAnalysis = {
   validated_at: string | null;
   client_sent_at: string | null;
   client_validated_at: string | null;
+  client_validation_source: "link" | "manual" | null;
+  client_validation_proof: string | null;
+  client_validated_by_email: string | null;
+  client_validated_ip: string | null;
+  client_validated_at_ts: string | null;
   pdf_storage_path: string | null;
   pdf_storage_bucket: string | null;
   created_by: string | null;
@@ -339,17 +344,11 @@ export function assessNeedAnalysisCompleteness(input: {
   if (!composeConstraintsText(details)) missing.push("Cadre & contraintes (modalité / financement…)");
 
   if (!input.accessibility_asked) missing.push("Question handicap posée");
-  if (input.accessibility_needed === "oui") {
+  else if (input.accessibility_needed !== "oui" && input.accessibility_needed !== "non") {
+    missing.push("Besoin d'aménagement (Oui / Non)");
+  } else if (input.accessibility_needed === "oui") {
     if (!String(input.disability_accommodations ?? "").trim()) {
       missing.push("Situations de handicap / aménagements");
-    }
-    if (!String(input.decided_adaptations ?? "").trim()) {
-      missing.push("Adaptations décidées");
-    }
-  } else if (input.accessibility_needed !== "non") {
-    // Legacy : sans le nouveau champ, exiger les deux textes comme avant
-    if (!String(input.disability_accommodations ?? "").trim()) {
-      missing.push("Handicap & aménagements");
     }
     if (!String(input.decided_adaptations ?? "").trim()) {
       missing.push("Adaptations décidées");
@@ -357,6 +356,12 @@ export function assessNeedAnalysisCompleteness(input: {
   }
 
   if (!String(input.validated_by ?? "").trim()) missing.push("Validée par (interne)");
+  else if (
+    String(input.conducted_by ?? "").trim() &&
+    String(input.validated_by).trim() === String(input.conducted_by).trim()
+  ) {
+    missing.push("Validée par ≠ Analyse menée par (séparation des rôles)");
+  }
 
   return { ready: missing.length === 0, missing };
 }
@@ -460,6 +465,20 @@ export function mapNeedAnalysisRow(row: Record<string, unknown>): OrganizationNe
     client_validated_at: row.client_validated_at
       ? String(row.client_validated_at).slice(0, 10)
       : null,
+    client_validation_source:
+      row.client_validation_source === "link" || row.client_validation_source === "manual"
+        ? row.client_validation_source
+        : null,
+    client_validation_proof: row.client_validation_proof
+      ? String(row.client_validation_proof)
+      : null,
+    client_validated_by_email: row.client_validated_by_email
+      ? String(row.client_validated_by_email)
+      : null,
+    client_validated_ip: row.client_validated_ip ? String(row.client_validated_ip) : null,
+    client_validated_at_ts: row.client_validated_at_ts
+      ? String(row.client_validated_at_ts)
+      : null,
     pdf_storage_path: row.pdf_storage_path ? String(row.pdf_storage_path) : null,
     pdf_storage_bucket: row.pdf_storage_bucket ? String(row.pdf_storage_bucket) : null,
     created_by: row.created_by ? String(row.created_by) : null,
@@ -518,6 +537,10 @@ export function needAnalysisToSurMesureBrief(analysis: {
 export const NEED_ANALYSIS_SURMESURE_STORAGE_KEY = "byound.surmesure.briefFromBesoin";
 
 export const NEED_ANALYSIS_SELECT =
+  "id, organization_id, deal_id, title, request_type, exchange_date, exchange_mode, interlocutor_name, interlocutor_role, conducted_by, accessibility_asked, accessibility_needed, context_problem, expected_outcomes, audience, constraints, disability_accommodations, decided_adaptations, details, recommendations, status, completed_at, validated_by, validated_at, client_sent_at, client_validated_at, client_validation_source, client_validation_proof, client_validated_by_email, client_validated_ip, client_validated_at_ts, pdf_storage_path, pdf_storage_bucket, created_by, updated_by, created_at, updated_at";
+
+/** v2 sans colonnes de traçabilité validation client (migration 20261123200000). */
+export const NEED_ANALYSIS_SELECT_V2 =
   "id, organization_id, deal_id, title, request_type, exchange_date, exchange_mode, interlocutor_name, interlocutor_role, conducted_by, accessibility_asked, accessibility_needed, context_problem, expected_outcomes, audience, constraints, disability_accommodations, decided_adaptations, details, recommendations, status, completed_at, validated_by, validated_at, client_sent_at, client_validated_at, pdf_storage_path, pdf_storage_bucket, created_by, updated_by, created_at, updated_at";
 
 export const NEED_ANALYSIS_SELECT_LEGACY =
@@ -552,9 +575,6 @@ export function buildNeedAnalysisWritePayload(body: Record<string, unknown>) {
     accessibility_asked: Boolean(body.accessibility_asked),
     accessibility_needed,
     validated_by: body.validated_by ? String(body.validated_by) : null,
-    client_validated_at: body.client_validated_at
-      ? String(body.client_validated_at).slice(0, 10)
-      : null,
     context_problem,
     expected_outcomes,
     audience,

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, User, Mail } from "lucide-react";
+import { EquipeSettingsPanel } from "@/components/control/equipe-settings-panel";
 import { StripeConnectButton } from "@/components/super-admin/stripe-connect-button";
 import { OfSettingsForm } from "@/components/super-admin/of-settings-form";
 
@@ -15,6 +16,8 @@ export default async function SettingsPage() {
           Configuration et gestion de l'accès super admin
         </p>
       </div>
+
+      <EquipeSettingsPanel />
 
       <OfSettingsForm />
 

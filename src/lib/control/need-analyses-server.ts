@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   NEED_ANALYSIS_SELECT,
   NEED_ANALYSIS_SELECT_LEGACY,
+  NEED_ANALYSIS_SELECT_V2,
   assessNeedAnalysisCompleteness,
   buildNeedAnalysisWritePayload,
   mapNeedAnalysisRow,
@@ -13,6 +14,7 @@ import {
   buildNeedAnalysisPdf,
   needAnalysisPdfFileName,
 } from "@/lib/control/need-analysis-pdf";
+import { buildActivityRow } from "@/lib/control/policy";
 import { sendEmail } from "@/lib/email/resend-client";
 import { publicAppUrl } from "@/lib/env";
 import { newDocToken, uploadFormationPdf } from "@/lib/formation-documents/storage";
@@ -56,7 +58,7 @@ function toLegacyPayload(payload: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(payload).filter(([key]) => LEGACY_WRITE_KEYS.has(key)));
 }
 
-/** SELECT avec repli sur les colonnes legacy si les colonnes v2 n'existent pas encore. */
+/** SELECT avec repli progressif si les colonnes v2 / traçabilité n'existent pas encore. */
 export async function selectNeedAnalysisRows(
   service: SupabaseClient,
   apply: QueryApply,
@@ -64,11 +66,27 @@ export async function selectNeedAnalysisRows(
   const run = async (cols: string) =>
     (await apply(service.from(TABLE).select(cols))) as DbResult;
   const first = await run(NEED_ANALYSIS_SELECT);
-  if (first.error && COLUMN_ERROR.test(first.error.message)) {
-    const second = await run(NEED_ANALYSIS_SELECT_LEGACY);
-    return { ...second, usedLegacy: true };
-  }
-  return { ...first, usedLegacy: false };
+  if (!first.error) return { ...first, usedLegacy: false };
+  if (!COLUMN_ERROR.test(first.error.message)) return { ...first, usedLegacy: false };
+  const mid = await run(NEED_ANALYSIS_SELECT_V2);
+  if (!mid.error) return { ...mid, usedLegacy: false };
+  if (!COLUMN_ERROR.test(mid.error.message)) return { ...mid, usedLegacy: false };
+  const second = await run(NEED_ANALYSIS_SELECT_LEGACY);
+  return { ...second, usedLegacy: true };
+}
+
+const TRACE_WRITE_KEYS = [
+  "client_validation_source",
+  "client_validation_proof",
+  "client_validated_by_email",
+  "client_validated_ip",
+  "client_validated_at_ts",
+] as const;
+
+function withoutTracePayload(payload: Record<string, unknown>) {
+  const next = { ...payload };
+  for (const key of TRACE_WRITE_KEYS) delete next[key];
+  return next;
 }
 
 async function writeNeedAnalysisRow(
@@ -84,10 +102,13 @@ async function writeNeedAnalysisRow(
     return (await query.select(cols).single()) as DbResult;
   };
   const first = await run(params.payload, NEED_ANALYSIS_SELECT);
-  if (first.error && COLUMN_ERROR.test(first.error.message)) {
-    return run(toLegacyPayload(params.payload), NEED_ANALYSIS_SELECT_LEGACY);
-  }
-  return first;
+  if (!first.error) return first;
+  if (!COLUMN_ERROR.test(first.error.message)) return first;
+  // Colonnes de traçabilité absentes → retry sans elles (v2).
+  const mid = await run(withoutTracePayload(params.payload), NEED_ANALYSIS_SELECT_V2);
+  if (!mid.error) return mid;
+  if (!COLUMN_ERROR.test(mid.error.message)) return mid;
+  return run(toLegacyPayload(params.payload), NEED_ANALYSIS_SELECT_LEGACY);
 }
 
 function profileDisplayName(p: Record<string, unknown>): string {
@@ -215,7 +236,6 @@ const MERGE_KEYS = [
   "accessibility_asked",
   "accessibility_needed",
   "validated_by",
-  "client_validated_at",
   "context_problem",
   "expected_outcomes",
   "audience",
@@ -224,6 +244,82 @@ const MERGE_KEYS = [
   "decided_adaptations",
   "recommendations",
 ] as const;
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function createdDay(iso: string | null | undefined) {
+  return iso ? String(iso).slice(0, 10) : todayIsoDate();
+}
+
+function clampExchangeDate(
+  value: string | null,
+  createdAt: string | null | undefined,
+): { ok: true; value: string | null } | { ok: false; error: string } {
+  if (!value) return { ok: true, value: null };
+  const day = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    return { ok: false, error: "Date de l’échange invalide." };
+  }
+  const max = createdDay(createdAt);
+  const today = todayIsoDate();
+  const ceiling = max < today ? max : today;
+  if (day > ceiling) {
+    return {
+      ok: false,
+      error: `La date de l’échange ne peut pas être postérieure à la création ni dans le futur (max. ${ceiling}).`,
+    };
+  }
+  return { ok: true, value: day };
+}
+
+async function isPedagogicalManager(service: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await service
+    .from("profiles")
+    .select("is_pedagogical_manager")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !data) return false;
+  return Boolean((data as { is_pedagogical_manager?: boolean }).is_pedagogical_manager);
+}
+
+async function assertValidatorIsManager(
+  service: SupabaseClient,
+  validatedBy: string | null,
+): Promise<string | null> {
+  if (!validatedBy) return null;
+  const ok = await isPedagogicalManager(service, validatedBy);
+  return ok
+    ? null
+    : "Seul un Responsable pédagogique peut valider l’analyse (Paramètres > Équipe).";
+}
+
+export async function logNeedAnalysisActivity(
+  service: SupabaseClient,
+  params: {
+    organizationId: string | null;
+    actorUserId: string;
+    action: string;
+    payload?: Record<string, unknown>;
+    actorType?: "client" | "byound_on_behalf" | "system";
+  },
+) {
+  if (!params.organizationId) return;
+  try {
+    await service.from("org_activity").insert(
+      buildActivityRow({
+        orgId: params.organizationId,
+        actorUserId: params.actorUserId,
+        actorType: params.actorType ?? "byound_on_behalf",
+        action: params.action,
+        payload: params.payload ?? {},
+      }),
+    );
+  } catch (e) {
+    console.warn("[need-analyses] journal:", e instanceof Error ? e.message : e);
+  }
+}
 
 export type NeedAnalysisSaveResult =
   | { ok: true; analysis: OrganizationNeedAnalysis }
@@ -248,10 +344,27 @@ function prepareWrite(body: Record<string, unknown>, current: OrganizationNeedAn
 
   const fields = buildNeedAnalysisWritePayload(merged);
 
-  // Date d'échange verrouillée une fois l'analyse complète.
-  if (current?.status === "complete" && current.exchange_date) {
+  // Date d'échange verrouillée une fois l'analyse complète (sauf override admin explicite).
+  const unlockExchange = body.unlock_exchange_date === true;
+  if (current?.status === "complete" && current.exchange_date && !unlockExchange) {
     fields.exchange_date = current.exchange_date;
   }
+
+  const exchangeCheck = clampExchangeDate(
+    fields.exchange_date,
+    current?.created_at ?? new Date().toISOString(),
+  );
+  if (!exchangeCheck.ok) {
+    return {
+      error: exchangeCheck.error,
+      fields,
+      validated_at: current?.validated_at ?? null,
+      completeness: { ready: false, missing: [exchangeCheck.error] },
+      now: new Date().toISOString(),
+      exchangeUnlocked: false,
+    };
+  }
+  fields.exchange_date = exchangeCheck.value;
 
   const now = new Date().toISOString();
   let validated_at = current?.validated_at ?? null;
@@ -276,7 +389,17 @@ function prepareWrite(body: Record<string, unknown>, current: OrganizationNeedAn
     details: fields.details,
   });
 
-  return { fields, validated_at, completeness, now };
+  return {
+    fields,
+    validated_at,
+    completeness,
+    now,
+    error: null as string | null,
+    exchangeUnlocked:
+      Boolean(unlockExchange) &&
+      current?.status === "complete" &&
+      current.exchange_date !== fields.exchange_date,
+  };
 }
 
 function incompleteError(missing: string[]): NeedAnalysisSaveResult {
@@ -285,6 +408,61 @@ function incompleteError(missing: string[]): NeedAnalysisSaveResult {
     status: 400,
     error: `Pour marquer l’analyse complète, il manque : ${missing.join(", ")}.`,
     missing,
+  };
+}
+
+async function resolveManualClientValidation(
+  service: SupabaseClient,
+  params: {
+    userId: string;
+    body: Record<string, unknown>;
+    current: OrganizationNeedAnalysis | null;
+  },
+): Promise<
+  | { ok: true; patch: Record<string, unknown> | null }
+  | { ok: false; status: number; error: string }
+> {
+  const wantsManual =
+    params.body.client_validated_at !== undefined &&
+    String(params.body.client_validated_at ?? "").trim() !== "";
+
+  if (!wantsManual) {
+    // Ne jamais écraser une validation existante ni préremplir depuis le formulaire.
+    return { ok: true, patch: null };
+  }
+
+  const day = String(params.body.client_validated_at).slice(0, 10);
+  if (params.current?.client_validated_at === day && params.current.client_validation_source) {
+    return { ok: true, patch: null };
+  }
+
+  const isRp = await isPedagogicalManager(service, params.userId);
+  if (!isRp) {
+    return {
+      ok: false,
+      status: 403,
+      error: "Seuls les Responsables pédagogiques peuvent saisir manuellement la date client.",
+    };
+  }
+  const proof = String(params.body.client_validation_proof ?? "").trim();
+  if (!proof) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Preuve de validation obligatoire pour une saisie manuelle de la date client.",
+    };
+  }
+  const now = new Date().toISOString();
+  return {
+    ok: true,
+    patch: {
+      client_validated_at: day,
+      client_validation_source: "manual",
+      client_validation_proof: proof,
+      client_validated_at_ts: now,
+      client_validated_by_email: null,
+      client_validated_ip: null,
+    },
   };
 }
 
@@ -298,7 +476,20 @@ export async function createNeedAnalysis(
     body: Record<string, unknown>;
   },
 ): Promise<NeedAnalysisSaveResult> {
-  const { fields, validated_at, completeness, now } = prepareWrite(params.body, null);
+  const prepared = prepareWrite(params.body, null);
+  if (prepared.error) return { ok: false, status: 400, error: prepared.error };
+  const { fields, validated_at, completeness, now } = prepared;
+
+  const validatorErr = await assertValidatorIsManager(service, fields.validated_by);
+  if (validatorErr) return { ok: false, status: 400, error: validatorErr };
+
+  const manual = await resolveManualClientValidation(service, {
+    userId: params.userId,
+    body: params.body,
+    current: null,
+  });
+  if (!manual.ok) return { ok: false, status: manual.status, error: manual.error };
+
   const wantComplete = params.body.markComplete === true;
   if (wantComplete && !completeness.ready) return incompleteError(completeness.missing);
   const complete = wantComplete && completeness.ready;
@@ -308,6 +499,14 @@ export async function createNeedAnalysis(
     deal_id: params.dealId,
     title: params.title,
     ...fields,
+    // Date client jamais préremplie à la création sauf saisie manuelle RP + preuve.
+    client_validated_at: null,
+    client_validation_source: null,
+    client_validation_proof: null,
+    client_validated_by_email: null,
+    client_validated_ip: null,
+    client_validated_at_ts: null,
+    ...(manual.patch ?? {}),
     validated_at,
     status: complete ? "complete" : "draft",
     completed_at: complete ? now : null,
@@ -320,7 +519,27 @@ export async function createNeedAnalysis(
   if (error) return { ok: false, status: 500, error: error.message };
 
   let analysis = mapNeedAnalysisRow(data as Record<string, unknown>);
-  if (complete) analysis = await persistNeedAnalysisPdf(service, analysis);
+  if (manual.patch) {
+    await logNeedAnalysisActivity(service, {
+      organizationId: params.organizationId,
+      actorUserId: params.userId,
+      action: "Analyse du besoin — validation client saisie manuellement",
+      payload: {
+        analysis_id: analysis.id,
+        client_validated_at: manual.patch.client_validated_at,
+        proof: manual.patch.client_validation_proof,
+      },
+    });
+  }
+  if (complete) {
+    analysis = await persistNeedAnalysisPdf(service, analysis);
+    await logNeedAnalysisActivity(service, {
+      organizationId: params.organizationId,
+      actorUserId: params.userId,
+      action: "Analyse du besoin marquée complète",
+      payload: { analysis_id: analysis.id, title: analysis.title },
+    });
+  }
   return { ok: true, analysis };
 }
 
@@ -336,7 +555,19 @@ export async function updateNeedAnalysis(
   },
 ): Promise<NeedAnalysisSaveResult> {
   const { current, body } = params;
-  const { fields, validated_at, completeness, now } = prepareWrite(body, current);
+  const prepared = prepareWrite(body, current);
+  if (prepared.error) return { ok: false, status: 400, error: prepared.error };
+  const { fields, validated_at, completeness, now, exchangeUnlocked } = prepared;
+
+  const validatorErr = await assertValidatorIsManager(service, fields.validated_by);
+  if (validatorErr) return { ok: false, status: 400, error: validatorErr };
+
+  const manual = await resolveManualClientValidation(service, {
+    userId: params.userId,
+    body,
+    current,
+  });
+  if (!manual.ok) return { ok: false, status: manual.status, error: manual.error };
 
   const wantComplete = body.markComplete === true || current.status === "complete";
   if (body.markComplete === true && !completeness.ready) {
@@ -354,6 +585,7 @@ export async function updateNeedAnalysis(
       ? { organization_id: params.patch.organization_id }
       : {}),
     ...fields,
+    ...(manual.patch ?? {}),
     validated_at,
     status: complete ? "complete" : "draft",
     completed_at: complete ? current.completed_at ?? now : null,
@@ -369,6 +601,40 @@ export async function updateNeedAnalysis(
   if (error) return { ok: false, status: 500, error: error.message };
 
   let analysis = mapNeedAnalysisRow(data as Record<string, unknown>);
+  const orgId = analysis.organization_id ?? current.organization_id;
+
+  if (manual.patch) {
+    await logNeedAnalysisActivity(service, {
+      organizationId: orgId,
+      actorUserId: params.userId,
+      action: "Analyse du besoin — validation client saisie manuellement",
+      payload: {
+        analysis_id: analysis.id,
+        client_validated_at: manual.patch.client_validated_at,
+        proof: manual.patch.client_validation_proof,
+      },
+    });
+  }
+  if (exchangeUnlocked) {
+    await logNeedAnalysisActivity(service, {
+      organizationId: orgId,
+      actorUserId: params.userId,
+      action: "Analyse du besoin — date d’échange modifiée après complétion",
+      payload: {
+        analysis_id: analysis.id,
+        from: current.exchange_date,
+        to: analysis.exchange_date,
+      },
+    });
+  }
+  if (complete && current.status !== "complete") {
+    await logNeedAnalysisActivity(service, {
+      organizationId: orgId,
+      actorUserId: params.userId,
+      action: "Analyse du besoin marquée complète",
+      payload: { analysis_id: analysis.id, title: analysis.title },
+    });
+  }
   // PDF : généré à la complétion, régénéré à chaque sauvegarde d'une analyse complète.
   if (complete) analysis = await persistNeedAnalysisPdf(service, analysis);
   return { ok: true, analysis };
@@ -453,6 +719,18 @@ export async function sendNeedAnalysisToClient(
   if (sentUpdate.error) {
     console.warn("[need-analyses] client_sent_at not saved:", sentUpdate.error.message);
   }
+
+  await logNeedAnalysisActivity(service, {
+    organizationId: params.analysis.organization_id,
+    actorUserId: params.analysis.updated_by || params.analysis.created_by || params.analysis.id,
+    action: "Analyse du besoin envoyée au client pour validation",
+    payload: {
+      analysis_id: params.analysis.id,
+      title: params.analysis.title,
+      to: email,
+      sent_at: sentAt,
+    },
+  });
 
   return { ok: true, analysis: { ...params.analysis, client_sent_at: sentAt } };
 }

@@ -20,7 +20,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   turbopack: {},
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "canvas"],
+  // unpdf : laisser bundler (worker inliné). pdf-parse / pdfjs restent externes.
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "canvas", "@napi-rs/canvas"],
   images: {
     remotePatterns: [
       {

@@ -7,7 +7,8 @@ alwaysApply: false
 # Preuves compétences · PDF
 
 - Un PDF / fichier joint **ne valide jamais** une compétence à lui seul.
-- Extraction Node uniquement (`export const runtime = "nodejs"`). Helper : `src/lib/skills/extract-proof-pdf.ts` (`pdf-parse` d’abord + fallback `pdfjs-dist/legacy`, stubs DOM, `pdfjs-dist` en **dependencies** aligné sur pdf-parse).
+- Extraction Node uniquement (`export const runtime = "nodejs"`). Helper : `src/lib/skills/extract-proof-pdf.ts` — **`unpdf` d’abord** (worker inliné, Vercel-safe), puis `pdf-parse` (+ `pdf-parse/worker`), puis `pdfjs-dist/legacy`.
+- Ne pas remettre pdfjs/pdf-parse en premier sur Vercel : le `pdf.worker.mjs` n’est pas dans le standalone → faux « scanné » / « extraction échouée ».
 - « Illisible / scanné » seulement si **&lt; 30 caractères** extractibles **sans** erreur technique. Si `extractError` → message « extraction échouée », pas « scanné ». Texte lisible → **tri IA** (jamais de validation auto).
 - Contenu générique sans faits → `needs_more` (demander exemple concret : bien, date, type de mandat, résultat…). Hors sujet / factice → `refused`.
 - `validated` seulement si le contenu démontre concrètement la compétence (confiance ≥ 0.75). Voir `analyze-skill-proof.ts`.

@@ -434,10 +434,15 @@ export function DeclareSkillFlow() {
       const proofJson = await proofRes.json().catch(() => null);
       if (!proofRes.ok) {
         setSubmitting(false);
-        setSoftError(
+        const apiError =
           typeof proofJson?.error === "string"
             ? proofJson.error
-            : "Preuve non analysée — ta déclaration est enregistrée, tu pourras compléter.",
+            : typeof proofJson?.message === "string"
+              ? proofJson.message
+              : null;
+        setSoftError(
+          apiError ||
+            `Preuve non analysée (${proofRes.status}). Ta déclaration est enregistrée — tu pourras compléter.`,
         );
         // Déclaration déjà sauvée : on laisse accéder à la liste
         setTimeout(() => {

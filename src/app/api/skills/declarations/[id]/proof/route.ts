@@ -20,6 +20,25 @@ function sanitizeFileName(name: string) {
     .slice(0, 80);
 }
 
+async function extractProofText(file: File, buffer: Buffer): Promise<string> {
+  const mime = (file.type || "").toLowerCase();
+  const name = file.name.toLowerCase();
+  try {
+    if (mime.includes("pdf") || name.endsWith(".pdf")) {
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: buffer });
+      const textResult = await parser.getText();
+      return String(textResult.text ?? "").trim().slice(0, 12000);
+    }
+    if (mime.startsWith("text/") || name.endsWith(".txt") || name.endsWith(".md")) {
+      return buffer.toString("utf8").trim().slice(0, 12000);
+    }
+  } catch (error) {
+    console.warn("[skills/proof] extract text failed", error);
+  }
+  return "";
+}
+
 /** Dépose / met à jour une preuve et lance l’analyse Byound. */
 export async function POST(
   request: NextRequest,
@@ -78,6 +97,7 @@ export async function POST(
   }
 
   let proofFilePath: string | null = null;
+  let extractedText = "";
   if (file) {
     if (file.size > 80 * 1024 * 1024) {
       return NextResponse.json({ error: "Fichier trop volumineux (max 80 Mo)." }, { status: 400 });
@@ -85,6 +105,7 @@ export async function POST(
     const safe = sanitizeFileName(file.name || "preuve");
     const path = `${session.id}/${id}/${Date.now()}-${safe}`;
     const buffer = Buffer.from(await file.arrayBuffer());
+    extractedText = await extractProofText(file, buffer);
     const uploaded = await uploadWithBucketFallback(db, {
       preferredBucket: PROOF_BUCKET,
       path,
@@ -138,6 +159,7 @@ export async function POST(
     proofNote: proofNote || null,
     hasFile: Boolean(proofFilePath),
     fileName: file?.name ?? null,
+    extractedText,
   });
 
   const next = statusesFromProofDecision(analysis.decision);

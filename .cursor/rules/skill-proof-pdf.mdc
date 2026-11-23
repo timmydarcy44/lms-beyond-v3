@@ -1,0 +1,13 @@
+---
+description: Règle métier — preuves compétences PDF (jamais valider un PDF médiocre)
+globs: src/lib/skills/**/*,src/app/api/skills/**/*,src/components/apprenant/skills/**/*,src/components/apprenant/learner-competences*
+alwaysApply: false
+---
+
+# Preuves compétences · PDF
+
+- Un PDF / fichier joint **ne valide jamais** une compétence à lui seul.
+- Byound doit **lire le contenu** (extraction texte) avant toute décision.
+- PDF illisible, trop court, hors sujet, factice (« n’importe quoi », lorem, test) → `refused` ou `needs_more`, **jamais** `validated` / statut `proven`.
+- `validated` seulement si le contenu démontre concrètement la compétence (confiance ≥ 0.75). Logique dans `src/lib/skills/analyze-skill-proof.ts` (`heuristicProofDecision`, `enforceProofValidationGate`).
+- Ne pas contourner ces gardes-fous dans les routes API ni côté UI apprenant.

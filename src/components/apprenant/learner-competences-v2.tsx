@@ -192,7 +192,7 @@ export function LearnerCompetencesV2() {
                         en cours de classement
                       </p>
                     ) : null}
-                    {r.reviewNote && r.status !== "proved" && r.status !== "declared" ? (
+                    {r.reviewNote && r.status !== "proved" ? (
                       <p className="mt-1 text-xs leading-relaxed" style={{ color: C.secondary }}>
                         {r.reviewNote}
                       </p>

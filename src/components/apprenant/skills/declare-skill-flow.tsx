@@ -833,7 +833,7 @@ export function DeclareSkillFlow() {
                 <div className="rounded-2xl border p-5" style={{ background: C.card, borderColor: C.border }}>
                   <p className="text-[15px] font-semibold text-white">Ajoute une preuve</p>
                   <p className="mt-1 text-[13px] text-white/50">
-                    PDF, vidéo, image, lien ou note — Byound analyse ensuite et valide, refuse ou demande un complément.
+                    PDF, vidéo, image, lien ou note — Byound lit le contenu. Un PDF hors sujet ou vide de sens est refusé : ça ne valide pas la compétence.
                     Une note seule du type « je ne sais pas » ne suffit pas.
                   </p>
 
@@ -956,7 +956,7 @@ export function DeclareSkillFlow() {
               <p>
                 {step === 2
                   ? "Tu n’es pas limité au catalogue. Si on ne trouve pas, tu continues avec tes mots : ta déclaration reste visible, on la classera ensuite."
-                  : "Byound analyse ta preuve. Elle devient « Prouvée » seulement si elle est validée — sinon on refuse ou on demande un complément."}
+                  : "Byound lit ta preuve. « Prouvée » seulement si le contenu démontre vraiment la compétence — un PDF n’importe quoi est refusé."}
               </p>
             </div>
           </aside>

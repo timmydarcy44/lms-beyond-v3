@@ -23,6 +23,9 @@ export type ByoundProgramFacts = {
   seatsAvailable: string;
   programPdfUrl: string;
   heroImageUrl: string;
+  /** Formation LMS rattachée à cette page cursus (courses.id). */
+  lmsCourseId: string;
+  lmsCourseTitle: string;
   candidaterHref: string;
 };
 
@@ -92,6 +95,8 @@ export function defaultByoundProgramFacts(
     seatsAvailable: "15",
     programPdfUrl: "",
     heroImageUrl: "",
+    lmsCourseId: "",
+    lmsCourseTitle: "",
     candidaterHref: candidaterHref(specialization),
   };
 }
@@ -122,5 +127,7 @@ export function mergeByoundProgramFacts(
     seatsAvailable: text("seats_available", defaults.seatsAvailable),
     programPdfUrl: String(row.program_pdf_url ?? "").trim(),
     heroImageUrl: String(row.hero_image_url ?? "").trim(),
+    lmsCourseId: String(row.lms_course_id ?? "").trim(),
+    lmsCourseTitle: String(row.lms_course_title ?? "").trim(),
   };
 }

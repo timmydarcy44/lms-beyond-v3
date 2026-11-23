@@ -16,11 +16,19 @@
   --ring: #7774ff;
   position: relative;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: clip;
   color: #f8fbff;
   background:
     radial-gradient(circle at 8% 4%, rgba(53, 104, 255, 0.3), transparent 28rem),
     radial-gradient(circle at 92% 18%, rgba(103, 76, 255, 0.2), transparent 32rem),
     linear-gradient(145deg, #050d1d 0%, #08162b 42%, #071225 100%);
+}
+
+.super-theme .control-shell,
+.control-shell {
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .super-theme::before {

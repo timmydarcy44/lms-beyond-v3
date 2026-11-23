@@ -31,8 +31,11 @@ function fileLabelFromUrl(url: string): string {
   }
 }
 
+type CourseOption = { id: string; title: string };
+
 export function ByoundFormationsAdminClient() {
   const [programs, setPrograms] = useState<ByoundProgramFacts[]>([]);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
   const [selected, setSelected] = useState<ByoundProgramFacts | null>(null);
   const [draft, setDraft] = useState<ByoundProgramFacts | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +58,7 @@ export function ByoundFormationsAdminClient() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Chargement impossible.");
       setPrograms(result.programs ?? []);
+      setCourses(Array.isArray(result.courses) ? result.courses : []);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Chargement impossible.");
     } finally {
@@ -141,6 +145,7 @@ export function ByoundFormationsAdminClient() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Enregistrement impossible.");
       setPrograms(result.programs ?? []);
+      if (Array.isArray(result.courses)) setCourses(result.courses);
       setDraft(result.program ?? draft);
       setSelected(result.program ?? draft);
       setSaved("Modifications enregistrées. Elles apparaissent sur la fiche formation.");
@@ -159,8 +164,8 @@ export function ByoundFormationsAdminClient() {
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">Pages cursus</h1>
         <p className="mt-2 max-w-2xl text-sm text-white/55">
-          Modifiez les infos affichées sur chaque page cursus publique, déposez la fiche
-          PDF à télécharger, et changez l’image de couverture.
+          Modifiez les infos affichées sur chaque page cursus publique, rattachez une
+          formation LMS, déposez la fiche PDF à télécharger, et changez l’image de couverture.
         </p>
       </div>
 
@@ -218,7 +223,11 @@ export function ByoundFormationsAdminClient() {
                           {program.seatsAvailable} places · {program.location}
                         </p>
                         <p className="mt-3 text-[11px] font-semibold text-indigo-300">
-                          {program.programPdfUrl ? "Fiche cursus PDF prête" : "PDF à déposer"}
+                          {program.lmsCourseId
+                            ? program.lmsCourseTitle || "Formation LMS liée"
+                            : "Aucune formation LMS"}
+                          {" · "}
+                          {program.programPdfUrl ? "PDF prêt" : "PDF à déposer"}
                           {" · "}
                           {program.heroImageUrl ? "Hero OK" : "Hero à déposer"}
                         </p>
@@ -263,6 +272,42 @@ export function ByoundFormationsAdminClient() {
           </div>
           {saved ? <p className="mt-3 text-sm text-emerald-300">{saved}</p> : null}
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <label className="sm:col-span-2 text-sm text-white/70">
+              Formation LMS rattachée
+              <select
+                className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#0b1020] px-3 text-sm text-white outline-none focus:border-indigo-400"
+                value={draft.lmsCourseId || ""}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  const course = courses.find((item) => item.id === id);
+                  setDraft({
+                    ...draft,
+                    lmsCourseId: id,
+                    lmsCourseTitle: course?.title ?? "",
+                  });
+                }}
+              >
+                <option value="">Aucune formation</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-white/45">
+                {draft.lmsCourseId
+                  ? "Cette page cursus pointe vers une formation du LMS Byound."
+                  : "Choisis une formation créée dans LMS → Formations pour lier le cursus."}
+              </p>
+              {draft.lmsCourseId ? (
+                <Link
+                  href={`/super/lms/formations/${draft.lmsCourseId}`}
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm text-indigo-300 hover:text-indigo-200"
+                >
+                  Ouvrir la formation LMS <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+              ) : null}
+            </label>
             {FIELDS.map((field) => (
               <label key={field.key} className="text-sm text-white/70">
                 {field.label}

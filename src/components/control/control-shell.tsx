@@ -273,17 +273,21 @@ function ControlFrame({
   }
 
   return (
-    <div className={`${manrope.className} control-shell min-h-screen bg-[#0A0F1E] text-white`}>
+    <div className={`${manrope.className} control-shell min-h-screen max-w-[100vw] overflow-x-clip bg-[#0A0F1E] text-white`}>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] border-r border-[#1A2340] bg-[#080C19] lg:block">{sidebar}</aside>
       {mobileNav ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button type="button" className="absolute inset-0 bg-black/50" aria-label="Fermer le menu" onClick={() => setMobileNav(false)} />
-          <aside className="relative h-full w-[260px] border-r border-[#1A2340] bg-[#080C19]">{sidebar}</aside>
+          <aside className="relative h-full w-[min(260px,86vw)] border-r border-[#1A2340] bg-[#080C19]">{sidebar}</aside>
         </div>
       ) : null}
-      <div className="lg:pl-[260px]">
-        <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-[#1A2340] bg-[#0A0F1E]/95 px-4 backdrop-blur">
-          <button type="button" className="rounded-lg border border-[#26304F] px-2 py-1 text-sm lg:hidden" onClick={() => setMobileNav(true)}>
+      <div className="min-w-0 max-w-full lg:pl-[260px]">
+        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-2 border-b border-[#1A2340] bg-[#0A0F1E]/95 px-3 backdrop-blur sm:h-[68px] sm:gap-3 sm:px-4">
+          <button
+            type="button"
+            className="shrink-0 rounded-lg border border-[#26304F] px-2 py-1 text-sm lg:hidden"
+            onClick={() => setMobileNav(true)}
+          >
             Menu
           </button>
           <div className="relative min-w-0 flex-1">
@@ -296,11 +300,11 @@ function ControlFrame({
                 setSearchOpen(true);
               }}
               onFocus={() => setSearchOpen(true)}
-              placeholder="Rechercher…  ⌘K"
-              className="h-10 w-full rounded-full border border-[#26304F] bg-[#0B1122] pl-9 pr-4 text-sm text-white outline-none placeholder:text-[#6C7593]"
+              placeholder="Rechercher…"
+              className="h-10 w-full min-w-0 rounded-full border border-[#26304F] bg-[#0B1122] pl-9 pr-3 text-sm text-white outline-none placeholder:text-[#6C7593]"
             />
             {searchOpen && query.trim().length >= 2 ? (
-              <div className="absolute left-0 right-0 top-12 max-h-[420px] overflow-auto rounded-2xl border border-[#1A2340] bg-[#111831] p-2 shadow-2xl">
+              <div className="absolute left-0 right-0 top-12 max-h-[min(420px,70vh)] overflow-auto rounded-2xl border border-[#1A2340] bg-[#111831] p-2 shadow-2xl">
                 {groups.length === 0 ? (
                   <p className="px-3 py-4 text-sm text-[#9AA3BD]">Aucun résultat</p>
                 ) : (
@@ -328,28 +332,51 @@ function ControlFrame({
               </div>
             ) : null}
           </div>
-          <button type="button" onClick={toggle} className="hidden h-10 items-center gap-2 rounded-full bg-[#6E5BFF] px-4 text-sm font-semibold text-white sm:inline-flex">
+          <button
+            type="button"
+            onClick={toggle}
+            className="hidden h-10 shrink-0 items-center gap-2 rounded-full bg-[#6E5BFF] px-4 text-sm font-semibold text-white md:inline-flex"
+          >
             ✦ Assistant
           </button>
-          <div className="relative">
-            <button type="button" onClick={() => setCreateOpen((value) => !value)} className="inline-flex h-10 items-center gap-1 rounded-full px-3 text-sm font-semibold" style={{ background: "#ffffff", color: "#12141C" }}>
-              <Plus className="h-4 w-4" /> Créer <ChevronDown className="h-3.5 w-3.5" />
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setCreateOpen((value) => !value)}
+              className="inline-flex h-10 items-center justify-center gap-1 rounded-full px-2.5 text-sm font-semibold sm:px-3"
+              style={{ background: "#ffffff", color: "#12141C" }}
+              aria-label="Créer"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Créer</span>
+              <ChevronDown className="hidden h-3.5 w-3.5 sm:inline" />
             </button>
             {createOpen ? (
               <div className="absolute right-0 top-12 w-48 rounded-2xl border border-[#1A2340] bg-[#111831] p-1 shadow-2xl">
                 {CONTROL_CREATE_LINKS.map((item) => (
-                  <Link key={item.href} href={item.href} onClick={() => setCreateOpen(false)} className="block rounded-xl px-3 py-2 text-sm text-white hover:bg-[#0B1122]">
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setCreateOpen(false)}
+                    className="block rounded-xl px-3 py-2 text-sm text-white hover:bg-[#0B1122]"
+                  >
                     {item.label}
                   </Link>
                 ))}
               </div>
             ) : null}
           </div>
-          <AlertsBadge />
-          <Link href="/dashboard/student/community" title="Messages" className="grid h-8 w-8 place-items-center rounded-full text-[#C9D2E8] hover:bg-[#111831]">
+          <div className="hidden shrink-0 sm:block">
+            <AlertsBadge />
+          </div>
+          <Link
+            href="/dashboard/student/community"
+            title="Messages"
+            className="hidden h-8 w-8 shrink-0 place-items-center rounded-full text-[#C9D2E8] hover:bg-[#111831] sm:grid"
+          >
             <MessageSquare className="h-4 w-4" />
           </Link>
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setAccountOpen((value) => !value)}
@@ -359,13 +386,24 @@ function ControlFrame({
               {initials(userName, userEmail)}
             </button>
             {accountOpen ? (
-              <div className="absolute right-0 top-12 w-64 rounded-2xl border border-[#1A2340] bg-[#111831] p-2 shadow-2xl">
+              <div className="absolute right-0 top-12 w-[min(16rem,calc(100vw-1.5rem))] rounded-2xl border border-[#1A2340] bg-[#111831] p-2 shadow-2xl">
                 <p className="px-3 py-2 text-sm font-semibold text-white">{userName || "Compte"}</p>
-                <p className="px-3 pb-2 text-[12px] text-[#9AA3BD]">{userEmail}</p>
+                <p className="break-all px-3 pb-2 text-[12px] text-[#9AA3BD]">{userEmail}</p>
                 <p className="px-3 pt-1 text-[12px] text-[#6C7593]">Apparence</p>
-                <button type="button" onClick={surface.toggle} className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white hover:bg-[#0B1122]">
+                <button
+                  type="button"
+                  onClick={surface.toggle}
+                  className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white hover:bg-[#0B1122]"
+                >
                   {surface.light ? "Fond sombre" : "Fond blanc"}
                 </button>
+                <Link
+                  href="/super/crm/cfa"
+                  onClick={() => setAccountOpen(false)}
+                  className="block rounded-xl px-3 py-2 text-sm text-white hover:bg-[#0B1122] sm:hidden"
+                >
+                  Alertes CFA
+                </Link>
                 <form action="/logout" method="POST">
                   <button type="submit" className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white hover:bg-[#0B1122]">
                     Déconnexion
@@ -375,7 +413,7 @@ function ControlFrame({
             ) : null}
           </div>
         </header>
-        <main>{children}</main>
+        <main className="min-w-0 max-w-full overflow-x-clip">{children}</main>
       </div>
       <AiAssistant hideLauncher />
     </div>

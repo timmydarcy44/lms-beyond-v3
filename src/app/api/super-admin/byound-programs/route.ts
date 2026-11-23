@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { CFA_SPECIALIZATIONS, type CfaSpecialization } from "@/lib/cfa-applications";
-import { listByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
+import {
+  listByoundLmsCourseOptions,
+  listByoundProgramFacts,
+} from "@/lib/byound-school/program-facts-server";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 function isSpecialization(value: string): value is CfaSpecialization {
@@ -13,8 +16,11 @@ export async function GET() {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
-  const programs = await listByoundProgramFacts();
-  return NextResponse.json({ programs });
+  const [programs, courses] = await Promise.all([
+    listByoundProgramFacts(),
+    listByoundLmsCourseOptions(),
+  ]);
+  return NextResponse.json({ programs, courses });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -31,7 +37,21 @@ export async function PATCH(request: NextRequest) {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible." }, { status: 503 });
 
-  const patch = {
+  const lmsCourseIdRaw = String(body?.lmsCourseId ?? "").trim();
+  const lmsCourseId = lmsCourseIdRaw || null;
+
+  if (lmsCourseId) {
+    const { data: course, error: courseError } = await db
+      .from("courses")
+      .select("id")
+      .eq("id", lmsCourseId)
+      .maybeSingle();
+    if (courseError || !course) {
+      return NextResponse.json({ error: "Formation LMS introuvable." }, { status: 400 });
+    }
+  }
+
+  const patch: Record<string, unknown> = {
     specialization,
     format: String(body?.format ?? "").trim(),
     next_intake: String(body?.nextIntake ?? "").trim(),
@@ -43,19 +63,36 @@ export async function PATCH(request: NextRequest) {
     seats_available: String(body?.seatsAvailable ?? "").trim(),
     program_pdf_url: String(body?.programPdfUrl ?? "").trim(),
     hero_image_url: String(body?.heroImageUrl ?? "").trim(),
+    lms_course_id: lmsCourseId,
     updated_at: new Date().toISOString(),
   };
 
   let { error } = await db.from("byound_school_programs").upsert(patch, {
     onConflict: "specialization",
   });
-  if (error && (error.code === "42703" || error.message.includes("hero_image_url"))) {
-    const withoutHero = { ...patch };
-    delete withoutHero.hero_image_url;
-    const retry = await db.from("byound_school_programs").upsert(withoutHero, {
+
+  // Colonnes optionnelles selon migrations appliquées
+  if (error && (error.code === "42703" || /lms_course_id|hero_image_url/i.test(error.message))) {
+    const retryPatch = { ...patch };
+    if (/lms_course_id/i.test(error.message) || error.message.includes("lms_course_id")) {
+      delete retryPatch.lms_course_id;
+    }
+    if (/hero_image_url/i.test(error.message) || error.message.includes("hero_image_url")) {
+      delete retryPatch.hero_image_url;
+    }
+    const retry = await db.from("byound_school_programs").upsert(retryPatch, {
       onConflict: "specialization",
     });
     error = retry.error;
+    if (!error && lmsCourseId && !("lms_course_id" in retryPatch)) {
+      return NextResponse.json(
+        {
+          error:
+            "Applique la migration byound_school_programs.lms_course_id pour rattacher une formation.",
+        },
+        { status: 400 },
+      );
+    }
   }
 
   if (error) {
@@ -70,9 +107,13 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const programs = await listByoundProgramFacts();
+  const [programs, courses] = await Promise.all([
+    listByoundProgramFacts(),
+    listByoundLmsCourseOptions(),
+  ]);
   return NextResponse.json({
     programs,
+    courses,
     program: programs.find((item) => item.specialization === specialization),
   });
 }

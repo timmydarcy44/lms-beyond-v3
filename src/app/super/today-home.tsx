@@ -69,13 +69,13 @@ export function TodayHome({ data }: { data: TodayHome }) {
   }
 
   return (
-    <div className="mx-auto max-w-[1240px] space-y-6 px-6 py-8">
+    <div className="mx-auto w-full max-w-[1240px] space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm capitalize text-[#9AA3BD]">{dateLabel}</p>
-          <h1 className="text-[32px] font-extrabold tracking-[-0.6px]">Bonjour {data.firstName}</h1>
+          <h1 className="text-[28px] font-extrabold tracking-[-0.6px] sm:text-[32px]">Bonjour {data.firstName}</h1>
         </div>
-        <div className="flex rounded-full border border-[#26304F] p-1">
+        <div className="flex max-w-full rounded-full border border-[#26304F] p-1">
           {([
             ["me", "Moi"],
             ["team", "Toute l'équipe"],
@@ -84,7 +84,7 @@ export function TodayHome({ data }: { data: TodayHome }) {
               key={id}
               type="button"
               onClick={() => setScope(id)}
-              className="rounded-full px-4 py-1.5 text-sm font-semibold"
+              className="rounded-full px-3 py-1.5 text-sm font-semibold sm:px-4"
               style={{ background: scope === id ? "#6E5BFF" : "transparent", color: scope === id ? "#fff" : "#9AA3BD" }}
             >
               {label}
@@ -124,7 +124,7 @@ export function TodayHome({ data }: { data: TodayHome }) {
                 <li className="py-6 text-sm text-[#9AA3BD]">Aucune demande en attente.</li>
               ) : null}
               {data.incomingDemandes.slice(0, 6).map((demande) => (
-                <li key={demande.id} className="flex items-center gap-3 py-3">
+                <li key={demande.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-3">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{demande.courseTitle}</span>
                     <span className="block truncate text-[12px] text-[#9AA3BD]">
@@ -132,17 +132,19 @@ export function TodayHome({ data }: { data: TodayHome }) {
                       {demande.source === "site_request" ? " · Site" : " · Dashboard"}
                     </span>
                   </span>
-                  <span className="text-sm text-[#C4BAFF]">
-                    {demande.amountHtCents != null && demande.amountHtCents > 0
-                      ? euros(demande.amountHtCents)
-                      : "À chiffrer"}
-                  </span>
-                  <Link
-                    href={`/super/crm/demandes?dossier=${demande.id}`}
-                    className="rounded-full border border-[#26304F] px-3 py-1 text-sm"
-                  >
-                    Ouvrir
-                  </Link>
+                  <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                    <span className="text-sm text-[#C4BAFF]">
+                      {demande.amountHtCents != null && demande.amountHtCents > 0
+                        ? euros(demande.amountHtCents)
+                        : "À chiffrer"}
+                    </span>
+                    <Link
+                      href={`/super/crm/demandes?dossier=${demande.id}`}
+                      className="rounded-full border border-[#26304F] px-3 py-1 text-sm"
+                    >
+                      Ouvrir
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -169,17 +171,37 @@ export function TodayHome({ data }: { data: TodayHome }) {
                 const link = actionLink(action);
                 const lateRow = action.date < todayKey;
                 return (
-                  <li key={action.id} className="flex items-center gap-3 py-3">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#1A2340] text-[#C9D2E8]">{channelIcon(action.channel)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{action.title}</span>
-                      <span className="block truncate text-[12px] text-[#9AA3BD]">{[action.company, action.contact].filter(Boolean).join(" · ")}</span>
-                    </span>
-                    <span className="text-sm" style={{ color: lateRow ? "#FF5C7A" : "#C4BAFF" }}>{formatDay(action.date)}</span>
-                    <a href={link.href} className="rounded-full border border-[#26304F] px-3 py-1 text-sm">{link.label}</a>
-                    <button type="button" disabled={busy === action.id} onClick={() => void markDone(action.id)} className="grid h-8 w-8 place-items-center rounded-full bg-[#163228] text-[#6BE39B]" title="Marquer faite">
-                      ✓
-                    </button>
+                  <li key={action.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#1A2340] text-[#C9D2E8]">
+                        {channelIcon(action.channel)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{action.title}</span>
+                        <span className="block truncate text-[12px] text-[#9AA3BD]">
+                          {[action.company, action.contact].filter(Boolean).join(" · ")}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center justify-between gap-2 pl-11 sm:justify-end sm:pl-0">
+                      <span className="text-sm" style={{ color: lateRow ? "#FF5C7A" : "#C4BAFF" }}>
+                        {formatDay(action.date)}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <a href={link.href} className="rounded-full border border-[#26304F] px-3 py-1 text-sm">
+                          {link.label}
+                        </a>
+                        <button
+                          type="button"
+                          disabled={busy === action.id}
+                          onClick={() => void markDone(action.id)}
+                          className="grid h-8 w-8 place-items-center rounded-full bg-[#163228] text-[#6BE39B]"
+                          title="Marquer faite"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 );
               })}

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Loader2, X } from "lucide-react";
 import { DECLARE_LEVELS } from "@/lib/skills/declare-levels";
+import { formatProofNoteForLearner } from "@/lib/skills/proof-note-display";
 
 const C = {
   card: "#0F1428",
@@ -24,6 +25,8 @@ type Declaration = {
   level: string;
   status: string;
   kind: string;
+  proof_url?: string | null;
+  proof_note?: string | null;
   proof_review_status?: string | null;
   proof_review_note?: string | null;
   skills: null | {
@@ -65,19 +68,41 @@ function statusMeta(status: RowStatus) {
   }
 }
 
+type Row = {
+  id: string;
+  name: string;
+  raw: string;
+  showRaw: boolean;
+  pending: boolean;
+  status: RowStatus;
+  reviewNote: string | null;
+  proofUrl: string | null;
+  proofNote: string | null;
+  bars: number;
+  level: string;
+};
+
 export function LearnerCompetencesV2() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [declarations, setDeclarations] = useState<Declaration[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState("");
+  const [proofNote, setProofNote] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [panelError, setPanelError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    const r = await fetch("/api/skills/declarations", { credentials: "include" });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Chargement impossible");
+    setDeclarations((j.declarations ?? []) as Declaration[]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/skills/declarations", { credentials: "include" })
-      .then(async (r) => {
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || "Chargement impossible");
-        if (!cancelled) setDeclarations((j.declarations ?? []) as Declaration[]);
-      })
+    void reload()
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : "Erreur");
       })
@@ -87,15 +112,16 @@ export function LearnerCompetencesV2() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reload]);
 
   const rows = useMemo(() => {
     return declarations
       .filter((d) => d.status === "declared" || d.status === "proven")
-      .map((d) => {
+      .map((d): Row => {
         const name = d.skills?.label || d.raw_label;
         const pending = d.match_status === "pending_review";
         const status = resolveProofStatus(d);
+        const reviewNote = formatProofNoteForLearner(d.proof_review_note, status);
         return {
           id: d.id,
           name,
@@ -103,18 +129,82 @@ export function LearnerCompetencesV2() {
           showRaw: Boolean(d.skills?.label && d.raw_label && d.skills.label !== d.raw_label),
           pending,
           status,
-          reviewNote: d.proof_review_note || null,
+          reviewNote,
+          proofUrl: d.proof_url || null,
+          proofNote: d.proof_note || null,
           bars: levelBars(d.level),
           level: d.level,
         };
       });
   }, [declarations]);
 
+  const selected = rows.find((r) => r.id === selectedId) ?? null;
+  const canComplement = selected?.status === "needs_more" || selected?.status === "declared";
+  const readOnly = selected?.status === "proved" || selected?.status === "pending_proof";
+
   const provedCount = rows.filter((r) => r.status === "proved").length;
   const declaredCount = rows.filter((r) => r.status === "declared").length;
   const reviewCount = rows.filter((r) =>
     ["pending_proof", "needs_more", "refused"].includes(r.status),
   ).length;
+
+  async function submitComplement() {
+    if (!selected || !canComplement) return;
+    if (!proofUrl.trim() && !proofNote.trim() && !proofFile) {
+      setPanelError("Ajoute un fichier, un lien ou une note.");
+      return;
+    }
+    setBusy(true);
+    setPanelError(null);
+    try {
+      const form = new FormData();
+      if (proofUrl.trim()) form.set("proofUrl", proofUrl.trim());
+      if (proofNote.trim()) form.set("proofNote", proofNote.trim());
+      if (proofFile) form.set("file", proofFile);
+      const res = await fetch(`/api/skills/declarations/${selected.id}/proof`, {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(
+          typeof json?.error === "string" ? json.error : `Envoi impossible (${res.status})`,
+        );
+      }
+      setProofUrl("");
+      setProofNote("");
+      setProofFile(null);
+      await reload();
+    } catch (e) {
+      setPanelError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteSkill() {
+    if (!selected) return;
+    if (!window.confirm(`Supprimer la compétence « ${selected.name} » ?`)) return;
+    setBusy(true);
+    setPanelError(null);
+    try {
+      const res = await fetch(`/api/skills/declarations/${selected.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(typeof json?.error === "string" ? json.error : "Suppression impossible");
+      }
+      setSelectedId(null);
+      await reload();
+    } catch (e) {
+      setPanelError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -179,43 +269,188 @@ export function LearnerCompetencesV2() {
             {rows.map((r) => {
               const meta = statusMeta(r.status);
               return (
-                <li key={r.id} className="flex items-center gap-3 py-3.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{r.pending ? r.raw : r.name}</p>
-                    {r.showRaw && !r.pending ? (
-                      <p className="text-xs" style={{ color: C.tertiary }}>
-                        Tes mots : {r.raw}
-                      </p>
-                    ) : null}
-                    {r.pending ? (
-                      <p className="text-xs" style={{ color: C.amber }}>
-                        en cours de classement
-                      </p>
-                    ) : null}
-                    {r.reviewNote && r.status !== "proved" ? (
-                      <p className="mt-1 text-xs leading-relaxed" style={{ color: C.secondary }}>
-                        {r.reviewNote}
-                      </p>
-                    ) : null}
-                    <div className="mt-2 flex gap-1">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="h-1.5 w-5 rounded-full"
-                          style={{ background: i < r.bars ? C.blue : "#1A2340" }}
-                        />
-                      ))}
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(r.id);
+                      setPanelError(null);
+                      setProofUrl("");
+                      setProofNote("");
+                      setProofFile(null);
+                    }}
+                    className="flex w-full items-center gap-3 py-3.5 text-left transition hover:bg-white/[0.03]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{r.pending ? r.raw : r.name}</p>
+                      {r.showRaw && !r.pending ? (
+                        <p className="text-xs" style={{ color: C.tertiary }}>
+                          Tes mots : {r.raw}
+                        </p>
+                      ) : null}
+                      {r.pending ? (
+                        <p className="text-xs" style={{ color: C.amber }}>
+                          en cours de classement
+                        </p>
+                      ) : null}
+                      {r.reviewNote && r.status !== "proved" ? (
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed" style={{ color: C.secondary }}>
+                          {r.reviewNote}
+                        </p>
+                      ) : null}
+                      <div className="mt-2 flex gap-1">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <span
+                            key={i}
+                            className="h-1.5 w-5 rounded-full"
+                            style={{ background: i < r.bars ? C.blue : "#1A2340" }}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <span className="shrink-0 text-[11px] font-semibold" style={{ color: meta.color }}>
-                    {meta.label}
-                  </span>
+                    <span className="shrink-0 text-[11px] font-semibold" style={{ color: meta.color }}>
+                      {meta.label}
+                    </span>
+                  </button>
                 </li>
               );
             })}
           </ul>
         )}
       </section>
+
+      {selected ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div
+            className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border p-5 shadow-xl"
+            style={{ background: C.card, borderColor: C.border }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="skill-panel-title"
+          >
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-full p-1 text-white/50 hover:bg-white/10 hover:text-white"
+              onClick={() => setSelectedId(null)}
+              aria-label="Fermer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <p id="skill-panel-title" className="pr-8 text-lg font-extrabold">
+              {selected.name}
+            </p>
+            <p className="mt-1 text-xs font-semibold" style={{ color: statusMeta(selected.status).color }}>
+              {statusMeta(selected.status).label}
+            </p>
+            {selected.reviewNote ? (
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: C.secondary }}>
+                {selected.reviewNote}
+              </p>
+            ) : null}
+
+            {(selected.proofUrl || selected.proofNote) && readOnly ? (
+              <div className="mt-4 space-y-2 rounded-xl border p-3 text-sm" style={{ borderColor: C.border }}>
+                {selected.proofUrl ? (
+                  <p>
+                    <span style={{ color: C.tertiary }}>Lien · </span>
+                    <a
+                      href={selected.proofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#8DB8FF] underline-offset-2 hover:underline"
+                    >
+                      Voir la preuve
+                    </a>
+                  </p>
+                ) : null}
+                {selected.proofNote ? (
+                  <p style={{ color: C.secondary }}>
+                    <span style={{ color: C.tertiary }}>Note · </span>
+                    {selected.proofNote}
+                  </p>
+                ) : null}
+                <p className="text-xs" style={{ color: C.tertiary }}>
+                  Compétence validée — consultation uniquement.
+                </p>
+              </div>
+            ) : null}
+
+            {canComplement ? (
+              <div className="mt-5 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.tertiary }}>
+                  Ajouter un élément
+                </p>
+                <label className="block text-xs" style={{ color: C.secondary }}>
+                  Fichier
+                  <input
+                    type="file"
+                    className="mt-1 block w-full text-sm text-white/80"
+                    onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label className="block text-xs" style={{ color: C.secondary }}>
+                  Lien
+                  <input
+                    type="url"
+                    value={proofUrl}
+                    onChange={(e) => setProofUrl(e.target.value)}
+                    className="mt-1 w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-white outline-none"
+                    style={{ borderColor: C.border }}
+                    placeholder="https://…"
+                  />
+                </label>
+                <label className="block text-xs" style={{ color: C.secondary }}>
+                  Note
+                  <textarea
+                    value={proofNote}
+                    onChange={(e) => setProofNote(e.target.value)}
+                    rows={3}
+                    className="mt-1 w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-white outline-none"
+                    style={{ borderColor: C.border }}
+                    placeholder="Faits concrets liés à la compétence…"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void submitComplement()}
+                  className="w-full rounded-full bg-white py-2.5 text-sm font-bold text-[#0A0F1E] disabled:opacity-50"
+                >
+                  {busy ? "Envoi…" : "Envoyer le complément"}
+                </button>
+              </div>
+            ) : null}
+
+            {selected.status === "refused" ? (
+              <p className="mt-4 text-xs" style={{ color: C.tertiary }}>
+                Tu peux supprimer cette déclaration ou en créer une nouvelle si tu as une autre preuve.
+              </p>
+            ) : null}
+
+            {panelError ? <p className="mt-3 text-sm text-[#FF8A9B]">{panelError}</p> : null}
+
+            <div className="mt-6 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void deleteSkill()}
+                className="rounded-full border px-4 py-2 text-xs font-semibold text-[#FF8A9B] disabled:opacity-50"
+                style={{ borderColor: "#5A2030" }}
+              >
+                Supprimer
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="rounded-full border px-4 py-2 text-xs font-semibold text-white/70"
+                style={{ borderColor: C.border }}
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

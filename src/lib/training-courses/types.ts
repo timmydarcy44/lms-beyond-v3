@@ -74,6 +74,16 @@ export type TrainingCourseRow = {
   price_on_quote?: boolean | null;
   /** Qualiopi ind.2 — surcharge méthode de calcul des indicateurs. */
   results_method_override?: string | null;
+  /** Contact référent affiché (ex. « Jessica Contentin — jessica@… »). */
+  contact_referent?: string | null;
+  /**
+   * Indicateurs qualité par clé (satisfaction, success, dropout, recommendation, completion).
+   * Shape : { value: number|null, period?: string|null, respondents?: number|null }
+   */
+  quality_indicators?: Record<
+    string,
+    { value: number | null; period?: string | null; respondents?: number | null }
+  > | null;
   created_at: string | null;
   updated_at: string | null;
 };

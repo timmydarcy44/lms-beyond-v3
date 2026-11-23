@@ -64,3 +64,23 @@ export async function PATCH(
   if (!data) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   return NextResponse.json({ declaration: data });
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const session = await getSession();
+  if (!session?.id) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+  const db = getServiceRoleClient();
+  if (!db) return NextResponse.json({ error: "NO_DB" }, { status: 503 });
+
+  const { id } = await context.params;
+  const { error } = await db
+    .from("skill_declarations")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", session.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}

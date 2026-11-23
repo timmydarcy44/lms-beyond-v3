@@ -249,6 +249,36 @@ function StarRating({ level }: { level: number }) {
   );
 }
 
+/** Lien mailto si un e-mail apparaît dans le texte (contact / réclamations / handicap). */
+function InfoValueText({ value }: { value: string }) {
+  const parts = value.split(/([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi);
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.includes("@") && /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(part) ? (
+          <a key={`${part}-${index}`} href={`mailto:${part}`} className="text-edge-accent underline-offset-2 hover:underline">
+            {part}
+          </a>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+/** FAQ : ne pas qualifier l’Open Badge de « certification ». */
+function sanitizeOpenBadgeFaqText(text: string): string {
+  return text
+    .replace(/Certification\s*&\s*Open Badge/gi, "Reconnaissance — Open Badge")
+    .replace(/Certification vérifiable/gi, "Open Badge vérifiable")
+    .replace(/une certification Open Badge/gi, "un Open Badge")
+    .replace(/la certification Open Badge/gi, "l'Open Badge")
+    .replace(/certification Open Badge/gi, "Open Badge")
+    .replace(/obtenir une certification/gi, "obtenir une reconnaissance")
+    .replace(/Obtenir une certification/gi, "Obtenir une reconnaissance");
+}
+
 export function EdgeTrainingDetailPage({
   course,
   badgeMeta,
@@ -274,8 +304,9 @@ export function EdgeTrainingDetailPage({
       buildQualityIndicators({
         ofSettingsMethod: resultsIndicatorsMethod,
         courseOverride: course.results_method_override,
+        stats: course.quality_indicators ?? null,
       }),
-    [resultsIndicatorsMethod, course.results_method_override],
+    [resultsIndicatorsMethod, course.results_method_override, course.quality_indicators],
   );
   const enrichedTrainers = useMemo(() => enrichInstructors(detail, course), [detail, course]);
 
@@ -499,7 +530,7 @@ export function EdgeTrainingDetailPage({
                   <span>Compétence</span>
                   <span>Niveau attendu</span>
                   <span>Évaluation</span>
-                  <span>Certification</span>
+                  <span>Reconnaissance</span>
                 </div>
                 {skillRows.map((row) => (
                   <div
@@ -511,7 +542,7 @@ export function EdgeTrainingDetailPage({
                     <span className="text-sm text-[#050505]/60">{row.evaluation}</span>
                     <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-edge-accent/10 px-2.5 py-1 text-xs font-medium text-edge-accent">
                       <Award className="h-3.5 w-3.5" />
-                      {row.certification}
+                      {row.recognition}
                     </span>
                   </div>
                 ))}
@@ -529,7 +560,7 @@ export function EdgeTrainingDetailPage({
                       <span>{row.evaluation}</span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-edge-accent/10 px-2 py-0.5 font-medium text-edge-accent">
                         <Award className="h-3 w-3" />
-                        {row.certification}
+                        {row.recognition}
                       </span>
                     </div>
                   </div>
@@ -626,14 +657,16 @@ export function EdgeTrainingDetailPage({
                     ) : null}
                     {item.label}
                   </p>
-                  <p className="mt-2 text-sm text-[#050505]/70">{item.value}</p>
+                  <p className="mt-2 text-sm text-[#050505]/70">
+                    <InfoValueText value={item.value} />
+                  </p>
                 </div>
               ))}
 
               {isBlockVisible(detail, "open_badge") && detail.badgeLabel ? (
                 <div className="rounded-[20px] border border-[#050505]/8 bg-white p-5 sm:col-span-2">
                   <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">
-                    Certification &amp; Open Badge
+                    Reconnaissance — Open Badge
                   </p>
                   <div className="mt-3 flex items-center gap-4">
                     {detail.badgeImageUrl ? (
@@ -646,7 +679,7 @@ export function EdgeTrainingDetailPage({
                     <div>
                       <p className="font-semibold">{detail.badgeLabel}</p>
                       <p className="mt-1 text-xs text-[#050505]/55">
-                        Certification vérifiable, partageable sur LinkedIn et dans votre wallet Byound.
+                        Open Badge vérifiable, partageable sur LinkedIn et dans votre wallet Byound.
                       </p>
                     </div>
                   </div>
@@ -770,12 +803,12 @@ export function EdgeTrainingDetailPage({
             </div>
           </section>
 
-          {/* 12. CERTIFICATION */}
+          {/* 12. RECONNAISSANCE */}
           <section className="scroll-mt-40">
             <div className="rounded-[24px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.06] to-white p-7">
               <div className="flex items-center gap-4">
                 {detail.badgeImageUrl ? (
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-xl">
                     <Image src={detail.badgeImageUrl} alt="" fill className="object-cover" unoptimized />
                   </div>
                 ) : (
@@ -784,7 +817,7 @@ export function EdgeTrainingDetailPage({
                   </span>
                 )}
                 <div>
-                  <h2 className="text-xl font-semibold tracking-[-0.02em]">Certification</h2>
+                  <h2 className="text-xl font-semibold tracking-[-0.02em]">Reconnaissance</h2>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#050505]/60">
                     Cette formation permet l&apos;obtention d&apos;un Open Badge Byound vérifiable en ligne
                     attestant des compétences acquises.
@@ -842,8 +875,10 @@ export function EdgeTrainingDetailPage({
               <div className="space-y-4">
                 {detail.faq.map((item) => (
                   <div key={item.q} className="rounded-[20px] border border-[#050505]/8 bg-white p-6">
-                    <p className="font-medium">{item.q}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-[#050505]/60">{item.a}</p>
+                    <p className="font-medium">{sanitizeOpenBadgeFaqText(item.q)}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-[#050505]/60">
+                      {sanitizeOpenBadgeFaqText(item.a)}
+                    </p>
                   </div>
                 ))}
               </div>

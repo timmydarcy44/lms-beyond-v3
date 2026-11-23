@@ -164,6 +164,7 @@ Décide :
 - validated : UNIQUEMENT si le contenu DÉMONTRE concrètement la compétence avec des faits vérifiables
   (ex. immobilier / prise de mandat : quel bien, quelle date, quel type de mandat, quel résultat)
 - refused : hors sujet, absurde, factice, sans rapport
+  → note SOBRE : explique POURQUOI c’est refusé, SANS coaching ni liste de « ce qu’il faut ajouter pour l’avoir »
 - needs_more : le texte parle de la compétence mais reste trop générique / scolaire / sans exemple concret
   → demande explicitement les faits manquants (bien, date, type de mandat, résultat, etc.)
 
@@ -182,7 +183,7 @@ Règle d’or : on ne valide JAMAIS sur un PDF médiocre, générique ou vide de
 - La présence d’un fichier n’est PAS une preuve.
 - Un discours générique (« j’ai appris à… », « il faut être professionnel ») sans exemple concret → needs_more
   (demande : quel bien / quelle date / quel type de mandat / quel résultat, adaptés à la compétence).
-- Hors sujet / factice → refused.
+- Hors sujet / factice → refused (raison courte, sans conseils pour « réussir » la validation).
 - validated seulement si le contenu montre clairement la compétence avec des éléments concrets.
 - En cas de doute → needs_more ou refused, jamais validated.
 Réponds uniquement en JSON.`,

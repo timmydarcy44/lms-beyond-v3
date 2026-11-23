@@ -67,20 +67,23 @@ export const HERO_DIAGNOSTIC_BADGES = [
 
 /** Méthodes pédagogiques par défaut (fusionnées avec la méthodologie saisie). */
 const DEFAULT_PEDAGOGICAL_METHODS = [
-  "Présentiel",
-  "Distanciel",
-  "Blended Learning",
-  "Études de cas",
-  "Jeux de rôle",
+  "Apports courts",
   "Mises en situation",
+  "Jeux de rôle",
+  "Feedback entre pairs",
   "Co-développement",
   "Coaching",
-  "Classe virtuelle",
-  "Travaux collaboratifs",
+  "Études de cas",
   "Supports numériques",
-  "IA Byound",
-  "NEVO",
+  "Plan de progression",
+  "Re-test à deux mois",
+  "LMS Byound",
+  "Parcours neuroadapté",
+  "Entretiens expérientiels",
+  "Jeux interactifs",
 ];
+
+const REMOVED_PEDAGOGICAL_METHODS = new Set(["classe virtuelle"]);
 
 export function buildPedagogicalMethods(detail: TrainingCourseDetail): string[] {
   const fromCourse = detail.methodology.filter(Boolean);
@@ -88,7 +91,7 @@ export function buildPedagogicalMethods(detail: TrainingCourseDetail): string[] 
   for (const method of DEFAULT_PEDAGOGICAL_METHODS) {
     if (!merged.some((m) => m.toLowerCase() === method.toLowerCase())) merged.push(method);
   }
-  return merged;
+  return merged.filter((m) => !REMOVED_PEDAGOGICAL_METHODS.has(m.toLowerCase()));
 }
 
 /** Modalités d'évaluation (obligatoire Qualiopi). */
@@ -110,7 +113,8 @@ export type SkillLevelRow = {
   /** Niveau attendu, 1 à 5 étoiles. */
   level: number;
   evaluation: string;
-  certification: string;
+  /** Open Badge / reconnaissance (plus de libellé « certification »). */
+  recognition: string;
 };
 
 const EVALUATION_MODES = [
@@ -120,13 +124,13 @@ const EVALUATION_MODES = [
   "Quiz + exercice",
 ];
 
-/** Tableau « Compétences développées » : compétence · niveau · évaluation · certification. */
+/** Tableau « Compétences développées » : compétence · niveau · évaluation · reconnaissance. */
 export function buildSkillLevelRows(detail: TrainingCourseDetail): SkillLevelRow[] {
   return detail.competences.map((skill, index) => ({
     skill,
     level: index === 0 ? 5 : 4,
     evaluation: EVALUATION_MODES[index % EVALUATION_MODES.length],
-    certification: "Badge Byound",
+    recognition: "Open Badge Byound",
   }));
 }
 
@@ -149,18 +153,24 @@ export type QualiopiInfoItem = {
   wide?: boolean;
 };
 
+const DEFAULT_ACCESSIBILITY =
+  "Formation accessible aux personnes en situation de handicap. Adaptations possibles sur demande, en lien si besoin avec nos partenaires (Agefiph, Cap Emploi).";
+
+const DEFAULT_COMPLAINTS =
+  "Pour toute réclamation : jessica.contentin@byound.fr — réponse sous 15 jours ouvrés.";
+
 /** Bloc « Informations » enrichi conforme Qualiopi. */
 export function buildQualiopiInfo(
   course: TrainingCoursePublic,
   detail: TrainingCourseDetail,
 ): QualiopiInfoItem[] {
-  const modality =
+  const modalityDetail = String(course.pedagogical_modality_detail ?? "").trim();
+  const modalityShort =
     pedagogicalModalityLabel(course.pedagogical_modality) ||
     detail.formatsLabel ||
     null;
-  const modalityDetail = String(course.pedagogical_modality_detail ?? "").trim();
-  const modalites = [modality, modalityDetail].filter(Boolean).join(" — ") ||
-    "À rédiger";
+  // Champ « Modalités pédagogiques » = détail saisi ; sinon libellé court / formats.
+  const modalites = modalityDetail || modalityShort || "À rédiger";
   const recognition = recognitionTypeLabel(course.recognition_type);
   const recognitionDetail = String(course.recognition_detail ?? "").trim();
   const recognitionValue = recognition
@@ -176,6 +186,12 @@ export function buildQualiopiInfo(
         year: "numeric",
       })
     : null;
+  const contactReferent =
+    String(course.contact_referent ?? "").trim() ||
+    (course.slug === "communiquer-avec-impact"
+      ? "Jessica Contentin — jessica.contentin@byound.fr"
+      : "") ||
+    "Votre conseiller pédagogique Byound.";
 
   return [
     { label: "Public concerné", value: publicConcerne, wide: true },
@@ -195,12 +211,16 @@ export function buildQualiopiInfo(
     },
     {
       label: "Accessibilité handicap",
-      value:
-        "Formation accessible aux personnes en situation de handicap. Adaptations possibles sur demande.",
+      value: DEFAULT_ACCESSIBILITY,
       wide: true,
     },
     { label: "Délais d'accès", value: "Accès sous 2 à 4 semaines après validation du diagnostic." },
-    { label: "Contact référent", value: "Votre conseiller pédagogique Byound." },
+    { label: "Contact référent", value: contactReferent, wide: true },
+    {
+      label: "Réclamations",
+      value: DEFAULT_COMPLAINTS,
+      wide: true,
+    },
     {
       label: "Référent handicap",
       value: "referent-handicap@byound.fr — étude personnalisée de chaque situation.",
@@ -212,20 +232,68 @@ export function buildQualiopiInfo(
   ];
 }
 
+export type QualityIndicatorKey =
+  | "satisfaction"
+  | "success"
+  | "dropout"
+  | "recommendation"
+  | "completion";
+
+/** Données publiées par indicateur (nullable tant que pas de sessions). */
+export type QualityIndicatorStat = {
+  value: number | null;
+  period?: string | null;
+  respondents?: number | null;
+};
+
 export type QualityIndicator = {
+  key: QualityIndicatorKey;
   label: string;
+  /** Affichage (ex. « 92 % — 25 répondants — Sessions 2027 ») ou null → « — ». */
   value: string | null;
   method: string;
 };
 
+/** Méthodes de calcul — identiques pour toutes les fiches (composant commun). */
+export const QUALITY_INDICATOR_METHODS: Record<QualityIndicatorKey, string> = {
+  satisfaction:
+    "Questionnaire de fin de formation : % de répondants satisfaits ou très satisfaits.",
+  success: "% de participants ayant obtenu l'Open Badge Byound.",
+  dropout: "% de participants n'ayant pas terminé la formation.",
+  recommendation: "% de répondants qui recommanderaient la formation.",
+  completion: "% d'heures réalisées sur le nombre d'heures prévues.",
+};
+
+const QUALITY_INDICATOR_LABELS: Record<QualityIndicatorKey, string> = {
+  satisfaction: "Taux de satisfaction",
+  success: "Taux de réussite",
+  dropout: "Taux d'abandon",
+  recommendation: "Taux de recommandation",
+  completion: "Taux de complétion",
+};
+
+export function formatQualityIndicatorDisplay(stat?: QualityIndicatorStat | null): string | null {
+  if (!stat || stat.value == null || !Number.isFinite(stat.value)) return null;
+  const parts = [`${Math.round(stat.value)} %`];
+  if (stat.respondents != null && Number.isFinite(stat.respondents)) {
+    parts.push(`${Math.round(stat.respondents)} répondants`);
+  }
+  if (stat.period && String(stat.period).trim()) {
+    parts.push(String(stat.period).trim());
+  }
+  return parts.join(" — ");
+}
+
 /**
  * Indicateurs qualité. Jamais de valeur fictive.
- * Affiche toujours la méthode de calcul (globale ou surcharge fiche).
+ * Chaque carte a sa propre méthode de calcul (composant commun).
  */
 export function buildQualityIndicators(input?: {
   ofSettingsMethod?: string | null;
   courseOverride?: string | null;
-  /** Valeurs réelles si/quand disponibles — sinon null. */
+  /** Stats réelles par indicateur — sinon null / « — ». */
+  stats?: Partial<Record<QualityIndicatorKey, QualityIndicatorStat | null>> | null;
+  /** @deprecated Preférer `stats`. */
   values?: Partial<Record<string, string | null>>;
 }): {
   available: boolean;
@@ -233,23 +301,31 @@ export function buildQualityIndicators(input?: {
   method: string;
   indicators: QualityIndicator[];
 } {
-  const method = resolveResultsMethod({
+  const legacyMethod = resolveResultsMethod({
     ofSettingsMethod: input?.ofSettingsMethod,
     courseOverride: input?.courseOverride,
   });
-  const values = input?.values ?? {};
-  const indicators: QualityIndicator[] = [
-    { label: "Taux de satisfaction", value: values.satisfaction ?? null, method },
-    { label: "Taux de réussite", value: values.success ?? null, method },
-    { label: "Taux d'abandon", value: values.dropout ?? null, method },
-    { label: "Taux de recommandation", value: values.recommendation ?? null, method },
-    { label: "Taux de complétion", value: values.completion ?? null, method },
-  ];
+  const stats = input?.stats ?? {};
+  const legacyValues = input?.values ?? {};
+  const keys = Object.keys(QUALITY_INDICATOR_METHODS) as QualityIndicatorKey[];
+  const indicators: QualityIndicator[] = keys.map((key) => {
+    const fromStats = formatQualityIndicatorDisplay(stats[key] ?? null);
+    const fromLegacy =
+      typeof legacyValues[key] === "string" && legacyValues[key]
+        ? String(legacyValues[key])
+        : null;
+    return {
+      key,
+      label: QUALITY_INDICATOR_LABELS[key],
+      value: fromStats ?? fromLegacy,
+      method: QUALITY_INDICATOR_METHODS[key],
+    };
+  });
   const available = indicators.some((i) => i.value != null);
   return {
     available,
     fallbackMessage: QUALIOPI_RESULTS_FALLBACK,
-    method,
+    method: legacyMethod,
     indicators,
   };
 }

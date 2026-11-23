@@ -8,7 +8,7 @@ import type { TrainingCoursePublic, TrainingCourseRow } from "@/lib/training-cou
 
 const SELECT_COLS_LEGACY =
   "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,program_structure,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,badge_class_id,meta_description,seo_tags,faq,why_choose,instructors,page_blocks,sessions,benefits,case_studies,deliverables,methodology,illustrations,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
-const SELECT_COLS = `${SELECT_COLS_LEGACY},recognition_type,recognition_detail,pedagogical_modality,pedagogical_modality_detail,financing_modalities,price_on_quote,results_method_override`;
+const SELECT_COLS = `${SELECT_COLS_LEGACY},recognition_type,recognition_detail,pedagogical_modality,pedagogical_modality_detail,financing_modalities,price_on_quote,results_method_override,contact_referent,quality_indicators`;
 
 function isMissingTableError(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
@@ -18,7 +18,7 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
 
 function isMissingQualiopiFicheCols(error: { message?: string } | null): boolean {
   if (!error?.message) return false;
-  return /recognition_type|pedagogical_modality|financing_modalities|price_on_quote|results_method_override/i.test(
+  return /recognition_type|pedagogical_modality|financing_modalities|price_on_quote|results_method_override|contact_referent|quality_indicators/i.test(
     error.message,
   );
 }

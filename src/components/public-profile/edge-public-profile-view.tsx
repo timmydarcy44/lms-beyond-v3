@@ -96,6 +96,13 @@ type Props = {
   toolLogoResolver: (label: string) => string | null;
   earnedOpenBadges?: PublicProfileEarnedBadge[];
   showBadges?: boolean;
+  /** Déclarations Byound (Mes compétences). */
+  byoundSkills?: Array<{
+    id: string;
+    label: string;
+    level: string;
+    status: "proven" | "declared";
+  }>;
 };
 
 export function EdgePublicProfileView({
@@ -125,6 +132,7 @@ export function EdgePublicProfileView({
   toolLogoResolver,
   earnedOpenBadges = [],
   showBadges = true,
+  byoundSkills = [],
 }: Props) {
   const [selectedBadge, setSelectedBadge] = useState<PublicProfileEarnedBadge | null>(null);
   const [analysisSkill, setAnalysisSkill] = useState<PublicSkillCardData | null>(null);
@@ -185,11 +193,41 @@ export function EdgePublicProfileView({
     window.print();
   };
 
+  const byoundSkillsSection =
+    byoundSkills.length === 0 ? null : (
+      <ul className="space-y-2">
+        {byoundSkills.map((skill) => (
+          <li
+            key={skill.id}
+            className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
+          >
+            <span className="min-w-0 truncate text-sm font-medium text-white">{skill.label}</span>
+            <span
+              className={cn(
+                "shrink-0 text-[11px] font-semibold",
+                skill.status === "proven" ? "text-emerald-300" : "text-[#9EC0FF]",
+              )}
+            >
+              {skill.status === "proven" ? "Prouvée" : "Déclarée"}
+            </span>
+          </li>
+        ))}
+      </ul>
+    );
+
   const competencesSection =
-    stackTools.length === 0 && skillCards.length === 0 ? (
+    stackTools.length === 0 && skillCards.length === 0 && byoundSkills.length === 0 ? (
       <p className="text-sm text-white/45">Aucune compétence renseignée.</p>
     ) : (
       <>
+        {byoundSkillsSection ? (
+          <div className="mb-5">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+              Mes compétences
+            </p>
+            {byoundSkillsSection}
+          </div>
+        ) : null}
         {stackTools.length ? (
           <div className="flex flex-wrap gap-2">
             {stackTools.map((tool) => (
@@ -206,7 +244,7 @@ export function EdgePublicProfileView({
           </div>
         ) : null}
         {skillCards.length ? (
-          <div className={stackTools.length ? "mt-5" : ""}>
+          <div className={stackTools.length || byoundSkills.length ? "mt-5" : ""}>
             <PublicSkillList skills={skillCards} onSelect={setAnalysisSkill} theme="dark" />
           </div>
         ) : null}
@@ -479,6 +517,7 @@ export function EdgePublicProfileView({
             </motion.section>
 
             {(skillCards.length > 0 ||
+              byoundSkills.length > 0 ||
               stackTools.length > 0 ||
               experiences.length > 0 ||
               diplomas.length > 0) && (

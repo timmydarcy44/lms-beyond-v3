@@ -352,6 +352,43 @@ export async function GET(request: Request) {
     }
   }
 
+  /** Mes compétences (déclarations Byound) — visibles sur /p/… */
+  type PublicByoundSkill = {
+    id: string;
+    label: string;
+    level: string;
+    status: "proven" | "declared";
+    reviewStatus: string | null;
+  };
+  let byoundSkills: PublicByoundSkill[] = [];
+  if (resolvedUserId) {
+    try {
+      const { data: decls } = await supabase
+        .from("skill_declarations")
+        .select(
+          "id, raw_label, level, status, proof_review_status, skills(label)",
+        )
+        .eq("user_id", resolvedUserId)
+        .in("status", ["declared", "proven"])
+        .order("updated_at", { ascending: false })
+        .limit(40);
+      byoundSkills = (decls ?? []).map((d) => {
+        const skill = d.skills as { label?: string } | null;
+        const review = String(d.proof_review_status ?? "");
+        const proven = d.status === "proven" || review === "validated";
+        return {
+          id: String(d.id),
+          label: String(skill?.label || d.raw_label || "Compétence"),
+          level: String(d.level ?? "intermediaire"),
+          status: proven ? ("proven" as const) : ("declared" as const),
+          reviewStatus: review || null,
+        };
+      });
+    } catch (err) {
+      console.warn("[public-profile] byound skills:", err);
+    }
+  }
+
   const experiences = (experiencesData ?? []).map((exp) => ({
     start: String(exp.date_debut ?? "—"),
     end: String(exp.date_fin ?? "—"),
@@ -385,5 +422,6 @@ export async function GET(request: Request) {
     settings: settingsData ?? null,
     earnedOpenBadges,
     idmcGlobalScore,
+    byoundSkills,
   });
 }

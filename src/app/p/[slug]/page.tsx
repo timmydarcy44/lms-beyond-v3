@@ -206,6 +206,9 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [earnedOpenBadges, setEarnedOpenBadges] = useState<PublicProfileEarnedBadge[]>([]);
   const [idmcGlobalScore, setIdmcGlobalScore] = useState<number | null>(null);
+  const [byoundSkills, setByoundSkills] = useState<
+    Array<{ id: string; label: string; level: string; status: "proven" | "declared" }>
+  >([]);
 
   const profile = useMemo(() => DEFAULT_PROFILE, []);
   const publicUrl =
@@ -252,11 +255,13 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
         setExperiences([]);
         setDiplomas([]);
         setEarnedOpenBadges([]);
+        setByoundSkills([]);
         setIdmcGlobalScore(null);
         return;
       }
       if (!response.ok) {
         setEarnedOpenBadges([]);
+        setByoundSkills([]);
         return;
       }
       const data = (await response.json()) as {
@@ -275,6 +280,12 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
         diplomas: Array<{ start: string; end: string; title: string; school: string; status: string }>;
         earnedOpenBadges?: PublicProfileEarnedBadge[];
         idmcGlobalScore?: number | null;
+        byoundSkills?: Array<{
+          id: string;
+          label: string;
+          level: string;
+          status: "proven" | "declared";
+        }>;
       };
       const resolvedId =
         data?.publicUserId ??
@@ -319,6 +330,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       setExperiences(data.experiences);
       setDiplomas(data.diplomas);
       setEarnedOpenBadges(Array.isArray(data.earnedOpenBadges) ? data.earnedOpenBadges : []);
+      setByoundSkills(Array.isArray(data.byoundSkills) ? data.byoundSkills : []);
       setIdmcGlobalScore(
         typeof data.idmcGlobalScore === "number" ? data.idmcGlobalScore : null,
       );
@@ -632,6 +644,7 @@ export default function PublicProfilePage({ params }: { params: { slug: string }
       stackTools={stackTools}
       toolLogoResolver={getToolLogoForLabel}
       earnedOpenBadges={earnedOpenBadges}
+      byoundSkills={byoundSkills}
       showBadges={appliedSettings.show_badges}
     />
   );

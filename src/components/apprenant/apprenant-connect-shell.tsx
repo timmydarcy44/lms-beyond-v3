@@ -497,14 +497,10 @@ export function ApprenantConnectShell({
                               : undefined;
                           const careDot = "careDot" in item && item.careDot && !active;
 
-                          return (
-                            <Link
-                              key={item.label + item.href}
-                              href={item.href}
-                              title={isSidebarCollapsed ? item.label : undefined}
-                              className={itemClass}
-                              onClick={() => setMobileOpen(false)}
-                            >
+                          const shareAction =
+                            "action" in item && item.action === "share-profile";
+                          const content = (
+                            <>
                               <span className="relative shrink-0">
                                 <item.icon className={iconClass} />
                                 {careDot ? (
@@ -519,6 +515,33 @@ export function ApprenantConnectShell({
                                   {badge}
                                 </span>
                               ) : null}
+                            </>
+                          );
+                          if (shareAction) {
+                            return (
+                              <button
+                                key={item.label + item.href}
+                                type="button"
+                                title={isSidebarCollapsed ? item.label : undefined}
+                                className={itemClass}
+                                onClick={() => {
+                                  setMobileOpen(false);
+                                  void handleShareProfile();
+                                }}
+                              >
+                                {content}
+                              </button>
+                            );
+                          }
+                          return (
+                            <Link
+                              key={item.label + item.href}
+                              href={item.href}
+                              title={isSidebarCollapsed ? item.label : undefined}
+                              className={itemClass}
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              {content}
                             </Link>
                           );
                         })}
@@ -721,28 +744,50 @@ export function ApprenantConnectShell({
                                   allHrefs,
                                 );
                                 const careItem = carePathActive && item.href.includes("/care");
+                                const itemClass = `group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
+                                  active
+                                    ? careItem
+                                      ? "bg-[#3A0F22] text-white"
+                                      : "bg-[#1B2350] text-white"
+                                    : "text-white/55 hover:bg-white/[0.04] hover:text-white"
+                                }`;
+                                const iconEl = (
+                                  <item.icon
+                                    className={`h-[18px] w-[18px] shrink-0 ${
+                                      active
+                                        ? careItem
+                                          ? "text-[#FF5C8A]"
+                                          : "text-[#C9C2FF]"
+                                        : "text-white/40"
+                                    }`}
+                                  />
+                                );
+                                const shareAction =
+                                  "action" in item && item.action === "share-profile";
+                                if (shareAction) {
+                                  return (
+                                    <button
+                                      key={item.label + item.href}
+                                      type="button"
+                                      className={itemClass}
+                                      onClick={() => {
+                                        handleNavigateMobile();
+                                        void handleShareProfile();
+                                      }}
+                                    >
+                                      {iconEl}
+                                      <span className="truncate">{item.label}</span>
+                                    </button>
+                                  );
+                                }
                                 return (
                                   <Link
                                     key={item.label + item.href}
                                     href={item.href}
                                     onClick={handleNavigateMobile}
-                                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
-                                      active
-                                        ? careItem
-                                          ? "bg-[#3A0F22] text-white"
-                                          : "bg-[#1B2350] text-white"
-                                        : "text-white/55 hover:bg-white/[0.04] hover:text-white"
-                                    }`}
+                                    className={itemClass}
                                   >
-                                    <item.icon
-                                      className={`h-[18px] w-[18px] shrink-0 ${
-                                        active
-                                          ? careItem
-                                            ? "text-[#FF5C8A]"
-                                            : "text-[#C9C2FF]"
-                                          : "text-white/40"
-                                      }`}
-                                    />
+                                    {iconEl}
                                     <span className="truncate">{item.label}</span>
                                     {"badgeCount" in item && item.badgeCount ? (
                                       <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#6E5BFF] px-1.5 text-[10px] font-bold text-white">

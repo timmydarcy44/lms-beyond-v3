@@ -7,7 +7,8 @@ alwaysApply: false
 # Preuves compétences · PDF
 
 - Un PDF / fichier joint **ne valide jamais** une compétence à lui seul.
-- Byound doit **lire le contenu** (extraction texte) avant toute décision.
-- PDF illisible, trop court, hors sujet, factice (« n’importe quoi », lorem, test) → `refused` ou `needs_more`, **jamais** `validated` / statut `proven`.
-- `validated` seulement si le contenu démontre concrètement la compétence (confiance ≥ 0.75). Logique dans `src/lib/skills/analyze-skill-proof.ts` (`heuristicProofDecision`, `enforceProofValidationGate`).
+- Extraction Node uniquement (`export const runtime = "nodejs"`). Helper : `src/lib/skills/extract-proof-pdf.ts` (`pdf-parse` + fallback `pdfjs-dist/legacy`, sans worker).
+- « Illisible » seulement si **&lt; 30 caractères** extractibles (scan/image). Sinon le texte passe au **tri IA** (jamais de validation auto).
+- Contenu générique sans faits → `needs_more` (demander exemple concret : bien, date, type de mandat, résultat…). Hors sujet / factice → `refused`.
+- `validated` seulement si le contenu démontre concrètement la compétence (confiance ≥ 0.75). Voir `analyze-skill-proof.ts`.
 - Ne pas contourner ces gardes-fous dans les routes API ni côté UI apprenant.

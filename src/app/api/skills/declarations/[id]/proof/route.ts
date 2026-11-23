@@ -6,8 +6,11 @@ import {
   analyzeSkillProof,
   statusesFromProofDecision,
 } from "@/lib/skills/analyze-skill-proof";
+import { extractProofPdfText } from "@/lib/skills/extract-proof-pdf";
 
 export const dynamic = "force-dynamic";
+/** pdf-parse / pdfjs nécessitent l’API Node (pas Edge). */
+export const runtime = "nodejs";
 
 const PROOF_BUCKET = "skill-proofs";
 
@@ -23,19 +26,16 @@ function sanitizeFileName(name: string) {
 async function extractProofText(file: File, buffer: Buffer): Promise<string> {
   const mime = (file.type || "").toLowerCase();
   const name = file.name.toLowerCase();
-  try {
-    if (mime.includes("pdf") || name.endsWith(".pdf")) {
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: buffer });
-      const textResult = await parser.getText();
-      return String(textResult.text ?? "").trim().slice(0, 12000);
-    }
-    if (mime.startsWith("text/") || name.endsWith(".txt") || name.endsWith(".md")) {
-      return buffer.toString("utf8").trim().slice(0, 12000);
-    }
-  } catch (error) {
-    console.warn("[skills/proof] extract text failed", error);
+
+  if (mime.includes("pdf") || name.endsWith(".pdf")) {
+    const extracted = await extractProofPdfText(buffer);
+    return extracted.text;
   }
+
+  if (mime.startsWith("text/") || name.endsWith(".txt") || name.endsWith(".md")) {
+    return buffer.toString("utf8").trim().slice(0, 12_000);
+  }
+
   return "";
 }
 
@@ -129,13 +129,14 @@ export async function POST(
         const { data: pub } = db.storage.from(uploaded.bucket).getPublicUrl(uploaded.path);
         proofUrl = pub?.publicUrl || "";
       } else {
-        const signed = await db.storage.from(uploaded.bucket).createSignedUrl(uploaded.path, 60 * 60 * 24 * 7);
+        const signed = await db.storage
+          .from(uploaded.bucket)
+          .createSignedUrl(uploaded.path, 60 * 60 * 24 * 7);
         proofUrl = signed.data?.signedUrl || "";
       }
     }
   }
 
-  // Marque en attente pendant l’analyse
   await db
     .from("skill_declarations")
     .update({
@@ -181,7 +182,6 @@ export async function POST(
     .select("id, status, proof_review_status, proof_review_note, proof_url, proof_note")
     .maybeSingle();
 
-  // Colonnes absentes → fallback sans review columns
   if (error && /proof_review|proof_file|column/i.test(error.message)) {
     const fallbackStatus = next.status === "proven" ? "declared" : next.status;
     const retry = await db

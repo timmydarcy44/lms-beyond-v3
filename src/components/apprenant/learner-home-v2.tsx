@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, Heart, Loader2 } from "lucide-react";
+import { Check, Heart, Loader2, Share2 } from "lucide-react";
 import type { LearnerSituationDetails } from "@/lib/apprenant/learner-situation";
 import type { HomeNextStep, HomeTimelineStep } from "@/lib/apprenant/learner-home-v2-data";
+import { useApprenantShell } from "@/components/apprenant/apprenant-shell-context";
 
 type HomePayload = {
   dateLabel: string;
@@ -87,6 +88,7 @@ function Ring({ filled, total, label }: { filled: number; total: number; label: 
 }
 
 export function LearnerHomeV2() {
+  const shell = useApprenantShell();
   const [data, setData] = useState<HomePayload | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,13 +124,24 @@ export function LearnerHomeV2() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16 pt-2 sm:px-6 lg:px-8" style={{ color: COLORS.text }}>
-      <header>
-        <p className="text-sm capitalize" style={{ color: COLORS.secondary }}>
-          {data.dateLabel}
-        </p>
-        <h1 className="mt-1 text-[40px] font-extrabold leading-tight tracking-tight">
-          Bonjour {data.firstName || "toi"}.
-        </h1>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm capitalize" style={{ color: COLORS.secondary }}>
+            {data.dateLabel}
+          </p>
+          <h1 className="mt-1 text-[40px] font-extrabold leading-tight tracking-tight">
+            Bonjour {data.firstName || "toi"}.
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => void shell?.sharePublicProfile?.()}
+          className="inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition hover:brightness-110"
+          style={{ borderColor: COLORS.border, background: COLORS.inner, color: COLORS.text }}
+        >
+          <Share2 className="h-4 w-4" style={{ color: COLORS.blue }} />
+          Partager ma page publique
+        </button>
       </header>
 
       {apprentice && data.alternance ? (
@@ -438,6 +451,24 @@ export function LearnerHomeV2() {
               Mes compétences →
             </Link>
           </article>
+
+          <button
+            type="button"
+            onClick={() => void shell?.sharePublicProfile?.()}
+            className="w-full rounded-3xl border p-5 text-left transition hover:brightness-110"
+            style={{ background: COLORS.card, borderColor: COLORS.border }}
+          >
+            <p className="text-xs font-bold" style={{ color: COLORS.blue }}>
+              Profil public
+            </p>
+            <p className="mt-2 flex items-center gap-2 font-extrabold">
+              <Share2 className="h-4 w-4" style={{ color: COLORS.blue }} />
+              Partager ma page
+            </p>
+            <p className="mt-2 text-sm" style={{ color: COLORS.secondary }}>
+              Copie le lien /p/… pour l’envoyer à une entreprise ou ton réseau.
+            </p>
+          </button>
 
           <Link
             href="/dashboard/apprenant/care"

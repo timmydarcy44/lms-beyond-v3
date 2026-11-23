@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Heart,
   Home,
+  Share2,
   Sparkles,
   Target,
   UserCircle,
@@ -23,6 +24,8 @@ export type UnifiedNavItem = {
   careDot?: boolean;
   /** Byound Care actif */
   careActive?: boolean;
+  /** Action spéciale (copie le lien /p/…) */
+  action?: "share-profile";
 };
 
 export type UnifiedNavGroup = {
@@ -88,6 +91,12 @@ export function buildUnifiedLearnerNav(input: {
         icon: UserCircle,
         badgeCount: profileBadge,
       },
+      {
+        label: "Partager ma page",
+        href: "#share-profile",
+        icon: Share2,
+        action: "share-profile",
+      },
     ],
   };
 
@@ -138,6 +147,7 @@ export function flattenUnifiedNav(groups: UnifiedNavGroup[]): UnifiedNavItem[] {
 
 export function isUnifiedNavItemActive(pathname: string | null, href: string, allHrefs: string[]) {
   if (!pathname) return false;
+  if (href.startsWith("#")) return false;
   const longerExists = allHrefs.some(
     (other) =>
       other !== href &&

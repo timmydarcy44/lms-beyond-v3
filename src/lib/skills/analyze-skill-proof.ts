@@ -1,4 +1,5 @@
 import { generateJSON } from "@/lib/ai/openai-client";
+import { PROOF_PDF_UNREADABLE_MAX_CHARS } from "@/lib/skills/extract-proof-pdf";
 
 export type ProofReviewDecision = "validated" | "refused" | "needs_more";
 
@@ -17,7 +18,7 @@ type AnalyzeInput = {
   proofNote: string | null;
   hasFile: boolean;
   fileName?: string | null;
-  /** Texte extrait du PDF / fichier — obligatoire pour valider un dépôt local. */
+  /** Texte extrait du PDF / fichier. */
   extractedText?: string | null;
 };
 
@@ -28,42 +29,16 @@ const GIBBERISH =
 /** Confiance mini pour passer en « Prouvée ». */
 export const PROOF_VALIDATE_MIN_CONFIDENCE = 0.75;
 
-/** Longueur mini du texte PDF pour qu’on puisse même envisager une validation. */
-export const PROOF_PDF_MIN_CHARS = 120;
-
-function skillTokens(label: string): string[] {
-  return label
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .split(/[^a-z0-9]+/)
-    .filter((token) => token.length >= 4);
-}
-
-function normalizeHay(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
 function isPdfLike(fileName?: string | null) {
   const name = String(fileName ?? "").toLowerCase();
   return name.endsWith(".pdf") || name.endsWith(".txt") || name.endsWith(".md");
 }
 
-function contentMentionsSkill(extracted: string, skillLabel: string) {
-  const tokens = skillTokens(skillLabel);
-  if (!tokens.length) return true;
-  const hay = normalizeHay(extracted);
-  return tokens.some((token) => hay.includes(token));
-}
-
 /**
- * Règle produit PDF / preuve fichier :
- * - un fichier joint ne valide JAMAIS à lui seul ;
- * - un PDF illisible, trop court, hors sujet ou « n’importe quoi » → refused / needs_more ;
- * - « validated » seulement si le CONTENU démontre la compétence (confiance ≥ 0.75).
+ * Règles produit :
+ * - jamais de validation auto sur présence de fichier ;
+ * - PDF illisible seulement si < 30 caractères extractibles ;
+ * - texte lisible → tri IA (pertinence), pas de short-circuit « hors sujet » avant l’IA.
  */
 export function heuristicProofDecision(input: AnalyzeInput): ProofAnalysis | null {
   const note = String(input.proofNote ?? "").trim();
@@ -96,43 +71,24 @@ export function heuristicProofDecision(input: AnalyzeInput): ProofAnalysis | nul
     };
   }
 
-  // PDF / texte joint mais vide ou illisible → jamais validé
-  if (hasFile && pdfLike && !extracted) {
+  // Illisible = scan / image / extraction vide — seuil 30 caractères
+  if (hasFile && pdfLike && extracted.length < PROOF_PDF_UNREADABLE_MAX_CHARS) {
     return {
       decision: "needs_more",
-      note: "Le PDF a été reçu mais Byound n’a pas pu en lire le contenu. Ajoute une note détaillée (ce que tu as fait, où, pour qui) ou un autre document lisible lié à la compétence.",
+      note: "Le PDF a été reçu mais Byound n’a pas pu en lire le contenu (fichier scanné ou image). Ajoute une note détaillée ou un document texte lié à la compétence.",
       confidence: 0.9,
     };
   }
 
-  if (hasFile && pdfLike && extracted.length > 0 && extracted.length < PROOF_PDF_MIN_CHARS) {
+  if (extracted && GIBBERISH.test(extracted) && extracted.length < 80) {
     return {
       decision: "refused",
-      note: "Le PDF est trop pauvre pour prouver la compétence. Dépose un livrable concret (travail réalisé, attestation, capture métier…) en lien avec ce que tu déclares.",
-      confidence: 0.88,
-    };
-  }
-
-  if (extracted && GIBBERISH.test(extracted)) {
-    return {
-      decision: "refused",
-      note: "Le document ne contient pas une preuve exploitable (texte factice / hors sujet). Refusé.",
+      note: "Le document ne contient pas une preuve exploitable (texte factice). Refusé.",
       confidence: 0.95,
     };
   }
 
-  // PDF hors sujet (aucun mot de la compétence) → refus, même avec une note courte
-  if (extracted.length >= PROOF_PDF_MIN_CHARS && !contentMentionsSkill(extracted, input.skillLabel)) {
-    if (note.length < 120) {
-      return {
-        decision: "refused",
-        note: `Le PDF ne parle pas de « ${input.skillLabel} ». Une compétence n’est prouvée que si le document montre clairement cette compétence.`,
-        confidence: 0.9,
-      };
-    }
-    // Note longue : on laisse le LLM trancher, mais pas de validation auto
-  }
-
+  // Texte lisible → toujours laisser l’IA trancher (jamais de validation ici)
   return null;
 }
 
@@ -156,23 +112,13 @@ export function enforceProofValidationGate(
     };
   }
 
-  // Fichier PDF : validation impossible sans texte suffisant + lien sémantique
-  if (input.hasFile && pdfLike) {
-    if (extracted.length < PROOF_PDF_MIN_CHARS) {
-      return {
-        decision: "refused",
-        note: "Un PDF sans contenu solide ne peut pas valider une compétence.",
-      };
-    }
-    if (!contentMentionsSkill(extracted, input.skillLabel) && note.length < 160) {
-      return {
-        decision: "refused",
-        note: `Le PDF ne démontre pas « ${input.skillLabel} ». Compétence non validée.`,
-      };
-    }
+  if (input.hasFile && pdfLike && extracted.length < PROOF_PDF_UNREADABLE_MAX_CHARS) {
+    return {
+      decision: "needs_more",
+      note: "Un PDF illisible ne peut pas valider une compétence.",
+    };
   }
 
-  // Aucun contenu exploitable du tout
   if (!extracted && !url && note.length < 80) {
     return {
       decision: "needs_more",
@@ -180,7 +126,7 @@ export function enforceProofValidationGate(
     };
   }
 
-  if (extracted && GIBBERISH.test(extracted)) {
+  if (extracted && GIBBERISH.test(extracted) && extracted.length < 80) {
     return {
       decision: "refused",
       note: "Document non recevable (contenu factice). Compétence non validée.",
@@ -204,15 +150,17 @@ Contexte : ${input.context ?? "non précisé"}
 Note de preuve : « ${String(input.proofNote ?? "").replace(/"/g, "'")} »
 Lien : ${input.proofUrl || "aucun"}
 Fichier joint : ${input.hasFile ? input.fileName || "oui" : "non"}
-Contenu extrait du fichier :
+Contenu extrait du fichier (LU — à juger sur le fond) :
 """
 ${excerpt || "(aucun texte extractible — tu ne peux PAS valider sur la seule présence du fichier)"}
 """
 
 Décide :
-- validated : UNIQUEMENT si le contenu (extrait PDF / note riche / page) DÉMONTRE concrètement la compétence
-- refused : hors sujet, pauvre, absurde, factice, sans rapport, ou PDF « n’importe quoi »
-- needs_more : piste possible mais preuve insuffisante
+- validated : UNIQUEMENT si le contenu DÉMONTRE concrètement la compétence avec des faits vérifiables
+  (ex. immobilier / prise de mandat : quel bien, quelle date, quel type de mandat, quel résultat)
+- refused : hors sujet, absurde, factice, sans rapport
+- needs_more : le texte parle de la compétence mais reste trop générique / scolaire / sans exemple concret
+  → demande explicitement les faits manquants (bien, date, type de mandat, résultat, etc.)
 
 Réponds en JSON : { "decision": "...", "note": "message clair pour l'apprenant (FR)", "confidence": 0.0 }`,
     {
@@ -225,10 +173,12 @@ Réponds en JSON : { "decision": "...", "note": "message clair pour l'apprenant 
       required: ["decision", "note", "confidence"],
     },
     `Tu es le contrôle qualité Byound des preuves de compétences.
-Règle d’or : on ne valide JAMAIS une compétence sur un PDF médiocre, hors sujet ou vide de sens.
+Règle d’or : on ne valide JAMAIS sur un PDF médiocre, générique ou vide de faits.
 - La présence d’un fichier n’est PAS une preuve.
-- Texte hors sujet / lorem / test / blabla → refused.
-- validated seulement si le contenu montre clairement la compétence déclarée (actions, résultats, contexte métier).
+- Un discours générique (« j’ai appris à… », « il faut être professionnel ») sans exemple concret → needs_more
+  (demande : quel bien / quelle date / quel type de mandat / quel résultat, adaptés à la compétence).
+- Hors sujet / factice → refused.
+- validated seulement si le contenu montre clairement la compétence avec des éléments concrets.
 - En cas de doute → needs_more ou refused, jamais validated.
 Réponds uniquement en JSON.`,
   );
@@ -236,7 +186,7 @@ Réponds uniquement en JSON.`,
   if (!result || typeof result !== "object") {
     return {
       decision: "needs_more",
-      note: "Preuve reçue — analyse automatique incomplète. Un complément (document lisible lié à la compétence) est nécessaire.",
+      note: "Preuve reçue — analyse automatique incomplète. Précise un exemple concret (faits, dates, résultat).",
       confidence: 0.35,
     };
   }
@@ -254,7 +204,7 @@ Réponds uniquement en JSON.`,
       ? "Preuve acceptée par Byound."
       : decision === "refused"
         ? "Preuve refusée : le contenu ne démontre pas la compétence."
-        : "Pièces complémentaires demandées.");
+        : "Pièces complémentaires demandées : donne un exemple concret.");
 
   const gated = enforceProofValidationGate(decision, input, confidence);
   if (gated.decision !== decision) {

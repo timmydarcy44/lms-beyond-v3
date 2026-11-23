@@ -86,24 +86,12 @@ export function buildTrainingCourseDetail(
     course.objectives?.[0] ??
     "";
 
-  const interLabel = formatPrice(course.inter_price, "/ participant");
+  // Intra uniquement pour l’instant (pas d’offre inter publique).
   const intraLabel = formatPrice(course.intra_price, "/ groupe");
 
   const sessions: TrainingSessionRow[] = course.sessions?.length
-    ? course.sessions
+    ? course.sessions.filter((s) => !/inter/i.test(String(s.format ?? s.id ?? "")))
     : [
-        ...(interLabel
-          ? [
-              {
-                id: "inter-default",
-                date: "Prochaine session inter",
-                city: "Paris · Distanciel",
-                seats: "Places limitées",
-                price: interLabel,
-                format: "Inter-entreprises",
-              },
-            ]
-          : []),
         ...(intraLabel
           ? [
               {
@@ -142,11 +130,13 @@ export function buildTrainingCourseDetail(
   };
 }
 
+/** @deprecated Offre inter retirée des fiches publiques — conservé pour l’admin. */
 export function formatInterPrice(course: TrainingCoursePublic): string {
   if (course.price_on_quote || course.inter_price == null) return "Sur devis";
   return `À partir de ${course.inter_price.toLocaleString("fr-FR")} € HT / participant`;
 }
 
+/** Tarif intra = montant total du groupe (pas /jour, pas /participant). */
 export function formatIntraPrice(course: TrainingCoursePublic): string {
   if (course.price_on_quote || course.intra_price == null) return "Sur devis";
   return `${course.intra_price.toLocaleString("fr-FR")} € HT / groupe`;

@@ -72,6 +72,7 @@ export type QualiopiFicheFields = {
   price_on_quote?: boolean | null;
   intra_price?: number | null;
   inter_price?: number | null;
+  max_intra_participants?: number | null;
   results_method_override?: string | null;
   objectives?: string[] | null;
   duration?: string | null;
@@ -282,12 +283,10 @@ export function resolveResultsMethod(input: {
 
 export function formatQualiopiTariff(course: QualiopiFicheFields): string {
   if (course.price_on_quote) return "Sur devis";
-  const parts: string[] = [];
-  if (course.inter_price != null) {
-    parts.push(`${course.inter_price.toLocaleString("fr-FR")} € HT / participant (inter)`);
-  }
+  // Offre publique : intra uniquement (tarif total groupe).
   if (course.intra_price != null) {
-    parts.push(`${course.intra_price.toLocaleString("fr-FR")} € HT / groupe (intra)`);
+    const max = course.max_intra_participants ?? 12;
+    return `${course.intra_price.toLocaleString("fr-FR")} € HT / groupe (intra, jusqu'à ${max} participants)`;
   }
-  return parts.length ? parts.join(" · ") : "Sur devis";
+  return "Sur devis";
 }

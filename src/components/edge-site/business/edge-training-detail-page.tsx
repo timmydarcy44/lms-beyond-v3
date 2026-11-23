@@ -29,7 +29,6 @@ import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premiu
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
 import {
   buildTrainingCourseDetail,
-  formatInterPrice,
   formatIntraPrice,
   isBlockVisible,
   type TrainingCourseDetail,
@@ -124,22 +123,17 @@ function PricingCards({
   demoHref: string;
   compact?: boolean;
 }) {
-  const interPrice = formatInterPrice(course);
+  // Offre publique : intra uniquement (tarif total groupe, pas /jour ni /participant).
   const intraPrice = formatIntraPrice(course);
 
   return (
     <div className={cn("space-y-4", compact ? "" : "mt-6")}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/45">Inter-entreprises</p>
-          <p className="mt-2 text-base font-semibold">{interPrice}</p>
-          <p className="mt-1 text-xs text-[#050505]/50">Par participant</p>
-        </div>
-        <div className="rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/45">Intra-entreprise</p>
-          <p className="mt-2 text-base font-semibold">{intraPrice}</p>
-          <p className="mt-1 text-xs text-[#050505]/50">Jusqu&apos;à {detail.maxIntraParticipants} participants</p>
-        </div>
+      <div className="rounded-2xl border border-[#050505]/8 bg-[#F7F7F5] p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/45">Intra-entreprise</p>
+        <p className="mt-2 text-base font-semibold">{intraPrice}</p>
+        <p className="mt-1 text-xs text-[#050505]/50">
+          Tarif total pour le groupe · jusqu&apos;à {detail.maxIntraParticipants} participants
+        </p>
       </div>
       {!compact ? (
         <div className="flex flex-col gap-2.5">

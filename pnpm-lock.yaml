@@ -235,7 +235,7 @@ importers:
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       openai:
         specifier: ^6.7.0
-        version: 6.15.0(ws@8.18.3)(zod@4.3.4)
+        version: 6.15.0(ws@8.22.2)(zod@4.3.4)
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -245,6 +245,9 @@ importers:
       pdf-parse:
         specifier: ^2.4.5
         version: 2.4.5
+      pdfjs-dist:
+        specifier: 5.4.296
+        version: 5.4.296
       puppeteer:
         specifier: ^24.30.0
         version: 24.34.0(typescript@5.9.3)
@@ -339,9 +342,6 @@ importers:
       eslint-config-next:
         specifier: ^16.0.7
         version: 16.1.1(@typescript-eslint/parser@8.51.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
-      pdfjs-dist:
-        specifier: 4.10.38
-        version: 4.10.38
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -6614,10 +6614,6 @@ packages:
     resolution: {integrity: sha512-mHU89HGh7v+4u2ubfnevJ03lmPgQ5WU4CxAVmTSh/sxVTEDYd1er/dKS/A6vg77NX47KTEoihq8jZBLr8Cxuwg==}
     engines: {node: '>=20.16.0 <21 || >=22.3.0'}
     hasBin: true
-
-  pdfjs-dist@4.10.38:
-    resolution: {integrity: sha512-/Y3fcFrXEAsMjJXeL9J8+ZG9U01LbuWaYypvDW2ycW1jL269L3js3DVBjDJ0Up9Np1uqDXsDrRihHANhZOlwdQ==}
-    engines: {node: '>=20'}
 
   pdfjs-dist@5.4.296:
     resolution: {integrity: sha512-DlOzet0HO7OEnmUmB6wWGJrrdvbyJKftI1bhMitK7O2N8W2gc757yyYBbINy9IDafXAV9wmKr9t7xsTaNKRG5Q==}
@@ -15381,9 +15377,9 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
-  openai@6.15.0(ws@8.18.3)(zod@4.3.4):
+  openai@6.15.0(ws@8.22.2)(zod@4.3.4):
     optionalDependencies:
-      ws: 8.18.3
+      ws: 8.22.2
       zod: 4.3.4
 
   option@0.2.4: {}
@@ -15522,10 +15518,6 @@ snapshots:
     dependencies:
       '@napi-rs/canvas': 0.1.80
       pdfjs-dist: 5.4.296
-
-  pdfjs-dist@4.10.38:
-    optionalDependencies:
-      '@napi-rs/canvas': 0.1.80
 
   pdfjs-dist@5.4.296:
     optionalDependencies:

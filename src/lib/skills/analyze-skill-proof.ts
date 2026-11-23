@@ -20,6 +20,8 @@ type AnalyzeInput = {
   fileName?: string | null;
   /** Texte extrait du PDF / fichier. */
   extractedText?: string | null;
+  /** Erreur technique d’extraction (≠ PDF scanné). */
+  extractError?: string | null;
 };
 
 const WEAK_NOTE = /^(je ne sais pas|idk|test|asdf|n\/?a|aucune|rien|ok|oui|non|\.+|xxx)$/i;
@@ -73,9 +75,12 @@ export function heuristicProofDecision(input: AnalyzeInput): ProofAnalysis | nul
 
   // Illisible = scan / image / extraction vide — seuil 30 caractères
   if (hasFile && pdfLike && extracted.length < PROOF_PDF_UNREADABLE_MAX_CHARS) {
+    const technical = Boolean(String(input.extractError ?? "").trim());
     return {
       decision: "needs_more",
-      note: "Le PDF a été reçu mais Byound n’a pas pu en lire le contenu (fichier scanné ou image). Ajoute une note détaillée ou un document texte lié à la compétence.",
+      note: technical
+        ? "Le PDF a été reçu mais l’extraction automatique a échoué côté serveur. Réessaie, ou ajoute une note détaillée / un document texte lié à la compétence."
+        : "Le PDF a été reçu mais Byound n’a pas pu en lire le contenu (fichier scanné ou image). Ajoute une note détaillée ou un document texte lié à la compétence.",
       confidence: 0.9,
     };
   }

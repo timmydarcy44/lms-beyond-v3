@@ -10,12 +10,69 @@ export type ProofPdfExtractResult = {
   error: string | null;
 };
 
+/** pdfjs référence DOMMatrix / Path2D au chargement — absents sur Node/Vercel. */
+function ensurePdfJsDomStubs() {
+  const g = globalThis as typeof globalThis & {
+    DOMMatrix?: unknown;
+    ImageData?: unknown;
+    Path2D?: unknown;
+  };
+  if (typeof g.DOMMatrix === "undefined") g.DOMMatrix = class {};
+  if (typeof g.ImageData === "undefined") g.ImageData = class {};
+  if (typeof g.Path2D === "undefined") g.Path2D = class {};
+  if (typeof Promise.withResolvers !== "function") {
+    // Node < 22 (souvent Vercel) — requis par pdfjs 4+/5+
+    (Promise as unknown as { withResolvers: () => {
+      promise: Promise<unknown>;
+      resolve: (v?: unknown) => void;
+      reject: (e?: unknown) => void;
+    } }).withResolvers = function withResolvers() {
+      let resolve!: (v?: unknown) => void;
+      let reject!: (e?: unknown) => void;
+      const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    };
+  }
+}
+
+function toPdfBytes(buffer: Buffer): Uint8Array {
+  // Copie propre : évite les vues sur pool Buffer Node qui cassent pdfjs.
+  return Uint8Array.from(buffer);
+}
+
+async function extractWithPdfParse(buffer: Buffer): Promise<string> {
+  ensurePdfJsDomStubs();
+  // Import dynamique : n’empêche pas le boot de la route si le module casse.
+  const mod = await import("pdf-parse");
+  const PDFParse = mod.PDFParse;
+  if (!PDFParse) throw new Error("PDFParse export manquant");
+  const parser = new PDFParse({ data: toPdfBytes(buffer) });
+  try {
+    const textResult = await parser.getText();
+    return String(textResult.text ?? "").trim().slice(0, MAX_CHARS);
+  } finally {
+    try {
+      await parser.destroy();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 async function extractWithPdfJs(buffer: Buffer): Promise<string> {
-  // Legacy build, sans worker — stable en serverless Next/Vercel.
+  ensurePdfJsDomStubs();
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const data = new Uint8Array(buffer);
+  // Empêche un worker d’une autre version (conflit 4.x / 5.x) de polluer l’API.
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = "";
+  } catch {
+    /* ignore */
+  }
   const loadingTask = pdfjs.getDocument({
-    data,
+    data: toPdfBytes(buffer),
     useSystemFonts: true,
     isEvalSupported: false,
     disableFontFace: true,
@@ -40,27 +97,9 @@ async function extractWithPdfJs(buffer: Buffer): Promise<string> {
   return parts.join("\n").trim().slice(0, MAX_CHARS);
 }
 
-async function extractWithPdfParse(buffer: Buffer): Promise<string> {
-  // Import dynamique : évite de faire planter le chargement du module route si pdf-parse casse au boot Vercel.
-  const mod = await import("pdf-parse");
-  const PDFParse = mod.PDFParse;
-  if (!PDFParse) throw new Error("PDFParse export manquant");
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  try {
-    const textResult = await parser.getText();
-    return String(textResult.text ?? "").trim().slice(0, MAX_CHARS);
-  } finally {
-    try {
-      await parser.destroy();
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
 /**
  * Extraction texte PDF côté Node (pas Edge).
- * pdfjs-legacy d’abord (déjà externalisé), puis pdf-parse en secours.
+ * pdf-parse d’abord (même chemin que les autres routes prod), puis pdfjs-legacy.
  */
 export async function extractProofPdfText(buffer: Buffer): Promise<ProofPdfExtractResult> {
   if (!buffer?.length) {
@@ -70,20 +109,20 @@ export async function extractProofPdfText(buffer: Buffer): Promise<ProofPdfExtra
   let lastError: string | null = null;
 
   try {
-    const text = await extractWithPdfJs(buffer);
+    const text = await extractWithPdfParse(buffer);
     if (text.length > 0) {
-      return { text, chars: text.length, engine: "pdfjs-legacy", error: null };
+      return { text, chars: text.length, engine: "pdf-parse", error: null };
     }
   } catch (error) {
     lastError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   }
 
   try {
-    const text = await extractWithPdfParse(buffer);
+    const text = await extractWithPdfJs(buffer);
     return {
       text,
       chars: text.length,
-      engine: text ? "pdf-parse" : "none",
+      engine: text ? "pdfjs-legacy" : "none",
       error: text ? null : lastError,
     };
   } catch (error) {
@@ -92,7 +131,7 @@ export async function extractProofPdfText(buffer: Buffer): Promise<ProofPdfExtra
       text: "",
       chars: 0,
       engine: "none",
-      error: lastError ? `${lastError} | pdf-parse: ${msg}` : msg,
+      error: lastError ? `${lastError} | pdfjs: ${msg}` : msg,
     };
   }
 }

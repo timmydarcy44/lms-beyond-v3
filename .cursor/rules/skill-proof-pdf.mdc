@@ -7,8 +7,8 @@ alwaysApply: false
 # Preuves compétences · PDF
 
 - Un PDF / fichier joint **ne valide jamais** une compétence à lui seul.
-- Extraction Node uniquement (`export const runtime = "nodejs"`). Helper : `src/lib/skills/extract-proof-pdf.ts` (`pdf-parse` + fallback `pdfjs-dist/legacy`, sans worker).
-- « Illisible » seulement si **&lt; 30 caractères** extractibles (scan/image). Sinon le texte passe au **tri IA** (jamais de validation auto).
+- Extraction Node uniquement (`export const runtime = "nodejs"`). Helper : `src/lib/skills/extract-proof-pdf.ts` (`pdf-parse` d’abord + fallback `pdfjs-dist/legacy`, stubs DOM, `pdfjs-dist` en **dependencies** aligné sur pdf-parse).
+- « Illisible / scanné » seulement si **&lt; 30 caractères** extractibles **sans** erreur technique. Si `extractError` → message « extraction échouée », pas « scanné ». Texte lisible → **tri IA** (jamais de validation auto).
 - Contenu générique sans faits → `needs_more` (demander exemple concret : bien, date, type de mandat, résultat…). Hors sujet / factice → `refused`.
 - `validated` seulement si le contenu démontre concrètement la compétence (confiance ≥ 0.75). Voir `analyze-skill-proof.ts`.
 - Ne pas contourner ces gardes-fous dans les routes API ni côté UI apprenant.

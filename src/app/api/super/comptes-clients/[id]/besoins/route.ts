@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { mapNeedAnalysisRow } from "@/lib/control/need-analyses";
 import {
-  NEED_ANALYSIS_SELECT,
-  buildNeedAnalysisWritePayload,
-  isNeedAnalysisComplete,
-  mapNeedAnalysisRow,
-} from "@/lib/control/need-analyses";
+  createNeedAnalysis,
+  isNeedAnalysisTableMissing,
+  selectNeedAnalysisRows,
+} from "@/lib/control/need-analyses-server";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+const MIGRATION_HINT =
+  "Migration besoins non appliquée. Appliquez supabase/migrations/20261121140000_organization_need_analyses.sql";
+
 async function requireStaff() {
   const supabase = await getServerClient();
+  if (!supabase) return null;
   const { data } = await supabase.auth.getUser();
   if (!data.user || !(await isSuperAdmin())) return null;
   return { service: getServiceRoleClient(), userId: data.user.id };
@@ -45,35 +49,24 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
       .is("organization_id", null);
   }
 
-  let query = auth.service
-    .from("organization_need_analyses")
-    .select(NEED_ANALYSIS_SELECT)
-    .order("updated_at", { ascending: false });
-
-  if (dealIds.length) {
-    query = query.or(
-      `organization_id.eq.${orgId},deal_id.in.(${dealIds.join(",")})`,
-    );
-  } else {
-    query = query.eq("organization_id", orgId);
-  }
-
-  const { data, error } = await query;
+  const { data, error } = await selectNeedAnalysisRows(auth.service, (query) => {
+    const ordered = query.order("updated_at", { ascending: false });
+    return dealIds.length
+      ? ordered.or(`organization_id.eq.${orgId},deal_id.in.(${dealIds.join(",")})`)
+      : ordered.eq("organization_id", orgId);
+  });
 
   if (error) {
-    if (/organization_need_analyses|schema cache|does not exist/i.test(error.message)) {
-      return NextResponse.json({
-        analyses: [],
-        deals: [],
-        error:
-          "Migration besoins non appliquée. Appliquez supabase/migrations/20261121140000_organization_need_analyses.sql",
-      });
+    if (isNeedAnalysisTableMissing(error.message)) {
+      return NextResponse.json({ analyses: [], deals: [], error: MIGRATION_HINT });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({
-    analyses: (data ?? []).map((row) => mapNeedAnalysisRow(row as Record<string, unknown>)),
+    analyses: ((data as unknown[]) ?? []).map((row) =>
+      mapNeedAnalysisRow(row as Record<string, unknown>),
+    ),
     deals,
   });
 }
@@ -84,49 +77,22 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!auth?.service) return NextResponse.json({ error: "Réservé au staff Byound" }, { status: 403 });
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const title = String(body.title ?? "").trim() || "Analyse du besoin";
-  const deal_id = body.deal_id ? String(body.deal_id) : null;
-  const fields = buildNeedAnalysisWritePayload(body);
-  const wantComplete = body.markComplete === true;
-  const complete = wantComplete && isNeedAnalysisComplete(fields);
+  const result = await createNeedAnalysis(auth.service, {
+    userId: auth.userId,
+    organizationId: orgId,
+    dealId: body.deal_id ? String(body.deal_id) : null,
+    title: String(body.title ?? "").trim() || "Analyse du besoin",
+    body,
+  });
 
-  if (wantComplete && !complete) {
+  if (!result.ok) {
+    if (result.status === 500 && isNeedAnalysisTableMissing(result.error)) {
+      return NextResponse.json({ error: MIGRATION_HINT }, { status: 503 });
+    }
     return NextResponse.json(
-      { error: "Pour marquer l’analyse complète, renseignez les 6 blocs principaux." },
-      { status: 400 },
+      { error: result.error, missing: result.missing },
+      { status: result.status },
     );
   }
-
-  const payload = {
-    organization_id: orgId,
-    deal_id,
-    title,
-    ...fields,
-    status: complete ? "complete" : "draft",
-    completed_at: complete ? new Date().toISOString() : null,
-    created_by: auth.userId,
-    updated_by: auth.userId,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data, error } = await auth.service
-    .from("organization_need_analyses")
-    .insert(payload)
-    .select(NEED_ANALYSIS_SELECT)
-    .single();
-
-  if (error) {
-    if (/organization_need_analyses|schema cache|does not exist/i.test(error.message)) {
-      return NextResponse.json(
-        {
-          error:
-            "Migration besoins non appliquée. Appliquez supabase/migrations/20261121140000_organization_need_analyses.sql",
-        },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ analysis: mapNeedAnalysisRow(data as Record<string, unknown>) });
+  return NextResponse.json({ analysis: result.analysis });
 }

@@ -84,6 +84,8 @@ export type TrainingCourseRow = {
     string,
     { value: number | null; period?: string | null; respondents?: number | null }
   > | null;
+  /** Surfaces catalogue : entreprise, particulier, reconversion (null = toutes). */
+  catalog_surfaces?: string[] | null;
   created_at: string | null;
   updated_at: string | null;
 };

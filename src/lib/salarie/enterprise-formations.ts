@@ -92,7 +92,7 @@ export async function listSalarieEnterpriseFormations(input: {
   email: string | null;
 }): Promise<SalarieEnterpriseFormation[]> {
   const client = await getServiceRoleClientOrFallback();
-  const courses = await fetchPublicTrainingCourses(client);
+  const courses = await fetchPublicTrainingCourses(client, "entreprise");
 
   let earned = new Set<string>();
   if (!isJadeDemoEmail(input.email)) {

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   const supabase = await getServerClient();
-  const courses = await fetchPublicTrainingCourses(supabase);
+  const courses = await fetchPublicTrainingCourses(supabase, "entreprise");
 
   return (
     <EdgePremiumShell overlayNav={false}>

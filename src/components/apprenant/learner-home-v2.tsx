@@ -485,6 +485,51 @@ export function LearnerHomeV2() {
           </Link>
         </div>
       </div>
+
+      <section className="rounded-3xl border p-5" style={{ background: COLORS.card, borderColor: COLORS.border }}>
+        <p className="text-xs font-bold uppercase tracking-wide" style={{ color: COLORS.tertiary }}>
+          Qualité &amp; sécurité
+        </p>
+        <h2 className="mt-2 text-lg font-extrabold">Tes recours et procédures</h2>
+        <p className="mt-1 max-w-2xl text-sm" style={{ color: COLORS.secondary }}>
+          Signalement harcèlement / discriminations, réclamation qualité, et accompagnement confidentiel.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Link
+            href="/dashboard/apprenant/signalement"
+            className="rounded-2xl border p-4 transition hover:brightness-110"
+            style={{ background: COLORS.inner, borderColor: COLORS.border }}
+          >
+            <p className="text-sm font-extrabold">Signalement sensible</p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: COLORS.secondary }}>
+              Violences, harcèlement ou discriminations — confidentiel, anonymat possible.
+            </p>
+            <p className="mt-3 text-sm font-semibold text-[#A99BFF]">Ouvrir →</p>
+          </Link>
+          <Link
+            href="/dashboard/apprenant/reclamation"
+            className="rounded-2xl border p-4 transition hover:brightness-110"
+            style={{ background: COLORS.inner, borderColor: COLORS.border }}
+          >
+            <p className="text-sm font-extrabold">Réclamation qualité</p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: COLORS.secondary }}>
+              Un problème sur ta formation ou la plateforme ? Dépose une réclamation.
+            </p>
+            <p className="mt-3 text-sm font-semibold text-[#A99BFF]">Ouvrir →</p>
+          </Link>
+          <Link
+            href="/dashboard/apprenant/care"
+            className="rounded-2xl border p-4 transition hover:brightness-110"
+            style={{ background: COLORS.inner, borderColor: COLORS.border }}
+          >
+            <p className="text-sm font-extrabold">Accompagnement</p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: COLORS.secondary }}>
+              Besoin d’écoute ? Accès aux professionnels Care.
+            </p>
+            <p className="mt-3 text-sm font-semibold text-[#A99BFF]">Ouvrir →</p>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

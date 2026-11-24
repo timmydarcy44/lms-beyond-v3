@@ -12,6 +12,9 @@ export type CoffreItem = {
   detail?: string | null;
   document_ids?: string[];
   kind?: string | null;
+  /** Lien métier (ex. suivi LMS live) à la place / en plus de l’upload PDF. */
+  actionHref?: string | null;
+  actionLabel?: string | null;
 };
 
 export type CoffreSnapshot = {
@@ -287,21 +290,25 @@ export async function buildCoffreSnapshot(
     },
     {
       key: "preuve_signature",
+      // Trace technique quand le client signe en ligne (code reçu par e-mail).
+      // Pas demandé si devis/convention ont été déposés manuellement par le staff.
       label: "Preuves de signature (OTP)",
       status:
         preuves.length >= 2
           ? "ready"
           : preuves.length === 1
             ? "partial"
-            : devisSigned || conventionSigned
-              ? "partial"
-              : isStaffDeposit(devis) && isStaffDeposit(convention)
-                ? "not_due"
+            : isStaffDeposit(devis) || isStaffDeposit(convention)
+              ? "not_due"
+              : devisSigned || conventionSigned
+                ? "partial"
                 : "missing",
       detail:
         isStaffDeposit(devis) || isStaffDeposit(convention)
-          ? "Pas dû — documents déposés manuellement (hors OTP)"
-          : `${preuves.length} preuve(s) archivée(s)`,
+          ? "Pas dû — dépôt staff (pas de signature en ligne)"
+          : preuves.length
+            ? `${preuves.length} preuve(s) OTP archivée(s)`
+            : "Archivé automatiquement après signature client par code e-mail",
       document_ids: preuves.map((p) => p.id),
       kind: "preuve_devis",
     },

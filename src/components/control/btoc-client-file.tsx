@@ -123,15 +123,28 @@ export function BtocClientFileView({ initial }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
-      setFile((prev) => ({
-        ...prev,
-        ...json.client,
-        fullName:
-          [json.client.firstName, json.client.lastName].filter(Boolean).join(" ").trim() ||
-          prev.fullName,
-      }));
+      if (json.client) {
+        setFile((prev) => ({
+          ...prev,
+          ...json.client,
+          fullName:
+            [json.client.firstName, json.client.lastName].filter(Boolean).join(" ").trim() ||
+            prev.fullName,
+        }));
+        setDraft({
+          firstName: String(json.client.firstName ?? ""),
+          lastName: String(json.client.lastName ?? ""),
+          email: String(json.client.email ?? ""),
+          phone: String(json.client.phone ?? ""),
+          addressLine: String(json.client.addressLine ?? ""),
+          postalCode: String(json.client.postalCode ?? ""),
+          city: String(json.client.city ?? ""),
+          fundingType: (json.client.fundingType ?? "") as "" | BtocFundingType,
+        });
+      }
       setEditing(false);
-      toast.success("Coordonnées mises à jour");
+      if (json.warning) toast.message(String(json.warning));
+      else toast.success("Coordonnées mises à jour");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -690,6 +703,14 @@ export function BtocClientFileView({ initial }: Props) {
                         </span>
                       </div>
                       <div className="mt-2.5 flex flex-wrap gap-2">
+                        {item.actionHref ? (
+                          <a
+                            href={item.actionHref}
+                            className="rounded-full bg-[#6E5BFF] px-3 py-1 text-[11px] font-semibold text-white"
+                          >
+                            {item.actionLabel || "Ouvrir"}
+                          </a>
+                        ) : null}
                         {href ? (
                           <a
                             href={href}

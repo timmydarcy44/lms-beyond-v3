@@ -127,21 +127,37 @@ export async function loadBtocClientFile(
   let profileRes = await service
     .from("profiles")
     .select(
-      "id, email, full_name, first_name, last_name, role, phone, created_at, address_line, postal_code, city, funding_type, is_test, rqth",
+      "id, email, full_name, first_name, last_name, role, phone, created_at, address_line, postal_code, city, funding_type, is_test, rqth, skills_metadata",
     )
     .eq("id", userId)
     .maybeSingle();
 
-  if (profileRes.error && /address_line|postal_code|funding_type|is_test|rqth|column|schema cache/i.test(profileRes.error.message)) {
+  if (profileRes.error && /address_line|postal_code|funding_type|is_test|rqth|skills_metadata|column|schema cache/i.test(profileRes.error.message)) {
     profileRes = await service
       .from("profiles")
-      .select("id, email, full_name, first_name, last_name, role, phone, created_at")
+      .select("id, email, full_name, first_name, last_name, role, phone, created_at, skills_metadata")
       .eq("id", userId)
       .maybeSingle();
+    if (profileRes.error && /skills_metadata|column|schema cache/i.test(profileRes.error.message)) {
+      profileRes = await service
+        .from("profiles")
+        .select("id, email, full_name, first_name, last_name, role, phone, created_at")
+        .eq("id", userId)
+        .maybeSingle();
+    }
   }
 
   const profile = profileRes.data as Record<string, unknown> | null;
   if (!profile) return null;
+
+  const meta =
+    profile.skills_metadata && typeof profile.skills_metadata === "object"
+      ? (profile.skills_metadata as Record<string, unknown>)
+      : {};
+  const btocCoords =
+    meta.btoc_coords && typeof meta.btoc_coords === "object"
+      ? (meta.btoc_coords as Record<string, unknown>)
+      : null;
 
   const email = String(profile.email ?? "");
   const names = splitName(
@@ -308,8 +324,44 @@ export async function loadBtocClientFile(
       ? Math.round(formations.reduce((s, f) => s + f.progressPct, 0) / formations.length)
       : 0;
 
+  // Suivi distanciel → lien live vers la fiche indicateurs LMS de l’apprenant
+  for (const coffre of coffres) {
+    coffre.items = coffre.items.map((item) => {
+      if (item.key !== "suivi_lms") return item;
+      const liveStatus =
+        progressAvgPct >= 100 ? "ready" : progressAvgPct > 0 ? "partial" : "missing";
+      return {
+        ...item,
+        status: item.status === "ready" ? "ready" : liveStatus,
+        detail:
+          progressAvgPct > 0
+            ? `Progression LMS ${progressAvgPct} % · connexions & modules`
+            : "Ouvrir le suivi live (connexions, temps, complétion)",
+        actionHref: `/super/lms/suivi/${userId}`,
+        actionLabel: "Voir le suivi LMS",
+        // Plus d’upload PDF obligatoire : la preuve = indicateurs live
+        kind: null,
+      };
+    });
+    const countable = coffre.items.filter((i) => i.status !== "not_due");
+    coffre.ready_count = countable.filter((i) => i.status === "ready").length;
+    coffre.total_count = countable.length;
+  }
+
   const adaptationNeedDeclared =
     canViewAdaptation && "rqth" in profile ? profile.rqth === true : null;
+
+  const addressLine =
+    (profile.address_line != null ? String(profile.address_line) : null) ||
+    (btocCoords?.address_line != null ? String(btocCoords.address_line) : null);
+  const postalCode =
+    (profile.postal_code != null ? String(profile.postal_code) : null) ||
+    (btocCoords?.postal_code != null ? String(btocCoords.postal_code) : null);
+  const city =
+    (profile.city != null ? String(profile.city) : null) ||
+    (btocCoords?.city != null ? String(btocCoords.city) : null);
+  const fundingType =
+    fundingOf(profile.funding_type) || fundingOf(btocCoords?.funding_type ?? null);
 
   return {
     id: String(profile.id),
@@ -318,10 +370,10 @@ export async function loadBtocClientFile(
     lastName: names.lastName,
     fullName: names.fullName,
     phone: profile.phone != null ? String(profile.phone) : null,
-    addressLine: profile.address_line != null ? String(profile.address_line) : null,
-    postalCode: profile.postal_code != null ? String(profile.postal_code) : null,
-    city: profile.city != null ? String(profile.city) : null,
-    fundingType: fundingOf(profile.funding_type),
+    addressLine,
+    postalCode,
+    city,
+    fundingType,
     createdAt: profile.created_at != null ? String(profile.created_at) : null,
     lastSignInAt,
     isTest:

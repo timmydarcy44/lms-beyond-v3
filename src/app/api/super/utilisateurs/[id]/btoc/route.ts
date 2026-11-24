@@ -98,37 +98,68 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
       ? fundingRaw
       : null;
 
+  const addressLine = String(body.address_line ?? "").trim() || null;
+  const city = String(body.city ?? "").trim() || null;
+  const coords = {
+    address_line: addressLine,
+    postal_code: postal || null,
+    city,
+    funding_type: fundingType,
+  };
+
   const patch: Record<string, unknown> = {
     first_name: firstName || null,
     last_name: lastName || null,
     full_name: fullName,
     phone: phone || null,
-    address_line: String(body.address_line ?? "").trim() || null,
-    postal_code: postal || null,
-    city: String(body.city ?? "").trim() || null,
-    funding_type: fundingType,
+    ...coords,
   };
   if (email) patch.email = email;
 
   let { error } = await auth.service.from("profiles").update(patch).eq("id", userId);
+  let usedMetadataFallback = false;
+
   if (error && /address_line|postal_code|funding_type|column|schema cache/i.test(error.message)) {
-    const fallback = {
+    // Colonnes B2C absentes en prod → stocker dans skills_metadata.btoc_coords
+    const { data: current } = await auth.service
+      .from("profiles")
+      .select("skills_metadata")
+      .eq("id", userId)
+      .maybeSingle();
+    const prevMeta =
+      current?.skills_metadata && typeof current.skills_metadata === "object"
+        ? (current.skills_metadata as Record<string, unknown>)
+        : {};
+    const fallback: Record<string, unknown> = {
       first_name: patch.first_name,
       last_name: patch.last_name,
       full_name: patch.full_name,
       phone: patch.phone,
+      skills_metadata: { ...prevMeta, btoc_coords: coords },
       ...(email ? { email } : {}),
     };
     ({ error } = await auth.service.from("profiles").update(fallback).eq("id", userId));
-    if (!error) {
-      // Colonnes adresse absentes : avertir
-      const client = await loadBtocClientFile(auth.service, userId, {
-        canViewAdaptation: await canViewAdaptation(),
-      });
-      return NextResponse.json({
-        warning: "Adresse / financement non persistés — appliquer la migration profiles B2C.",
-        client,
-      });
+    if (!error) usedMetadataFallback = true;
+    else {
+      // skills_metadata aussi absent → au moins nom / email / téléphone
+      const bare = {
+        first_name: patch.first_name,
+        last_name: patch.last_name,
+        full_name: patch.full_name,
+        phone: patch.phone,
+        ...(email ? { email } : {}),
+      };
+      ({ error } = await auth.service.from("profiles").update(bare).eq("id", userId));
+      if (!error) {
+        const client = await loadBtocClientFile(auth.service, userId, {
+          canViewAdaptation: await canViewAdaptation(),
+        });
+        return NextResponse.json({
+          warning:
+            "Nom / téléphone enregistrés, mais adresse & financement non persistés (migration B2C manquante).",
+          client,
+        });
+      }
     }
   }
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -136,7 +167,12 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   const client = await loadBtocClientFile(auth.service, userId, {
     canViewAdaptation: await canViewAdaptation(),
   });
-  return NextResponse.json({ client });
+  return NextResponse.json({
+    client,
+    ...(usedMetadataFallback
+      ? { warning: "Coordonnées enregistrées (stockage de secours — appliquer la migration profiles B2C)." }
+      : {}),
+  });
 }
 
 export async function POST(request: NextRequest, ctx: Ctx) {

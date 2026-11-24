@@ -9,10 +9,17 @@ import type { TrainingCoursePublic, TrainingCourseRow } from "@/lib/training-cou
 const SELECT_COLS_LEGACY =
   "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,program_structure,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,badge_class_id,meta_description,seo_tags,faq,why_choose,instructors,page_blocks,sessions,benefits,case_studies,deliverables,methodology,illustrations,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
 const SELECT_COLS_QUALIOPI = `${SELECT_COLS_LEGACY},recognition_type,recognition_detail,pedagogical_modality,pedagogical_modality_detail,financing_modalities,price_on_quote,results_method_override,contact_referent,quality_indicators`;
-const SELECT_COLS = `${SELECT_COLS_QUALIOPI},catalog_surfaces`;
+const SELECT_COLS_HANDICAP = `${SELECT_COLS_QUALIOPI},handicap_referent`;
+const SELECT_COLS = `${SELECT_COLS_HANDICAP},catalog_surfaces`;
 
 /** Du plus complet au plus ancien : repli si des colonnes ne sont pas encore migrées. */
-const SELECT_TIERS = [SELECT_COLS, SELECT_COLS_QUALIOPI, SELECT_COLS_LEGACY];
+const SELECT_TIERS = [
+  SELECT_COLS,
+  `${SELECT_COLS_QUALIOPI},catalog_surfaces`,
+  SELECT_COLS_HANDICAP,
+  SELECT_COLS_QUALIOPI,
+  SELECT_COLS_LEGACY,
+];
 
 export type CatalogSurface = "entreprise" | "particulier" | "reconversion";
 
@@ -24,7 +31,7 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
 
 function isMissingQualiopiFicheCols(error: { message?: string } | null): boolean {
   if (!error?.message) return false;
-  return /recognition_type|pedagogical_modality|financing_modalities|price_on_quote|results_method_override|contact_referent|quality_indicators|catalog_surfaces/i.test(
+  return /recognition_type|pedagogical_modality|financing_modalities|price_on_quote|results_method_override|contact_referent|handicap_referent|quality_indicators|catalog_surfaces/i.test(
     error.message,
   );
 }
@@ -122,6 +129,10 @@ export async function fetchTrainingCourseBySlug(
 
   const row = data as TrainingCourseRow;
   if (row.organization_id || row.source === "surmesure") {
+    return null;
+  }
+  // Fiches dépubliées : hors catalogue public et hors URL détail.
+  if (row.is_active === false) {
     return null;
   }
 

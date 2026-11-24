@@ -13,6 +13,10 @@ import {
   recognitionTypeLabel,
   resolveResultsMethod,
 } from "@/lib/training-courses/qualiopi-fiche";
+import {
+  resolveContactReferent,
+  resolveHandicapReferent,
+} from "@/lib/training-courses/public-referents";
 
 export type DiagnosticStep = {
   title: string;
@@ -22,8 +26,8 @@ export type DiagnosticStep = {
 /** Frise « Chaque parcours débute par un diagnostic ». */
 export const DIAGNOSTIC_STEPS: DiagnosticStep[] = [
   {
-    title: "Évaluation psychométrique",
-    description: "Mesure des aptitudes et du potentiel du collaborateur.",
+    title: "Évaluation des aptitudes",
+    description: "Repérage des aptitudes et des leviers de progression du collaborateur.",
   },
   {
     title: "Analyse comportementale",
@@ -186,12 +190,8 @@ export function buildQualiopiInfo(
         year: "numeric",
       })
     : null;
-  const contactReferent =
-    String(course.contact_referent ?? "").trim() ||
-    (course.slug === "communiquer-avec-impact"
-      ? "Jessica Contentin — jessica.contentin@byound.fr"
-      : "") ||
-    "Votre conseiller pédagogique Byound.";
+  const contactReferent = resolveContactReferent(course.contact_referent);
+  const handicapReferent = resolveHandicapReferent(course.handicap_referent);
 
   return [
     { label: "Public concerné", value: publicConcerne, wide: true },
@@ -223,7 +223,7 @@ export function buildQualiopiInfo(
     },
     {
       label: "Référent handicap",
-      value: "referent-handicap@byound.fr — étude personnalisée de chaque situation.",
+      value: handicapReferent,
       wide: true,
     },
     ...(updatedAt

@@ -8,6 +8,23 @@ import {
   type TrainingSessionRow,
 } from "@/lib/training-courses/cms-types";
 import type { TrainingCourseFaqItem } from "@/lib/training-courses/types";
+import {
+  derivePedagogicalModalityFromFormats,
+  pedagogicalModalityLabel,
+} from "@/lib/training-courses/qualiopi-fiche";
+
+/** En-tête formats : `formats[]` si présents, sinon libellé dérivé de `pedagogical_modality`. */
+export function buildHeaderFormatsLabel(course: {
+  formats?: string[] | null;
+  pedagogical_modality?: string | null;
+}): string {
+  const fromFormats = (course.formats ?? []).map((f) => String(f).trim()).filter(Boolean);
+  if (fromFormats.length) return fromFormats.join(" · ");
+  const modality =
+    String(course.pedagogical_modality ?? "").trim() ||
+    derivePedagogicalModalityFromFormats(course.formats);
+  return pedagogicalModalityLabel(modality) ?? "";
+}
 
 export type TrainingCourseDetail = {
   course: TrainingCoursePublic;
@@ -121,7 +138,7 @@ export function buildTrainingCourseDetail(
     whyFollow: course.why_choose ?? [],
     programSections: normalizeProgramStructure(course.program_structure, course.program),
     pageBlocks: normalizePageBlocks(course.page_blocks),
-    formatsLabel: (course.formats ?? []).join(" · "),
+    formatsLabel: buildHeaderFormatsLabel(course),
     maxIntraParticipants: course.max_intra_participants ?? 12,
     sessions,
     faq: course.faq ?? [],

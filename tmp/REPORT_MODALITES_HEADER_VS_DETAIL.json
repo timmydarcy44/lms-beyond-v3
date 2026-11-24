@@ -1,0 +1,921 @@
+[
+  {
+    "slug": "negocier-et-defendre-ses-prix",
+    "title": "Négocier et défendre ses prix",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "3-h-pour-construire-un-pipe-commercial-fiable",
+    "title": "3 h pour construire un pipe commercial fiable",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "3-h-pour-s-initier-aux-methodes-agiles-scrum-kanban",
+    "title": "3 h pour s'initier aux méthodes agiles : Scrum & Kanban",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "3-h-pour-preparer-une-negociation-batna",
+    "title": "3 h pour préparer une négociation (BATNA)",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "prospecter-efficacement-en-multicanal",
+    "title": "Prospecter efficacement en multicanal",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "3-h-pour-reussir-l-onboarding-d-un-nouveau-collaborateur",
+    "title": "3 h pour réussir l'onboarding d'un nouveau collaborateur",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "3-h-pour-comprendre-l-ia-ce-que-c-est-ce-que-ce-n-est-pas",
+    "title": "3 h pour comprendre l'IA : ce que c'est, ce que ce n'est pas",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "3-h-pour-decouvrir-l-automatisation-commerciale",
+    "title": "3 h pour découvrir l'automatisation commerciale",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "conduire-un-rendez-vous-de-decouverte",
+    "title": "Conduire un rendez-vous de découverte",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "negocier-les-grands-comptes-et-les-ventes-complexes",
+    "title": "Négocier les grands comptes et les ventes complexes",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "traiter-les-objections-et-conclure",
+    "title": "Traiter les objections et conclure",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "manager-une-equipe-commerciale",
+    "title": "Manager une équipe commerciale",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "3-h-pour-scorer-et-prioriser-ses-leads",
+    "title": "3 h pour scorer et prioriser ses leads",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "parcours-primo-manager-reussir-sa-prise-de-poste",
+    "title": "Parcours primo-manager : réussir sa prise de poste",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "mixte",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Journées en présentiel pour la pratique et le collectif, complétées par des modules digitaux avant/après. Évaluations formatives tout au lon"
+  },
+  {
+    "slug": "manager-une-equipe-hybride-et-multigenerationnelle",
+    "title": "Manager une équipe hybride et multigénérationnelle",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "3-h-pour-conduire-des-reunions-efficaces",
+    "title": "3 h pour conduire des réunions efficaces",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "conduire-les-entretiens-annuels-et-professionnels",
+    "title": "Conduire les entretiens annuels et professionnels",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "3-h-pour-gagner-en-productivite-digitale",
+    "title": "3 h pour gagner en productivité digitale",
+    "formats": [
+      "Distanciel"
+    ],
+    "pedagogical_modality": "elearning_asynchrone",
+    "announcedInHeader": [
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Distanciel"
+    ],
+    "detailPreview": "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones"
+  },
+  {
+    "slug": "conduire-un-entretien-de-recrutement",
+    "title": "Conduire un entretien de recrutement",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "recadrer-et-donner-un-feedback-difficile",
+    "title": "Recadrer et donner un feedback difficile",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "prevenir-les-risques-psychosociaux-le-role-du-manager",
+    "title": "Prévenir les risques psychosociaux : le rôle du manager",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "manager-a-l-ere-de-l-ia",
+    "title": "Manager à l'ère de l'IA",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "conduire-le-changement",
+    "title": "Conduire le changement",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "maitrise-de-l-ia-les-essentiels-et-la-conformite-ai-act",
+    "title": "Maîtrise de l'IA : les essentiels et la conformité AI Act",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "maitrise-de-lia-essentiels-conformite-ai-act",
+    "title": "Maîtrise de l'IA : les essentiels et la conformité AI Act",
+    "formats": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "account-management-et-fidelisation",
+    "title": "Account management et fidélisation",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "utiliser-l-ia-generative-au-quotidien-prompting-et-verification",
+    "title": "Utiliser l'IA générative au quotidien : prompting et vérification",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "prendre-en-main-votre-assistant-ia-claude-copilot-chatgpt-ou-gemini",
+    "title": "Prendre en main votre assistant IA : Claude, Copilot, ChatGPT ou Gemini",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "concevoir-un-outil-no-code-pour-votre-structure",
+    "title": "Concevoir un outil no-code pour votre structure",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "mixte",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Journées en présentiel pour la pratique et le collectif, complétées par des modules digitaux avant/après. Évaluations formatives tout au lon"
+  },
+  {
+    "slug": "l-ia-au-service-de-la-vente-et-de-la-prospection",
+    "title": "L'IA au service de la vente et de la prospection",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "l-ia-dans-votre-metier-atelier-sur-mesure",
+    "title": "L'IA dans votre métier : atelier sur mesure",
+    "formats": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "piloter-la-transformation-ia-de-son-entreprise",
+    "title": "Piloter la transformation IA de son entreprise",
+    "formats": [
+      "Présentiel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "automatiser-ses-taches-avec-l-ia-workflows-no-code-et-premiers-agents",
+    "title": "Automatiser ses tâches avec l'IA : workflows no-code et premiers agents",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "intelligence-emotionnelle-et-relationnelle",
+    "title": "Intelligence émotionnelle et relationnelle",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "storytelling-professionnel",
+    "title": "Storytelling professionnel",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "gerer-les-conflits-et-les-conversations-difficiles",
+    "title": "Gérer les conflits et les conversations difficiles",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "travailler-et-cooperer-en-equipe",
+    "title": "Travailler et coopérer en équipe",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "decider-et-resoudre-des-problemes",
+    "title": "Décider et résoudre des problèmes",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "efficacite-personnelle-temps-priorites-et-energie",
+    "title": "Efficacité personnelle : temps, priorités et énergie",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "leadership-et-posture",
+    "title": "Leadership et posture",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "prise-de-parole-en-public-structure-et-impact",
+    "title": "Prise de parole en public : structure et impact",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "accompagnement-individuel-cible",
+    "title": "Accompagnement individuel ciblé",
+    "formats": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel"
+    ],
+    "detailPreview": "Séquences d’apports courts, démonstrations et coaching individuel ou en binôme. Plan d’action personnalisé en fin de parcours. Supports et r"
+  },
+  {
+    "slug": "apprendre-a-apprendre",
+    "title": "Apprendre à apprendre",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "traiter-l-information-sans-saturer",
+    "title": "Traiter l'information sans saturer",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "piloter-sa-montee-en-competences",
+    "title": "Piloter sa montée en compétences",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "penser-avec-l-ia-sans-perdre-son-autonomie",
+    "title": "Penser avec l'IA sans perdre son autonomie",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  },
+  {
+    "slug": "manager-developper-la-capacite-d-apprentissage-de-son-equipe",
+    "title": "Manager : développer la capacité d'apprentissage de son équipe",
+    "formats": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "pedagogical_modality": "presentiel",
+    "announcedInHeader": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "missingInDetail": [
+      "Présentiel",
+      "Distanciel",
+      "Blended"
+    ],
+    "detailPreview": "Alternance d’apports théoriques et de mises en situation. Ateliers en sous-groupes, études de cas métier, feedbacks individualisés. Supports"
+  }
+]

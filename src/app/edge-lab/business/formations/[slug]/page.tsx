@@ -25,19 +25,44 @@ async function loadBadgeMeta(badgeClassId: string | null | undefined) {
   };
 }
 
+function trainingBrandSuffix(course: {
+  slug: string;
+  catalog_surfaces?: string[] | null;
+}): "Byound Care" | "Byound Business" {
+  if (course.slug === "fondamentaux-neuroeducation") return "Byound Care";
+  const surfaces = course.catalog_surfaces ?? [];
+  if (
+    surfaces.length > 0 &&
+    !surfaces.includes("entreprise") &&
+    (surfaces.includes("particulier") || surfaces.includes("reconversion"))
+  ) {
+    return "Byound Care";
+  }
+  return "Byound Business";
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await getServerClient();
   const course = await fetchTrainingCourseBySlug(supabase, slug);
   if (!course) return { title: "Formation | Byound Business" };
   const rythme = (course.formats ?? []).filter(Boolean).join(", ") || course.duration || "";
+  const brand = trainingBrandSuffix(course);
   const meta = await resolveGeneratedMetadata({
     type: "training",
     path: `${TRAINING_FORMATION_BASE_PATH}/${slug}`,
     vars: { formation: course.title, niveau: course.level ?? "", rythme },
     sourceDescription: course.meta_description ?? course.short_description ?? "",
   });
-  return { ...meta, keywords: course.seo_tags ?? meta.keywords };
+  const titleBase = typeof meta.title === "string" ? meta.title : course.title;
+  const title = String(titleBase)
+    .replace(/\s*\|\s*Byound School\b/gi, ` | ${brand}`)
+    .replace(/\s*\|\s*Byound Business\b/gi, ` | ${brand}`)
+    .replace(/\s*\|\s*Byound Care\b/gi, ` | ${brand}`);
+  const withBrand = /\|\s*Byound (Business|Care|School)\b/i.test(title)
+    ? title
+    : `${title.replace(/\s*\|\s*Byound\b/gi, "").trim()} | ${brand}`;
+  return { ...meta, title: withBrand, keywords: course.seo_tags ?? meta.keywords };
 }
 
 export default async function Page({ params }: Props) {

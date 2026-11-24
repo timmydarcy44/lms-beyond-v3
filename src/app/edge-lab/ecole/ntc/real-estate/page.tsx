@@ -348,7 +348,7 @@ export default async function NtcRealEstatePage() {
                 ))}
               </div>
               <p className="mt-8 text-sm leading-relaxed text-white/45">
-                Formation accessible aux personnes en situation de handicap selon les besoins et adaptations nécessaires. Référent handicap : inclusion@byound.fr
+                Formation accessible aux personnes en situation de handicap selon les besoins et adaptations nécessaires. Référent handicap : referent-handicap@byound.fr — Jessica Contentin
               </p>
             </div>
             <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-7 backdrop-blur sm:p-9">

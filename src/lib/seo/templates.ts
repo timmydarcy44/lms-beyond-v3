@@ -26,7 +26,7 @@ export const DEFAULT_SEO_TEMPLATE_ROWS: SeoTemplateRecord[] = [
   },
   {
     type: "training",
-    title_template: "{formation} - {niveau} à Caen | Byound School",
+    title_template: "{formation} - {niveau} · Caen | Byound Business",
     description_template: "{formation} ({niveau}) à Caen, rythme {rythme}.",
     jsonld_type: "Course",
     og_image_url: "",

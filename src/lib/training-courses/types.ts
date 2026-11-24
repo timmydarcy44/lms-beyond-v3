@@ -76,6 +76,8 @@ export type TrainingCourseRow = {
   results_method_override?: string | null;
   /** Contact référent affiché (ex. « Jessica Contentin — jessica@… »). */
   contact_referent?: string | null;
+  /** Référent handicap affiché (surcharge de la constante site). */
+  handicap_referent?: string | null;
   /**
    * Indicateurs qualité par clé (satisfaction, success, dropout, recommendation, completion).
    * Shape : { value: number|null, period?: string|null, respondents?: number|null }

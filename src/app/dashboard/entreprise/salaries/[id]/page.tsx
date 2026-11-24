@@ -606,7 +606,7 @@ export default function SalarieDetailPage() {
           <EmployeeHeader
             name={fullName}
             initials={initials(displayEmployee.first_name, displayEmployee.last_name)}
-            subtitle={[displayEmployee.job_title, displayEmployee.department, displayEmployee.metier ?? metierMatch?.title].filter(Boolean).join(" · ") || "Poste non renseigné"}
+            subtitle={[displayEmployee.metier ?? metierMatch?.title ?? displayEmployee.job_title, displayEmployee.department].filter(Boolean).join(" · ") || "Métier non renseigné"}
             pills={pills}
             email={displayEmployee.email?.trim() || "Non renseigné"}
             phone={displayEmployee.phone?.trim() || "Non renseigné"}
@@ -662,7 +662,7 @@ export default function SalarieDetailPage() {
               <div className="min-w-0">
                 <h1 className="text-3xl font-black tracking-tight text-[#0f3d3a] sm:text-4xl">{fullName}</h1>
                 <p className="mt-1 text-base text-gray-700 sm:text-lg">
-                  {displayEmployee.job_title ?? "Poste non renseigné"}
+                  {displayEmployee.metier ?? metierMatch?.title ?? displayEmployee.job_title ?? "Métier non renseigné"}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
                   <span className="inline-flex items-center gap-1.5">
@@ -842,8 +842,7 @@ export default function SalarieDetailPage() {
               email={displayEmployee.email ?? null}
               phone={displayEmployee.phone ?? null}
               hireDate={displayEmployee.hire_date ?? null}
-              jobTitle={displayEmployee.job_title ?? null}
-              metier={displayEmployee.metier ?? null}
+              metier={displayEmployee.metier ?? metierMatch?.title ?? displayEmployee.job_title ?? null}
               documents={hrDocuments}
               editing
               showContactOnly

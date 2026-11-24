@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     email?: string;
     department?: string;
     job_title?: string;
+    metier?: string;
   };
   try {
     body = await request.json();
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
   const last_name = String(body.last_name ?? "").trim();
   const email = String(body.email ?? "").trim().toLowerCase();
   const department = String(body.department ?? "").trim() || null;
-  const job_title = String(body.job_title ?? "").trim() || null;
+  const metier = String(body.metier ?? body.job_title ?? "").trim() || null;
 
   if (!first_name || !last_name || !email || !email.includes("@")) {
     return NextResponse.json({ error: "Prénom, nom et email valides requis" }, { status: 400 });
@@ -61,14 +62,26 @@ export async function POST(request: NextRequest) {
     last_name,
     email,
     department,
-    job_title,
+    metier,
+    job_title: metier,
   });
 
-  const { data: employee, error: insertErr } = await service
+  let { data: employee, error: insertErr } = await service
     .from("employees")
     .insert(insertRow)
     .select("id")
     .single();
+
+  // Colonne metier absente sur certains environnements : retomber sur job_title seul.
+  if (insertErr && /metier|schema cache|column/i.test(insertErr.message) && "metier" in insertRow) {
+    const { metier: _drop, ...withoutMetier } = insertRow;
+    void _drop;
+    ({ data: employee, error: insertErr } = await service
+      .from("employees")
+      .insert(withoutMetier)
+      .select("id")
+      .single());
+  }
 
   if (insertErr) {
     return NextResponse.json({ error: insertErr.message }, { status: 400 });

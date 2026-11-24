@@ -6,6 +6,7 @@ export type EmployeeInsertRow = {
   email: string;
   department?: string | null;
   job_title?: string | null;
+  metier?: string | null;
   equipe_id?: string | null;
   manager_id?: string | null;
   profile_id?: string | null;
@@ -19,15 +20,19 @@ export function buildEmployeeInsertRow(input: {
   email: string;
   department?: string | null;
   job_title?: string | null;
+  metier?: string | null;
   equipe_id?: string | null;
 }): EmployeeInsertRow {
+  const metierTitle = (input.metier ?? input.job_title ?? null)?.trim() || null;
   return {
     company_id: input.company_id,
     first_name: input.first_name,
     last_name: input.last_name,
     email: input.email,
     department: input.department ?? null,
-    job_title: input.job_title ?? null,
+    // job_title suit le métier RH (référentiel Métiers).
+    job_title: metierTitle,
+    ...(metierTitle ? { metier: metierTitle } : {}),
     ...(input.equipe_id ? { equipe_id: input.equipe_id } : {}),
   };
 }

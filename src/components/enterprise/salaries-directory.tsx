@@ -130,7 +130,7 @@ export function SalariesDirectory() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[13px] font-semibold text-gray-500">
                   <th className="px-4 py-3">Collaborateur</th>
-                  <th className="px-4 py-3">Poste</th>
+                  <th className="px-4 py-3">Métier</th>
                   <th className="px-4 py-3">Département</th>
                   <th className="px-4 py-3">Diagnostic</th>
                   <th className="px-4 py-3">Formation</th>

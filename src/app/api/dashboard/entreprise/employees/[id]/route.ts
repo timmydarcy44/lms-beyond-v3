@@ -504,12 +504,12 @@ export async function PATCH(
     (Boolean(readBack.error && /phone|column|schema cache/i.test(readBack.error.message)) ||
       (stored != null && phoneDigits(stored.phone) !== phoneDigits(body.phone?.trim() || null)));
   if ("job_title" in body && stored && (stored.job_title ?? null) !== (body.job_title?.trim() || null)) {
-    return NextResponse.json({ error: "Impossible d'enregistrer le poste." }, { status: 400 });
+    return NextResponse.json({ error: "Impossible d'enregistrer le métier." }, { status: 400 });
   }
 
   return NextResponse.json({
     ...(phoneUnsaved
-      ? { warning: "Le téléphone n'a pas été enregistré. Le poste et le métier le sont." }
+      ? { warning: "Le téléphone n'a pas été enregistré. Le métier l'est." }
       : {}),
     employee: {
       id: data.id,

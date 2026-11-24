@@ -28,7 +28,6 @@ type Props = {
   email: string | null;
   phone: string | null;
   hireDate: string | null;
-  jobTitle?: string | null;
   metier?: string | null;
   documents: HrDocument[];
   editing?: boolean;
@@ -43,7 +42,7 @@ type Props = {
     metier?: string | null;
   }) => void;
   onDocumentsChange: (docs: HrDocument[]) => void;
-  /** Incrémenté par « Terminer » pour enregistrer poste et téléphone. */
+  /** Incrémenté par « Terminer » pour enregistrer métier et téléphone. */
   saveRequest?: number;
   onSaved?: () => void;
 };
@@ -53,7 +52,6 @@ export function EnterpriseEmployeeHrPanel({
   email,
   phone,
   hireDate,
-  jobTitle = null,
   metier = null,
   documents,
   editing = false,
@@ -66,7 +64,6 @@ export function EnterpriseEmployeeHrPanel({
 }: Props) {
   const [editPhone, setEditPhone] = useState(phone ?? "");
   const [editHireDate, setEditHireDate] = useState(hireDate ?? "");
-  const [editPoste, setEditPoste] = useState(jobTitle ?? "");
   const [editMetier, setEditMetier] = useState(metier ?? "");
   const [metiers, setMetiers] = useState<{ id: string; title: string }[]>([]);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -80,9 +77,8 @@ export function EnterpriseEmployeeHrPanel({
   useEffect(() => {
     setEditPhone(phone ?? "");
     setEditHireDate(hireDate ?? "");
-    setEditPoste(jobTitle ?? "");
     setEditMetier(metier ?? "");
-  }, [phone, hireDate, jobTitle, metier]);
+  }, [phone, hireDate, metier]);
 
   useEffect(() => {
     if (!editing) return;
@@ -102,16 +98,16 @@ export function EnterpriseEmployeeHrPanel({
   const showContact = !showEntretiensOnly;
   const showEntretiens = !showContactOnly;
 
-  const draftRef = useRef({ phone: "", hireDate: "", poste: "", metier: "" });
+  const draftRef = useRef({ phone: "", hireDate: "", metier: "" });
   draftRef.current = {
     phone: editPhone,
     hireDate: editHireDate,
-    poste: editPoste,
     metier: editMetier,
   };
 
   const saveProfile = async () => {
     const current = draftRef.current;
+    const metierTitle = current.metier.trim() || null;
     setSavingProfile(true);
     try {
       const res = await fetch(`/api/dashboard/entreprise/employees/${employeeId}`, {
@@ -120,8 +116,9 @@ export function EnterpriseEmployeeHrPanel({
         body: JSON.stringify({
           phone: current.phone.trim() || null,
           hire_date: current.hireDate || null,
-          job_title: current.poste.trim() || null,
-          metier: current.metier.trim() || null,
+          // Une seule source de vérité : le métier RH ; job_title suit pour les listes existantes.
+          metier: metierTitle,
+          job_title: metierTitle,
         }),
       });
       const json = (await res.json()) as { error?: string; warning?: string };
@@ -130,8 +127,8 @@ export function EnterpriseEmployeeHrPanel({
       onProfileChange({
         phone: current.phone.trim() || null,
         hire_date: current.hireDate || null,
-        job_title: current.poste.trim() || null,
-        metier: current.metier.trim() || null,
+        job_title: metierTitle,
+        metier: metierTitle,
       });
       toast.success("Fiche mise à jour");
       return true;
@@ -277,39 +274,30 @@ export function EnterpriseEmployeeHrPanel({
             </div>
           </div>
           {editing ? (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Poste</label>
-                <input
-                  value={editPoste}
-                  onChange={(e) => setEditPoste(e.target.value)}
-                  placeholder="Ex. Responsable commercial"
-                  className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">Métier</label>
-                <select
-                  value={editMetier}
-                  onChange={(e) => setEditMetier(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">Choisir un métier</option>
-                  {editMetier && !metiers.some((role) => role.title === editMetier) ? (
-                    <option value={editMetier}>{editMetier}</option>
-                  ) : null}
-                  {metiers.map((role) => (
-                    <option key={role.id} value={role.title}>
-                      {role.title}
-                    </option>
-                  ))}
-                </select>
-                {metiers.length === 0 ? (
-                  <p className="mt-1.5 text-xs text-gray-500">
-                    Ajoutez d&apos;abord un métier dans la section Métiers.
-                  </p>
+            <div className="mt-4">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Métier
+              </label>
+              <select
+                value={editMetier}
+                onChange={(e) => setEditMetier(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm sm:max-w-md"
+              >
+                <option value="">Choisir un métier</option>
+                {editMetier && !metiers.some((role) => role.title === editMetier) ? (
+                  <option value={editMetier}>{editMetier} (hors référentiel)</option>
                 ) : null}
-              </div>
+                {metiers.map((role) => (
+                  <option key={role.id} value={role.title}>
+                    {role.title}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-xs text-gray-500">
+                {metiers.length === 0
+                  ? "Créez d’abord un métier dans la section Métiers, puis rattachez le collaborateur."
+                  : "Uniquement les métiers créés dans Métiers — utilisé pour les écarts de compétences."}
+              </p>
             </div>
           ) : null}
           {editing ? (

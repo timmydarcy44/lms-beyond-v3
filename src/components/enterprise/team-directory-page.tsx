@@ -810,7 +810,7 @@ export function TeamDirectoryPage() {
             </button>
             <Avatar employee={opened} size={56} />
             <h2 className="mt-4 text-[22px] font-extrabold">{fullName(opened)}</h2>
-            <p className="text-[14px] text-[#6B6F7A]">{opened.job_title ?? "Poste non renseigné"} · {opened.department ?? "Département non renseigné"}</p>
+            <p className="text-[14px] text-[#6B6F7A]">{opened.job_title ?? "Métier non renseigné"} · {opened.department ?? "Département non renseigné"}</p>
             <div className="mt-5 grid grid-cols-3 gap-2">
               <Mini label="Formation" value={typeof opened.formation_percent === "number" ? `${opened.formation_percent} %` : opened.formation_active ? "En cours" : "—"} />
               <Mini label="Compétences" value={String(opened.skills?.length ?? "—")} />
@@ -891,7 +891,7 @@ export function TeamDirectoryPage() {
 }
 
 function lineDetail(employee: EntrepriseEmployee) {
-  const job = employee.job_title ?? "Poste non renseigné";
+  const job = employee.job_title ?? "Métier non renseigné";
   if (!employee.diagnostic_done) {
     const since = formatDay(employee.created_at);
     return `${job} · Diagnostic en attente${since ? ` depuis le ${since}` : ""}`;

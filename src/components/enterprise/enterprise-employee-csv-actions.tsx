@@ -25,7 +25,7 @@ export function exportEmployeesCsv(employees: EntrepriseEmployee[], organisation
     toast.error("Aucun collaborateur à exporter");
     return;
   }
-  const header = "Nom,Prénom,Email,Département,Poste,Date d'ajout,Statut diagnostic,Score IDMC";
+  const header = "Nom,Prénom,Email,Département,Métier,Date d'ajout,Statut diagnostic,Score IDMC";
   const rows = employees.map((e) => {
     const diag = e.diagnostic_done ? "Complété" : "En attente";
     const score = e.idmc_score != null ? String(Math.round(e.idmc_score)) : "";
@@ -71,8 +71,9 @@ export function EnterpriseEmployeeCsvActions({
     last_name: "",
     email: "",
     department: "",
-    job_title: "",
+    metier: "",
   });
+  const [metiers, setMetiers] = useState<{ id: string; title: string }[]>([]);
 
   useEffect(() => {
     if (autoOpenAdd) setShowAddModal(true);
@@ -81,6 +82,20 @@ export function EnterpriseEmployeeCsvActions({
   useEffect(() => {
     if (openAddSignal > 0) setShowAddModal(true);
   }, [openAddSignal]);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    let cancelled = false;
+    void fetch("/api/dashboard/entreprise/metiers")
+      .then((res) => res.json())
+      .then((json: { roles?: { id: string; title: string }[] }) => {
+        if (!cancelled) setMetiers(json.roles ?? []);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [showAddModal]);
 
   const deptOptions = [
     ...new Set([...departments, addForm.department].filter(Boolean) as string[]),
@@ -150,10 +165,18 @@ export function EnterpriseEmployeeCsvActions({
     if (!requireOrg()) return;
     setSubmitting(true);
     try {
+      const metierTitle = addForm.metier.trim() || null;
       const res = await fetch("/api/dashboard/entreprise/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(addForm),
+        body: JSON.stringify({
+          first_name: addForm.first_name,
+          last_name: addForm.last_name,
+          email: addForm.email,
+          department: addForm.department,
+          metier: metierTitle,
+          job_title: metierTitle,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur");
@@ -164,7 +187,7 @@ export function EnterpriseEmployeeCsvActions({
         last_name: "",
         email: "",
         department: "",
-        job_title: "",
+        metier: "",
       });
       onSuccess();
       setInvitedCollaboratorName(displayName);
@@ -326,12 +349,24 @@ export function EnterpriseEmployeeCsvActions({
                 </datalist>
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-500">Poste</label>
-                <input
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={addForm.job_title}
-                  onChange={(e) => setAddForm((f) => ({ ...f, job_title: e.target.value }))}
-                />
+                <label className="text-xs font-semibold text-gray-500">Métier</label>
+                <select
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                  value={addForm.metier}
+                  onChange={(e) => setAddForm((f) => ({ ...f, metier: e.target.value }))}
+                >
+                  <option value="">Choisir un métier</option>
+                  {metiers.map((role) => (
+                    <option key={role.id} value={role.title}>
+                      {role.title}
+                    </option>
+                  ))}
+                </select>
+                {metiers.length === 0 ? (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Créez d’abord un métier dans la section Métiers.
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/80 px-4 py-3 text-xs text-violet-900">

@@ -1,30 +1,68 @@
 "use server";
 
+type AuthUserRow = {
+  id: string;
+  last_sign_in_at?: string | null;
+  confirmed_at?: string | null;
+  email_confirmed_at?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+};
+
 type SupabaseAdminClient = {
   auth?: {
     admin?: {
       listUsers?: (opts: { page?: number; perPage?: number }) => Promise<{
-        data?: { users?: Array<{ id: string; last_sign_in_at?: string | null }> };
+        data?: { users?: AuthUserRow[] };
       }>;
       getUserById?: (id: string) => Promise<{
-        data?: { user?: { id: string; last_sign_in_at?: string | null } };
-        error?: unknown;
+        data?: { user?: AuthUserRow };
+        error?: { message?: string } | null;
       }>;
     };
   };
   from: (table: string) => {
     select: (columns: string) => {
-      in: (column: string, values: string[]) => Promise<{ data?: Array<{ user_id: string }> }>;
+      in: (
+        column: string,
+        values: string[],
+      ) => Promise<{ data?: Array<{ user_id: string }>; error?: { message?: string } | null }>;
     };
   };
 };
 
-/** Dernière connexion pour une liste d'utilisateurs (auth.admin.getUserById). */
-export async function fetchLastSignInForUserIds(
+export type AuthAccessStatus = {
+  authFound: boolean;
+  /** Uniquement auth.users.last_sign_in_at */
+  lastSignInAt: string | null;
+  /** false si needs_password_setup === true ; null si user Auth introuvable */
+  passwordSet: boolean | null;
+};
+
+function isoOrNull(value: unknown): string | null {
+  const iso = String(value ?? "").trim();
+  if (!iso) return null;
+  if (!Number.isFinite(Date.parse(iso))) return null;
+  return iso;
+}
+
+function statusFromAuthUser(user: AuthUserRow | null | undefined): AuthAccessStatus {
+  if (!user?.id) {
+    return { authFound: false, lastSignInAt: null, passwordSet: null };
+  }
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  return {
+    authFound: true,
+    lastSignInAt: isoOrNull(user.last_sign_in_at),
+    passwordSet: meta.needs_password_setup !== true,
+  };
+}
+
+/** Statut d'accès Auth pour une liste d'utilisateurs (batch getUserById). */
+export async function fetchAuthAccessStatusForUserIds(
   supabase: SupabaseAdminClient,
   userIds: string[],
-): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+): Promise<Map<string, AuthAccessStatus>> {
+  const map = new Map<string, AuthAccessStatus>();
   if (userIds.length === 0) return map;
 
   const getUserById = supabase.auth?.admin?.getUserById;
@@ -37,18 +75,35 @@ export async function fetchLastSignInForUserIds(
       batch.map(async (id) => {
         try {
           const { data, error } = await getUserById(id);
-          if (error || !data?.user?.last_sign_in_at) return null;
-          return { id, lastSignInAt: data.user.last_sign_in_at };
-        } catch {
-          return null;
+          if (error) {
+            console.error("[fetchAuthAccessStatusForUserIds] getUserById", id, error.message ?? error);
+            return { id, status: statusFromAuthUser(null) };
+          }
+          return { id, status: statusFromAuthUser(data?.user) };
+        } catch (err) {
+          console.error("[fetchAuthAccessStatusForUserIds] getUserById threw", id, err);
+          return { id, status: statusFromAuthUser(null) };
         }
       }),
     );
     for (const row of results) {
-      if (row?.lastSignInAt) map.set(row.id, row.lastSignInAt);
+      map.set(row.id, row.status);
     }
   }
 
+  return map;
+}
+
+/** Dernière connexion Auth (last_sign_in_at uniquement). */
+export async function fetchLastSignInForUserIds(
+  supabase: SupabaseAdminClient,
+  userIds: string[],
+): Promise<Map<string, string>> {
+  const statuses = await fetchAuthAccessStatusForUserIds(supabase, userIds);
+  const map = new Map<string, string>();
+  for (const [id, status] of statuses) {
+    if (status.lastSignInAt) map.set(id, status.lastSignInAt);
+  }
   return map;
 }
 
@@ -67,7 +122,8 @@ export async function fetchLastSignInMap(
     const users = data?.users ?? [];
     if (users.length === 0) break;
     for (const u of users) {
-      if (u.last_sign_in_at) map.set(u.id, u.last_sign_in_at);
+      const at = isoOrNull(u.last_sign_in_at);
+      if (at) map.set(u.id, at);
     }
     if (users.length < perPage) break;
     page += 1;

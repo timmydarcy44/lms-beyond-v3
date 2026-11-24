@@ -27,6 +27,11 @@ export type AccountMemberPerson = {
   /** DISC + IDMC + soft skills complétés (0–3). */
   testsDone: number;
   testsTotal: number;
+  /** true si needs_password_setup !== true ; null si Auth introuvable / invitation seule. */
+  passwordSet: boolean | null;
+  /** auth.users.last_sign_in_at uniquement. */
+  lastSignInAt: string | null;
+  /** Alias KPI : aligné sur lastSignInAt. */
   lastSeenAt: string | null;
 };
 

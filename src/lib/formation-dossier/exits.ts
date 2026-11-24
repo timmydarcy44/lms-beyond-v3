@@ -188,6 +188,18 @@ export async function recordParticipantExit(
     },
   });
 
+  if (row.kind === "abandon") {
+    void import("@/lib/entreprise/activation-event-emails")
+      .then(({ notifyRhFormationAbandon }) =>
+        notifyRhFormationAbandon(service, {
+          dossierId: params.dossierId,
+          participantId: params.participantId,
+          kind: row.kind,
+        }),
+      )
+      .catch((err) => console.error("[exits] activation abandon mail", err));
+  }
+
   // Résoudre les alertes engagement ouvertes pour ce participant
   await service
     .from("formation_engagement_alerts")

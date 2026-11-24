@@ -1,4 +1,4 @@
-import { fetchLastSignInForUserIds } from "@/lib/queries/learner-tracking";
+import { fetchAuthAccessStatusForUserIds } from "@/lib/queries/learner-tracking";
 import { listUserRoles, hasTutorRole } from "@/lib/auth/user-roles";
 import {
   getDossierStage,
@@ -100,7 +100,7 @@ export async function getAccountParticipants(
   const memberUserIds = memberships.map((m) => m.user_id);
   const dossierIds = dossiers.map((d) => d.id);
 
-  const [profilesRes, rolesByUser, participantsRes, assertionsRes, lastSeenMap] = await Promise.all([
+  const [profilesRes, rolesByUser, participantsRes, assertionsRes, authAccessByUser] = await Promise.all([
     memberUserIds.length
       ? db
           .from("profiles")
@@ -120,7 +120,7 @@ export async function getAccountParticipants(
           .select("id, recipient_profile_id, revoked_at")
           .in("recipient_profile_id", memberUserIds)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null }),
-    fetchLastSignInForUserIds(db, memberUserIds),
+    fetchAuthAccessStatusForUserIds(db as never, memberUserIds),
   ]);
 
   const profileMap = new Map(
@@ -325,6 +325,8 @@ export async function getAccountParticipants(
     );
     const testProfileId =
       String(emp?.profile_id ?? "").trim() || member.user_id;
+    const auth = authAccessByUser.get(member.user_id);
+    const lastSignInAt = auth?.lastSignInAt ?? null;
     return {
       userId: member.user_id,
       employeeId: emp?.id ? String(emp.id) : null,
@@ -341,7 +343,9 @@ export async function getAccountParticipants(
       badges: badgesByUser.get(member.user_id) ?? 0,
       testsDone: testsDoneByProfile.get(testProfileId) ?? 0,
       testsTotal: TESTS_TOTAL,
-      lastSeenAt: lastSeenMap.get(member.user_id) ?? null,
+      passwordSet: auth?.authFound ? Boolean(auth.passwordSet) : null,
+      lastSignInAt,
+      lastSeenAt: lastSignInAt,
     };
   });
 
@@ -369,6 +373,8 @@ export async function getAccountParticipants(
       badges: 0,
       testsDone: testProfileId ? (testsDoneByProfile.get(testProfileId) ?? 0) : 0,
       testsTotal: TESTS_TOTAL,
+      passwordSet: null,
+      lastSignInAt: null,
       lastSeenAt: null,
     });
   }

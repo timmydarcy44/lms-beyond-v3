@@ -302,6 +302,14 @@ export async function issueBadgeAssertion(
   if (signed) await publishIssuerKeys(db);
   const badgeName = String((badge as { name?: string }).name ?? (badge as { title?: string }).title ?? "Open Badge");
   await sendOpenBadgeAwardEmail(email, badgeName);
+  void import("@/lib/entreprise/activation-event-emails")
+    .then(({ notifyRhBadgeSignal }) =>
+      notifyRhBadgeSignal(db, {
+        recipientProfileId: input.recipientProfileId,
+        badgeName,
+      }),
+    )
+    .catch((err) => console.error("[badge-assertions] rh signal mail", err));
 
   return {
     ok: true,

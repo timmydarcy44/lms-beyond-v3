@@ -36,6 +36,16 @@ const KIND_LABELS: Record<string, string> = {
   "eval-chaud": "Évaluation à chaud",
   "eval-froid": "Évaluation à froid",
   otp: "Code de vérification",
+  "activation-metiers": "Activation · métiers",
+  "activation-rh-ouvertures": "Activation · ouvertures RH",
+  "activation-rh-tests": "Activation · tests RH",
+  "activation-collab-acces": "Activation · accès collaborateur",
+  "activation-collab-tests": "Activation · tests collaborateur",
+  "activation-collab-last": "Activation · dernier rappel",
+  "activation-ecarts": "Activation · écarts",
+  "formation-assignee": "Formation assignée",
+  "formation-abandon": "Signal abandon",
+  "badge-rh-signal": "Signal badge",
   other: "E-mail",
 };
 

@@ -46,30 +46,56 @@ function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
-function connectedLabel(lastSeenAt: string | null) {
-  if (!lastSeenAt) return null;
-  const ms = Date.now() - Date.parse(lastSeenAt);
-  if (!Number.isFinite(ms) || ms < 0) return null;
-  const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-  if (days <= 0) return "aujourd'hui";
-  if (days === 1) return "il y a 1 jour";
-  if (days < 14) return `il y a ${days} jours`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 8) return `il y a ${weeks} sem.`;
-  const months = Math.floor(days / 30);
-  return `il y a ${months} mois`;
+function formatShortDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
-function connectionStat(lastSeenAt: string | null) {
-  if (!lastSeenAt) return "—";
-  const ms = Date.now() - Date.parse(lastSeenAt);
-  if (!Number.isFinite(ms) || ms < 0) return "—";
-  const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-  if (days <= 0) return "0 j";
-  if (days < 14) return `${days} j`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 8) return `${weeks} sem.`;
-  return `${Math.floor(days / 30)} mois`;
+function formatFullDate(iso: string | null | undefined) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("fr-FR");
+}
+
+/** Pastille « connexion » : date de dernier sign-in, sinon étape mdp. */
+function connectionStat(person: AccountMemberPerson) {
+  const short = formatShortDate(person.lastSignInAt);
+  if (short) return short;
+  if (person.invited) return "—";
+  if (person.passwordSet === false) return "mdp?";
+  if (person.passwordSet === true) return "—";
+  return "—";
+}
+
+function memberAccessFooter(person: AccountMemberPerson) {
+  if (person.invited) {
+    const when = formatFullDate(person.invitedAt);
+    return {
+      label: when ? `Invitation envoyée le ${when}` : "Invitation en attente",
+      color: "#F2CF6B",
+    };
+  }
+  if (person.passwordSet === false) {
+    return { label: "Mot de passe à créer", color: "#F2CF6B" };
+  }
+  const when = formatFullDate(person.lastSignInAt);
+  if (when) {
+    return {
+      label: `Mot de passe créé · Dernière connexion le ${when}`,
+      color: "#6BE39B",
+    };
+  }
+  if (person.passwordSet === true) {
+    return {
+      label: "Mot de passe créé · Pas encore de connexion Auth",
+      color: "#F2CF6B",
+    };
+  }
+  // Auth introuvable
+  return { label: "Compte sans statut Auth", color: "#F2CF6B" };
 }
 
 function testsLabel(person: Pick<AccountMemberPerson, "testsDone" | "testsTotal">) {
@@ -180,7 +206,7 @@ export function AccountMembersTab({
   const initial = readUrlState();
   const [filter, setFilter] = useState<FilterId>(initial.filter);
   const [query, setQuery] = useState(initial.q);
-  const [view, setView] = useState<ViewMode>(initial.view || "cards");
+  const [view, setView] = useState<ViewMode>(initial.view ?? "cards");
   const [payload, setPayload] = useState<AccountParticipantsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +286,7 @@ export function AccountMembersTab({
     });
   }, [members, filter, query, roleCfa]);
 
-  const connectedMonth = members.filter((p) => !p.invited && isConnectedThisMonth(p.lastSeenAt)).length;
+  const connectedMonth = members.filter((p) => !p.invited && isConnectedThisMonth(p.lastSignInAt)).length;
   const inTraining = members.filter((p) => p.formations.length > 0).length;
   const pendingInvites = members.filter((p) => p.invited).length;
 
@@ -463,7 +489,7 @@ export function AccountMembersTab({
                 <span style={{ color: testsColor(done, total) }}>
                   {done}/{total}
                 </span>
-                <span className="text-xs text-[#9AA3BD]">{connectionStat(person.lastSeenAt)}</span>
+                <span className="text-xs text-[#9AA3BD]">{connectionStat(person)}</span>
                 <button
                   type="button"
                   className="text-xs font-semibold text-[#A99BFF]"
@@ -583,15 +609,7 @@ function MemberCard({
   const extra = Math.max(0, person.formations.length - 3);
   const isAdmin = !person.invited && roleTone(person.role) === "admin";
   const { done: testsDone, total: testsTotal } = testsLabel(person);
-  const conn = connectedLabel(person.lastSeenAt);
-  const footerLeft = person.invited
-    ? person.invitedAt
-      ? `Invitation envoyée le ${new Date(person.invitedAt).toLocaleDateString("fr-FR")}`
-      : "Invitation en attente"
-    : conn
-      ? `● Connecté ${conn}`
-      : "Jamais connecté";
-  const footerColor = person.invited || !conn ? "#F2CF6B" : "#6BE39B";
+  const { label: footerLeft, color: footerColor } = memberAccessFooter(person);
 
   return (
     <article className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-[22px]">
@@ -720,7 +738,7 @@ function MemberCard({
         </span>
         <span className="rounded-2xl bg-[#0B1122] p-2">
           <span className="block text-sm font-extrabold text-[#F2F4FA]">
-            {connectionStat(person.lastSeenAt)}
+            {connectionStat(person)}
           </span>
           connexion
         </span>

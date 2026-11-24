@@ -71,6 +71,10 @@
     {
       "path": "/api/cron/bpf-campaign",
       "schedule": "30 8 * * 1"
+    },
+    {
+      "path": "/api/cron/entreprise-activation",
+      "schedule": "0 7 * * *"
     }
   ]
 }

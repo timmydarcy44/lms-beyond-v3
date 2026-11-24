@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyFormationAssignedEmails } from "@/lib/entreprise/activation-event-emails";
 import { listOrgLearners, userCanManageOrgFormations } from "@/lib/org/org-formations";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
@@ -201,6 +202,11 @@ export async function POST(req: Request) {
       alt = await writeClient.from("course_enrollments").insert(courseEnrollments as never);
     }
     if (!alt.error) {
+      void notifyFormationAssignedEmails(writeClient, {
+        orgId: scopeOrgId,
+        courseId,
+        userIds,
+      }).catch((err) => console.error("[courses/assign] activation mail", err));
       return NextResponse.json({
         success: true,
         count: userIds.length,
@@ -211,6 +217,12 @@ export async function POST(req: Request) {
     const msg = code === "42501" ? "Erreur de permissions (RLS)" : result.error.message;
     return NextResponse.json({ success: false, error: msg, code }, { status: 400 });
   }
+
+  void notifyFormationAssignedEmails(writeClient, {
+    orgId: scopeOrgId,
+    courseId,
+    userIds,
+  }).catch((err) => console.error("[courses/assign] activation mail", err));
 
   return NextResponse.json({
     success: true,

@@ -62,6 +62,11 @@ export async function POST(request: NextRequest) {
   const fundingRaw = String(body.funding_type ?? "direct").trim().toLowerCase();
   const fundingType = fundingRaw === "opco" ? "opco" : "direct";
   const notes = String(body.notes ?? body.message ?? "").trim();
+  const isSurmesure =
+    body.surmesure === true ||
+    trainingId === "surmesure" ||
+    String(body.surmesure ?? "").trim() === "1";
+  const customTitle = String(body.custom_title ?? body.title ?? "").trim();
 
   const rawIds = Array.isArray(body.participant_ids)
     ? body.participant_ids
@@ -79,7 +84,7 @@ export async function POST(request: NextRequest) {
   // Compat ancien formulaire « nombre de participants »
   const legacyParticipants = String(body.participants ?? "").trim();
 
-  if (!trainingId || !contactName || !contactEmail) {
+  if ((!trainingId && !isSurmesure) || !contactName || !contactEmail) {
     return NextResponse.json(
       { error: "Formation et contact sont requis." },
       { status: 400 },
@@ -92,10 +97,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Email invalide." }, { status: 400 });
   }
 
-  const training = BUSINESS_TRAINING_ITEMS.find((item) => item.id === trainingId);
-  if (!training) {
+  const catalogTraining = BUSINESS_TRAINING_ITEMS.find((item) => item.id === trainingId);
+  if (!isSurmesure && !catalogTraining) {
     return NextResponse.json({ error: "Formation introuvable." }, { status: 404 });
   }
+  if (isSurmesure && !customTitle && !catalogTraining) {
+    return NextResponse.json(
+      { error: "Intitulé de formation Sur-mesure requis." },
+      { status: 400 },
+    );
+  }
+
+  const training = isSurmesure
+    ? {
+        id: "surmesure",
+        category: "Sur-mesure",
+        title: customTitle || catalogTraining?.title || "Formation Sur-mesure",
+        subtitle: "Parcours construit à la demande",
+        duration: "À définir",
+        level: "Sur-mesure",
+        format: "Présentiel · Distanciel · Blended",
+        expert: "Équipe pédagogique Byound",
+        companiesCount: 0,
+        participants: "Selon le brief",
+        startingPrice: "Sur devis",
+      }
+    : catalogTraining!;
 
   let companyName = "";
   let orgSiret = "";
@@ -174,14 +201,21 @@ export async function POST(request: NextRequest) {
   const viewerLabel = [access.viewer.prenom, access.viewer.nom].filter(Boolean).join(" ").trim();
 
   const html = buildEdgeEmailShell({
-    title: "Demande de formation entreprise",
+    title: isSurmesure
+      ? "Demande de formation Sur-mesure"
+      : "Demande de formation entreprise",
     preheader: `${companyName} — ${training.title}`,
     bodyHtml: `
       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A4A4A;">
-        Une entreprise a demandé une session via le dashboard Byound.
+        ${
+          isSurmesure
+            ? "Une entreprise a demandé une formation Sur-mesure (hors catalogue). Créer le parcours adapté à partir de ce brief."
+            : "Une entreprise a demandé une session via le dashboard Byound."
+        }
       </p>
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="text-align:left;">
         ${row("Formation", training.title)}
+        ${row("Type", isSurmesure ? "Sur-mesure (à créer)" : "Catalogue")}
         ${row("Catégorie", training.category)}
         ${row("Durée / niveau", `${training.duration} · ${training.level}`)}
         ${row("Catalogue", `${training.format} · à partir de ${training.startingPrice}`)}
@@ -215,10 +249,12 @@ export async function POST(request: NextRequest) {
     skipBcc: true,
     replyTo: contactEmail,
     from: EDGE_COCKPIT_FROM,
-    subject: `[Byound Formations] ${companyName} — ${training.title}`,
+    subject: `[Byound Formations${isSurmesure ? " · Sur-mesure" : ""}] ${companyName} — ${training.title}`,
     html,
     tags: {
-      type: "entreprise-formation-request",
+      type: isSurmesure
+        ? "entreprise-formation-request-surmesure"
+        : "entreprise-formation-request",
       org_id: access.organizationId,
     },
   });

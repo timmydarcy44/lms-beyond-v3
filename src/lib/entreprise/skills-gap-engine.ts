@@ -19,6 +19,10 @@ import {
   type CollectiveScope,
   type GapSeverity,
 } from "@/lib/entreprise/skills-gap-config";
+import {
+  proposeFormationForSkillGap,
+  proposedFormationToDemanderHref,
+} from "@/lib/entreprise/skills-gap-formation-propose";
 
 export type SkillsGapEmployeeInput = {
   id: string;
@@ -74,6 +78,15 @@ export type CollectiveNeed = {
 };
 
 export type SkillsGapAction =
+  | {
+      type: "propose_formation";
+      label: string;
+      href: string;
+      subtitle: string;
+      rationale: string;
+      in_catalogue: boolean;
+      price_note?: string;
+    }
   | { type: "edge_online"; label: string; href: string }
   | { type: "coaching"; label: string; href: string }
   | { type: "create_parcours"; label: string; href: string }
@@ -205,7 +218,31 @@ export function buildNeedActions(
   const isCollectivePriority = need.scope === "collectif_prioritaire";
   const severeGap = classifyGapSeverity(need.avg_gap) === "important";
 
-  // Individuel / mixte → digital & coaching
+  // Action principale : LA formation la plus cohérente (catalogue ou Sur-mesure)
+  const proposal = proposeFormationForSkillGap({
+    skill: need.skill,
+    metier_title: need.metier_title,
+    scope: need.scope,
+    avg_gap: need.avg_gap,
+  });
+  actions.push({
+    type: "propose_formation",
+    label: proposal.title,
+    href: proposedFormationToDemanderHref(proposal, {
+      skill: need.skill,
+      metier_title: need.metier_title,
+    }),
+    subtitle: proposal.in_catalogue
+      ? `Catalogue · ${proposal.category}`
+      : "Sur-mesure · hors catalogue",
+    rationale: proposal.rationale,
+    in_catalogue: proposal.in_catalogue,
+    price_note: proposal.in_catalogue
+      ? undefined
+      : `Devis Sur-mesure · à partir de ${EDGE_EXPERT_TRAINING_DAY_PRICE_EUR.toLocaleString("fr-FR")} € / jour`,
+  });
+
+  // Individuel / mixte → digital & coaching en complément
   if (isIndividual || isMixed) {
     actions.push({
       type: "edge_online",
@@ -219,24 +256,26 @@ export function buildNeedActions(
     });
   }
 
-  // Mixte → présentiel aussi possible
-  if (isMixed) {
+  // Mixte → présentiel générique (si la reco n’est pas déjà catalogue présentiel)
+  if (isMixed && !proposal.in_catalogue) {
     actions.push({
       type: "request_edge_training",
-      label: "Formation présentiel Byound",
+      label: "Parcourir le catalogue présentiel",
       href: `/dashboard/entreprise/formations/demander?skill=${skillQ}&metier=${metierQ}&format=Présentiel`,
       price_note: `${EDGE_EXPERT_TRAINING_DAY_PRICE_EUR.toLocaleString("fr-FR")} € / jour`,
     });
   }
 
-  // Collectif → présentiel / atelier d’équipe en priorité
+  // Collectif → options internes en complément de la reco
   if (isCollective) {
-    actions.push({
-      type: "request_edge_training",
-      label: "Formation présentiel Byound (équipe)",
-      href: `/dashboard/entreprise/formations/demander?skill=${skillQ}&metier=${metierQ}&format=Présentiel`,
-      price_note: `${EDGE_EXPERT_TRAINING_DAY_PRICE_EUR.toLocaleString("fr-FR")} € / jour`,
-    });
+    if (!proposal.in_catalogue) {
+      actions.push({
+        type: "request_edge_training",
+        label: "Parcourir le catalogue présentiel",
+        href: `/dashboard/entreprise/formations/demander?skill=${skillQ}&metier=${metierQ}&format=Présentiel`,
+        price_note: `${EDGE_EXPERT_TRAINING_DAY_PRICE_EUR.toLocaleString("fr-FR")} € / jour`,
+      });
+    }
     actions.push({
       type: "create_internal_formation",
       label: "Créer une formation interne",

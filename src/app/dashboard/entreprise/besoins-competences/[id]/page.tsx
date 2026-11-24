@@ -17,11 +17,15 @@ type Action = {
   href: string;
   price_note?: string;
   matches_count?: number;
+  subtitle?: string;
+  rationale?: string;
+  in_catalogue?: boolean;
 };
 
 type NeedDetail = {
   id: string;
   skill: string;
+  metier_id: string;
   metier_title: string;
   department: string | null;
   target: number;
@@ -48,6 +52,11 @@ const ACTION_VISUALS: Record<
   string,
   { image: string; description: string; imagePosition?: string }
 > = {
+  propose_formation: {
+    image: "/edge-lab/cover_analyse_comportementale.png",
+    description: "Formation la plus cohérente",
+    imagePosition: "center",
+  },
   edge_online: {
     image: "/edge-lab/objective-online-devices.png",
     description: "Parcours digital à la carte",
@@ -90,6 +99,9 @@ const FALLBACK_VISUAL = {
 };
 
 function actionSubtitle(action: Action) {
+  if (action.type === "propose_formation") {
+    return action.subtitle || (action.in_catalogue ? "Catalogue" : "Sur-mesure");
+  }
   if (action.price_note) return action.price_note;
   return ACTION_VISUALS[action.type]?.description ?? FALLBACK_VISUAL.description;
 }
@@ -214,38 +226,91 @@ export default function BesoinCompetencesDetailPage() {
 
             <section className="mt-10">
               <h2 className="mb-4 text-[13px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Actions recommandées
+                Formation recommandée
               </h2>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {need.actions.map((action) => {
-                  const visual = ACTION_VISUALS[action.type] ?? FALLBACK_VISUAL;
-                  return (
-                    <Link
-                      key={`${action.type}-${action.href}`}
-                      href={action.href}
-                      className="group relative block aspect-[5/4] overflow-hidden rounded-[24px] shadow-[0_10px_28px_rgba(0,0,0,0.1)] transition duration-400 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(0,0,0,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
-                    >
-                      <Image
-                        src={visual.image}
-                        alt=""
-                        fill
-                        sizes="(max-width: 768px) 50vw, 33vw"
-                        className="object-cover transition duration-500 ease-out group-hover:scale-[1.05]"
-                        style={{ objectPosition: visual.imagePosition ?? "center" }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-                      <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-4">
-                        <h3 className="text-[15px] font-semibold leading-tight tracking-tight text-white [font-family:-apple-system,'SF_Pro_Display',BlinkMacSystemFont,sans-serif]">
-                          {action.label}
-                        </h3>
-                        <p className="mt-1 line-clamp-1 text-[11px] text-white/70">
-                          {actionSubtitle(action)}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+              {(() => {
+                const primary = need.actions.find((a) => a.type === "propose_formation");
+                const secondary = need.actions.filter((a) => a.type !== "propose_formation");
+                return (
+                  <>
+                    {primary ? (
+                      <Link
+                        href={primary.href}
+                        className="group mb-6 block overflow-hidden rounded-[28px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(0,0,0,0.12)]"
+                      >
+                        <div className="grid gap-0 lg:grid-cols-[1fr_1.2fr]">
+                          <div className="relative min-h-[160px] lg:min-h-[200px]">
+                            <Image
+                              src={ACTION_VISUALS.propose_formation!.image}
+                              alt=""
+                              fill
+                              className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                              sizes="(max-width: 1024px) 100vw, 40vw"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent lg:bg-gradient-to-r" />
+                          </div>
+                          <div className="flex flex-col justify-center p-5 sm:p-6">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
+                              {primary.in_catalogue
+                                ? "Catalogue Byound"
+                                : "Sur-mesure · hors catalogue"}
+                            </p>
+                            <h3 className="mt-2 text-xl font-semibold tracking-tight text-gray-950 [font-family:-apple-system,'SF_Pro_Display',BlinkMacSystemFont,sans-serif]">
+                              {primary.label}
+                            </h3>
+                            {primary.rationale ? (
+                              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                                {primary.rationale}
+                              </p>
+                            ) : null}
+                            <p className="mt-4 text-sm font-semibold text-violet-600">
+                              Demander cette formation →
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ) : null}
+
+                    {secondary.length > 0 ? (
+                      <>
+                        <h2 className="mb-4 mt-2 text-[13px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                          Autres options
+                        </h2>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                          {secondary.map((action) => {
+                            const visual = ACTION_VISUALS[action.type] ?? FALLBACK_VISUAL;
+                            return (
+                              <Link
+                                key={`${action.type}-${action.href}`}
+                                href={action.href}
+                                className="group relative block aspect-[5/4] overflow-hidden rounded-[24px] shadow-[0_10px_28px_rgba(0,0,0,0.1)] transition duration-400 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(0,0,0,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
+                              >
+                                <Image
+                                  src={visual.image}
+                                  alt=""
+                                  fill
+                                  sizes="(max-width: 768px) 50vw, 33vw"
+                                  className="object-cover transition duration-500 ease-out group-hover:scale-[1.05]"
+                                  style={{ objectPosition: visual.imagePosition ?? "center" }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+                                <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-4">
+                                  <h3 className="text-[15px] font-semibold leading-tight tracking-tight text-white [font-family:-apple-system,'SF_Pro_Display',BlinkMacSystemFont,sans-serif]">
+                                    {action.label}
+                                  </h3>
+                                  <p className="mt-1 line-clamp-1 text-[11px] text-white/70">
+                                    {actionSubtitle(action)}
+                                  </p>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : null}
+                  </>
+                );
+              })()}
             </section>
 
             <section className="mt-10">

@@ -189,9 +189,15 @@ function RequestModal({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-500">
                   {item.category}
                 </p>
-                <h2 className="mt-2 text-2xl font-bold text-gray-950">Demander {item.title}</h2>
+                <h2 className="mt-2 text-2xl font-bold text-gray-950">
+                  {item.id === SURMESURE_ID
+                    ? `Demander « ${item.title} »`
+                    : `Demander ${item.title}`}
+                </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  {item.duration} · {item.level} · à partir de {item.startingPrice}
+                  {item.id === SURMESURE_ID
+                    ? "Byound créera la formation Sur-mesure à partir de cette demande"
+                    : `${item.duration} · ${item.level} · à partir de ${item.startingPrice}`}
                 </p>
               </div>
               <button
@@ -433,11 +439,33 @@ function RequestModal({
   );
 }
 
+const SURMESURE_ID = "surmesure";
+
+function buildSurmesureItem(title: string): BusinessTrainingItem {
+  return {
+    id: SURMESURE_ID,
+    category: "Sur-mesure",
+    title: title.trim() || "Formation Sur-mesure",
+    subtitle: "Parcours construit à la demande",
+    duration: "À définir",
+    level: "Sur-mesure",
+    format: "Présentiel · Distanciel · Blended",
+    expert: "Équipe pédagogique Byound",
+    companiesCount: 0,
+    participants: "Selon le brief",
+    startingPrice: "Sur devis",
+  };
+}
+
 export default function EntrepriseFormationRequestPage() {
   const searchParams = useSearchParams();
   const skillParam = (searchParams.get("skill") ?? "").trim();
   const metierParam = (searchParams.get("metier") ?? "").trim();
   const formatParam = (searchParams.get("format") ?? "").trim();
+  const titleParam = (searchParams.get("title") ?? "").trim();
+  const trainingParam = (searchParams.get("training") ?? "").trim();
+  const rationaleParam = (searchParams.get("rationale") ?? "").trim();
+  const surmesureParam = searchParams.get("surmesure") === "1";
   const fromSignup = searchParams.get("from") === "signup";
   const { loading: overviewLoading, data: overview } = useEntrepriseOverview();
 
@@ -473,11 +501,37 @@ export default function EntrepriseFormationRequestPage() {
   }, []);
 
   useEffect(() => {
-    if (!skillParam && !formatParam) return;
-    const needle = skillParam.toLowerCase();
-    if (skillParam) {
+    if (!skillParam && !formatParam && !titleParam && !trainingParam && !surmesureParam) return;
+
+    const gapNotes = [
+      skillParam
+        ? `Besoin Skills Gap : renforcer « ${skillParam} »${metierParam ? ` pour le métier « ${metierParam} »` : ""}.`
+        : "",
+      rationaleParam || "",
+      surmesureParam
+        ? "Demande Sur-mesure : créer une formation adaptée (hors catalogue public)."
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    if (surmesureParam || (titleParam && !trainingParam)) {
+      const item = buildSurmesureItem(titleParam || skillParam || "Formation Sur-mesure");
+      setSelected(item);
+      setIntentBanner(
+        `Formation recommandée hors catalogue : « ${item.title} ». Byound créera le parcours Sur-mesure à partir de cette demande.`,
+      );
+    } else if (trainingParam) {
+      const byId = BUSINESS_TRAINING_ITEMS.find((item) => item.id === trainingParam);
+      if (byId) {
+        setCategory(byId.category);
+        setSelected(byId);
+        setIntentBanner(`Formation recommandée : « ${byId.title} ».`);
+      }
+    } else if (skillParam) {
       const softCat = BUSINESS_TRAINING_CATEGORIES.find((c) => c === "Soft Skills");
       if (softCat) setCategory(softCat);
+      const needle = skillParam.toLowerCase();
       const match = BUSINESS_TRAINING_ITEMS.find(
         (item) =>
           item.title.toLowerCase().includes(needle) ||
@@ -486,19 +540,24 @@ export default function EntrepriseFormationRequestPage() {
       );
       if (match) setSelected(match);
     }
+
     setForm((prev) => ({
       ...prev,
       preferred_format:
         formatParam && (FORMAT_OPTIONS as readonly string[]).includes(formatParam)
           ? formatParam
           : prev.preferred_format,
-      notes:
-        prev.notes ||
-        (skillParam
-          ? `Besoin Skills Gap : renforcer « ${skillParam} »${metierParam ? ` pour le métier « ${metierParam} »` : ""}.`
-          : prev.notes),
+      notes: prev.notes || gapNotes || prev.notes,
     }));
-  }, [skillParam, metierParam, formatParam]);
+  }, [
+    skillParam,
+    metierParam,
+    formatParam,
+    titleParam,
+    trainingParam,
+    rationaleParam,
+    surmesureParam,
+  ]);
 
   useEffect(() => {
     const prenom = String(overview?.viewer?.prenom ?? "").trim();
@@ -606,11 +665,18 @@ export default function EntrepriseFormationRequestPage() {
     setSubmitting(true);
     setError(null);
     try {
+      const isSurmesure = selected.id === SURMESURE_ID;
       const res = await fetch("/api/dashboard/entreprise/formations/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           training_id: selected.id,
+          ...(isSurmesure
+            ? {
+                surmesure: true,
+                custom_title: selected.title,
+              }
+            : {}),
           ...form,
         }),
       });

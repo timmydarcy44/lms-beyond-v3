@@ -29,7 +29,7 @@ export default async function CreateUserPage({
         </h1>
         <p className="text-sm text-gray-600">
           {isBtoc
-            ? "Créez un particulier : email, téléphone, prénom, nom. Un email lui permettra de créer son mot de passe."
+            ? "Créez un particulier : email, téléphone, prénom, nom. Aucun email automatique — vous demanderez la création du mot de passe depuis la fiche."
             : "Créez un contact avec email, téléphone, prénom, nom et rôle. Un email lui permettra de créer son mot de passe de façon autonome. Il apparaîtra ensuite dans la liste CRM Contacts."}
         </p>
       </div>

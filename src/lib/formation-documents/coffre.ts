@@ -266,6 +266,7 @@ export async function buildCoffreSnapshot(
             ? "partial"
             : "missing",
       document_ids: [programme, livret, reglement].filter(Boolean).map((d) => d!.id),
+      kind: "programme",
     },
     {
       key: "formateur_cv",

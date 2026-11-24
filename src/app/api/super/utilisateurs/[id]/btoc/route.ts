@@ -4,6 +4,7 @@ import { isHandicapPortfolioOnlyRoleType } from "@/lib/auth/school-role-type-gua
 import { loadBtocClientFile } from "@/lib/control/btoc-client-file";
 import { createFormationDossier } from "@/lib/formation-dossier/create-dossier";
 import { sendAssessmentInvites } from "@/lib/formation-assessments/send";
+import { sendCrmUserPasswordInvite } from "@/lib/crm/send-crm-user-password-invite";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendEmail } from "@/lib/email/resend-client";
 import { buildEdgeEmailShell, escapeEdgeEmailHtml } from "@/lib/emails/edge-email-shell";
@@ -53,6 +54,18 @@ async function requireStaff() {
     return { ok: false as const, status: 503 as const, error: "Service indisponible" };
   }
   return { ok: true as const, service, staffId: data.user.id };
+}
+
+export async function GET(_request: NextRequest, ctx: Ctx) {
+  const auth = await requireStaff();
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  const { id: userId } = await ctx.params;
+  const client = await loadBtocClientFile(auth.service, userId, {
+    canViewAdaptation: await canViewAdaptation(),
+  });
+  if (!client) return NextResponse.json({ error: "Client introuvable" }, { status: 404 });
+  return NextResponse.json({ client });
 }
 
 export async function PATCH(request: NextRequest, ctx: Ctx) {
@@ -141,12 +154,23 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     .maybeSingle();
   if (!profile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
-  const isTest = (profile as { is_test?: boolean }).is_test === true;
-  if (!isTest) {
-    return NextResponse.json(
-      { error: "Action réservée aux comptes de test (is_test = true)." },
-      { status: 400 },
-    );
+  if (action === "send_password_invite") {
+    const to = String(profile.email ?? "").trim().toLowerCase();
+    if (!to.includes("@")) {
+      return NextResponse.json({ error: "Email client manquant" }, { status: 400 });
+    }
+    const invite = await sendCrmUserPasswordInvite(auth.service, {
+      email: to,
+      firstName: String(profile.first_name ?? "").trim() || "bonjour",
+      role: "PARTICULIER",
+    });
+    if (!invite.ok) {
+      return NextResponse.json({ error: invite.error || "Envoi impossible" }, { status: 502 });
+    }
+    return NextResponse.json({
+      ok: true,
+      message: `Demande de création de mot de passe envoyée à ${to}`,
+    });
   }
 
   if (action === "relance_qualiopi") {
@@ -156,10 +180,6 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     const to = String(profile.email ?? "").trim().toLowerCase();
     if (!to.includes("@")) {
       return NextResponse.json({ error: "Email client manquant" }, { status: 400 });
-    }
-    // Garde-fou : uniquement adresses de test pendant les essais
-    if (!/(\+test|@byound\.|@exemple\.|@example\.|@test\.)/i.test(to) && !isTest) {
-      return NextResponse.json({ error: "Relance bloquée hors adresse de test" }, { status: 400 });
     }
 
     const name =

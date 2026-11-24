@@ -93,8 +93,11 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: { initial
         title={title}
         subtitle={`${rows.length} ${noun}${rows.length > 1 ? "s" : ""}`}
         actions={
-          <a href="/super/utilisateurs/new" className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white">
-            + Nouveau contact
+          <a
+            href={mode === "particuliers" ? "/super/utilisateurs/new?audience=btoc" : "/super/utilisateurs/new"}
+            className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
+          >
+            {mode === "particuliers" ? "+ Nouvelle inscription" : "+ Nouveau contact"}
           </a>
         }
       />

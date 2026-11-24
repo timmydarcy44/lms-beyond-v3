@@ -48,11 +48,23 @@ export type BtocClientFile = {
 };
 
 const BTOC_ROLES = new Set(["btoc", "particulier", "PARTICULIER"]);
+const BTOC_LEARNER_ROLES = new Set([
+  "learner",
+  "student",
+  "apprenant",
+  "btoc",
+  "particulier",
+  "PARTICULIER",
+]);
 
-/** Rôle CRM ou `role_type=particulier` (inscriptions site : role=learner). */
+/**
+ * Client BtoC = apprenant / particulier uniquement.
+ * Ignore tuteur, club, praticien… même si `role_type` est (à tort) `particulier`.
+ */
 export function isBtocRole(role: string | null | undefined, roleType?: string | null) {
   const r = String(role ?? "").trim();
   const rt = String(roleType ?? "").trim().toLowerCase();
+  if (!BTOC_LEARNER_ROLES.has(r)) return false;
   if (BTOC_ROLES.has(r)) return true;
   return rt === "particulier" || rt === "btoc";
 }

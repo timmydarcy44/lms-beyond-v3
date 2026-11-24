@@ -25,11 +25,47 @@ export default async function UserDetailsPage({
 
   const service = getServiceRoleClient();
   if (service) {
-    const { data: roleRow } = await service
+    let { data: roleRow } = await service
       .from("profiles")
       .select("role, role_type")
       .eq("id", userId)
       .maybeSingle();
+
+    // Répare les créations CRM B2C restées en learner sans role_type (absents de Client BtoC).
+    if (
+      roleRow &&
+      !isBtocRole(
+        (roleRow as { role?: string }).role,
+        (roleRow as { role_type?: string | null }).role_type,
+      )
+    ) {
+      try {
+        const { data: authUser } = await service.auth.admin.getUserById(userId);
+        const meta = (authUser.user?.user_metadata ?? {}) as Record<string, unknown>;
+        const metaRole = String(meta.role ?? "");
+        const metaRoleType = String(meta.role_type ?? "").toLowerCase();
+        const source = String(meta.signup_source ?? "");
+        const looksBtoc =
+          metaRoleType === "particulier" ||
+          metaRoleType === "btoc" ||
+          ["PARTICULIER", "particulier", "btoc"].includes(metaRole) ||
+          source === "crm_btoc" ||
+          (source === "crm_edge" && ["PARTICULIER", "particulier", "btoc"].includes(metaRole));
+        if (looksBtoc) {
+          await service
+            .from("profiles")
+            .update({ role_type: "particulier" })
+            .eq("id", userId);
+          ({ data: roleRow } = await service
+            .from("profiles")
+            .select("role, role_type")
+            .eq("id", userId)
+            .maybeSingle());
+        }
+      } catch {
+        /* ignore */
+      }
+    }
 
     if (
       isBtocRole(

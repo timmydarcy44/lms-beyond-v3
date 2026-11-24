@@ -1,14 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { BtocClientFile, BtocFundingType } from "@/lib/control/btoc-client-file";
+import { isLot4Kind } from "@/lib/formation-documents/constants";
+import type { CoffreItemStatus } from "@/lib/formation-documents/coffre";
 
 const CARD = "rounded-[26px] border border-[#1A2340] bg-[#111831]";
 const MUTED = "text-[#9AA3BD]";
 const INPUT =
   "mt-1.5 w-full rounded-xl border border-[#26304F] bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]";
+
+const COFFRE_STATUS: Record<
+  CoffreItemStatus,
+  { label: string; bg: string; fg: string }
+> = {
+  missing: { label: "Absent", bg: "#3A1818", fg: "#FF8E8E" },
+  partial: { label: "Incomplet", bg: "#3A3118", fg: "#F2CF6B" },
+  ready: { label: "Déposé", bg: "#163228", fg: "#6BE39B" },
+  not_due: { label: "Pas dû", bg: "#1A2340", fg: "#8A93AE" },
+};
 
 const FUNDING_LABEL: Record<BtocFundingType, string> = {
   fonds_propres: "Fonds propres",
@@ -73,6 +85,11 @@ export function BtocClientFileView({ initial }: Props) {
   const [assignReason, setAssignReason] = useState("offerte");
   const [assignBusy, setAssignBusy] = useState(false);
   const [selectedCoffre, setSelectedCoffre] = useState(0);
+  const [coffreBusyKey, setCoffreBusyKey] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ dossierId: string; kind: string; itemKey: string } | null>(
+    null,
+  );
 
   const conn = lastConnexionTone(file.lastSignInAt);
   const coffreReady = file.coffres.reduce((s, c) => s + c.ready_count, 0);
@@ -143,10 +160,6 @@ export function BtocClientFileView({ initial }: Props) {
       toast.error("Choisissez une formation");
       return;
     }
-    if (!file.isTest) {
-      toast.error("Assignez uniquement sur un compte de test (is_test).");
-      return;
-    }
     setAssignBusy(true);
     try {
       const res = await fetch(`/api/super/utilisateurs/${file.id}/btoc`, {
@@ -176,10 +189,6 @@ export function BtocClientFileView({ initial }: Props) {
   };
 
   const relance = async () => {
-    if (!file.isTest) {
-      toast.error("Relances de test uniquement (compte is_test).");
-      return;
-    }
     try {
       const res = await fetch(`/api/super/utilisateurs/${file.id}/btoc`, {
         method: "POST",
@@ -188,13 +197,99 @@ export function BtocClientFileView({ initial }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Relance impossible");
-      toast.success(json.message || "Relance envoyée (adresse de test)");
+      toast.success(json.message || "Relance envoyée");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     }
   };
 
+  const [passwordInviteBusy, setPasswordInviteBusy] = useState(false);
+  const sendPasswordInvite = async () => {
+    setPasswordInviteBusy(true);
+    try {
+      const res = await fetch(`/api/super/utilisateurs/${file.id}/btoc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send_password_invite" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Envoi impossible");
+      toast.success(json.message || "Demande de création de mot de passe envoyée");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setPasswordInviteBusy(false);
+    }
+  };
+
   const activeCoffre = file.coffres[selectedCoffre] ?? null;
+
+  const refreshClient = async () => {
+    const res = await fetch(`/api/super/utilisateurs/${file.id}/btoc`);
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json.client) setFile(json.client);
+  };
+
+  const sendCoffreDoc = async (dossierId: string, kind: string, itemKey: string) => {
+    setCoffreBusyKey(`send:${itemKey}`);
+    try {
+      const res = await fetch(
+        `/api/super-admin/crm/formation-dossiers/${dossierId}/documents/send`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind, to: file.email }),
+        },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Envoi impossible");
+      toast.success(
+        json.sent_to?.length
+          ? `Envoyé en ligne à ${json.sent_to.join(", ")}`
+          : "Document envoyé en ligne",
+      );
+      await refreshClient();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Envoi impossible");
+    } finally {
+      setCoffreBusyKey(null);
+    }
+  };
+
+  const pickUpload = (dossierId: string, kind: string, itemKey: string) => {
+    setUploadTarget({ dossierId, kind, itemKey });
+    queue.queueMicrotask(() => uploadInputRef.current?.click());
+  };
+
+  const onUploadFile = async (fileList: FileList | null) => {
+    const target = uploadTarget;
+    setUploadTarget(null);
+    const pdf = fileList?.[0];
+    if (!target || !pdf) return;
+    if (!/\.pdf$/i.test(pdf.name) && pdf.type !== "application/pdf") {
+      toast.error("PDF uniquement");
+      return;
+    }
+    setCoffreBusyKey(`upload:${target.itemKey}`);
+    try {
+      const form = new FormData();
+      form.set("kind", target.kind);
+      form.set("file", pdf);
+      const res = await fetch(
+        `/api/super-admin/crm/formation-dossiers/${target.dossierId}/documents/upload`,
+        { method: "POST", body: form },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || "Upload impossible");
+      toast.success("Document déposé dans le coffre");
+      await refreshClient();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload impossible");
+    } finally {
+      setCoffreBusyKey(null);
+      if (uploadInputRef.current) uploadInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 px-4 py-8 sm:px-6">
@@ -234,6 +329,14 @@ export function BtocClientFileView({ initial }: Props) {
           >
             Écrire
           </a>
+          <button
+            type="button"
+            disabled={passwordInviteBusy}
+            onClick={() => void sendPasswordInvite()}
+            className="rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#151C33] disabled:opacity-50"
+          >
+            {passwordInviteBusy ? "Envoi…" : "Demander à créer un mot de passe"}
+          </button>
           <a
             href="/dashboard/apprenant"
             target="_blank"
@@ -461,6 +564,14 @@ export function BtocClientFileView({ initial }: Props) {
         )}
       </section>
 
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={(e) => void onUploadFile(e.target.files)}
+      />
+
       <section id="coffre" className={`${CARD} scroll-mt-28 p-5 sm:p-6`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-extrabold text-white">
@@ -471,12 +582,30 @@ export function BtocClientFileView({ initial }: Props) {
           </h2>
           {activeCoffre ? (
             <a
-              href={`/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/coffre-zip`}
+              href={`/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/coffre?format=zip`}
               className="rounded-full border border-[#26304F] px-3 py-1.5 text-xs font-semibold text-[#C9D2E8] hover:text-white"
             >
               Tout télécharger (ZIP)
             </a>
           ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
+          {(
+            [
+              ["missing", "Absent"],
+              ["partial", "Incomplet"],
+              ["ready", "Déposé"],
+            ] as const
+          ).map(([key, label]) => (
+            <span
+              key={key}
+              className="rounded-full px-2.5 py-0.5"
+              style={{ background: COFFRE_STATUS[key].bg, color: COFFRE_STATUS[key].fg }}
+            >
+              {label}
+            </span>
+          ))}
         </div>
 
         {file.coffres.length === 0 ? (
@@ -504,50 +633,73 @@ export function BtocClientFileView({ initial }: Props) {
             {activeCoffre ? (
               <ul className="mt-4 space-y-2">
                 {activeCoffre.items.map((item) => {
+                  const tone = COFFRE_STATUS[item.status] ?? COFFRE_STATUS.not_due;
                   const docId = item.document_ids?.[0];
                   const href = docId
                     ? `/api/super-admin/crm/formation-documents/${docId}/pdf`
                     : item.kind && activeCoffre.dossier_id
                       ? `/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/documents/${item.kind}/pdf`
                       : null;
-                  const rowClass =
-                    "flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-[#1A2340] bg-[#0B1122] px-3 py-2.5 text-left transition hover:border-[#6E5BFF]/45";
-                  const body = (
-                    <>
-                      <div>
-                        <p className="text-sm font-semibold text-white">{item.label}</p>
-                        {item.detail ? <p className={`text-xs ${MUTED}`}>{item.detail}</p> : null}
+                  const canUpload = Boolean(item.kind) && item.status !== "not_due";
+                  const canSend =
+                    Boolean(item.kind) &&
+                    item.status !== "not_due" &&
+                    isLot4Kind(String(item.kind));
+                  const busyUpload = coffreBusyKey === `upload:${item.key}`;
+                  const busySend = coffreBusyKey === `send:${item.key}`;
+                  return (
+                    <li
+                      key={item.key}
+                      className="rounded-xl border border-[#1A2340] bg-[#0B1122] px-3 py-2.5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-white">{item.label}</p>
+                          {item.detail ? <p className={`text-xs ${MUTED}`}>{item.detail}</p> : null}
+                        </div>
+                        <span
+                          className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                          style={{ background: tone.bg, color: tone.fg }}
+                        >
+                          {tone.label}
+                        </span>
                       </div>
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                          item.status === "ready"
-                            ? "bg-[#163228] text-[#6BE39B]"
-                            : item.status === "partial" || item.status === "missing"
-                              ? "bg-[#3A3118] text-[#F2CF6B]"
-                              : "bg-[#1A2340] text-[#8A93AE]"
-                        }`}
-                      >
-                        {item.status === "ready"
-                          ? href
-                            ? "Ouvrir"
-                            : "OK"
-                          : item.status === "partial"
-                            ? "Partiel"
-                            : item.status === "missing"
-                              ? "Manquant"
-                              : "Pas dû"}
-                      </span>
-                    </>
-                  );
-                  return href ? (
-                    <li key={item.key}>
-                      <a href={href} target="_blank" rel="noreferrer" className={rowClass}>
-                        {body}
-                      </a>
-                    </li>
-                  ) : (
-                    <li key={item.key} className={rowClass}>
-                      {body}
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {href ? (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-full border border-[#26304F] px-3 py-1 text-[11px] font-semibold text-[#C9D2E8] hover:text-white"
+                          >
+                            Ouvrir
+                          </a>
+                        ) : null}
+                        {canUpload && item.kind ? (
+                          <button
+                            type="button"
+                            disabled={Boolean(coffreBusyKey)}
+                            onClick={() =>
+                              pickUpload(activeCoffre.dossier_id, item.kind!, item.key)
+                            }
+                            className="rounded-full border border-[#26304F] px-3 py-1 text-[11px] font-semibold text-[#C9D2E8] hover:text-white disabled:opacity-50"
+                          >
+                            {busyUpload ? "Upload…" : "Uploader"}
+                          </button>
+                        ) : null}
+                        {canSend && item.kind ? (
+                          <button
+                            type="button"
+                            disabled={Boolean(coffreBusyKey)}
+                            onClick={() =>
+                              void sendCoffreDoc(activeCoffre.dossier_id, item.kind!, item.key)
+                            }
+                            className="rounded-full bg-[#6E5BFF] px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                          >
+                            {busySend ? "Envoi…" : "Envoyer en ligne"}
+                          </button>
+                        ) : null}
+                      </div>
                     </li>
                   );
                 })}
@@ -598,7 +750,9 @@ export function BtocClientFileView({ initial }: Props) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
           <div className={`${CARD} relative z-10 w-full max-w-lg p-6`}>
             <h3 className="text-lg font-extrabold text-white">Assigner une formation</h3>
-            <p className={`mt-1 text-sm ${MUTED}`}>Compte test uniquement — crée l’inscription et ouvre le coffre.</p>
+            <p className={`mt-1 text-sm ${MUTED}`}>
+              Crée l’inscription, ouvre le coffre Qualiopi et envoie le test de positionnement.
+            </p>
             <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[#9AA3BD]">
               Formation
               <select className={INPUT} value={assignCourseId} onChange={(e) => setAssignCourseId(e.target.value)}>

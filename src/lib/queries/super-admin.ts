@@ -954,11 +954,14 @@ export async function getAllUsers(): Promise<UserListItem[]> {
         (profile as { role_type?: string | null }).role_type != null
           ? String((profile as { role_type?: string | null }).role_type)
           : null;
-      // Préférer le rôle profil pour les B2C (role_type=particulier), sinon membership org.
-      const role =
-        roleType === "particulier" || roleType === "btoc" || BTOC_PROFILE_ROLES.has(profileRole)
-          ? profileRole
-          : roleMap.get(profile.id) || profileRole;
+      // B2C : garder le rôle profil seulement pour apprenant/particulier (pas tuteur/club mal tagués).
+      const isBtocLearnerProfile =
+        BTOC_PROFILE_ROLES.has(profileRole) ||
+        ((roleType === "particulier" || roleType === "btoc") &&
+          ["learner", "student", "apprenant"].includes(profileRole));
+      const role = isBtocLearnerProfile
+        ? profileRole
+        : roleMap.get(profile.id) || profileRole;
 
       return {
         id: profile.id,

@@ -92,10 +92,24 @@ export type CrmUserListItem = {
   testCount: number;
 };
 
-/** Client BtoC : rôle CRM ou role_type=particulier (inscriptions site). */
+/** Rôles « apprenant / particulier » acceptés en Client BtoC (exclut tuteur, club, etc.). */
+const CRM_BTOC_LEARNER_ROLES = new Set([
+  "learner",
+  "student",
+  "apprenant",
+  "btoc",
+  "particulier",
+  "PARTICULIER",
+]);
+
+/**
+ * Client BtoC = particulier / apprenant uniquement.
+ * `role_type=particulier` seul ne suffit pas (beaucoup de comptes legacy mal tagués : tuteur, club…).
+ */
 export function isCrmBtocUser(user: { role?: string | null; roleType?: string | null }) {
   const role = String(user.role ?? "").trim();
   const roleType = String(user.roleType ?? "").trim().toLowerCase();
+  if (!CRM_BTOC_LEARNER_ROLES.has(role)) return false;
   if (["btoc", "particulier", "PARTICULIER"].includes(role)) return true;
   return roleType === "particulier" || roleType === "btoc";
 }

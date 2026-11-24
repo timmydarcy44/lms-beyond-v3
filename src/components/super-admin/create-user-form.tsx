@@ -27,6 +27,7 @@ function resolveDefaultRole(defaultRole?: string): CrmProfileRole {
 
 export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
   const router = useRouter();
+  const isBtoc = defaultRole === "btoc" || defaultRole === "PARTICULIER" || defaultRole === "particulier";
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -44,8 +45,10 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim() || null,
-        role,
+        role: isBtoc ? "PARTICULIER" : role,
         organizationIds: [],
+        // B2C : jamais d’email à la création — CTA « Demander à créer un mot de passe » sur la fiche.
+        sendInvite: isBtoc ? false : true,
       });
 
       if (result.success) {
@@ -53,6 +56,10 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
           toast.warning(result.warning);
         } else if (result.inviteSent) {
           toast.success("Utilisateur créé — un email de création de mot de passe a été envoyé");
+        } else if (isBtoc) {
+          toast.success(
+            "Client BtoC créé. Utilisez « Demander à créer un mot de passe » sur la fiche quand vous êtes prêt.",
+          );
         } else {
           toast.success("Utilisateur créé avec succès");
         }
@@ -128,23 +135,33 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
         />
       </div>
 
-      <div>
-        <Label htmlFor="role" className="text-gray-900">
-          Rôle *
-        </Label>
-        <select
-          id="role"
-          value={role}
-          onChange={(e) => setRole(e.target.value as CrmProfileRole)}
-          className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
-        >
-          {CRM_PROFILE_ROLE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {isBtoc ? (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+          <p className="font-semibold text-gray-900">Particulier B2C</p>
+          <p className="mt-1 text-gray-600">
+            Aucun email à la création. Le client apparaît tout de suite dans Client BtoC. Envoyez le
+            lien depuis la fiche avec « Demander à créer un mot de passe ».
+          </p>
+        </div>
+      ) : (
+        <div>
+          <Label htmlFor="role" className="text-gray-900">
+            Rôle *
+          </Label>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as CrmProfileRole)}
+            className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
+          >
+            {CRM_PROFILE_ROLE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
         <Button
@@ -165,6 +182,8 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Création...
             </>
+          ) : isBtoc ? (
+            "Créer le client BtoC"
           ) : (
             "Créer l'utilisateur"
           )}

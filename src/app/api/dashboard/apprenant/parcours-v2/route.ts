@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getApprenantDashboardData } from "@/lib/queries/apprenant";
+import { resolveEffectiveApprenantUserId } from "@/lib/control/learner-preview";
 import { getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
 import {
   buildUserObjectiveDisplay,
@@ -23,7 +24,7 @@ export async function GET() {
   const db = getServiceRoleClient() ?? (await getServerClient());
   if (!db) return NextResponse.json({ error: "NO_DB_CLIENT" }, { status: 500 });
 
-  const userId = session.id;
+  const { userId, preview } = await resolveEffectiveApprenantUserId(session.id);
   let formations: Array<{
     id: string;
     title: string;
@@ -34,15 +35,67 @@ export async function GET() {
   }> = [];
 
   try {
-    const data = await getApprenantDashboardData();
-    formations = (data.formations ?? []).map((f) => ({
-      id: f.id,
-      title: f.title,
-      href: f.href,
-      progress: f.progress ?? null,
-      meta: f.level || f.meta || null,
-      level: f.level ?? null,
-    }));
+    if (preview) {
+      const { data: enrollments } = await db
+        .from("enrollments")
+        .select("id, course_id, courses ( id, title )")
+        .eq("user_id", userId)
+        .limit(40);
+      for (const enr of enrollments ?? []) {
+        const courseId = String((enr as { course_id?: string }).course_id ?? "");
+        if (!courseId) continue;
+        const course = (enr as { courses?: { title?: string } | null }).courses;
+        formations.push({
+          id: courseId,
+          title: course?.title?.trim() || "Formation",
+          href: `/dashboard/apprenant/cours/${courseId}`,
+          progress: null,
+          meta: null,
+          level: null,
+        });
+      }
+      const { data: parts } = await db
+        .from("formation_participants")
+        .select("dossier_id")
+        .eq("profile_id", userId)
+        .limit(20);
+      const dossierIds = (parts ?? [])
+        .map((p) => String((p as { dossier_id?: string }).dossier_id ?? ""))
+        .filter(Boolean);
+      if (dossierIds.length) {
+        const { data: dossiers } = await db
+          .from("formation_dossiers")
+          .select("id, course_title, training_course_id")
+          .in("id", dossierIds);
+        const known = new Set(formations.map((f) => f.title.trim().toLowerCase()));
+        for (const d of dossiers ?? []) {
+          const title = String((d as { course_title?: string }).course_title ?? "").trim() || "Formation";
+          if (known.has(title.toLowerCase())) continue;
+          const courseId = String((d as { training_course_id?: string | null }).training_course_id ?? "");
+          formations.push({
+            id: courseId || `dossier-${(d as { id: string }).id}`,
+            title,
+            href: courseId
+              ? `/dashboard/apprenant/cours/${courseId}`
+              : "/dashboard/apprenant",
+            progress: null,
+            meta: "Assignée",
+            level: null,
+          });
+          known.add(title.toLowerCase());
+        }
+      }
+    } else {
+      const data = await getApprenantDashboardData();
+      formations = (data.formations ?? []).map((f) => ({
+        id: f.id,
+        title: f.title,
+        href: f.href,
+        progress: f.progress ?? null,
+        meta: f.level || f.meta || null,
+        level: f.level ?? null,
+      }));
+    }
   } catch {
     formations = [];
   }

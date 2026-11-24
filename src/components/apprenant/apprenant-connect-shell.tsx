@@ -116,6 +116,37 @@ export function ApprenantConnectShell({
       setAuthMeta(userData.user.user_metadata as Record<string, unknown>);
     }
     if (!uid) return;
+
+    // Preview BtoC : afficher le profil du client, pas celui du staff.
+    try {
+      const previewRes = await fetch("/api/super/learner-preview");
+      if (previewRes.ok) {
+        const previewJson = (await previewRes.json()) as {
+          active?: boolean;
+          firstName?: string | null;
+          lastName?: string | null;
+          email?: string | null;
+          avatarUrl?: string | null;
+        };
+        if (previewJson.active) {
+          setProfile({
+            first_name: previewJson.firstName ?? null,
+            last_name: previewJson.lastName ?? null,
+            email: previewJson.email ?? null,
+            avatar_url: previewJson.avatarUrl ?? null,
+            role: "learner",
+            role_type: "particulier",
+          });
+          setIsParticulier(true);
+          if (previewJson.email) setAuthEmail(previewJson.email);
+          edgePerfMark("shell-profiles-done");
+          return;
+        }
+      }
+    } catch {
+      /* ignore — fallback profil session */
+    }
+
     const { data } = await supabase
       .from("profiles")
       .select(

@@ -1,4 +1,6 @@
 export const IMPERSONATION_COOKIE = "byound_impersonation";
+/** Preview lecture seule de l’espace apprenant d’un client BtoC (session staff inchangée). */
+export const LEARNER_PREVIEW_COOKIE = "byound_learner_preview";
 
 export const REASON_CODES = [
   { code: "client_request", label: "Demande du client" },

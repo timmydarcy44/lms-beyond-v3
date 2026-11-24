@@ -337,15 +337,29 @@ export function BtocClientFileView({ initial }: Props) {
           >
             {passwordInviteBusy ? "Envoi…" : "Demander à créer un mot de passe"}
           </button>
-          <a
-            href="/dashboard/apprenant"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
             className="rounded-full border border-[#26304F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#151C33]"
-            title="Espace apprenant (accompagnement org à brancher si besoin)"
+            title="Ouvre l’espace apprenant de ce client en lecture (votre session Control ne change pas)"
+            onClick={() => {
+              void (async () => {
+                try {
+                  const res = await fetch("/api/super/learner-preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: file.id }),
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.error || "Ouverture impossible");
+                  window.location.href = String(json.href || "/dashboard/apprenant");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Ouverture impossible");
+                }
+              })();
+            }}
           >
             Ouvrir son espace
-          </a>
+          </button>
           <button
             type="button"
             onClick={() => setEditing(true)}

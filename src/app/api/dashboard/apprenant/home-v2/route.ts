@@ -17,6 +17,7 @@ import {
 import { parseProfessionalProject } from "@/lib/particulier/profil-edge-maturity";
 import { getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
+import { resolveEffectiveApprenantUserId } from "@/lib/control/learner-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export async function GET() {
   const db = getServiceRoleClient() ?? (await getServerClient());
   if (!db) return NextResponse.json({ error: "NO_DB_CLIENT" }, { status: 500 });
 
-  const userId = session.id;
+  const { userId, preview } = await resolveEffectiveApprenantUserId(session.id);
   const situation = await resolveLearnerSituation(db, userId);
 
   const { data: profile } = await db
@@ -280,6 +281,9 @@ export async function GET() {
   return NextResponse.json({
     dateLabel: formatFrenchLongDate(),
     firstName,
+    preview: preview
+      ? { active: true, targetName: preview.targetName, targetUserId: preview.targetUserId }
+      : null,
     situation,
     nextStep,
     timeline,

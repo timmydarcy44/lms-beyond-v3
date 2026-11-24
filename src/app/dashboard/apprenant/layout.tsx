@@ -7,12 +7,14 @@ import "@/styles/edge-connect.css";
 import "@/styles/jessica-connect.css";
 import { PaywallConnect } from "@/components/paywalls/paywall-connect";
 import { ApprenantConnectShell } from "@/components/apprenant/apprenant-connect-shell";
+import { LearnerPreviewBanner } from "@/components/control/learner-preview-banner";
 import { JadeInternalFill } from "@/components/demo/jade-internal-fill";
 import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isUniversalAdminRole } from "@/lib/auth/is-admin-role";
 import { getSession } from "@/lib/auth/session";
 import type { ApprenantConnectVariant } from "@/lib/apprenant/connect-theme";
+import { readLearnerPreviewContext } from "@/lib/control/learner-preview";
 import {
   isJessicaLmsHostname,
   isJessicaStudioProfile,
@@ -30,12 +32,15 @@ function resolveApprenantVariant(
 function ApprenantShellWithSuspense({
   variant,
   children,
+  previewName,
 }: {
   variant: ApprenantConnectVariant;
   children: ReactNode;
+  previewName?: string | null;
 }) {
   return (
     <Suspense fallback={null}>
+      {previewName ? <LearnerPreviewBanner targetName={previewName} /> : null}
       <ApprenantConnectShell variant={variant}>
         <JadeInternalFill>{children}</JadeInternalFill>
       </ApprenantConnectShell>
@@ -103,18 +108,29 @@ export default async function ApprenantSuiteLayout({ children }: { children: Rea
   }
 
   const variant = resolveApprenantVariant(hostname, profile);
+  const preview = await readLearnerPreviewContext();
+  const previewName =
+    preview && !preview.expired && preview.staffId === user.id ? preview.targetName : null;
 
   if (
     isUniversalAdminRole(profile?.role) ||
     isByoundBusinessManager(user.email) ||
     isByoundBusinessManager(profile?.email)
   ) {
-    return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
+    return (
+      <ApprenantShellWithSuspense variant={variant} previewName={previewName}>
+        {children}
+      </ApprenantShellWithSuspense>
+    );
   }
 
   if (profile?.access_connect === false) {
     return <PaywallConnect />;
   }
 
-  return <ApprenantShellWithSuspense variant={variant}>{children}</ApprenantShellWithSuspense>;
+  return (
+    <ApprenantShellWithSuspense variant={variant} previewName={previewName}>
+      {children}
+    </ApprenantShellWithSuspense>
+  );
 }

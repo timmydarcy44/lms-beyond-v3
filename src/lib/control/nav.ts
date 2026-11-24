@@ -21,7 +21,7 @@ export type ControlNavItem = {
 };
 
 export type ControlNavSection = {
-  id: "business" | "cfa" | "formation" | "qualite";
+  id: "business" | "cfa" | "particulier" | "formation" | "qualite";
   label: string;
   dot: string;
   items: ControlNavItem[];
@@ -42,11 +42,15 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         href: "/super/crm/pipeline",
         countKey: "pipelineLate",
         countTone: "late",
-        match: (pathname) =>
-          pathname === "/super/crm/pipeline" ||
-          pathname.startsWith("/super/crm/pipeline-btob") ||
-          (pathname.startsWith("/super/crm/pipeline") &&
-            !pathname.startsWith("/super/crm/pipeline/prescripteurs")),
+        match: (pathname, role) => {
+          if (role === "btoc") return false;
+          return (
+            pathname === "/super/crm/pipeline" ||
+            pathname.startsWith("/super/crm/pipeline-btob") ||
+            (pathname.startsWith("/super/crm/pipeline") &&
+              !pathname.startsWith("/super/crm/pipeline/prescripteurs"))
+          );
+        },
       },
       {
         id: "demandes",
@@ -128,6 +132,33 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     ],
   },
   {
+    id: "particulier",
+    label: "Particulier",
+    dot: "#F2CF6B",
+    items: [
+      {
+        id: "nouvelle-inscription",
+        label: "Nouvelle inscription",
+        href: "/super/utilisateurs/new?audience=btoc",
+        match: (pathname) => pathname === "/super/utilisateurs/new",
+      },
+      {
+        id: "demande-renseignements",
+        label: "Demande de renseignements",
+        href: "/super/crm/pipeline?type=btoc",
+        match: (pathname, role) =>
+          pathname === "/super/crm/pipeline" && role === "btoc",
+      },
+      {
+        id: "clients-btoc",
+        label: "Client BtoC",
+        href: "/super/utilisateurs?role=btoc",
+        match: (pathname, role) =>
+          pathname === "/super/utilisateurs" && role === "btoc",
+      },
+    ],
+  },
+  {
     id: "formation",
     label: "Formation",
     dot: "#8DB8FF",
@@ -200,12 +231,6 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
         label: "Contacts",
         href: "/super/utilisateurs",
         match: (pathname, role) => pathname === "/super/utilisateurs" && !role,
-      },
-      {
-        id: "particuliers",
-        label: "Particuliers",
-        href: "/super/utilisateurs?role=btoc",
-        match: (pathname, role) => pathname === "/super/utilisateurs" && role === "btoc",
       },
       { id: "qualiopi", label: "Qualiopi", href: "/super/crm/qualiopi", match: exact("/super/crm/qualiopi") },
       {

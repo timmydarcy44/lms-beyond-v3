@@ -6,14 +6,14 @@ import { ChevronRight } from "lucide-react";
 import { EmptyState, SegmentedFilter } from "@/components/control/chrome";
 import { DataTable, PageHeader, StatusPill } from "@/components/control/ui";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
-import { formatCrmRoleLabel, type CrmUserListItem } from "@/lib/crm/crm-shared";
+import { formatCrmRoleLabel, isCrmBtocUser, type CrmUserListItem } from "@/lib/crm/crm-shared";
 
 const COLORS = ["#6E5BFF", "#8DB8FF", "#5EDCC3", "#F2CF6B", "#FF8A9B"];
 
 const GROUPS = [
   { id: "all", label: "Tous", roles: null },
   { id: "learner", label: "Apprenants", roles: ["learner", "student", "apprenant"] },
-  { id: "btoc", label: "Particuliers", roles: ["btoc", "particulier", "PARTICULIER"] },
+  { id: "btoc", label: "Client BtoC", roles: ["btoc", "particulier", "PARTICULIER"] },
   { id: "instructor", label: "Formateurs", roles: ["instructor", "formateur"] },
   { id: "tutor", label: "Tuteurs", roles: ["tutor"] },
   { id: "expert", label: "Experts", roles: ["expert"] },
@@ -24,6 +24,16 @@ function modeOf(role: string) {
   if (["learner", "student", "apprenant"].includes(role)) return "apprenants";
   if (role === "tutor") return "tuteurs";
   return "contacts";
+}
+
+function matchesGroup(user: CrmUserListItem, groupId: string) {
+  if (groupId === "all") return true;
+  if (groupId === "btoc") return isCrmBtocUser(user);
+  const roles = GROUPS.find((item) => item.id === groupId)?.roles;
+  if (!roles) return true;
+  // Ne pas compter les B2C (learner+role_type) dans Apprenants purs
+  if (groupId === "learner" && isCrmBtocUser(user)) return false;
+  return (roles as readonly string[]).includes(user.role);
 }
 
 function personName(user: CrmUserListItem) {
@@ -60,18 +70,22 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: { initial
   const pool = showTests ? initialUsers : initialUsers.filter((user) => !tests.some((item) => item.id === user.id));
   const query = search.trim().toLowerCase();
   const rows = useMemo(() => {
-    const roles = GROUPS.find((item) => item.id === group)?.roles ?? (group === "all" ? null : [group]);
     return pool.filter((user) => {
-      if (roles && !(roles as readonly string[]).includes(user.role)) return false;
+      if (!matchesGroup(user, group)) return false;
       if (!query) return true;
       return [personName(user), user.email, ...(user.organizations ?? []).map((org) => org.name)].join(" ").toLowerCase().includes(query);
     });
   }, [pool, group, query]);
   const pageCount = Math.max(1, Math.ceil(rows.length / 40));
   const visible = rows.slice((page - 1) * 40, page * 40);
-  const title = mode === "particuliers" ? "Particuliers" : mode === "apprenants" ? "Apprenants" : mode === "tuteurs" ? "Tuteurs" : "Contacts";
-  const noun = mode === "particuliers" ? "particulier" : mode === "apprenants" ? "apprenant" : mode === "tuteurs" ? "tuteur" : "contact";
-  const counts = Object.fromEntries(GROUPS.map((item) => [item.id, item.roles ? pool.filter((user) => (item.roles as readonly string[]).includes(user.role)).length : pool.length]));
+  const title = mode === "particuliers" ? "Clients BtoC" : mode === "apprenants" ? "Apprenants" : mode === "tuteurs" ? "Tuteurs" : "Contacts";
+  const noun = mode === "particuliers" ? "client BtoC" : mode === "apprenants" ? "apprenant" : mode === "tuteurs" ? "tuteur" : "contact";
+  const counts = Object.fromEntries(
+    GROUPS.map((item) => [
+      item.id,
+      item.id === "all" ? pool.length : pool.filter((user) => matchesGroup(user, item.id)).length,
+    ]),
+  );
 
   return (
     <div className="mx-auto max-w-[1240px] space-y-5 px-6 py-8">

@@ -131,8 +131,12 @@ export type UserListItem = {
   email: string;
   fullName: string | null;
   role: string;
+  /** Métier / audience (ex. particulier B2C) — distinct du role LMS. */
+  roleType?: string | null;
   organizations: Array<{ id: string; name: string }>;
 };
+
+const BTOC_PROFILE_ROLES = new Set(["btoc", "particulier", "PARTICULIER"]);
 
 export type OrganizationActivity = {
   id: string;
@@ -894,9 +898,15 @@ export async function getAllUsers(): Promise<UserListItem[]> {
     }
     
     // Méthode normale (avec ou sans service role)
-    const { data: profiles, error } = await supabase
+    let { data: profiles, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, role");
+      .select("id, email, full_name, role, role_type");
+
+    if (error && /role_type|column|schema cache/i.test(error.message)) {
+      ({ data: profiles, error } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, role"));
+    }
 
     if (error) {
       console.error("[super-admin] Error fetching users:", {
@@ -939,12 +949,23 @@ export async function getAllUsers(): Promise<UserListItem[]> {
         id: orgId,
         name: orgNameMap.get(orgId) || "Organisation inconnue",
       }));
+      const profileRole = String((profile as { role?: string }).role ?? "learner");
+      const roleType =
+        (profile as { role_type?: string | null }).role_type != null
+          ? String((profile as { role_type?: string | null }).role_type)
+          : null;
+      // Préférer le rôle profil pour les B2C (role_type=particulier), sinon membership org.
+      const role =
+        roleType === "particulier" || roleType === "btoc" || BTOC_PROFILE_ROLES.has(profileRole)
+          ? profileRole
+          : roleMap.get(profile.id) || profileRole;
 
       return {
         id: profile.id,
         email: profile.email || "",
         fullName: profile.full_name || null,
-        role: roleMap.get(profile.id) || profile.role || "learner",
+        role,
+        roleType,
         organizations,
       };
     });

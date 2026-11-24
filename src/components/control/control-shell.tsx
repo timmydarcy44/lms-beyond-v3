@@ -17,6 +17,7 @@ const NAV_KEY = "byound-control-nav";
 const DEFAULT_OPEN: Record<string, boolean> = {
   business: true,
   cfa: true,
+  particulier: true,
   formation: true,
   qualite: false,
 };
@@ -54,7 +55,9 @@ function ControlFrame({
   children: ReactNode;
 }) {
   const pathname = usePathname() ?? "";
-  const role = useSearchParams().get("role");
+  const searchParams = useSearchParams();
+  /** role (utilisateurs) ou type (pipeline B2C) pour activer les items de nav. */
+  const role = searchParams.get("role") ?? searchParams.get("type");
   const router = useRouter();
   const { toggle } = useAiAssistant();
   const surface = useSurface("byound-super-surface", ".super-theme", "super-light");

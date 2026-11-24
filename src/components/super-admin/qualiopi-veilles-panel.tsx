@@ -32,6 +32,13 @@ export function QualiopiVeillesPanel() {
   const [title, setTitle] = useState("");
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
+  const digestsLookStale = useMemo(() => {
+    const latest = digests[0];
+    if (!latest?.created_at) return true;
+    const year = new Date(latest.created_at).getFullYear();
+    return year < 2026;
+  }, [digests]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -220,6 +227,14 @@ export function QualiopiVeillesPanel() {
           </Button>
         </div>
       </div>
+
+      {digestsLookStale ? (
+        <div className="rounded-2xl border border-[#5A4A1E] bg-[#2A2410] px-4 py-3 text-sm text-[#F2CF6B]">
+          Les synthèses semblent datées (avant 2026) ou absentes — la pertinence Qualiopi en pâtit.
+          Cliquez <strong className="font-semibold">Générer maintenant</strong> pour produire un digest à jour
+          (sources RAG + web), puis surlignez ce qui compte pour le PAQ.
+        </div>
+      ) : null}
 
       {loading ? (
         <p className={cn("text-sm", QUALIOPI_MUTED)}>Chargement…</p>

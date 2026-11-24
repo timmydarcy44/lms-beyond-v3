@@ -4,6 +4,13 @@ import { DEFAULT_BTOC_PIPELINE_STAGES } from "@/lib/crm/pipeline-shared";
 
 const BTOC_ROLES = new Set(["btoc", "PARTICULIER", "particulier", "student"]);
 
+function isBtocProfile(row: { role?: string | null; role_type?: string | null }) {
+  const role = String(row.role ?? "");
+  const roleType = String(row.role_type ?? "").toLowerCase();
+  if (BTOC_ROLES.has(role)) return true;
+  return roleType === "particulier" || roleType === "btoc";
+}
+
 type BtocStage = "inscription" | "badge_passe" | "paiement";
 
 function splitName(fullName: string | null, email: string): { first: string; company: string } {
@@ -75,13 +82,21 @@ export async function syncBtocPipelineDeals(): Promise<{ synced: number; errors:
     );
   }
 
-  const { data: profiles, error } = await supabase
+  let { data: profiles, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, phone, role, created_at");
+    .select("id, email, full_name, phone, role, role_type, created_at");
+
+  if (error && /role_type|column|schema cache/i.test(error.message)) {
+    ({ data: profiles, error } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, phone, role, created_at"));
+  }
 
   if (error) return { synced: 0, errors: [error.message] };
 
-  const btocProfiles = (profiles ?? []).filter((p) => BTOC_ROLES.has(String(p.role ?? "")));
+  const btocProfiles = (profiles ?? []).filter((p) =>
+    isBtocProfile(p as { role?: string | null; role_type?: string | null }),
+  );
   const errors: string[] = [];
   let synced = 0;
 

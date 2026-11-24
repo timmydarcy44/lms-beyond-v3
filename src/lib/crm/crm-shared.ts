@@ -82,6 +82,7 @@ export type CrmUserListItem = {
   email: string;
   fullName: string | null;
   role: string;
+  roleType?: string | null;
   organizations: Array<{ id: string; name: string }>;
   firstName: string;
   lastName: string;
@@ -90,3 +91,11 @@ export type CrmUserListItem = {
   totalRevenue: number;
   testCount: number;
 };
+
+/** Client BtoC : rôle CRM ou role_type=particulier (inscriptions site). */
+export function isCrmBtocUser(user: { role?: string | null; roleType?: string | null }) {
+  const role = String(user.role ?? "").trim();
+  const roleType = String(user.roleType ?? "").trim().toLowerCase();
+  if (["btoc", "particulier", "PARTICULIER"].includes(role)) return true;
+  return roleType === "particulier" || roleType === "btoc";
+}

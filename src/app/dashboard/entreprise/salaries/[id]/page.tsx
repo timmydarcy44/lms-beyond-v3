@@ -612,7 +612,7 @@ export default function SalarieDetailPage() {
             phone={displayEmployee.phone?.trim() || "Non renseigné"}
             seniority={seniority || "Non renseigné"}
             inclusion={inclusion?.summary?.trim() || (inclusion && inclusion.status !== "none" ? "Besoin déclaré" : "Aucun besoin déclaré")}
-            showInvite={!displayEmployee.profile_id}
+            showInvite={Boolean(displayEmployee.email?.trim())}
             inviteBusy={resendingInvite}
             onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
             onPlanInterview={() => {

@@ -31,7 +31,7 @@ export function OrgFormationCards({
   emptyTitle,
   emptyDescription,
   showAssign = true,
-  badgeFor,
+  badgeLabel,
 }: {
   courses: OrgFormationListItem[];
   learners: OrgLearnerOption[];
@@ -39,7 +39,8 @@ export function OrgFormationCards({
   emptyTitle: string;
   emptyDescription: string;
   showAssign?: boolean;
-  badgeFor?: (course: OrgFormationListItem) => string | null;
+  /** Libellé statique sérialisable (RSC → client) — ne pas passer une fonction. */
+  badgeLabel?: string | null;
 }) {
   const [openFor, setOpenFor] = useState<OrgFormationListItem | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -94,7 +95,7 @@ export function OrgFormationCards({
     <>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {courses.map((course) => {
-          const badge = badgeFor?.(course);
+          const badge = badgeLabel?.trim() || null;
           return (
             <article
               key={course.id}

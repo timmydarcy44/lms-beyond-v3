@@ -36,7 +36,7 @@ export default async function EntrepriseFormationsParcoursPage() {
             orgId={orgId}
             emptyTitle="Aucun parcours LMS"
             emptyDescription="Lorsqu’un conseiller Byound met une formation à disposition de votre compte, elle apparaît ici."
-            badgeFor={() => "Byound LMS"}
+            badgeLabel="Byound LMS"
           />
         </OrgFormationsShell>
       </main>

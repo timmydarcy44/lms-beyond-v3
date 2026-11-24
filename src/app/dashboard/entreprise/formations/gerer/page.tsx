@@ -37,7 +37,7 @@ export default async function EntrepriseFormationsGererPage() {
             orgId={orgId}
             emptyTitle="Aucune formation organisationnelle"
             emptyDescription="Créez une formation pour la rendre accessible uniquement aux membres de votre organisation."
-            badgeFor={() => "Interne"}
+            badgeLabel="Interne"
           />
         </OrgFormationsShell>
       </main>

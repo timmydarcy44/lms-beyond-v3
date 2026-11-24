@@ -311,19 +311,33 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       const contactName =
         [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
         String(profile.full_name ?? "");
-      const dossier = await createFormationDossier(auth.service, {
-        organizationId: orgId,
-        source: "manual",
-        trainingCourseId,
-        courseTitle: String(course.title ?? ""),
-        contactName: contactName || null,
-        contactEmail: String(profile.email ?? "") || null,
-        contactPhone: (profile as { phone?: string | null }).phone ?? null,
-        modalityPresence: "distanciel",
-        notes: `Assignation BtoC (${reason})`,
-        ownerUserId: auth.staffId,
-        createdBy: auth.staffId,
-      });
+      let dossier;
+      try {
+        dossier = await createFormationDossier(auth.service, {
+          organizationId: orgId,
+          source: "manual",
+          trainingCourseId,
+          courseTitle: String(course.title ?? ""),
+          contactName: contactName || null,
+          contactEmail: String(profile.email ?? "") || null,
+          contactPhone: (profile as { phone?: string | null }).phone ?? null,
+          modalityPresence: "distanciel",
+          notes: `Assignation BtoC (${reason})`,
+          ownerUserId: auth.staffId,
+          createdBy: auth.staffId,
+        });
+      } catch (e) {
+        console.error("[btoc/assign] dossier:", e);
+        return NextResponse.json(
+          {
+            error:
+              e instanceof Error
+                ? e.message
+                : "Impossible de créer le dossier Qualiopi",
+          },
+          { status: 400 },
+        );
+      }
       dossierId = String(dossier.id);
       const { data: existingParticipant } = await auth.service
         .from("formation_participants")
@@ -332,11 +346,24 @@ export async function POST(request: NextRequest, ctx: Ctx) {
         .eq("profile_id", userId)
         .maybeSingle();
       if (!existingParticipant) {
-        await auth.service.from("formation_participants").insert({
-          dossier_id: dossierId,
-          profile_id: userId,
-          role: "learner",
-        });
+        // Pas de colonne `role` sur formation_participants (prod).
+        const { error: participantError } = await auth.service
+          .from("formation_participants")
+          .insert({
+            dossier_id: dossierId,
+            profile_id: userId,
+            bpf_learner_status: "particulier",
+          });
+        if (participantError) {
+          console.error("[btoc/assign] participant:", participantError);
+          return NextResponse.json(
+            {
+              error: `Dossier créé mais participant non rattaché : ${participantError.message}`,
+              dossier_id: dossierId,
+            },
+            { status: 400 },
+          );
+        }
       }
 
       try {
@@ -346,6 +373,9 @@ export async function POST(request: NextRequest, ctx: Ctx) {
           onlyPending: true,
         });
         positionnementSent = pos.sent;
+        if (!positionnementSent && pos.errors?.length) {
+          console.warn("[btoc/assign] positionnement errors:", pos.errors);
+        }
       } catch (e) {
         console.warn("[btoc/assign] positionnement:", e);
       }

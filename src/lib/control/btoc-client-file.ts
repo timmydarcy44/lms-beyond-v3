@@ -251,14 +251,56 @@ export async function loadBtocClientFile(
     .eq("profile_id", userId)
     .limit(20);
 
+  const knownDossierIds = new Set(formations.map((f) => f.dossierId).filter(Boolean));
+  const knownTitles = new Set(formations.map((f) => f.title.trim().toLowerCase()).filter(Boolean));
+
   for (const p of participants ?? []) {
     const dossierId = String((p as { dossier_id?: string }).dossier_id ?? "");
     if (!dossierId) continue;
     const snap = await buildCoffreSnapshot(service, dossierId);
     if (!snap) continue;
-    coffres.push({ ...snap, formationTitle: snap.course_title || "Formation" });
-    const match = formations.find((f) => !f.dossierId && f.title === snap.course_title);
-    if (match) match.dossierId = dossierId;
+    const title = snap.course_title?.trim() || "Formation";
+    coffres.push({ ...snap, formationTitle: title });
+
+    const match =
+      formations.find((f) => f.dossierId === dossierId) ||
+      formations.find((f) => !f.dossierId && f.title.trim().toLowerCase() === title.toLowerCase());
+    if (match) {
+      match.dossierId = dossierId;
+      continue;
+    }
+
+    // Assignation BtoC hors catalogue LMS : afficher quand même la formation + coffre
+    if (!knownDossierIds.has(dossierId) && !knownTitles.has(title.toLowerCase())) {
+      const { data: dossierRow } = await service
+        .from("formation_dossiers")
+        .select("id, course_title, training_course_id, created_at, status")
+        .eq("id", dossierId)
+        .maybeSingle();
+      formations.push({
+        id: `dossier-${dossierId}`,
+        title,
+        origin: "assignee",
+        status:
+          String((dossierRow as { status?: string } | null)?.status ?? "") === "cloture"
+            ? "terminee"
+            : "non_commencee",
+        purchasedAt:
+          (dossierRow as { created_at?: string | null } | null)?.created_at ?? null,
+        priceTtc: null,
+        paymentMethod: null,
+        invoiceUrl: null,
+        accessEndsAt: null,
+        progressPct: 0,
+        courseId:
+          (dossierRow as { training_course_id?: string | null } | null)?.training_course_id ??
+          null,
+        dossierId,
+        coverUrl: null,
+      });
+      knownDossierIds.add(dossierId);
+      knownTitles.add(title.toLowerCase());
+    }
   }
 
   const progressAvgPct =

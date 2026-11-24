@@ -182,6 +182,10 @@ export async function buildCoffreSnapshot(
     pedagogical_modality: pedagogicalModality,
     lms_course_id: lmsCourseId,
   });
+  const pedLower = String(pedagogicalModality ?? "").toLowerCase();
+  /** 100 % asynchrone sans créneaux synchro → pas de convocation « date/lieu ». */
+  const asyncNoSession =
+    (pedLower.includes("asynchrone") || pedLower === "elearning_asynchrone") && slotCount === 0;
 
   const devisSigned = isSignedDoc(devis);
   const conventionSigned = isSignedDoc(convention);
@@ -249,10 +253,18 @@ export async function buildCoffreSnapshot(
     {
       key: "convocation",
       label: "Convocations",
-      status: convocs.some((c) => c.sent_at) ? "ready" : hasFile(convocs[0]) ? "partial" : "missing",
-      detail: convocs[0]?.sent_at
-        ? `Envoyées ${new Date(String(convocs[0].sent_at)).toLocaleDateString("fr-FR")}`
-        : null,
+      status: asyncNoSession
+        ? "not_due"
+        : convocs.some((c) => c.sent_at)
+          ? "ready"
+          : hasFile(convocs[0])
+            ? "partial"
+            : "missing",
+      detail: asyncNoSession
+        ? "Pas dû — parcours e-learning asynchrone sans session synchrone"
+        : convocs[0]?.sent_at
+          ? `Envoyées ${new Date(String(convocs[0].sent_at)).toLocaleDateString("fr-FR")}`
+          : null,
       document_ids: convocs.map((c) => c.id),
       kind: "convocation",
     },

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   let { data: existing } = await service
     .from("formation_documents")
-    .select("id, access_token")
+    .select("id, access_token, status")
     .eq("dossier_id", dossierId)
     .eq("kind", kind)
     .is("participant_id", null)
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!existing) {
     const { data: fallback } = await service
       .from("formation_documents")
-      .select("id, access_token")
+      .select("id, access_token, status")
       .eq("dossier_id", dossierId)
       .eq("kind", kind)
       .maybeSingle();
@@ -97,11 +97,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const now = new Date().toISOString();
   const accessToken =
     (existing as { access_token?: string | null } | null)?.access_token || newDocToken();
+  // Contrainte SQL : to_generate | sent | opened | signed (pas "ready").
+  const prevStatus = String(
+    (existing as { status?: string | null } | null)?.status ?? "to_generate",
+  );
+  const nextStatus = ["opened", "signed"].includes(prevStatus) ? prevStatus : "sent";
   const payload = {
     dossier_id: dossierId,
     kind,
     title: resolveTitle(kind),
-    status: "ready",
+    status: nextStatus,
     file_url: uploaded.fileUrl,
     storage_bucket: uploaded.bucket,
     storage_path: uploaded.path,

@@ -640,7 +640,8 @@ export function BtocClientFileView({ initial }: Props) {
                     : item.kind && activeCoffre.dossier_id
                       ? `/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/documents/${item.kind}/pdf`
                       : null;
-                  const canUpload = Boolean(item.kind) && item.status !== "not_due";
+                  // Upload possible même si « pas dû » (dépôt manuel staff).
+                  const canUpload = Boolean(item.kind);
                   const canSend =
                     Boolean(item.kind) &&
                     item.status !== "not_due" &&

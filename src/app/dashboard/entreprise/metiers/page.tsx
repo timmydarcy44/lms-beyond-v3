@@ -27,6 +27,7 @@ import { viewerIsJade } from "@/lib/demo/jade-account";
 import { JADE_METIERS } from "@/lib/demo/jade-dashboard-mocks";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { GLOBAL_SKILL_REFERENTIAL, referentialItemName } from "@/lib/profile/competency-referential";
+import { SOFT_SKILLS } from "@/lib/soft-skills/questions";
 
 type JobRole = {
   id: string;
@@ -45,26 +46,30 @@ type SoftSkillTarget = {
 type BuildMode = "manual" | "ai";
 
 type RoleFormState = {
+  sector: string;
   title: string;
   description: string;
   hardSkills: string[];
   softSkills: SoftSkillTarget[];
 };
 
-const SOFT_SKILL_LIBRARY = [
-  "Communication",
-  "Leadership",
-  "Organisation",
-  "Adaptabilite",
-  "Collaboration",
-  "Autonomie",
-  "Rigueur",
-  "Empathie",
-  "Gestion du stress",
-  "Resolution de problemes",
-  "Assertivite",
-  "Creativite",
-];
+const SOFT_SKILL_LIBRARY = Array.from(
+  new Set([
+    ...SOFT_SKILLS.map((skill) => skill.titre),
+    "Communication",
+    "Leadership",
+    "Organisation",
+    "Adaptabilité",
+    "Collaboration",
+    "Autonomie",
+    "Rigueur",
+    "Empathie",
+    "Gestion du stress",
+    "Résolution de problèmes",
+    "Assertivité",
+    "Créativité",
+  ]),
+).sort((a, b) => a.localeCompare(b, "fr"));
 
 const HARD_SKILL_LIBRARY = Array.from(
   new Set([
@@ -96,10 +101,11 @@ const HARD_SKILL_LIBRARY = Array.from(
 const DEFAULT_SOFT_TARGET_ON_15 = 11;
 
 const EMPTY_FORM: RoleFormState = {
+  sector: "",
   title: "",
   description: "",
   hardSkills: [],
-  softSkills: SOFT_SKILL_LIBRARY.map((label) => ({ label, score: DEFAULT_SOFT_TARGET_ON_15 })),
+  softSkills: [],
 };
 
 function encodeSoftSkills(skills: SoftSkillTarget[]) {
@@ -117,7 +123,6 @@ function decodeSoftSkills(values: string[]) {
     const parsed = Number(scoreRaw);
     let score = DEFAULT_SOFT_TARGET_ON_15;
     if (Number.isFinite(parsed)) {
-      // Legacy métier targets were 0–100
       score = parsed > 15 ? Math.round((parsed / 100) * 15) : Math.round(parsed);
       score = Math.max(3, Math.min(15, score));
     }
@@ -150,11 +155,13 @@ export default function EntrepriseMetiersPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [buildMode, setBuildMode] = useState<BuildMode>("manual");
+  const [aiGenerated, setAiGenerated] = useState(false);
   const [choiceOpen, setChoiceOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [form, setForm] = useState<RoleFormState>(EMPTY_FORM);
   const [hardSkillQuery, setHardSkillQuery] = useState("");
+  const [softSkillQuery, setSoftSkillQuery] = useState("");
   const [customHardSkill, setCustomHardSkill] = useState("");
 
   const hardSkillOptions = useMemo(() => {
@@ -171,6 +178,23 @@ export default function EntrepriseMetiersPage() {
       });
   }, [form.hardSkills, hardSkillQuery]);
 
+  const softSkillOptions = useMemo(() => {
+    const selected = new Set(form.softSkills.map((s) => s.label.toLowerCase()));
+    const merged = Array.from(new Set([...SOFT_SKILL_LIBRARY, ...form.softSkills.map((s) => s.label)]));
+    const q = softSkillQuery.trim().toLowerCase();
+    return merged
+      .filter((skill) => !q || skill.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aSel = selected.has(a.toLowerCase()) ? 0 : 1;
+        const bSel = selected.has(b.toLowerCase()) ? 0 : 1;
+        if (aSel !== bSel) return aSel - bSel;
+        return a.localeCompare(b, "fr");
+      });
+  }, [form.softSkills, softSkillQuery]);
+
+  const showSkillEditors = buildMode === "manual" || aiGenerated || Boolean(editingRoleId);
+  const showAiBrief = buildMode === "ai" && !editingRoleId;
+
   const loadRoles = async () => {
     setLoading(true);
     setError(null);
@@ -181,10 +205,10 @@ export default function EntrepriseMetiersPage() {
       }
       const response = await fetch("/api/dashboard/entreprise/metiers", { credentials: "include" });
       const payload = (await response.json()) as { roles?: JobRole[]; error?: string };
-      if (!response.ok) throw new Error(payload.error || "Impossible de charger les metiers");
+      if (!response.ok) throw new Error(payload.error || "Impossible de charger les métiers");
       setRoles(Array.isArray(payload.roles) ? payload.roles : []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Impossible de charger les metiers");
+      setError(err instanceof Error ? err.message : "Impossible de charger les métiers");
     } finally {
       setLoading(false);
     }
@@ -208,6 +232,20 @@ export default function EntrepriseMetiersPage() {
     });
   };
 
+  const toggleSoftSkill = (label: string) => {
+    const normalized = label.trim();
+    if (!normalized) return;
+    setForm((prev) => {
+      const exists = prev.softSkills.some((item) => item.label.toLowerCase() === normalized.toLowerCase());
+      return {
+        ...prev,
+        softSkills: exists
+          ? prev.softSkills.filter((item) => item.label.toLowerCase() !== normalized.toLowerCase())
+          : [...prev.softSkills, { label: normalized, score: DEFAULT_SOFT_TARGET_ON_15 }],
+      };
+    });
+  };
+
   const addCustomHardSkill = () => {
     const normalized = normalizeHardSkill(customHardSkill);
     if (!normalized) return;
@@ -222,9 +260,11 @@ export default function EntrepriseMetiersPage() {
 
   const openManualCreate = () => {
     setBuildMode("manual");
+    setAiGenerated(false);
     setEditingRoleId(null);
     setForm(EMPTY_FORM);
     setHardSkillQuery("");
+    setSoftSkillQuery("");
     setCustomHardSkill("");
     setChoiceOpen(false);
     setEditorOpen(true);
@@ -233,9 +273,11 @@ export default function EntrepriseMetiersPage() {
 
   const openAiCreate = () => {
     setBuildMode("ai");
+    setAiGenerated(false);
     setEditingRoleId(null);
     setForm(EMPTY_FORM);
     setHardSkillQuery("");
+    setSoftSkillQuery("");
     setCustomHardSkill("");
     setChoiceOpen(false);
     setEditorOpen(true);
@@ -244,8 +286,10 @@ export default function EntrepriseMetiersPage() {
 
   const openEdit = (role: JobRole) => {
     setBuildMode("manual");
+    setAiGenerated(false);
     setEditingRoleId(role.id);
     setForm({
+      sector: "",
       title: role.title,
       description: role.description,
       hardSkills: Array.isArray(role.hard_skills) ? role.hard_skills : [],
@@ -255,6 +299,7 @@ export default function EntrepriseMetiersPage() {
           : role.soft_skills.map((skill) => ({ label: skill, score: DEFAULT_SOFT_TARGET_ON_15 })),
     });
     setHardSkillQuery("");
+    setSoftSkillQuery("");
     setCustomHardSkill("");
     setEditorOpen(true);
     setError(null);
@@ -262,7 +307,15 @@ export default function EntrepriseMetiersPage() {
 
   const handleAiGenerate = async () => {
     if (!form.title.trim()) {
-      setError("Saisissez le nom du metier avant de lancer AI Skills.");
+      setError("Indiquez l’intitulé du métier.");
+      return;
+    }
+    if (!form.sector.trim()) {
+      setError("Indiquez le secteur d’activité.");
+      return;
+    }
+    if (!form.description.trim()) {
+      setError("Ajoutez une description pour que l’IA propose des compétences pertinentes.");
       return;
     }
     setAiLoading(true);
@@ -272,7 +325,11 @@ export default function EntrepriseMetiersPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title }),
+        body: JSON.stringify({
+          title: form.title,
+          sector: form.sector,
+          description: form.description,
+        }),
       });
       const payload = (await response.json()) as {
         description?: string;
@@ -280,24 +337,33 @@ export default function EntrepriseMetiersPage() {
         soft_skills?: SoftSkillTarget[];
         error?: string;
       };
-      if (!response.ok) throw new Error(payload.error || "Generation IA impossible");
+      if (!response.ok) throw new Error(payload.error || "Génération IA impossible");
       setForm((prev) => ({
         ...prev,
         description: payload.description || prev.description,
-        hardSkills: Array.isArray(payload.hard_skills) ? payload.hard_skills : prev.hardSkills,
+        hardSkills: Array.isArray(payload.hard_skills) ? payload.hard_skills : [],
         softSkills:
           Array.isArray(payload.soft_skills) && payload.soft_skills.length > 0
             ? payload.soft_skills
-            : prev.softSkills,
+            : [],
       }));
+      setAiGenerated(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Generation IA impossible");
+      setError(err instanceof Error ? err.message : "Génération IA impossible");
     } finally {
       setAiLoading(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (!form.title.trim()) {
+      setError("L’intitulé du métier est requis.");
+      return;
+    }
+    if (buildMode === "ai" && !editingRoleId && !aiGenerated) {
+      setError("Générez d’abord les compétences avec l’IA, puis ajustez-les si besoin.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -322,6 +388,7 @@ export default function EntrepriseMetiersPage() {
       await loadRoles();
       setEditorOpen(false);
       setEditingRoleId(null);
+      setAiGenerated(false);
       setForm(EMPTY_FORM);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Enregistrement impossible");
@@ -331,7 +398,7 @@ export default function EntrepriseMetiersPage() {
   };
 
   const handleDelete = async (roleId: string) => {
-    if (!window.confirm("Supprimer ce metier ?")) return;
+    if (!window.confirm("Supprimer ce métier ?")) return;
     setError(null);
     try {
       const response = await fetch(`/api/dashboard/entreprise/metiers/${roleId}`, {
@@ -351,9 +418,9 @@ export default function EntrepriseMetiersPage() {
       <EnterpriseSidebar />
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:pl-[280px]">
         <header className="mb-8">
-          <h1 className={ENTREPRISE_H1_CLASS}>Metiers</h1>
+          <h1 className={ENTREPRISE_H1_CLASS}>Métiers</h1>
           <p className="mt-2 text-center text-sm text-gray-500">
-            Definissez vos roles, leurs hard skills et les scores cibles de soft skills.
+            Définissez vos rôles, leurs hard skills et les scores cibles de soft skills.
           </p>
         </header>
 
@@ -364,23 +431,23 @@ export default function EntrepriseMetiersPage() {
             onClick={() => setChoiceOpen(true)}
           >
             <Plus className="h-4 w-4" />
-            Ajouter un metier
+            Ajouter un métier
           </Button>
         </div>
 
         <section className="space-y-4">
           {loading ? (
             <div className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-sm">
-              <p className="text-sm text-gray-500">Chargement des metiers...</p>
+              <p className="text-sm text-gray-500">Chargement des métiers…</p>
             </div>
           ) : roles.length === 0 ? (
             <div className="rounded-[28px] border border-dashed border-gray-200 bg-[#fafafa] p-8 text-center shadow-sm">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
                 <BriefcaseBusiness className="h-6 w-6" />
               </div>
-              <h2 className="mt-4 text-lg font-semibold text-gray-900">Aucun metier enregistre</h2>
+              <h2 className="mt-4 text-lg font-semibold text-gray-900">Aucun métier enregistré</h2>
               <p className="mt-2 text-sm text-gray-500">
-                Cree un metier manuellement ou avec AI Skills pour preparer la presentation.
+                Créez un métier manuellement ou laissez l’IA proposer hard skills et soft skills.
               </p>
             </div>
           ) : (
@@ -405,7 +472,7 @@ export default function EntrepriseMetiersPage() {
                       ) : null}
                       {formatRelativeDate(role.created_at) ? (
                         <p className="mt-2 text-xs text-gray-400">
-                          Cree le {formatRelativeDate(role.created_at)}
+                          Créé le {formatRelativeDate(role.created_at)}
                         </p>
                       ) : null}
                     </div>
@@ -452,14 +519,18 @@ export default function EntrepriseMetiersPage() {
                         Soft skills cibles
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {softSkills.map((skill) => (
-                          <span
-                            key={`${skill.label}-${skill.score}`}
-                            className="rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
-                          >
-                            {skill.label} · {skill.score}/15
-                          </span>
-                        ))}
+                        {softSkills.length > 0 ? (
+                          softSkills.map((skill) => (
+                            <span
+                              key={`${skill.label}-${skill.score}`}
+                              className="rounded-full border border-violet-100 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
+                            >
+                              {skill.label} · {skill.score}/15
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-400">Aucune</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -469,15 +540,15 @@ export default function EntrepriseMetiersPage() {
           )}
         </section>
 
-        {error ? <p className="mt-6 text-sm text-red-600">{error}</p> : null}
+        {error && !editorOpen ? <p className="mt-6 text-sm text-red-600">{error}</p> : null}
       </main>
 
       <Dialog open={choiceOpen} onOpenChange={setChoiceOpen}>
         <DialogContent className="max-w-3xl rounded-[28px] border-gray-200 bg-white">
           <DialogHeader>
-            <DialogTitle>Ajouter un metier</DialogTitle>
+            <DialogTitle>Ajouter un métier</DialogTitle>
             <DialogDescription>
-              Choisissez si vous partez de zero ou si l&apos;IA vous aide a construire la fiche.
+              Partez de zéro, ou laissez l’IA proposer hard skills et soft skills à partir d’un brief.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 md:grid-cols-2">
@@ -487,9 +558,9 @@ export default function EntrepriseMetiersPage() {
               className="rounded-3xl border border-gray-200 bg-[#fafafa] p-6 text-left transition hover:border-violet-300 hover:bg-violet-50"
             >
               <Plus className="h-6 w-6 text-violet-600" />
-              <p className="mt-4 text-lg font-semibold text-gray-900">Creer le metier en partant de 0</p>
+              <p className="mt-4 text-lg font-semibold text-gray-900">Créer le métier à partir de 0</p>
               <p className="mt-2 text-sm text-gray-500">
-                Le RH remplit la fiche et note lui-meme toutes les soft skills.
+                Intitulé, hard skills (choix multiple), soft skills (choix multiple + note cible).
               </p>
             </button>
             <button
@@ -498,214 +569,351 @@ export default function EntrepriseMetiersPage() {
               className="rounded-3xl border border-gray-200 bg-[#fafafa] p-6 text-left transition hover:border-violet-300 hover:bg-violet-50"
             >
               <Bot className="h-6 w-6 text-violet-600" />
-              <p className="mt-4 text-lg font-semibold text-gray-900">AI Skills</p>
+              <p className="mt-4 text-lg font-semibold text-gray-900">Créer avec l’IA</p>
               <p className="mt-2 text-sm text-gray-500">
-                Le RH saisit le nom du metier, puis l&apos;IA propose competences et systeme de notation.
+                Secteur, intitulé et description → l’IA propose hard skills et soft skills (modifiables).
               </p>
             </button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+      <Dialog
+        open={editorOpen}
+        onOpenChange={(open) => {
+          setEditorOpen(open);
+          if (!open) {
+            setAiGenerated(false);
+            setError(null);
+          }
+        }}
+      >
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-[28px] border-gray-200 bg-white">
           <DialogHeader>
-            <DialogTitle>{editingRoleId ? "Modifier le metier" : "Construire une fiche metier"}</DialogTitle>
+            <DialogTitle>{editingRoleId ? "Modifier le métier" : "Construire une fiche métier"}</DialogTitle>
             <DialogDescription>
               {buildMode === "manual"
-                ? "Renseignez le metier et notez les soft skills cibles."
-                : "Saisissez le nom du metier puis laissez AI Skills proposer une base editable."}
+                ? "Choisissez vous-même les hard skills et soft skills, puis fixez les notes cibles."
+                : aiGenerated
+                  ? "Ajustez la proposition IA (compétences et notes), puis enregistrez."
+                  : "Renseignez le brief : l’IA proposera ensuite hard skills et soft skills."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-gray-700">Nom du metier</span>
-                <Input
-                  value={form.title}
-                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                  placeholder="Ex. Business Developer"
-                />
-              </label>
-              <div className="flex items-end">
+            {showAiBrief ? (
+              <>
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">Secteur d’activité</span>
+                  <Input
+                    value={form.sector}
+                    onChange={(event) => setForm((prev) => ({ ...prev, sector: event.target.value }))}
+                    placeholder="Ex. Industrie agroalimentaire, Retail, SaaS B2B…"
+                  />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">Intitulé du métier</span>
+                  <Input
+                    value={form.title}
+                    onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                    placeholder="Ex. Business Developer"
+                  />
+                </label>
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">Description</span>
+                  <Textarea
+                    value={form.description}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                    placeholder="Missions, contexte, équipe, enjeux…"
+                    className="min-h-[120px]"
+                  />
+                </label>
+                <Button
+                  type="button"
+                  className="w-full rounded-xl bg-violet-600 text-white hover:bg-violet-700"
+                  onClick={() => void handleAiGenerate()}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                  Proposer hard skills & soft skills
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2 md:col-span-2">
+                    <span className="text-sm font-medium text-gray-700">Intitulé du métier</span>
+                    <Input
+                      value={form.title}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, title: event.target.value }))
+                      }
+                      placeholder="Ex. Business Developer"
+                    />
+                  </label>
+                </div>
+
+                {buildMode === "ai" && form.sector ? (
+                  <p className="rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+                    Secteur : <span className="font-semibold">{form.sector}</span>
+                  </p>
+                ) : null}
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">Description</span>
+                  <Textarea
+                    value={form.description}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, description: event.target.value }))
+                    }
+                    placeholder="Résumé du poste, contexte, missions principales…"
+                    className="min-h-[100px]"
+                  />
+                </label>
+
                 {buildMode === "ai" ? (
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50"
+                    className="rounded-xl border-violet-200 text-violet-700 hover:bg-violet-50"
                     onClick={() => void handleAiGenerate()}
                     disabled={aiLoading}
                   >
-                    {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                    Generer avec AI Skills
+                    {aiLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="h-4 w-4" />
+                    )}
+                    Regenerer avec l’IA
                   </Button>
                 ) : null}
-              </div>
-            </div>
+              </>
+            )}
 
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Description</span>
-              <Textarea
-                value={form.description}
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                placeholder="Resume du poste, contexte, missions principales..."
-                className="min-h-[120px]"
-              />
-            </label>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Hard skills</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Selection multiple dans la liste, ou ajout d&apos;une competence personnalisee.
-                </p>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full justify-between rounded-xl border-gray-200 font-normal"
-                  >
-                    <span className="truncate text-left text-gray-700">
-                      {form.hardSkills.length > 0
-                        ? `${form.hardSkills.length} competence${form.hardSkills.length > 1 ? "s" : ""} selectionnee${form.hardSkills.length > 1 ? "s" : ""}`
-                        : "Choisir des hard skills"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
-                  <DropdownMenuLabel>Catalogue</DropdownMenuLabel>
-                  <div className="px-2 pb-2">
-                    <Input
-                      value={hardSkillQuery}
-                      onChange={(event) => setHardSkillQuery(event.target.value)}
-                      placeholder="Filtrer..."
-                      className="h-8"
-                      onKeyDown={(event) => event.stopPropagation()}
-                    />
+            {showSkillEditors ? (
+              <>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Hard skills</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Sélection multiple dans la liste, ou ajout d’une compétence personnalisée.
+                    </p>
                   </div>
-                  <DropdownMenuSeparator />
-                  {hardSkillOptions.length === 0 ? (
-                    <p className="px-2 py-3 text-sm text-gray-500">Aucun resultat</p>
-                  ) : (
-                    hardSkillOptions.map((skill) => (
-                      <DropdownMenuCheckboxItem
-                        key={skill}
-                        checked={form.hardSkills.some((item) => item.toLowerCase() === skill.toLowerCase())}
-                        onCheckedChange={() => toggleHardSkill(skill)}
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        {skill}
-                      </DropdownMenuCheckboxItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
 
-              {form.hardSkills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {form.hardSkills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
-                    >
-                      {skill}
-                      <button
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
                         type="button"
-                        aria-label={`Retirer ${skill}`}
-                        className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-                        onClick={() => toggleHardSkill(skill)}
+                        variant="outline"
+                        className="w-full justify-between rounded-xl border-gray-200 font-normal"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+                        <span className="truncate text-left text-gray-700">
+                          {form.hardSkills.length > 0
+                            ? `${form.hardSkills.length} compétence${form.hardSkills.length > 1 ? "s" : ""} sélectionnée${form.hardSkills.length > 1 ? "s" : ""}`
+                            : "Choisir des hard skills"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+                      <DropdownMenuLabel>Catalogue</DropdownMenuLabel>
+                      <div className="px-2 pb-2">
+                        <Input
+                          value={hardSkillQuery}
+                          onChange={(event) => setHardSkillQuery(event.target.value)}
+                          placeholder="Filtrer…"
+                          className="h-8"
+                          onKeyDown={(event) => event.stopPropagation()}
+                        />
+                      </div>
+                      <DropdownMenuSeparator />
+                      {hardSkillOptions.length === 0 ? (
+                        <p className="px-2 py-3 text-sm text-gray-500">Aucun résultat</p>
+                      ) : (
+                        hardSkillOptions.map((skill) => (
+                          <DropdownMenuCheckboxItem
+                            key={skill}
+                            checked={form.hardSkills.some(
+                              (item) => item.toLowerCase() === skill.toLowerCase(),
+                            )}
+                            onCheckedChange={() => toggleHardSkill(skill)}
+                            onSelect={(event) => event.preventDefault()}
+                          >
+                            {skill}
+                          </DropdownMenuCheckboxItem>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-              <div className="flex gap-2">
-                <Input
-                  value={customHardSkill}
-                  onChange={(event) => setCustomHardSkill(event.target.value)}
-                  placeholder="Ajouter une hard skill absente..."
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addCustomHardSkill();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" className="shrink-0" onClick={addCustomHardSkill}>
-                  Ajouter
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Soft skills et score cible</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Même échelle que le test Soft Skills collaborateurs : de 3 à 15.
-                </p>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {form.softSkills.map((skill, index) => (
-                  <div key={`${skill.label}-${index}`} className="rounded-2xl border border-gray-200 p-4">
-                    <Input
-                      value={skill.label}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          softSkills: prev.softSkills.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, label: event.target.value } : item,
-                          ),
-                        }))
-                      }
-                      placeholder="Soft skill"
-                    />
-                    <div className="mt-3 flex items-center gap-3">
-                      <input
-                        type="range"
-                        min={3}
-                        max={15}
-                        value={skill.score}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            softSkills: prev.softSkills.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, score: Number(event.target.value) } : item,
-                            ),
-                          }))
-                        }
-                        className="w-full accent-violet-600"
-                      />
-                      <span className="w-14 text-right text-sm font-semibold text-violet-700">
-                        {skill.score}/15
-                      </span>
+                  {form.hardSkills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {form.hardSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+                        >
+                          {skill}
+                          <button
+                            type="button"
+                            aria-label={`Retirer ${skill}`}
+                            className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                            onClick={() => toggleHardSkill(skill)}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
                     </div>
+                  ) : null}
+
+                  <div className="flex gap-2">
+                    <Input
+                      value={customHardSkill}
+                      onChange={(event) => setCustomHardSkill(event.target.value)}
+                      placeholder="Ajouter une hard skill absente…"
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addCustomHardSkill();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={addCustomHardSkill}
+                    >
+                      Ajouter
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Soft skills</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Choix multiple, puis note cible (échelle test Soft Skills : 3 à 15).
+                    </p>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between rounded-xl border-gray-200 font-normal"
+                      >
+                        <span className="truncate text-left text-gray-700">
+                          {form.softSkills.length > 0
+                            ? `${form.softSkills.length} soft skill${form.softSkills.length > 1 ? "s" : ""} sélectionnée${form.softSkills.length > 1 ? "s" : ""}`
+                            : "Choisir des soft skills"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="max-h-72 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto">
+                      <DropdownMenuLabel>Catalogue</DropdownMenuLabel>
+                      <div className="px-2 pb-2">
+                        <Input
+                          value={softSkillQuery}
+                          onChange={(event) => setSoftSkillQuery(event.target.value)}
+                          placeholder="Filtrer…"
+                          className="h-8"
+                          onKeyDown={(event) => event.stopPropagation()}
+                        />
+                      </div>
+                      <DropdownMenuSeparator />
+                      {softSkillOptions.length === 0 ? (
+                        <p className="px-2 py-3 text-sm text-gray-500">Aucun résultat</p>
+                      ) : (
+                        softSkillOptions.map((skill) => (
+                          <DropdownMenuCheckboxItem
+                            key={skill}
+                            checked={form.softSkills.some(
+                              (item) => item.label.toLowerCase() === skill.toLowerCase(),
+                            )}
+                            onCheckedChange={() => toggleSoftSkill(skill)}
+                            onSelect={(event) => event.preventDefault()}
+                          >
+                            {skill}
+                          </DropdownMenuCheckboxItem>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {form.softSkills.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {form.softSkills.map((skill, index) => (
+                        <div
+                          key={`${skill.label}-${index}`}
+                          className="rounded-2xl border border-gray-200 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium text-gray-900">{skill.label}</p>
+                            <button
+                              type="button"
+                              aria-label={`Retirer ${skill.label}`}
+                              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                              onClick={() => toggleSoftSkill(skill.label)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="mt-3 flex items-center gap-3">
+                            <input
+                              type="range"
+                              min={3}
+                              max={15}
+                              value={skill.score}
+                              onChange={(event) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  softSkills: prev.softSkills.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, score: Number(event.target.value) }
+                                      : item,
+                                  ),
+                                }))
+                              }
+                              className="w-full accent-violet-600"
+                            />
+                            <span className="w-14 text-right text-sm font-semibold text-violet-700">
+                              {skill.score}/15
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">Aucune soft skill sélectionnée.</p>
+                  )}
+                </div>
+              </>
+            ) : null}
           </div>
+
+          {error && editorOpen ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setEditorOpen(false)}>
               Annuler
             </Button>
-            <Button
-              type="button"
-              className="bg-violet-600 text-white hover:bg-violet-700"
-              disabled={saving}
-              onClick={() => void handleSubmit()}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {editingRoleId ? "Enregistrer les modifications" : "Creer le metier"}
-            </Button>
+            {showSkillEditors ? (
+              <Button
+                type="button"
+                className="bg-violet-600 text-white hover:bg-violet-700"
+                disabled={saving}
+                onClick={() => void handleSubmit()}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {editingRoleId ? "Enregistrer les modifications" : "Créer le métier"}
+              </Button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>

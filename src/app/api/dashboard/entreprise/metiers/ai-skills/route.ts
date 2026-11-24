@@ -33,6 +33,7 @@ function normalizePayload(
   title: string,
   result: { description?: unknown; hard_skills?: unknown; soft_skills?: unknown },
   source: "ai" | "fallback",
+  descriptionFallback?: string,
 ) {
   const hardSkills = Array.isArray(result.hard_skills)
     ? Array.from(
@@ -57,7 +58,9 @@ function normalizePayload(
 
   return {
     title,
-    description: String(result.description ?? "").trim(),
+    description:
+      String(result.description ?? "").trim() ||
+      String(descriptionFallback ?? "").trim(),
     hard_skills: hardSkills,
     soft_skills: softSkills,
     source,
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  let body: { title?: unknown };
+  let body: { title?: unknown; sector?: unknown; description?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -78,27 +81,44 @@ export async function POST(request: NextRequest) {
   }
 
   const title = String(body.title ?? "").trim();
+  const sector = String(body.sector ?? "").trim();
+  const description = String(body.description ?? "").trim();
   if (!title) {
-    return NextResponse.json({ error: "Le nom du metier est requis" }, { status: 400 });
+    return NextResponse.json({ error: "L’intitulé du métier est requis" }, { status: 400 });
   }
 
-  const prompt = `Pour le metier "${title}", propose:
-- une description courte orientee RH / fiche metier
-- 6 a 10 hard skills concretes
-- 6 a 10 soft skills avec un score cible de 3 a 15 (meme echelle que le test Soft Skills Byound : 3 questions × Likert 1-5)
+  const contextLines = [
+    `Intitulé : ${title}`,
+    sector ? `Secteur d’activité : ${sector}` : null,
+    description ? `Description fournie par le RH :\n${description}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
-Reponds en francais, concret, operationnel, sans jargon inutile.`;
+  const prompt = `À partir du contexte RH suivant, construis une fiche métier exploitable :
+
+${contextLines}
+
+Propose :
+- une description courte orientée RH / fiche métier (enrichis la description fournie si utile, sans la contredire)
+- 6 à 10 hard skills concrètes, alignées sur le secteur et l’intitulé
+- 6 à 10 soft skills avec un score cible de 3 à 15 (même échelle que le test Soft Skills Byound : 3 questions × Likert 1-5)
+
+Réponds en français, concret, opérationnel, sans jargon inutile.`;
 
   const result = await generateJSON(
     prompt,
     SOFT_SKILL_SCHEMA,
-    "Tu es un expert RH. Retourne uniquement un JSON propre, operationnel et exploitable dans un outil de creation de fiches metier.",
+    "Tu es un expert RH. Retourne uniquement un JSON propre, opérationnel et exploitable dans un outil de création de fiches métier.",
   );
 
   if (result) {
-    return NextResponse.json(normalizePayload(title, result, "ai"));
+    return NextResponse.json(normalizePayload(title, result, "ai", description));
   }
 
-  // Quota OpenAI / cle absente : fallback local pour que le CTA demo reste utilisable
-  return NextResponse.json(normalizePayload(title, buildMetierAiSkillsFallback(title), "fallback"));
+  // Quota OpenAI / clé absente : fallback local enrichi par le titre (+ secteur si présent).
+  const fallbackSeed = sector ? `${title} ${sector}` : title;
+  return NextResponse.json(
+    normalizePayload(title, buildMetierAiSkillsFallback(fallbackSeed), "fallback", description),
+  );
 }

@@ -289,18 +289,50 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       .maybeSingle();
     if (!course) return NextResponse.json({ error: "Formation introuvable" }, { status: 404 });
 
-    const lmsCourseId = (course as { lms_course_id?: string | null }).lms_course_id;
+    let lmsCourseId = (course as { lms_course_id?: string | null }).lms_course_id
+      ? String((course as { lms_course_id?: string | null }).lms_course_id)
+      : null;
+
+    // Si le catalogue CMS n’est pas lié au parcours LMS, rattache par titre.
+    if (!lmsCourseId) {
+      const title = String((course as { title?: string }).title ?? "").trim();
+      const needle = title.toLowerCase().replace(/^les\s+/, "").trim();
+      if (needle.length >= 8) {
+        const { data: matched } = await auth.service
+          .from("courses")
+          .select("id, title, slug")
+          .ilike("title", `%${needle.slice(0, 60)}%`)
+          .limit(8);
+        const best =
+          (matched ?? []).find((c) => {
+            const t = String(c.title ?? "").toLowerCase();
+            return t === title.toLowerCase() || t === needle || t.includes(needle.slice(0, 24));
+          }) || (matched ?? [])[0];
+        if (best?.id) {
+          lmsCourseId = String(best.id);
+          await auth.service
+            .from("training_courses")
+            .update({ lms_course_id: lmsCourseId })
+            .eq("id", trainingCourseId);
+        }
+      }
+    }
+
     if (lmsCourseId) {
+      // Schéma prod : enrollments sans colonne `id`
       const { data: existingEnroll } = await auth.service
         .from("enrollments")
-        .select("id")
+        .select("course_id")
         .eq("user_id", userId)
         .eq("course_id", lmsCourseId)
         .maybeSingle();
       if (!existingEnroll) {
-        await auth.service
+        const { error: enrollErr } = await auth.service
           .from("enrollments")
           .insert({ user_id: userId, course_id: lmsCourseId, role: "learner" });
+        if (enrollErr) {
+          console.error("[btoc/assign] enrollment:", enrollErr.message);
+        }
       }
     }
 

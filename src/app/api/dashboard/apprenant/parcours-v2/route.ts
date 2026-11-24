@@ -36,16 +36,20 @@ export async function GET() {
 
   try {
     // Toujours charger pour userId effectif (preview Anaïs ≠ session staff).
-    // getApprenantDashboardData() ignore la preview → ne plus l’utiliser ici.
-    const { data: enrollments } = await db
+    // Schéma enrollments prod : pas de colonne `id` → ne pas la sélectionner.
+    const { data: enrollments, error: enrErr } = await db
       .from("enrollments")
-      .select("id, course_id, courses ( id, title, slug )")
+      .select("course_id, courses ( id, title, slug )")
       .eq("user_id", userId)
       .limit(40);
+    if (enrErr) {
+      console.warn("[parcours-v2] enrollments", enrErr.message);
+    }
     for (const enr of enrollments ?? []) {
       const courseId = String((enr as { course_id?: string }).course_id ?? "");
       if (!courseId) continue;
-      const course = (enr as { courses?: { title?: string; slug?: string } | null }).courses;
+      const courseRaw = (enr as { courses?: { title?: string; slug?: string } | Array<{ title?: string; slug?: string }> | null }).courses;
+      const course = Array.isArray(courseRaw) ? courseRaw[0] : courseRaw;
       const slug = course?.slug?.trim() || courseId;
       formations.push({
         id: courseId,
@@ -56,6 +60,36 @@ export async function GET() {
         level: null,
       });
     }
+
+    // catalog_access (achat / grant BtoC)
+    const accessRes = await db
+      .from("catalog_access")
+      .select("catalog_item_id, catalog_items ( id, title, content_id )")
+      .eq("user_id", userId)
+      .in("access_status", ["purchased", "manually_granted"])
+      .limit(40);
+    const accessRows = accessRes.error ? [] : accessRes.data;
+    const knownIds = new Set(formations.map((f) => f.id));
+    const knownTitles = new Set(formations.map((f) => f.title.trim().toLowerCase()));
+    for (const row of accessRows ?? []) {
+      const itemRaw = (row as { catalog_items?: Record<string, unknown> | Record<string, unknown>[] | null }).catalog_items;
+      const item = Array.isArray(itemRaw) ? itemRaw[0] : itemRaw;
+      const contentId = item?.content_id ? String(item.content_id) : "";
+      const title = String(item?.title ?? "").trim() || "Formation";
+      const id = contentId || String(item?.id ?? "");
+      if (!id || knownIds.has(id) || knownTitles.has(title.toLowerCase())) continue;
+      formations.push({
+        id,
+        title,
+        href: `/catalog/formations/${contentId || id}`,
+        progress: null,
+        meta: "Assignée",
+        level: null,
+      });
+      knownIds.add(id);
+      knownTitles.add(title.toLowerCase());
+    }
+
     const { data: parts } = await db
       .from("formation_participants")
       .select("dossier_id")
@@ -69,10 +103,9 @@ export async function GET() {
         .from("formation_dossiers")
         .select("id, course_title, training_course_id")
         .in("id", dossierIds);
-      const known = new Set(formations.map((f) => f.title.trim().toLowerCase()));
       for (const d of dossiers ?? []) {
         const title = String((d as { course_title?: string }).course_title ?? "").trim() || "Formation";
-        if (known.has(title.toLowerCase())) continue;
+        if (knownTitles.has(title.toLowerCase())) continue;
         const trainingCourseId = String(
           (d as { training_course_id?: string | null }).training_course_id ?? "",
         );
@@ -81,11 +114,39 @@ export async function GET() {
         if (trainingCourseId) {
           const { data: tc } = await db
             .from("training_courses")
-            .select("lms_course_id")
+            .select("lms_course_id, title")
             .eq("id", trainingCourseId)
             .maybeSingle();
           lmsCourseId = tc?.lms_course_id ? String(tc.lms_course_id) : null;
-          if (lmsCourseId) {
+          // Secours : rattacher un parcours LMS au titre si le lien manque
+          if (!lmsCourseId) {
+            const needle = String(tc?.title || title)
+              .toLowerCase()
+              .replace(/^les\s+/, "")
+              .trim();
+            const { data: matched } = await db
+              .from("courses")
+              .select("id, slug, title")
+              .ilike("title", `%${needle.slice(0, 48)}%`)
+              .limit(5);
+            const best =
+              (matched ?? []).find((c) =>
+                String(c.title ?? "")
+                  .toLowerCase()
+                  .includes("neuro"),
+              ) || (matched ?? [])[0];
+            if (best?.id) {
+              lmsCourseId = String(best.id);
+              slug = best.slug ? String(best.slug) : lmsCourseId;
+              // Persiste le lien pour les prochaines fois (best-effort)
+              void db
+                .from("training_courses")
+                .update({ lms_course_id: lmsCourseId })
+                .eq("id", trainingCourseId)
+                .then(() => undefined)
+                .catch(() => undefined);
+            }
+          } else {
             const { data: course } = await db
               .from("courses")
               .select("id, slug")
@@ -94,17 +155,38 @@ export async function GET() {
             slug = course?.slug ? String(course.slug) : lmsCourseId;
           }
         }
+        // UUID LMS seulement dans `id` (évite crash open_badges / progress)
+        const formationId = lmsCourseId || `dossier-${(d as { id: string }).id}`;
         formations.push({
-          id: lmsCourseId || `dossier-${(d as { id: string }).id}`,
+          id: formationId,
           title,
           href: slug
             ? `/catalog/formations/${slug}`
             : "/dashboard/apprenant/formations",
           progress: null,
-          meta: lmsCourseId ? "Assignée" : "Assignée · pas de parcours LMS",
+          meta: lmsCourseId ? "Assignée" : "Assignée · parcours LMS à lier",
           level: null,
         });
-        known.add(title.toLowerCase());
+        knownIds.add(formationId);
+        knownTitles.add(title.toLowerCase());
+
+        // Crée l’enrollment manquant si on a résolu un LMS
+        if (lmsCourseId && !knownIds.has(`enroll:${lmsCourseId}`)) {
+          const { data: existing } = await db
+            .from("enrollments")
+            .select("course_id")
+            .eq("user_id", userId)
+            .eq("course_id", lmsCourseId)
+            .maybeSingle();
+          if (!existing) {
+            await db.from("enrollments").insert({
+              user_id: userId,
+              course_id: lmsCourseId,
+              role: "learner",
+            });
+          }
+          knownIds.add(`enroll:${lmsCourseId}`);
+        }
       }
     }
 
@@ -120,7 +202,8 @@ export async function GET() {
         level: f.level ?? null,
       }));
     }
-  } catch {
+  } catch (e) {
+    console.error("[parcours-v2] formations", e);
     formations = [];
   }
 
@@ -137,7 +220,10 @@ export async function GET() {
     String(row.target_career_slug ?? "").replace(/-/g, " ") ||
     null;
 
-  const courseIds = formations.map((f) => f.id).filter(Boolean);
+  const isUuid = (v: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+
+  const courseIds = formations.map((f) => f.id).filter((id) => isUuid(id));
   const progressByCourse = new Map<
     string,
     Awaited<ReturnType<typeof readCourseLearnerProgress>>
@@ -159,10 +245,11 @@ export async function GET() {
 
   const badgeByCourse = new Map<string, string>();
   if (courseIds.length) {
-    const { data: openBadges } = await db
+    const { data: openBadges, error: badgeErr } = await db
       .from("open_badges")
       .select("course_id, name, title")
       .in("course_id", courseIds);
+    if (badgeErr) console.warn("[parcours-v2] open_badges", badgeErr.message);
     for (const b of openBadges ?? []) {
       const cid = String((b as { course_id?: string }).course_id ?? "");
       if (!cid || badgeByCourse.has(cid)) continue;
@@ -191,7 +278,7 @@ export async function GET() {
       status,
       done,
       total,
-      meta: f.level || null,
+      meta: f.meta || f.level || null,
       badgeHint: badgeByCourse.get(f.id) ?? null,
     };
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { AssessmentQuestion } from "@/lib/formation-assessments/types";
 
 /** Palette type Revolut — violet, overlays, contraste chaud. */
@@ -93,8 +93,20 @@ export function RevolutAssessment({
   initialScore = null,
   onPersist,
 }: RevolutAssessmentProps) {
-  const [index, setIndex] = useState(0);
+  const firstUnanswered = (() => {
+    if (alreadyDone) return 0;
+    const idx = questions.findIndex((q) => {
+      if (q.type === "section" || q.type === "text") return false;
+      const v = initialAnswers[q.id];
+      return v == null || v === "";
+    });
+    return idx >= 0 ? idx : Math.max(0, questions.length - 1);
+  })();
+
+  const [index, setIndex] = useState(firstUnanswered);
   const [answers, setAnswers] = useState<Record<string, unknown>>(initialAnswers);
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(alreadyDone);
@@ -103,19 +115,30 @@ export function RevolutAssessment({
   const total = questions.length;
   const question = questions[index];
   const progress = total ? Math.round(((index + (done ? 1 : 0)) / total) * 100) : 0;
-  const value = question ? answers[question.id] : undefined;
+  const rawValue = question ? answers[question.id] : undefined;
+  const value =
+    question && (question.type === "nps" || question.type === "scale") && rawValue != null && rawValue !== ""
+      ? Number(rawValue)
+      : rawValue;
 
   const canNext = useMemo(() => {
     if (!question) return false;
     if (question.type === "section") return true;
     if (question.type === "text") return true;
     if (question.type === "multi") return Array.isArray(value) && value.length > 0;
+    if (question.type === "nps" || question.type === "scale") {
+      return value != null && value !== "" && Number.isFinite(Number(value));
+    }
     return value != null && value !== "";
   }, [question, value]);
 
   const setValue = (next: unknown) => {
     if (!question) return;
-    setAnswers((a) => ({ ...a, [question.id]: next }));
+    setAnswers((a) => {
+      const merged = { ...a, [question.id]: next };
+      answersRef.current = merged;
+      return merged;
+    });
   };
 
   const toggleMulti = (opt: string) => {
@@ -136,22 +159,27 @@ export function RevolutAssessment({
     if (!question) return;
     setBusy(true);
     setError(null);
+    const isLast = index >= total - 1;
+    const snapshot = { ...answersRef.current };
     try {
-      const isLast = index >= total - 1;
-      const snapshot = { ...answers };
       if (onPersist && !preview) {
-        const result = await onPersist(
-          isLast ? snapshot : { [question.id]: snapshot[question.id] },
-          isLast,
-        );
-        if (isLast) {
-          setDone(true);
-          if (result?.score_pct != null) setScore(Number(result.score_pct));
+        const payload = isLast ? snapshot : { [question.id]: snapshot[question.id] };
+        if (!isLast) {
+          // N’attend pas la base pour avancer (évite le blocage si Supabase est lent).
+          void onPersist(payload, false).catch((e) => {
+            console.warn("[assessment] persist step", e);
+          });
+          setIndex((i) => i + 1);
+          return;
         }
+        const result = await onPersist(payload, true);
+        setDone(true);
+        if (result?.score_pct != null) setScore(Number(result.score_pct));
       } else if (isLast) {
         setDone(true);
+      } else {
+        setIndex((i) => i + 1);
       }
-      if (!isLast) setIndex((i) => i + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -289,7 +317,7 @@ export function RevolutAssessment({
                         }
                       >
                         {nums.map((n) => {
-                          const selected = value === n;
+                          const selected = Number(value) === n;
                           const sideLabel =
                             vertical && n === min && lowLabel
                               ? lowLabel

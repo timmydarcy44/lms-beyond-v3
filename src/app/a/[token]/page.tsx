@@ -62,14 +62,26 @@ export default function AssessmentPublicPage() {
       alreadyDone={data.status === "completed"}
       initialScore={data.score_pct}
       onPersist={async (answers, complete) => {
-        const res = await fetch(`/api/formation-assessments/${encodeURIComponent(token)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ answers, complete }),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
-        return { score_pct: json.score_pct };
+        const ctrl = new AbortController();
+        const timer = window.setTimeout(() => ctrl.abort(), complete ? 25000 : 10000);
+        try {
+          const res = await fetch(`/api/formation-assessments/${encodeURIComponent(token)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ answers, complete }),
+            signal: ctrl.signal,
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json.error || "Enregistrement impossible");
+          return { score_pct: json.score_pct };
+        } catch (e) {
+          if (e instanceof DOMException && e.name === "AbortError") {
+            throw new Error("Délai dépassé — réessayez dans un instant.");
+          }
+          throw e;
+        } finally {
+          window.clearTimeout(timer);
+        }
       }}
     />
   );

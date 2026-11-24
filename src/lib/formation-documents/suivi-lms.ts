@@ -119,6 +119,7 @@ export function dossierHasDistanciel(params: {
     ped.includes("distan") ||
     ped.includes("elearning") ||
     ped.includes("e-learning") ||
+    ped.includes("asynchron") ||
     ped === "mixte"
   ) {
     return true;

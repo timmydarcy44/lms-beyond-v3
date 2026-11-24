@@ -111,7 +111,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const accessToken =
     (existing as { access_token?: string | null } | null)?.access_token || newDocToken();
   // Contrainte SQL : to_generate | sent | opened | signed (pas "ready").
-  // Dépôt staff d’un devis/convention déjà signé → signed (pastille Déposé).
+  // Dépôt staff devis/convention → signed + acceptance_method staff_upload (« Déposé le », pas OTP).
   const staffSignedKinds = new Set(["devis", "convention", "preuve_devis", "preuve_convention"]);
   const prevStatus = String(
     (existing as { status?: string | null } | null)?.status ?? "to_generate",
@@ -132,10 +132,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     access_token: accessToken,
     generated_at: now,
     updated_at: now,
+    acceptance_method: "staff_upload",
   };
   if (nextStatus === "signed") {
     payload.signed_at = now;
-    payload.acceptance_method = "staff_upload";
   }
 
   if (existing?.id) {

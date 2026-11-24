@@ -52,9 +52,64 @@ function hasStoredFile(d: DocRow | undefined): boolean {
   return Boolean(d && (d.file_url || d.storage_path));
 }
 
+function isStaffDeposit(d: DocRow | undefined): boolean {
+  return String(d?.acceptance_method ?? "") === "staff_upload";
+}
+
 function isSignedDoc(d: DocRow | undefined): boolean {
   if (!d) return false;
+  // Dépôt staff ≠ signature client OTP
+  if (isStaffDeposit(d)) return false;
   return d.status === "signed" || Boolean(d.signed_at);
+}
+
+function formatFrDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(String(iso));
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("fr-FR");
+}
+
+/** Libellé détail : « Déposé le… » (staff) vs « Signé le… » (OTP client). */
+function depositOrSignedDetail(
+  d: DocRow | undefined,
+  gender: "m" | "f",
+): string | null {
+  if (!d) return null;
+  if (isStaffDeposit(d)) {
+    const when = formatFrDate(d.signed_at || d.generated_at);
+    return when ? `Déposé le ${when}` : "PDF déposé";
+  }
+  if (isSignedDoc(d)) {
+    const word = gender === "f" ? "Signée" : "Signé";
+    const who = d.signer_name ? ` · ${d.signer_name}` : "";
+    const when = formatFrDate(d.signed_at);
+    return `${word}${who}${when ? ` le ${when}` : ""}`;
+  }
+  if (hasStoredFile(d)) {
+    const when = formatFrDate(d.generated_at);
+    return when ? `Déposé le ${when}` : "PDF déposé";
+  }
+  if (hasFile(d)) return `Statut ${d.status || "—"}`;
+  return null;
+}
+
+function singleDocItem(params: {
+  key: string;
+  label: string;
+  kind: string;
+  doc: DocRow | undefined;
+  gender?: "m" | "f";
+}): CoffreItem {
+  const ready = isSignedDoc(params.doc) || hasStoredFile(params.doc) || isStaffDeposit(params.doc);
+  return {
+    key: params.key,
+    label: params.label,
+    status: ready ? "ready" : hasFile(params.doc) ? "partial" : "missing",
+    detail: depositOrSignedDetail(params.doc, params.gender ?? "m"),
+    document_ids: params.doc ? [params.doc.id] : [],
+    kind: params.kind,
+  };
 }
 
 function pick(docs: DocRow[], kind: string, scoped = false): DocRow[] {
@@ -199,51 +254,36 @@ export async function buildCoffreSnapshot(
 
   const items: CoffreItem[] = [
     {
-      key: "devis",
-      label: "Devis signé",
-      // Upload staff (PDF déjà signé) = Déposé ; signature OTP = aussi Déposé.
-      status: devisSigned || hasStoredFile(devis)
+      ...singleDocItem({
+        key: "devis",
+        label: "Devis",
+        kind: "devis",
+        doc: devis,
+        gender: "m",
+      }),
+      status: devisSigned || hasStoredFile(devis) || isStaffDeposit(devis)
         ? "ready"
         : preuveDevis.length
           ? "partial"
           : hasFile(devis)
             ? "partial"
             : "missing",
-      detail: devisSigned
-        ? `Signé${devis?.signer_name ? ` · ${devis.signer_name}` : ""}${
-            devis?.acceptance_method ? ` · ${devis.acceptance_method}` : ""
-          }${devis?.signed_at ? ` · ${new Date(String(devis.signed_at)).toLocaleDateString("fr-FR")}` : ""}`
-        : hasStoredFile(devis)
-          ? "PDF déposé"
-          : hasFile(devis)
-            ? `Statut ${devis?.status || "—"}`
-            : null,
-      document_ids: devis ? [devis.id] : [],
-      kind: "devis",
     },
     {
-      key: "convention",
-      label: "Convention signée",
-      status: conventionSigned || hasStoredFile(convention)
+      ...singleDocItem({
+        key: "convention",
+        label: "Convention",
+        kind: "convention",
+        doc: convention,
+        gender: "f",
+      }),
+      status: conventionSigned || hasStoredFile(convention) || isStaffDeposit(convention)
         ? "ready"
         : preuveConvention.length
           ? "partial"
           : hasFile(convention)
             ? "partial"
             : "missing",
-      detail: conventionSigned
-        ? `Signée${convention?.signer_name ? ` · ${convention.signer_name}` : ""}${
-            convention?.signed_at
-              ? ` · ${new Date(String(convention.signed_at)).toLocaleDateString("fr-FR")}`
-              : ""
-          }`
-        : hasStoredFile(convention)
-          ? "PDF déposé"
-          : hasFile(convention)
-            ? `Statut ${convention?.status || "—"}`
-            : null,
-      document_ids: convention ? [convention.id] : [],
-      kind: "convention",
     },
     {
       key: "preuve_signature",
@@ -255,8 +295,13 @@ export async function buildCoffreSnapshot(
             ? "partial"
             : devisSigned || conventionSigned
               ? "partial"
-              : "missing",
-      detail: `${preuves.length} preuve(s) archivée(s)`,
+              : isStaffDeposit(devis) && isStaffDeposit(convention)
+                ? "not_due"
+                : "missing",
+      detail:
+        isStaffDeposit(devis) || isStaffDeposit(convention)
+          ? "Pas dû — documents déposés manuellement (hors OTP)"
+          : `${preuves.length} preuve(s) archivée(s)`,
       document_ids: preuves.map((p) => p.id),
       kind: "preuve_devis",
     },
@@ -278,18 +323,24 @@ export async function buildCoffreSnapshot(
       document_ids: convocs.map((c) => c.id),
       kind: "convocation",
     },
-    {
-      key: "programme_pack",
-      label: "Programme / livret / règlement",
-      status:
-        [programme, livret, reglement].filter(hasFile).length >= 2
-          ? "ready"
-          : [programme, livret, reglement].some(hasFile)
-            ? "partial"
-            : "missing",
-      document_ids: [programme, livret, reglement].filter(Boolean).map((d) => d!.id),
+    singleDocItem({
+      key: "programme",
+      label: "Programme",
       kind: "programme",
-    },
+      doc: programme,
+    }),
+    singleDocItem({
+      key: "reglement",
+      label: "Règlement intérieur",
+      kind: "reglement",
+      doc: reglement,
+    }),
+    singleDocItem({
+      key: "livret",
+      label: "Livret d'accueil",
+      kind: "livret",
+      doc: livret,
+    }),
     {
       key: "formateur_cv",
       label: "CV formateur (snapshot)",
@@ -412,25 +463,45 @@ export async function buildCoffreSnapshot(
       key: "suivi_lms",
       label: "Suivi distanciel LMS",
       status: (() => {
-        if (!hasDistanciel) return "not_due";
-        if (!lmsCourseId) return pastSession ? "missing" : "not_due";
-        if (participants === 0) return pastSession ? "missing" : "not_due";
-        const learnersOk = suiviLms.length >= participants && suiviLms.every(hasFile);
-        const sessionOk = hasFile(suiviLmsSession);
+        // Asynchrone / distanciel : dû dès l’ouverture du coffre (pas « pas dû »).
+        const due = hasDistanciel || asyncNoSession;
+        if (!due) return "not_due";
+        const unscopedSuivi = docs.filter(
+          (d) =>
+            (d.kind === "suivi_lms" || d.kind === "suivi_lms_session") &&
+            !d.participant_id &&
+            hasStoredFile(d),
+        );
+        const sessionOk = hasStoredFile(suiviLmsSession) || unscopedSuivi.length > 0;
+        const learnersOk =
+          participants > 0 && suiviLms.length >= participants && suiviLms.every(hasFile);
         if (learnersOk && sessionOk) return "ready";
-        if (suiviLms.length > 0 || sessionOk) return "partial";
-        return pastSession ? "missing" : "not_due";
+        // BtoC / dépôt staff d’une synthèse unique = Déposé
+        if (sessionOk && participants <= 1) return "ready";
+        if (learnersOk || sessionOk || suiviLms.length > 0) return "partial";
+        return "missing";
       })(),
-      detail: hasDistanciel
-        ? lmsCourseId
-          ? `${suiviLms.length}/${participants} apprenant(s) · synthèse ${hasFile(suiviLmsSession) ? "ok" : "manquante"}`
-          : "Cours LMS non lié au catalogue"
-        : "Pas de distanciel sur ce dossier",
+      detail: (() => {
+        const due = hasDistanciel || asyncNoSession;
+        if (!due) return "Pas de distanciel sur ce dossier";
+        if (hasStoredFile(suiviLmsSession) || docs.some((d) => d.kind === "suivi_lms" && !d.participant_id && hasStoredFile(d))) {
+          return depositOrSignedDetail(suiviLmsSession ?? docs.find((d) => d.kind === "suivi_lms" && !d.participant_id), "m")
+            ?? "Synthèse déposée";
+        }
+        if (lmsCourseId) {
+          return `${suiviLms.length}/${participants || 1} apprenant(s) · synthèse manquante`;
+        }
+        return "À déposer — suivi LMS obligatoire en distanciel / asynchrone";
+      })(),
       document_ids: [
         ...suiviLms.map((d) => d.id),
         ...(suiviLmsSession ? [suiviLmsSession.id] : []),
+        ...docs
+          .filter((d) => d.kind === "suivi_lms" && !d.participant_id)
+          .map((d) => d.id),
       ],
-      kind: "suivi_lms",
+      // Upload staff → synthèse session (hors participant)
+      kind: "suivi_lms_session",
     },
   ];
 

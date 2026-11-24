@@ -139,6 +139,15 @@ export function ApprenantConnectShell({
           });
           setIsParticulier(true);
           if (previewJson.email) setAuthEmail(previewJson.email);
+          // Invalide le snapshot partagé (sinon DISC/parcours du staff).
+          try {
+            const { invalidateLearnerSnapshotProviderCache } = await import(
+              "@/components/learner/learner-snapshot-provider"
+            );
+            invalidateLearnerSnapshotProviderCache();
+          } catch {
+            /* ignore */
+          }
           edgePerfMark("shell-profiles-done");
           return;
         }

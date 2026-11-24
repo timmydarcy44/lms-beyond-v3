@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   buildDiscObservation,
   buildIdmcObservation,
   buildSoftSkillsObservation,
 } from "@/lib/apprenant/assessment-observations";
 import { formatDiscProfileSentence } from "@/lib/disc/disc-profile-label";
-import { normalizeDiscScores, resolveDiscProfile } from "@/lib/disc/disc-scoring";
+import { parseStoredDiscScores } from "@/lib/disc/disc-scoring";
 import { AXES_LABELS, type AxisKey } from "@/lib/idmc/idmc-display";
 import type { DiscScores } from "@/components/apprenant/apprenant-assessment-results";
 
@@ -72,30 +71,42 @@ export function LearnerTestsV2() {
     let cancelled = false;
     (async () => {
       try {
-        const sb = createSupabaseBrowserClient();
-        if (!sb) throw new Error("Session indisponible");
-        const { data: auth } = await sb.auth.getUser();
-        const uid = auth.user?.id;
-        if (!uid) throw new Error("Non connecté");
+        // Hub serveur (honore la preview BtoC) — pas de lecture RLS session staff.
+        const hubRes = await fetch("/api/dashboard/apprenant/profil-hub", {
+          credentials: "include",
+        });
+        if (!hubRes.ok) throw new Error("Chargement impossible");
+        const hub = (await hubRes.json()) as {
+          disc?: { scores?: unknown; updated_at?: string } | null;
+          idmc?: { scores?: unknown; updated_at?: string } | null;
+          softSkills?: { scores?: unknown; taken_at?: string } | null;
+        };
 
-        const [disc, idmc, soft] = await Promise.all([
-          sb.from("disc_resultats").select("scores, updated_at").eq("profile_id", uid).maybeSingle(),
-          sb.from("idmc_resultats").select("scores, updated_at").eq("profile_id", uid).maybeSingle(),
-          sb
-            .from("soft_skills_resultats")
-            .select("scores, taken_at")
-            .eq("learner_id", uid)
-            .order("taken_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ]);
+        const discData = hub.disc ?? null;
+        const idmcData = hub.idmc ?? null;
+        const softData = hub.softSkills ?? null;
 
         const next: TestCard[] = [];
 
         // DISC
-        if (disc.data?.scores) {
-          const scores = normalizeDiscScores(disc.data.scores as DiscScores);
-          const { dominant } = resolveDiscProfile(scores);
+        if (discData?.scores) {
+          const scores = parseStoredDiscScores(
+            discData.scores as Record<string, unknown>,
+          ) as DiscScores | null;
+          if (!scores) {
+            next.push({
+              id: "disc",
+              name: "Profil comportemental",
+              sub: "DISC",
+              done: false,
+              headline: "Pas encore passé",
+              explanation: "Ce test révèle ta façon d’agir et de collaborer.",
+              pills: [],
+              pillColor: C.blue,
+              detailHref: "/dashboard/apprenant/disc",
+              date: null,
+            });
+          } else {
           const labels: Record<string, string> = {
             D: "Décision",
             I: "Influence",
@@ -117,8 +128,9 @@ export function LearnerTestsV2() {
             pills: sorted.slice(0, 3).map(([k]) => labels[k] || k),
             pillColor: C.blue,
             detailHref: "/dashboard/apprenant/profil-comportemental",
-            date: disc.data.updated_at ? String(disc.data.updated_at).slice(0, 10) : null,
+            date: discData.updated_at ? String(discData.updated_at).slice(0, 10) : null,
           });
+          }
         } else {
           next.push({
             id: "disc",
@@ -135,8 +147,8 @@ export function LearnerTestsV2() {
         }
 
         // IDMC
-        if (idmc.data?.scores) {
-          const axes = idmc.data.scores as Record<AxisKey, number>;
+        if (idmcData?.scores) {
+          const axes = idmcData.scores as Record<AxisKey, number>;
           const ranked = (Object.entries(axes) as Array<[AxisKey, number]>).sort(
             (a, b) => b[1] - a[1],
           );
@@ -151,7 +163,7 @@ export function LearnerTestsV2() {
             pills: ranked.slice(0, 3).map(([k]) => AXES_LABELS[k] || k),
             pillColor: C.violet,
             detailHref: "/dashboard/apprenant/profil-comportemental",
-            date: idmc.data.updated_at ? String(idmc.data.updated_at).slice(0, 10) : null,
+            date: idmcData.updated_at ? String(idmcData.updated_at).slice(0, 10) : null,
           });
         } else {
           next.push({
@@ -169,7 +181,7 @@ export function LearnerTestsV2() {
         }
 
         // Soft skills
-        const softScores = (soft.data?.scores ?? null) as Record<string, number> | null;
+        const softScores = (softData?.scores ?? null) as Record<string, number> | null;
         if (softScores && Object.keys(softScores).length) {
           const items = Object.entries(softScores).map(([skill, score]) => ({
             skill,
@@ -186,7 +198,7 @@ export function LearnerTestsV2() {
             pills: top.map((t) => t.skill),
             pillColor: C.turquoise,
             detailHref: "/dashboard/apprenant/profil-comportemental",
-            date: soft.data?.taken_at ? String(soft.data.taken_at).slice(0, 10) : null,
+            date: softData?.taken_at ? String(softData.taken_at).slice(0, 10) : null,
           });
         } else {
           next.push({
@@ -204,14 +216,13 @@ export function LearnerTestsV2() {
         }
 
         const dates = [
-          disc.data?.updated_at ? String(disc.data.updated_at) : null,
-          idmc.data?.updated_at ? String(idmc.data.updated_at) : null,
-          soft.data?.taken_at ? String(soft.data.taken_at) : null,
+          discData?.updated_at ? String(discData.updated_at) : null,
+          idmcData?.updated_at ? String(idmcData.updated_at) : null,
+          softData?.taken_at ? String(softData.taken_at) : null,
         ].filter(Boolean) as string[];
         const oldestMonths = dates.length
           ? Math.min(...dates.map((d) => monthsSince(d) ?? 0))
           : 99;
-        // Délai 6 mois par défaut si tous les tests sont faits
         const allDone = next.every((c) => c.done);
         if (!cancelled) {
           setCards(next);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { resolveEffectiveApprenantUserId } from "@/lib/control/learner-preview";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +16,14 @@ export async function GET() {
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "NO_DB" }, { status: 503 });
 
+  const { userId } = await resolveEffectiveApprenantUserId(session.id);
+
   const rich = await db
     .from("skill_declarations")
     .select(
       "id, skill_id, raw_label, match_confidence, match_status, kind, level, context, proof_url, proof_note, proof_review_status, proof_review_note, status, updated_at, skills(id, label, description, is_soft, skill_domains(label))",
     )
-    .eq("user_id", session.id)
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false });
 
   if (rich.error && /proof_review/i.test(rich.error.message)) {
@@ -29,7 +32,7 @@ export async function GET() {
       .select(
         "id, skill_id, raw_label, match_confidence, match_status, kind, level, context, proof_url, proof_note, status, updated_at, skills(id, label, description, is_soft, skill_domains(label))",
       )
-      .eq("user_id", session.id)
+      .eq("user_id", userId)
       .order("updated_at", { ascending: false });
     if (fallback.error) return NextResponse.json({ error: fallback.error.message }, { status: 400 });
     return NextResponse.json({ declarations: fallback.data ?? [] });
@@ -44,6 +47,14 @@ export async function POST(request: NextRequest) {
   if (!session?.id) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "NO_DB" }, { status: 503 });
+
+  const { preview } = await resolveEffectiveApprenantUserId(session.id);
+  if (preview) {
+    return NextResponse.json(
+      { error: "Lecture seule en aperçu espace apprenant" },
+      { status: 403 },
+    );
+  }
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const kind = body?.kind === "soft" ? "soft" : "hard";

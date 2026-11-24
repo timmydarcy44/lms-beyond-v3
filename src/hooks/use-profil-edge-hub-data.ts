@@ -144,8 +144,8 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     }
     const t0 = typeof performance !== "undefined" ? performance.now() : 0;
     const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (!uid) {
+    const sessionUid = userData.user?.id;
+    if (!sessionUid) {
       setError("Session introuvable.");
       return;
     }
@@ -159,20 +159,71 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
         null,
     );
 
-    const [profileRes, discRes, idmcRes, softRes, expRes, dipRes] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select(
-          "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata",
-        )
-        .eq("id", uid)
-        .maybeSingle(),
-      supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
-      supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
-      fetchLatestSoftSkillsResult(supabase, uid, "scores, taken_at"),
-      supabase.from("experiences_pro").select("*").eq("learner_id", uid),
-      supabase.from("diplomes").select("*").eq("learner_id", uid),
-    ]);
+    // Preview BtoC : données via API service-role (RLS session staff = Timmy sinon).
+    let uid = sessionUid;
+    let profileRes: { data: Record<string, unknown> | null; error: { message?: string } | null } = {
+      data: null,
+      error: null,
+    };
+    let discRes: { data: { scores?: unknown } | null } = { data: null };
+    let idmcRes: { data: { scores?: unknown } | null } = { data: null };
+    let softRes: Awaited<ReturnType<typeof fetchLatestSoftSkillsResult>> = null;
+    let expRes: { data: unknown[] | null } = { data: [] };
+    let dipRes: { data: unknown[] | null } = { data: [] };
+
+    let usedPreviewHub = false;
+    try {
+      const hubRes = await fetch("/api/dashboard/apprenant/profil-hub", { credentials: "include" });
+      if (hubRes.ok) {
+        const hub = (await hubRes.json()) as {
+          preview?: boolean;
+          userId?: string;
+          profile?: Record<string, unknown> | null;
+          disc?: { scores?: unknown } | null;
+          idmc?: { scores?: unknown } | null;
+          softSkills?: Awaited<ReturnType<typeof fetchLatestSoftSkillsResult>>;
+          experiences?: unknown[];
+          diplomes?: unknown[];
+        };
+        if (hub.preview && hub.userId) {
+          usedPreviewHub = true;
+          uid = hub.userId;
+          profileRes = { data: hub.profile ?? null, error: null };
+          discRes = { data: hub.disc ?? null };
+          idmcRes = { data: hub.idmc ?? null };
+          softRes = hub.softSkills ?? null;
+          expRes = { data: hub.experiences ?? [] };
+          dipRes = { data: hub.diplomes ?? [] };
+          if (hub.profile?.email) setAuthEmail(String(hub.profile.email));
+          if (hub.profile?.first_name) setAuthMetaFirstName(String(hub.profile.first_name));
+        }
+      }
+    } catch {
+      /* fallback session */
+    }
+
+    if (!usedPreviewHub) {
+      const parallel = await Promise.all([
+        supabase
+          .from("profiles")
+          .select(
+            "first_name, last_name, email, phone, telephone, city, avatar_url, target_career_slug, type_profil, objective_details, cross_profile_completion, professional_project, hard_skills, skills_metadata",
+          )
+          .eq("id", uid)
+          .maybeSingle(),
+        supabase.from("disc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+        supabase.from("idmc_resultats").select("scores").eq("profile_id", uid).maybeSingle(),
+        fetchLatestSoftSkillsResult(supabase, uid, "scores, taken_at"),
+        supabase.from("experiences_pro").select("*").eq("learner_id", uid),
+        supabase.from("diplomes").select("*").eq("learner_id", uid),
+      ]);
+      profileRes = parallel[0] as typeof profileRes;
+      discRes = parallel[1];
+      idmcRes = parallel[2];
+      softRes = parallel[3];
+      expRes = parallel[4] as typeof expRes;
+      dipRes = parallel[5] as typeof dipRes;
+    }
 
     if (typeof performance !== "undefined" && process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
@@ -192,7 +243,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     const objectiveDetails = (profile?.objective_details as Record<string, string>) ?? {};
     const project = migrateLegacyProjectToV2(
       mergeObjectiveDetailsIntoProject(
-        profile?.type_profil,
+        profile?.type_profil ? String(profile.type_profil) : null,
         parseProfessionalProject(profile?.professional_project),
         objectiveDetails,
       ),
@@ -210,19 +261,24 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     setSkillsMetadata((profile?.skills_metadata as Record<string, LearnerHardSkillMeta>) ?? {});
 
     const learnerEmail =
-      (profile?.email ? String(profile.email) : null) || userData.user?.email || null;
+      (profile?.email ? String(profile.email) : null) ||
+      (usedPreviewHub ? null : userData.user?.email) ||
+      null;
     let profileCandidates: string[] = [uid];
-    try {
-      profileCandidates = await collectLearnerProfileCandidates(supabase, uid, learnerEmail);
-    } catch {
-      /* ignore */
+    // En preview, le client Supabase = session staff → ne pas re-résoudre via RLS.
+    if (!usedPreviewHub) {
+      try {
+        profileCandidates = await collectLearnerProfileCandidates(supabase, uid, learnerEmail);
+      } catch {
+        /* ignore */
+      }
     }
 
     // Source de vérité : tables tests (+ legacy profil). Le snapshot ne doit pas masquer une base vide.
     let resolvedDisc = parseStoredDiscScores(
       (discRes.data?.scores as Record<string, unknown> | null) ?? null,
     ) as DiscScores | null;
-    if (!resolvedDisc) {
+    if (!resolvedDisc && !usedPreviewHub) {
       try {
         resolvedDisc = (await fetchDiscScoresForCandidates(
           supabase,
@@ -238,7 +294,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     if (idmcRes.data?.scores) {
       resolvedIdmcAxes = normalizeIdmcAxesRecord(idmcRes.data.scores) as Record<AxisKey, number> | null;
     }
-    if (!resolvedIdmcAxes) {
+    if (!resolvedIdmcAxes && !usedPreviewHub) {
       try {
         resolvedIdmcAxes = (await fetchIdmcAxesForCandidates(
           supabase,
@@ -256,7 +312,7 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
 
     const fromDb = parseSoftSkillsScoreEntries(softRes?.scores);
     let resolvedRadar = fromDb.length ? fromDb : [];
-    if (!resolvedRadar.length) {
+    if (!resolvedRadar.length && !usedPreviewHub) {
       try {
         resolvedRadar = await fetchSoftSkillsRadarForCandidates(supabase, profileCandidates);
       } catch {
@@ -279,7 +335,8 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
       resolvedRadar = [];
     }
     const snap = snapshotCtx?.snapshot;
-    if (snap) {
+    // Ne pas mélanger le snapshot du staff avec le hub preview.
+    if (snap && !usedPreviewHub && snap.userId === uid) {
       if (!resolvedDisc && snap.discScores) resolvedDisc = snap.discScores;
       if (!resolvedIdmcAxes && snap.idmcAxes && hasMeaningfulIdmcAxes(snap.idmcAxes)) {
         resolvedIdmcAxes = snap.idmcAxes;
@@ -297,31 +354,37 @@ export function useProfilEdgeHubData(): ProfilEdgeHubData {
     setSoftSkillsScores(resolvedSoft);
 
     setExperiences(
-      (expRes.data ?? []).map((row) => ({
-        id: String(row.id),
-        employeur: row.employeur,
-        poste: row.poste ?? null,
-        type_contrat: row.type_contrat,
-        date_debut: row.date_debut,
-        date_fin: row.date_fin,
-        missions: row.missions,
-        competences_developpees: Array.isArray(row.competences_developpees)
-          ? row.competences_developpees.map(String)
-          : [],
-      })),
+      (expRes.data ?? []).map((raw) => {
+        const row = raw as Record<string, unknown>;
+        return {
+          id: String(row.id ?? ""),
+          employeur: row.employeur as ExperiencePro["employeur"],
+          poste: (row.poste as string | null) ?? null,
+          type_contrat: row.type_contrat as ExperiencePro["type_contrat"],
+          date_debut: row.date_debut as ExperiencePro["date_debut"],
+          date_fin: row.date_fin as ExperiencePro["date_fin"],
+          missions: row.missions as ExperiencePro["missions"],
+          competences_developpees: Array.isArray(row.competences_developpees)
+            ? row.competences_developpees.map(String)
+            : [],
+        };
+      }),
     );
 
     setDiplomas(
-      (dipRes.data ?? []).map((row) => ({
-        id: String(row.id),
-        intitule: row.intitule,
-        ecole: row.ecole,
-        annee_obtention: row.annee_obtention,
-        mode: row.mode,
-        diploma_type: row.diploma_type ?? null,
-        niveau: row.niveau ?? null,
-        description: row.description ?? null,
-      })),
+      (dipRes.data ?? []).map((raw) => {
+        const row = raw as Record<string, unknown>;
+        return {
+          id: String(row.id ?? ""),
+          intitule: row.intitule as Diplome["intitule"],
+          ecole: row.ecole as Diplome["ecole"],
+          annee_obtention: row.annee_obtention as Diplome["annee_obtention"],
+          mode: row.mode as Diplome["mode"],
+          diploma_type: (row.diploma_type as string | null) ?? null,
+          niveau: (row.niveau as string | null) ?? null,
+          description: (row.description as string | null) ?? null,
+        };
+      }),
     );
 
     const slug = profile?.target_career_slug ? String(profile.target_career_slug) : null;

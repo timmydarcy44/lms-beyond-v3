@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveLearnerDisplayFirstName } from "@/lib/apprenant/display-first-name";
+import { resolveEffectiveApprenantUserId } from "@/lib/control/learner-preview";
 import {
   buildSalarieDemoSnapshot,
   isSalarieDemoEmail,
@@ -31,9 +32,20 @@ export async function GET(request: Request) {
   }
 
   const db = getServiceRoleClient() ?? authClient;
-  const userId = user.id;
-  const email = (user.email ?? "").trim().toLowerCase();
-  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const { userId, preview } = await resolveEffectiveApprenantUserId(user.id);
+  let email = (user.email ?? "").trim().toLowerCase();
+  let meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  if (preview) {
+    const { data: targetProfile } = await db
+      .from("profiles")
+      .select("email, first_name")
+      .eq("id", userId)
+      .maybeSingle();
+    if (targetProfile?.email) email = String(targetProfile.email).trim().toLowerCase();
+    if (targetProfile?.first_name) {
+      meta = { ...meta, first_name: String(targetProfile.first_name) };
+    }
+  }
 
   const profileIds = await collectLearnerProfileCandidates(db, userId, email);
 

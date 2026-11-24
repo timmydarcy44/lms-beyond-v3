@@ -4,6 +4,7 @@ import {
   learnerSituationLabel,
   resolveLearnerSituation,
 } from "@/lib/apprenant/learner-situation";
+import { resolveEffectiveApprenantUserId } from "@/lib/control/learner-preview";
 import { getServiceRoleClient, getServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,8 @@ export async function GET() {
   const db = getServiceRoleClient() ?? (await getServerClient());
   if (!db) return NextResponse.json({ error: "NO_DB_CLIENT" }, { status: 500 });
 
-  const details = await resolveLearnerSituation(db, session.id);
+  const { userId } = await resolveEffectiveApprenantUserId(session.id);
+  const details = await resolveLearnerSituation(db, userId);
   return NextResponse.json({
     ...details,
     label: learnerSituationLabel(details.situation),

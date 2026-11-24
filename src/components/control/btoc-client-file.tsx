@@ -160,7 +160,11 @@ export function BtocClientFileView({ initial }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Assignation impossible");
-      toast.success("Formation assignée — coffre ouvert");
+      toast.success(
+        json.positionnement_sent
+          ? "Formation assignée — coffre ouvert · positionnement envoyé"
+          : "Formation assignée — coffre ouvert",
+      );
       setAssignOpen(false);
       if (json.client) setFile(json.client);
       else window.location.reload();
@@ -457,54 +461,59 @@ export function BtocClientFileView({ initial }: Props) {
         )}
       </section>
 
-      {file.formations.length > 0 || file.coffres.length > 0 ? (
-        <section id="coffre" className={`${CARD} scroll-mt-28 p-5 sm:p-6`}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-extrabold text-white">
-              Coffre Qualiopi{" "}
-              <span className={`text-sm font-semibold ${MUTED}`}>
-                {coffreTotal ? `${coffreReady} / ${coffreTotal}` : ""}
-              </span>
-            </h2>
-            {activeCoffre ? (
-              <a
-                href={`/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/coffre-zip`}
-                className="rounded-full border border-[#26304F] px-3 py-1.5 text-xs font-semibold text-[#C9D2E8] hover:text-white"
-              >
-                Tout télécharger (ZIP)
-              </a>
-            ) : null}
-          </div>
+      <section id="coffre" className={`${CARD} scroll-mt-28 p-5 sm:p-6`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-extrabold text-white">
+            Coffre Qualiopi{" "}
+            <span className={`text-sm font-semibold ${MUTED}`}>
+              {coffreTotal ? `${coffreReady} / ${coffreTotal}` : ""}
+            </span>
+          </h2>
+          {activeCoffre ? (
+            <a
+              href={`/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/coffre-zip`}
+              className="rounded-full border border-[#26304F] px-3 py-1.5 text-xs font-semibold text-[#C9D2E8] hover:text-white"
+            >
+              Tout télécharger (ZIP)
+            </a>
+          ) : null}
+        </div>
 
-          {file.coffres.length === 0 ? (
-            <p className={`mt-4 text-sm ${MUTED}`}>
-              Aucun coffre encore — l’assignation d’une formation génère le contrat et ouvre le coffre.
-            </p>
-          ) : (
-            <>
-              {file.coffres.length > 1 ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {file.coffres.map((c, i) => (
-                    <button
-                      key={c.dossier_id}
-                      type="button"
-                      onClick={() => setSelectedCoffre(i)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        i === selectedCoffre ? "bg-[#6E5BFF] text-white" : "bg-[#1A2340] text-[#C9D2E8]"
-                      }`}
-                    >
-                      {c.formationTitle}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {activeCoffre ? (
-                <ul className="mt-4 space-y-2">
-                  {activeCoffre.items.map((item) => (
-                    <li
-                      key={item.key}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#1A2340] bg-[#0B1122] px-3 py-2.5"
-                    >
+        {file.coffres.length === 0 ? (
+          <p className={`mt-4 text-sm ${MUTED}`}>
+            Aucun coffre encore — l’assignation d’une formation génère le contrat et ouvre le coffre.
+          </p>
+        ) : (
+          <>
+            {file.coffres.length > 1 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {file.coffres.map((c, i) => (
+                  <button
+                    key={c.dossier_id}
+                    type="button"
+                    onClick={() => setSelectedCoffre(i)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      i === selectedCoffre ? "bg-[#6E5BFF] text-white" : "bg-[#1A2340] text-[#C9D2E8]"
+                    }`}
+                  >
+                    {c.formationTitle}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {activeCoffre ? (
+              <ul className="mt-4 space-y-2">
+                {activeCoffre.items.map((item) => {
+                  const docId = item.document_ids?.[0];
+                  const href = docId
+                    ? `/api/super-admin/crm/formation-documents/${docId}/pdf`
+                    : item.kind && activeCoffre.dossier_id
+                      ? `/api/super-admin/crm/formation-dossiers/${activeCoffre.dossier_id}/documents/${item.kind}/pdf`
+                      : null;
+                  const rowClass =
+                    "flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-[#1A2340] bg-[#0B1122] px-3 py-2.5 text-left transition hover:border-[#6E5BFF]/45";
+                  const body = (
+                    <>
                       <div>
                         <p className="text-sm font-semibold text-white">{item.label}</p>
                         {item.detail ? <p className={`text-xs ${MUTED}`}>{item.detail}</p> : null}
@@ -519,21 +528,34 @@ export function BtocClientFileView({ initial }: Props) {
                         }`}
                       >
                         {item.status === "ready"
-                          ? "OK"
+                          ? href
+                            ? "Ouvrir"
+                            : "OK"
                           : item.status === "partial"
                             ? "Partiel"
                             : item.status === "missing"
                               ? "Manquant"
                               : "Pas dû"}
                       </span>
+                    </>
+                  );
+                  return href ? (
+                    <li key={item.key}>
+                      <a href={href} target="_blank" rel="noreferrer" className={rowClass}>
+                        {body}
+                      </a>
                     </li>
-                  ))}
-                </ul>
-              ) : null}
-            </>
-          )}
-        </section>
-      ) : null}
+                  ) : (
+                    <li key={item.key} className={rowClass}>
+                      {body}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </>
+        )}
+      </section>
 
       {file.formations.length > 0 ? (
         <section id="suivi" className={`${CARD} scroll-mt-28 p-5 sm:p-6`}>

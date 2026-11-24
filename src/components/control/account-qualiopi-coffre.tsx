@@ -8,6 +8,8 @@ type CoffreItem = {
   label: string;
   status: "ready" | "partial" | "missing" | "not_due";
   detail?: string | null;
+  document_ids?: string[];
+  kind?: string | null;
 };
 
 type OrgDoc = {
@@ -236,23 +238,45 @@ export function AccountQualiopiCoffre({ organizationId }: { organizationId: stri
             <ul className="space-y-1.5">
               {selected.items.map((item) => {
                 const tone = STATUS_TONE[item.status];
+                const docId = item.document_ids?.[0];
+                const linkedDoc =
+                  (docId ? selected.documents.find((d) => d.id === docId) : null) ??
+                  (item.kind ? selected.documents.find((d) => d.kind === item.kind) : null) ??
+                  null;
+                const open = () => {
+                  if (linkedDoc) {
+                    openDoc(linkedDoc);
+                    return;
+                  }
+                  if (item.kind) {
+                    setPreview({
+                      title: item.label,
+                      href: `/api/super-admin/crm/formation-dossiers/${selected.dossier_id}/documents/${item.kind}/pdf`,
+                    });
+                  }
+                };
+                const clickable = Boolean(linkedDoc || item.kind);
                 return (
-                  <li
-                    key={item.key}
-                    className="flex items-center justify-between gap-2 rounded-xl bg-[#0B1122] px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm text-[#F2F4FA]">{item.label}</p>
-                      {item.detail ? (
-                        <p className="truncate text-[11px] text-[#6C7593]">{item.detail}</p>
-                      ) : null}
-                    </div>
-                    <span
-                      className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
-                      style={{ background: tone.bg, color: tone.fg }}
+                  <li key={item.key}>
+                    <button
+                      type="button"
+                      disabled={!clickable}
+                      onClick={() => open()}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl bg-[#0B1122] px-3 py-2 text-left transition enabled:hover:bg-[#151C33] disabled:cursor-default"
                     >
-                      {STATUS_LABEL[item.status]}
-                    </span>
+                      <div className="min-w-0">
+                        <p className="text-sm text-[#F2F4FA]">{item.label}</p>
+                        {item.detail ? (
+                          <p className="truncate text-[11px] text-[#6C7593]">{item.detail}</p>
+                        ) : null}
+                      </div>
+                      <span
+                        className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                        style={{ background: tone.bg, color: tone.fg }}
+                      >
+                        {clickable && item.status === "ready" ? "Ouvrir" : STATUS_LABEL[item.status]}
+                      </span>
+                    </button>
                   </li>
                 );
               })}

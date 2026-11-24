@@ -3,6 +3,7 @@ import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { isHandicapPortfolioOnlyRoleType } from "@/lib/auth/school-role-type-guards";
 import { loadBtocClientFile } from "@/lib/control/btoc-client-file";
 import { createFormationDossier } from "@/lib/formation-dossier/create-dossier";
+import { sendAssessmentInvites } from "@/lib/formation-assessments/send";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendEmail } from "@/lib/email/resend-client";
 import { buildEdgeEmailShell, escapeEdgeEmailHtml } from "@/lib/emails/edge-email-shell";
@@ -248,21 +249,50 @@ export async function POST(request: NextRequest, ctx: Ctx) {
       }
     }
 
-    // Dossier Qualiopi si le particulier a une org (sinon enrollment seul)
+    // Dossier Qualiopi : org existante, sinon org personnelle BtoC pour coffre + positionnement
+    let orgId: string | null = null;
     const { data: membership } = await auth.service
       .from("org_memberships")
       .select("org_id")
       .eq("user_id", userId)
       .limit(1)
       .maybeSingle();
+    if (membership?.org_id) {
+      orgId = String(membership.org_id);
+    } else {
+      const contactLabel =
+        [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+        String(profile.full_name ?? profile.email ?? "Particulier");
+      const slugBase = `btoc-${String(profile.email ?? userId)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40)}`;
+      const { data: org, error: orgErr } = await auth.service
+        .from("organizations")
+        .insert({
+          name: `BtoC · ${contactLabel}`,
+          slug: `${slugBase}-${Date.now().toString(36)}`,
+        })
+        .select("id")
+        .single();
+      if (!orgErr && org?.id) {
+        orgId = String(org.id);
+        await auth.service.from("org_memberships").upsert(
+          { org_id: orgId, user_id: userId, role: "learner" },
+          { onConflict: "org_id,user_id" },
+        );
+      }
+    }
 
     let dossierId: string | null = null;
-    if (membership?.org_id) {
+    let positionnementSent = 0;
+    if (orgId) {
       const contactName =
         [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
         String(profile.full_name ?? "");
       const dossier = await createFormationDossier(auth.service, {
-        organizationId: String(membership.org_id),
+        organizationId: orgId,
         source: "manual",
         trainingCourseId,
         courseTitle: String(course.title ?? ""),
@@ -288,6 +318,17 @@ export async function POST(request: NextRequest, ctx: Ctx) {
           role: "learner",
         });
       }
+
+      try {
+        const pos = await sendAssessmentInvites(auth.service, {
+          dossierId,
+          kind: "positionnement",
+          onlyPending: true,
+        });
+        positionnementSent = pos.sent;
+      } catch (e) {
+        console.warn("[btoc/assign] positionnement:", e);
+      }
     }
 
     const client = await loadBtocClientFile(auth.service, userId, {
@@ -296,9 +337,12 @@ export async function POST(request: NextRequest, ctx: Ctx) {
     return NextResponse.json({
       ok: true,
       dossier_id: dossierId,
+      positionnement_sent: positionnementSent,
       warning: dossierId
-        ? null
-        : "Inscription créée. Reliez le particulier à une organisation pour ouvrir le coffre Qualiopi.",
+        ? positionnementSent
+          ? null
+          : "Formation assignée — positionnement non envoyé (vérifier l’e-mail / le template)."
+        : "Inscription créée sans dossier Qualiopi.",
       client,
     });
   }

@@ -90,7 +90,7 @@ export function CreateOrganisationModal({
         throw new Error(msg || "Erreur");
       }
       const orgId = json.organisation_id ?? json.organization_id;
-      toast.success("Organisation créée — invitation envoyée au DRH");
+      toast.success("Organisation créée — envoyez le lien mdp depuis la fiche compte");
       onOpenChange(false);
       if (orgId) onSuccess?.(orgId);
       window.dispatchEvent(new CustomEvent("crm-updated"));
@@ -107,7 +107,8 @@ export function CreateOrganisationModal({
         <DialogHeader>
           <DialogTitle>🚀 Créer l&apos;organisation Beyond</DialogTitle>
           <DialogDescription>
-            Crée l&apos;espace client, envoie l&apos;invitation au DRH et lie le deal CRM.
+            Crée l&apos;espace client et lie le deal CRM. Le mail de création de mot de passe
+            s&apos;envoie ensuite depuis la fiche compte.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -116,7 +117,7 @@ export function CreateOrganisationModal({
             <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Email du DRH / Admin * (invitation envoyée)</Label>
+            <Label>Email du DRH / Admin *</Label>
             <Input type="email" value={drhEmail} onChange={(e) => setDrhEmail(e.target.value)} />
           </div>
           <div className="space-y-2">

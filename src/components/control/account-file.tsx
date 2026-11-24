@@ -146,6 +146,7 @@ export function AccountFile({
   } | null>(null);
   const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [passwordInviteBusy, setPasswordInviteBusy] = useState(false);
   const kpis = useAccountKpis(detail);
 
   useEffect(() => {
@@ -191,8 +192,31 @@ export function AccountFile({
 
   if (!account) return null;
 
-  const adminEmail = detail.members.find((member) => member.role === "admin" && member.email)?.email;
+  const adminMember = detail.members.find((member) => member.role === "admin" && member.email);
+  const adminEmail = adminMember?.email;
+  const adminNeedsPasswordInvite = Boolean(
+    adminMember && (adminMember.invited || !adminMember.lastSeenAt),
+  );
   const headerMeta = accountHeaderMeta(account);
+
+  async function sendAdminPasswordInvite() {
+    if (!account?.id || passwordInviteBusy) return;
+    setPasswordInviteBusy(true);
+    try {
+      const res = await fetch(`/api/super/comptes-clients/${account.id}/send-password-invite`, {
+        method: "POST",
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string; email?: string };
+      if (!res.ok) {
+        setNotice(json.error || "Envoi impossible");
+        return;
+      }
+      setNotice(`Lien mdp envoyé${json.email ? ` à ${json.email}` : ""}.`);
+      router.refresh();
+    } finally {
+      setPasswordInviteBusy(false);
+    }
+  }
   const statusLabel =
     account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer";
   const statusTone =
@@ -214,6 +238,16 @@ export function AccountFile({
       {embedded ? (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <AccountManagerPicker detail={detail} onNotice={setNotice} />
+          {adminEmail ? (
+            <button
+              type="button"
+              disabled={passwordInviteBusy}
+              onClick={() => void sendAdminPasswordInvite()}
+              className="rounded-full border border-[#F2CF6B]/50 bg-[#3A3118] px-4 py-2 text-sm font-semibold text-[#F2CF6B] disabled:opacity-50"
+            >
+              {passwordInviteBusy ? "Envoi…" : "Envoyer le lien mdp"}
+            </button>
+          ) : null}
         </div>
       ) : (
         <header
@@ -267,6 +301,21 @@ export function AccountFile({
             <div className="flex flex-col items-end gap-3">
               <AccountManagerPicker detail={detail} onNotice={setNotice} />
               <div className="flex flex-wrap justify-end gap-2">
+                {adminEmail ? (
+                  <button
+                    type="button"
+                    disabled={passwordInviteBusy}
+                    onClick={() => void sendAdminPasswordInvite()}
+                    className="rounded-full border border-[#F2CF6B]/50 bg-[#3A3118] px-4 py-2 text-sm font-semibold text-[#F2CF6B] disabled:opacity-50"
+                    title={
+                      adminNeedsPasswordInvite
+                        ? "Envoie le lien de création de mot de passe à l’admin"
+                        : "Renvoyer le lien de création de mot de passe"
+                    }
+                  >
+                    {passwordInviteBusy ? "Envoi…" : "Envoyer le lien mdp"}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setRequestWizardOpen(true)}
@@ -307,6 +356,18 @@ export function AccountFile({
                       ) : (
                         <span className="block px-2 py-1.5 text-[#6C7593]">Aucun admin à contacter</span>
                       )}
+                      {adminEmail ? (
+                        <button
+                          type="button"
+                          className="block w-full rounded-xl px-2 py-1.5 text-left"
+                          onClick={() => {
+                            setActionsOpen(false);
+                            void sendAdminPasswordInvite();
+                          }}
+                        >
+                          Envoyer le lien mdp
+                        </button>
+                      ) : null}
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); openInvite(); }}>Inviter</button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); openTab("courses"); }}>Accès LMS</button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>

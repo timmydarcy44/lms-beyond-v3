@@ -245,6 +245,16 @@ export const QUALIOPI_MODALITY_DETAIL_OPTIONS = [
     text: "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones planifiés.",
   },
   {
+    id: "elearning_asynchrone",
+    label: "Formation e-learning asynchrone",
+    text: "Parcours 100 % e-learning asynchrone sur le LMS Byound : modules à son rythme, activités interactives, quiz de validation et ressources téléchargeables. Suivi de progression automatisé ; support pédagogique à distance.",
+  },
+  {
+    id: "elearning_accompagnement",
+    label: "Formation e-learning + accompagnement",
+    text: "Modules e-learning asynchrones complétés par un accompagnement tutoré (visios, messages, points d’étape). Objectifs individualisés, feedbacks réguliers et consolidation en sessions synchrones courtes.",
+  },
+  {
     id: "standard_mixte",
     label: "Parcours mixte (présentiel + digital)",
     text: "Journées en présentiel pour la pratique et le collectif, complétées par des modules digitaux avant/après. Évaluations formatives tout au long du parcours.",

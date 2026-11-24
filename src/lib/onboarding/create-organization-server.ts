@@ -157,60 +157,61 @@ async function resolveAuthUserId(
   return null;
 }
 
-async function inviteDrhUser(
+/**
+ * Crée le compte Auth DRH **sans** envoyer d’e-mail.
+ * L’invitation mot de passe part ensuite via le CTA Control.
+ */
+async function provisionDrhUser(
   service: SupabaseClient,
   params: { email: string; drhName: string; orgId: string },
 ): Promise<string | null> {
   const existingId = await resolveAuthUserId(service, params.email);
   if (existingId) return existingId;
 
-  const origin = appOrigin();
-  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(`/onboarding/${params.orgId}`)}`;
-
-  const { data: invite, error: inviteErr } = await service.auth.admin.inviteUserByEmail(params.email, {
-    data: {
+  const { data: created, error: createErr } = await service.auth.admin.createUser({
+    email: params.email,
+    email_confirm: true,
+    user_metadata: {
       organization_id: params.orgId,
       role: "admin_hr",
       full_name: params.drhName,
       onboarding_pending: true,
     },
-    redirectTo,
   });
 
-  if (!inviteErr && invite?.user?.id) {
-    return invite.user.id;
+  if (!createErr && created?.user?.id) {
+    return created.user.id;
   }
 
-  if (inviteErr) {
-    console.error("[onboarding/invite_drh] inviteUserByEmail:", {
-      message: inviteErr.message,
-      status: inviteErr.status,
-      code: inviteErr.code,
+  if (createErr) {
+    console.error("[onboarding/provision_drh] createUser:", {
+      message: createErr.message,
+      status: createErr.status,
+      code: createErr.code,
       email: params.email,
     });
 
-    if (isEmailAlreadyRegisteredError(inviteErr.message)) {
+    if (isEmailAlreadyRegisteredError(createErr.message)) {
       const existing = await resolveAuthUserId(service, params.email);
       if (existing) {
-        console.log("[onboarding/invite_drh] email déjà en Auth, réutilisation user_id:", existing);
+        console.log("[onboarding/provision_drh] email déjà en Auth, réutilisation user_id:", existing);
         return existing;
       }
       throw stepError(
         "invite_drh",
         "Cet email est déjà enregistré dans Supabase Auth sans profil lié",
-        inviteErr.message,
+        createErr.message,
       );
     }
   }
 
-  const afterInvite = await resolveAuthUserId(service, params.email);
-  if (afterInvite) return afterInvite;
+  const afterCreate = await resolveAuthUserId(service, params.email);
+  if (afterCreate) return afterCreate;
 
   throw stepError(
     "invite_drh",
-    "Invitation DRH impossible",
-    inviteErr?.message ??
-      "Vérifiez SUPABASE_SERVICE_ROLE_KEY et les paramètres Auth (inviteUserByEmail)",
+    "Création du compte DRH impossible",
+    createErr?.message ?? "Vérifiez SUPABASE_SERVICE_ROLE_KEY",
   );
 }
 
@@ -347,7 +348,7 @@ export async function createOrganizationFromDeal(
     const activationLink = `${origin}/onboarding/${orgId}`;
 
     step = "invite_drh";
-    const userId = await inviteDrhUser(service, {
+    const userId = await provisionDrhUser(service, {
       email: body.drh_email,
       drhName: body.drh_name,
       orgId,
@@ -366,7 +367,8 @@ export async function createOrganizationFromDeal(
     step = "link_deal";
     await linkDealToOrganization(service, body.deal_id, orgId, body.drh_email);
 
-    step = "send_emails";
+    // Pas d’e-mail au DRH à la création — CTA « Envoyer le lien mdp » sur la fiche compte.
+    step = "notify_internal";
     try {
       await sendOnboardingEmails({
         companyName: body.company_name,
@@ -376,6 +378,7 @@ export async function createOrganizationFromDeal(
         dealId: body.deal_id,
         organisationId: orgId,
         activationLink,
+        sendDrhWelcome: false,
       });
     } catch (e) {
       console.error("[onboarding] emails:", e);

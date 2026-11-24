@@ -13,16 +13,19 @@ export async function sendOnboardingEmails(params: {
   dealId: string;
   organisationId: string;
   activationLink?: string;
+  /** Si false, n’envoie pas le mail d’activation au DRH (CTA manuel sur la fiche). */
+  sendDrhWelcome?: boolean;
 }) {
   const origin = appOrigin();
   const activationLink =
     params.activationLink ?? `${origin}/onboarding/${params.organisationId}`;
 
-  await sendEmail({
-    from: "Timmy Darcy <noreply@byound.fr>",
-    to: params.drhEmail,
-    subject: `Bienvenue sur Beyond — Votre espace ${params.companyName} est prêt`,
-    html: `
+  if (params.sendDrhWelcome !== false) {
+    await sendEmail({
+      from: "Timmy Darcy <noreply@byound.fr>",
+      to: params.drhEmail,
+      subject: `Bienvenue sur Beyond — Votre espace ${params.companyName} est prêt`,
+      html: `
       <div style="font-family:sans-serif;max-width:600px;line-height:1.5;color:#111">
         <h2>Bonjour ${params.drhName},</h2>
         <p>Votre organisation <strong>${params.companyName}</strong> vient d'être créée sur Beyond.</p>
@@ -36,7 +39,8 @@ export async function sendOnboardingEmails(params: {
         <p>À très bientôt,<br>Darcy — Fondateur Beyond</p>
       </div>
     `,
-  });
+    });
+  }
 
   await sendEmail({
     from: "Beyond <noreply@byound.fr>",
@@ -44,7 +48,7 @@ export async function sendOnboardingEmails(params: {
     subject: `✅ Nouvelle organisation créée : ${params.companyName}`,
     html: `
       <p>Organisation : <strong>${params.companyName}</strong></p>
-      <p>DRH invité : ${params.drhEmail}</p>
+      <p>DRH : ${params.drhEmail}${params.sendDrhWelcome === false ? " (lien mdp non envoyé)" : ""}</p>
       <p>Salariés estimés : ${params.estimatedUsers ?? "—"}</p>
       <p><a href="${origin}/super/crm/pipeline-btob/${params.dealId}">Voir la fiche CRM →</a></p>
       <p><a href="${origin}/dashboard/entreprise?org=${params.organisationId}">Espace entreprise →</a></p>

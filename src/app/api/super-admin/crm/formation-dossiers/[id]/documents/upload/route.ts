@@ -72,26 +72,39 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const uploaded = await uploadFormationPdf(service, { dossierId, kind, buffer });
   if (!uploaded) {
-    return NextResponse.json({ error: "Upload stockage impossible" }, { status: 502 });
+    return NextResponse.json(
+      {
+        error:
+          "Upload stockage impossible (bucket formation-docs). Vérifiez les droits storage Supabase.",
+      },
+      { status: 502 },
+    );
   }
 
-  let { data: existing } = await service
-    .from("formation_documents")
-    .select("id, access_token, status")
-    .eq("dossier_id", dossierId)
-    .eq("kind", kind)
-    .is("participant_id", null)
-    .is("slot_id", null)
-    .maybeSingle();
-
-  if (!existing) {
-    const { data: fallback } = await service
+  // Ne pas filtrer participant_id/slot_id d’abord : certains docs seed n’ont pas ces colonnes renseignées.
+  let existing: { id: string; access_token?: string | null; status?: string | null } | null = null;
+  {
+    const first = await service
       .from("formation_documents")
       .select("id, access_token, status")
       .eq("dossier_id", dossierId)
       .eq("kind", kind)
+      .is("participant_id", null)
+      .is("slot_id", null)
       .maybeSingle();
-    existing = fallback;
+    if (!first.error && first.data) {
+      existing = first.data;
+    } else {
+      const fallback = await service
+        .from("formation_documents")
+        .select("id, access_token, status")
+        .eq("dossier_id", dossierId)
+        .eq("kind", kind)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!fallback.error && fallback.data) existing = fallback.data;
+    }
   }
 
   const now = new Date().toISOString();

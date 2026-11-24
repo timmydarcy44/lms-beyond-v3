@@ -38,17 +38,18 @@ export async function GET() {
     if (preview) {
       const { data: enrollments } = await db
         .from("enrollments")
-        .select("id, course_id, courses ( id, title )")
+        .select("id, course_id, courses ( id, title, slug )")
         .eq("user_id", userId)
         .limit(40);
       for (const enr of enrollments ?? []) {
         const courseId = String((enr as { course_id?: string }).course_id ?? "");
         if (!courseId) continue;
-        const course = (enr as { courses?: { title?: string } | null }).courses;
+        const course = (enr as { courses?: { title?: string; slug?: string } | null }).courses;
+        const slug = course?.slug?.trim() || courseId;
         formations.push({
           id: courseId,
           title: course?.title?.trim() || "Formation",
-          href: `/dashboard/apprenant/cours/${courseId}`,
+          href: `/catalog/formations/${slug}`,
           progress: null,
           meta: null,
           level: null,
@@ -71,15 +72,36 @@ export async function GET() {
         for (const d of dossiers ?? []) {
           const title = String((d as { course_title?: string }).course_title ?? "").trim() || "Formation";
           if (known.has(title.toLowerCase())) continue;
-          const courseId = String((d as { training_course_id?: string | null }).training_course_id ?? "");
+          const trainingCourseId = String(
+            (d as { training_course_id?: string | null }).training_course_id ?? "",
+          );
+          let lmsCourseId: string | null = null;
+          let slug: string | null = null;
+          if (trainingCourseId) {
+            const { data: tc } = await db
+              .from("training_courses")
+              .select("lms_course_id")
+              .eq("id", trainingCourseId)
+              .maybeSingle();
+            lmsCourseId = tc?.lms_course_id ? String(tc.lms_course_id) : null;
+            if (lmsCourseId) {
+              const { data: course } = await db
+                .from("courses")
+                .select("id, slug")
+                .eq("id", lmsCourseId)
+                .maybeSingle();
+              slug = course?.slug ? String(course.slug) : lmsCourseId;
+            }
+          }
+          // Pas de parcours LMS lié → page formations (évite 404 /cours/…).
           formations.push({
-            id: courseId || `dossier-${(d as { id: string }).id}`,
+            id: lmsCourseId || `dossier-${(d as { id: string }).id}`,
             title,
-            href: courseId
-              ? `/dashboard/apprenant/cours/${courseId}`
-              : "/dashboard/apprenant",
+            href: slug
+              ? `/catalog/formations/${slug}`
+              : "/dashboard/apprenant/formations",
             progress: null,
-            meta: "Assignée",
+            meta: lmsCourseId ? "Assignée" : "Assignée · pas de parcours LMS",
             level: null,
           });
           known.add(title.toLowerCase());

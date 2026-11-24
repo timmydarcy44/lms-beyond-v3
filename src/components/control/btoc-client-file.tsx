@@ -87,9 +87,7 @@ export function BtocClientFileView({ initial }: Props) {
   const [selectedCoffre, setSelectedCoffre] = useState(0);
   const [coffreBusyKey, setCoffreBusyKey] = useState<string | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const [uploadTarget, setUploadTarget] = useState<{ dossierId: string; kind: string; itemKey: string } | null>(
-    null,
-  );
+  const uploadTargetRef = useRef<{ dossierId: string; kind: string; itemKey: string } | null>(null);
 
   const conn = lastConnexionTone(file.lastSignInAt);
   const coffreReady = file.coffres.reduce((s, c) => s + c.ready_count, 0);
@@ -257,15 +255,20 @@ export function BtocClientFileView({ initial }: Props) {
   };
 
   const pickUpload = (dossierId: string, kind: string, itemKey: string) => {
-    setUploadTarget({ dossierId, kind, itemKey });
-    queue.queueMicrotask(() => uploadInputRef.current?.click());
+    uploadTargetRef.current = { dossierId, kind, itemKey };
+    // Ref synchrone : le state React n’est pas fiable avant le file picker.
+    uploadInputRef.current?.click();
   };
 
   const onUploadFile = async (fileList: FileList | null) => {
-    const target = uploadTarget;
-    setUploadTarget(null);
+    const target = uploadTargetRef.current;
+    uploadTargetRef.current = null;
     const pdf = fileList?.[0];
-    if (!target || !pdf) return;
+    if (!pdf) return;
+    if (!target) {
+      toast.error("Cible d’upload perdue — réessayez.");
+      return;
+    }
     if (!/\.pdf$/i.test(pdf.name) && pdf.type !== "application/pdf") {
       toast.error("PDF uniquement");
       return;

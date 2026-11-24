@@ -24,6 +24,9 @@ export type AccountMemberPerson = {
   invitedAt: string | null;
   formations: AccountMemberFormation[];
   badges: number;
+  /** DISC + IDMC + soft skills complétés (0–3). */
+  testsDone: number;
+  testsTotal: number;
   lastSeenAt: string | null;
 };
 

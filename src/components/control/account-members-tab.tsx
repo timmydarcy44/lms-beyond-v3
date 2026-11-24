@@ -72,6 +72,18 @@ function connectionStat(lastSeenAt: string | null) {
   return `${Math.floor(days / 30)} mois`;
 }
 
+function testsLabel(person: Pick<AccountMemberPerson, "testsDone" | "testsTotal">) {
+  const done = person.testsDone ?? 0;
+  const total = person.testsTotal ?? 3;
+  return { done, total };
+}
+
+function testsColor(done: number, total: number) {
+  if (done >= total) return "#6BE39B";
+  if (done > 0) return "#F2CF6B";
+  return "#F2F4FA";
+}
+
 function isConnectedThisMonth(lastSeenAt: string | null) {
   if (!lastSeenAt) return false;
   const t = Date.parse(lastSeenAt);
@@ -413,19 +425,21 @@ export function AccountMembersTab({
         </div>
       ) : filtered.length > 0 ? (
         <div className="overflow-hidden rounded-[24px] border border-[#1A2340] bg-[#111831]">
-          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.7fr)_auto] gap-2 px-4 py-3 text-[13px] text-[#6C7593]">
+          <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,.8fr)_minmax(0,.55fr)_minmax(0,.55fr)_minmax(0,.7fr)_auto] gap-2 px-4 py-3 text-[13px] text-[#6C7593]">
             <span>Membre</span>
             <span>Rôle</span>
             <span>Formations</span>
+            <span>Tests</span>
             <span>Connexion</span>
             <span />
           </div>
           {filtered.map((person) => {
             const pill = rolePill(person);
+            const { done, total } = testsLabel(person);
             return (
               <div
                 key={person.userId}
-                className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,.9fr)_minmax(0,.7fr)_minmax(0,.7fr)_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm"
+                className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,.8fr)_minmax(0,.55fr)_minmax(0,.55fr)_minmax(0,.7fr)_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm"
               >
                 <span className="min-w-0">
                   <span
@@ -445,6 +459,9 @@ export function AccountMembersTab({
                 </span>
                 <span style={{ color: person.formations.length ? "#8DB8FF" : "#F2F4FA" }}>
                   {person.formations.length}
+                </span>
+                <span style={{ color: testsColor(done, total) }}>
+                  {done}/{total}
                 </span>
                 <span className="text-xs text-[#9AA3BD]">{connectionStat(person.lastSeenAt)}</span>
                 <button
@@ -513,7 +530,22 @@ export function AccountMembersTab({
       {profilePerson ? (
         <SidePanel title={profilePerson.name} onClose={() => setProfilePerson(null)}>
           <p className="mb-3 text-sm text-[#9AA3BD]">{profilePerson.email}</p>
-          <p className="mb-4 text-sm text-[#C9D2E8]">{rolePill(profilePerson).label}</p>
+          <p className="mb-2 text-sm text-[#C9D2E8]">{rolePill(profilePerson).label}</p>
+          <p className="mb-4 text-sm text-[#C9D2E8]">
+            Tests :{" "}
+            <span
+              className="font-semibold"
+              style={{
+                color: testsColor(
+                  testsLabel(profilePerson).done,
+                  testsLabel(profilePerson).total,
+                ),
+              }}
+            >
+              {testsLabel(profilePerson).done} / {testsLabel(profilePerson).total}
+            </span>
+            <span className="text-[#6C7593]"> (DISC, IDMC, soft skills)</span>
+          </p>
           <ul className="space-y-2 text-sm">
             {profilePerson.formations.length === 0 ? (
               <li className="text-[#6C7593]">Aucune formation</li>
@@ -550,6 +582,7 @@ function MemberCard({
   const shown = person.formations.slice(0, 3);
   const extra = Math.max(0, person.formations.length - 3);
   const isAdmin = !person.invited && roleTone(person.role) === "admin";
+  const { done: testsDone, total: testsTotal } = testsLabel(person);
   const conn = connectedLabel(person.lastSeenAt);
   const footerLeft = person.invited
     ? person.invitedAt
@@ -665,7 +698,7 @@ function MemberCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-[#9AA3BD]">
+      <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs text-[#9AA3BD]">
         <span className="rounded-2xl bg-[#0B1122] p-2">
           <span
             className="block text-sm font-extrabold"
@@ -674,6 +707,12 @@ function MemberCard({
             {person.formations.length}
           </span>
           formation{person.formations.length > 1 ? "s" : ""}
+        </span>
+        <span className="rounded-2xl bg-[#0B1122] p-2">
+          <span className="block text-sm font-extrabold" style={{ color: testsColor(testsDone, testsTotal) }}>
+            {testsDone}/{testsTotal}
+          </span>
+          test{testsTotal > 1 ? "s" : ""}
         </span>
         <span className="rounded-2xl bg-[#0B1122] p-2">
           <span className="block text-sm font-extrabold text-[#F2F4FA]">{person.badges}</span>

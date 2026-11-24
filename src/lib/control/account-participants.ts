@@ -263,6 +263,40 @@ export async function getAccountParticipants(
     );
   }
 
+  // Profils pour compter les 3 tests (membres + employés liés)
+  const testProfileIds = [
+    ...new Set(
+      [
+        ...memberUserIds,
+        ...employees.map((e) => String(e.profile_id ?? "").trim()).filter(Boolean),
+      ].filter(Boolean),
+    ),
+  ];
+  const testsDoneByProfile = new Map<string, number>();
+  if (testProfileIds.length) {
+    const [disc, idmc, softLearner, softEmployee] = await Promise.all([
+      db.from("disc_resultats").select("profile_id").in("profile_id", testProfileIds),
+      db.from("idmc_resultats").select("profile_id").in("profile_id", testProfileIds),
+      db.from("soft_skills_resultats").select("learner_id").in("learner_id", testProfileIds),
+      db.from("soft_skills_resultats_salarie").select("learner_id").in("learner_id", testProfileIds),
+    ]);
+    const discIds = new Set((disc.data ?? []).map((row) => String((row as { profile_id?: string }).profile_id ?? "")));
+    const idmcIds = new Set((idmc.data ?? []).map((row) => String((row as { profile_id?: string }).profile_id ?? "")));
+    const softIds = new Set([
+      ...(softLearner.data ?? []).map((row) => String((row as { learner_id?: string }).learner_id ?? "")),
+      ...(softEmployee.data ?? []).map((row) => String((row as { learner_id?: string }).learner_id ?? "")),
+    ]);
+    for (const id of testProfileIds) {
+      let n = 0;
+      if (discIds.has(id)) n += 1;
+      if (idmcIds.has(id)) n += 1;
+      if (softIds.has(id)) n += 1;
+      testsDoneByProfile.set(id, n);
+    }
+  }
+
+  const TESTS_TOTAL = 3;
+
   const members: AccountMemberPerson[] = memberships.map((member) => {
     const profile = profileMap.get(member.user_id);
     const email = String(profile?.email || profile?.reference_email || "");
@@ -289,6 +323,8 @@ export async function getAccountParticipants(
     const formations = (formationsByMember.get(member.user_id) ?? []).sort((a, b) =>
       (a.nextDate || "9999").localeCompare(b.nextDate || "9999"),
     );
+    const testProfileId =
+      String(emp?.profile_id ?? "").trim() || member.user_id;
     return {
       userId: member.user_id,
       employeeId: emp?.id ? String(emp.id) : null,
@@ -303,6 +339,8 @@ export async function getAccountParticipants(
       invitedAt: null,
       formations,
       badges: badgesByUser.get(member.user_id) ?? 0,
+      testsDone: testsDoneByProfile.get(testProfileId) ?? 0,
+      testsTotal: TESTS_TOTAL,
       lastSeenAt: lastSeenMap.get(member.user_id) ?? null,
     };
   });
@@ -314,6 +352,7 @@ export async function getAccountParticipants(
     if (emp.status === "inactive") continue;
     const name =
       formatPersonName([emp.first_name, emp.last_name].filter(Boolean).join(" ")) || "Invitation";
+    const testProfileId = String(emp.profile_id ?? "").trim();
     members.push({
       userId: `employee:${emp.id}`,
       employeeId: String(emp.id),
@@ -328,6 +367,8 @@ export async function getAccountParticipants(
       invitedAt: emp.created_at ? String(emp.created_at) : null,
       formations: [],
       badges: 0,
+      testsDone: testProfileId ? (testsDoneByProfile.get(testProfileId) ?? 0) : 0,
+      testsTotal: TESTS_TOTAL,
       lastSeenAt: null,
     });
   }

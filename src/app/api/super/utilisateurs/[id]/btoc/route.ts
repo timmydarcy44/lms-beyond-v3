@@ -10,7 +10,7 @@ import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-type Ctx = { params: Promise<{ userId: string }> };
+type Ctx = { params: Promise<{ id: string }> };
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest, ctx: Ctx) {
   const auth = await requireStaff();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { userId } = await ctx.params;
+  const { id: userId } = await ctx.params;
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
   const email = String(body.email ?? "").trim().toLowerCase();
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest, ctx: Ctx) {
   const auth = await requireStaff();
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { userId } = await ctx.params;
+  const { id: userId } = await ctx.params;
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const action = String(body.action ?? "");
 

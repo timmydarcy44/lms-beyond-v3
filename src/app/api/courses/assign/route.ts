@@ -73,8 +73,21 @@ export async function POST(req: Request) {
     ? await userCanManageOrgFormations(readClient, user.id, requestOrgId)
     : false;
 
-  // Catalogue Byound → RH peut assigner une formation publiée à SES collaborateurs
-  const catalogueOk = allowCatalogueAssign && canManageRequestOrg && isPublished;
+  // Parcours LMS mis à disposition (organization_lms_courses) — même droit que catalogue
+  let hasLmsGrant = false;
+  if (requestOrgId && canManageRequestOrg && isPublished && !isOwner && !canManageCourseOrg) {
+    const { data: grant } = await readClient
+      .from("organization_lms_courses")
+      .select("course_id")
+      .eq("organization_id", requestOrgId)
+      .eq("course_id", courseId)
+      .maybeSingle();
+    hasLmsGrant = Boolean(grant?.course_id);
+  }
+
+  // Catalogue Byound / grant LMS → RH peut assigner une formation publiée à SES collaborateurs
+  const catalogueOk =
+    ((allowCatalogueAssign && canManageRequestOrg) || hasLmsGrant) && isPublished;
 
   if (!isOwner && !canManageCourseOrg && !catalogueOk) {
     return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 });

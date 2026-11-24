@@ -67,6 +67,8 @@ export function OrgFormationCards({
             learnerIds: Array.from(selected),
             orgId,
             scopeOrgOnly: true,
+            // Parcours LMS (grant) : course.org_id ≠ org RH → même flag que le catalogue
+            ...(openFor.source === "lms_grant" ? { allowCatalogueAssign: true } : {}),
           }),
         });
         const json = await res.json().catch(() => ({}));

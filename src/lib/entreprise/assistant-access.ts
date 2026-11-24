@@ -2,6 +2,7 @@ import { isByoundBusinessManager } from "@/lib/auth/byound-business-manager";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getCurrentProfileWithAccess } from "@/lib/auth/profile";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { readImpersonationContext } from "@/lib/control/session";
 import { EDGEBS_ORG_ID } from "@/lib/entreprise/edgebs-demo-data";
 
 /** Rôles RH entreprise autorisés (exclut admin plateforme / super_admin). */
@@ -19,6 +20,21 @@ export async function resolveEntrepriseAssistantAccess(): Promise<EntrepriseAssi
   }
 
   const managerEmail = user.email ?? profile.email ?? null;
+
+  // Staff « Voir comme le client » — avant EdgeBS / super-admin redirect
+  const impersonation = await readImpersonationContext();
+  if (impersonation && !impersonation.expired && impersonation.staffId === user.id) {
+    if (isJadeDemoEmail(managerEmail) || !(await isSuperAdmin())) {
+      return { ok: false, error: "Session d'accompagnement refusée", status: 403 };
+    }
+    return {
+      ok: true,
+      userId: user.id,
+      organizationId: impersonation.orgId,
+      email: managerEmail,
+    };
+  }
+
   if (isJadeDemoEmail(managerEmail)) {
     return { ok: true, userId: user.id, organizationId: EDGEBS_ORG_ID, email: managerEmail };
   }

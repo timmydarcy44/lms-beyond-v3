@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { MetalBadgeCard } from "@/components/openbadges/metal-badge-card";
-import { REASON_CODES } from "@/lib/control/constants";
 import { formatEuroDelta, formatEurosHt, summarizeRevenue, type BillingDoc } from "@/lib/control/policy";
+import { startClientView } from "@/lib/control/start-client-view";
 import type { loadAccountDetail } from "@/lib/control/load";
 import { DisabledTip, EmptyState, Field, KpiCard, SegmentedFilter, SidePanel, fieldClass } from "./chrome";
 import { AccountFormationRequestWizard } from "./account-formation-request-wizard";
@@ -138,7 +138,7 @@ export function AccountFile({
     return "overview";
   });
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | "space" | null>(null);
+  const [panel, setPanel] = useState<"invite" | "course" | "badge" | "import" | null>(null);
   const [invitePrefill, setInvitePrefill] = useState<{
     firstName?: string;
     lastName?: string;
@@ -147,6 +147,7 @@ export function AccountFile({
   const [requestWizardOpen, setRequestWizardOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [passwordInviteBusy, setPasswordInviteBusy] = useState(false);
+  const [clientViewBusy, setClientViewBusy] = useState(false);
   const kpis = useAccountKpis(detail);
 
   useEffect(() => {
@@ -163,15 +164,24 @@ export function AccountFile({
   }, [initialDealId]);
 
   const activeNav = navFromTab(tab);
-  const hasAdmin = detail.members.some((member) => member.role === "admin" && member.email.includes("@"));
-  const needsConfig = account?.status !== "active" && account?.status !== "demo";
   const spaceReason = !detail.schemaReady
-    ? "L'ouverture d'espace n'est pas encore disponible."
-    : needsConfig
-      ? "Ce compte est encore « À configurer ». Finalisez la mise en route (admin, modules) avant d'ouvrir son espace."
-      : !hasAdmin
-        ? "Aucun administrateur actif sur ce compte. Invitez un administrateur pour pouvoir ouvrir l'espace."
-        : null;
+    ? "L'ouverture d'espace n'est pas encore disponible (migration comptes clients)."
+    : null;
+
+  async function openClientView() {
+    if (!account?.id || clientViewBusy || spaceReason) return;
+    setClientViewBusy(true);
+    try {
+      const result = await startClientView(account.id);
+      if (!result.ok) {
+        setNotice(result.error);
+        return;
+      }
+      window.location.href = "/dashboard/entreprise";
+    } finally {
+      setClientViewBusy(false);
+    }
+  }
 
   function openInvite(prefill?: { firstName?: string; lastName?: string; email?: string }) {
     setInvitePrefill(prefill ?? null);
@@ -248,6 +258,18 @@ export function AccountFile({
               {passwordInviteBusy ? "Envoi…" : "Envoyer le lien mdp"}
             </button>
           ) : null}
+          {spaceReason ? (
+            <DisabledTip label="Voir comme le client ↗" reason={spaceReason} variant="primary" />
+          ) : (
+            <button
+              type="button"
+              disabled={clientViewBusy}
+              onClick={() => void openClientView()}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] disabled:opacity-50"
+            >
+              {clientViewBusy ? "Ouverture…" : "Voir comme le client ↗"}
+            </button>
+          )}
         </div>
       ) : (
         <header
@@ -324,14 +346,16 @@ export function AccountFile({
                   ＋ Demande de formation
                 </button>
                 {spaceReason ? (
-                  <DisabledTip label="Ouvrir son espace ↗" reason={spaceReason} variant="primary" />
+                  <DisabledTip label="Voir comme le client ↗" reason={spaceReason} variant="primary" />
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setPanel("space")}
-                    className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]"
+                    disabled={clientViewBusy}
+                    onClick={() => void openClientView()}
+                    className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E] disabled:opacity-50"
+                    title="Ouvre le tableau de bord entreprise tel que le client le voit (lecture seule)"
                   >
-                    Ouvrir son espace ↗
+                    {clientViewBusy ? "Ouverture…" : "Voir comme le client ↗"}
                   </button>
                 )}
                 <span className="relative">
@@ -471,7 +495,6 @@ export function AccountFile({
       {panel === "course" ? <AssignPanel orgId={account.id} courses={detail.lmsCourses} people={detail.people} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "badge" ? <BadgePanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
       {panel === "import" ? <ImportPanel orgId={account.id} onClose={() => setPanel(null)} onDone={(message) => { setNotice(message); router.refresh(); }} /> : null}
-      {panel === "space" ? <SpaceDialog orgId={account.id} orgName={account.name} onClose={() => setPanel(null)} /> : null}
       {requestWizardOpen ? (
         <AccountFormationRequestWizard
           orgId={account.id}
@@ -1295,20 +1318,3 @@ function ImportPanel({ orgId, onClose, onDone }: { orgId: string; onClose: () =>
   );
 }
 
-function SpaceDialog({ orgId, orgName, onClose }: { orgId: string; orgName: string; onClose: () => void }) {
-  const [reasonCode, setReasonCode] = useState("client_request");
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <SidePanel title={`Ouvrir l'espace de ${orgName}`} onClose={onClose}>
-      <p className="mb-3 text-sm text-[#C9D2E8]">L'espace s'ouvre en lecture. Votre session Byound ne change pas.</p>
-      <Field label="Motif, si vous passez ensuite en modification"><select value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} className={fieldClass}>{REASON_CODES.map((reason) => <option key={reason.code} value={reason.code}>{reason.label}</option>)}</select></Field>
-      {error ? <p className="mb-3 text-sm text-[#FF8A9B]">{error}</p> : null}
-      <button type="button" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]" onClick={async () => {
-        const response = await fetch("/api/super/impersonation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgId, mode: "read", reasonCode }) });
-        const json = (await response.json()) as { error?: string };
-        if (!response.ok) { setError(json.error || "Ouverture impossible"); return; }
-        window.location.href = "/dashboard/entreprise";
-      }}>Ouvrir en lecture</button>
-    </SidePanel>
-  );
-}

@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 import { EmptyState } from "@/components/control/chrome";
 import { DataTable, StatusPill } from "@/components/control/ui";
 import { formatEuroDelta, formatEurosHt } from "@/lib/control/policy";
+import { startClientView } from "@/lib/control/start-client-view";
 import type { ControlAccount, ControlCockpit } from "@/lib/control/load";
 
 const VIEW_STORAGE_KEY = "byound.accounts.view";
@@ -91,6 +92,23 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("list");
+  const [clientViewBusyId, setClientViewBusyId] = useState<string | null>(null);
+
+  async function openAsClient(orgId: string) {
+    if (clientViewBusyId) return;
+    setClientViewBusyId(orgId);
+    setOpenMenu(null);
+    try {
+      const result = await startClientView(orgId);
+      if (!result.ok) {
+        window.alert(result.error);
+        return;
+      }
+      window.location.href = "/dashboard/entreprise";
+    } finally {
+      setClientViewBusyId(null);
+    }
+  }
 
   useEffect(() => {
     try {
@@ -408,7 +426,15 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
                     ⋯
                   </button>
                   {openMenu === account.id ? (
-                    <span className="absolute right-0 top-8 z-10 w-44 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-sm" onClick={(event) => event.stopPropagation()}>
+                    <span className="absolute right-0 top-8 z-10 w-52 rounded-2xl border border-[#26304F] bg-[#0B1122] p-2 text-sm" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="block w-full rounded-xl px-2 py-1.5 text-left font-semibold text-[#C9C2FF]"
+                        disabled={clientViewBusyId === account.id}
+                        onClick={() => void openAsClient(account.id)}
+                      >
+                        {clientViewBusyId === account.id ? "Ouverture…" : "Voir comme le client"}
+                      </button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { void navigator.clipboard.writeText(account.id); setCopied(account.id); }}>
                         {copied === account.id ? "Identifiant copié" : "Copier l'identifiant"}
                       </button>

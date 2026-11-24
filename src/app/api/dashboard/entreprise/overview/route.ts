@@ -58,6 +58,18 @@ function buildOverviewEmployeeStatus(
 }
 
 export async function GET() {
+  try {
+    return await buildOverviewResponse();
+  } catch (error) {
+    console.error("[dashboard/entreprise/overview] unexpected", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erreur de chargement" },
+      { status: 500 },
+    );
+  }
+}
+
+async function buildOverviewResponse() {
   const access = await resolveEntrepriseOverviewAccess();
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status });
@@ -177,12 +189,27 @@ export async function GET() {
         .maybeSingle();
       if (orgMinimalErr || !orgMinimal) {
         console.error("[dashboard/entreprise/overview] org", orgMinimalErr ?? orgErr);
-        return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
+        // Soft-fail : éviter « Erreur de chargement » sidebar / layout pour un orgId orphelin
+        return NextResponse.json({
+          configuration_required: true,
+          needsOnboarding: true,
+          viewer: access.viewer,
+          onboarding_href: "/onboarding",
+          ...buildEmptyEntrepriseOverviewPayload(access.viewer),
+          organisation: { id: orgId, name: "Mon organisation", logo_url: null, formation_only: false },
+        });
       }
       orgRow = orgMinimal;
     } else {
       console.error("[dashboard/entreprise/overview] org", orgErr);
-      return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
+      return NextResponse.json({
+        configuration_required: true,
+        needsOnboarding: true,
+        viewer: access.viewer,
+        onboarding_href: "/onboarding",
+        ...buildEmptyEntrepriseOverviewPayload(access.viewer),
+        organisation: { id: orgId, name: "Mon organisation", logo_url: null, formation_only: false },
+      });
     }
   }
   if (empErr) console.error("[dashboard/entreprise/overview] employees", empErr);

@@ -426,7 +426,7 @@ export function EnterpriseMobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const overviewCtx = useOptionalEnterpriseOverviewContext();
-  const orgName = overviewCtx?.data?.organisation?.name || "Beyond Enterprise";
+  const orgName = overviewCtx?.data?.organisation?.name?.trim() || "Mon organisation";
   const orgLogo = overviewCtx?.data?.organisation?.logo_url || null;
   const [sessionOnly, setSessionOnly] = useState(false);
   useEffect(() => {
@@ -593,6 +593,8 @@ export default function EnterpriseSidebar() {
   }, [viewer]);
 
   const initials = viewerInitials(viewer.prenom, viewer.nom, viewer.email);
+  const orgName = overviewData?.organisation?.name?.trim() || "Mon organisation";
+  const orgLogo = overviewData?.organisation?.logo_url || null;
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !(prev[label] ?? false) }));
@@ -604,15 +606,15 @@ export default function EnterpriseSidebar() {
     >
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-[12px] font-extrabold text-[#070C1C]">
-          {overviewData?.organisation?.logo_url ? (
+          {orgLogo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={overviewData.organisation.logo_url} alt="" className="h-full w-full object-cover" />
+            <img src={orgLogo} alt="" className="h-full w-full object-cover" />
           ) : (
-            (overviewData?.organisation?.name || "Byound").slice(0, 2).toUpperCase()
+            orgName.slice(0, 2).toUpperCase()
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-extrabold text-white">Byound Business</p>
+          <p className="truncate text-[15px] font-extrabold text-white">{orgName}</p>
           <p className="text-[12px] text-[#9096A3]">Powered by Byound</p>
         </div>
       </div>

@@ -30,15 +30,24 @@ export function parsePrivateStorageRef(
 export async function uploadFormationPdf(
   service: SupabaseClient,
   params: { dossierId: string; kind: string; buffer: Buffer },
-): Promise<{ bucket: string; path: string; fileUrl: string } | null> {
+): Promise<{ bucket: string; path: string; fileUrl: string; error?: string } | null> {
   const objectId = newDocToken();
   // Chemin opaque : pas de dossierId complet énumérable
   const path = `${objectId}/${params.kind}.pdf`;
 
-  try {
-    await service.storage.createBucket(FORMATION_DOCS_BUCKET, { public: false });
-  } catch {
-    /* existe déjà */
+  // createBucket renvoie { error } (ne throw pas) — s’assurer que le bucket existe.
+  const listed = await service.storage.listBuckets();
+  const exists = (listed.data ?? []).some((b) => b.name === FORMATION_DOCS_BUCKET);
+  if (!exists) {
+    const created = await service.storage.createBucket(FORMATION_DOCS_BUCKET, {
+      public: false,
+      fileSizeLimit: "25MB",
+      allowedMimeTypes: ["application/pdf"],
+    });
+    if (created.error && !/already exists|duplicate/i.test(created.error.message)) {
+      console.warn("[formation-docs/storage] createBucket:", created.error.message);
+      return null;
+    }
   }
 
   const { error } = await service.storage.from(FORMATION_DOCS_BUCKET).upload(path, params.buffer, {

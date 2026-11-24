@@ -83,19 +83,29 @@ function memberAccessFooter(person: AccountMemberPerson) {
   }
   const when = formatFullDate(person.lastSignInAt);
   if (when) {
+    const isAdmin = ["admin", "owner", "admin_hr", "rh", "entreprise"].includes(
+      String(person.role ?? "").toLowerCase(),
+    );
     return {
-      label: `Mot de passe créé · Dernière connexion le ${when}`,
+      label: isAdmin
+        ? `Compte créé · Dernière connexion le ${when}`
+        : `Mot de passe créé · Dernière connexion le ${when}`,
       color: "#6BE39B",
     };
   }
   if (person.passwordSet === true) {
+    const isAdmin = ["admin", "owner", "admin_hr", "rh", "entreprise"].includes(
+      String(person.role ?? "").toLowerCase(),
+    );
     return {
-      label: "Mot de passe créé · Pas encore de connexion Auth",
+      label: isAdmin
+        ? "Compte créé · Pas encore de connexion"
+        : "Mot de passe créé · Pas encore de connexion Auth",
       color: "#F2CF6B",
     };
   }
-  // Auth introuvable
-  return { label: "Compte sans statut Auth", color: "#F2CF6B" };
+  // Auth introuvable (ne devrait plus arriver pour un admin qui s’est inscrit)
+  return { label: "Statut de connexion indisponible", color: "#F2CF6B" };
 }
 
 function testsLabel(person: Pick<AccountMemberPerson, "testsDone" | "testsTotal">) {

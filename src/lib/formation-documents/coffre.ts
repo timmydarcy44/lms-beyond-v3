@@ -47,6 +47,11 @@ function hasFile(d: DocRow | undefined): boolean {
   return Boolean(d && (d.file_url || d.storage_path || d.generated_at || d.signed_at));
 }
 
+/** Fichier réellement stocké (upload staff / génération PDF), pas seulement une ligne seed. */
+function hasStoredFile(d: DocRow | undefined): boolean {
+  return Boolean(d && (d.file_url || d.storage_path));
+}
+
 function isSignedDoc(d: DocRow | undefined): boolean {
   if (!d) return false;
   return d.status === "signed" || Boolean(d.signed_at);
@@ -196,7 +201,8 @@ export async function buildCoffreSnapshot(
     {
       key: "devis",
       label: "Devis signé",
-      status: devisSigned
+      // Upload staff (PDF déjà signé) = Déposé ; signature OTP = aussi Déposé.
+      status: devisSigned || hasStoredFile(devis)
         ? "ready"
         : preuveDevis.length
           ? "partial"
@@ -207,16 +213,18 @@ export async function buildCoffreSnapshot(
         ? `Signé${devis?.signer_name ? ` · ${devis.signer_name}` : ""}${
             devis?.acceptance_method ? ` · ${devis.acceptance_method}` : ""
           }${devis?.signed_at ? ` · ${new Date(String(devis.signed_at)).toLocaleDateString("fr-FR")}` : ""}`
-        : hasFile(devis)
-          ? `Statut ${devis?.status || "—"}`
-          : null,
+        : hasStoredFile(devis)
+          ? "PDF déposé"
+          : hasFile(devis)
+            ? `Statut ${devis?.status || "—"}`
+            : null,
       document_ids: devis ? [devis.id] : [],
       kind: "devis",
     },
     {
       key: "convention",
       label: "Convention signée",
-      status: conventionSigned
+      status: conventionSigned || hasStoredFile(convention)
         ? "ready"
         : preuveConvention.length
           ? "partial"
@@ -229,9 +237,11 @@ export async function buildCoffreSnapshot(
               ? ` · ${new Date(String(convention.signed_at)).toLocaleDateString("fr-FR")}`
               : ""
           }`
-        : hasFile(convention)
-          ? `Statut ${convention?.status || "—"}`
-          : null,
+        : hasStoredFile(convention)
+          ? "PDF déposé"
+          : hasFile(convention)
+            ? `Statut ${convention?.status || "—"}`
+            : null,
       document_ids: convention ? [convention.id] : [],
       kind: "convention",
     },

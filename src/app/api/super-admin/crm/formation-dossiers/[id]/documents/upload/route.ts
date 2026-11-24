@@ -111,11 +111,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const accessToken =
     (existing as { access_token?: string | null } | null)?.access_token || newDocToken();
   // Contrainte SQL : to_generate | sent | opened | signed (pas "ready").
+  // Dépôt staff d’un devis/convention déjà signé → signed (pastille Déposé).
+  const staffSignedKinds = new Set(["devis", "convention", "preuve_devis", "preuve_convention"]);
   const prevStatus = String(
     (existing as { status?: string | null } | null)?.status ?? "to_generate",
   );
-  const nextStatus = ["opened", "signed"].includes(prevStatus) ? prevStatus : "sent";
-  const payload = {
+  const nextStatus = staffSignedKinds.has(kind)
+    ? "signed"
+    : ["opened", "signed"].includes(prevStatus)
+      ? prevStatus
+      : "sent";
+  const payload: Record<string, unknown> = {
     dossier_id: dossierId,
     kind,
     title: resolveTitle(kind),
@@ -127,6 +133,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     generated_at: now,
     updated_at: now,
   };
+  if (nextStatus === "signed") {
+    payload.signed_at = now;
+    payload.acceptance_method = "staff_upload";
+  }
 
   if (existing?.id) {
     const { data, error } = await service
@@ -135,7 +145,23 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       .eq("id", existing.id)
       .select("id, kind, title, status")
       .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      // Colonnes storage absentes en prod → retry sans storage_* .
+      if (/storage_(path|bucket)/i.test(error.message)) {
+        const slim = { ...payload };
+        delete slim.storage_bucket;
+        delete slim.storage_path;
+        const retry = await service
+          .from("formation_documents")
+          .update(slim)
+          .eq("id", existing.id)
+          .select("id, kind, title, status")
+          .single();
+        if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 400 });
+        return NextResponse.json({ ok: true, document: retry.data });
+      }
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ ok: true, document: data });
   }
 
@@ -144,6 +170,20 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     .insert(payload)
     .select("id, kind, title, status")
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    if (/storage_(path|bucket)/i.test(error.message)) {
+      const slim = { ...payload };
+      delete slim.storage_bucket;
+      delete slim.storage_path;
+      const retry = await service
+        .from("formation_documents")
+        .insert(slim)
+        .select("id, kind, title, status")
+        .single();
+      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 400 });
+      return NextResponse.json({ ok: true, document: retry.data });
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
   return NextResponse.json({ ok: true, document: data });
 }

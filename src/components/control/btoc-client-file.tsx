@@ -257,22 +257,29 @@ export function BtocClientFileView({ initial }: Props) {
   const pickUpload = (dossierId: string, kind: string, itemKey: string) => {
     uploadTargetRef.current = { dossierId, kind, itemKey };
     // Ref synchrone : le state React n’est pas fiable avant le file picker.
-    uploadInputRef.current?.click();
+    const input = uploadInputRef.current;
+    if (!input) {
+      toast.error("Sélecteur de fichier indisponible — rechargez la page.");
+      return;
+    }
+    input.value = "";
+    input.click();
   };
 
   const onUploadFile = async (fileList: FileList | null) => {
     const target = uploadTargetRef.current;
-    uploadTargetRef.current = null;
     const pdf = fileList?.[0];
     if (!pdf) return;
     if (!target) {
       toast.error("Cible d’upload perdue — réessayez.");
       return;
     }
+    // Ne clear la cible qu’après validation fichier, pour pouvoir réessayer.
     if (!/\.pdf$/i.test(pdf.name) && pdf.type !== "application/pdf") {
       toast.error("PDF uniquement");
       return;
     }
+    uploadTargetRef.current = null;
     setCoffreBusyKey(`upload:${target.itemKey}`);
     try {
       const form = new FormData();
@@ -283,7 +290,7 @@ export function BtocClientFileView({ initial }: Props) {
         { method: "POST", body: form },
       );
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || "Upload impossible");
+      if (!res.ok) throw new Error(json.error || `Upload impossible (${res.status})`);
       toast.success("Document déposé dans le coffre");
       await refreshClient();
     } catch (e) {

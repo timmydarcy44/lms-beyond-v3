@@ -1,5 +1,3 @@
-"use server";
-
 type AuthUserRow = {
   id: string;
   last_sign_in_at?: string | null;
@@ -65,8 +63,9 @@ export async function fetchAuthAccessStatusForUserIds(
   const map = new Map<string, AuthAccessStatus>();
   if (userIds.length === 0) return map;
 
-  const getUserById = supabase.auth?.admin?.getUserById;
-  if (!getUserById) return map;
+  // Ne pas extraire getUserById hors de admin : sinon `this` est perdu et Auth échoue.
+  const admin = supabase.auth?.admin;
+  if (!admin?.getUserById) return map;
 
   const batchSize = 20;
   for (let i = 0; i < userIds.length; i += batchSize) {
@@ -74,7 +73,7 @@ export async function fetchAuthAccessStatusForUserIds(
     const results = await Promise.all(
       batch.map(async (id) => {
         try {
-          const { data, error } = await getUserById(id);
+          const { data, error } = await admin.getUserById(id);
           if (error) {
             console.error("[fetchAuthAccessStatusForUserIds] getUserById", id, error.message ?? error);
             return { id, status: statusFromAuthUser(null) };

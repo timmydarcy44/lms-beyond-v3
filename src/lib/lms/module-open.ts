@@ -120,32 +120,50 @@ export function scheduleLockForModule(
   if (rule.mode === "date") {
     if (!rule.date) return "Ce module s’ouvre à une date précise.";
     if (parisDay(ctx.now) >= rule.date) return null;
-    return `Ce module s’ouvre le ${formatOpenDate(rule.date)}.`;
+    return `Fermé jusqu’au ${formatOpenDate(rule.date)}. Vous serez prévenu(e) par e-mail à l’ouverture.`;
   }
 
   const delay = delayWords(rule.amount, rule.unit);
   if (rule.mode === "enrollment") {
     if (!ctx.ready) {
-      return delay ? `Ce module s’ouvre ${delay} après ton inscription.` : "Ce module s’ouvre dès ton inscription.";
+      return delay
+        ? `Fermé pendant ${delay} après ton inscription. Vous serez prévenu(e) par e-mail à l’ouverture.`
+        : "Ce module s’ouvre dès ton inscription.";
     }
     if (ctx.enrolledAt === undefined) return null;
     if (ctx.enrolledAt == null) {
-      return delay ? `Ce module s’ouvre ${delay} après ton inscription.` : "Ce module s’ouvre dès ton inscription.";
+      return delay
+        ? `Fermé pendant ${delay} après ton inscription. Vous serez prévenu(e) par e-mail à l’ouverture.`
+        : "Ce module s’ouvre dès ton inscription.";
     }
     const opens = addDelay(ctx.enrolledAt, rule.amount, rule.unit);
     if (ctx.now >= opens) return null;
-    return `Ce module s’ouvre le ${formatOpenDay(opens)}.`;
+    return `Fermé jusqu’au ${formatOpenDay(opens)}. Vous serez prévenu(e) par e-mail à l’ouverture.`;
   }
 
   const finished = ctx.ready ? moduleFinishedAt(modules[moduleIndex - 1], ctx) : null;
   if (!ctx.ready || finished == null) {
     return delay
-      ? `Ce module s’ouvre ${delay} après la fin du module précédent.`
+      ? `Fermé pendant ${delay} après la fin du module précédent. Vous serez prévenu(e) par e-mail à l’ouverture.`
       : "Ce module s’ouvre à la fin du module précédent.";
   }
   const opens = addDelay(finished, rule.amount, rule.unit);
   if (ctx.now >= opens) return null;
-  return `Ce module s’ouvre le ${formatOpenDay(opens)}.`;
+  return `Fermé jusqu’au ${formatOpenDay(opens)}. Vous serez prévenu(e) par e-mail à l’ouverture.`;
+}
+
+/** Date d’ouverture calculée (ms) pour un module en mode previous, ou null. */
+export function scheduleOpenAtForModule(
+  modules: ScheduleModule[],
+  moduleIndex: number,
+  ctx: ScheduleContext,
+): number | null {
+  if (moduleIndex <= 0 || moduleIndex >= modules.length) return null;
+  const rule = readModuleOpenRule(modules[moduleIndex]?.openRule);
+  if (rule.mode !== "previous") return null;
+  const finished = moduleFinishedAt(modules[moduleIndex - 1], ctx);
+  if (finished == null) return null;
+  return addDelay(finished, rule.amount, rule.unit);
 }
 
 export function scheduleLockForLesson(

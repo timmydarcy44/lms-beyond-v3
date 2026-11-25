@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { maybeNotifyModuleScheduleAfterLeaf } from "@/lib/lms/maybe-notify-module-schedule";
 import { getServerClient, getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -11,7 +12,11 @@ export async function POST(request: NextRequest) {
   const userId = authData?.user?.id;
   if (!userId) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const body = (await request.json().catch(() => null)) as { courseId?: string; leafId?: string; leafTitle?: string } | null;
+  const body = (await request.json().catch(() => null)) as {
+    courseId?: string;
+    leafId?: string;
+    leafTitle?: string;
+  } | null;
   const courseId = String(body?.courseId ?? "").trim();
   const leafId = String(body?.leafId ?? "").trim();
   const leafTitle = String(body?.leafTitle ?? "").trim().slice(0, 240) || null;
@@ -35,5 +40,12 @@ export async function POST(request: NextRequest) {
     console.error("[leaf-completion]", error.code, error.message);
     return NextResponse.json({ saved: false, error: error.message }, { status: 200 });
   }
+
+  try {
+    await maybeNotifyModuleScheduleAfterLeaf({ db, userId, courseId, leafId });
+  } catch (e) {
+    console.error("[leaf-completion] module-schedule-notice", e);
+  }
+
   return NextResponse.json({ saved: true });
 }

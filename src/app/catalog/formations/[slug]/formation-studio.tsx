@@ -684,11 +684,11 @@ export function FormationStudio({
                       const nodeDone = node.leaves.filter((leaf) => isDone(leaf.progress)).length;
                       if (!node.leaves.length) {
                         return (
-                          <Link key={node.id} href={node.locked ? playBase : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} title={node.lockReason} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
+                          <Link key={node.id} href={node.locked ? playBase : node.href} className="formation-studio__leaf" data-locked={node.locked || undefined} title={node.lockReason || node.title} onClick={(event) => { if (node.locked) event.preventDefault(); }}>
                             <span className="formation-studio__dot" data-state={node.locked ? undefined : isDone(node.progress) ? "done" : node.id === resume?.id ? "next" : node.progress.state === "percent" ? "progress" : undefined} />
                             <span className="formation-studio__leaf-copy">
-                              <span className="formation-studio__leaf-title" title={node.title}>{node.title}</span>
-                              <span className="formation-studio__meta">{joinMeta([node.duration, node.locked ? null : isDone(node.progress) ? "Terminé" : "À faire"])}</span>
+                              <span className="formation-studio__leaf-title" title={node.lockReason || node.title}>{node.title}</span>
+                              <span className="formation-studio__meta" title={node.lockReason}>{joinMeta([node.duration, node.locked ? node.lockReason || "Fermé" : isDone(node.progress) ? "Terminé" : "À faire"])}</span>
                             </span>
                             <span className="formation-studio__lock" title={node.lockReason} aria-label={node.lockReason}>{node.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                           </Link>
@@ -748,7 +748,7 @@ export function FormationStudio({
                                   key={leaf.id}
                                   href={leaf.locked ? playBase : leaf.href}
                                   className="formation-studio__leaf"
-                                  title={leaf.lockReason}
+                                  title={leaf.lockReason || leaf.title}
                                   data-locked={leaf.locked || undefined}
                                   aria-disabled={leaf.locked || undefined}
                                   onClick={(event) => {
@@ -757,8 +757,8 @@ export function FormationStudio({
                                 >
                                   <span className="formation-studio__dot" data-state={leaf.locked ? undefined : isDone(leaf.progress) ? "done" : leaf.id === resume?.id ? "next" : leaf.progress.state === "percent" ? "progress" : undefined} />
                                   <span className="formation-studio__leaf-copy">
-                                    <span className="formation-studio__leaf-title" title={leaf.title}>{leaf.title}</span>
-                                    <span className="formation-studio__meta">{joinMeta([leaf.duration, leaf.locked ? null : isDone(leaf.progress) ? "Terminé" : leaf.progress.percent ? `${leaf.progress.percent} %` : "À faire"])}</span>
+                                    <span className="formation-studio__leaf-title" title={leaf.lockReason || leaf.title}>{leaf.title}</span>
+                                    <span className="formation-studio__meta" title={leaf.lockReason}>{joinMeta([leaf.duration, leaf.locked ? leaf.lockReason || "Fermé" : isDone(leaf.progress) ? "Terminé" : leaf.progress.percent ? `${leaf.progress.percent} %` : "À faire"])}</span>
                                   </span>
                                   <span className="formation-studio__lock" title={leaf.lockReason} aria-label={leaf.lockReason}>{leaf.locked ? <Lock size={14} strokeWidth={2} aria-hidden /> : null}</span>
                                 </Link>

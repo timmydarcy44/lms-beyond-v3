@@ -75,23 +75,35 @@ export async function sendAssessmentInvites(
     if (params.onlyPending && attempt.status === "completed") continue;
 
     const url = assessmentUrl(attempt.access_token);
-    const body =
-      params.kind === "positionnement"
-        ? `Votre formation « ${escapeEdgeEmailHtml(course)} » approche. Merci de répondre à ce court test de positionnement 2 à 3 jours avant la session (1 écran = 1 question).`
-        : params.kind === "eval_chaud"
-          ? `La formation « ${escapeEdgeEmailHtml(course)} » vient de se terminer. Votre avis à chaud nous est précieux.`
-          : `Deux mois après « ${escapeEdgeEmailHtml(course)} », partagez l'impact sur votre pratique.`;
+    const firstName = String(p.name ?? "")
+      .trim()
+      .split(/\s+/)[0] || "bonjour";
+    const isPositionnement = params.kind === "positionnement";
+    const body = isPositionnement
+      ? `Vous aurez accès à votre test de positionnement préalable au démarrage de la formation « ${escapeEdgeEmailHtml(course)} ». Merci de le compléter avant le début de la session (une question par écran). Veuillez cliquer sur le lien ci-dessous pour commencer.`
+      : params.kind === "eval_chaud"
+        ? `La formation « ${escapeEdgeEmailHtml(course)} » vient de se terminer. Votre avis à chaud nous est précieux.`
+        : `Deux mois après « ${escapeEdgeEmailHtml(course)} », partagez l'impact sur votre pratique.`;
+    const subject = isPositionnement
+      ? "Votre test de positionnement est prêt"
+      : `${label} — Byound`;
+    const title = isPositionnement ? "Votre test de positionnement est prêt" : label;
+    const ctaLabel = isPositionnement ? "Accéder au test de positionnement" : "Commencer";
 
     const html = buildEdgeEmailShell({
-      title: label,
-      preheader: body,
-      bodyHtml: `${edgeEmailParagraph(`Bonjour ${escapeEdgeEmailHtml(p.name)},`)}${edgeEmailParagraph(body)}`,
-      cta: { label: "Commencer", href: url },
+      title,
+      preheader: isPositionnement
+        ? "Votre test de positionnement est prêt — cliquez pour commencer"
+        : body,
+      bodyHtml: `${edgeEmailParagraph(
+        `Bonjour ${escapeEdgeEmailHtml(firstName)},`,
+      )}${edgeEmailParagraph(body)}`,
+      cta: { label: ctaLabel, href: url },
     });
     const result = await sendEmail({
       to: p.email!,
       from: EDGE_COCKPIT_FROM,
-      subject: `${label} — Byound`,
+      subject,
       html,
       tags: { type: `formation-${params.kind}`, dossier_id: params.dossierId },
     });

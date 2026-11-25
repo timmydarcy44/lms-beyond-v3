@@ -108,6 +108,18 @@ export type SuiviLeafTimeRow = {
   durationSeconds: number | null;
 };
 
+export type SuiviGameRow = {
+  id: string;
+  title: string;
+  courseTitle: string | null;
+  score: number | null;
+  passed: boolean | null;
+  tone: "good" | "mid" | "bad" | null;
+  durationSeconds: number | null;
+  completedAt: string | null;
+  source: "serious_game_attempts" | "leaf_completion";
+};
+
 export type SuiviLearnerDetail = {
   userId: string;
   displayName: string;
@@ -155,6 +167,7 @@ export type SuiviLearnerDetail = {
   quizzes: SuiviQuizRow[];
   interviews: SuiviInterviewRow[];
   flashcards: SuiviFlashcardRow[];
+  games: SuiviGameRow[];
   leafTimes: SuiviLeafTimeRow[];
 };
 
@@ -804,6 +817,94 @@ export async function loadLearnerSuiviDetail(
     }
   }
 
+  // Jeux interactifs
+  const games: SuiviGameRow[] = [];
+  const gamesRes = await db
+    .from("serious_game_attempts")
+    .select(
+      "id, game_id, course_id, lesson_id, score, passed, tone, duration_sec, ending_title, completed_at, status",
+    )
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false })
+    .limit(40);
+  if (!gamesRes.error) {
+    const gameCourseIds = [
+      ...new Set(
+        (gamesRes.data ?? [])
+          .map((r) => String((r as { course_id?: string | null }).course_id ?? ""))
+          .filter(Boolean),
+      ),
+    ];
+    const gameCourseTitles = new Map<string, string>();
+    if (gameCourseIds.length) {
+      const { data: courseRows } = await db.from("courses").select("id, title").in("id", gameCourseIds);
+      for (const c of courseRows ?? []) {
+        gameCourseTitles.set(
+          String((c as { id: string }).id),
+          String((c as { title?: string }).title ?? "Formation"),
+        );
+      }
+    }
+    for (const row of gamesRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      const toneRaw = String(r.tone ?? "");
+      const tone: SuiviGameRow["tone"] =
+        toneRaw === "good" || toneRaw === "mid" || toneRaw === "bad" ? toneRaw : null;
+      const lessonLeaf = leafTimes.find((l) => l.leafId === String(r.lesson_id ?? ""));
+      const title =
+        (r.ending_title ? String(r.ending_title).trim() : "") ||
+        lessonLeaf?.title ||
+        (r.game_id ? `Jeu ${String(r.game_id).slice(0, 12)}` : "Jeu interactif");
+      games.push({
+        id: String(r.id),
+        title,
+        courseTitle: r.course_id ? gameCourseTitles.get(String(r.course_id)) ?? null : null,
+        score: r.score != null && Number.isFinite(Number(r.score)) ? Number(r.score) : null,
+        passed: typeof r.passed === "boolean" ? r.passed : null,
+        tone,
+        durationSeconds:
+          r.duration_sec != null && Number.isFinite(Number(r.duration_sec))
+            ? Math.max(0, Number(r.duration_sec))
+            : null,
+        completedAt: r.completed_at ? String(r.completed_at) : null,
+        source: "serious_game_attempts",
+      });
+    }
+  }
+  for (const leaf of leafTimes) {
+    if (leaf.kind !== "jeu") continue;
+    const already = games.some(
+      (g) =>
+        g.title.toLowerCase() === leaf.title.toLowerCase() ||
+        (g.completedAt &&
+          Math.abs(Date.parse(g.completedAt) - Date.parse(leaf.completedAt)) < 120_000),
+    );
+    if (already) {
+      const match = games.find(
+        (g) =>
+          g.title.toLowerCase() === leaf.title.toLowerCase() ||
+          (g.completedAt &&
+            Math.abs(Date.parse(g.completedAt) - Date.parse(leaf.completedAt)) < 120_000),
+      );
+      if (match && match.durationSeconds == null && leaf.durationSeconds != null) {
+        match.durationSeconds = leaf.durationSeconds;
+      }
+      continue;
+    }
+    games.push({
+      id: `leaf-game-${leaf.leafId}`,
+      title: leaf.title,
+      courseTitle: primary?.title ?? null,
+      score: null,
+      passed: null,
+      tone: null,
+      durationSeconds: leaf.durationSeconds,
+      completedAt: leaf.completedAt,
+      source: "leaf_completion",
+    });
+  }
+
   // Flashcards + annotation carte par carte
   const flashcards: SuiviFlashcardRow[] = [];
   const flashRes = await db
@@ -1070,6 +1171,7 @@ export async function loadLearnerSuiviDetail(
     quizzes,
     interviews,
     flashcards,
+    games,
     leafTimes: [...leafTimes].reverse(),
   };
 }

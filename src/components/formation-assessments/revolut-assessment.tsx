@@ -205,11 +205,6 @@ export function RevolutAssessment({
           <p className="mt-4 max-w-sm text-[15px] leading-relaxed" style={{ color: MUTED }}>
             {copy.body}
           </p>
-          {score != null && kind === "positionnement" ? (
-            <p className="mt-5 text-sm font-medium" style={{ color: PURPLE }}>
-              Score indicatif · {score}&nbsp;%
-            </p>
-          ) : null}
           {score != null && kind !== "positionnement" ? (
             <p className="mt-5 text-sm font-medium" style={{ color: PURPLE }}>
               Score indicatif · {score}&nbsp;%

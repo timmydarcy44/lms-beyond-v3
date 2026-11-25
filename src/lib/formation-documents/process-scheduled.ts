@@ -218,21 +218,27 @@ export async function processDueFormationMails(
         }
         const name =
           row.payload && typeof row.payload.name === "string" ? row.payload.name : null;
+        const firstName = name ? name.trim().split(/\s+/)[0] : null;
         const course =
           row.payload && typeof row.payload.course_title === "string"
             ? row.payload.course_title
             : "votre formation";
         const result = await sendScheduledOrgMail(service, row, "positionnement", {
-          subject: "Test de positionnement — Byound",
+          subject: "Votre test de positionnement est prêt",
           html: buildEdgeEmailShell({
-            title: "Test de positionnement",
-            preheader: "À faire 2–3 jours avant la session",
+            title: "Votre test de positionnement est prêt",
+            preheader: "Cliquez pour accéder à votre test préalable à la formation",
             bodyHtml: `${edgeEmailParagraph(
-              name ? `Bonjour ${escapeEdgeEmailHtml(name)},` : "Bonjour,",
+              firstName
+                ? `Bonjour ${escapeEdgeEmailHtml(firstName)},`
+                : "Bonjour,",
             )}${edgeEmailParagraph(
-              `Votre formation « ${escapeEdgeEmailHtml(course)} » approche. Merci de répondre à ce court test de positionnement (une question par écran) — idéalement 2 à 3 jours avant la session.`,
+              `Vous aurez accès à votre test de positionnement préalable au démarrage de la formation « ${escapeEdgeEmailHtml(course)} ». Merci de le compléter avant le début de la session (une question par écran). Veuillez cliquer sur le lien ci-dessous pour commencer.`,
             )}`,
-            cta: { label: "Commencer le test", href: assessmentUrl(attempt.access_token) },
+            cta: {
+              label: "Accéder au test de positionnement",
+              href: assessmentUrl(attempt.access_token),
+            },
           }),
           tags: { type: "formation-positionnement", dossier_id: row.dossier_id },
         });

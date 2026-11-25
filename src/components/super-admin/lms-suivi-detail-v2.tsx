@@ -624,6 +624,7 @@ function PedagogyPanel({ data }: { data: SuiviLearnerDetail }) {
   const quizzes = data.quizzes ?? [];
   const interviews = data.interviews ?? [];
   const flashcards = data.flashcards ?? [];
+  const games = data.games ?? [];
   const leafTimes = data.leafTimes ?? [];
   const readingLeaves = leafTimes.filter((l) => l.kind === "lecture" || l.kind === "autre");
 
@@ -637,8 +638,8 @@ function PedagogyPanel({ data }: { data: SuiviLearnerDetail }) {
             </p>
             <h2 className="mt-1 text-[18px] font-extrabold">Ce que l’apprenant a vraiment produit</h2>
             <p className="mt-1 max-w-2xl text-[13px]" style={{ color: MUTED }}>
-              Résultats de quiz, retours d’entretiens, annotations flashcards et temps estimé par
-              sous-chapitre (delta entre complétions).
+              Résultats de quiz, entretiens, jeux interactifs, annotations flashcards et temps estimé
+              par sous-chapitre.
             </p>
           </div>
         </div>
@@ -791,6 +792,71 @@ function PedagogyPanel({ data }: { data: SuiviLearnerDetail }) {
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-2xl border p-4" style={{ borderColor: BORDER, background: "#0F162C" }}>
+            <h3 className="text-[14px] font-extrabold">Jeux interactifs</h3>
+            {games.length === 0 ? (
+              <p className="mt-3 text-[13px]" style={{ color: TERT }}>
+                Aucun jeu interactif terminé.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {games.map((g) => (
+                  <li key={g.id} className="rounded-xl border px-3 py-2.5" style={{ borderColor: BORDER }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold">{g.title}</p>
+                        <p className="mt-0.5 text-[11px]" style={{ color: TERT }}>
+                          {g.courseTitle ? `${g.courseTitle} · ` : ""}
+                          {g.completedAt
+                            ? fmtDate(g.completedAt, { dateStyle: "medium", timeStyle: "short" })
+                            : "—"}
+                          {g.durationSeconds != null
+                            ? ` · ${formatDurationCompact(g.durationSeconds)}`
+                            : ""}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold"
+                        style={{
+                          background:
+                            g.score != null
+                              ? `${quizColor(g.score)}22`
+                              : g.tone === "good"
+                                ? `${GREEN}22`
+                                : g.tone === "bad"
+                                  ? `${RED}22`
+                                  : "#1C2443",
+                          color:
+                            g.score != null
+                              ? quizColor(g.score)
+                              : g.tone === "good"
+                                ? GREEN
+                                : g.tone === "bad"
+                                  ? RED
+                                  : TERT,
+                        }}
+                      >
+                        {g.score != null
+                          ? `${Math.round(g.score)} %`
+                          : g.passed === true
+                            ? "Réussi"
+                            : g.passed === false
+                              ? "À retravailler"
+                              : g.tone === "good"
+                                ? "Bon"
+                                : g.tone === "mid"
+                                  ? "Moyen"
+                                  : g.tone === "bad"
+                                    ? "Fragile"
+                                    : "Terminé"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+
           <article className="rounded-2xl border p-4" style={{ borderColor: BORDER, background: "#0F162C" }}>
             <h3 className="text-[14px] font-extrabold">Flashcards · annotations</h3>
             {flashcards.length === 0 ? (

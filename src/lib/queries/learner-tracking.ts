@@ -93,7 +93,34 @@ export async function fetchAuthAccessStatusForUserIds(
   return map;
 }
 
-/** Dernière connexion Auth (last_sign_in_at uniquement). */
+type ActivityQueryClient = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      in: (
+        column: string,
+        values: string[],
+      ) => {
+        order: (
+          column: string,
+          opts: { ascending: boolean },
+        ) => {
+          limit: (n: number) => Promise<{
+            data?: Array<Record<string, unknown>> | null;
+            error?: { message?: string } | null;
+          }>;
+        };
+      };
+    };
+  };
+};
+
+function rememberLatest(map: Map<string, string>, userId: string, iso: string | null) {
+  if (!userId || !iso) return;
+  const prev = map.get(userId);
+  if (!prev || Date.parse(iso) > Date.parse(prev)) map.set(userId, iso);
+}
+
+/** Dernière activité utile pour la pastille (Auth + séances LMS / heartbeats). */
 export async function fetchLastSignInForUserIds(
   supabase: SupabaseAdminClient,
   userIds: string[],
@@ -103,6 +130,46 @@ export async function fetchLastSignInForUserIds(
   for (const [id, status] of statuses) {
     if (status.lastSignInAt) map.set(id, status.lastSignInAt);
   }
+
+  if (userIds.length === 0) return map;
+
+  const db = supabase as unknown as ActivityQueryClient;
+  const chunk = 80;
+  for (let i = 0; i < userIds.length; i += chunk) {
+    const ids = userIds.slice(i, i + chunk);
+    try {
+      const { data: sessions } = await db
+        .from("learning_sessions")
+        .select("user_id, ended_at, started_at")
+        .in("user_id", ids)
+        .order("ended_at", { ascending: false })
+        .limit(Math.max(ids.length * 4, 40));
+      for (const row of sessions ?? []) {
+        rememberLatest(
+          map,
+          String(row.user_id ?? ""),
+          isoOrNull(row.ended_at) ?? isoOrNull(row.started_at),
+        );
+      }
+    } catch (e) {
+      console.warn("[fetchLastSignInForUserIds] learning_sessions", e);
+    }
+
+    try {
+      const { data: signals } = await db
+        .from("learning_activity_signals")
+        .select("user_id, happened_at")
+        .in("user_id", ids)
+        .order("happened_at", { ascending: false })
+        .limit(Math.max(ids.length * 4, 40));
+      for (const row of signals ?? []) {
+        rememberLatest(map, String(row.user_id ?? ""), isoOrNull(row.happened_at));
+      }
+    } catch {
+      // Table optionnelle
+    }
+  }
+
   return map;
 }
 

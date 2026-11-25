@@ -16,7 +16,7 @@ export async function GET() {
     .select("*")
     .order("week_start", { ascending: false })
     .order("kind")
-    .limit(24);
+    .limit(40);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ digests: data ?? [] });

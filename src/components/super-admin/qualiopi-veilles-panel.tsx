@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, Highlighter, Loader2, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Highlighter, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import {
   QUALIOPI_MUTED,
 } from "@/components/super-admin/qualiopi/qualiopi-audit-styles";
 import {
+  VEILLE_AXES,
   VEILLE_KIND,
   VEILLE_THEME_LABELS,
   type VeilleDigest,
@@ -21,6 +22,15 @@ import {
 } from "@/lib/qualiopi/veille-shared";
 
 const HIGHLIGHT_THEMES: VeilleTheme[] = ["reglementaire", "metier", "pedagogie", "transversal"];
+const MS_90_DAYS = 90 * 24 * 60 * 60 * 1000;
+
+function nextMondayLabel(from = new Date()): string {
+  const d = new Date(from);
+  const day = d.getDay();
+  const add = day === 1 ? 7 : (8 - day) % 7 || 7;
+  d.setDate(d.getDate() + add);
+  return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
 
 export function QualiopiVeillesPanel() {
   const [sources, setSources] = useState<VeilleSource[]>([]);
@@ -31,13 +41,6 @@ export function QualiopiVeillesPanel() {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [sourcesOpen, setSourcesOpen] = useState(false);
-
-  const digestsLookStale = useMemo(() => {
-    const latest = digests[0];
-    if (!latest?.created_at) return true;
-    const year = new Date(latest.created_at).getFullYear();
-    return year < 2026;
-  }, [digests]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,6 +80,44 @@ export function QualiopiVeillesPanel() {
     return unified ?? digests[0] ?? null;
   }, [digests]);
 
+  const digests90 = useMemo(() => {
+    const since = Date.now() - MS_90_DAYS;
+    return digests.filter((row) => Date.parse(row.created_at || row.week_start) >= since);
+  }, [digests]);
+
+  const digestsLookStale = useMemo(() => {
+    if (!latest?.created_at) return true;
+    const ageMs = Date.now() - Date.parse(latest.created_at);
+    return !Number.isFinite(ageMs) || ageMs > 10 * 24 * 60 * 60 * 1000;
+  }, [latest]);
+
+  const axisStats = useMemo(() => {
+    return VEILLE_AXES.map((axis) => {
+      const itemsInLatest = (latest?.items ?? []).filter((item) => item.theme === axis.theme).length;
+      const treated = highlights.filter(
+        (row) => row.theme === axis.theme && row.status === "done",
+      ).length;
+      const saved = highlights.filter(
+        (row) => row.theme === axis.theme && row.status !== "done",
+      ).length;
+      return { ...axis, itemsInLatest, treated, saved };
+    });
+  }, [highlights, latest]);
+
+  const itemsByTheme = useMemo(() => {
+    const map: Record<VeilleTheme, VeilleDigestItem[]> = {
+      reglementaire: [],
+      metier: [],
+      pedagogie: [],
+      transversal: [],
+    };
+    for (const item of latest?.items ?? []) {
+      const theme = (item.theme as VeilleTheme | null | undefined) ?? "transversal";
+      map[theme].push(item);
+    }
+    return map;
+  }, [latest]);
+
   const addSource = async () => {
     const res = await fetch("/api/super-admin/crm/qualiopi/veilles/sources", {
       method: "POST",
@@ -114,7 +155,11 @@ export function QualiopiVeillesPanel() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Échec");
-      toast.success(sendEmail ? "Actualités générées et mail envoyé" : "Actualités générées");
+      toast.success(
+        sendEmail
+          ? "Veille générée et mail récap envoyé"
+          : "Veille automatique terminée — synthèses à jour",
+      );
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Échec");
@@ -200,39 +245,64 @@ export function QualiopiVeillesPanel() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">Veille</h1>
+          <h1 className="text-2xl font-bold text-white sm:text-3xl">Veille Qualiopi</h1>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-            Actualités formation continue (réglementaire, métier, pédagogie fusionnés). RAG 1 = vos sources.
-            RAG 2 = le web. Rituel lundi : mail → 10 min de surlignage (thème + Traité) → 1 action PAQ si besoin.
+            Trois axes (ind. 23, 24, 25) : légale & réglementaire, compétences & métiers, innovations
+            pédagogiques. Recherche auto (sources + web) → synthèse → surlignage « Traité ».
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            variant="outline"
             disabled={running}
             onClick={() => void runNow(false)}
-            className="border-white/15 bg-transparent text-white hover:bg-white/5"
+            className="bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"
           >
-            {running ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Générer maintenant
+            {running ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+            Lancer une recherche
           </Button>
           <Button
             type="button"
+            variant="outline"
             disabled={running}
             onClick={() => void runNow(true)}
-            className="bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"
+            className="border-white/15 bg-transparent text-white hover:bg-white/5"
           >
             Générer + envoyer le mail
           </Button>
         </div>
       </div>
 
+      <section className={cn(QUALIOPI_CARD, "grid gap-3 p-4 sm:grid-cols-3")}>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Automatique</p>
+          <p className="mt-1 text-sm text-white/85">
+            Chaque <strong className="font-semibold text-white">lundi matin</strong> : recherche + synthèse
+            + mail récap.
+          </p>
+          <p className="mt-1 text-xs text-white/45">Prochain passage : {nextMondayLabel()}</p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">À la demande</p>
+          <p className="mt-1 text-sm text-white/85">
+            <strong className="font-semibold text-white">Lancer une recherche</strong> refait la même
+            veille automatique (sans attendre le lundi).
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Preuve 90 j</p>
+          <p className="mt-1 text-sm text-white/85">
+            <strong className="font-semibold text-white">{digests90.length}</strong> synthèse(s) sur 90 jours
+            {latest?.email_sent_at ? " · dernier mail envoyé" : ""}.
+          </p>
+        </div>
+      </section>
+
       {digestsLookStale ? (
         <div className="rounded-2xl border border-[#5A4A1E] bg-[#2A2410] px-4 py-3 text-sm text-[#F2CF6B]">
-          Les synthèses semblent datées (avant 2026) ou absentes — la pertinence Qualiopi en pâtit.
-          Cliquez <strong className="font-semibold">Générer maintenant</strong> pour produire un digest à jour
-          (sources RAG + web), puis surlignez ce qui compte pour le PAQ.
+          Synthèse absente ou trop ancienne (&gt; 10 j). Cliquez{" "}
+          <strong className="font-semibold">Lancer une recherche</strong> pour actualiser les 3 axes, puis
+          surlignez ce qui compte.
         </div>
       ) : null}
 
@@ -240,14 +310,40 @@ export function QualiopiVeillesPanel() {
         <p className={cn("text-sm", QUALIOPI_MUTED)}>Chargement…</p>
       ) : (
         <>
+          <section className="grid gap-3 lg:grid-cols-3">
+            {axisStats.map((axis) => (
+              <article key={axis.theme} className={cn(QUALIOPI_CARD, "p-4")}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Ind. {axis.indicatorId}
+                </p>
+                <h2 className="mt-1 text-base font-semibold text-white">{axis.title}</h2>
+                <p className={cn("mt-1 text-xs leading-relaxed", QUALIOPI_MUTED)}>{axis.description}</p>
+                <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-white/[0.04] px-2 py-2">
+                    <dt className="text-[10px] uppercase tracking-wide text-white/40">Semaine</dt>
+                    <dd className="mt-0.5 text-lg font-semibold text-white">{axis.itemsInLatest}</dd>
+                  </div>
+                  <div className="rounded-xl bg-white/[0.04] px-2 py-2">
+                    <dt className="text-[10px] uppercase tracking-wide text-white/40">Traité</dt>
+                    <dd className="mt-0.5 text-lg font-semibold text-[#6BE39B]">{axis.treated}</dd>
+                  </div>
+                  <div className="rounded-xl bg-white/[0.04] px-2 py-2">
+                    <dt className="text-[10px] uppercase tracking-wide text-white/40">En cours</dt>
+                    <dd className="mt-0.5 text-lg font-semibold text-[#F2C15A]">{axis.saved}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </section>
+
           <section className={cn(QUALIOPI_CARD, "p-5")}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-lg font-semibold text-white">Actualités de la semaine</h2>
+                <h2 className="text-lg font-semibold text-white">Synthèse de la semaine</h2>
                 {latest ? (
                   <p className="mt-1 text-xs text-white/40">
                     Semaine du {latest.week_start}
-                    {latest.email_sent_at ? " · mail envoyé" : ""}
+                    {latest.email_sent_at ? " · mail récap envoyé" : " · mail non envoyé"}
                   </p>
                 ) : null}
               </div>
@@ -267,69 +363,133 @@ export function QualiopiVeillesPanel() {
 
             {!latest ? (
               <p className={cn("mt-4 text-sm", QUALIOPI_MUTED)}>
-                Pas encore d’actualités. Ajoutez éventuellement des sources RAG 1, puis générez.
+                Pas encore de synthèse. Cliquez « Lancer une recherche » (ou attendez le lundi matin).
               </p>
             ) : (
-              <div className="mt-4 space-y-4">
-                <h3 className="text-base font-semibold text-white">{latest.title}</h3>
-                <p className="text-sm leading-relaxed text-white/75">{latest.summary}</p>
-                <ul className="space-y-3">
-                  {(latest.items ?? []).map((item) => {
-                    const themeLabel = item.theme
-                      ? VEILLE_THEME_LABELS[item.theme as VeilleTheme]
-                      : null;
-                    return (
-                      <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 space-y-1.5">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {themeLabel ? (
-                                <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/55">
-                                  {themeLabel}
-                                </span>
-                              ) : null}
-                              <span
-                                className={cn(
-                                  "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-                                  item.rag === "rag1"
-                                    ? "bg-[#F2C15A]/15 text-[#F2C15A]"
-                                    : "bg-white/5 text-white/45",
-                                )}
-                              >
-                                {item.rag === "rag1" ? "RAG 1" : "RAG 2"}
-                              </span>
+              <div className="mt-4 space-y-6">
+                <div>
+                  <h3 className="text-base font-semibold text-white">{latest.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/75">{latest.summary}</p>
+                </div>
+
+                {VEILLE_AXES.map((axis) => {
+                  const items = itemsByTheme[axis.theme];
+                  return (
+                    <div key={axis.theme} className="space-y-3">
+                      <div className="flex flex-wrap items-baseline gap-2 border-b border-white/10 pb-2">
+                        <h4 className="text-sm font-semibold text-white">{axis.title}</h4>
+                        <span className="text-[11px] text-white/40">Ind. {axis.indicatorId}</span>
+                        <span className="text-[11px] text-white/35">{items.length} info(s)</span>
+                      </div>
+                      {items.length === 0 ? (
+                        <p className={cn("text-sm", QUALIOPI_MUTED)}>
+                          Aucun item sur cet axe dans la dernière synthèse — relancez une recherche.
+                        </p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {items.map((item) => (
+                            <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 space-y-1.5">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+                                        item.rag === "rag1"
+                                          ? "bg-[#F2C15A]/15 text-[#F2C15A]"
+                                          : "bg-white/5 text-white/45",
+                                      )}
+                                    >
+                                      {item.rag === "rag1" ? "Sources prioritaires" : "Web"}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm font-semibold text-white">{item.title}</p>
+                                  <p className="text-sm leading-relaxed text-white/65">{item.summary}</p>
+                                  {item.url ? (
+                                    <a
+                                      href={item.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-block text-xs text-[#9BB0FF] hover:underline"
+                                    >
+                                      Lire la source
+                                    </a>
+                                  ) : null}
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void highlightItem(latest, item)}
+                                  className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
+                                >
+                                  <Highlighter className="mr-1 h-3.5 w-3.5" />
+                                  Surligner
+                                </Button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {itemsByTheme.transversal.length > 0 ? (
+                  <div className="space-y-3">
+                    <h4 className="border-b border-white/10 pb-2 text-sm font-semibold text-white">
+                      Transversal
+                    </h4>
+                    <ul className="space-y-3">
+                      {itemsByTheme.transversal.map((item) => (
+                        <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 space-y-1.5">
+                              <p className="text-sm font-semibold text-white">{item.title}</p>
+                              <p className="text-sm leading-relaxed text-white/65">{item.summary}</p>
                             </div>
-                            <p className="text-sm font-semibold text-white">{item.title}</p>
-                            <p className="text-sm leading-relaxed text-white/65">{item.summary}</p>
-                            {item.url ? (
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-block text-xs text-[#9BB0FF] hover:underline"
-                              >
-                                Lire la source
-                              </a>
-                            ) : null}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void highlightItem(latest, item)}
+                              className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
+                            >
+                              <Highlighter className="mr-1 h-3.5 w-3.5" />
+                              Surligner
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => void highlightItem(latest, item)}
-                            className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
-                          >
-                            <Highlighter className="mr-1 h-3.5 w-3.5" />
-                            Surligner
-                          </Button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             )}
           </section>
+
+          {digests90.length > 1 ? (
+            <section className={cn(QUALIOPI_CARD, "p-5")}>
+              <h2 className="text-lg font-semibold text-white">Historique 90 jours</h2>
+              <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
+                Preuve des synthèses hebdomadaires (lundi auto + recherches manuelles).
+              </p>
+              <ul className="mt-4 divide-y divide-white/8">
+                {digests90.map((row) => (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                    <span className="text-white/85">
+                      Semaine du {row.week_start}
+                      <span className="ml-2 text-white/40">{row.title}</span>
+                    </span>
+                    <span className="text-xs text-white/40">
+                      {(row.items ?? []).length} info(s)
+                      {row.email_sent_at ? " · mail" : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <section className={cn(QUALIOPI_CARD, "overflow-hidden")}>
             <button
@@ -338,9 +498,9 @@ export function QualiopiVeillesPanel() {
               className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
             >
               <div>
-                <h2 className="text-base font-semibold text-white">Sources RAG 1</h2>
+                <h2 className="text-base font-semibold text-white">Sources prioritaires</h2>
                 <p className={cn("mt-0.5 text-sm", QUALIOPI_MUTED)}>
-                  URLs à lire en priorité. Le RAG 2 couvre le reste du web formation continue.
+                  URLs lues en priorité à chaque recherche. Le web complète le reste.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-white/50">
@@ -369,7 +529,7 @@ export function QualiopiVeillesPanel() {
                 </div>
                 <ul className="space-y-2">
                   {sources.length === 0 ? (
-                    <li className={cn("text-sm", QUALIOPI_MUTED)}>Aucune source RAG 1 pour l’instant.</li>
+                    <li className={cn("text-sm", QUALIOPI_MUTED)}>Aucune source prioritaire pour l’instant.</li>
                   ) : (
                     sources.map((source) => (
                       <li key={source.id} className="flex items-center justify-between gap-3 text-sm text-white/70">
@@ -395,7 +555,7 @@ export function QualiopiVeillesPanel() {
       <section className={cn(QUALIOPI_CARD, "p-5")}>
         <h2 className="text-lg font-semibold text-white">Informations surlignées</h2>
         <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
-          À retravailler de votre côté — preuve que la veille est exploitée.
+          Choisissez l’axe (23 / 24 / 25) et passez en « Traité » pour prouver l’exploitation de la veille.
         </p>
         <ul className="mt-4 space-y-3">
           {highlights.length === 0 ? (

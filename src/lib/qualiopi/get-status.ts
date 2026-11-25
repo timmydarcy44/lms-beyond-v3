@@ -551,6 +551,12 @@ function assessAuto(
       // Highlight « Traité » sans thème / transversal : compte pour les 3 axes
       const exploited = themeDone >= 1 || sig.veilleAnyDone >= 1;
       const autoActive = sig.veilleDigestCount >= 1 || sig.veilleAnySaved >= 1;
+      const axisTitle =
+        id === 23
+          ? "Veille légale et réglementaire"
+          : id === 24
+            ? "Veille compétences et métiers"
+            : "Veille innovations pédagogiques";
       const axisLabel =
         id === 23 ? "réglementaire" : id === 24 ? "métier" : "pédagogie";
 
@@ -559,29 +565,31 @@ function assessAuto(
         if (sig.veilleDigestCount >= 1) {
           proofs.push(
             proof(
-              "Veille automatique (digests)",
+              `${axisTitle} — synthèses auto`,
               "/super/crm/qualiopi/veilles",
               null,
-              `${sig.veilleDigestCount} digest(s) / 90 j`,
+              `${sig.veilleDigestCount} synthèse(s) hebdo · 90 j (lundi + recherche manuelle)`,
             ),
           );
         }
         if (exploited) {
           proofs.push(
             proof(
-              `Highlight ${axisLabel} traité`,
+              `${axisTitle} — exploitation`,
               "/super/crm/qualiopi/veilles",
               null,
-              themeDone >= 1 ? `${themeDone} traité(s)` : `${sig.veilleAnyDone} traité(s)`,
+              themeDone >= 1
+                ? `${themeDone} info(s) « Traité » (${axisLabel})`
+                : `${sig.veilleAnyDone} info(s) « Traité »`,
             ),
           );
         } else if (sig.veilleAnySaved >= 1) {
           proofs.push(
             proof(
-              "Surlignages enregistrés",
+              `${axisTitle} — surlignages`,
               "/super/crm/qualiopi/veilles",
               null,
-              `${sig.veilleAnySaved} — passer en Traité pour renforcer la preuve`,
+              `${sig.veilleAnySaved} enregistré(s) — passer en Traité pour renforcer la preuve`,
             ),
           );
         }

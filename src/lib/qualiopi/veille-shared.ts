@@ -14,6 +14,33 @@ export const VEILLE_THEME_LABELS: Record<VeilleTheme, string> = {
   transversal: "Transversal",
 };
 
+/** Axes Qualiopi 23–25 — titres alignés sur le référentiel. */
+export const VEILLE_AXES = [
+  {
+    theme: "reglementaire" as const,
+    indicatorId: 23,
+    title: "Veille légale et réglementaire",
+    shortTitle: "Légale & réglementaire",
+    description: "Formation professionnelle, Qualiopi, financement, obligations OF.",
+  },
+  {
+    theme: "metier" as const,
+    indicatorId: 24,
+    title: "Veille compétences et métiers",
+    shortTitle: "Compétences & métiers",
+    description: "Évolutions des compétences, emplois et besoins entreprises.",
+  },
+  {
+    theme: "pedagogie" as const,
+    indicatorId: 25,
+    title: "Veille innovations pédagogiques",
+    shortTitle: "Innovations pédagogiques",
+    description: "Méthodes, outils et technologies pour la formation d’adultes.",
+  },
+] as const;
+
+export type VeilleAxis = (typeof VEILLE_AXES)[number];
+
 /** RAG 2 — recherche web formation continue (pas une liste de sites). */
 export const VEILLE_WEB_QUERIES = [
   "actualité formation professionnelle continue France",

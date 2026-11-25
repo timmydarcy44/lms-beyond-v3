@@ -222,7 +222,7 @@ export function LmsSuiviDetailV2({ initial }: Props) {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi
           label="Progression"
           value={data.modulesTotal ? `${data.progressPct} %` : "—"}
@@ -261,6 +261,11 @@ export function LmsSuiviDetailV2({ initial }: Props) {
           }
         />
         <Kpi
+          label="Quiz & entretiens"
+          value={String((data.quizzes?.length ?? 0) + (data.interviews?.length ?? 0))}
+          sub={`${data.quizzes?.length ?? 0} quiz · ${data.interviews?.length ?? 0} entretien${(data.interviews?.length ?? 0) > 1 ? "s" : ""}`}
+        />
+        <Kpi
           label="Dernière activité"
           value={
             data.lastActivityAt
@@ -275,6 +280,8 @@ export function LmsSuiviDetailV2({ initial }: Props) {
           }
         />
       </div>
+
+      <PedagogyPanel data={data} />
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-4">
@@ -421,6 +428,9 @@ export function LmsSuiviDetailV2({ initial }: Props) {
 
           <section className="rounded-[24px] border p-5" style={{ borderColor: BORDER, background: CARD }}>
             <h2 className="text-[15px] font-extrabold">Progression par module</h2>
+            <p className="mt-1 text-[11px]" style={{ color: TERT }}>
+              Score quiz · temps estimé sur le module
+            </p>
             <ul className="mt-4 space-y-3">
               {data.modules.length === 0 ? (
                 <li className="text-[13px]" style={{ color: TERT }}>
@@ -447,8 +457,8 @@ export function LmsSuiviDetailV2({ initial }: Props) {
                         }}
                       />
                     </div>
-                    <p className="text-[11px]" style={{ color: TERT }}>
-                      {m.timeLabel}
+                    <p className="text-[11px]" style={{ color: m.timeLabel !== "—" ? BLUE : TERT }}>
+                      {m.timeLabel !== "—" ? `Temps ≈ ${m.timeLabel}` : "Temps non mesuré"}
                     </p>
                   </li>
                 ))
@@ -562,6 +572,300 @@ export function LmsSuiviDetailV2({ initial }: Props) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function interviewStyleLabel(style: SuiviLearnerDetail["interviews"][number]["style"]) {
+  if (style === "coaching") return "Coaching";
+  if (style === "mise_en_situation") return "Mise en situation";
+  return "Entretien expérientiel";
+}
+
+function leafKindLabel(kind: SuiviLearnerDetail["leafTimes"][number]["kind"]) {
+  if (kind === "quiz") return "Quiz";
+  if (kind === "jeu") return "Jeu";
+  if (kind === "entretien") return "Entretien";
+  if (kind === "lecture") return "Lecture";
+  return "Contenu";
+}
+
+function PedagogyPanel({ data }: { data: SuiviLearnerDetail }) {
+  const quizzes = data.quizzes ?? [];
+  const interviews = data.interviews ?? [];
+  const flashcards = data.flashcards ?? [];
+  const leafTimes = data.leafTimes ?? [];
+  const readingLeaves = leafTimes.filter((l) => l.kind === "lecture" || l.kind === "autre");
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-[24px] border p-5" style={{ borderColor: BORDER, background: CARD }}>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: VIOLET_SOFT }}>
+              Lecture pédagogique
+            </p>
+            <h2 className="mt-1 text-[18px] font-extrabold">Ce que l’apprenant a vraiment produit</h2>
+            <p className="mt-1 max-w-2xl text-[13px]" style={{ color: MUTED }}>
+              Résultats de quiz, retours d’entretiens, annotations flashcards et temps estimé par
+              sous-chapitre (delta entre complétions).
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-2xl border p-4" style={{ borderColor: BORDER, background: "#0F162C" }}>
+            <h3 className="text-[14px] font-extrabold">Résultats des quiz</h3>
+            {quizzes.length === 0 ? (
+              <p className="mt-3 text-[13px]" style={{ color: TERT }}>
+                Aucun quiz enregistré pour l’instant.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {quizzes.map((q) => (
+                  <li key={q.id} className="rounded-xl border px-3 py-2.5" style={{ borderColor: BORDER }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold">{q.title}</p>
+                        <p className="mt-0.5 text-[11px]" style={{ color: TERT }}>
+                          {q.completedAt
+                            ? fmtDate(q.completedAt, { dateStyle: "medium", timeStyle: "short" })
+                            : "—"}
+                          {q.durationSeconds != null
+                            ? ` · ${formatDurationCompact(q.durationSeconds)}`
+                            : ""}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold"
+                        style={{
+                          background: q.percentage != null ? `${quizColor(q.percentage)}22` : "#1C2443",
+                          color: quizColor(q.percentage),
+                        }}
+                      >
+                        {q.percentage != null ? `${Math.round(q.percentage)} %` : "Score —"}
+                      </span>
+                    </div>
+                    {q.correctHint ? (
+                      <p className="mt-1.5 text-[11px]" style={{ color: MUTED }}>
+                        {q.correctHint}
+                      </p>
+                    ) : null}
+                    {q.durationSeconds != null ? (
+                      <p className="mt-1 text-[11px]" style={{ color: BLUE }}>
+                        Temps de réponse estimé : {formatDurationCompact(q.durationSeconds)}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+
+          <article className="rounded-2xl border p-4" style={{ borderColor: BORDER, background: "#0F162C" }}>
+            <h3 className="text-[14px] font-extrabold">Entretiens expérientiels</h3>
+            {interviews.length === 0 ? (
+              <p className="mt-3 text-[13px]" style={{ color: TERT }}>
+                Aucun entretien complété.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-4">
+                {interviews.map((iv) => (
+                  <li key={iv.id} className="rounded-xl border px-3 py-3" style={{ borderColor: BORDER }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                        style={{ background: "#1A2340", color: VIOLET_SOFT }}
+                      >
+                        {interviewStyleLabel(iv.style)}
+                      </span>
+                      {iv.score != null ? (
+                        <span className="text-[12px] font-bold" style={{ color: GREEN }}>
+                          Score {iv.score}
+                        </span>
+                      ) : null}
+                      <span className="text-[11px]" style={{ color: TERT }}>
+                        {formatDurationCompact(iv.durationSeconds)} ·{" "}
+                        {fmtDate(iv.completedAt, { dateStyle: "medium", timeStyle: "short" })}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[13px] font-semibold">
+                      {iv.chapterTitle || iv.courseTitle || "Entretien"}
+                    </p>
+                    {iv.summary ? (
+                      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: MUTED }}>
+                        {iv.summary}
+                      </p>
+                    ) : null}
+                    {iv.bienDit.length > 0 ? (
+                      <div className="mt-3">
+                        <p className="text-[11px] font-bold" style={{ color: GREEN }}>
+                          Bien dit
+                        </p>
+                        <ul className="mt-1 space-y-1">
+                          {iv.bienDit.map((line) => (
+                            <li key={line} className="text-[12px]" style={{ color: MUTED }}>
+                              · {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {iv.aRevoir.length > 0 || iv.pasCompris.length > 0 ? (
+                      <div className="mt-3">
+                        <p className="text-[11px] font-bold" style={{ color: AMBER }}>
+                          À revoir
+                        </p>
+                        <ul className="mt-1 space-y-1">
+                          {[...iv.aRevoir, ...iv.pasCompris].map((line) => (
+                            <li key={line} className="text-[12px]" style={{ color: MUTED }}>
+                              · {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {iv.axes.length > 0 ? (
+                      <div className="mt-3">
+                        <p className="text-[11px] font-bold" style={{ color: BLUE }}>
+                          Axes d’amélioration
+                        </p>
+                        <ul className="mt-1 space-y-1">
+                          {iv.axes.map((line) => (
+                            <li key={line} className="text-[12px]" style={{ color: MUTED }}>
+                              · {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {iv.compris.length > 0 ? (
+                      <div className="mt-3">
+                        <p className="text-[11px] font-bold" style={{ color: VIOLET_SOFT }}>
+                          Compris
+                        </p>
+                        <ul className="mt-1 space-y-1">
+                          {iv.compris.map((line) => (
+                            <li key={line} className="text-[12px]" style={{ color: MUTED }}>
+                              · {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <article className="rounded-2xl border p-4" style={{ borderColor: BORDER, background: "#0F162C" }}>
+            <h3 className="text-[14px] font-extrabold">Flashcards · annotations</h3>
+            {flashcards.length === 0 ? (
+              <p className="mt-3 text-[13px]" style={{ color: TERT }}>
+                Aucune session flashcards.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-4">
+                {flashcards.map((fc) => (
+                  <li key={fc.id} className="rounded-xl border px-3 py-3" style={{ borderColor: BORDER }}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[13px] font-semibold">{fc.scopeLabel}</p>
+                        <p className="text-[11px]" style={{ color: TERT }}>
+                          {fc.courseTitle ? `${fc.courseTitle} · ` : ""}
+                          {fmtDate(fc.completedAt, { dateStyle: "medium", timeStyle: "short" })} ·{" "}
+                          {formatDurationCompact(fc.durationSeconds)}
+                        </p>
+                      </div>
+                      <span
+                        className="rounded-full px-2.5 py-1 text-[12px] font-bold"
+                        style={{
+                          background: `${quizColor(fc.knownPercent)}22`,
+                          color: quizColor(fc.knownPercent),
+                        }}
+                      >
+                        {fc.knownCount}/{fc.knownCount + fc.unknownCount} sues · {fc.knownPercent} %
+                      </span>
+                    </div>
+                    {fc.cards.length > 0 ? (
+                      <ul className="mt-3 space-y-1.5">
+                        {fc.cards.map((card) => (
+                          <li
+                            key={`${fc.id}-${card.cardId}`}
+                            className="flex items-start gap-2 text-[12px]"
+                          >
+                            <span
+                              className="mt-0.5 h-2 w-2 shrink-0 rounded-full"
+                              style={{
+                                background:
+                                  card.result === "known"
+                                    ? GREEN
+                                    : card.result === "unknown"
+                                      ? RED
+                                      : TERT,
+                              }}
+                              title={card.result === "known" ? "Sue" : "À revoir"}
+                            />
+                            <span style={{ color: card.result === "unknown" ? AMBER : MUTED }}>
+                              {card.front}
+                              {card.result === "unknown" ? (
+                                <span className="ml-1 font-semibold" style={{ color: RED }}>
+                                  · à revoir
+                                </span>
+                              ) : null}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+
+          <article className="rounded-2xl border p-4" style={{ borderColor: BORDER, background: "#0F162C" }}>
+            <h3 className="text-[14px] font-extrabold">Temps par sous-chapitre</h3>
+            <p className="mt-1 text-[11px]" style={{ color: TERT }}>
+              Estimation via l’écart entre deux complétions (plafonné à 45 min).
+            </p>
+            {readingLeaves.length === 0 && leafTimes.length === 0 ? (
+              <p className="mt-3 text-[13px]" style={{ color: TERT }}>
+                Pas encore de sous-chapitres complétés.
+              </p>
+            ) : (
+              <ul className="mt-3 max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                {leafTimes.map((leaf) => (
+                  <li
+                    key={`${leaf.leafId}-${leaf.completedAt}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2"
+                    style={{ borderColor: BORDER }}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[12px] font-semibold">{leaf.title}</p>
+                      <p className="text-[10px]" style={{ color: TERT }}>
+                        {leafKindLabel(leaf.kind)} ·{" "}
+                        {fmtDate(leaf.completedAt, { dateStyle: "short", timeStyle: "short" })}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 text-[12px] font-bold tabular-nums"
+                      style={{ color: leaf.durationSeconds != null ? BLUE : TERT }}
+                    >
+                      {leaf.durationSeconds != null
+                        ? formatDurationCompact(leaf.durationSeconds)
+                        : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+      </section>
     </div>
   );
 }

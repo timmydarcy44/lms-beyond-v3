@@ -50,6 +50,64 @@ export type SuiviRelanceRow = {
   channel: string | null;
 };
 
+export type SuiviQuizRow = {
+  id: string;
+  title: string;
+  score: number | null;
+  maxScore: number | null;
+  percentage: number | null;
+  completedAt: string | null;
+  /** Durée estimée (delta entre leaves) ou session quiz si connue. */
+  durationSeconds: number | null;
+  source: "quiz_submissions" | "leaf_completion";
+  correctHint: string | null;
+};
+
+export type SuiviInterviewRow = {
+  id: string;
+  style: "coaching" | "experiential" | "mise_en_situation";
+  chapterTitle: string | null;
+  courseTitle: string | null;
+  score: number | null;
+  passed: boolean | null;
+  durationSeconds: number;
+  completedAt: string;
+  summary: string | null;
+  bienDit: string[];
+  aRevoir: string[];
+  axes: string[];
+  compris: string[];
+  pasCompris: string[];
+};
+
+export type SuiviFlashcardCard = {
+  cardId: string;
+  front: string;
+  result: "known" | "unknown" | "other";
+};
+
+export type SuiviFlashcardRow = {
+  id: string;
+  scopeLabel: string;
+  courseTitle: string | null;
+  knownCount: number;
+  unknownCount: number;
+  totalCards: number;
+  knownPercent: number;
+  durationSeconds: number;
+  completedAt: string;
+  cards: SuiviFlashcardCard[];
+};
+
+export type SuiviLeafTimeRow = {
+  leafId: string;
+  title: string;
+  kind: "lecture" | "quiz" | "jeu" | "entretien" | "autre";
+  completedAt: string;
+  /** Temps passé estimé avant cette feuille (delta). */
+  durationSeconds: number | null;
+};
+
 export type SuiviLearnerDetail = {
   userId: string;
   displayName: string;
@@ -87,6 +145,10 @@ export type SuiviLearnerDetail = {
   anomalies: SuiviDetailSession[];
   modules: SuiviModuleRow[];
   relances: SuiviRelanceRow[];
+  quizzes: SuiviQuizRow[];
+  interviews: SuiviInterviewRow[];
+  flashcards: SuiviFlashcardRow[];
+  leafTimes: SuiviLeafTimeRow[];
 };
 
 function startOfWeek(d: Date): Date {
@@ -115,6 +177,24 @@ function activityState(lastActivityAt: string | null): {
   if (days < 14) return { tone: "amber", label: `Inactif depuis ${days} jours`, inactiveDays: days };
   return { tone: "red", label: `Inactive depuis ${days} jours`, inactiveDays: days };
 }
+
+function leafKind(title: string): SuiviLeafTimeRow["kind"] {
+  const t = title.toLowerCase();
+  if (t.includes("quiz") || t.includes("évaluation") || t.includes("evaluation")) return "quiz";
+  if (t.includes("jeu") || t.includes("game") || t.includes("interactif")) return "jeu";
+  if (t.includes("entretien") || t.includes("interview") || t.includes("mise en situation")) {
+    return "entretien";
+  }
+  if (t.startsWith("chapter-") || t.includes("chapitre")) return "lecture";
+  return "lecture";
+}
+
+function asStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item ?? "").trim()).filter(Boolean);
+}
+
+const MAX_LEAF_DELTA_SEC = 45 * 60;
 
 function countModules(structure: unknown): { total: number; titles: string[]; ids: string[] } {
   const titles: string[] = [];
@@ -339,23 +419,223 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     leaves.map((l) => String((l as { leaf_id?: string }).leaf_id ?? "")).filter(Boolean),
   );
 
-  // Quiz scores (best effort — quiz_submissions)
-  const quizByModule = new Map<string, number>();
-  if (primary) {
-    const quizzesRes = await db
-      .from("quiz_submissions")
-      .select("score, percent, module_id, course_id, created_at, lesson_id")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (!quizzesRes.error) {
-      for (const q of quizzesRes.data ?? []) {
-        const row = q as Record<string, unknown>;
-        const mid = String(row.module_id ?? row.lesson_id ?? "");
-        const score = Number(row.percent ?? row.score);
-        if (!mid || !Number.isFinite(score) || quizByModule.has(mid)) continue;
-        quizByModule.set(mid, score);
+  // Feuilles chronologiques → temps de lecture / quiz estimés (delta borné)
+  const leavesChrono = (leaves as Array<Record<string, unknown>>)
+    .map((l) => ({
+      leafId: String(l.leaf_id ?? ""),
+      title: String(l.leaf_title ?? "Contenu").trim() || "Contenu",
+      completedAt: String(l.completed_at ?? ""),
+    }))
+    .filter((l) => l.leafId && l.completedAt)
+    .sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
+
+  const leafTimes: SuiviLeafTimeRow[] = leavesChrono.map((leaf, index) => {
+    let durationSeconds: number | null = null;
+    if (index > 0) {
+      const prev = leavesChrono[index - 1];
+      const delta = Math.round((Date.parse(leaf.completedAt) - Date.parse(prev.completedAt)) / 1000);
+      if (Number.isFinite(delta) && delta > 0 && delta <= MAX_LEAF_DELTA_SEC) {
+        durationSeconds = delta;
       }
+    }
+    return {
+      leafId: leaf.leafId,
+      title: leaf.title,
+      kind: leafKind(leaf.title),
+      completedAt: leaf.completedAt,
+      durationSeconds,
+    };
+  });
+
+  // Quiz : submissions (score réel) + leaves quiz (durée estimée)
+  const quizzes: SuiviQuizRow[] = [];
+  const quizByModule = new Map<string, number>();
+  const quizzesRes = await db
+    .from("quiz_submissions")
+    .select("id, test_id, score, answers, created_at, tests(id, title)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  if (!quizzesRes.error) {
+    for (const q of quizzesRes.data ?? []) {
+      const row = q as Record<string, unknown>;
+      const testsRaw = row.tests as
+        | { id?: string; title?: string }
+        | Array<{ id?: string; title?: string }>
+        | null;
+      const test = Array.isArray(testsRaw) ? testsRaw[0] : testsRaw;
+      const score = Number(row.score);
+      const answers = row.answers;
+      let correctHint: string | null = null;
+      if (answers && typeof answers === "object" && !Array.isArray(answers)) {
+        const vals = Object.values(answers as Record<string, unknown>);
+        correctHint = `${vals.length} réponse${vals.length > 1 ? "s" : ""} enregistrée${vals.length > 1 ? "s" : ""}`;
+      }
+      quizzes.push({
+        id: String(row.id ?? row.test_id ?? ""),
+        title: String(test?.title ?? "Quiz").trim() || "Quiz",
+        score: Number.isFinite(score) ? score : null,
+        maxScore: 100,
+        percentage: Number.isFinite(score) ? score : null,
+        completedAt: row.created_at ? String(row.created_at) : null,
+        durationSeconds: null,
+        source: "quiz_submissions",
+        correctHint,
+      });
+      if (Number.isFinite(score) && test?.id) quizByModule.set(String(test.id), score);
+    }
+  }
+
+  for (const leaf of leafTimes) {
+    if (leaf.kind !== "quiz") continue;
+    const already = quizzes.some(
+      (q) =>
+        q.title.toLowerCase() === leaf.title.toLowerCase() ||
+        (q.completedAt &&
+          Math.abs(Date.parse(q.completedAt) - Date.parse(leaf.completedAt)) < 120_000),
+    );
+    if (already) {
+      const match = quizzes.find(
+        (q) =>
+          q.title.toLowerCase() === leaf.title.toLowerCase() ||
+          (q.completedAt &&
+            Math.abs(Date.parse(q.completedAt) - Date.parse(leaf.completedAt)) < 120_000),
+      );
+      if (match && match.durationSeconds == null && leaf.durationSeconds != null) {
+        match.durationSeconds = leaf.durationSeconds;
+      }
+      continue;
+    }
+    quizzes.push({
+      id: `leaf-${leaf.leafId}`,
+      title: leaf.title,
+      score: null,
+      maxScore: null,
+      percentage: null,
+      completedAt: leaf.completedAt,
+      durationSeconds: leaf.durationSeconds,
+      source: "leaf_completion",
+      correctHint: "Score non persisté (quiz LMS hors table tests)",
+    });
+  }
+
+  // Entretiens expérientiels
+  const interviews: SuiviInterviewRow[] = [];
+  const interviewRes = await db
+    .from("experiential_interview_sessions")
+    .select(
+      "id, course_id, lesson_id, interview_style, chapter_title, course_title, score, ending, passed, duration_seconds, completed_at, feedback, feedback_md",
+    )
+    .eq("user_id", userId)
+    .order("completed_at", { ascending: false })
+    .limit(40);
+  if (!interviewRes.error) {
+    for (const row of interviewRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      const fb = (r.feedback ?? null) as Record<string, unknown> | null;
+      const styleRaw = String(r.interview_style ?? "experiential");
+      const style: SuiviInterviewRow["style"] =
+        styleRaw === "coaching"
+          ? "coaching"
+          : styleRaw === "mise_en_situation"
+            ? "mise_en_situation"
+            : "experiential";
+      interviews.push({
+        id: String(r.id),
+        style,
+        chapterTitle: r.chapter_title ? String(r.chapter_title) : null,
+        courseTitle: r.course_title ? String(r.course_title) : null,
+        score: r.score != null && Number.isFinite(Number(r.score)) ? Number(r.score) : null,
+        passed: typeof r.passed === "boolean" ? r.passed : null,
+        durationSeconds: Math.max(0, Number(r.duration_seconds) || 0),
+        completedAt: String(r.completed_at ?? new Date().toISOString()),
+        summary:
+          (fb?.summary ? String(fb.summary) : null) ||
+          (r.feedback_md ? String(r.feedback_md).slice(0, 400) : null),
+        bienDit: asStringList(fb?.bien_dit),
+        aRevoir: asStringList(fb?.a_revoir),
+        axes: asStringList(fb?.axes_amelioration),
+        compris: asStringList(fb?.compris),
+        pasCompris: asStringList(fb?.pas_compris),
+      });
+    }
+  }
+
+  // Flashcards + annotation carte par carte
+  const flashcards: SuiviFlashcardRow[] = [];
+  const flashRes = await db
+    .from("flashcard_study_sessions")
+    .select(
+      "id, course_id, scope_id, total_cards, known_count, unknown_count, card_results, duration_seconds, completed_at",
+    )
+    .eq("user_id", userId)
+    .order("completed_at", { ascending: false })
+    .limit(40);
+  if (!flashRes.error) {
+    const cardIds = new Set<string>();
+    for (const row of flashRes.data ?? []) {
+      const results = (row as { card_results?: Array<{ cardId?: string }> }).card_results ?? [];
+      for (const item of results) {
+        if (item?.cardId) cardIds.add(String(item.cardId));
+      }
+    }
+    const frontById = new Map<string, string>();
+    const ids = [...cardIds].slice(0, 200);
+    if (ids.length) {
+      const cardsRes = await db.from("flashcards").select("id, front").in("id", ids);
+      if (!cardsRes.error) {
+        for (const c of cardsRes.data ?? []) {
+          frontById.set(String((c as { id: string }).id), String((c as { front?: string }).front ?? "").trim());
+        }
+      }
+    }
+    const courseIds = [
+      ...new Set(
+        (flashRes.data ?? [])
+          .map((r) => String((r as { course_id?: string | null }).course_id ?? ""))
+          .filter(Boolean),
+      ),
+    ];
+    const courseTitleById = new Map<string, string>();
+    if (courseIds.length) {
+      const { data: courseRows } = await db.from("courses").select("id, title").in("id", courseIds);
+      for (const c of courseRows ?? []) {
+        courseTitleById.set(String((c as { id: string }).id), String((c as { title?: string }).title ?? "Formation"));
+      }
+    }
+    for (const row of flashRes.data ?? []) {
+      const r = row as Record<string, unknown>;
+      const known = Number(r.known_count) || 0;
+      const unknown = Number(r.unknown_count) || 0;
+      const reviewed = known + unknown;
+      const results = (Array.isArray(r.card_results) ? r.card_results : []) as Array<{
+        cardId?: string;
+        result?: string;
+      }>;
+      const scopeId = String(r.scope_id ?? "");
+      const matchingLeaf = leafTimes.find((l) => l.leafId === scopeId);
+      flashcards.push({
+        id: String(r.id),
+        scopeLabel: matchingLeaf?.title || scopeId || "Révision flashcards",
+        courseTitle: r.course_id ? courseTitleById.get(String(r.course_id)) ?? null : null,
+        knownCount: known,
+        unknownCount: unknown,
+        totalCards: Number(r.total_cards) || reviewed,
+        knownPercent: reviewed > 0 ? Math.round((known / reviewed) * 100) : 0,
+        durationSeconds: Math.max(0, Number(r.duration_seconds) || 0),
+        completedAt: String(r.completed_at ?? new Date().toISOString()),
+        cards: results.slice(0, 24).map((item) => {
+          const cardId = String(item.cardId ?? "");
+          const resultRaw = String(item.result ?? "");
+          const result: SuiviFlashcardCard["result"] =
+            resultRaw === "known" ? "known" : resultRaw === "unknown" ? "unknown" : "other";
+          return {
+            cardId,
+            front: frontById.get(cardId) || `Carte ${cardId.slice(0, 8)}`,
+            result,
+          };
+        }),
+      });
     }
   }
 
@@ -372,13 +652,20 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     let status: SuiviModuleRow["status"] = "todo";
     if (pct >= 100) status = "done";
     else if (pct > 0 || (i === 0 && completedLeaves.size > 0)) status = "current";
+    const relatedSeconds = leafTimes
+      .filter((l) => l.title.toLowerCase().includes(title.toLowerCase().slice(0, 18)) || l.leafId.includes(id))
+      .reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
+    const quizScore =
+      quizzes.find((q) => q.title.toLowerCase().includes(title.toLowerCase().slice(0, 12)))?.percentage ??
+      quizByModule.get(id) ??
+      null;
     return {
       id,
       title,
       progressPct: status === "done" ? 100 : pct,
       status,
-      timeLabel: "—",
-      quizScore: quizByModule.get(id) ?? null,
+      timeLabel: relatedSeconds > 0 ? formatDurationCompact(relatedSeconds) : "—",
+      quizScore,
     };
   });
 
@@ -511,5 +798,9 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     anomalies,
     modules,
     relances,
+    quizzes,
+    interviews,
+    flashcards,
+    leafTimes: [...leafTimes].reverse(),
   };
 }

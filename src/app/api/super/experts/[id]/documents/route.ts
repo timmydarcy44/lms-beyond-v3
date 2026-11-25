@@ -18,7 +18,7 @@ function folderLabel(folder: string) {
     cv: "CV",
     attestation: "Attestation",
     diplome: "Diplôme",
-    contrat: "Contrat",
+    contrat: "Contrat de prestation",
     admin: "Pièce administrative",
     autre: "Document",
   };

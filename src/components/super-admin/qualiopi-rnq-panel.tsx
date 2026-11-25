@@ -45,6 +45,7 @@ const NEXT_HREF: Record<string, string> = {
   pilot: "/super/crm/qualiopi/pilote",
   experts: "/super/experts",
   formations: "/super/crm/programmation",
+  agenda: "/super/crm/programmation?view=agenda",
   handicap: "/super/crm/qualiopi/handicap",
 };
 
@@ -55,13 +56,14 @@ function guessHref(nextStep?: string): string | null {
   if (t.includes("risque")) return NEXT_HREF.risques;
   if (t.includes("réclamation") || t.includes("paq") || t.includes("qualité") || t.includes("signalement"))
     return NEXT_HREF.qualite;
+  if (t.includes("coordination") || t.includes("ical") || t.includes("agenda")) return NEXT_HREF.agenda;
   if (t.includes("formateur") || t.includes("compétences") || t.includes("sous-trait")) return NEXT_HREF.formateurs;
   if (t.includes("handicap")) return NEXT_HREF.handicap;
   if (t.includes("process") || t.includes("moyens")) return NEXT_HREF.process;
   if (t.includes("catalogue") || t.includes("objectif") || t.includes("lms")) return NEXT_HREF.catalogue;
   if (t.includes("expert")) return NEXT_HREF.experts;
-  if (t.includes("session") || t.includes("pipeline") || t.includes("émarg") || t.includes("dossier"))
-    return NEXT_HREF.formations;
+  if (t.includes("intervenants") || t.includes("session") || t.includes("pipeline") || t.includes("émarg") || t.includes("dossier"))
+    return t.includes("intervenants") ? NEXT_HREF.agenda : NEXT_HREF.formations;
   if (t.includes("coffre") || t.includes("convention") || t.includes("livret")) return NEXT_HREF.coffre;
   if (t.includes("n/a") || t.includes("attester")) return null;
   return NEXT_HREF.pilot;

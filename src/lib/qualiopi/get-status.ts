@@ -467,13 +467,26 @@ function assessAuto(
         sessionsTotal >= 1
           ? {
               status: "proven",
-              proofs: [proof("Sessions / intervenants", "/super/crm/programmation", null, `${sessionsTotal}`)],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/programmation" },
+              proofs: [
+                proof(
+                  "Agenda coordination (iCal)",
+                  "/super/crm/programmation?view=agenda",
+                  null,
+                  `${sessionsTotal}`,
+                ),
+              ],
+              nextAction: {
+                label: "Voir l’agenda",
+                href: "/super/crm/programmation?view=agenda",
+              },
             }
           : {
               status: "todo",
               proofs: [],
-              nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
+              nextAction: {
+                label: "Ouvrir l’agenda",
+                href: "/super/crm/programmation?view=agenda",
+              },
             },
       );
     case 19:

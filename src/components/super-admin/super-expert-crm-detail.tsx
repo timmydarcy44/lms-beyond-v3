@@ -76,6 +76,7 @@ const TRACKS = [
 
 const EXPECTED_DOCS = [
   { label: "CV", test: (name: string) => /\bcv\b/i.test(name) },
+  { label: "Contrat de prestation", test: (name: string) => /contrat|prestation|sous[- ]?trait/i.test(name) },
   { label: "Diplômes", test: (name: string) => /dipl/i.test(name) },
   { label: "Attestations", test: (name: string) => /attest/i.test(name) },
   { label: "Pièces administratives", test: (name: string) => /admin|siret|kbis|assurance|rc/i.test(name) },
@@ -180,7 +181,7 @@ export function SuperExpertCrmDetail({
   const [photo, setPhoto] = useState(expert.photo_url || expert.avatar_url || "");
   const [logoUrl, setLogoUrl] = useState(parseContributorProfile(expert.references, expert.headline).companyLogoUrl ?? "");
   const [uploading, setUploading] = useState<"photo" | "logo" | "document" | null>(null);
-  const [docFolder, setDocFolder] = useState<"cv" | "attestation" | "diplome" | "admin" | "autre">("cv");
+  const [docFolder, setDocFolder] = useState<"cv" | "contrat" | "attestation" | "diplome" | "admin" | "autre">("cv");
   const [bioOpen, setBioOpen] = useState(false);
   const [editingSkills, setEditingSkills] = useState(false);
   const [skillForm, setSkillForm] = useState({ domains: "", specialties: "", formats: "", audiences: "", zones: "", languages: "", availabilities: "" });
@@ -368,10 +369,13 @@ export function SuperExpertCrmDetail({
       const body = new FormData();
       body.set("file", file);
       body.set("folder", docFolder);
+      if (docFolder === "contrat") {
+        body.set("label", "Contrat de prestation");
+      }
       const res = await fetch(`/api/super/experts/${expert.id}/documents`, { method: "POST", body });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out.error || "Envoi impossible");
-      toast.success("Document déposé.");
+      toast.success(docFolder === "contrat" ? "Contrat de prestation déposé." : "Document déposé.");
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible");
@@ -743,7 +747,7 @@ export function SuperExpertCrmDetail({
 
         {tab === "documents" ? (
           <SectionCard color="#8DB8FF">
-            <SectionHeader icon={FileText} color="#8DB8FF" title="Documents" subtitle="CV, diplômes, attestations, pièces administratives" action={<TintPill color="#8DB8FF" onClick={() => go("mail", "documents")}>Demander les documents manquants</TintPill>} />
+            <SectionHeader icon={FileText} color="#8DB8FF" title="Documents" subtitle="CV, contrat de prestation, diplômes, attestations" action={<TintPill color="#8DB8FF" onClick={() => go("mail", "documents")}>Demander les documents manquants</TintPill>} />
             <div className="grid gap-6 px-6 pb-6 pt-4 lg:grid-cols-2">
               <div>
                 <div className="flex flex-wrap items-end justify-between gap-3">
@@ -755,6 +759,7 @@ export function SuperExpertCrmDetail({
                       className="rounded-full border border-[#26304F] bg-[#0B1122] px-3 py-1.5 text-xs text-[#E8ECF8]"
                     >
                       <option value="cv">CV</option>
+                      <option value="contrat">Contrat de prestation</option>
                       <option value="attestation">Attestation</option>
                       <option value="diplome">Diplôme</option>
                       <option value="admin">Admin</option>

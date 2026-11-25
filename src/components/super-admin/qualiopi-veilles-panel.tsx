@@ -41,6 +41,11 @@ export function QualiopiVeillesPanel() {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualExcerpt, setManualExcerpt] = useState("");
+  const [manualUrl, setManualUrl] = useState("");
+  const [manualTheme, setManualTheme] = useState<VeilleTheme>("reglementaire");
+  const [manualBusy, setManualBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -241,6 +246,31 @@ export function QualiopiVeillesPanel() {
     await load();
   };
 
+  const addManualInfo = async () => {
+    const nextTitle = manualTitle.trim();
+    const nextExcerpt = manualExcerpt.trim();
+    if (!nextTitle || !nextExcerpt) {
+      toast.error("Titre et contenu requis");
+      return;
+    }
+    setManualBusy(true);
+    try {
+      await saveHighlight({
+        digest_id: latest?.id ?? null,
+        title: nextTitle,
+        excerpt: nextExcerpt,
+        url: manualUrl.trim() || null,
+        theme: manualTheme,
+      });
+      setManualTitle("");
+      setManualExcerpt("");
+      setManualUrl("");
+      setManualTheme("reglementaire");
+    } finally {
+      setManualBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -290,10 +320,9 @@ export function QualiopiVeillesPanel() {
           </p>
         </div>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Preuve 90 j</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/40">Manuel</p>
           <p className="mt-1 text-sm text-white/85">
-            <strong className="font-semibold text-white">{digests90.length}</strong> synthèse(s) sur 90 jours
-            {latest?.email_sent_at ? " · dernier mail envoyé" : ""}.
+            Ajoutez aussi une info à la main (titre, contenu, axe) dans la section ci-dessous.
           </p>
         </div>
       </section>
@@ -551,6 +580,57 @@ export function QualiopiVeillesPanel() {
           </section>
         </>
       )}
+
+      <section className={cn(QUALIOPI_CARD, "p-5")}>
+        <h2 className="text-lg font-semibold text-white">Ajouter une information</h2>
+        <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
+          Complément manuel à la veille auto — utile pour une note interne, un texte réglementaire ou un
+          retour terrain.
+        </p>
+        <div className="mt-4 grid gap-3">
+          <input
+            value={manualTitle}
+            onChange={(event) => setManualTitle(event.target.value)}
+            placeholder="Titre"
+            className="w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
+          />
+          <textarea
+            value={manualExcerpt}
+            onChange={(event) => setManualExcerpt(event.target.value)}
+            placeholder="Contenu / résumé…"
+            rows={4}
+            className="w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
+          />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select
+              value={manualTheme}
+              onChange={(event) => setManualTheme(event.target.value as VeilleTheme)}
+              className="rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white sm:max-w-[220px]"
+            >
+              {HIGHLIGHT_THEMES.map((theme) => (
+                <option key={theme} value={theme}>
+                  {VEILLE_THEME_LABELS[theme]}
+                </option>
+              ))}
+            </select>
+            <input
+              value={manualUrl}
+              onChange={(event) => setManualUrl(event.target.value)}
+              placeholder="Lien (optionnel)"
+              className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
+            />
+            <Button
+              type="button"
+              disabled={manualBusy}
+              onClick={() => void addManualInfo()}
+              className="bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"
+            >
+              {manualBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Ajouter
+            </Button>
+          </div>
+        </div>
+      </section>
 
       <section className={cn(QUALIOPI_CARD, "p-5")}>
         <h2 className="text-lg font-semibold text-white">Informations surlignées</h2>

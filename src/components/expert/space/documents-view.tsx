@@ -11,7 +11,7 @@ import { documentExpiryLabel, type ExpertDocumentItem } from "@/lib/expert/space
 
 const FOLDERS = [
   { id: "tous", label: "Tous", dot: "bg-[#F4F5F7]" },
-  { id: "contrat", label: "Contrats", dot: "bg-[#FF4B4B]" },
+  { id: "contrat", label: "Contrat de prestation", dot: "bg-[#FF4B4B]" },
   { id: "cv", label: "CV", dot: "bg-[#8DB8FF]" },
   { id: "attestation", label: "Attestations", dot: "bg-[#F2CF6B]" },
   { id: "modele", label: "Exemple de facture", dot: "bg-[#FFB4B8]" },

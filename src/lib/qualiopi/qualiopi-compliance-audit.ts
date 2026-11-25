@@ -327,7 +327,7 @@ export function assessQualiopiCompliance(input: {
       ? row(
           18,
           "validated",
-          "CRM pipeline + sessions : coordination formateurs / experts traçable par intervention.",
+          "Agenda Programmation (iCal) : coordination formateurs / créneaux traçable.",
         )
       : row(
           18,

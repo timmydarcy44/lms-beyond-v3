@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveEffectiveSalarieUserId } from "@/lib/control/learner-preview";
 import {
   buildSalarieDemoBadges,
   isSalarieDemoEmail,
@@ -26,27 +27,31 @@ export async function GET() {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
+  const { userId, preview } = await resolveEffectiveSalarieUserId(user.id);
   const db = getServiceRoleClient() ?? authClient;
   const { data: profile } = await db
     .from("profiles")
-    .select("company_id, school_id")
-    .eq("id", user.id)
+    .select("company_id, school_id, email")
+    .eq("id", userId)
     .maybeSingle();
 
   const orgId =
     (profile?.company_id as string | null) ?? (profile?.school_id as string | null) ?? null;
   const orgIds = orgId ? [orgId] : [];
+  const emailForDemo = preview
+    ? String(profile?.email ?? "").trim() || null
+    : user.email ?? null;
 
   const [earnedOpenBadges, visibleOpenBadges] = await Promise.all([
-    getLearnerEarnedOpenBadges(user.id),
-    getLearnerVisibleOpenBadges(user.id, orgId, orgIds),
+    getLearnerEarnedOpenBadges(userId),
+    getLearnerVisibleOpenBadges(userId, orgId, orgIds),
   ]);
 
   const earned = Array.isArray(earnedOpenBadges) ? earnedOpenBadges : [];
   const visible = Array.isArray(visibleOpenBadges) ? visibleOpenBadges : [];
 
-  if (isSalarieDemoEmail(user.email) && earned.length === 0) {
-    const email = String(user.email ?? "").toLowerCase();
+  if (isSalarieDemoEmail(emailForDemo) && earned.length === 0) {
+    const email = String(emailForDemo ?? "").toLowerCase();
     const demo = email.includes("demoapprenant@psg.fr")
       ? buildPsgApprenantDemoBadges()
       : buildSalarieDemoBadges();

@@ -202,7 +202,7 @@ export async function persistNeedAnalysisPdf(
       kind: "analyse-besoin",
       buffer,
     });
-    if (!uploaded) return analysis;
+    if (!uploaded.ok) return analysis;
     const { error } = await service
       .from(TABLE)
       .update({ pdf_storage_path: uploaded.path, pdf_storage_bucket: uploaded.bucket })

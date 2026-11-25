@@ -216,7 +216,11 @@ export async function generateFormationDocuments(
         : {};
     const patch: Record<string, unknown> = {
       // Réf privée (private://…) ou null — jamais d'URL publique
-      file_url: uploaded?.fileUrl ?? (isPublicStorageUrl(row.file_url) ? null : row.file_url),
+      file_url: uploaded.ok
+        ? uploaded.fileUrl
+        : isPublicStorageUrl(row.file_url)
+          ? null
+          : row.file_url,
       access_token: accessToken,
       accept_token: acceptToken ?? null,
       generated_at: new Date().toISOString(),
@@ -241,7 +245,7 @@ export async function generateFormationDocuments(
           : {}),
       };
     }
-    if (uploaded) {
+    if (uploaded.ok) {
       patch.storage_bucket = uploaded.bucket;
       patch.storage_path = uploaded.path;
     }

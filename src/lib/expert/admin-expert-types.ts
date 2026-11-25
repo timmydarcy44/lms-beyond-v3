@@ -38,12 +38,42 @@ export function parseExpertRegistrationMeta(references: unknown) {
 
 export function parseExpertDocuments(references: unknown) {
   if (!Array.isArray(references)) return [];
-  return references.filter(
+  const flat = references.filter(
     (item) =>
       item &&
       typeof item === "object" &&
       ["edge_document", "document", "edge_cv"].includes(String((item as { _type?: string })._type ?? "")),
   ) as Record<string, unknown>[];
+
+  const meta = references.find(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      (item as { _type?: string })._type === "edge_registration_meta",
+  ) as { documents?: Array<Record<string, unknown>> } | undefined;
+  const fromMeta = Array.isArray(meta?.documents)
+    ? meta.documents
+        .filter((d) => d && typeof d === "object" && typeof d.id === "string")
+        .map((d) => ({
+          _type: "edge_document",
+          id: d.id,
+          label: d.name ?? d.label,
+          name: d.name ?? d.label,
+          url: d.url,
+          uploaded_at: d.uploaded_at,
+          folder: d.folder,
+        }))
+    : [];
+
+  const seen = new Set<string>();
+  const out: Record<string, unknown>[] = [];
+  for (const doc of [...flat, ...fromMeta]) {
+    const key = String(doc.id ?? doc.url ?? doc.name ?? "");
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
+    out.push(doc);
+  }
+  return out;
 }
 
 export function parseExpertInternalNotes(references: unknown) {

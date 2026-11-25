@@ -633,7 +633,7 @@ async function upsertCoffreDoc(
     kind: params.kind,
     buffer: params.buffer,
   });
-  if (!uploaded) return { ok: false, error: "Upload PDF impossible" };
+  if (!uploaded.ok) return { ok: false, error: uploaded.error || "Upload PDF impossible" };
 
   const now = new Date().toISOString();
   let query = service

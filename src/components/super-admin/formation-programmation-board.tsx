@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,16 @@ import {
 } from "@/lib/formation-dossier/constants";
 import type { FormationDossierBoardCard } from "@/lib/formation-dossier/board";
 import { FormationDossierSheet } from "@/components/super-admin/formation-dossier-sheet";
+import { FormationProgrammationAgenda } from "@/components/super-admin/formation-programmation-agenda";
 
 export function FormationProgrammationBoard() {
+  const searchParams = useSearchParams();
+  const [view, setView] = useState<"pipeline" | "agenda">(
+    searchParams.get("view") === "agenda" ? "agenda" : "pipeline",
+  );
   const [cards, setCards] = useState<FormationDossierBoardCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("dossier"));
   const [motifOpen, setMotifOpen] = useState<{
     id: string;
     toStatus: FormationDossierStatus;
@@ -116,18 +122,46 @@ export function FormationProgrammationBoard() {
             Cockpit ops des dossiers formation. Le drag passe par la transition serveur (pas de
             saut d&apos;étape).
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setView("pipeline")}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                view === "pipeline"
+                  ? "bg-[#6C5CF5] text-white"
+                  : "border border-[#262A4A] text-[#A3A8C7]"
+              }`}
+            >
+              Pipeline
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("agenda")}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                view === "agenda"
+                  ? "bg-[#6C5CF5] text-white"
+                  : "border border-[#262A4A] text-[#A3A8C7]"
+              }`}
+            >
+              Agenda iCal
+            </button>
+          </div>
         </div>
-        <Button
-          type="button"
-          className="bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]"
-          onClick={() => toast.message("Créez un dossier depuis la fiche entreprise ou un deal.")}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Nouveau dossier
-        </Button>
+        {view === "pipeline" ? (
+          <Button
+            type="button"
+            className="bg-[#6C5CF5] text-white hover:bg-[#5B4DE0]"
+            onClick={() => toast.message("Créez un dossier depuis la fiche entreprise ou un deal.")}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Nouveau dossier
+          </Button>
+        ) : null}
       </div>
 
-      {!loading ? (
+      {view === "agenda" ? <FormationProgrammationAgenda /> : null}
+
+      {view === "pipeline" && !loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <section className="rounded-2xl border border-[#262A4A] bg-gradient-to-br from-[#1A1440] via-[#141731] to-[#141731] px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#B7AEFF]">
@@ -163,9 +197,10 @@ export function FormationProgrammationBoard() {
         </div>
       ) : null}
 
-      {loading ? (
+      {view === "pipeline" && loading ? (
         <p className="text-sm text-[#A3A8C7]">Chargement…</p>
-      ) : (
+      ) : null}
+      {view === "pipeline" && !loading ? (
         <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4">
           {FORMATION_DOSSIER_STATUSES.map((status) => {
             const column = byStatus.get(status) ?? [];
@@ -246,7 +281,7 @@ export function FormationProgrammationBoard() {
             );
           })}
         </div>
-      )}
+      ) : null}
 
       {motifOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

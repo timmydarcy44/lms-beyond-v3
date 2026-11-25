@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { getSession } from "@/lib/auth/session";
 import { isEdgeCertified } from "@/lib/expert/expert-certification";
+import { loadExpertDocumentsMerged } from "@/lib/expert/expert-documents-load";
 import { parseRegistrationMeta, type ExpertDocumentMeta } from "@/lib/expert/expert-registration-meta";
 import { buildJadeDocuments, buildJadeMissions, buildJadeReviews, buildJadeSlots } from "@/lib/expert/jade-expert-space";
 import {
@@ -431,7 +432,9 @@ export const loadExpertSpace = cache(async (): Promise<ExpertSpaceData> => {
         at: String(review.created_at ?? now.toISOString()),
       }));
 
-  const documents = (meta?.documents ?? []).map(mapDocument);
+  const documents = admin
+    ? await loadExpertDocumentsMerged(admin, session.id, expert.references)
+    : (meta?.documents ?? []).map(mapDocument);
   const created = expert.created_at ? new Date(String(expert.created_at)) : null;
   const steps = [
     { id: "dossier", label: "Dossier validé", detail: "CV, spécialités et références", at: created ? created.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null, done: expert.review_status === "approved" },

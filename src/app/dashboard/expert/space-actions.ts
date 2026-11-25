@@ -326,20 +326,39 @@ export async function saveExpertDocument(input: z.infer<typeof documentSchema>) 
     return { ok: true };
   }
   const supabase = await getServerClient();
-  if (!supabase) return { ok: false, error: "Service indisponible" };
-  const current = await supabase.from("experts").select("references").eq("id", session.id).maybeSingle();
+  const admin = getServiceRoleClient();
+  const db = admin ?? supabase;
+  if (!db) return { ok: false, error: "Service indisponible" };
+  const current = await db.from("experts").select("references").eq("id", session.id).maybeSingle();
   const meta = parseRegistrationMeta(current.data?.references);
-  const references = mergeRegistrationMeta(current.data?.references, { documents: [...(meta?.documents ?? []), document] });
-  const { error } = await supabase.from("experts").update({ references }).eq("id", session.id);
+  const withMeta = mergeRegistrationMeta(current.data?.references, {
+    documents: [...(meta?.documents ?? []), document],
+  });
+  const edgeDoc = {
+    _type: parsed.folder === "cv" ? "edge_cv" : "edge_document",
+    id: document.id,
+    label: document.name,
+    name: document.name,
+    url: document.url,
+    folder: parsed.folder,
+    uploaded_at: document.uploaded_at,
+    at: document.uploaded_at,
+  };
+  const references = Array.isArray(withMeta) ? [...withMeta, edgeDoc] : [edgeDoc];
+  const { error } = await db.from("experts").update({ references }).eq("id", session.id);
   if (error) return { ok: false, error: error.message };
-  await supabase.from("expert_documents").insert({
+  const { error: insertErr } = await db.from("expert_documents").insert({
     id: document.id,
     expert_id: session.id,
     name: parsed.name,
     folder: parsed.folder,
     status: "deposited",
     url: parsed.url,
+    uploaded_at: document.uploaded_at,
   });
+  if (insertErr && !/duplicate|unique/i.test(insertErr.message)) {
+    console.warn("[saveExpertDocument] expert_documents:", insertErr.message);
+  }
   refresh();
   return { ok: true };
 }

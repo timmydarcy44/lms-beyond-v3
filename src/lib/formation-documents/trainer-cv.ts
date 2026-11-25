@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { parseRegistrationMeta } from "@/lib/expert/expert-registration-meta";
 import { uploadFormationPdf, newDocToken } from "@/lib/formation-documents/storage";
 
 export type ExpertCvRef = {
@@ -37,8 +38,8 @@ export async function resolveExpertCv(
     .eq("id", expertUserId)
     .maybeSingle();
 
-  const refs = expert?.references as { documents?: Array<Record<string, unknown>> } | null;
-  const docs = Array.isArray(refs?.documents) ? refs!.documents! : [];
+  const meta = parseRegistrationMeta(expert?.references);
+  const docs = meta?.documents ?? [];
   const cv = docs
     .filter((d) => {
       const folder = String(d.folder ?? d.category ?? "").toLowerCase();
@@ -96,6 +97,7 @@ export async function snapshotTrainerCvToDossier(
         buffer: bytes,
       })
     : null;
+  const stored = uploaded?.ok ? uploaded : null;
 
   const now = new Date().toISOString();
   const title = `CV formateur — ${cv.name}`;
@@ -105,7 +107,7 @@ export async function snapshotTrainerCvToDossier(
     trainer_user_id: params.trainerUserId,
     uploaded_at: cv.uploadedAt,
     snapshotted_at: now,
-    copied_to_vault: Boolean(uploaded),
+    copied_to_vault: Boolean(stored),
   };
 
   const { data: existing } = await service
@@ -125,11 +127,11 @@ export async function snapshotTrainerCvToDossier(
     updated_at: now,
     meta,
     // Copie privée si possible, sinon lien source (dépôt expert)
-    file_url: uploaded?.fileUrl ?? cv.url,
+    file_url: stored?.fileUrl ?? cv.url,
   };
-  if (uploaded) {
-    patch.storage_bucket = uploaded.bucket;
-    patch.storage_path = uploaded.path;
+  if (stored) {
+    patch.storage_bucket = stored.bucket;
+    patch.storage_path = stored.path;
   }
 
   let documentId: string;

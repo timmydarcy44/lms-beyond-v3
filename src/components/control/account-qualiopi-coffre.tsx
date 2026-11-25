@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { EmptyState } from "./chrome";
 
 type CoffreItem = {
@@ -81,8 +82,11 @@ export function AccountQualiopiCoffre({ organizationId }: { organizationId: stri
   const [snap, setSnap] = useState<OrgSnap | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploadBusyKey, setUploadBusyKey] = useState<string | null>(null);
   const [selectedDossierId, setSelectedDossierId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ title: string; href: string } | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<{ dossierId: string; kind: string; itemKey: string } | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -142,6 +146,56 @@ export function AccountQualiopiCoffre({ organizationId }: { organizationId: stri
     setPreview({ title: doc.title, href: docPdfHref(doc) });
   };
 
+  const pickUpload = (dossierId: string, kind: string, itemKey: string) => {
+    uploadTargetRef.current = { dossierId, kind, itemKey };
+    const input = uploadInputRef.current;
+    if (!input) {
+      toast.error("Sélecteur de fichier indisponible — rechargez la page.");
+      return;
+    }
+    input.value = "";
+    input.click();
+  };
+
+  const onUploadFile = async (fileList: FileList | null) => {
+    const target = uploadTargetRef.current;
+    const file = fileList?.[0];
+    if (!file) return;
+    if (!target) {
+      toast.error("Cible d’upload perdue — réessayez.");
+      return;
+    }
+    const okType =
+      file.type === "application/pdf" ||
+      /\.pdf$/i.test(file.name) ||
+      /^image\/(jpeg|jpg|png)$/i.test(file.type) ||
+      /\.(jpe?g|png)$/i.test(file.name);
+    if (!okType) {
+      toast.error("PDF, JPEG ou PNG uniquement");
+      return;
+    }
+    uploadTargetRef.current = null;
+    setUploadBusyKey(target.itemKey);
+    try {
+      const form = new FormData();
+      form.set("kind", target.kind);
+      form.set("file", file);
+      const res = await fetch(
+        `/api/super-admin/crm/formation-dossiers/${target.dossierId}/documents/upload`,
+        { method: "POST", body: form },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Upload impossible (${res.status})`);
+      toast.success("Document déposé dans le coffre");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload impossible");
+    } finally {
+      setUploadBusyKey(null);
+      if (uploadInputRef.current) uploadInputRef.current.value = "";
+    }
+  };
+
   if (error && !snap) {
     return <EmptyState title={error} />;
   }
@@ -159,6 +213,13 @@ export function AccountQualiopiCoffre({ organizationId }: { organizationId: stri
 
   return (
     <div className="mt-6 space-y-5">
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
+        className="hidden"
+        onChange={(e) => void onUploadFile(e.target.files)}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-[#1A2340] bg-[#111831] px-5 py-4">
         <div>
           <p className="text-lg font-extrabold text-[#F2F4FA]">Coffre Qualiopi</p>
@@ -256,27 +317,38 @@ export function AccountQualiopiCoffre({ organizationId }: { organizationId: stri
                   }
                 };
                 const clickable = Boolean(linkedDoc || item.kind);
+                const busyUpload = uploadBusyKey === item.key;
                 return (
-                  <li key={item.key}>
-                    <button
-                      type="button"
-                      disabled={!clickable}
-                      onClick={() => open()}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl bg-[#0B1122] px-3 py-2 text-left transition enabled:hover:bg-[#151C33] disabled:cursor-default"
-                    >
-                      <div className="min-w-0">
+                  <li key={item.key} className="rounded-xl bg-[#0B1122] px-3 py-2">
+                    <div className="flex w-full items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        disabled={!clickable}
+                        onClick={() => open()}
+                        className="min-w-0 flex-1 text-left transition enabled:hover:opacity-90 disabled:cursor-default"
+                      >
                         <p className="text-sm text-[#F2F4FA]">{item.label}</p>
                         {item.detail ? (
                           <p className="truncate text-[11px] text-[#6C7593]">{item.detail}</p>
                         ) : null}
-                      </div>
+                      </button>
                       <span
                         className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
                         style={{ background: tone.bg, color: tone.fg }}
                       >
                         {clickable && item.status === "ready" ? "Ouvrir" : STATUS_LABEL[item.status]}
                       </span>
-                    </button>
+                    </div>
+                    {item.kind ? (
+                      <button
+                        type="button"
+                        disabled={Boolean(uploadBusyKey)}
+                        onClick={() => pickUpload(selected.dossier_id, item.kind!, item.key)}
+                        className="mt-2 rounded-full border border-[#26304F] px-3 py-1 text-[11px] font-semibold text-[#C9D2E8] hover:text-white disabled:opacity-50"
+                      >
+                        {busyUpload ? "Upload…" : "Uploader"}
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}

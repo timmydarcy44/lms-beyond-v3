@@ -98,9 +98,9 @@ export async function archiveSignatureProof(
     generated_at: params.signedAt,
     updated_at: new Date().toISOString(),
     meta,
-    file_url: uploaded?.fileUrl ?? null,
+    file_url: uploaded.ok ? uploaded.fileUrl : null,
   };
-  if (uploaded) {
+  if (uploaded.ok) {
     patch.storage_bucket = uploaded.bucket;
     patch.storage_path = uploaded.path;
   }

@@ -127,9 +127,9 @@ export async function archiveEmargementPdf(
         day_part: ctx.slot.day_part,
         closed_at: params.closedAt || now,
       },
-      file_url: uploaded?.fileUrl ?? null,
+      file_url: uploaded.ok ? uploaded.fileUrl : null,
     };
-    if (uploaded) {
+    if (uploaded.ok) {
       patch.storage_bucket = uploaded.bucket;
       patch.storage_path = uploaded.path;
     }

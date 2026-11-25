@@ -1,5 +1,6 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { ADMIN_EXPERT_SELECT, type AdminExpertRow } from "@/lib/expert/admin-expert-types";
+import { loadExpertDocumentsMerged, toAdminDocumentEntries } from "@/lib/expert/expert-documents-load";
 
 export type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
 export {
@@ -63,5 +64,30 @@ export async function getAdminExpertById(id: string): Promise<AdminExpertRow | n
     console.error("[getAdminExpertById]", error);
     return null;
   }
-  return (data as AdminExpertRow | null) ?? null;
+  if (!data) return null;
+
+  // Enrichit references avec expert_documents (CV déposé côté dashboard/expert).
+  try {
+    const docs = await loadExpertDocumentsMerged(supabase, id, (data as AdminExpertRow).references);
+    if (docs.length) {
+      const flat = toAdminDocumentEntries(docs);
+      const refs = Array.isArray((data as AdminExpertRow).references)
+        ? [...((data as AdminExpertRow).references as unknown[])]
+        : [];
+      const existingIds = new Set(
+        refs
+          .filter((item) => item && typeof item === "object")
+          .map((item) => String((item as { id?: string }).id ?? "")),
+      );
+      for (const entry of flat) {
+        if (entry.id && existingIds.has(String(entry.id))) continue;
+        refs.push(entry);
+      }
+      (data as AdminExpertRow).references = refs;
+    }
+  } catch (enrichError) {
+    console.warn("[getAdminExpertById] documents enrich:", enrichError);
+  }
+
+  return data as AdminExpertRow;
 }

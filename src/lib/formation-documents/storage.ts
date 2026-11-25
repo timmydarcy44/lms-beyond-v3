@@ -23,6 +23,10 @@ export function parsePrivateStorageRef(
   return { bucket: rest.slice(0, slash), path: rest.slice(slash + 1) };
 }
 
+export type FormationPdfUploadResult =
+  | { ok: true; bucket: string; path: string; fileUrl: string }
+  | { ok: false; error: string };
+
 /**
  * Upload PDF en bucket privé, chemin non devinable.
  * Ne jamais exposer d'URL publique.
@@ -30,15 +34,21 @@ export function parsePrivateStorageRef(
 export async function uploadFormationPdf(
   service: SupabaseClient,
   params: { dossierId: string; kind: string; buffer: Buffer },
-): Promise<{ bucket: string; path: string; fileUrl: string; error?: string } | null> {
+): Promise<FormationPdfUploadResult> {
   const objectId = newDocToken();
   // Chemin opaque : pas de dossierId complet énumérable
   const path = `${objectId}/${params.kind}.pdf`;
 
-  // createBucket renvoie { error } (ne throw pas) — s’assurer que le bucket existe.
-  const listed = await service.storage.listBuckets();
-  const exists = (listed.data ?? []).some((b) => b.name === FORMATION_DOCS_BUCKET);
-  if (!exists) {
+  const tryUpload = () =>
+    service.storage.from(FORMATION_DOCS_BUCKET).upload(path, params.buffer, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
+
+  let { error } = await tryUpload();
+
+  // Bucket manquant → créer puis réessayer (évite un listBuckets flaky).
+  if (error && /bucket not found|not found/i.test(error.message)) {
     const created = await service.storage.createBucket(FORMATION_DOCS_BUCKET, {
       public: false,
       fileSizeLimit: "25MB",
@@ -46,21 +56,18 @@ export async function uploadFormationPdf(
     });
     if (created.error && !/already exists|duplicate/i.test(created.error.message)) {
       console.warn("[formation-docs/storage] createBucket:", created.error.message);
-      return null;
+      return { ok: false, error: `Bucket formation-docs: ${created.error.message}` };
     }
+    ({ error } = await tryUpload());
   }
-
-  const { error } = await service.storage.from(FORMATION_DOCS_BUCKET).upload(path, params.buffer, {
-    contentType: "application/pdf",
-    upsert: true,
-  });
 
   if (error) {
     console.warn("[formation-docs/storage] upload failed:", error.message);
-    return null;
+    return { ok: false, error: error.message };
   }
 
   return {
+    ok: true,
     bucket: FORMATION_DOCS_BUCKET,
     path,
     fileUrl: toPrivateStorageRef(FORMATION_DOCS_BUCKET, path),

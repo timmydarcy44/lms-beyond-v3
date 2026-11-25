@@ -267,14 +267,14 @@ export async function issueFormationInvoice(
       kind: "facture",
       title: "Facture",
       status: "sent",
-      file_url: uploaded?.fileUrl ?? null,
+      file_url: uploaded.ok ? uploaded.fileUrl : null,
       access_token: accessToken,
       generated_at: new Date().toISOString(),
       sent_at: new Date().toISOString(),
       last_sent_to: dossier.contact_email || null,
       updated_at: new Date().toISOString(),
     };
-    if (uploaded) {
+    if (uploaded.ok) {
       factureRow.storage_bucket = uploaded.bucket;
       factureRow.storage_path = uploaded.path;
     }

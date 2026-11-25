@@ -113,10 +113,10 @@ export async function ensureSignedPdfBuffer(
 
   const patch: Record<string, unknown> = {
     meta: nextMeta,
-    file_url: uploaded?.fileUrl ?? doc.file_url ?? null,
+    file_url: uploaded.ok ? uploaded.fileUrl : (doc.file_url ?? null),
     updated_at: new Date().toISOString(),
   };
-  if (uploaded) {
+  if (uploaded.ok) {
     patch.storage_bucket = uploaded.bucket;
     patch.storage_path = uploaded.path;
   }

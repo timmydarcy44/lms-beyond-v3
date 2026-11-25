@@ -179,7 +179,8 @@ export function SuperExpertCrmDetail({
   const [loading, setLoading] = useState<string | null>(null);
   const [photo, setPhoto] = useState(expert.photo_url || expert.avatar_url || "");
   const [logoUrl, setLogoUrl] = useState(parseContributorProfile(expert.references, expert.headline).companyLogoUrl ?? "");
-  const [uploading, setUploading] = useState<"photo" | "logo" | null>(null);
+  const [uploading, setUploading] = useState<"photo" | "logo" | "document" | null>(null);
+  const [docFolder, setDocFolder] = useState<"cv" | "attestation" | "diplome" | "admin" | "autre">("cv");
   const [bioOpen, setBioOpen] = useState(false);
   const [editingSkills, setEditingSkills] = useState(false);
   const [skillForm, setSkillForm] = useState({ domains: "", specialties: "", formats: "", audiences: "", zones: "", languages: "", availabilities: "" });
@@ -353,6 +354,24 @@ export function SuperExpertCrmDetail({
       if (!res.ok) throw new Error(out.error || "Envoi impossible");
       setLogoUrl(out.companyLogoUrl ?? "");
       toast.success("Logo enregistré.");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Envoi impossible");
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const uploadDocument = async (file: File) => {
+    setUploading("document");
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      body.set("folder", docFolder);
+      const res = await fetch(`/api/super/experts/${expert.id}/documents`, { method: "POST", body });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "Envoi impossible");
+      toast.success("Document déposé.");
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible");
@@ -727,7 +746,36 @@ export function SuperExpertCrmDetail({
             <SectionHeader icon={FileText} color="#8DB8FF" title="Documents" subtitle="CV, diplômes, attestations, pièces administratives" action={<TintPill color="#8DB8FF" onClick={() => go("mail", "documents")}>Demander les documents manquants</TintPill>} />
             <div className="grid gap-6 px-6 pb-6 pt-4 lg:grid-cols-2">
               <div>
-                <p className="text-sm font-extrabold">Transmis</p>
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <p className="text-sm font-extrabold">Transmis</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={docFolder}
+                      onChange={(e) => setDocFolder(e.target.value as typeof docFolder)}
+                      className="rounded-full border border-[#26304F] bg-[#0B1122] px-3 py-1.5 text-xs text-[#E8ECF8]"
+                    >
+                      <option value="cv">CV</option>
+                      <option value="attestation">Attestation</option>
+                      <option value="diplome">Diplôme</option>
+                      <option value="admin">Admin</option>
+                      <option value="autre">Autre</option>
+                    </select>
+                    <label className="cursor-pointer rounded-full bg-[#8DB8FF] px-3 py-1.5 text-xs font-extrabold text-[#0B1122]">
+                      {uploading === "document" ? "Envoi…" : "Déposer"}
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
+                        className="sr-only"
+                        disabled={uploading === "document"}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) void uploadDocument(file);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
                 <ul className="mt-3 space-y-2">
                   {documents.length === 0 ? <li className="text-sm text-[#9AA3BD]">Aucun document transmis.</li> : null}
                   {documents.map((doc, index) => {

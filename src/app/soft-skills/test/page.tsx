@@ -55,7 +55,20 @@ export default function SoftSkillsTestPage() {
         return;
       }
 
-      const next = await redirectAfterAssessmentTest("soft_skills", applicationReturn("/soft-skills/resultats"));
+      const from =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("from")
+          : null;
+      const resultsHref =
+        from === "expert"
+          ? "/soft-skills/resultats?from=expert"
+          : from === "salarie"
+            ? "/soft-skills/resultats?from=salarie"
+            : applicationReturn("/soft-skills/resultats");
+      const next =
+        from === "expert"
+          ? resultsHref
+          : await redirectAfterAssessmentTest("soft_skills", resultsHref);
       window.setTimeout(() => {
         window.location.href = next;
       }, 600);

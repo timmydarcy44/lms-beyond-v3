@@ -80,9 +80,11 @@ export default function SoftSkillsResultsPage() {
           ? new URLSearchParams(window.location.search).get("from")
           : null;
       router.replace(
-        from === "salarie"
-          ? "/dashboard/salarie/test-soft-skills"
-          : "/dashboard/apprenant/soft-skills-intro",
+        from === "expert"
+          ? "/dashboard/expert/bilans"
+          : from === "salarie"
+            ? "/dashboard/salarie/test-soft-skills"
+            : "/dashboard/apprenant/soft-skills-intro",
       );
     };
     load();

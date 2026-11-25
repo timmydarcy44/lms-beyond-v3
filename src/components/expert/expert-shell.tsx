@@ -281,6 +281,7 @@ export function ExpertShell({
         children: [
           { label: "Mes formations", href: "/dashboard/expert/formations" },
           { label: "Proposer une formation", href: "/dashboard/expert/formations/proposer" },
+          { label: "Mes bilans", href: "/dashboard/expert/bilans" },
           { label: "Mes résultats", href: "/dashboard/expert/resultats" },
           { label: "Compétences à valider", href: "/dashboard/expert/competences" },
         ],

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { DOC_TITLES, isLot4Kind, type Lot4DocumentKind } from "@/lib/formation-documents/constants";
+import { normalizeStaffUploadToPdf } from "@/lib/formation-documents/normalize-upload-pdf";
 import { newDocToken, uploadFormationPdf } from "@/lib/formation-documents/storage";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -56,10 +57,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: `Kind non supporté: ${kind}` }, { status: 400 });
   }
   if (!(file instanceof File) || file.size <= 0) {
-    return NextResponse.json({ error: "Fichier PDF requis" }, { status: 400 });
+    return NextResponse.json({ error: "Fichier requis (PDF, JPEG ou PNG)" }, { status: 400 });
   }
-  if (file.size > 25 * 1024 * 1024) {
-    return NextResponse.json({ error: "Fichier trop volumineux (max 25 Mo)" }, { status: 400 });
+
+  const normalized = await normalizeStaffUploadToPdf(file);
+  if (!normalized.buffer) {
+    return NextResponse.json({ error: normalized.error || "Fichier invalide" }, { status: 400 });
   }
 
   const { data: dossier } = await service
@@ -69,13 +72,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     .maybeSingle();
   if (!dossier) return NextResponse.json({ error: "Dossier introuvable" }, { status: 404 });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const uploaded = await uploadFormationPdf(service, { dossierId, kind, buffer });
-  if (!uploaded) {
+  const uploaded = await uploadFormationPdf(service, {
+    dossierId,
+    kind,
+    buffer: normalized.buffer,
+  });
+  if (!uploaded.ok) {
     return NextResponse.json(
       {
-        error:
-          "Upload stockage impossible (bucket formation-docs). Vérifiez les droits storage Supabase.",
+        error: `Upload stockage impossible: ${uploaded.error}`,
       },
       { status: 502 },
     );

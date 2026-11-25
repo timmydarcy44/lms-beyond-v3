@@ -289,8 +289,13 @@ export function BtocClientFileView({ initial }: Props) {
       return;
     }
     // Ne clear la cible qu’après validation fichier, pour pouvoir réessayer.
-    if (!/\.pdf$/i.test(pdf.name) && pdf.type !== "application/pdf") {
-      toast.error("PDF uniquement");
+    const okType =
+      pdf.type === "application/pdf" ||
+      /\.pdf$/i.test(pdf.name) ||
+      /^image\/(jpeg|jpg|png)$/i.test(pdf.type) ||
+      /\.(jpe?g|png)$/i.test(pdf.name);
+    if (!okType) {
+      toast.error("PDF, JPEG ou PNG uniquement");
       return;
     }
     uploadTargetRef.current = null;
@@ -608,7 +613,7 @@ export function BtocClientFileView({ initial }: Props) {
       <input
         ref={uploadInputRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png"
         className="hidden"
         onChange={(e) => void onUploadFile(e.target.files)}
       />

@@ -43,7 +43,6 @@ export function EmployeeSkills({
   onEdit: () => void;
 }) {
   const [filter, setFilter] = useState<FilterId>("all");
-  const [expanded, setExpanded] = useState(false);
   const [reminding, setReminding] = useState(false);
   const summary = summarizeFicheGaps(gaps);
   const counts = {
@@ -209,7 +208,7 @@ export function EmployeeSkills({
             action={shareConsent ? { label: "Relancer le diagnostic", onClick: () => void remind() } : undefined}
           />
         ) : (
-          <SoftSkillRanking skills={softSkills} expanded={expanded} onToggle={() => setExpanded((value) => !value)} />
+          <SoftSkillRanking skills={softSkills} />
         )}
 
         {byoundSkills.length === 0 ? (
@@ -305,40 +304,68 @@ function RowMenu({ onAssign }: { onAssign: () => void }) {
 
 export function SoftSkillRanking({
   skills,
-  expanded,
-  onToggle,
+  expanded: _expanded,
+  onToggle: _onToggle,
 }: {
   skills: Array<{ skill: string; score: number }>;
-  expanded: boolean;
-  onToggle: () => void;
+  expanded?: boolean;
+  onToggle?: () => void;
 }) {
   const ranked = [...skills].sort((a, b) => b.score - a.score);
-  const top = ranked.slice(0, 5);
-  const topNames = new Set(top.map((item) => item.skill));
-  const bottom = ranked.slice(-5).filter((item) => !topNames.has(item.skill));
+  const forces = ranked.filter((item) => Math.round(item.score) >= 12);
+  const develop = ranked.filter((item) => Math.round(item.score) <= 8);
+  const mid = ranked.filter((item) => {
+    const rounded = Math.round(item.score);
+    return rounded > 8 && rounded < 12;
+  });
+  const rankOf = (skill: string) => ranked.findIndex((row) => row.skill === skill) + 1;
+
   return (
     <section className="rounded-[26px] bg-white p-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold">Soft skills · classement</h2>
-        {ranked.length > 10 ? (
-          <button type="button" onClick={onToggle} className="text-sm font-semibold">
-            {expanded ? "Réduire" : `Voir les ${ranked.length} ›`}
-          </button>
-        ) : null}
+        <p className="text-sm text-[#6B6F7A]">{ranked.length} compétence{ranked.length > 1 ? "s" : ""}</p>
       </div>
-      <ol className="mt-4">
-        {(expanded ? ranked : top).map((item) => (
-          <RankRow key={item.skill} rank={ranked.findIndex((row) => row.skill === item.skill) + 1} skill={item.skill} score={item.score} />
-        ))}
-        {!expanded && bottom.length > 0 ? (
-          <>
-            <li className="my-2 border-t border-[#F1EFE9]" aria-hidden />
-            {bottom.map((item) => (
-              <RankRow key={item.skill} rank={ranked.findIndex((row) => row.skill === item.skill) + 1} skill={item.skill} score={item.score} />
+      <p className="mt-2 text-sm text-[#6B6F7A]">
+        Vert ≥ 12 (points forts) · Orange ≤ 8 (à développer).
+      </p>
+
+      {forces.length > 0 ? (
+        <div className="mt-5">
+          <h3 className="text-sm font-bold text-[#1F9D57]">Points forts</h3>
+          <ol className="mt-2">
+            {forces.map((item) => (
+              <RankRow key={item.skill} rank={rankOf(item.skill)} skill={item.skill} score={item.score} />
             ))}
-          </>
-        ) : null}
-      </ol>
+          </ol>
+        </div>
+      ) : null}
+
+      {develop.length > 0 ? (
+        <div className="mt-5">
+          <h3 className="text-sm font-bold text-[#E7782C]">À développer</h3>
+          <ol className="mt-2">
+            {develop.map((item) => (
+              <RankRow key={item.skill} rank={rankOf(item.skill)} skill={item.skill} score={item.score} />
+            ))}
+          </ol>
+        </div>
+      ) : null}
+
+      {mid.length > 0 ? (
+        <div className="mt-5">
+          <h3 className="text-sm font-bold text-[#6B6F7A]">En progression</h3>
+          <ol className="mt-2">
+            {mid.map((item) => (
+              <RankRow key={item.skill} rank={rankOf(item.skill)} skill={item.skill} score={item.score} />
+            ))}
+          </ol>
+        </div>
+      ) : null}
+
+      {ranked.length === 0 ? (
+        <p className="mt-4 text-sm text-[#6B6F7A]">Aucun soft skill partagé.</p>
+      ) : null}
     </section>
   );
 }
@@ -349,7 +376,7 @@ function RankRow({ rank, skill, score }: { rank: number; skill: string; score: n
   return (
     <li className="flex items-center gap-3 py-2">
       <span className="w-6 text-sm font-semibold text-[#6B6F7A]">{rank}</span>
-      <span className="min-w-0 flex-1 truncate font-semibold">{skill}</span>
+      <span className="min-w-0 flex-1 font-semibold leading-snug">{skill}</span>
       <span className="h-1.5 w-[90px] overflow-hidden rounded-full bg-[#ECE9E1]" aria-hidden>
         <span className="block h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, (rounded / 15) * 100))}%`, background: color }} />
       </span>

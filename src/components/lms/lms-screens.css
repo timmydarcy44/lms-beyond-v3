@@ -9,6 +9,14 @@
   background: #f5f4f1;
 }
 
+/* Résultats : toujours scrollables (overlay plein écran parent inclus). */
+.quiz-results-screen {
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
 .lms-screen--dys,
 .lms-screen--dys button,
 .lms-screen--dys p,

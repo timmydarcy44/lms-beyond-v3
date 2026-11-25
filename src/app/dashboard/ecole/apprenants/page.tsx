@@ -11,6 +11,7 @@ import { getServerClient } from "@/lib/supabase/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { SchoolApprenantsPageClient } from "@/components/beyond-connect/school-apprenants-page-client";
 import { mockOffers } from "@/lib/mocks/appData";
+import { fetchLastSignInForUserIds } from "@/lib/queries/learner-tracking";
 
 export const dynamic = "force-dynamic";
 
@@ -64,9 +65,20 @@ async function ApprenantsContent({
     if (apprenantsError) {
       console.error("Erreur chargement apprenants:", apprenantsError.message);
     } else {
-      studentsRows = (apprenantsRows ?? [])
+      const base = (apprenantsRows ?? [])
         .map((row: { student?: unknown }) => row.student)
-        .filter(Boolean);
+        .filter(Boolean) as Array<{ id?: string; [key: string]: unknown }>;
+      const ids = base.map((s) => String(s.id ?? "")).filter(Boolean);
+      let lastSignIn = new Map<string, string>();
+      try {
+        lastSignIn = await fetchLastSignInForUserIds(listClient as never, ids);
+      } catch (e) {
+        console.warn("[ecole/apprenants] lastSignIn", e);
+      }
+      studentsRows = base.map((s) => ({
+        ...s,
+        last_sign_in_at: lastSignIn.get(String(s.id ?? "")) ?? null,
+      }));
     }
     classOptions = (classesRows ?? []) as { id: string; name: string | null }[];
   }

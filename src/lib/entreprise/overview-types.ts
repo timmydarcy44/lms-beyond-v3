@@ -17,6 +17,8 @@ export type EntrepriseEmployee = {
   diagnostic_label?: string | null;
   avatar_url?: string | null;
   last_activity_at?: string | null;
+  /** auth.users.last_sign_in_at — vignette connecté / non connecté. */
+  last_sign_in_at?: string | null;
 };
 
 export type EntrepriseOverviewData = {

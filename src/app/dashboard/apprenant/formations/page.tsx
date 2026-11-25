@@ -41,8 +41,8 @@ export default async function ApprenantMesFormationsPage() {
         : [];
 
   return (
-    <div className={APPRENANT_PAGE_SHELL}>
-      <section className="mb-8 space-y-2">
+    <div className={`${APPRENANT_PAGE_SHELL} pb-8`}>
+      <section className="mb-6 space-y-2 sm:mb-8">
         <p className={APPRENANT_PAGE_KICKER}>Formations</p>
         <h1 className={APPRENANT_PAGE_TITLE}>Mes formations</h1>
         <p className={APPRENANT_PAGE_LEAD}>
@@ -59,7 +59,7 @@ export default async function ApprenantMesFormationsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {formations.map((f) => {
             const href =
               f.href?.startsWith("http") || f.href?.startsWith("/")

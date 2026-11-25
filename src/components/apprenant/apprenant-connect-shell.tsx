@@ -893,7 +893,7 @@ export function ApprenantConnectShell({
               </div>
             </div>
 
-            <div className="relative z-10 px-5 py-6 sm:px-8 lg:pl-8 lg:pr-10 lg:py-8">
+            <div className="relative z-10 px-4 py-5 pb-24 sm:px-6 sm:py-6 sm:pb-8 lg:pl-8 lg:pr-10 lg:py-8">
               {children}
             </div>
           </main>

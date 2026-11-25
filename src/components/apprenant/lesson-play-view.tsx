@@ -3171,7 +3171,7 @@ function TestFlowInline({
   if (isFullscreen) {
     return (
       <div 
-        className="fixed inset-0 z-[99999] flex flex-col overflow-hidden bg-white"
+        className="fixed inset-0 z-[99999] flex flex-col overflow-y-auto overscroll-contain bg-white"
         style={{ 
           position: 'fixed',
           left: 0, 
@@ -3179,7 +3179,7 @@ function TestFlowInline({
           top: 0, 
           bottom: 0,
           width: '100vw',
-          height: '100vh',
+          height: '100dvh',
           margin: 0,
           padding: 0,
           zIndex: 99999,
@@ -3203,7 +3203,7 @@ function TestFlowInline({
             padding-left: 0 !important;
           }
         `}</style>
-        <div className="test-content w-full h-full">
+        <div className="test-content min-h-0 w-full flex-1">
           <TestFlow
             slug={testId}
             title={title}
@@ -3213,7 +3213,7 @@ function TestFlowInline({
             fullscreen={true}
             minScorePercent={minScorePercent ?? 70}
             immersive
-            className="flex-1 w-full h-full"
+            className="min-h-full w-full"
             chapterLabel={chapterLabel}
             courseId={courseId}
             lessonId={lessonId}

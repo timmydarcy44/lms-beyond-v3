@@ -123,23 +123,23 @@ export function LearnerHomeV2() {
   const totalSkills = data.objective.acquiredCount + data.objective.toStrengthenCount;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16 pt-2 sm:px-6 lg:px-8" style={{ color: COLORS.text }}>
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+    <div className="mx-auto max-w-6xl space-y-5 px-0 pb-20 pt-1" style={{ color: COLORS.text }}>
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="min-w-0">
           <p className="text-sm capitalize" style={{ color: COLORS.secondary }}>
             {data.dateLabel}
           </p>
-          <h1 className="mt-1 text-[40px] font-extrabold leading-tight tracking-tight">
+          <h1 className="mt-1 text-[28px] font-extrabold leading-tight tracking-tight sm:text-[34px] lg:text-[40px]">
             Bonjour {data.firstName || "toi"}.
           </h1>
         </div>
         <button
           type="button"
           onClick={() => void shell?.sharePublicProfile?.()}
-          className="inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition hover:brightness-110"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition hover:brightness-110 sm:w-auto"
           style={{ borderColor: COLORS.border, background: COLORS.inner, color: COLORS.text }}
         >
-          <Share2 className="h-4 w-4" style={{ color: COLORS.blue }} />
+          <Share2 className="h-4 w-4 shrink-0" style={{ color: COLORS.blue }} />
           Partager ma page publique
         </button>
       </header>
@@ -231,7 +231,7 @@ export function LearnerHomeV2() {
 
       {!apprentice ? (
         <section
-          className="flex flex-col gap-5 rounded-[28px] border p-6 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-5 rounded-[22px] border p-4 sm:rounded-[28px] sm:p-6 sm:flex-row sm:items-center sm:justify-between"
           style={{
             borderColor: "#2E3570",
             background:
@@ -242,14 +242,14 @@ export function LearnerHomeV2() {
             <p className="text-xs font-bold" style={{ color: COLORS.violetSoft }}>
               Ta prochaine étape
             </p>
-            <h2 className="mt-2 text-[30px] font-extrabold leading-tight">{data.nextStep.title}</h2>
+            <h2 className="mt-2 text-[22px] font-extrabold leading-tight sm:text-[30px]">{data.nextStep.title}</h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed" style={{ color: COLORS.secondary }}>
               {data.nextStep.body}
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href={data.nextStep.ctaHref}
-                className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#0A0F1E]"
+                className="inline-flex w-full items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#0A0F1E] sm:w-auto"
               >
                 {data.nextStep.ctaLabel}
               </Link>

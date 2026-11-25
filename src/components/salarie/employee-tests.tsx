@@ -61,7 +61,6 @@ export function EmployeeTests({
   softSkillsAt: string | null;
 }) {
   const [sending, setSending] = useState(false);
-  const [softOpen, setSoftOpen] = useState(false);
   const name = firstName.trim() || "Ce collaborateur";
 
   if (!shareConsent) {
@@ -251,7 +250,7 @@ export function EmployeeTests({
 
       <div id="employee-soft-skills">
         {softShared ? (
-          <SoftSkillRanking skills={softSkills} expanded={softOpen} onToggle={() => setSoftOpen((value) => !value)} />
+          <SoftSkillRanking skills={softSkills} />
         ) : (
           <div className="rounded-[26px] bg-white px-6 py-5">
             <h2 className="text-lg font-extrabold text-[#07080B]">Soft skills</h2>

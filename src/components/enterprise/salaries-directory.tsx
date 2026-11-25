@@ -11,6 +11,7 @@ import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
 import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
 import { ENTREPRISE_H1_CLASS } from "@/lib/entreprise/styles";
 import { cn } from "@/lib/utils";
+import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 
 const AVATAR_COLORS = [
   "bg-violet-500",
@@ -147,13 +148,18 @@ export function SalariesDirectory() {
                           href={`/dashboard/entreprise/salaries/${employee.id}`}
                           className="flex items-center gap-3"
                         >
-                          <div
-                            className={cn(
-                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
-                              avatarColor(fullName),
-                            )}
-                          >
-                            {initials(employee.first_name, employee.last_name)}
+                          <div className="relative h-10 w-10 shrink-0">
+                            <div
+                              className={cn(
+                                "flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white",
+                                avatarColor(fullName),
+                              )}
+                            >
+                              {initials(employee.first_name, employee.last_name)}
+                            </div>
+                            <ConnectionPresenceDot
+                              lastSignInAt={employee.last_sign_in_at ?? employee.last_activity_at}
+                            />
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900">{fullName}</p>

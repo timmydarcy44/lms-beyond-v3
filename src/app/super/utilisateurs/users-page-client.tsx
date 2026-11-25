@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { EmptyState, SegmentedFilter } from "@/components/control/chrome";
 import { DataTable, PageHeader, StatusPill } from "@/components/control/ui";
+import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 import { formatCrmRoleLabel, isCrmBtocUser, type CrmUserListItem } from "@/lib/crm/crm-shared";
 
@@ -129,7 +130,15 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: { initial
               const name = personName(user);
               return (
                 <span className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#0A0F1E]" style={{ background: colorFor(name) }}>{initials(name)}</span>
+                  <span className="relative grid h-9 w-9 place-items-center">
+                    <span
+                      className="grid h-9 w-9 place-items-center rounded-full text-xs font-bold text-[#0A0F1E]"
+                      style={{ background: colorFor(name) }}
+                    >
+                      {initials(name)}
+                    </span>
+                    <ConnectionPresenceDot lastSignInAt={user.lastSignInAt} className="ring-[#0B1122]" />
+                  </span>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold">{name}</span>
                     <span className="block max-w-[260px] truncate text-[12px] text-[#9AA3BD]">{user.email}</span>

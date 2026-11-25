@@ -274,42 +274,43 @@ export default function TestFlow({
 
     const holdsNext = blocksNextModule && session.score < minScorePercent;
     return (
-      <QuizResults
-        score={session.score}
-        minScorePercent={minScorePercent}
-        summary={summary}
-        completionLabel={`Terminé le ${completionDelay}`}
-        reviewItems={reviewItems}
-        radarRows={radarRows}
-        courseId={courseId}
-        lessonId={lessonId}
-        continueHref={holdsNext ? undefined : continueHref}
-        unlockedModuleName={holdsNext ? undefined : openedModuleName.trim() || undefined}
-        nextLockedMessage={
-          holdsNext
-            ? `Il te faut ${goalCount(minScorePercent, questions.length)} / ${questions.length} pour ouvrir le module suivant.`
-            : undefined
-        }
-        onClose={() => {
-          if (onClose) onClose();
-          else router.push("/dashboard/student/learning/tests");
-        }}
-        onReviewAgain={() => {
-          resetSession(slug);
-          setCurrentIndex(0);
-          setShowSummary(false);
-          setValidated({});
-          setRevealed(false);
-          setShowWelcome(immersive);
-          try {
-            sessionStorage.removeItem(spotKey(slug));
-          } catch {
-            /* ignore */
+      <div className={cn("min-h-[100dvh] w-full overflow-y-auto overscroll-contain bg-[#f5f4f1]", className)}>
+        <QuizResults
+          score={session.score}
+          minScorePercent={minScorePercent}
+          summary={summary}
+          completionLabel={`Terminé le ${completionDelay}`}
+          reviewItems={reviewItems}
+          radarRows={radarRows}
+          courseId={courseId}
+          lessonId={lessonId}
+          continueHref={holdsNext ? undefined : continueHref}
+          unlockedModuleName={holdsNext ? undefined : openedModuleName.trim() || undefined}
+          nextLockedMessage={
+            holdsNext
+              ? `Il te faut ${goalCount(minScorePercent, questions.length)} / ${questions.length} pour ouvrir le module suivant.`
+              : undefined
           }
-        }}
-        fullscreen={fullscreen}
-        className={className}
-      />
+          onClose={() => {
+            if (onClose) onClose();
+            else router.push("/dashboard/student/learning/tests");
+          }}
+          onReviewAgain={() => {
+            resetSession(slug);
+            setCurrentIndex(0);
+            setShowSummary(false);
+            setValidated({});
+            setRevealed(false);
+            setShowWelcome(immersive);
+            try {
+              sessionStorage.removeItem(spotKey(slug));
+            } catch {
+              /* ignore */
+            }
+          }}
+          fullscreen={fullscreen}
+        />
+      </div>
     );
   }
 

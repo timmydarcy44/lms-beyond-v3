@@ -14,6 +14,7 @@ import {
   type UnlinkedParticipant,
 } from "@/lib/control/account-participants-format";
 import { roleLabel, roleTone } from "@/lib/roles";
+import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 import { EmptyState, SidePanel, Field, fieldClass } from "./chrome";
 
 const VIEW_STORAGE_KEY = "byound.account.members.view";
@@ -478,11 +479,14 @@ export function AccountMembersTab({
                 className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,.8fr)_minmax(0,.55fr)_minmax(0,.55fr)_minmax(0,.7fr)_auto] items-center gap-2 border-t border-[#1A2340] px-4 py-3 text-sm"
               >
                 <span className="min-w-0">
-                  <span
-                    className="mr-2 inline-grid h-9 w-9 place-items-center rounded-[12px] text-xs font-bold text-white"
-                    style={{ background: avatarGradient(person.userId) }}
-                  >
-                    {initials(person.name)}
+                  <span className="relative mr-2 inline-grid h-9 w-9 place-items-center align-middle">
+                    <span
+                      className="inline-grid h-9 w-9 place-items-center rounded-[12px] text-xs font-bold text-white"
+                      style={{ background: avatarGradient(person.userId) }}
+                    >
+                      {initials(person.name)}
+                    </span>
+                    <ConnectionPresenceDot lastSignInAt={person.lastSignInAt} className="ring-[#0B1122]" />
                   </span>
                   <span className="font-semibold text-[#F2F4FA]">{person.name}</span>
                   <span className="block truncate pl-11 text-xs text-[#8A93AE]">{person.email}</span>
@@ -624,11 +628,14 @@ function MemberCard({
   return (
     <article className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-[22px]">
       <div className="flex items-start gap-3">
-        <span
-          className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-[17px] text-sm font-extrabold text-white"
-          style={{ background: avatarGradient(person.userId) }}
-        >
-          {initials(person.name)}
+        <span className="relative grid h-[52px] w-[52px] shrink-0 place-items-center">
+          <span
+            className="grid h-[52px] w-[52px] place-items-center rounded-[17px] text-sm font-extrabold text-white"
+            style={{ background: avatarGradient(person.userId) }}
+          >
+            {initials(person.name)}
+          </span>
+          <ConnectionPresenceDot lastSignInAt={person.lastSignInAt} size="md" className="ring-[#111831]" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">

@@ -18,6 +18,7 @@ import {
 } from "@/lib/entreprise/overview-route";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { JADE_ENTREPRISE_OVERVIEW } from "@/lib/demo/jade-dashboard-mocks";
+import { fetchLastSignInForUserIds } from "@/lib/queries/learner-tracking";
 
 export const dynamic = "force-dynamic";
 
@@ -353,6 +354,15 @@ async function buildOverviewResponse() {
     }
   }
 
+  let lastSignInByProfile = new Map<string, string>();
+  if (profileIds.length > 0) {
+    try {
+      lastSignInByProfile = await fetchLastSignInForUserIds(service, profileIds);
+    } catch (e) {
+      console.warn("[dashboard/entreprise/overview] lastSignIn", e);
+    }
+  }
+
   const payload = {
     viewer: access.viewer,
     organisation: {
@@ -401,6 +411,7 @@ async function buildOverviewResponse() {
       const diag = diagByEmployee.get(e.id as string);
       const pid = testStatus?.profile_id ?? (e.profile_id as string | null);
       const hasEnrollment = pid ? enrollmentByProfile.has(pid) : false;
+      const lastSignIn = pid ? lastSignInByProfile.get(pid) ?? null : null;
       return {
         id: e.id as string,
         first_name: (e.first_name as string | null) ?? null,
@@ -413,6 +424,8 @@ async function buildOverviewResponse() {
         diagnostic_started: Boolean(testStatus?.diagnostic_done),
         idmc_score: testStatus?.idmc_score ?? diag?.idmc_score ?? null,
         formation_active: hasEnrollment,
+        last_sign_in_at: lastSignIn,
+        last_activity_at: lastSignIn,
       };
     }),
     collaborators_preview: employees.slice(0, 5).map((e) => {

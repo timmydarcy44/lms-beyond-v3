@@ -23,6 +23,7 @@ import { useEntrepriseOverview } from "@/hooks/use-entreprise-overview";
 import { filterRealEntrepriseEmployees } from "@/lib/entreprise/demo-employee-id";
 import { JADE_ENTREPRISE_OFFERS, JADE_ORG_COURSES } from "@/lib/demo/jade-dashboard-mocks";
 import type { EntrepriseEmployee } from "@/lib/entreprise/overview-types";
+import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 import { cn } from "@/lib/utils";
 
 const manrope = Manrope({ subsets: ["latin"] });
@@ -908,13 +909,21 @@ function strongValue(employee: EntrepriseEmployee) {
 }
 
 function Avatar({ employee, size = 44 }: { employee: EntrepriseEmployee; size?: number }) {
-  if (employee.avatar_url) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={employee.avatar_url} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
-  }
+  const lastAt = employee.last_sign_in_at ?? employee.last_activity_at ?? null;
   return (
-    <span className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] font-bold text-white" style={{ width: size, height: size, fontSize: size > 48 ? 18 : 14 }}>
-      {initials(employee)}
+    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
+      {employee.avatar_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={employee.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
+      ) : (
+        <span
+          className="inline-flex h-full w-full items-center justify-center rounded-full bg-[#6E5BFF] font-bold text-white"
+          style={{ fontSize: size > 48 ? 18 : 14 }}
+        >
+          {initials(employee)}
+        </span>
+      )}
+      <ConnectionPresenceDot lastSignInAt={lastAt} size={size > 48 ? "md" : "sm"} />
     </span>
   );
 }

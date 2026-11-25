@@ -17,6 +17,7 @@ import {
   type LearnerEarnedOpenBadge,
   type LearnerVisibleOpenBadge,
 } from "@/lib/openbadges/learner-visible-badges";
+import { resolveEffectiveApprenantUserId } from "@/lib/control/learner-preview";
 import { headers } from "next/headers";
 
 // Fonction pour récupérer les formateurs disponibles pour un apprenant
@@ -103,7 +104,7 @@ export type LearnerCard = {
   image_url?: string | null;
 };
 
-/** Même règle partout (inscriptions + catalogue org) : les brouillons ne sont pas listés. */
+/** Catalogue org : brouillons masqués. Inscriptions personnelles : toujours visibles (voir enrollments). */
 function isCourseStatusVisibleForApprenant(status: unknown): boolean {
   return (
     status === "published" ||
@@ -111,6 +112,13 @@ function isCourseStatusVisibleForApprenant(status: unknown): boolean {
     status == null ||
     !status
   );
+}
+
+/** Formations assignées à l’apprenant : visibles même en draft (assignation = droit d’accès). */
+function isEnrolledCourseVisibleForApprenant(status: unknown): boolean {
+  if (isCourseStatusVisibleForApprenant(status)) return true;
+  const value = String(status ?? "").toLowerCase();
+  return value === "draft" || value === "ready" || value === "review";
 }
 
 function courseRowToLearnerCard(course: Record<string, unknown>): LearnerCard {
@@ -331,8 +339,10 @@ export async function getApprenantDashboardData(
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) {
       return {
         hero: {
           title: "Bienvenue",
@@ -353,6 +363,11 @@ export async function getApprenantDashboardData(
         earnedOpenBadges: [],
       };
     }
+
+    // Preview Control (« Ouvrir son espace ») : données du salarié cible, pas du staff.
+    const { userId: effectiveUserId, preview: isLearnerPreview } =
+      await resolveEffectiveApprenantUserId(authUser.id);
+    const user = { ...authUser, id: effectiveUserId };
 
     const h = await headers();
     const explicitSlug = typeof options === "string" ? options : options?.orgSlug;
@@ -428,10 +443,14 @@ export async function getApprenantDashboardData(
 
     // Récupérer les formations assignées via enrollments (schéma normalisé: user_id + course_id)
     let formations: LearnerCard[] = [];
-    
+    // Preview : service role obligatoire (RLS bloque la lecture des enrollments d’un autre user).
+    const enrollmentsClient = isLearnerPreview
+      ? ((await getServiceRoleClientOrFallback()) ?? galaxyReadClient)
+      : galaxyReadClient;
+
     try {
       // Essayer d'abord avec enrollments (sans colonnes qui pourraient ne pas exister)
-      let enrollmentsQuery = galaxyReadClient
+      let enrollmentsQuery = enrollmentsClient
         .from("enrollments")
         .select(`
           course_id,
@@ -467,7 +486,8 @@ export async function getApprenantDashboardData(
         console.warn("[apprenant] enrollments fetch failed:", enrollError.message);
       } else if (enrollments && enrollments.length > 0) {
         for (const enrollment of enrollments) {
-          const course = (enrollment as any).courses;
+          const courseRaw = (enrollment as { courses?: unknown }).courses;
+          const course = (Array.isArray(courseRaw) ? courseRaw[0] : courseRaw) as Record<string, unknown> | null;
           if (course) {
             if (isCourseParcoursOnly(course as any)) continue;
             const c = course as {
@@ -477,29 +497,32 @@ export async function getApprenantDashboardData(
               hero_image_url?: string | null;
             };
             const coverMedia = c.cover_image || c.hero_image_url || c.image_url || c.cover_url || null;
-            if (isCourseStatusVisibleForApprenant((course as { status?: unknown }).status)) {
+            if (isEnrolledCourseVisibleForApprenant(course.status)) {
               formations.push({
-                id: course.id,
-                title: course.title || "Formation sans titre",
-                slug: course.slug || course.id,
-                href: `/catalog/formations/${course.slug || course.id}`,
+                id: String(course.id),
+                title: (course.title as string) || "Formation sans titre",
+                slug: (course.slug as string) || String(course.id),
+                href: `/catalog/formations/${(course.slug as string) || course.id}`,
                 // Utiliser seulement les colonnes qui existent
                 image: coverMedia || "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80",
                 cover_url: coverMedia,
                 cover_image: c.cover_image || null,
-                presentation: course.presentation ?? null,
-                meta: course.description || null,
-                category: course.category || null,
-                category_id: (course as { category_id?: string | null }).category_id
-                  ? String((course as { category_id?: string | null }).category_id)
+                presentation: (course.presentation as string | null) ?? null,
+                meta: (course.description as string | null) || null,
+                category: (course.category as string | null) || null,
+                category_id: course.category_id ? String(course.category_id) : null,
+                category_name: (course.category_name as string | null | undefined) ?? null,
+                level:
+                  (course.level as string | null) ??
+                  (course.builder_snapshot as { general?: { level?: string } } | null)?.general?.level ??
+                  null,
+                validatedByPeerId: course.validated_by_peer_id
+                  ? String(course.validated_by_peer_id)
                   : null,
-                category_name: (course as { category_name?: string | null }).category_name ?? null,
-                level: (course as any).level ?? (course as any)?.builder_snapshot?.general?.level ?? null,
-                validatedByPeerId: (course as any)?.validated_by_peer_id ? String((course as any).validated_by_peer_id) : null,
                 validatedBy: null,
                 cta: "Continuer",
                 progress: 0,
-                builder_snapshot: (course as { builder_snapshot?: unknown }).builder_snapshot,
+                builder_snapshot: course.builder_snapshot,
                 hero_image_url: c.hero_image_url ?? null,
                 image_url: c.image_url ?? null,
               });
@@ -517,7 +540,7 @@ export async function getApprenantDashboardData(
       console.log("[apprenant] Trying direct course fetch via enrollments course_ids");
       try {
         // Récupérer d'abord les course_ids depuis enrollments (sans join)
-        const { data: enrollmentIds, error: idsError } = await galaxyReadClient
+        const { data: enrollmentIds, error: idsError } = await enrollmentsClient
           .from("enrollments")
           .select("course_id")
           .eq("user_id", user.id);
@@ -532,7 +555,7 @@ export async function getApprenantDashboardData(
           let coursesError: any = null;
           
           // Essayer avec les colonnes de base (sans published qui n'existe peut-être pas)
-          let baseCoursesQuery = galaxyReadClient
+          let baseCoursesQuery = enrollmentsClient
             .from("courses")
             .select(
               "id, title, description, presentation, slug, cover_image, image_url, hero_image_url, builder_snapshot, status, creator_id, category, category_id, category_name, level, validated_by_peer_id",
@@ -548,7 +571,7 @@ export async function getApprenantDashboardData(
           if (coursesErr) {
             console.error("[apprenant] Error fetching courses with base columns:", coursesErr);
             // Essayer avec encore moins de colonnes
-            let minimalQuery = galaxyReadClient
+            let minimalQuery = enrollmentsClient
               .from("courses")
               .select("id, title, description, presentation, slug, status")
               .in("id", courseIds);
@@ -577,9 +600,9 @@ export async function getApprenantDashboardData(
             console.log("[apprenant] Found courses directly:", courses.length);
             // Filtrer par status si disponible, sinon prendre tous
             const publishedCourses = courses.filter((course: any) =>
-              isCourseStatusVisibleForApprenant(course.status),
+              isEnrolledCourseVisibleForApprenant(course.status),
             );
-            console.log("[apprenant] Published courses after filtering:", publishedCourses.length);
+            console.log("[apprenant] Enrolled courses after filtering:", publishedCourses.length);
             formations = publishedCourses.map((course: any) => {
               const coverMedia =
                 course.hero_image_url || course.image_url || course.cover_image || course.cover_url || null;

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { BtocClientFile, BtocFundingType } from "@/lib/control/btoc-client-file";
 import { isLot4Kind } from "@/lib/formation-documents/constants";
 import type { CoffreItemStatus } from "@/lib/formation-documents/coffre";
+import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 
 const CARD = "rounded-[26px] border border-[#1A2340] bg-[#111831]";
 const MUTED = "text-[#9AA3BD]";
@@ -322,8 +323,11 @@ export function BtocClientFileView({ initial }: Props) {
 
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 items-start gap-4">
-          <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#6E5BFF] to-[#2F7CF6] text-lg font-extrabold text-white">
-            {initials(file.fullName)}
+          <div className="relative grid h-16 w-16 shrink-0 place-items-center">
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-[#6E5BFF] to-[#2F7CF6] text-lg font-extrabold text-white">
+              {initials(file.fullName)}
+            </div>
+            <ConnectionPresenceDot lastSignInAt={file.lastSignInAt} size="md" className="ring-[#0B1122]" />
           </div>
           <div className="min-w-0">
             <h1 className="text-3xl font-extrabold tracking-tight text-white">{file.fullName}</h1>

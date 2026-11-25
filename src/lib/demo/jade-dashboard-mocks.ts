@@ -187,6 +187,7 @@ export const JADE_ENTREPRISE_OVERVIEW: EntrepriseOverviewData = {
     diagnostic_at: JADE_TEAM_EXTRAS[index]?.diagnostic_at ?? null,
     diagnostic_label: JADE_TEAM_EXTRAS[index]?.diagnostic_label ?? null,
     last_activity_at: JADE_TEAM_EXTRAS[index]?.last_activity_at ?? null,
+    last_sign_in_at: JADE_TEAM_EXTRAS[index]?.last_activity_at ?? null,
     avatar_url: null,
   })),
   employees_pending: JADE_TEAM.filter((row) => !row[4]).length,

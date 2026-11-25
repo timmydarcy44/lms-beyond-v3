@@ -5,6 +5,7 @@ import Link from "next/link";
 import { computeDiscMatch, type DiscScores } from "@/lib/mocks/appData";
 import { BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 
 type ProfileRow = {
   id: string;
@@ -25,6 +26,7 @@ type ProfileRow = {
   live_status?: "live" | "en_poste" | "test" | null;
   avatar_url?: string | null;
   handicap_alert?: { label: string } | null;
+  last_sign_in_at?: string | null;
 };
 
 type OfferRow = {
@@ -194,21 +196,24 @@ export function SchoolApprenantsTable({ studentsRows, offers, classOptions = [] 
                   href={`/dashboard/ecole/apprenants/${row.id}`}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-xl py-1 pr-2 transition hover:bg-[#F5F5F7]/80"
                 >
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[#E5E5EA] bg-[#E8E8ED]">
-                    {row.avatar_url ? (
-                      <img
-                        src={row.avatar_url}
-                        alt={`${row.first_name || ""} ${row.last_name || ""}`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#1D1D1F]"
-                        aria-hidden
-                      >
-                        {rowInitials(row.first_name, row.last_name)}
-                      </div>
-                    )}
+                  <div className="relative h-12 w-12 shrink-0 overflow-visible">
+                    <div className="h-12 w-12 overflow-hidden rounded-full border border-[#E5E5EA] bg-[#E8E8ED]">
+                      {row.avatar_url ? (
+                        <img
+                          src={row.avatar_url}
+                          alt={`${row.first_name || ""} ${row.last_name || ""}`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#1D1D1F]"
+                          aria-hidden
+                        >
+                          {rowInitials(row.first_name, row.last_name)}
+                        </div>
+                      )}
+                    </div>
+                    <ConnectionPresenceDot lastSignInAt={row.last_sign_in_at} size="md" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-[#1D1D1F]">

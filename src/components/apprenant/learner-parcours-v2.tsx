@@ -71,17 +71,17 @@ export function LearnerParcoursV2() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 px-4 pb-16 pt-2 text-[#F2F4FA] sm:px-6 lg:px-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[34px] font-extrabold tracking-tight sm:text-[40px]">Mon parcours</h1>
+    <div className="mx-auto max-w-6xl space-y-5 px-0 pb-20 pt-1 text-[#F2F4FA] sm:px-0 lg:px-0">
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[28px] font-extrabold tracking-tight sm:text-[34px] lg:text-[40px]">Mon parcours</h1>
           <p className="mt-1 text-sm" style={{ color: C.secondary }}>
             {[data.objectiveTitle, "Training center"].filter(Boolean).join(" · ")}
           </p>
         </div>
         <Link
           href="/dashboard/apprenant/profil-comportemental/projet"
-          className="rounded-full border px-4 py-2 text-sm font-semibold"
+          className="inline-flex w-full items-center justify-center rounded-full border px-4 py-2.5 text-sm font-semibold sm:w-auto"
           style={{ borderColor: C.border, color: C.secondary }}
         >
           Modifier mon objectif
@@ -89,7 +89,7 @@ export function LearnerParcoursV2() {
       </header>
 
       <section
-        className="flex flex-col gap-4 rounded-[28px] border p-6 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-4 rounded-[22px] border p-4 sm:rounded-[28px] sm:p-6 sm:flex-row sm:items-center sm:justify-between"
         style={{
           borderColor: "#2E3570",
           background:
@@ -120,19 +120,19 @@ export function LearnerParcoursV2() {
           )}
         </div>
         <Link
-          href={data.resume?.href || "/dashboard/apprenant/formations"}
-          className="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#0A0F1E]"
+          href={data.resume?.href || (data.modules[0]?.href ?? "/dashboard/apprenant/formations")}
+          className="inline-flex w-full shrink-0 items-center justify-center rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#0A0F1E] sm:w-auto"
         >
           {data.resume ? "Continuer →" : "Commencer →"}
         </Link>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
-        <article className="rounded-3xl border p-5" style={{ background: C.card, borderColor: C.border }}>
-          <div className="flex items-center justify-between gap-2">
+        <article className="rounded-3xl border p-4 sm:p-5" style={{ background: C.card, borderColor: C.border }}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-extrabold">Mon programme</h2>
             <Link href="/dashboard/apprenant/formations" className="text-sm font-semibold text-[#A99BFF]">
-              Tout le catalogue →
+              Mes formations →
             </Link>
           </div>
           {data.modules.length === 0 ? (

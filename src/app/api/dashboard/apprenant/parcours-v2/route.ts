@@ -17,6 +17,16 @@ function dayKey(iso: string) {
   return iso.slice(0, 10);
 }
 
+function normalizeFormationTitle(title: string) {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^les?\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function GET() {
   const session = await getSession();
   if (!session?.id) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -70,14 +80,14 @@ export async function GET() {
       .limit(40);
     const accessRows = accessRes.error ? [] : accessRes.data;
     const knownIds = new Set(formations.map((f) => f.id));
-    const knownTitles = new Set(formations.map((f) => f.title.trim().toLowerCase()));
+    const knownTitles = new Set(formations.map((f) => normalizeFormationTitle(f.title)));
     for (const row of accessRows ?? []) {
       const itemRaw = (row as { catalog_items?: Record<string, unknown> | Record<string, unknown>[] | null }).catalog_items;
       const item = Array.isArray(itemRaw) ? itemRaw[0] : itemRaw;
       const contentId = item?.content_id ? String(item.content_id) : "";
       const title = String(item?.title ?? "").trim() || "Formation";
       const id = contentId || String(item?.id ?? "");
-      if (!id || knownIds.has(id) || knownTitles.has(title.toLowerCase())) continue;
+      if (!id || knownIds.has(id) || knownTitles.has(normalizeFormationTitle(title))) continue;
       formations.push({
         id,
         title,
@@ -87,7 +97,7 @@ export async function GET() {
         level: null,
       });
       knownIds.add(id);
-      knownTitles.add(title.toLowerCase());
+      knownTitles.add(normalizeFormationTitle(title));
     }
 
     const { data: parts } = await db
@@ -105,7 +115,7 @@ export async function GET() {
         .in("id", dossierIds);
       for (const d of dossiers ?? []) {
         const title = String((d as { course_title?: string }).course_title ?? "").trim() || "Formation";
-        if (knownTitles.has(title.toLowerCase())) continue;
+        if (knownTitles.has(normalizeFormationTitle(title))) continue;
         const trainingCourseId = String(
           (d as { training_course_id?: string | null }).training_course_id ?? "",
         );
@@ -120,10 +130,7 @@ export async function GET() {
           lmsCourseId = tc?.lms_course_id ? String(tc.lms_course_id) : null;
           // Secours : rattacher un parcours LMS au titre si le lien manque
           if (!lmsCourseId) {
-            const needle = String(tc?.title || title)
-              .toLowerCase()
-              .replace(/^les\s+/, "")
-              .trim();
+            const needle = normalizeFormationTitle(String(tc?.title || title));
             const { data: matched } = await db
               .from("courses")
               .select("id, slug, title")
@@ -131,9 +138,7 @@ export async function GET() {
               .limit(5);
             const best =
               (matched ?? []).find((c) =>
-                String(c.title ?? "")
-                  .toLowerCase()
-                  .includes("neuro"),
+                normalizeFormationTitle(String(c.title ?? "")).includes(needle.slice(0, 24)),
               ) || (matched ?? [])[0];
             if (best?.id) {
               lmsCourseId = String(best.id);
@@ -157,18 +162,21 @@ export async function GET() {
         }
         // UUID LMS seulement dans `id` (évite crash open_badges / progress)
         const formationId = lmsCourseId || `dossier-${(d as { id: string }).id}`;
+        const playHref = slug
+          ? `/catalog/formations/${slug}`
+          : lmsCourseId
+            ? `/catalog/formations/${lmsCourseId}`
+            : `/dashboard/apprenant/formations`;
         formations.push({
           id: formationId,
           title,
-          href: slug
-            ? `/catalog/formations/${slug}`
-            : "/dashboard/apprenant/formations",
+          href: playHref,
           progress: null,
           meta: lmsCourseId ? "Assignée" : "Assignée · parcours LMS à lier",
           level: null,
         });
         knownIds.add(formationId);
-        knownTitles.add(title.toLowerCase());
+        knownTitles.add(normalizeFormationTitle(title));
 
         // Crée l’enrollment manquant si on a résolu un LMS
         if (lmsCourseId && !knownIds.has(`enroll:${lmsCourseId}`)) {

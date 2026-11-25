@@ -482,13 +482,13 @@ export async function PATCH(
 
   let readBack = await service
     .from("employees")
-    .select("id, phone, job_title, hire_date, metier")
+    .select("id, phone, job_title, hire_date, metier, profile_id")
     .eq("id", employeeId)
     .maybeSingle();
   if (readBack.error && /metier|schema cache|column/i.test(readBack.error.message)) {
     readBack = await service
       .from("employees")
-      .select("id, phone, job_title, hire_date")
+      .select("id, phone, job_title, hire_date, profile_id")
       .eq("id", employeeId)
       .maybeSingle();
   }
@@ -497,6 +497,7 @@ export async function PATCH(
     job_title?: string | null;
     hire_date?: string | null;
     metier?: string | null;
+    profile_id?: string | null;
   } | null;
   const phoneDigits = (value: string | null | undefined) => String(value ?? "").replace(/[^\d+]/g, "");
   const phoneUnsaved =
@@ -505,6 +506,16 @@ export async function PATCH(
       (stored != null && phoneDigits(stored.phone) !== phoneDigits(body.phone?.trim() || null)));
   if ("job_title" in body && stored && (stored.job_title ?? null) !== (body.job_title?.trim() || null)) {
     return NextResponse.json({ error: "Impossible d'enregistrer le métier." }, { status: 400 });
+  }
+
+  if ("phone" in body && !phoneUnsaved) {
+    const profileId = String(stored?.profile_id ?? "").trim();
+    if (profileId) {
+      await service
+        .from("profiles")
+        .update({ phone: body.phone?.trim() || null })
+        .eq("id", profileId);
+    }
   }
 
   return NextResponse.json({

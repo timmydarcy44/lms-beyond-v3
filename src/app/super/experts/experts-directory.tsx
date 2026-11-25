@@ -9,6 +9,7 @@ import { DataTable, PageHeader, RolePill, StatusPill } from "@/components/contro
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
+import { parseExpertDocuments } from "@/lib/expert/admin-expert-types";
 import { parseContributorProfile } from "@/lib/expert/contributor-profile";
 
 const FILTERS = [
@@ -175,6 +176,18 @@ export function ExpertsDirectory({
             cell: (expert) => {
               const status = statusOf(expert.review_status);
               return <StatusPill label={status.label} tone={status.tone} />;
+            },
+          },
+          {
+            id: "docs",
+            header: "Docs",
+            cell: (expert) => {
+              const count = parseExpertDocuments(expert.references).length;
+              return count > 0 ? (
+                <StatusPill label={`${count} doc${count > 1 ? "s" : ""}`} tone="success" />
+              ) : (
+                <StatusPill label="Aucun doc" tone="danger" />
+              );
             },
           },
           {

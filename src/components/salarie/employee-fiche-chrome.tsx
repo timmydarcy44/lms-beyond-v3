@@ -98,6 +98,11 @@ export function EmployeeHeader({
   phone,
   seniority,
   inclusion,
+  editing = false,
+  editPhone,
+  editHireDate,
+  onEditPhoneChange,
+  onEditHireDateChange,
   showInvite,
   inviteBusy,
   showOpenSpace,
@@ -117,6 +122,11 @@ export function EmployeeHeader({
   phone: string;
   seniority: string;
   inclusion: string;
+  editing?: boolean;
+  editPhone?: string;
+  editHireDate?: string;
+  onEditPhoneChange?: (value: string) => void;
+  onEditHireDateChange?: (value: string) => void;
   showInvite: boolean;
   inviteBusy?: boolean;
   showOpenSpace?: boolean;
@@ -174,15 +184,40 @@ export function EmployeeHeader({
               <Mail className="h-5 w-5" />
             </RoundAction>
           ) : null}
-          <RoundAction label="Modifier" onClick={onEdit}>
+          <RoundAction label={editing ? "Édition…" : "Modifier"} onClick={onEdit}>
             <Pencil className="h-5 w-5" />
           </RoundAction>
         </div>
       </div>
       <div className="relative mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MiniCard label="Email" value={email} />
-        <MiniCard label="Téléphone" value={phone} />
-        <MiniCard label="Ancienneté" value={seniority} />
+        {editing && onEditPhoneChange ? (
+          <label className="rounded-2xl bg-white/10 px-4 py-3">
+            <span className="text-xs text-white/60">Téléphone</span>
+            <input
+              value={editPhone ?? ""}
+              onChange={(e) => onEditPhoneChange(e.target.value)}
+              placeholder="06 12 34 56 78"
+              className="mt-1 w-full rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white outline-none placeholder:text-white/40"
+            />
+          </label>
+        ) : (
+          <MiniCard label="Téléphone" value={phone} />
+        )}
+        {editing && onEditHireDateChange ? (
+          <label className="rounded-2xl bg-white/10 px-4 py-3">
+            <span className="text-xs text-white/60">Date d&apos;entrée (ancienneté)</span>
+            <input
+              type="date"
+              value={editHireDate ?? ""}
+              onChange={(e) => onEditHireDateChange(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-white/20 bg-white/10 px-2 py-1.5 text-sm font-semibold text-white outline-none"
+            />
+            <span className="mt-1 block text-xs text-white/50">Ancienneté : {seniority}</span>
+          </label>
+        ) : (
+          <MiniCard label="Ancienneté" value={seniority} />
+        )}
         <button type="button" onClick={onInclusion} className="rounded-2xl bg-white/10 px-4 py-3 text-left">
           <p className="text-xs text-white/60">Inclusion / accessibilité</p>
           <p className={`mt-1 truncate text-sm font-semibold ${inclusion === "Aucun besoin déclaré" ? "text-[#9096A3]" : "text-white"}`}>{inclusion}</p>

@@ -42,7 +42,13 @@ type Props = {
     metier?: string | null;
   }) => void;
   onDocumentsChange: (docs: HrDocument[]) => void;
-  /** Incrémenté par « Terminer » pour enregistrer métier et téléphone. */
+  /** Brouillon synchronisé avec l’en-tête (téléphone / date d’entrée / métier). */
+  onContactDraftChange?: (patch: {
+    phone?: string;
+    hire_date?: string;
+    metier?: string;
+  }) => void;
+  /** Incrémenté par « Enregistrer » pour enregistrer métier et téléphone. */
   saveRequest?: number;
   onSaved?: () => void;
 };
@@ -59,6 +65,7 @@ export function EnterpriseEmployeeHrPanel({
   showEntretiensOnly = false,
   onProfileChange,
   onDocumentsChange,
+  onContactDraftChange,
   saveRequest = 0,
   onSaved,
 }: Props) {
@@ -221,7 +228,11 @@ export function EnterpriseEmployeeHrPanel({
                 </label>
                 <input
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditPhone(value);
+                    onContactDraftChange?.({ phone: value });
+                  }}
                   placeholder="06 12 34 56 78"
                   className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
                 />
@@ -244,7 +255,11 @@ export function EnterpriseEmployeeHrPanel({
                 <input
                   type="date"
                   value={editHireDate}
-                  onChange={(e) => setEditHireDate(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditHireDate(value);
+                    onContactDraftChange?.({ hire_date: value });
+                  }}
                   className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
                 />
               </div>
@@ -280,7 +295,11 @@ export function EnterpriseEmployeeHrPanel({
               </label>
               <select
                 value={editMetier}
-                onChange={(e) => setEditMetier(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEditMetier(value);
+                  onContactDraftChange?.({ metier: value });
+                }}
                 className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm sm:max-w-md"
               >
                 <option value="">Choisir un métier</option>

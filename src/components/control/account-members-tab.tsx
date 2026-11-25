@@ -14,6 +14,7 @@ import {
   type UnlinkedParticipant,
 } from "@/lib/control/account-participants-format";
 import { roleLabel, roleTone } from "@/lib/roles";
+import { startClientView } from "@/lib/control/start-client-view";
 import { ConnectionPresenceDot } from "@/components/ui/connection-presence-dot";
 import { EmptyState, SidePanel, Field, fieldClass } from "./chrome";
 
@@ -612,20 +613,45 @@ export function AccountMembersTab({
               type="button"
               className="w-full rounded-full bg-[#6E5BFF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#5B48F0]"
               onClick={() => {
-                void fetch("/api/super/learner-preview", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ userId: profilePerson.userId, space: "salarie" }),
-                })
-                  .then(async (res) => {
-                    const json = (await res.json()) as { error?: string; href?: string };
+                const openAsAdmin = roleTone(profilePerson.role) === "admin";
+                void (async () => {
+                  try {
+                    if (openAsAdmin) {
+                      const view = await startClientView(organizationId);
+                      if (!view.ok) throw new Error(view.error);
+                      window.location.href = "/dashboard/entreprise";
+                      return;
+                    }
+                    const res = await fetch("/api/super/learner-preview", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ userId: profilePerson.userId, space: "salarie" }),
+                    });
+                    const json = (await res.json()) as {
+                      error?: string;
+                      href?: string;
+                      needsOrgImpersonation?: boolean;
+                      orgId?: string | null;
+                      space?: string;
+                    };
                     if (!res.ok) throw new Error(json.error ?? "Ouverture impossible");
+                    if (json.space === "entreprise" || json.needsOrgImpersonation) {
+                      const orgId = json.orgId || organizationId;
+                      const view = await startClientView(orgId);
+                      if (!view.ok) throw new Error(view.error);
+                      window.location.href = "/dashboard/entreprise";
+                      return;
+                    }
                     window.location.href = json.href || "/dashboard/salarie";
-                  })
-                  .catch((e: unknown) => onNotice(e instanceof Error ? e.message : "Ouverture impossible"));
+                  } catch (e: unknown) {
+                    onNotice(e instanceof Error ? e.message : "Ouverture impossible");
+                  }
+                })();
               }}
             >
-              Voir son espace (lecture seule)
+              {roleTone(profilePerson.role) === "admin"
+                ? "Voir son espace entreprise"
+                : "Voir son espace (lecture seule)"}
             </button>
           ) : null}
         </SidePanel>

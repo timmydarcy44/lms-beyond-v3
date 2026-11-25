@@ -43,7 +43,6 @@ import {
   Pencil,
   Phone,
   Trash2,
-  X,
 } from "lucide-react";
 const manrope = Manrope({ subsets: ["latin"] });
 
@@ -225,6 +224,7 @@ export default function SalarieDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saveRequest, setSaveRequest] = useState(0);
+  const [contactDraft, setContactDraft] = useState({ phone: "", hireDate: "", metier: "" });
   const [resendingInvite, setResendingInvite] = useState(false);
   const [openingSpace, setOpeningSpace] = useState(false);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
@@ -331,7 +331,13 @@ export default function SalarieDetailPage() {
         }
 
         if (!cancelled) {
-          setEmployee(payload.employee ?? null);
+          const nextEmployee = payload.employee ?? null;
+          setEmployee(nextEmployee);
+          setContactDraft({
+            phone: nextEmployee?.phone ?? "",
+            hireDate: nextEmployee?.hire_date ?? "",
+            metier: nextEmployee?.metier ?? nextEmployee?.job_title ?? "",
+          });
           setDiagnostics(payload.diagnostics ?? []);
           setHasDiagnostics(Boolean(payload.has_diagnostics));
           setPendingShareConsent(Boolean(payload.pending_share_consent));
@@ -579,20 +585,57 @@ export default function SalarieDetailPage() {
     router.replace(suffix ? `${pathname}?${suffix}` : pathname);
   };
 
+  const startEditing = () => {
+    if (!displayEmployee) return;
+    setContactDraft({
+      phone: displayEmployee.phone ?? "",
+      hireDate: displayEmployee.hire_date ?? "",
+      metier: displayEmployee.metier ?? metierMatch?.title ?? displayEmployee.job_title ?? "",
+    });
+    setEditing(true);
+    goTab("overview");
+    window.setTimeout(
+      () => document.getElementById("employee-hr-edit")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      80,
+    );
+  };
+
   return (
     <div className={`${manrope.className} flex min-h-screen bg-[#F4F4F1] text-[#07080B]`}>
       <EnterpriseSidebar />
       <main className="relative z-10 flex-1 px-4 py-8 sm:px-8 lg:pl-[280px]">
         {editing ? (
-          <div className="mb-4 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-            <span>Mode édition — seules les sections autorisées sont modifiables.</span>
-            <button
-              type="button"
-              onClick={() => setSaveRequest((n) => n + 1)}
-              className="inline-flex items-center gap-1 font-semibold text-amber-900"
-            >
-              <X className="h-4 w-4" /> Terminer
-            </button>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <span>
+              Mode édition — téléphone, date d&apos;entrée (ancienneté) et métier sont modifiables.
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setContactDraft({
+                    phone: displayEmployee.phone ?? "",
+                    hireDate: displayEmployee.hire_date ?? "",
+                    metier:
+                      displayEmployee.metier ??
+                      metierMatch?.title ??
+                      displayEmployee.job_title ??
+                      "",
+                  });
+                  setEditing(false);
+                }}
+                className="rounded-full px-3 py-1.5 font-semibold text-amber-900/80 hover:bg-amber-100"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => setSaveRequest((n) => n + 1)}
+                className="rounded-full bg-amber-900 px-4 py-1.5 font-semibold text-amber-50 hover:bg-amber-800"
+              >
+                Enregistrer
+              </button>
+            </div>
           </div>
         ) : null}
 
@@ -611,8 +654,16 @@ export default function SalarieDetailPage() {
             pills={pills}
             email={displayEmployee.email?.trim() || "Non renseigné"}
             phone={displayEmployee.phone?.trim() || "Non renseigné"}
-            seniority={seniority || "Non renseigné"}
+            seniority={
+              formatSeniority(editing ? contactDraft.hireDate || null : displayEmployee.hire_date) ||
+              "Non renseigné"
+            }
             inclusion={inclusion?.summary?.trim() || (inclusion && inclusion.status !== "none" ? "Besoin déclaré" : "Aucun besoin déclaré")}
+            editing={editing}
+            editPhone={contactDraft.phone}
+            editHireDate={contactDraft.hireDate}
+            onEditPhoneChange={(value) => setContactDraft((prev) => ({ ...prev, phone: value }))}
+            onEditHireDateChange={(value) => setContactDraft((prev) => ({ ...prev, hireDate: value }))}
             showInvite={Boolean(displayEmployee.email?.trim()) && !hasDiagnostics}
             inviteBusy={resendingInvite}
             showOpenSpace={Boolean(displayEmployee.profile_id)}
@@ -650,7 +701,7 @@ export default function SalarieDetailPage() {
                   setOpeningSpace(false);
                 });
             }}
-            onEdit={() => setEditing(true)}
+            onEdit={startEditing}
             onInclusion={() => setInclusionSignal((value) => value + 1)}
           />
         </div>
@@ -832,6 +883,38 @@ export default function SalarieDetailPage() {
         <div role="tabpanel" id={`employee-panel-${tab}`} aria-labelledby={`employee-tab-${tab}`}>
         {tab === "overview" ? (
         <>
+        {editing ? (
+          <div id="employee-hr-edit" className="mt-6">
+            <EnterpriseEmployeeHrPanel
+              employeeId={employeeId!}
+              email={displayEmployee.email ?? null}
+              phone={contactDraft.phone}
+              hireDate={contactDraft.hireDate || null}
+              metier={contactDraft.metier || null}
+              documents={hrDocuments}
+              editing
+              showContactOnly
+              onContactDraftChange={(patch) =>
+                setContactDraft((prev) => ({
+                  phone: patch.phone ?? prev.phone,
+                  hireDate: patch.hire_date ?? prev.hireDate,
+                  metier: patch.metier ?? prev.metier,
+                }))
+              }
+              onProfileChange={(patch) => {
+                setEmployee((prev) => (prev ? { ...prev, ...patch } : prev));
+                setContactDraft((prev) => ({
+                  phone: patch.phone ?? prev.phone,
+                  hireDate: patch.hire_date ?? prev.hireDate,
+                  metier: patch.metier ?? patch.job_title ?? prev.metier,
+                }));
+              }}
+              onDocumentsChange={setHrDocuments}
+              saveRequest={saveRequest}
+              onSaved={() => setEditing(false)}
+            />
+          </div>
+        ) : null}
         <EmployeeOverview
           shareConsent={shareConsent}
           hasDiagnostics={hasDiagnostics}
@@ -852,26 +935,8 @@ export default function SalarieDetailPage() {
           onPrepareInterview={() => {
             window.setTimeout(() => document.getElementById("employee-entretiens")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
           }}
-          onEdit={() => setEditing(true)}
+          onEdit={startEditing}
         />
-        {editing ? (
-          <div className="mt-6">
-            <EnterpriseEmployeeHrPanel
-              employeeId={employeeId!}
-              email={displayEmployee.email ?? null}
-              phone={displayEmployee.phone ?? null}
-              hireDate={displayEmployee.hire_date ?? null}
-              metier={displayEmployee.metier ?? metierMatch?.title ?? displayEmployee.job_title ?? null}
-              documents={hrDocuments}
-              editing
-              showContactOnly
-              onProfileChange={(patch) => setEmployee((prev) => (prev ? { ...prev, ...patch } : prev))}
-              onDocumentsChange={setHrDocuments}
-              saveRequest={saveRequest}
-              onSaved={() => setEditing(false)}
-            />
-          </div>
-        ) : null}
         <div className="mt-6">
           <EnterpriseEmployeeMissions
             employeeId={employeeId!}
@@ -891,7 +956,7 @@ export default function SalarieDetailPage() {
             softSkills={softSkills}
             byoundSkills={byoundSkills}
             onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
-            onEdit={() => setEditing(true)}
+            onEdit={startEditing}
           />
         ) : tab === "tests" ? (
           <EmployeeTests

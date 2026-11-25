@@ -34,9 +34,12 @@ import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 import { CONTRIBUTOR_ROLES, parseContributorProfile, type ContributorRole } from "@/lib/expert/contributor-profile";
 import { EXPERT_MAIL_TEMPLATES } from "@/lib/expert/expert-mail-templates";
 import { ExpertFormationProposals } from "@/components/super-admin/expert-formation-proposals";
+import { ExpertCrmTestResults } from "@/components/super-admin/expert-crm-test-results";
 import { CrmEmailsClient } from "@/app/super/crm/emails/crm-emails-client";
 import { SectionCard, SectionHeader, TintPill, fullDate, shortDate } from "@/components/super-admin/expert-fiche-ui";
 import type { FormationProposal } from "@/lib/expert/formation-proposals";
+import type { EmployeeTestResults } from "@/lib/entreprise/employee-profile-diagnostics";
+import { hasAnyTestResults } from "@/lib/entreprise/employee-profile-diagnostics";
 
 type BadgeOption = { id: string; name: string; imageUrl?: string | null; domain?: string | null };
 type Draft = {
@@ -62,6 +65,7 @@ const TABS = [
   { id: "roles", label: "Rôles et visibilité" },
   { id: "cursus", label: "Cursus et badges" },
   { id: "missions", label: "Missions" },
+  { id: "bilans", label: "Bilans" },
   { id: "documents", label: "Documents" },
   { id: "mail", label: "Mail" },
   { id: "historique", label: "Historique" },
@@ -159,12 +163,17 @@ export function SuperExpertCrmDetail({
   proposals = [],
   initialTab = "profil",
   initialTemplate = null,
+  testResults = null,
+  lastSignInAt = null,
 }: {
   expert: AdminExpertRow;
   basePath?: string;
   proposals?: FormationProposal[];
   initialTab?: string;
   initialTemplate?: string | null;
+  testResults?: EmployeeTestResults | null;
+  /** auth.users.last_sign_in_at — vraie dernière connexion. */
+  lastSignInAt?: string | null;
 }) {
   const router = useRouter();
   const serverDraft = useMemo(() => buildDraft(expert), [expert]);
@@ -208,7 +217,20 @@ export function SuperExpertCrmDetail({
   const name = personName(expert.first_name ?? "", expert.last_name ?? "");
   const initials = `${(expert.first_name ?? "?").charAt(0)}${(expert.last_name ?? "").charAt(0)}`.toUpperCase();
   const approvedAt = notes.find((item) => item.action === "approved" && item.at)?.at;
-  const lastActivityAt = [...notes].filter((item) => item.at).sort((a, b) => +new Date(b.at!) - +new Date(a.at!))[0]?.at ?? expert.created_at;
+  // Connexion Auth, bilans récents, notes CRM, inscription — le plus récent gagne.
+  // (Avant : uniquement les notes internes → Jérôme restait figé au 5 sept.)
+  const lastNoteAt = [...notes].filter((item) => item.at).sort((a, b) => +new Date(b.at!) - +new Date(a.at!))[0]?.at ?? null;
+  const lastActivityAt = [
+    lastSignInAt,
+    testResults?.disc_at ?? null,
+    testResults?.idmc_at ?? null,
+    testResults?.soft_skills_at ?? null,
+    testResults?.updated_at ?? null,
+    lastNoteAt,
+    expert.created_at,
+  ]
+    .filter((value): value is string => Boolean(value) && Number.isFinite(Date.parse(value)))
+    .sort((a, b) => +new Date(b) - +new Date(a))[0] ?? null;
   const pending = expert.review_status !== "approved";
   const certified = Boolean(expert.is_certified_beyond || expert.certification_status === "certified");
   const changes = changeCount(draft, base);
@@ -366,15 +388,78 @@ export function SuperExpertCrmDetail({
   const uploadDocument = async (file: File) => {
     setUploading("document");
     try {
-      const body = new FormData();
-      body.set("file", file);
-      body.set("folder", docFolder);
-      if (docFolder === "contrat") {
-        body.set("label", "Contrat de prestation");
+      const maxBytes = 80 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        throw new Error(
+          `Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(1)} Mo, max 80 Mo). Compressez le PDF puis réessayez.`,
+        );
       }
-      const res = await fetch(`/api/super/experts/${expert.id}/documents`, { method: "POST", body });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(out.error || "Envoi impossible");
+
+      const label = docFolder === "contrat" ? "Contrat de prestation" : undefined;
+      // Upload direct Storage (évite la limite body Next/Vercel ~4,5 Mo).
+      const prepareRes = await fetch(`/api/super/experts/${expert.id}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "prepare",
+          folder: docFolder,
+          fileName: file.name,
+          contentType: file.type || "application/octet-stream",
+          size: file.size,
+          label,
+        }),
+      });
+      const prepare = (await prepareRes.json().catch(() => ({}))) as {
+        error?: string;
+        signedUrl?: string;
+        token?: string;
+        path?: string;
+        bucket?: string;
+        docId?: string;
+        url?: string;
+        name?: string;
+        folder?: string;
+      };
+      if (!prepareRes.ok || !prepare.signedUrl || !prepare.docId || !prepare.url) {
+        throw new Error(prepare.error || "Préparation de l’upload impossible");
+      }
+
+      const put = await fetch(prepare.signedUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+          ...(prepare.token ? { Authorization: `Bearer ${prepare.token}` } : {}),
+        },
+        body: file,
+      });
+      if (!put.ok) {
+        const detail = await put.text().catch(() => "");
+        throw new Error(
+          detail
+            ? `Envoi Storage échoué (${put.status}). ${detail.slice(0, 180)}`
+            : `Envoi Storage échoué (${put.status}). Vérifiez la taille max du bucket Supabase.`,
+        );
+      }
+
+      const completeRes = await fetch(`/api/super/experts/${expert.id}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "complete",
+          folder: prepare.folder ?? docFolder,
+          docId: prepare.docId,
+          url: prepare.url,
+          label: prepare.name ?? label ?? file.name,
+          fileName: file.name,
+          contentType: file.type || null,
+          size: file.size,
+          path: prepare.path,
+          bucket: prepare.bucket,
+        }),
+      });
+      const complete = (await completeRes.json().catch(() => ({}))) as { error?: string };
+      if (!completeRes.ok) throw new Error(complete.error || "Enregistrement impossible");
+
       toast.success(docFolder === "contrat" ? "Contrat de prestation déposé." : "Document déposé.");
       router.refresh();
     } catch (error) {
@@ -412,9 +497,23 @@ export function SuperExpertCrmDetail({
     .filter(([, count]) => count > 1)
     .map(([label]) => label);
 
+  const testsDone = testResults
+    ? [Boolean(testResults.disc), Boolean(testResults.idmc_score != null || (testResults.idmc_axes && Object.values(testResults.idmc_axes).some((v) => Number(v) > 0))), testResults.soft_skills.length > 0].filter(Boolean).length
+    : 0;
   const counters: Record<string, number | null> = {
     cursus: draft.cursus.length || null,
     missions: kpis.missionsCount,
+    bilans: hasAnyTestResults(
+      testResults ?? {
+        disc: null,
+        idmc_score: null,
+        idmc_axes: null,
+        soft_skills: [],
+        updated_at: null,
+      },
+    )
+      ? testsDone
+      : null,
     documents: documents.length || null,
   };
 
@@ -533,7 +632,20 @@ export function SuperExpertCrmDetail({
             <Kpi icon={Briefcase} color="#8B7BFF" label="Missions" value={kpis.missionsCount != null ? String(kpis.missionsCount) : "0"} />
             <Kpi icon={User} color="#8DB8FF" label="Expérience" value={kpis.yearsExperience ?? "—"} />
             <Kpi icon={Star} color="#F5C85C" label="Note moyenne" value={kpis.rating != null ? String(kpis.rating).replace(".", ",") : "—"} hint={kpis.rating == null ? "Après la 1re mission" : undefined} />
-            <Kpi icon={Clock} color="#6BE39B" label="Dernière activité" value={shortDate(lastActivityAt)} hint={relativeDay(lastActivityAt)} />
+            <Kpi
+              icon={Clock}
+              color="#6BE39B"
+              label="Dernière activité"
+              value={shortDate(lastActivityAt)}
+              hint={(() => {
+                const ago = relativeDay(lastActivityAt);
+                if (lastSignInAt && lastActivityAt === lastSignInAt) return `Connexion · ${ago ?? ""}`.trim();
+                if (testResults && lastActivityAt && [testResults.disc_at, testResults.idmc_at, testResults.soft_skills_at, testResults.updated_at].includes(lastActivityAt)) {
+                  return `Bilan · ${ago ?? ""}`.trim();
+                }
+                return ago;
+              })()}
+            />
             <Kpi icon={BadgeCheck} color="#F2CF6B" label="Profil complet" value={`${done} / ${checks.length}`} hint={missing ? `Il manque ${missing.missing}` : "Complet"} hintColor={missing ? "#F2CF6B" : "#6BE39B"} />
           </div>
         </div>
@@ -743,6 +855,23 @@ export function SuperExpertCrmDetail({
             <SectionHeader icon={Briefcase} color="#8B7BFF" title="Missions" subtitle="Chiffre déclaré à l'inscription" />
             <p className="px-6 pb-6 pt-4 text-sm text-[#9AA3BD]">{kpis.missionsCount ? `${kpis.missionsCount} mission${kpis.missionsCount > 1 ? "s" : ""} enregistrée${kpis.missionsCount > 1 ? "s" : ""}.` : "Aucune mission enregistrée."}</p>
           </SectionCard>
+        ) : null}
+
+        {tab === "bilans" ? (
+          <ExpertCrmTestResults
+            results={
+              testResults ?? {
+                disc: null,
+                idmc_score: null,
+                idmc_axes: null,
+                soft_skills: [],
+                updated_at: null,
+                disc_at: null,
+                idmc_at: null,
+                soft_skills_at: null,
+              }
+            }
+          />
         ) : null}
 
         {tab === "documents" ? (

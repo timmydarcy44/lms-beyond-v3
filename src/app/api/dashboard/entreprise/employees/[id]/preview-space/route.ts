@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isEntrepriseManagerRole } from "@/lib/auth/entreprise-manager-role";
 import {
   buildLearnerPreviewCookie,
   LEARNER_PREVIEW_COOKIE,
@@ -12,8 +13,8 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * RH / admin entreprise : ouvre l’espace salarié du collaborateur en lecture seule
- * (même cookie que la preview Control).
+ * RH / admin entreprise : ouvre l’espace du collaborateur en lecture seule.
+ * Admin RH → dashboard/entreprise ; salarié → dashboard/salarie (cookie preview).
  */
 export async function POST(
   _request: NextRequest,
@@ -57,6 +58,27 @@ export async function POST(
     [employee.first_name, employee.last_name].filter(Boolean).join(" ").trim() ||
     String(employee.email ?? "Collaborateur");
 
+  const { data: profile } = await service
+    .from("profiles")
+    .select("role, role_type")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (
+    isEntrepriseManagerRole(
+      (profile as { role?: string | null } | null)?.role,
+      (profile as { role_type?: string | null } | null)?.role_type,
+    )
+  ) {
+    return NextResponse.json({
+      ok: true,
+      targetUserId: profileId,
+      targetName,
+      href: "/dashboard/entreprise",
+      space: "entreprise",
+    });
+  }
+
   const cookie = await buildLearnerPreviewCookie({
     staffId: access.userId,
     targetUserId: profileId,
@@ -71,6 +93,7 @@ export async function POST(
     targetUserId: profileId,
     targetName,
     href: "/dashboard/salarie",
+    space: "salarie",
   });
   response.cookies.set(LEARNER_PREVIEW_COOKIE, cookie.token, cookie.options);
   return response;

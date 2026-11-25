@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isEntrepriseManagerRole } from "@/lib/auth/entreprise-manager-role";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import {
@@ -83,13 +84,51 @@ export async function POST(request: NextRequest) {
 
   const { data: profile } = await service
     .from("profiles")
-    .select("id, email, full_name, first_name, last_name, role, role_type")
+    .select("id, email, full_name, first_name, last_name, role, role_type, company_id")
     .eq("id", userId)
     .maybeSingle();
   if (!profile) return NextResponse.json({ error: "Profil introuvable" }, { status: 404 });
 
   const role = (profile as { role?: string }).role;
   const roleType = (profile as { role_type?: string | null }).role_type;
+  const companyId = String((profile as { company_id?: string | null }).company_id ?? "").trim();
+
+  const targetName =
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
+    String(profile.full_name ?? profile.email ?? "Collaborateur");
+
+  // Admin / RH : ouvrir l’espace entreprise (pas l’UI salarié).
+  if (isEntrepriseManagerRole(role, roleType)) {
+    let orgId = companyId;
+    if (!orgId) {
+      const { data: emp } = await service
+        .from("employees")
+        .select("company_id")
+        .eq("profile_id", userId)
+        .limit(1)
+        .maybeSingle();
+      orgId = String((emp as { company_id?: string } | null)?.company_id ?? "").trim();
+    }
+    if (!orgId) {
+      const { data: membership } = await service
+        .from("org_memberships")
+        .select("org_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+      orgId = String((membership as { org_id?: string } | null)?.org_id ?? "").trim();
+    }
+    return NextResponse.json({
+      ok: true,
+      targetUserId: userId,
+      targetName,
+      href: "/dashboard/entreprise",
+      space: "entreprise",
+      orgId: orgId || null,
+      needsOrgImpersonation: Boolean(orgId),
+    });
+  }
+
   const wantSalarie = String(body.space ?? "").toLowerCase() === "salarie" || isSalarieProfile(role, roleType);
   const allowBtoc = isBtocRole(role, roleType);
   if (!wantSalarie && !allowBtoc) {
@@ -98,10 +137,6 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-
-  const targetName =
-    [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
-    String(profile.full_name ?? profile.email ?? "Collaborateur");
 
   const cookie = await buildLearnerPreviewCookie({
     staffId: user.id,

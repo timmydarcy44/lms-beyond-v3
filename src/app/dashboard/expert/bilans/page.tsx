@@ -25,7 +25,7 @@ const TESTS = [
     title: "IDMC",
     detail: "Motivations et moteurs d’engagement.",
     href: "/idmc/test?from=expert",
-    resultHref: "/dashboard/expert/resultats",
+    resultHref: "/dashboard/expert/bilans",
   },
 ] as const;
 
@@ -40,8 +40,8 @@ export default async function ExpertBilansPage() {
   if (userId && db) {
     const [soft, disc, idmc] = await Promise.all([
       db.from("soft_skills_resultats").select("learner_id").eq("learner_id", userId).maybeSingle(),
-      db.from("disc_resultats").select("learner_id").eq("learner_id", userId).maybeSingle(),
-      db.from("idmc_resultats").select("learner_id").eq("learner_id", userId).maybeSingle(),
+      db.from("disc_resultats").select("profile_id").eq("profile_id", userId).maybeSingle(),
+      db.from("idmc_resultats").select("profile_id").eq("profile_id", userId).maybeSingle(),
     ]);
     softDone = Boolean(soft.data);
     discDone = Boolean(disc.data);

@@ -26,6 +26,7 @@ type DiscIpsativeTestRunnerProps = {
 };
 
 export function DiscIpsativeTestRunner({ onComplete }: DiscIpsativeTestRunnerProps) {
+  const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<PickPhase>("most");
   const [mostLabel, setMostLabel] = useState<DiscLabel | null>(null);
@@ -48,8 +49,8 @@ export function DiscIpsativeTestRunner({ onComplete }: DiscIpsativeTestRunnerPro
 
   const instruction =
     phase === "most"
-      ? "Sélectionnez celle qui vous correspond le plus"
-      : "Maintenant, celle qui vous correspond le moins";
+      ? "Sélectionnez celle qui vous représente le plus"
+      : "Maintenant, celle qui vous représente le moins";
 
   const canAdvance = Boolean(mostLabel && leastLabel && !submitting && !analyzing);
 
@@ -117,6 +118,43 @@ export function DiscIpsativeTestRunner({ onComplete }: DiscIpsativeTestRunnerPro
     shuffledOptions,
   ]);
 
+  if (!started) {
+    return (
+      <AssessmentTestFrame
+        stepLabel={`DISC · ${DISC_QUESTION_COUNT} questions`}
+        progress={0}
+        kicker="Avant de commencer"
+        title="Deux réponses par question."
+        footer={
+          <button
+            type="button"
+            onClick={() => setStarted(true)}
+            className="h-12 w-full rounded-full bg-[#111111] text-[15px] font-semibold text-white"
+          >
+            Commencer le test
+          </button>
+        }
+      >
+        <div className="space-y-4 text-[15px] leading-relaxed text-[#3A3D45]">
+          <p>
+            Pour chaque situation, vous choisissez <strong>deux</strong> affirmations parmi quatre :
+          </p>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              d&apos;abord celle qui <strong>vous représente le plus</strong> ;
+            </li>
+            <li>
+              ensuite celle qui <strong>vous représente le moins</strong>.
+            </li>
+          </ul>
+          <p className="text-[#5C6370]">
+            Répondez spontanément : il n&apos;y a pas de bonne ou de mauvaise réponse.
+          </p>
+        </div>
+      </AssessmentTestFrame>
+    );
+  }
+
   if (!current) return null;
 
   const progress = Math.round(((index + (phase === "least" ? 0.5 : 0)) / DISC_QUESTION_COUNT) * 100);
@@ -145,7 +183,12 @@ export function DiscIpsativeTestRunner({ onComplete }: DiscIpsativeTestRunnerPro
         {shuffledOptions.map((option) => {
           const locked = phase === "least" && mostLabel === option.label;
           const selected = mostLabel === option.label || leastLabel === option.label;
-          const mark = mostLabel === option.label ? "Le plus" : leastLabel === option.label ? "Le moins" : "";
+          const mark =
+            mostLabel === option.label
+              ? "Ça me représente plus"
+              : leastLabel === option.label
+                ? "Ça me représente moins"
+                : "";
           return (
             <AssessmentChoice
               key={`${option.label}-${option.text}`}

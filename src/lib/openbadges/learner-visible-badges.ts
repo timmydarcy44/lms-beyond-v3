@@ -5,6 +5,11 @@ import {
   OpenBadgesRpcUnavailableError,
 } from "@/lib/openbadges/badge-repository";
 import { countLearnerBadgeAttempts } from "@/lib/openbadges/badge-earner-attempt";
+import { resolveByoundPublicBadgeImageUrl } from "@/lib/openbadges/byound-badge-assets";
+import {
+  PROFIL_COMPORTEMENTAL_BADGE_DISPLAY_NAME,
+  PROFIL_COMPORTEMENTAL_BADGE_ID,
+} from "@/lib/openbadges/diagnostic-commercial-badge";
 import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
 import { getBadgeCriteriaUrl } from "@/lib/openbadges/urls";
 import { BADGE_PUBLIC_ORIGIN } from "@/lib/openbadges/v3/credential";
@@ -14,6 +19,13 @@ import { awardedBadgeClassIds } from "@/lib/openbadges/badge-assertions";
 import { getLearnerOpenBadgeAward } from "@/lib/openbadges/open-badge-earner-submissions";
 import { prisma, resolveAndApplyDatabaseUrl } from "@/lib/prisma";
 import { getServiceRoleClient } from "@/lib/supabase/server";
+
+function displayOpenBadgeName(badge: { id: string; name?: string | null; title?: string | null }) {
+  if (badge.id === PROFIL_COMPORTEMENTAL_BADGE_ID) {
+    return PROFIL_COMPORTEMENTAL_BADGE_DISPLAY_NAME;
+  }
+  return String(badge.title ?? badge.name ?? "").trim() || "Open Badge";
+}
 
 export type LearnerVisibleOpenBadge = {
   id: string;
@@ -258,17 +270,23 @@ export async function getLearnerEarnedOpenBadges(
       const earned = assertions.flatMap((assertion) => {
         const badge = byId.get(String(assertion.badge_class_id));
         if (!badge) return [];
-        const name = String(badge.name ?? badge.title ?? "").trim() || "Open Badge";
+        const name = displayOpenBadgeName(badge);
         const assertionId = assertion.id ? String(assertion.id) : null;
         const shareUrl = assertionId
           ? `${BADGE_PUBLIC_ORIGIN}/badges/${assertionId}`
           : getBadgeCriteriaUrl(String(badge.id));
         const level = parseLevelFromEvaluationConfig(badge.evaluation_config);
+        const rawImage = (badge.image_url as string | null) ?? null;
+        const imageUrl = resolveByoundPublicBadgeImageUrl({
+          id: String(badge.id),
+          name,
+          imageUrl: rawImage,
+        });
         return [
           {
             id: String(badge.id),
             name,
-            imageUrl: (badge.image_url as string | null) ?? null,
+            imageUrl,
             level,
             awardedAt: String(assertion.issued_at),
             shareUrl,
@@ -305,12 +323,16 @@ export async function getLearnerEarnedOpenBadges(
   for (const badge of rows) {
     const award = getLearnerOpenBadgeAward(badge.evaluationConfig, uid);
     if (!award) continue;
-    const name = award.badgeName ?? badge.name;
+    const name =
+      badge.id === PROFIL_COMPORTEMENTAL_BADGE_ID
+        ? PROFIL_COMPORTEMENTAL_BADGE_DISPLAY_NAME
+        : (award.badgeName ?? badge.name);
     const shareUrl = getBadgeCriteriaUrl(badge.id);
+    const rawImage = badge.imageUrl ?? award.imageUrl ?? null;
     earned.push({
       id: badge.id,
       name,
-      imageUrl: badge.imageUrl ?? award.imageUrl ?? null,
+      imageUrl: resolveByoundPublicBadgeImageUrl({ id: badge.id, name, imageUrl: rawImage }),
       level: badge.level,
       awardedAt: award.awardedAt,
       shareUrl,

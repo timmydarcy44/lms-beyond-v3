@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CrossProfileBadgeCelebration } from "@/components/apprenant/cross-profile-badge-celebration";
 import { listPublicCatalogEntries } from "@/lib/hard-skills/skill-catalog-policy";
 import type { EmployeeNextStep } from "@/lib/salarie/employee-next-step";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,11 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [badgeCelebration, setBadgeCelebration] = useState<{
+    badgeName: string;
+    badgeImageUrl: string | null;
+    walletHref: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +101,37 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
       .catch(() => {
         if (!cancelled) setError(true);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/dashboard/cross-profile-badge-celebration", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as {
+          pending?: boolean;
+          badgeName?: string;
+          badgeImageUrl?: string | null;
+          walletHref?: string;
+        };
+        if (json.pending && json.badgeName) {
+          setBadgeCelebration({
+            badgeName: json.badgeName,
+            badgeImageUrl: json.badgeImageUrl ?? null,
+            walletHref: json.walletHref ?? "/dashboard/salarie/badges",
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -348,15 +385,17 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
           />
         ) : null}
         {active === "badges" ? (
-          <HeroFigure
-            legend="Open Badges"
-            value={String(home.badges.count)}
-            unit=""
-            caption={
-              home.badges.names.slice(0, 2).join(" · ") +
-              (home.badges.names.length > 2 ? ` · +${home.badges.names.length - 2}` : "")
-            }
-          />
+          <Link href="/dashboard/salarie/badges" className="relative block">
+            <HeroFigure
+              legend="Wallet"
+              value={String(home.badges.count)}
+              unit=""
+              caption={
+                home.badges.names.slice(0, 2).join(" · ") +
+                (home.badges.names.length > 2 ? ` · +${home.badges.names.length - 2}` : "")
+              }
+            />
+          </Link>
         ) : null}
 
         <div className="relative mt-8 flex flex-wrap items-start justify-center gap-4">
@@ -442,6 +481,20 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
       ) : null}
 
       {needOpen ? <NeedModal onClose={() => setNeedOpen(false)} /> : null}
+      {badgeCelebration ? (
+        <CrossProfileBadgeCelebration
+          badgeName={badgeCelebration.badgeName}
+          badgeImageUrl={badgeCelebration.badgeImageUrl}
+          walletHref={badgeCelebration.walletHref}
+          onDismiss={() => {
+            setBadgeCelebration(null);
+            void fetch("/api/dashboard/cross-profile-badge-celebration", {
+              method: "POST",
+              credentials: "include",
+            }).catch(() => undefined);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

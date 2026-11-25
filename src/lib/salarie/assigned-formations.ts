@@ -1,4 +1,3 @@
-import { collectLearnerProfileCandidates } from "@/lib/learner/resolve-learner-profile-candidates";
 import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 
 export type SalarieAssignedFormation = {
@@ -39,29 +38,88 @@ function courseCover(row: { cover_image?: string | null; builder_snapshot?: unkn
   return fromSnapshot || null;
 }
 
-/** Formations assignées au salarié (enrollments + course_enrollments), sans filtre org_id cours. */
+async function resolveSalarieOrganizationId(
+  client: NonNullable<Awaited<ReturnType<typeof getServiceRoleClientOrFallback>>>,
+  userId: string,
+): Promise<string | null> {
+  const [{ data: profile }, { data: employee }, { data: membership }] = await Promise.all([
+    client.from("profiles").select("company_id, entreprise_id").eq("id", userId).maybeSingle(),
+    client
+      .from("employees")
+      .select("company_id")
+      .eq("profile_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    client
+      .from("org_memberships")
+      .select("org_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const profileRow = profile as { company_id?: string | null; entreprise_id?: string | null } | null;
+  const fromProfile = String(profileRow?.company_id ?? profileRow?.entreprise_id ?? "").trim() || null;
+  const fromEmployee = String((employee as { company_id?: string | null } | null)?.company_id ?? "").trim() || null;
+  const fromMembership = String((membership as { org_id?: string | null } | null)?.org_id ?? "").trim() || null;
+
+  return fromProfile || fromEmployee || fromMembership;
+}
+
+/** Course ids the org may expose to collaborateurs (owned + LMS grants). */
+async function listOrgAllowedCourseIds(
+  client: NonNullable<Awaited<ReturnType<typeof getServiceRoleClientOrFallback>>>,
+  orgId: string,
+): Promise<Set<string>> {
+  const allowed = new Set<string>();
+  const [{ data: owned }, { data: grants }] = await Promise.all([
+    client.from("courses").select("id").eq("org_id", orgId).limit(500),
+    client.from("organization_lms_courses").select("course_id").eq("organization_id", orgId).limit(500),
+  ]);
+  for (const row of owned ?? []) {
+    const id = String((row as { id?: string }).id ?? "").trim();
+    if (id) allowed.add(id);
+  }
+  for (const row of grants ?? []) {
+    const id = String((row as { course_id?: string }).course_id ?? "").trim();
+    if (id) allowed.add(id);
+  }
+  return allowed;
+}
+
+/**
+ * Formations assignées au salarié.
+ * - enrollments du profil courant uniquement (pas de fusion email / profils frères)
+ * - limité aux formations de l'organisation (courses.org_id ou organization_lms_courses)
+ */
 export async function listSalarieAssignedFormations(
   userId: string,
-  email?: string | null,
+  _email?: string | null,
 ): Promise<SalarieAssignedFormation[]> {
   if (!UUID_RE.test(userId)) return [];
   const client = await getServiceRoleClientOrFallback();
   if (!client) return [];
 
+  const orgId = await resolveSalarieOrganizationId(client, userId);
+  if (!orgId || !UUID_RE.test(orgId)) return [];
+
+  const allowedCourseIds = await listOrgAllowedCourseIds(client, orgId);
+  if (allowedCourseIds.size === 0) return [];
+
   const courseIds = new Set<string>();
-  const profileIds = await collectLearnerProfileCandidates(client, userId, email);
-  const userIds = profileIds.length ? profileIds : [userId];
 
   const pull = async (table: "enrollments" | "course_enrollments", column: "user_id" | "learner_id") => {
-    const withRole = await client.from(table).select("course_id, role").in(column, userIds).limit(200);
+    const withRole = await client.from(table).select("course_id, role").eq(column, userId).limit(200);
     const rows = withRole.error
-      ? (await client.from(table).select("course_id").in(column, userIds).limit(200)).data
+      ? (await client.from(table).select("course_id").eq(column, userId).limit(200)).data
       : withRole.data;
     for (const row of rows ?? []) {
       const role = String((row as { role?: string }).role ?? "student").trim().toLowerCase();
       if (role && !["student", "learner", "apprenant", "salarie", "collaborateur"].includes(role)) continue;
       const id = String((row as { course_id?: string }).course_id ?? "").trim();
-      if (id) courseIds.add(id);
+      if (id && allowedCourseIds.has(id)) courseIds.add(id);
     }
   };
 

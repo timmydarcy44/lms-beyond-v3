@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { maybeTriggerCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
 import { BYOUND_CONNAISSANCE_DE_SOI_BADGE_IMAGE_URL } from "@/lib/openbadges/byound-badge-assets";
-import { PROFIL_COMPORTEMENTAL_BADGE_NAME } from "@/lib/openbadges/diagnostic-commercial-badge";
+import { PROFIL_COMPORTEMENTAL_BADGE_DISPLAY_NAME } from "@/lib/openbadges/diagnostic-commercial-badge";
 import { createSupabaseServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,12 @@ export async function GET() {
   }
 
   const db = getServiceRoleClient() ?? authClient;
+
+  // Débloque le badge pour les salariés déjà à 3/3 (soft_skills_resultats_salarie inclus).
+  await maybeTriggerCrossProfileCompletion(user.id).catch((err) => {
+    console.warn("[cross-profile-celebration] trigger:", err);
+  });
+
   const { data: profile } = await db
     .from("profiles")
     .select("cross_profile_completion, role, role_type")
@@ -60,7 +67,7 @@ export async function GET() {
 
   return NextResponse.json({
     pending: true,
-    badgeName: PROFIL_COMPORTEMENTAL_BADGE_NAME,
+    badgeName: PROFIL_COMPORTEMENTAL_BADGE_DISPLAY_NAME,
     badgeImageUrl,
     openingParagraph: completion?.opening_paragraph ?? null,
     walletHref: isSalarie

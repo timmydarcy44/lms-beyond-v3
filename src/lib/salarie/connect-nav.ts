@@ -19,11 +19,12 @@ export const SALARIE_NAV_ITEMS: SalarieNavItem[] = [
   { label: "Accueil", href: "/dashboard/salarie", icon: Home },
   { label: "Mes bilans", href: "/dashboard/salarie/bilans", icon: ClipboardList },
   { label: "Mes formations", href: "/dashboard/salarie/formations", icon: BookOpen },
+  { label: "Wallet", href: "/dashboard/salarie/badges", icon: Wallet },
   { label: "Mes compétences", href: "/dashboard/salarie/competences", icon: UserCircle },
   { label: "Accompagnement", href: "/dashboard/salarie/accompagnement", icon: Users },
   { label: "Réclamation", href: "/dashboard/salarie/reclamation", icon: MessageSquareWarning },
   { label: "Signalement", href: "/dashboard/salarie/signalement", icon: MessageSquareWarning },
-  { label: "Mon compte", href: "/dashboard/salarie/profil", icon: Wallet },
+  { label: "Mon compte", href: "/dashboard/salarie/profil", icon: UserCircle },
 ];
 
 export const SALARIE_PAGE_KICKER =

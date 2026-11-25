@@ -12,6 +12,7 @@ import {
   fetchIdmcAxesForCandidates,
   fetchLatestSoftSkillsResultForCandidates,
 } from "@/lib/learner/resolve-learner-profile-candidates";
+import { maybeTriggerCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
 import { getLearnerEarnedOpenBadges } from "@/lib/openbadges/learner-visible-badges";
 import { listSalarieAssignedFormations } from "@/lib/salarie/assigned-formations";
 import { enterpriseVisibilityForEmployee } from "@/lib/salarie/enterprise-visibility";
@@ -233,6 +234,10 @@ export async function loadSalarieHome(userId: string, email: string | null): Pro
     const skillMeta = meta[name] as Parameters<typeof listSkillProofs>[0];
     if (listSkillProofs(skillMeta).length > 0) withProof += 1;
   }
+
+  await maybeTriggerCrossProfileCompletion(userId).catch((err) => {
+    console.warn("[salarie-home] cross-profile trigger:", err);
+  });
 
   let badgeNames: string[] = [];
   try {

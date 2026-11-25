@@ -21,6 +21,7 @@ import { maybeRefreshProfileAnalysisIfStale } from "@/lib/learner/profile-analys
 import { resolveProfilComportementalBadgeId } from "@/lib/openbadges/diagnostic-commercial-badge";
 import { issueBadgeAssertion } from "@/lib/openbadges/badge-assertions";
 import { getLearnerOpenBadgeAward } from "@/lib/openbadges/open-badge-earner-submissions";
+import { fetchLatestSoftSkillsResult } from "@/lib/soft-skills/resolve-soft-skills-result";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export type CrossProfileCompletionRecord = {
@@ -71,20 +72,20 @@ function parseCrossProfileCompletion(raw: unknown): CrossProfileCompletionRecord
 }
 
 async function loadTestRows(service: SupabaseClient, userId: string) {
-  const [discRes, idmcRes, softRes] = await Promise.all([
+  const [discRes, idmcRes, soft] = await Promise.all([
     service.from("disc_resultats").select("scores").eq("profile_id", userId).maybeSingle(),
     service
       .from("idmc_resultats")
       .select("scores, level, global_score")
       .eq("profile_id", userId)
       .maybeSingle(),
-    service.from("soft_skills_resultats").select("scores").eq("learner_id", userId).maybeSingle(),
+    fetchLatestSoftSkillsResult(service, userId, "scores, taken_at"),
   ]);
 
   return {
     disc: discRes.data,
     idmc: idmcRes.data,
-    soft: softRes.data,
+    soft,
   };
 }
 

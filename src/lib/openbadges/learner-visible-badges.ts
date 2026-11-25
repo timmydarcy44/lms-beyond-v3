@@ -170,34 +170,39 @@ export async function getLearnerVisibleOpenBadges(
   }
 
   if (rows.length === 0 && resolveAndApplyDatabaseUrl()) {
-    const badgeClasses = await prisma.badgeClass.findMany({
-      where: {
-        orgId: { in: resolvedOrgIds },
-        status: "ACTIVE",
-        visibleInLearnerDashboard: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        imageUrl: true,
-        imageTemplateUrl: true,
-        level: true,
-        requiresEnrollment: true,
-        requiredCourseId: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: 24,
-    });
-    rows = badgeClasses.map((badge) => ({
-      id: badge.id,
-      name: badge.name,
-      description: badge.description,
-      imageUrl: badge.imageUrl ?? badge.imageTemplateUrl ?? null,
-      level: badge.level,
-      requiresEnrollment: badge.requiresEnrollment,
-      requiredCourseId: badge.requiredCourseId,
-    }));
+    try {
+      const badgeClasses = await prisma.badgeClass.findMany({
+        where: {
+          orgId: { in: resolvedOrgIds },
+          status: "ACTIVE",
+          visibleInLearnerDashboard: true,
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          imageUrl: true,
+          imageTemplateUrl: true,
+          level: true,
+          requiresEnrollment: true,
+          requiredCourseId: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 24,
+      });
+      rows = badgeClasses.map((badge) => ({
+        id: badge.id,
+        name: badge.name,
+        description: badge.description,
+        imageUrl: badge.imageUrl ?? badge.imageTemplateUrl ?? null,
+        level: badge.level,
+        requiresEnrollment: badge.requiresEnrollment,
+        requiredCourseId: badge.requiredCourseId,
+      }));
+    } catch (err) {
+      console.warn("[learner-visible-badges] prisma fallback:", err);
+      rows = [];
+    }
   }
 
   if (rows.length === 0) return [];

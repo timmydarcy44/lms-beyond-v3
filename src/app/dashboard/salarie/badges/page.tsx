@@ -34,10 +34,21 @@ export default async function SalarieWalletPage() {
     (profile?.company_id as string | null) ?? (profile?.school_id as string | null) ?? null;
   const orgIds = orgId ? [orgId] : [];
 
-  const [earnedOpenBadges, visibleOpenBadges] = await Promise.all([
-    getLearnerEarnedOpenBadges(userId),
-    getLearnerVisibleOpenBadges(userId, orgId, orgIds),
-  ]);
+  let earnedOpenBadges: Awaited<ReturnType<typeof getLearnerEarnedOpenBadges>> = [];
+  let visibleOpenBadges: Awaited<ReturnType<typeof getLearnerVisibleOpenBadges>> = [];
+  try {
+    [earnedOpenBadges, visibleOpenBadges] = await Promise.all([
+      getLearnerEarnedOpenBadges(userId),
+      getLearnerVisibleOpenBadges(userId, orgId, orgIds),
+    ]);
+  } catch (err) {
+    console.error("[salarie/badges] wallet load:", err);
+    try {
+      earnedOpenBadges = await getLearnerEarnedOpenBadges(userId);
+    } catch (earnedErr) {
+      console.error("[salarie/badges] earned load:", earnedErr);
+    }
+  }
 
   return (
     <div className={SALARIE_PAGE_SHELL}>

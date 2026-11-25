@@ -15,6 +15,7 @@ import "katex/dist/katex.min.css";
 import { EmbeddedLessonResource } from "@/components/apprenant/embedded-lesson-resource";
 import { LessonSmartAssist } from "@/components/apprenant/lesson-smart-assist";
 import { ByoundCardsPrompt, type ByoundCardsReview } from "@/components/apprenant/byound-cards-prompt";
+import { CourseContentFeedbackFab } from "@/components/lms/course-content-feedback-fab";
 import { ReadingContent } from "@/components/lms/ReadingContent";
 import { splitSectionTitle } from "@/lib/lms/reading-transform";
 import { markLeafDone, readLeafDone } from "@/lib/learning/leaf-done";
@@ -3039,6 +3040,16 @@ export function LessonPlayView({
           </div>,
           document.body,
         )}
+
+      {!preview ? (
+        <CourseContentFeedbackFab
+          courseId={courseId}
+          courseTitle={courseTitle || detail.title}
+          lessonId={activeLesson.id}
+          lessonTitle={activeLesson.title}
+          audience="apprenant"
+        />
+      ) : null}
       </>
     );
   };

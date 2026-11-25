@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Bell, Download, ExternalLink, FileDown } from "lucide-react";
 import type { SuiviLearnerDetail } from "@/lib/lms/learner-suivi-detail";
@@ -58,6 +59,7 @@ function statusLabel(status: string) {
 }
 
 export function LmsSuiviDetailV2({ initial }: Props) {
+  const router = useRouter();
   const [data, setData] = useState(initial);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [relanceOpen, setRelanceOpen] = useState(false);
@@ -176,7 +178,11 @@ export function LmsSuiviDetailV2({ initial }: Props) {
               {data.courses.length > 1 ? (
                 <select
                   value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setCourseId(next);
+                    router.push(`/super/lms/suivi/${data.userId}?courseId=${encodeURIComponent(next)}`);
+                  }}
                   className="rounded-full border px-3 py-1 text-[12px] font-semibold"
                   style={{ borderColor: BORDER, background: CARD, color: TEXT }}
                 >
@@ -225,7 +231,7 @@ export function LmsSuiviDetailV2({ initial }: Props) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Kpi
           label="Progression"
-          value={data.modulesTotal ? `${data.progressPct} %` : "—"}
+          value={data.chaptersTotal || data.modulesTotal ? `${data.progressPct} %` : "—"}
           valueColor={GREEN}
           sub={
             data.modulesTotal
@@ -234,12 +240,50 @@ export function LmsSuiviDetailV2({ initial }: Props) {
           }
         />
         <Kpi
-          label="Séances"
-          value={data.sessionCount ? String(data.sessionCount) : "—"}
+          label="Chapitres"
+          value={
+            data.chaptersTotal
+              ? `${data.chaptersDone}/${data.chaptersTotal}`
+              : data.chaptersDone
+                ? String(data.chaptersDone)
+                : "—"
+          }
           sub={
-            data.firstSessionAt
-              ? `depuis le ${fmtDate(data.firstSessionAt, { day: "numeric", month: "short" })}`
-              : "Pas encore de séance"
+            data.chaptersTotal
+              ? `${data.chaptersDone} effectué${data.chaptersDone > 1 ? "s" : ""}`
+              : "Aucun chapitre détecté"
+          }
+        />
+        <Kpi
+          label="Sous-chapitres"
+          value={
+            data.subchaptersTotal
+              ? `${data.subchaptersDone}/${data.subchaptersTotal}`
+              : data.subchaptersDone
+                ? String(data.subchaptersDone)
+                : "—"
+          }
+          sub={
+            data.subchaptersTotal
+              ? `${data.subchaptersDone} effectué${data.subchaptersDone > 1 ? "s" : ""}`
+              : "Aucun sous-chapitre détecté"
+          }
+        />
+        <Kpi
+          label="Temps contenu"
+          value={
+            data.contentSeconds > 0
+              ? formatDurationCompact(data.contentSeconds)
+              : data.sessionCount
+                ? formatDurationCompact(data.activeSeconds)
+                : "—"
+          }
+          sub={
+            data.readingSeconds > 0
+              ? `dont ${formatDurationCompact(data.readingSeconds)} de lecture`
+              : data.sessionCount
+                ? `${data.sessionCount} séance${data.sessionCount > 1 ? "s" : ""}`
+                : "Pas encore de contenu"
           }
         />
         <Kpi
@@ -247,23 +291,9 @@ export function LmsSuiviDetailV2({ initial }: Props) {
           value={data.sessionCount ? formatDurationCompact(data.connectedSeconds) : "—"}
           sub={
             data.sessionCount
-              ? `moyenne ${formatDurationCompact(data.avgConnectedPerSession)} par séance`
+              ? `actif ${formatDurationCompact(data.activeSeconds)} · ${data.activeRatioPct} %`
               : "Pas encore de séance"
           }
-        />
-        <Kpi
-          label="Temps actif"
-          value={data.sessionCount ? formatDurationCompact(data.activeSeconds) : "—"}
-          sub={
-            data.sessionCount
-              ? `${data.activeRatioPct} % du temps connecté`
-              : "Pas encore de séance"
-          }
-        />
-        <Kpi
-          label="Quiz & entretiens"
-          value={String((data.quizzes?.length ?? 0) + (data.interviews?.length ?? 0))}
-          sub={`${data.quizzes?.length ?? 0} quiz · ${data.interviews?.length ?? 0} entretien${(data.interviews?.length ?? 0) > 1 ? "s" : ""}`}
         />
         <Kpi
           label="Dernière activité"

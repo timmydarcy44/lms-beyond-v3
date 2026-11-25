@@ -7,6 +7,7 @@ import { Manrope } from "next/font/google";
 import { ArrowRight, Bell, BookOpen, Check, ChevronRight, ClipboardList, Lock, Menu, MoreHorizontal, NotebookPen, Play, Search, Shield, Sparkles, Target } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { LearningStrategyModal } from "@/components/apprenant/learning-strategy-modal";
+import { CourseContentFeedbackFab } from "@/components/lms/course-content-feedback-fab";
 import { readLeafDone } from "@/lib/learning/leaf-done";
 import { useDyslexiaMode } from "@/components/apprenant/dyslexia-mode-provider";
 import { useSupabase } from "@/components/providers/supabase-provider";
@@ -1155,6 +1156,15 @@ export function FormationStudio({
         </div>
       ) : null}
       <LearningStrategyModal isOpen={strategyOpen} onClose={() => setStrategyOpen(false)} />
+      {!preview ? (
+        <CourseContentFeedbackFab
+          courseId={courseId}
+          courseTitle={title}
+          lessonId={selectedNode?.id ?? selectedChapter?.id ?? null}
+          lessonTitle={selectedNode?.title ?? selectedChapter?.title ?? null}
+          audience="apprenant"
+        />
+      ) : null}
     </div>
   );
 }

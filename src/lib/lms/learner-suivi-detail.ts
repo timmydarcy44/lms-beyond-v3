@@ -130,6 +130,13 @@ export type SuiviLearnerDetail = {
   progressPct: number;
   modulesDone: number;
   modulesTotal: number;
+  chaptersDone: number;
+  chaptersTotal: number;
+  subchaptersDone: number;
+  subchaptersTotal: number;
+  /** Durée estimée de lecture / contenu (deltas entre leaves). */
+  contentSeconds: number;
+  readingSeconds: number;
   sessionCount: number;
   firstSessionAt: string | null;
   connectedSeconds: number;
@@ -196,26 +203,176 @@ function asStringList(value: unknown): string[] {
 
 const MAX_LEAF_DELTA_SEC = 45 * 60;
 
-function countModules(structure: unknown): { total: number; titles: string[]; ids: string[] } {
-  const titles: string[] = [];
-  const ids: string[] = [];
-  const root = structure as { modules?: unknown[]; chapters?: unknown[] } | null;
-  const modules = Array.isArray(root?.modules)
-    ? root!.modules!
-    : Array.isArray(root?.chapters)
-      ? root!.chapters!
-      : [];
-  for (const mod of modules) {
-    const m = mod as { id?: string; title?: string; visible?: boolean; lessons?: unknown[] };
-    if (!isCourseNodeVisible(m as { deleted_at?: string | null })) continue;
-    const id = String(m.id ?? titles.length);
-    titles.push(String(m.title ?? `Module ${titles.length + 1}`));
-    ids.push(id);
+type OutlineSection = {
+  id: string;
+  title: string;
+  chapters: Array<{
+    id: string;
+    title: string;
+    subchapters: Array<{ id: string; title: string }>;
+  }>;
+};
+
+function parseBuilderSnapshot(raw: unknown): unknown {
+  if (raw == null) return null;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   }
-  return { total: titles.length, titles, ids };
+  return raw;
 }
 
-export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearnerDetail | null> {
+function parseOutlineFromSnapshot(snapshot: unknown): OutlineSection[] {
+  const sectionsRaw =
+    snapshot && typeof snapshot === "object"
+      ? (snapshot as { sections?: unknown }).sections
+      : null;
+  if (!Array.isArray(sectionsRaw)) {
+    // Legacy structure.modules / structure.chapters
+    const root = snapshot as { modules?: unknown[]; chapters?: unknown[] } | null;
+    const modules = Array.isArray(root?.modules)
+      ? root!.modules!
+      : Array.isArray(root?.chapters)
+        ? root!.chapters!
+        : [];
+    return modules
+      .filter((mod) => isCourseNodeVisible(mod as { deleted_at?: string | null }))
+      .map((mod, index) => {
+        const m = mod as { id?: string; title?: string; lessons?: unknown[] };
+        const lessons = Array.isArray(m.lessons) ? m.lessons : [];
+        return {
+          id: String(m.id ?? `module-${index}`),
+          title: String(m.title ?? `Module ${index + 1}`),
+          chapters: lessons
+            .filter((lesson) => isCourseNodeVisible(lesson as { deleted_at?: string | null }))
+            .map((lesson, lessonIndex) => {
+              const l = lesson as { id?: string; title?: string };
+              return {
+                id: String(l.id ?? `lesson-${lessonIndex}`),
+                title: String(l.title ?? `Chapitre ${lessonIndex + 1}`),
+                subchapters: [] as Array<{ id: string; title: string }>,
+              };
+            }),
+        };
+      })
+      .filter((section) => section.chapters.length > 0 || Boolean(section.title));
+  }
+
+  return (sectionsRaw as Array<Record<string, unknown>>)
+    .filter((section) => isCourseNodeVisible(section as { deleted_at?: string | null }))
+    .map((section, index) => {
+      const chaptersRaw = Array.isArray(section.chapters) ? section.chapters : [];
+      return {
+        id: String(section.id || `section-${index}`),
+        title: String(section.title ?? `Module ${index + 1}`),
+        chapters: (chaptersRaw as Array<Record<string, unknown>>)
+          .filter((chapter) => isCourseNodeVisible(chapter as { deleted_at?: string | null }))
+          .map((chapter, chapterIndex) => {
+            const subsRaw = Array.isArray(chapter.subchapters) ? chapter.subchapters : [];
+            return {
+              id: String(chapter.id || `chapter-${chapterIndex}`),
+              title: String(chapter.title ?? `Chapitre ${chapterIndex + 1}`),
+              subchapters: (subsRaw as Array<Record<string, unknown>>)
+                .filter((sub) => isCourseNodeVisible(sub as { deleted_at?: string | null }))
+                .map((sub, subIndex) => ({
+                  id: String(sub.id || `sub-${subIndex}`),
+                  title: String(sub.title ?? `Sous-chapitre ${subIndex + 1}`),
+                })),
+            };
+          }),
+      };
+    })
+    .filter((section) => section.chapters.length > 0);
+}
+
+function normalizeTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function outlineProgress(
+  sections: OutlineSection[],
+  completedLeafIds: Set<string>,
+  completedTitles: Set<string>,
+): {
+  modules: { total: number; titles: string[]; ids: string[] };
+  modulesDone: number;
+  chaptersDone: number;
+  chaptersTotal: number;
+  subchaptersDone: number;
+  subchaptersTotal: number;
+  chapterDoneIds: Set<string>;
+} {
+  const titles: string[] = [];
+  const ids: string[] = [];
+  let modulesDone = 0;
+  let chaptersDone = 0;
+  let chaptersTotal = 0;
+  let subchaptersDone = 0;
+  let subchaptersTotal = 0;
+  const chapterDoneIds = new Set<string>();
+  const usedTitles = new Set<string>();
+
+  const markTitle = (title: string): boolean => {
+    const key = normalizeTitle(title);
+    if (!key || usedTitles.has(key) || !completedTitles.has(key)) return false;
+    usedTitles.add(key);
+    return true;
+  };
+
+  for (const section of sections) {
+    titles.push(section.title);
+    ids.push(section.id);
+    let sectionChaptersDone = 0;
+    for (const chapter of section.chapters) {
+      chaptersTotal += 1;
+      const subs = chapter.subchapters;
+      let doneSubs = 0;
+      for (const sub of subs) {
+        subchaptersTotal += 1;
+        const byId = completedLeafIds.has(sub.id);
+        const byTitle = !byId && markTitle(sub.title);
+        if (byId || byTitle) {
+          doneSubs += 1;
+          subchaptersDone += 1;
+        }
+      }
+      const chapterLeafDone =
+        completedLeafIds.has(chapter.id) || markTitle(chapter.title);
+      const allSubsDone = subs.length > 0 && doneSubs >= subs.length;
+      if (chapterLeafDone || allSubsDone) {
+        chaptersDone += 1;
+        sectionChaptersDone += 1;
+        chapterDoneIds.add(chapter.id);
+      }
+    }
+    if (section.chapters.length > 0 && sectionChaptersDone >= section.chapters.length) {
+      modulesDone += 1;
+    }
+  }
+
+  return {
+    modules: { total: titles.length, titles, ids },
+    modulesDone,
+    chaptersDone,
+    chaptersTotal,
+    subchaptersDone,
+    subchaptersTotal,
+    chapterDoneIds,
+  };
+}
+
+export async function loadLearnerSuiviDetail(
+  userId: string,
+  preferredCourseId?: string | null,
+): Promise<SuiviLearnerDetail | null> {
   const db = getServiceRoleClient();
   if (!db) return null;
 
@@ -256,15 +413,30 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
       const rich = await db
         .from("enrollments")
         .select(
-          "course_id, created_at, courses ( id, title, structure, estimated_duration_minutes, access_days )",
+          "course_id, created_at, courses ( id, title, builder_snapshot, estimated_duration_minutes, access_days )",
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(20);
       if (rich.error && /estimated_duration|access_days|column|schema cache/i.test(rich.error.message)) {
+        const mid = await db
+          .from("enrollments")
+          .select("course_id, created_at, courses ( id, title, builder_snapshot )")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        if (!mid.error) return mid;
         return db
           .from("enrollments")
-          .select("course_id, created_at, courses ( id, title, structure )")
+          .select("course_id, created_at, courses ( id, title )")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(20);
+      }
+      if (rich.error && /builder_snapshot|structure|column|schema cache/i.test(rich.error.message)) {
+        return db
+          .from("enrollments")
+          .select("course_id, created_at, courses ( id, title )")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(20);
@@ -377,8 +549,13 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
 
   const anomalies = sessions.filter((s) => s.suspicious);
 
-  const courses: Array<{ id: string; title: string; structure?: unknown; estMin?: number | null; accessDays?: number | null }> =
-    [];
+  const courses: Array<{
+    id: string;
+    title: string;
+    snapshot?: unknown;
+    estMin?: number | null;
+    accessDays?: number | null;
+  }> = [];
   for (const enr of enrollments ?? []) {
     const row = enr as unknown as {
       course_id?: string;
@@ -391,7 +568,7 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     courses.push({
       id,
       title: String(course?.title ?? "Formation"),
-      structure: course?.structure,
+      snapshot: parseBuilderSnapshot(course?.builder_snapshot),
       estMin:
         course?.estimated_duration_minutes != null
           ? Number(course.estimated_duration_minutes)
@@ -400,24 +577,90 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     });
   }
 
-  const primary = courses[0] ?? null;
-  const modMeta = primary ? countModules(primary.structure) : { total: 0, titles: [], ids: [] };
+  // Leaves toutes formations → choisir le cours primaire par activité réelle
+  const allLeavesRes = await db
+    .from("learner_leaf_completions")
+    .select("leaf_id, leaf_title, completed_at, course_id")
+    .eq("user_id", userId)
+    .order("completed_at", { ascending: false })
+    .limit(400);
+  const allLeaves = (!allLeavesRes.error ? allLeavesRes.data : null) ?? [];
 
-  let leaves: unknown[] = [];
-  if (primary) {
-    const leavesRes = await db
-      .from("learner_leaf_completions")
-      .select("leaf_id, leaf_title, completed_at, course_id")
-      .eq("user_id", userId)
-      .eq("course_id", primary.id)
-      .order("completed_at", { ascending: false })
-      .limit(200);
-    if (!leavesRes.error) leaves = leavesRes.data ?? [];
+  const preferred =
+    preferredCourseId && courses.some((c) => c.id === preferredCourseId)
+      ? preferredCourseId
+      : null;
+  let primary =
+    (preferred ? courses.find((c) => c.id === preferred) : null) ??
+    null;
+  if (!primary && allLeaves.length) {
+    const enrolledIds = new Set(courses.map((c) => c.id));
+    for (const leaf of allLeaves) {
+      const cid = String((leaf as { course_id?: string }).course_id ?? "");
+      if (cid && enrolledIds.has(cid)) {
+        primary = courses.find((c) => c.id === cid) ?? null;
+        break;
+      }
+    }
+    // Activité hors enrollments listés : rattacher le cours quand même
+    if (!primary) {
+      const cid = String((allLeaves[0] as { course_id?: string }).course_id ?? "");
+      if (cid) {
+        const { data: orphanCourse } = await db
+          .from("courses")
+          .select("id, title, builder_snapshot")
+          .eq("id", cid)
+          .maybeSingle();
+        if (orphanCourse) {
+          primary = {
+            id: String((orphanCourse as { id: string }).id),
+            title: String((orphanCourse as { title?: string }).title ?? "Formation"),
+            snapshot: parseBuilderSnapshot(
+              (orphanCourse as { builder_snapshot?: unknown }).builder_snapshot,
+            ),
+          };
+          if (!courses.some((c) => c.id === primary!.id)) {
+            courses.unshift(primary);
+          }
+        }
+      }
+    }
   }
+  if (!primary) primary = courses[0] ?? null;
+
+  // Si builder_snapshot manquant sur l’enrollment join, recharger
+  if (primary && primary.snapshot == null) {
+    const { data: courseRow } = await db
+      .from("courses")
+      .select("id, title, builder_snapshot")
+      .eq("id", primary.id)
+      .maybeSingle();
+    if (courseRow) {
+      primary = {
+        ...primary,
+        title: String((courseRow as { title?: string }).title ?? primary.title),
+        snapshot: parseBuilderSnapshot(
+          (courseRow as { builder_snapshot?: unknown }).builder_snapshot,
+        ),
+      };
+    }
+  }
+
+  const outline = primary ? parseOutlineFromSnapshot(primary.snapshot) : [];
+  const leaves = primary
+    ? allLeaves.filter((l) => String((l as { course_id?: string }).course_id ?? "") === primary!.id)
+    : [];
 
   const completedLeaves = new Set(
     leaves.map((l) => String((l as { leaf_id?: string }).leaf_id ?? "")).filter(Boolean),
   );
+  const completedTitles = new Set(
+    leaves
+      .map((l) => normalizeTitle(String((l as { leaf_title?: string }).leaf_title ?? "")))
+      .filter(Boolean),
+  );
+  const outlineStats = outlineProgress(outline, completedLeaves, completedTitles);
+  const modMeta = outlineStats.modules;
 
   // Feuilles chronologiques → temps de lecture / quiz estimés (delta borné)
   const leavesChrono = (leaves as Array<Record<string, unknown>>)
@@ -639,21 +882,26 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     }
   }
 
-  const modules: SuiviModuleRow[] = modMeta.titles.map((title, i) => {
-    const id = modMeta.ids[i] ?? `m-${i}`;
-    // Heuristique : module done si ≥1 leaf completed matching title/id — sinon ratio global
-    const doneHint = [...completedLeaves].some((lid) => lid.startsWith(id) || lid.includes(id));
+  const modules: SuiviModuleRow[] = outline.map((section, i) => {
+    const id = section.id || modMeta.ids[i] || `m-${i}`;
+    const title = section.title || modMeta.titles[i] || `Module ${i + 1}`;
+    const chapterIds = section.chapters.map((ch) => ch.id);
+    const doneChapters = chapterIds.filter((cid) => outlineStats.chapterDoneIds.has(cid)).length;
+    const totalChapters = Math.max(1, chapterIds.length);
     const pct =
-      modMeta.total > 0
-        ? doneHint
-          ? 100
-          : Math.min(99, Math.round((completedLeaves.size / Math.max(1, modMeta.total * 3)) * 100))
-        : 0;
+      chapterIds.length === 0
+        ? 0
+        : Math.round((doneChapters / totalChapters) * 100);
     let status: SuiviModuleRow["status"] = "todo";
     if (pct >= 100) status = "done";
-    else if (pct > 0 || (i === 0 && completedLeaves.size > 0)) status = "current";
+    else if (pct > 0 || doneChapters > 0) status = "current";
     const relatedSeconds = leafTimes
-      .filter((l) => l.title.toLowerCase().includes(title.toLowerCase().slice(0, 18)) || l.leafId.includes(id))
+      .filter(
+        (l) =>
+          l.title.toLowerCase().includes(title.toLowerCase().slice(0, 18)) ||
+          l.leafId.includes(id) ||
+          chapterIds.some((cid) => l.leafId === cid || l.leafId.startsWith(cid)),
+      )
       .reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
     const quizScore =
       quizzes.find((q) => q.title.toLowerCase().includes(title.toLowerCase().slice(0, 12)))?.percentage ??
@@ -683,10 +931,25 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     }
   }
 
-  const modulesDone = modules.filter((m) => m.status === "done").length;
-  const modulesTotal = modules.length || Math.max(1, Math.ceil(completedLeaves.size / 3) || 0);
+  const modulesDone =
+    outlineStats.modulesDone || modules.filter((m) => m.status === "done").length;
+  const modulesTotal = modules.length || outlineStats.modules.total;
+  const chaptersDone = outlineStats.chaptersDone;
+  const chaptersTotal = outlineStats.chaptersTotal;
+  const subchaptersDone = outlineStats.subchaptersDone;
+  const subchaptersTotal = outlineStats.subchaptersTotal;
   const progressPct =
-    modulesTotal > 0 ? Math.round((modulesDone / modulesTotal) * 100) : completedLeaves.size > 0 ? 10 : 0;
+    chaptersTotal > 0
+      ? Math.round((chaptersDone / chaptersTotal) * 100)
+      : modulesTotal > 0
+        ? Math.round((modulesDone / modulesTotal) * 100)
+        : completedLeaves.size > 0
+          ? 10
+          : 0;
+  const readingSeconds = leafTimes
+    .filter((l) => l.kind === "lecture" || l.kind === "autre")
+    .reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
+  const contentSeconds = leafTimes.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
 
   const accessWeeks =
     primary?.accessDays && primary.accessDays > 0 ? Math.max(1, Math.round(primary.accessDays / 7)) : null;
@@ -783,6 +1046,12 @@ export async function loadLearnerSuiviDetail(userId: string): Promise<SuiviLearn
     progressPct,
     modulesDone,
     modulesTotal: modules.length || modulesTotal,
+    chaptersDone,
+    chaptersTotal,
+    subchaptersDone,
+    subchaptersTotal,
+    contentSeconds,
+    readingSeconds,
     sessionCount: metrics.sessionCount,
     firstSessionAt,
     connectedSeconds: metrics.connectedSeconds,

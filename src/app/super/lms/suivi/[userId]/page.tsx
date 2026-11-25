@@ -6,11 +6,14 @@ export const dynamic = "force-dynamic";
 
 export default async function LearnerSuiviDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ userId: string }>;
+  searchParams?: Promise<{ courseId?: string }>;
 }) {
   const { userId } = await params;
-  const detail = await loadLearnerSuiviDetail(userId);
+  const sp = searchParams ? await searchParams : {};
+  const detail = await loadLearnerSuiviDetail(userId, sp.courseId ?? null);
 
   if (!detail) {
     return (
@@ -25,7 +28,7 @@ export default async function LearnerSuiviDetailPage({
 
   return (
     <main className="px-4 py-8 sm:px-8" style={{ background: "transparent" }}>
-      <LmsSuiviDetailV2 initial={detail} />
+      <LmsSuiviDetailV2 key={`${detail.userId}-${detail.courseId ?? "none"}`} initial={detail} />
     </main>
   );
 }

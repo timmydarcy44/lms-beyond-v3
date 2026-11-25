@@ -1,11 +1,12 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect, useState } from "react";
 import { ApprenantOpenBadgesSection } from "@/components/apprenant/apprenant-open-badges-section";
 import { ApprenantWalletBadgesGrid } from "@/components/apprenant/apprenant-wallet-badges-grid";
-import type {
-  LearnerEarnedOpenBadge,
-  LearnerVisibleOpenBadge,
+import { getSession } from "@/lib/auth/session";
+import { resolveEffectiveSalarieUserId } from "@/lib/control/learner-preview";
+import {
+  getLearnerEarnedOpenBadges,
+  getLearnerVisibleOpenBadges,
 } from "@/lib/openbadges/learner-visible-badges";
 import {
   SALARIE_PAGE_KICKER,
@@ -13,33 +14,30 @@ import {
   SALARIE_PAGE_SHELL,
   SALARIE_PAGE_TITLE,
 } from "@/lib/salarie/connect-nav";
+import { getServiceRoleClient } from "@/lib/supabase/server";
 
-export default function SalarieWalletPage() {
-  const [loading, setLoading] = useState(true);
-  const [earnedOpenBadges, setEarnedOpenBadges] = useState<LearnerEarnedOpenBadge[]>([]);
-  const [visibleOpenBadges, setVisibleOpenBadges] = useState<LearnerVisibleOpenBadge[]>([]);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/dashboard/learner-wallet", { credentials: "include" });
-        const json = (await res.json()) as {
-          earnedOpenBadges?: LearnerEarnedOpenBadge[];
-          visibleOpenBadges?: LearnerVisibleOpenBadge[];
-        };
-        if (!cancelled) {
-          setEarnedOpenBadges(json.earnedOpenBadges ?? []);
-          setVisibleOpenBadges(json.visibleOpenBadges ?? []);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export default async function SalarieWalletPage() {
+  const session = await getSession();
+  if (!session?.id) {
+    redirect("/login?next=/dashboard/salarie/badges");
+  }
+
+  const { userId } = await resolveEffectiveSalarieUserId(session.id);
+  const db = getServiceRoleClient();
+  const { data: profile } = db
+    ? await db.from("profiles").select("company_id, school_id").eq("id", userId).maybeSingle()
+    : { data: null };
+
+  const orgId =
+    (profile?.company_id as string | null) ?? (profile?.school_id as string | null) ?? null;
+  const orgIds = orgId ? [orgId] : [];
+
+  const [earnedOpenBadges, visibleOpenBadges] = await Promise.all([
+    getLearnerEarnedOpenBadges(userId),
+    getLearnerVisibleOpenBadges(userId, orgId, orgIds),
+  ]);
 
   return (
     <div className={SALARIE_PAGE_SHELL}>
@@ -51,22 +49,17 @@ export default function SalarieWalletPage() {
         </p>
       </section>
 
-      {loading ? (
-        <div className="mt-8 h-40 animate-pulse rounded-2xl bg-white/[0.04]" />
-      ) : (
-        <>
-          <ApprenantWalletBadgesGrid badges={earnedOpenBadges} />
-          {visibleOpenBadges.length > 0 ? (
-            <section className="space-y-4 pt-4">
-              <div className="space-y-1">
-                <p className={SALARIE_PAGE_KICKER}>À obtenir</p>
-                <h2 className="text-lg font-medium text-white">Badges disponibles</h2>
-              </div>
-              <ApprenantOpenBadgesSection badges={visibleOpenBadges} />
-            </section>
-          ) : null}
-        </>
-      )}
+      <ApprenantWalletBadgesGrid badges={earnedOpenBadges} />
+
+      {visibleOpenBadges.length > 0 ? (
+        <section className="space-y-4 pt-4">
+          <div className="space-y-1">
+            <p className={SALARIE_PAGE_KICKER}>À obtenir</p>
+            <h2 className="text-lg font-medium text-white">Badges disponibles</h2>
+          </div>
+          <ApprenantOpenBadgesSection badges={visibleOpenBadges} />
+        </section>
+      ) : null}
     </div>
   );
 }

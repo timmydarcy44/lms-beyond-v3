@@ -2,11 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createBadgeSalt, hashBadgeEmail } from "@/lib/openbadges/v3/identity";
 import {
+  BADGE_PUBLIC_ORIGIN,
   buildOpenBadgeCredential,
   type BadgeAlignment,
   type BadgeEvidenceItem,
 } from "@/lib/openbadges/v3/credential";
 import { sendOpenBadgeAwardEmail } from "@/lib/openbadges/award-email";
+import { buildOpenBadgeLinkedInShareUrl } from "@/lib/openbadges/linkedin-share";
+import { recordOpenBadgeAward } from "@/lib/openbadges/open-badge-earner-submissions";
 import { issueOpenBadgeCredential } from "@/lib/openbadges/v3/issue";
 import { issuerPublicKeys, kidsMatch, publicJwksKeys, signCredentialJwt } from "@/lib/openbadges/v3/sign";
 
@@ -301,6 +304,16 @@ export async function issueBadgeAssertion(
   if (insertError || !inserted) return { ok: false, error: "STORAGE" };
   if (signed) await publishIssuerKeys(db);
   const badgeName = String((badge as { name?: string }).name ?? (badge as { title?: string }).title ?? "Open Badge");
+  const shareUrl = `${BADGE_PUBLIC_ORIGIN}/badges/${inserted.id}`;
+  void recordOpenBadgeAward(String(badge.id), input.recipientProfileId, {
+    awardedAt: String(inserted.issued_at),
+    shareUrl,
+    linkedInShareUrl: buildOpenBadgeLinkedInShareUrl({ shareUrl, badgeName }),
+    badgeName,
+    imageUrl: typeof (badge as { image_url?: string }).image_url === "string"
+      ? (badge as { image_url: string }).image_url
+      : null,
+  }).catch((err) => console.warn("[badge-assertions] learnerAwards:", err));
   await sendOpenBadgeAwardEmail(email, badgeName);
   void import("@/lib/entreprise/activation-event-emails")
     .then(({ notifyRhBadgeSignal }) =>

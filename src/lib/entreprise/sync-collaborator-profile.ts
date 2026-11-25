@@ -52,6 +52,19 @@ export async function syncCollaboratorProfileAfterInvite(
   if (linkErr) {
     console.warn("[sync-collaborator-profile] employee link:", linkErr.message);
   }
+
+  // Siège org : sans ça le collaborateur reste « invitation envoyée » dans Control.
+  const membership = await service.from("org_memberships").upsert(
+    {
+      org_id: params.organizationId,
+      user_id: params.userId,
+      role: "learner",
+    },
+    { onConflict: "org_id,user_id" },
+  );
+  if (membership.error) {
+    console.warn("[sync-collaborator-profile] org_memberships:", membership.error.message);
+  }
 }
 
 export { resolveAuthUserIdByEmail } from "@/lib/expert/resolve-auth-user";

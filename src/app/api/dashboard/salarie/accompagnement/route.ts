@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { resolveEffectiveSalarieUserId } from "@/lib/control/learner-preview";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import { EDGE_COCKPIT_FROM } from "@/lib/email/edge-cockpit-from";
 import { sendEmail } from "@/lib/email/resend-client";
@@ -25,6 +26,11 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await auth.auth.getUser();
   if (!user?.id) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+  const { preview } = await resolveEffectiveSalarieUserId(user.id);
+  if (preview) {
+    return NextResponse.json({ error: "Lecture seule — action désactivée en aperçu" }, { status: 403 });
+  }
 
   let body: Record<string, unknown>;
   try {

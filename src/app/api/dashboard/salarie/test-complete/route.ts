@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveEffectiveSalarieUserId } from "@/lib/control/learner-preview";
 import {
   notifyCollaboratorTestComplete,
   type CollaboratorTestKind,
@@ -16,6 +17,11 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user?.id) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+  const { preview } = await resolveEffectiveSalarieUserId(user.id);
+  if (preview) {
+    return NextResponse.json({ error: "Lecture seule — action désactivée en aperçu" }, { status: 403 });
+  }
 
   let body: { test?: string } = {};
   try {

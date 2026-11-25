@@ -72,11 +72,20 @@ function connectionStat(person: AccountMemberPerson) {
 }
 
 function memberAccessFooter(person: AccountMemberPerson) {
-  if (person.invited) {
+  // Si des tests existent déjà, ne plus afficher « invitation » (compte réellement engagé).
+  if (person.invited && (person.testsDone ?? 0) <= 0 && !person.lastSignInAt) {
     const when = formatFullDate(person.invitedAt);
     return {
       label: when ? `Invitation envoyée le ${when}` : "Invitation en attente",
       color: "#F2CF6B",
+    };
+  }
+  if (person.invited && ((person.testsDone ?? 0) > 0 || person.lastSignInAt)) {
+    const when = formatFullDate(person.lastSignInAt);
+    const tests = `${person.testsDone ?? 0}/${person.testsTotal ?? 3} tests`;
+    return {
+      label: when ? `Compte actif · ${tests} · dernière connexion le ${when}` : `Compte actif · ${tests}`,
+      color: "#6BE39B",
     };
   }
   if (person.passwordSet === false) {
@@ -130,7 +139,7 @@ function isConnectedThisMonth(lastSeenAt: string | null) {
 }
 
 function rolePill(person: AccountMemberPerson) {
-  if (person.invited) {
+  if (person.invited && (person.testsDone ?? 0) <= 0 && !person.lastSignInAt) {
     return { label: "Invitation", bg: "#3A3118", fg: "#F2CF6B" };
   }
   if (roleTone(person.role) === "admin") {
@@ -586,7 +595,7 @@ export function AccountMembersTab({
             </span>
             <span className="text-[#6C7593]"> (DISC, IDMC, soft skills)</span>
           </p>
-          <ul className="space-y-2 text-sm">
+          <ul className="mb-4 space-y-2 text-sm">
             {profilePerson.formations.length === 0 ? (
               <li className="text-[#6C7593]">Aucune formation</li>
             ) : (
@@ -598,6 +607,27 @@ export function AccountMembersTab({
               ))
             )}
           </ul>
+          {!profilePerson.userId.startsWith("employee:") ? (
+            <button
+              type="button"
+              className="w-full rounded-full bg-[#6E5BFF] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#5B48F0]"
+              onClick={() => {
+                void fetch("/api/super/learner-preview", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: profilePerson.userId, space: "salarie" }),
+                })
+                  .then(async (res) => {
+                    const json = (await res.json()) as { error?: string; href?: string };
+                    if (!res.ok) throw new Error(json.error ?? "Ouverture impossible");
+                    window.location.href = json.href || "/dashboard/salarie";
+                  })
+                  .catch((e: unknown) => onNotice(e instanceof Error ? e.message : "Ouverture impossible"));
+              }}
+            >
+              Voir son espace (lecture seule)
+            </button>
+          ) : null}
         </SidePanel>
       ) : null}
 

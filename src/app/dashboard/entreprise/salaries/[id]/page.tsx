@@ -226,6 +226,7 @@ export default function SalarieDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saveRequest, setSaveRequest] = useState(0);
   const [resendingInvite, setResendingInvite] = useState(false);
+  const [openingSpace, setOpeningSpace] = useState(false);
   const [employee, setEmployee] = useState<EmployeeRow | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticRow[]>([]);
   const [hasDiagnostics, setHasDiagnostics] = useState(false);
@@ -612,8 +613,10 @@ export default function SalarieDetailPage() {
             phone={displayEmployee.phone?.trim() || "Non renseigné"}
             seniority={seniority || "Non renseigné"}
             inclusion={inclusion?.summary?.trim() || (inclusion && inclusion.status !== "none" ? "Besoin déclaré" : "Aucun besoin déclaré")}
-            showInvite={Boolean(displayEmployee.email?.trim())}
+            showInvite={Boolean(displayEmployee.email?.trim()) && !hasDiagnostics}
             inviteBusy={resendingInvite}
+            showOpenSpace={Boolean(displayEmployee.profile_id)}
+            openSpaceBusy={openingSpace}
             onAssignFormation={() => router.push("/dashboard/entreprise/formations/gerer")}
             onPlanInterview={() => {
               goTab("overview");
@@ -630,6 +633,22 @@ export default function SalarieDetailPage() {
                 })
                 .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Envoi impossible"))
                 .finally(() => setResendingInvite(false));
+            }}
+            onOpenSpace={() => {
+              if (!employeeId) return;
+              setOpeningSpace(true);
+              void fetch(`/api/dashboard/entreprise/employees/${encodeURIComponent(employeeId)}/preview-space`, {
+                method: "POST",
+              })
+                .then(async (res) => {
+                  const json = (await res.json()) as { error?: string; href?: string };
+                  if (!res.ok) throw new Error(json.error ?? "Ouverture impossible");
+                  window.location.href = json.href || "/dashboard/salarie";
+                })
+                .catch((e: unknown) => {
+                  toast.error(e instanceof Error ? e.message : "Ouverture impossible");
+                  setOpeningSpace(false);
+                });
             }}
             onEdit={() => setEditing(true)}
             onInclusion={() => setInclusionSignal((value) => value + 1)}

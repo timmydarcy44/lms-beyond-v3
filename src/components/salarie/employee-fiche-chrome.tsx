@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Calendar, GraduationCap, Mail, Pencil } from "lucide-react";
+import { Calendar, Eye, GraduationCap, Mail, Pencil } from "lucide-react";
 
 export const EMPLOYEE_TABS = [
   { id: "overview", label: "Vue d'ensemble" },
@@ -100,9 +100,12 @@ export function EmployeeHeader({
   inclusion,
   showInvite,
   inviteBusy,
+  showOpenSpace,
+  openSpaceBusy,
   onAssignFormation,
   onPlanInterview,
   onResendInvite,
+  onOpenSpace,
   onEdit,
   onInclusion,
 }: {
@@ -116,9 +119,12 @@ export function EmployeeHeader({
   inclusion: string;
   showInvite: boolean;
   inviteBusy?: boolean;
+  showOpenSpace?: boolean;
+  openSpaceBusy?: boolean;
   onAssignFormation: () => void;
   onPlanInterview: () => void;
   onResendInvite: () => void;
+  onOpenSpace?: () => void;
   onEdit: () => void;
   onInclusion: () => void;
 }) {
@@ -153,6 +159,16 @@ export function EmployeeHeader({
           <RoundAction label="Planifier un entretien" onClick={onPlanInterview}>
             <Calendar className="h-5 w-5" />
           </RoundAction>
+          {showOpenSpace && onOpenSpace ? (
+            <RoundAction
+              label={openSpaceBusy ? "Ouverture…" : "Voir son espace"}
+              tone="violet"
+              disabled={openSpaceBusy}
+              onClick={onOpenSpace}
+            >
+              <Eye className="h-5 w-5" />
+            </RoundAction>
+          ) : null}
           {showInvite ? (
             <RoundAction label={inviteBusy ? "Envoi…" : "Renvoyer l'invitation"} disabled={inviteBusy} onClick={onResendInvite}>
               <Mail className="h-5 w-5" />

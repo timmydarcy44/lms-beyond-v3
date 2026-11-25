@@ -350,13 +350,115 @@ export async function getAccountParticipants(
   });
 
   const knownEmails = new Set(members.map((m) => normalizeEmail(m.email)).filter(Boolean));
+  const knownUserIds = new Set(members.map((m) => m.userId));
+
+  // Employés avec profil Auth mais sans org_membership → auto-rattacher + ne plus afficher « invitation ».
+  const orphanEmployees = employees.filter((emp) => {
+    if (emp.status === "inactive") return false;
+    const email = normalizeEmail(emp.email);
+    if (email && knownEmails.has(email)) return false;
+    const profileId = String(emp.profile_id ?? "").trim();
+    return Boolean(profileId) && !knownUserIds.has(profileId);
+  });
+  const orphanProfileIds = orphanEmployees
+    .map((emp) => String(emp.profile_id ?? "").trim())
+    .filter(Boolean);
+  const orphanAuth =
+    orphanProfileIds.length > 0
+      ? await fetchAuthAccessStatusForUserIds(db as never, orphanProfileIds)
+      : new Map();
+
+  for (const emp of orphanEmployees) {
+    const profileId = String(emp.profile_id ?? "").trim();
+    if (!profileId) continue;
+    const auth = orphanAuth.get(profileId);
+    const testsDone = testsDoneByProfile.get(profileId) ?? 0;
+    const activated =
+      Boolean(auth?.lastSignInAt) || auth?.passwordSet === true || testsDone > 0 || auth?.authFound === true;
+
+    // Backfill membership pour les comptes déjà actifs (ex. Noémie @ PPS).
+    if (activated) {
+      const upsert = await db.from("org_memberships").upsert(
+        { org_id: accountId, user_id: profileId, role: "learner" },
+        { onConflict: "org_id,user_id" },
+      );
+      if (upsert.error) {
+        console.warn("[getAccountParticipants] backfill membership", upsert.error.message);
+      }
+    }
+
+    let profile = profileMap.get(profileId);
+    if (!profile) {
+      const extra = await db
+        .from("profiles")
+        .select("id, full_name, first_name, last_name, email, reference_email, role, role_type")
+        .eq("id", profileId)
+        .maybeSingle();
+      if (extra.data) {
+        const row = extra.data as {
+          id: string;
+          full_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          email?: string | null;
+          reference_email?: string | null;
+          role?: string | null;
+          role_type?: string | null;
+        };
+        profile = row;
+        profileMap.set(profileId, row);
+      }
+    }
+
+    const email =
+      String(profile?.email || profile?.reference_email || emp.email || "").trim() ||
+      String(emp.email ?? "");
+    const name = profile
+      ? displayNameFromProfile(profile)
+      : formatPersonName([emp.first_name, emp.last_name].filter(Boolean).join(" ")) ||
+        "Collaborateur";
+    const lastSignInAt = auth?.lastSignInAt ?? null;
+
+    members.push({
+      userId: profileId,
+      employeeId: String(emp.id),
+      name,
+      firstName:
+        formatPersonName(profile?.first_name) ||
+        formatPersonName(emp.first_name) ||
+        splitPersonName(name).firstName ||
+        null,
+      lastName:
+        formatPersonName(profile?.last_name) ||
+        formatPersonName(emp.last_name) ||
+        splitPersonName(name).lastName ||
+        null,
+      email,
+      role: "learner",
+      jobTitle: emp.job_title,
+      isTutor: false,
+      invited: !activated,
+      invitedAt: activated ? null : emp.created_at ? String(emp.created_at) : null,
+      formations: [],
+      badges: badgesByUser.get(profileId) ?? 0,
+      testsDone,
+      testsTotal: TESTS_TOTAL,
+      passwordSet: auth?.authFound ? Boolean(auth.passwordSet) : null,
+      lastSignInAt,
+      lastSeenAt: lastSignInAt,
+    });
+    knownEmails.add(normalizeEmail(email));
+    knownUserIds.add(profileId);
+  }
+
   for (const emp of employees) {
     const email = normalizeEmail(emp.email);
     if (!email || knownEmails.has(email)) continue;
     if (emp.status === "inactive") continue;
+    const testProfileId = String(emp.profile_id ?? "").trim();
+    if (testProfileId && knownUserIds.has(testProfileId)) continue;
     const name =
       formatPersonName([emp.first_name, emp.last_name].filter(Boolean).join(" ")) || "Invitation";
-    const testProfileId = String(emp.profile_id ?? "").trim();
     members.push({
       userId: `employee:${emp.id}`,
       employeeId: String(emp.id),

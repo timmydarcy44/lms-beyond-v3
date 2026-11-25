@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveEffectiveSalarieUserId } from "@/lib/control/learner-preview";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import {
   mapPractitionerRow,
@@ -23,6 +24,7 @@ export async function GET() {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
+  const { userId } = await resolveEffectiveSalarieUserId(user.id);
   const db = getServiceRoleClient() ?? authClient;
   const { data, error } = await db
     .from("praticiens_bct")
@@ -41,7 +43,7 @@ export async function GET() {
   const { data: session } = await db
     .from("sessions_bct")
     .select("date_session, heure_debut, praticien_id")
-    .eq("collaborateur_id", user.id)
+    .eq("collaborateur_id", userId)
     .gte("date_session", today)
     .order("date_session", { ascending: true })
     .limit(1)

@@ -311,8 +311,6 @@ export function LmsSuiviDetailV2({ initial }: Props) {
         />
       </div>
 
-      <PedagogyPanel data={data} />
-
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-4">
           <section className="rounded-[24px] border p-5" style={{ borderColor: BORDER, background: CARD }}>
@@ -550,6 +548,8 @@ export function LmsSuiviDetailV2({ initial }: Props) {
           </section>
         </div>
       </div>
+
+      <PedagogyPanel data={data} />
 
       {relanceOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

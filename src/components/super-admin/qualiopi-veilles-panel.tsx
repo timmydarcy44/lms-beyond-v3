@@ -14,6 +14,7 @@ import {
   VEILLE_AXES,
   VEILLE_KIND,
   VEILLE_THEME_LABELS,
+  splitVeilleHighlightNote,
   type VeilleDigest,
   type VeilleDigestItem,
   type VeilleHighlight,
@@ -47,11 +48,13 @@ export function QualiopiVeillesPanel() {
   const [manualTheme, setManualTheme] = useState<VeilleTheme>("reglementaire");
   const [manualBusy, setManualBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [planBusyId, setPlanBusyId] = useState<string | null>(null);
 
-  const exportPdf = async () => {
+  const exportPdf = async (mode: "registre" | "synthese" = "registre") => {
     setExportBusy(true);
     try {
-      const res = await fetch("/api/super-admin/crm/qualiopi/veilles/export", {
+      const qs = mode === "synthese" ? "?mode=synthese" : "";
+      const res = await fetch(`/api/super-admin/crm/qualiopi/veilles/export${qs}`, {
         credentials: "same-origin",
         cache: "no-store",
       });
@@ -78,17 +81,41 @@ export function QualiopiVeillesPanel() {
       const urlObject = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = urlObject;
-      a.download = `registre-veilles-qualiopi-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.download =
+        mode === "synthese"
+          ? `synthese-veille-byound-${new Date().toISOString().slice(0, 10)}.pdf`
+          : `registre-veilles-qualiopi-${new Date().toISOString().slice(0, 10)}.pdf`;
       a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(urlObject), 2_000);
-      toast.success("PDF veilles téléchargé");
+      toast.success(mode === "synthese" ? "Document de synthèse téléchargé" : "Registre PDF téléchargé");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Export PDF veilles impossible");
     } finally {
       setExportBusy(false);
+    }
+  };
+
+  const createActionPlan = async (highlightId: string) => {
+    setPlanBusyId(highlightId);
+    try {
+      const res = await fetch(
+        `/api/super-admin/crm/qualiopi/veilles/highlights/${highlightId}/action-plan`,
+        { method: "POST" },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error || "Plan d’action impossible");
+        return;
+      }
+      toast.success("Plan d’action généré");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Plan d’action impossible");
+    } finally {
+      setPlanBusyId(null);
     }
   };
 
@@ -277,7 +304,7 @@ export function QualiopiVeillesPanel() {
           <p className="text-sm font-semibold text-white">{item.title}</p>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-white/40">Synthèse</p>
-            <p className="mt-0.5 text-sm leading-relaxed text-white/70">{item.summary}</p>
+            <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-white/70">{item.summary}</p>
           </div>
           {item.recommendedAction ? (
             <div className="rounded-lg border border-[#6E5BFF]/30 bg-[#6E5BFF]/10 px-3 py-2">
@@ -385,8 +412,8 @@ export function QualiopiVeillesPanel() {
         <div>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Veille Qualiopi</h1>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-            Trois axes (ind. 23, 24, 25). Chaque actualité : synthèse de ce que Byound a lu +
-            proposition concrète (quoi en faire). Puis surlignage « Traité » si tu agis.
+            Pilotage ind. 23 / 24 / 25 : synthèse détaillée par actualité, surlignage, plan d’action,
+            document de synthèse PDF.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -394,7 +421,21 @@ export function QualiopiVeillesPanel() {
             type="button"
             variant="outline"
             disabled={exportBusy}
-            onClick={() => void exportPdf()}
+            onClick={() => void exportPdf("synthese")}
+            className="border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
+          >
+            {exportBusy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Créer un document de synthèse
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={exportBusy}
+            onClick={() => void exportPdf("registre")}
             className="border-white/15 bg-transparent text-white hover:bg-white/5"
           >
             {exportBusy ? (
@@ -402,7 +443,7 @@ export function QualiopiVeillesPanel() {
             ) : (
               <Download className="mr-2 h-4 w-4" />
             )}
-            Exporter en PDF
+            Registre PDF (audit)
           </Button>
           <Button
             type="button"
@@ -703,14 +744,19 @@ export function QualiopiVeillesPanel() {
           {highlights.length === 0 ? (
             <li className={cn("text-sm", QUALIOPI_MUTED)}>Rien de surligné pour l’instant.</li>
           ) : (
-            highlights.map((row) => (
+            highlights.map((row) => {
+              const { preface, actionPlan } = splitVeilleHighlightNote(row.note);
+              return (
               <li key={row.id} className={cn(QUALIOPI_CARD_INNER, "space-y-3 p-4")}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0 flex-1 space-y-2">
                     <p className="font-semibold text-white">{row.title}</p>
-                    <p className="mt-1 text-sm text-white/65">{row.excerpt}</p>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-white/40">Synthèse</p>
+                      <p className="mt-0.5 text-sm leading-relaxed text-white/70">{row.excerpt}</p>
+                    </div>
                     {row.url ? (
-                      <a href={row.url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-[#9BB0FF] hover:underline">
+                      <a href={row.url} target="_blank" rel="noreferrer" className="inline-block text-xs text-[#9BB0FF] hover:underline">
                         Lire la source
                       </a>
                     ) : null}
@@ -746,20 +792,51 @@ export function QualiopiVeillesPanel() {
                     </select>
                   </div>
                 </div>
+                {actionPlan ? (
+                  <div className="rounded-lg border border-[#6E5BFF]/30 bg-[#6E5BFF]/10 px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#c4bcff]">
+                      Plan d’action Byound
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#e8e4ff]">
+                      {actionPlan}
+                    </p>
+                  </div>
+                ) : null}
                 <textarea
-                  defaultValue={row.note ?? ""}
+                  key={`${row.id}-${row.updated_at}-note`}
+                  defaultValue={preface}
                   placeholder="Note de retravail…"
                   onBlur={(event) => {
-                    const next = event.target.value.trim();
-                    if (next !== (row.note ?? "").trim()) void updateHighlight(row.id, { note: next });
+                    const nextPreface = event.target.value.trim();
+                    const nextNote = actionPlan
+                      ? `${nextPreface}${nextPreface ? "\n\n" : ""}## Plan d'action Byound\n${actionPlan}`
+                      : nextPreface;
+                    if (nextNote !== (row.note ?? "").trim()) {
+                      void updateHighlight(row.id, { note: nextNote });
+                    }
                   }}
                   className="min-h-20 w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
                 />
-                <button type="button" onClick={() => void deleteHighlight(row.id)} className="text-xs text-red-300 hover:underline">
-                  Supprimer
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={planBusyId === row.id}
+                    onClick={() => void createActionPlan(row.id)}
+                    className="bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"
+                  >
+                    {planBusyId === row.id ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : null}
+                    Faire un plan d’action
+                  </Button>
+                  <button type="button" onClick={() => void deleteHighlight(row.id)} className="text-xs text-red-300 hover:underline">
+                    Supprimer
+                  </button>
+                </div>
               </li>
-            ))
+              );
+            })
           )}
         </ul>
       </section>

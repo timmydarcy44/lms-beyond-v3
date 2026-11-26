@@ -90,7 +90,7 @@ export function encodeSlotRule(kind: SlotKind, weekly: boolean, clientId?: strin
 export type ExpertDocumentItem = {
   id: string;
   name: string;
-  folder: "contrat" | "cv" | "attestation" | "facture" | "modele" | "autre";
+  folder: "contrat" | "cv" | "attestation" | "diplome" | "admin" | "facture" | "modele" | "autre";
   status: "to_sign" | "signed" | "deposited";
   uploadedAt: string;
   expiresAt: string | null;

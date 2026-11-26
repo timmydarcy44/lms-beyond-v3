@@ -27,7 +27,16 @@ function mapMetaDoc(doc: ExpertDocumentMeta): ExpertDocumentItem {
 
 function mapTableRow(row: Record<string, unknown>): ExpertDocumentItem {
   const folderRaw = String(row.folder ?? "autre");
-  const allowed = new Set(["contrat", "cv", "attestation", "facture", "modele", "autre"]);
+  const allowed = new Set([
+    "contrat",
+    "cv",
+    "attestation",
+    "diplome",
+    "admin",
+    "facture",
+    "modele",
+    "autre",
+  ]);
   const folder = (allowed.has(folderRaw) ? folderRaw : "autre") as ExpertDocumentItem["folder"];
   return {
     id: String(row.id),

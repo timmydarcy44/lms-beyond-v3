@@ -39,7 +39,56 @@ export async function getAdminExperts(status?: string | null): Promise<AdminExpe
     console.error("[getAdminExperts]", error);
     return [];
   }
-  return (data ?? []) as AdminExpertRow[];
+  const rows = (data ?? []) as AdminExpertRow[];
+  if (rows.length === 0) return rows;
+
+  // Enrichit la liste avec expert_documents (sinon « Aucun doc » alors que des fichiers sont déposés).
+  try {
+    const ids = rows.map((row) => row.id);
+    const { data: docRows } = await supabase
+      .from("expert_documents")
+      .select("id, expert_id, name, folder, url, uploaded_at")
+      .in("expert_id", ids);
+    if (!docRows?.length) return rows;
+
+    const byExpert = new Map<string, Record<string, unknown>[]>();
+    for (const row of docRows as Array<Record<string, unknown>>) {
+      const expertId = String(row.expert_id ?? "");
+      if (!expertId || !String(row.url ?? "").trim()) continue;
+      const list = byExpert.get(expertId) ?? [];
+      list.push({
+        _type: String(row.folder) === "cv" ? "edge_cv" : "edge_document",
+        id: row.id,
+        label: row.name,
+        name: row.name,
+        url: row.url,
+        folder: row.folder,
+        uploaded_at: row.uploaded_at,
+        at: row.uploaded_at,
+      });
+      byExpert.set(expertId, list);
+    }
+
+    for (const expert of rows) {
+      const extras = byExpert.get(expert.id);
+      if (!extras?.length) continue;
+      const refs = Array.isArray(expert.references) ? [...(expert.references as unknown[])] : [];
+      const existingIds = new Set(
+        refs
+          .filter((item) => item && typeof item === "object")
+          .map((item) => String((item as { id?: string }).id ?? "")),
+      );
+      for (const entry of extras) {
+        if (entry.id && existingIds.has(String(entry.id))) continue;
+        refs.push(entry);
+      }
+      expert.references = refs;
+    }
+  } catch (enrichError) {
+    console.warn("[getAdminExperts] documents enrich:", enrichError);
+  }
+
+  return rows;
 }
 
 export async function getAdminExpertById(id: string): Promise<AdminExpertRow | null> {

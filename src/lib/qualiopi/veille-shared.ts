@@ -53,7 +53,10 @@ export const VEILLE_WEB_QUERIES = [
 export type VeilleDigestItem = {
   id: string;
   title: string;
-  /** Synthèse de l’article / information lue. */
+  /**
+   * Synthèse détaillée de l’article / information lue
+   * (contexte, faits, impact OF / Byound, enjeux).
+   */
   summary: string;
   /**
    * Proposition d’action pour Byound (quoi en faire concrètement :
@@ -66,6 +69,31 @@ export type VeilleDigestItem = {
   sourceLabel?: string | null;
   isPriority?: boolean;
 };
+
+/** Marqueur stocké dans highlight.note pour le plan d’action généré. */
+export const VEILLE_ACTION_PLAN_MARKER = "## Plan d'action Byound";
+
+export function splitVeilleHighlightNote(note: string | null | undefined): {
+  preface: string;
+  actionPlan: string | null;
+} {
+  const raw = String(note ?? "").trim();
+  if (!raw) return { preface: "", actionPlan: null };
+  const idx = raw.indexOf(VEILLE_ACTION_PLAN_MARKER);
+  if (idx < 0) return { preface: raw, actionPlan: null };
+  return {
+    preface: raw.slice(0, idx).trim(),
+    actionPlan: raw.slice(idx + VEILLE_ACTION_PLAN_MARKER.length).trim() || null,
+  };
+}
+
+export function mergeVeilleHighlightNote(preface: string, actionPlan: string | null | undefined): string {
+  const head = preface.trim();
+  const plan = String(actionPlan ?? "").trim();
+  if (!plan) return head;
+  const block = `${VEILLE_ACTION_PLAN_MARKER}\n${plan}`;
+  return head ? `${head}\n\n${block}` : block;
+}
 
 export type VeilleSource = {
   id: string;

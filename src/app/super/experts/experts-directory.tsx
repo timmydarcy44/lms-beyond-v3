@@ -11,6 +11,7 @@ import { looksLikeTestAccount } from "@/lib/control/test-account";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
 import { parseExpertDocuments } from "@/lib/expert/admin-expert-types";
 import { parseContributorProfile } from "@/lib/expert/contributor-profile";
+import { summarizeExpectedDocs } from "@/lib/expert/expected-documents";
 
 const FILTERS = [
   { id: "all", label: "Tous" },
@@ -67,8 +68,11 @@ export function ExpertsDirectory({
   const [search, setSearch] = useState("");
   const [showTests, setShowTests] = useState(false);
   const [page, setPage] = useState(1);
-  const tests = experts.filter((expert) => looksLikeTestAccount({ email: expert.email, name: displayName(expert) }));
-  const base = showTests ? experts : experts.filter((expert) => !tests.some((item) => item.id === expert.id));
+  const activeExperts = experts.filter((expert) => expert.is_active !== false);
+  const tests = activeExperts.filter((expert) => looksLikeTestAccount({ email: expert.email, name: displayName(expert) }));
+  const base = showTests
+    ? activeExperts
+    : activeExperts.filter((expert) => !tests.some((item) => item.id === expert.id));
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: base.length };
     for (const expert of base) {
@@ -182,11 +186,19 @@ export function ExpertsDirectory({
             id: "docs",
             header: "Docs",
             cell: (expert) => {
-              const count = parseExpertDocuments(expert.references).length;
-              return count > 0 ? (
-                <StatusPill label={`${count} doc${count > 1 ? "s" : ""}`} tone="success" />
-              ) : (
-                <StatusPill label="Aucun doc" tone="danger" />
+              const docs = parseExpertDocuments(expert.references);
+              const summary = summarizeExpectedDocs(docs);
+              if (summary.received === 0) {
+                return <StatusPill label="Aucun doc" tone="danger" />;
+              }
+              if (summary.received >= summary.total) {
+                return <StatusPill label={`${summary.received}/${summary.total} OK`} tone="success" />;
+              }
+              return (
+                <StatusPill
+                  label={`${summary.received}/${summary.total}`}
+                  tone={summary.received >= 3 ? "success" : "warning"}
+                />
               );
             },
           },

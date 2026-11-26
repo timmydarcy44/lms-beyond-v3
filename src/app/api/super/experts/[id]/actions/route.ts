@@ -37,7 +37,35 @@ export async function POST(
     let patch: Record<string, unknown> = {};
     let references = Array.isArray(expert.references) ? [...expert.references] : [];
 
-    if (action === "toggle_active") {
+    if (action === "delete") {
+      // Soft-delete d’abord (is_active), puis tentative de suppression définitive.
+      await supabase.from("experts").update({ is_active: false }).eq("id", id);
+      const { error: deleteError } = await supabase.from("experts").delete().eq("id", id);
+      if (deleteError) {
+        // FK : on garde le soft-delete et on masque via review_status.
+        const { error: softError } = await supabase
+          .from("experts")
+          .update({ is_active: false, review_status: "rejected" })
+          .eq("id", id);
+        if (softError) {
+          return NextResponse.json(
+            { error: softError.message || deleteError.message || "Suppression impossible" },
+            { status: 500 },
+          );
+        }
+        revalidatePath("/super/experts");
+        revalidatePath(`/super/experts/${id}`);
+        revalidatePath("/admin/experts");
+        return NextResponse.json({
+          success: true,
+          softDeleted: true,
+          message: "Profil désactivé (lié à d’autres données).",
+        });
+      }
+      revalidatePath("/super/experts");
+      revalidatePath("/admin/experts");
+      return NextResponse.json({ success: true, deleted: true });
+    } else if (action === "toggle_active") {
       patch.is_active = !expert.is_active;
     } else if (action === "set_certified") {
       patch.certification_status = "certified";

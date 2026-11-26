@@ -31,7 +31,7 @@ export function buildVeilleWeeklyEmailHtml(input: {
       return `<li style="margin:0 0 16px;">
         <strong style="font-size:15px;">${escapeHtml(item.title)}</strong>
         ${meta ? `<p style="margin:2px 0 0;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.04em;">${escapeHtml(meta)}</p>` : ""}
-        <p style="margin:6px 0 0;color:#444;"><strong>Synthèse :</strong> ${escapeHtml(item.summary)}</p>
+        <p style="margin:6px 0 0;color:#444;white-space:pre-wrap;"><strong>Synthèse :</strong> ${escapeHtml(item.summary)}</p>
         ${
           item.recommendedAction
             ? `<p style="margin:8px 0 0;padding:8px 10px;background:#f3f0ff;border-radius:8px;color:#3d2f9c;"><strong>Proposition :</strong> ${escapeHtml(item.recommendedAction)}</p>`

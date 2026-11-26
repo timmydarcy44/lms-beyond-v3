@@ -29,6 +29,10 @@ import { cn } from "@/lib/utils";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
 import { parseExpertDocuments, parseExpertInternalNotes, parseExpertRegistrationMeta } from "@/lib/expert/admin-expert-types";
 import { buildExpertTimeline, computeExpertKpis, getExpertCoverUrl, getExpertCvUrl, getExpertPortfolioUrl } from "@/lib/expert/expert-crm-utils";
+import {
+  EXPECTED_EXPERT_DOCS,
+  docMatchesExpectedSlot,
+} from "@/lib/expert/expected-documents";
 import { expertProfileChecks, skillCards, skillLabels } from "@/lib/expert/fiche-profile";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
 import { CONTRIBUTOR_ROLES, parseContributorProfile, type ContributorRole } from "@/lib/expert/contributor-profile";
@@ -76,14 +80,6 @@ const TRACKS = [
   { code: "MEM", title: "Retail & Luxury", color: "#F2A3C7" },
   { code: "REM", title: "Management", color: "#8DB8FF" },
   { code: "RDC", title: "Business Development", color: "#5EDCC3" },
-];
-
-const EXPECTED_DOCS = [
-  { label: "CV", test: (name: string) => /\bcv\b/i.test(name) },
-  { label: "Contrat de prestation", test: (name: string) => /contrat|prestation|sous[- ]?trait/i.test(name) },
-  { label: "Diplômes", test: (name: string) => /dipl/i.test(name) },
-  { label: "Attestations", test: (name: string) => /attest/i.test(name) },
-  { label: "Pièces administratives", test: (name: string) => /admin|siret|kbis|assurance|rc/i.test(name) },
 ];
 
 const ROLE_COPY: Record<ContributorRole, string> = {
@@ -307,6 +303,12 @@ export function SuperExpertCrmDetail({
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out?.error || "Erreur");
+      if (action === "delete") {
+        toast.success("Formateur / expert supprimé.");
+        router.push("/super/experts");
+        router.refresh();
+        return;
+      }
       toast.success("Mise à jour enregistrée.");
       if (action === "add_note") setNote("");
       if (action === "update_referential") setEditingSkills(false);
@@ -395,7 +397,15 @@ export function SuperExpertCrmDetail({
         );
       }
 
-      const label = docFolder === "contrat" ? "Contrat de prestation" : undefined;
+      const folderLabels: Record<string, string> = {
+        cv: "CV",
+        contrat: "Contrat de prestation",
+        attestation: "Attestation",
+        diplome: "Diplôme",
+        admin: "Pièce administrative",
+        autre: "Document",
+      };
+      const label = folderLabels[docFolder] ?? "Document";
       // Upload direct Storage (évite la limite body Next/Vercel ~4,5 Mo).
       const prepareRes = await fetch(`/api/super/experts/${expert.id}/documents`, {
         method: "POST",
@@ -622,6 +632,18 @@ export function SuperExpertCrmDetail({
                     <MenuButton onClick={() => { setMenuOpen(false); setPrompt("needs_info"); }}>Demander des informations</MenuButton>
                     <MenuButton onClick={() => { setMenuOpen(false); void runAction("set_certified", { certified: true }); }}>Byound Certified</MenuButton>
                     <MenuButton onClick={() => { setMenuOpen(false); void runAction("toggle_care"); }}>{expert.is_care_expert ? "Retirer de Care" : "Afficher dans Care"}</MenuButton>
+                    <MenuButton
+                      onClick={() => {
+                        setMenuOpen(false);
+                        const ok = window.confirm(
+                          "Supprimer définitivement ce formateur / expert ? Cette action est irréversible.",
+                        );
+                        if (!ok) return;
+                        void runAction("delete");
+                      }}
+                    >
+                      Supprimer
+                    </MenuButton>
                   </div>
                 ) : null}
               </div>
@@ -860,6 +882,8 @@ export function SuperExpertCrmDetail({
         {tab === "bilans" ? (
           <ExpertCrmTestResults
             expertId={expert.id}
+            expertFirstName={expert.first_name ?? ""}
+            expertEmail={expert.email ?? ""}
             results={
               testResults ?? {
                 disc: null,
@@ -931,9 +955,25 @@ export function SuperExpertCrmDetail({
               <div>
                 <p className="text-sm font-extrabold">Attendus</p>
                 <ul className="mt-3 space-y-2">
-                  {EXPECTED_DOCS.map((item) => {
-                    const found = documents.some((doc) => item.test(String(doc.label ?? doc.name ?? "")));
-                    return <li key={item.label} className="rounded-2xl border border-[#1A2340] bg-[#0B1122] px-4 py-3 text-sm">{item.label} <span className="text-[#9AA3BD]">{found ? "· reçu" : "· manquant"}</span></li>;
+                  {EXPECTED_EXPERT_DOCS.map((item) => {
+                    const found = documents.some((doc) => docMatchesExpectedSlot(doc, item));
+                    return (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-[#1A2340] bg-[#0B1122] px-4 py-3 text-sm"
+                      >
+                        <span className="font-medium text-[#E8ECF8]">{item.label}</span>
+                        <span
+                          className={
+                            found
+                              ? "rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"
+                              : "rounded-full bg-red-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300"
+                          }
+                        >
+                          {found ? "OK" : "Manquant"}
+                        </span>
+                      </li>
+                    );
                   })}
                 </ul>
               </div>

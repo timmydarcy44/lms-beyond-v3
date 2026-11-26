@@ -46,6 +46,14 @@ export const EXPERT_MAIL_TEMPLATES: ExpertMailTemplate[] = [
     message:
       "Bonjour {prenom},\n\nNous revenons vers vous au sujet de votre demande Byound Certified.\n\nVotre espace : {lien_espace}",
   },
+  {
+    id: "tests",
+    label: "Demande de bilans & tests",
+    subject: "Réalisez vos tests Byound — qualité des prestations",
+    title: "Vos bilans & tests",
+    message:
+      "Bonjour {prenom},\n\nDans le cadre de la qualité des prestations de Byound, il est important de réaliser vos tests (soft skills, DISC et IDMC).\n\nSans ces tests, votre profil sera moins mis en avant et moins sollicité pour animer des formations.\n\nMerci de les passer depuis votre espace : {lien_espace}",
+  },
 ];
 
 export function fillExpertMail(text: string, variables: Record<string, string>): string {

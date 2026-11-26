@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, Highlighter, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Highlighter, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,31 @@ export function QualiopiVeillesPanel() {
   const [manualUrl, setManualUrl] = useState("");
   const [manualTheme, setManualTheme] = useState<VeilleTheme>("reglementaire");
   const [manualBusy, setManualBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const exportPdf = async () => {
+    setExportBusy(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/qualiopi/veilles/export");
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        toast.error(err?.error || "Export PDF veilles impossible");
+        return;
+      }
+      const blob = await res.blob();
+      const urlObject = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = urlObject;
+      a.download = `registre-veilles-qualiopi-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(urlObject);
+      toast.success("PDF veilles téléchargé");
+    } catch {
+      toast.error("Export PDF veilles impossible");
+    } finally {
+      setExportBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -282,6 +307,20 @@ export function QualiopiVeillesPanel() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={exportBusy}
+            onClick={() => void exportPdf()}
+            className="border-white/15 bg-transparent text-white hover:bg-white/5"
+          >
+            {exportBusy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Exporter PDF
+          </Button>
           <Button
             type="button"
             disabled={running}

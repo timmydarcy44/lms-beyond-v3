@@ -32,9 +32,14 @@ export function QualiopiProofGuide({
   async function exportPdf() {
     setPdfBusy(true);
     try {
-      const res = await fetch(`/api/super-admin/crm/qualiopi/indicators/${indicatorId}/pdf`);
+      const res = await fetch(`/api/super-admin/crm/qualiopi/indicators/${indicatorId}/pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
       if (!res.ok) {
-        toast.error("Export PDF impossible");
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        toast.error(err?.error || "Export PDF impossible");
         return;
       }
       const blob = await res.blob();

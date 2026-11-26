@@ -225,12 +225,22 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
 
   const exportIndicatorPdf = async (indicatorId: number) => {
     try {
-      const res = await fetch(`/api/super-admin/crm/qualiopi/indicators/${indicatorId}/pdf`);
+      const indicator = snapshot?.indicators.find((i) => i.indicatorId === indicatorId) ?? null;
+      const res = await fetch(`/api/super-admin/crm/qualiopi/indicators/${indicatorId}/pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ indicator }),
+      });
       if (!res.ok) {
-        toast.error(`PDF ind. ${indicatorId} impossible`);
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        toast.error(err?.error || `PDF ind. ${indicatorId} impossible`);
         return;
       }
       const blob = await res.blob();
+      if (!blob.type.includes("pdf") && blob.size < 1000) {
+        toast.error(`PDF ind. ${indicatorId} impossible`);
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

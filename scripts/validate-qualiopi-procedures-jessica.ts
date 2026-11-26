@@ -155,6 +155,8 @@ async function main() {
       .update({
         status: "validated",
         current_version: version,
+        owner_id: JESSICA.id,
+        owner_name: JESSICA.name,
         validated_by: JESSICA.id,
         validated_by_name: JESSICA.name,
         validated_at: now,

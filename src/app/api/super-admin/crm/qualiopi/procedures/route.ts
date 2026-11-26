@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       current_version: "0.1",
       indicators,
       legal_obligation: legal,
-      owner_name: String(body.owner_name ?? "").trim() || "Timmy Darcy",
+      owner_name: String(body.owner_name ?? "").trim() || "Jessica Contentin",
     })
     .select("*")
     .single();

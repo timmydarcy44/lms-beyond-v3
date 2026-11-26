@@ -132,7 +132,7 @@ export async function listProceduresFallback(supabase: SupabaseClient) {
       current_version: "0.1",
       indicators: meta.indicators,
       legal_obligation: meta.legal,
-      owner_name: "Timmy Darcy",
+      owner_name: "Jessica Contentin",
       validated_by_name: null,
       validated_at: null,
       effective_date: null,

@@ -166,9 +166,27 @@ ${htmlBody}
 </body>
 </html>`;
 
+  return renderFullHtmlDocumentToPdf(html, {
+    fullBleed: opts?.fullBleed,
+    marginMm: opts?.marginMm,
+  });
+}
+
+/** Document HTML complet → PDF A4 (styles / polices déjà dans le HTML). */
+export async function renderFullHtmlDocumentToPdf(
+  html: string,
+  opts?: Pick<RenderHtmlToPdfOpts, "marginMm" | "fullBleed">,
+): Promise<Buffer> {
+  const margin = opts?.fullBleed
+    ? { top: 0, right: 0, bottom: 0, left: 0 }
+    : (opts?.marginMm ?? { top: 0, right: 0, bottom: 0, left: 0 });
+
   const browser = await launchBrowser();
   try {
-    const page = await browser.newPage();
+    const page = (await browser.newPage()) as {
+      setContent: (html: string, opts: { waitUntil: string; timeout: number }) => Promise<void>;
+      pdf: (opts: Record<string, unknown>) => Promise<Buffer | Uint8Array>;
+    };
     await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 20_000 });
     const pdf = await page.pdf({
       format: "A4",

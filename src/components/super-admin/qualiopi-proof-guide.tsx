@@ -1,6 +1,8 @@
 "use client";
 
-import { ExternalLink, X } from "lucide-react";
+import { useState } from "react";
+import { Download, ExternalLink, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { QualiopiPlanExamples } from "@/components/super-admin/qualiopi-plan-examples";
 import { QUALIOPI_INDICATORS } from "@/lib/qualiopi/indicators";
@@ -20,10 +22,35 @@ export function QualiopiProofGuide({
   actionLabel = "Ouvrir la preuve",
   onClose,
 }: Props) {
+  const [pdfBusy, setPdfBusy] = useState(false);
+
   if (!open || indicatorId == null) return null;
 
   const def = QUALIOPI_INDICATORS.find((i) => i.id === indicatorId);
   const external = Boolean(proofHref && /^https?:\/\//i.test(proofHref));
+
+  async function exportPdf() {
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`/api/super-admin/crm/qualiopi/indicators/${indicatorId}/pdf`);
+      if (!res.ok) {
+        toast.error("Export PDF impossible");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `qualiopi-ind-${indicatorId}-preuve.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`PDF indicateur ${indicatorId} téléchargé`);
+    } catch {
+      toast.error("Export PDF impossible");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-3 sm:items-center">
@@ -68,6 +95,16 @@ export function QualiopiProofGuide({
             onClick={onClose}
           >
             Fermer
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pdfBusy}
+            className="border-white/15 bg-transparent text-white"
+            onClick={() => void exportPdf()}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            {pdfBusy ? "PDF…" : "Exporter PDF"}
           </Button>
           {proofHref ? (
             <a

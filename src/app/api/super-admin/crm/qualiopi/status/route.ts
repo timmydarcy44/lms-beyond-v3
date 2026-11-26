@@ -35,6 +35,11 @@ async function safeCount(
   }
 }
 
+/** Snapshot statut indicateurs — partagé avec l’export PDF par indicateur. */
+export async function buildStatusForEvidence(force = false) {
+  return buildStatus(force);
+}
+
 async function buildStatus(force = false) {
   if (!force && cache && Date.now() - cache.at < CACHE_MS) {
     return cache.payload;

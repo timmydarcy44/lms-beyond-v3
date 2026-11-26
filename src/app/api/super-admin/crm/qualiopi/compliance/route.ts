@@ -21,6 +21,7 @@ import {
 import { isOpenStep, resolveReclamationStep } from "@/lib/qualiopi/reclamation-status";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function countCoursesWithObjectives(
   trainingRows: { objectives?: string[] | null }[] | null,
@@ -55,6 +56,11 @@ async function safeSelect<T>(
   } catch {
     return { data: null, count: 0 };
   }
+}
+
+/** Snapshot compliance partagé (grille PDF + pack preuves). */
+export async function buildSnapshotForEvidencePack() {
+  return buildSnapshot();
 }
 
 async function buildSnapshot() {
@@ -322,11 +328,12 @@ export async function GET(req: NextRequest) {
   }
 
   if (req.nextUrl.searchParams.get("format") === "pdf") {
-    const pdf = buildQualiopiGrillePdf(snapshot);
+    const pdf = await buildQualiopiGrillePdf(snapshot);
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="grille-qualiopi-rnq-v10-${new Date().toISOString().slice(0, 10)}.pdf"`,
+        "Cache-Control": "no-store",
       },
     });
   }

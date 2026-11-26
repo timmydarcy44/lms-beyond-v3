@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ChevronDown, MoreHorizontal, Target } from "lucide-react";
+import { ChevronDown, Download, MoreHorizontal, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QUALIOPI_CRITERION_NAMES } from "@/lib/qualiopi/indicators";
 import { ACTIVITY_LABELS, type QualiopiActivityKey } from "@/lib/qualiopi/activity-profile";
@@ -76,6 +76,7 @@ function criterionGlobalStatus(statuses: QualiopiUiStatus[]): QualiopiUiStatus {
 export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSlot }: Props) {
   const [snapshot, setSnapshot] = useState<QualiopiStatusSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [packBusy, setPackBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "todo">("all");
   const [openCriterion, setOpenCriterion] = useState<number | null>(null);
@@ -199,6 +200,49 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
     URL.revokeObjectURL(url);
   };
 
+  const exportEvidencePack = async () => {
+    setPackBusy(true);
+    try {
+      const res = await fetch("/api/super-admin/crm/qualiopi/evidence-pack");
+      if (!res.ok) {
+        toast.error("Pack preuves impossible");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `preuve-qualiopi-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Pack preuves téléchargé");
+    } catch {
+      toast.error("Pack preuves impossible");
+    } finally {
+      setPackBusy(false);
+    }
+  };
+
+  const exportIndicatorPdf = async (indicatorId: number) => {
+    try {
+      const res = await fetch(`/api/super-admin/crm/qualiopi/indicators/${indicatorId}/pdf`);
+      if (!res.ok) {
+        toast.error(`PDF ind. ${indicatorId} impossible`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `qualiopi-ind-${indicatorId}-preuve.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`PDF indicateur ${indicatorId} téléchargé`);
+    } catch {
+      toast.error(`PDF ind. ${indicatorId} impossible`);
+    }
+  };
+
   const s = snapshot?.summary;
   const proven = s?.proven ?? 0;
   const applicable = s?.applicable ?? 32;
@@ -251,6 +295,15 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
             className="rounded-full border-[#26304F] bg-transparent text-sm text-white hover:bg-white/5"
           >
             Exporter la grille (PDF)
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={packBusy}
+            onClick={() => void exportEvidencePack()}
+            className="rounded-full border-[#26304F] bg-transparent text-sm text-white hover:bg-white/5"
+          >
+            {packBusy ? "Pack en cours…" : "Exporter le pack preuves (ZIP)"}
           </Button>
           <Link
             href="/super/qualiopi/audit"
@@ -575,6 +628,15 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                     >
                                       {STATUS_LABEL[ind.status]}
                                     </span>
+                                    <button
+                                      type="button"
+                                      title={`Exporter PDF ind. ${ind.indicatorId}`}
+                                      onClick={() => void exportIndicatorPdf(ind.indicatorId)}
+                                      className="inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[11px] font-semibold text-white/80 hover:bg-white/5"
+                                      style={{ borderColor: BORDER }}
+                                    >
+                                      <Download className="h-3 w-3" /> PDF
+                                    </button>
                                     {ind.status === "na" ? (
                                       <Button
                                         size="sm"

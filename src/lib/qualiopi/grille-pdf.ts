@@ -1,118 +1,115 @@
-import { jsPDF } from "jspdf";
+import { renderHtmlToPdf } from "@/lib/formation-documents/html-pdf";
 import type { QualiopiComplianceSnapshot } from "@/lib/qualiopi/qualiopi-compliance-audit";
 import { mergeComplianceIntoCriteria } from "@/lib/qualiopi/qualiopi-compliance-audit";
+import {
+  Q_PDF,
+  QUALIOPI_STATUS_LABEL,
+  escPdf,
+  fmtPdfDateTime,
+  qualiopiPdfShell,
+  qualiopiStatusColor,
+} from "@/lib/qualiopi/pdf-theme";
 
-function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-FR");
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  validated: "En place",
-  partial: "Partiel",
-  missing: "Manquant",
-  not_applicable: "N/A",
-};
-
-/** Export PDF de la grille RNQ V10 (33 indicateurs). */
-export function buildQualiopiGrillePdf(snapshot: QualiopiComplianceSnapshot): Buffer {
-  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  const margin = 14;
-  const pageW = 210;
-  let y = 16;
-
+function buildGrilleHtml(snapshot: QualiopiComplianceSnapshot, generatedAtIso: string): string {
   const criteria = mergeComplianceIntoCriteria(snapshot);
   const s = snapshot.summary;
+  const runtime = snapshot.runtime;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("Grille Qualiopi — RNQ V.10 (33 indicateurs)", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(
-    `Export du ${fmtDate(new Date().toISOString())} · Pret audit estime : ${s.readinessPercent}% · Applicables : ${s.applicable}/${s.total} · N/A : ${s.notApplicable}`,
-    margin,
-    y,
-  );
-  y += 5;
-  doc.text(
-    `Valides : ${s.validated} · Partiels : ${s.partial} · Manquants : ${s.missing}`,
-    margin,
-    y,
-  );
-  y += 8;
+  const kpiBlock = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">Prêt audit</div><div class="v">${escPdf(s.readinessPercent)} %</div><div class="s">${escPdf(s.applicable)} applicables</div></div>
+      <div class="kpi"><div class="l">En place</div><div class="v" style="color:${Q_PDF.green}">${escPdf(s.validated)}</div><div class="s">Indicateurs validés</div></div>
+      <div class="kpi"><div class="l">Partiels</div><div class="v" style="color:${Q_PDF.amber}">${escPdf(s.partial)}</div><div class="s">À consolider</div></div>
+      <div class="kpi"><div class="l">Manquants</div><div class="v" style="color:${Q_PDF.red}">${escPdf(s.missing)}</div><div class="s">N/A ${escPdf(s.notApplicable)}</div></div>
+    </div>`;
 
-  const ensureSpace = (need: number) => {
-    if (y + need > 285) {
-      doc.addPage();
-      y = 16;
-    }
-  };
+  const runtimeBlock = `
+    <div class="card">
+      <h2>Métriques runtime</h2>
+      <table class="data">
+        <thead><tr><th>Signal</th><th>Valeur</th></tr></thead>
+        <tbody>
+          <tr><td>Coffre admin (modèles)</td><td>${escPdf(runtime.coreDocsUploaded)}/${escPdf(runtime.coreDocsTotal)}</td></tr>
+          <tr><td>Sessions CRM</td><td>${escPdf(runtime.sessionsTotal)}</td></tr>
+          <tr><td>Émargements signés</td><td>${escPdf(runtime.sessionsWithSignedAttendance)}</td></tr>
+          <tr><td>Réponses satisfaction</td><td>${escPdf(runtime.satisfactionResponses)}</td></tr>
+          <tr><td>Cours avec objectifs</td><td>${escPdf(runtime.coursesWithObjectives)}</td></tr>
+          <tr><td>Experts approuvés</td><td>${escPdf(runtime.approvedExperts)}</td></tr>
+          <tr><td>Attestations</td><td>${escPdf(runtime.attestationsCount)}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
 
-  for (const criterion of criteria) {
-    ensureSpace(18);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    const cTitle = doc.splitTextToSize(
-      `Critere ${criterion.id} — ${criterion.title}`,
-      pageW - margin * 2,
-    );
-    doc.text(cTitle, margin, y);
-    y += cTitle.length * 5 + 2;
+  const criteriaHtml = criteria
+    .map((criterion) => {
+      const rows = criterion.indicators
+        .map((ind) => {
+          const c = ind.compliance;
+          const status = c?.status ?? "missing";
+          const statusLabel = QUALIOPI_STATUS_LABEL[status] ?? status;
+          const color = qualiopiStatusColor(status);
+          const justification =
+            status === "not_applicable"
+              ? c?.naJustification || c?.attestationNote || c?.reason || ""
+              : c?.attestationNote
+                ? `Preuve : ${c.attestationNote}`
+                : c?.reason || "";
+          const next = c?.nextStep ? `Prochaine étape : ${c.nextStep}` : "";
+          return `<tr>
+            <td style="width:52px"><span class="pill" style="color:${color}">Ind. ${escPdf(ind.id)}</span></td>
+            <td>
+              <div style="font-weight:800">${escPdf(ind.summary)}</div>
+              <div class="muted" style="margin-top:4px;font-size:10px">${escPdf(justification || "—")}</div>
+              ${next ? `<div class="muted" style="margin-top:2px;font-size:10px">${escPdf(next)}</div>` : ""}
+            </td>
+            <td style="width:78px;color:${color}">${escPdf(statusLabel)}</td>
+          </tr>`;
+        })
+        .join("");
+      return `<div class="card">
+        <h2>Critère ${escPdf(criterion.id)} — ${escPdf(criterion.title)}</h2>
+        <table class="data">
+          <thead><tr><th>Ind.</th><th>Exigence & preuve</th><th>Statut</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    })
+    .join("");
 
-    for (const ind of criterion.indicators) {
-      const c = ind.compliance;
-      const status = c?.status ?? "missing";
-      const statusLabel = STATUS_LABEL[status] ?? status;
-      const justification =
-        status === "not_applicable"
-          ? c?.naJustification || c?.attestationNote || c?.reason || ""
-          : c?.attestationNote
-            ? `Preuve : ${c.attestationNote}`
-            : c?.reason || "";
+  const inner = `
+    <header class="hero">
+      <div class="brand">
+        <div class="brand-mark">Byound Control</div>
+        <div class="brand-meta">Export Qualiopi<br/>${escPdf(fmtPdfDateTime(generatedAtIso))}</div>
+      </div>
+      <h1>Grille RNQ V.10</h1>
+      <p class="sub">Référentiel national qualité · 7 critères · ${escPdf(s.total)} indicateurs · preuves & métriques</p>
+      ${kpiBlock}
+    </header>
+    ${runtimeBlock}
+    ${criteriaHtml}
+    <footer class="foot">
+      Document interne Byound — l’audit certificateur reste décisionnaire.
+      Justifications N/A éditables dans /super/crm/qualiopi.
+      Pack preuves : grille + registres + coffre dossier.
+    </footer>`;
 
-      ensureSpace(22);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text(`Ind. ${ind.id} — ${statusLabel}`, margin, y);
-      y += 4;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      const summary = doc.splitTextToSize(ind.summary, pageW - margin * 2);
-      doc.text(summary, margin, y);
-      y += summary.length * 3.4 + 1;
-      if (justification) {
-        const just = doc.splitTextToSize(
-          status === "not_applicable" ? `Justification N/A : ${justification}` : justification,
-          pageW - margin * 2,
-        );
-        doc.setTextColor(80);
-        doc.text(just, margin, y);
-        doc.setTextColor(0);
-        y += just.length * 3.4 + 2;
-      } else {
-        y += 2;
-      }
-      doc.setDrawColor(220);
-      doc.line(margin, y, pageW - margin, y);
-      y += 3;
-    }
-    y += 2;
-  }
+  return qualiopiPdfShell(inner);
+}
 
-  ensureSpace(16);
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(7);
-  doc.setTextColor(100);
-  doc.text(
-    "Document interne Byound — l'audit certificateur reste decisionnaire. Justifications N/A editables dans /super/crm/qualiopi.",
-    margin,
-    y,
-  );
-  doc.setTextColor(0);
+/** Export PDF grille RNQ (HTML Revolut → Puppeteer). */
+export async function buildQualiopiGrillePdf(snapshot: QualiopiComplianceSnapshot): Promise<Buffer> {
+  const generatedAtIso = new Date().toISOString();
+  const htmlBody = buildGrilleHtml(snapshot, generatedAtIso);
+  return renderHtmlToPdf(htmlBody, { font: "manrope", fullBleed: true });
+}
 
-  const arrayBuffer = doc.output("arraybuffer");
-  return Buffer.from(arrayBuffer);
+/** HTML imprimable (fallback / preview navigateur). */
+export function buildQualiopiGrilleHtmlDocument(snapshot: QualiopiComplianceSnapshot): string {
+  const generatedAtIso = new Date().toISOString();
+  const body = buildGrilleHtml(snapshot, generatedAtIso);
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><title>Grille Qualiopi RNQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>body{font-family:Manrope,system-ui,sans-serif;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>
+</head><body>${body}<script>window.onload=()=>{if(new URLSearchParams(location.search).get("autoprint")==="1")setTimeout(()=>window.print(),300)}</script></body></html>`;
 }

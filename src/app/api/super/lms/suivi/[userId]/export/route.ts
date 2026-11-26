@@ -4,8 +4,10 @@ import { getServerClient } from "@/lib/supabase/server";
 import { loadLearnerSuiviDetail } from "@/lib/lms/learner-suivi-detail";
 import { formatDurationCompact } from "@/lib/lms/lms-metrics";
 import { buildSuiviReleveHtml } from "@/lib/lms/suivi-releve-pdf";
+import { renderFullHtmlDocumentToPdf } from "@/lib/formation-documents/html-pdf";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type Ctx = { params: Promise<{ userId: string }> };
 
@@ -34,14 +36,15 @@ export async function GET(request: NextRequest, ctx: Ctx) {
     ? `${detail.firstSessionAt.slice(0, 10)} → ${new Date().toISOString().slice(0, 10)}`
     : "—";
 
-  if (format === "pdf") {
+  const safeName = detail.displayName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+
+  if (format === "html") {
     const html = buildSuiviReleveHtml(detail, generatedAt);
-    const safeName = detail.displayName
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9_-]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 40);
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
@@ -49,6 +52,32 @@ export async function GET(request: NextRequest, ctx: Ctx) {
         "Cache-Control": "no-store",
       },
     });
+  }
+
+  if (format === "pdf") {
+    const html = buildSuiviReleveHtml(detail, generatedAt).replace(
+      /<div class="print-bar">[\s\S]*?<\/div>/,
+      "",
+    );
+    try {
+      const pdf = await renderFullHtmlDocumentToPdf(html, { fullBleed: true });
+      return new NextResponse(new Uint8Array(pdf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="releve-lms-${safeName || detail.userId.slice(0, 8)}.pdf"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    } catch {
+      // Fallback navigateur si Chromium indisponible en local
+      return new NextResponse(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `inline; filename="releve-lms-${safeName || detail.userId.slice(0, 8)}.html"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
   }
 
   const header = [

@@ -4,6 +4,7 @@ import { loadDisabilityReferentContact } from "@/lib/handicap/referent-contact";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { getQualiopiStatus, type QualiopiStatusSignals } from "@/lib/qualiopi/get-status";
 import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
+import { JEROME_PICOT_EMAIL } from "@/lib/auth/jerome-picot";
 import { formationDocumentPublicUrl } from "@/lib/formation-documents/public-url";
 import { assessQualiopiFicheCompliance } from "@/lib/training-courses/qualiopi-fiche";
 import {
@@ -168,6 +169,8 @@ async function buildStatus(force = false) {
   let coursesCompliantCount = 0;
   let examplePublicFormationSlug: string | null = null;
   let exampleCompliantSlug: string | null = null;
+  let exampleTrainingCourseId: string | null = null;
+  let exampleCompliantCourseId: string | null = null;
   for (const row of publicCourses) {
     const objs = Array.isArray(row.objectives)
       ? row.objectives.filter((o) => String(o).trim())
@@ -192,13 +195,17 @@ async function buildStatus(force = false) {
       { accessibilityOk },
     );
     const slug = String(row.slug ?? "").trim();
+    const courseId = String(row.id ?? "").trim() || null;
     if (slug && !examplePublicFormationSlug) examplePublicFormationSlug = slug;
+    if (courseId && !exampleTrainingCourseId) exampleTrainingCourseId = courseId;
     if (compliance.ok) {
       coursesCompliantCount += 1;
       if (slug && !exampleCompliantSlug) exampleCompliantSlug = slug;
+      if (courseId && !exampleCompliantCourseId) exampleCompliantCourseId = courseId;
     }
   }
   examplePublicFormationSlug = exampleCompliantSlug ?? examplePublicFormationSlug;
+  exampleTrainingCourseId = exampleCompliantCourseId ?? exampleTrainingCourseId;
 
   const processSafe = await supabase.from("crm_qualiopi_process_docs").select("kind, status");
   const processReady: Record<string, boolean> = {};
@@ -425,11 +432,30 @@ async function buildStatus(force = false) {
     ),
     meansProcessReady: Boolean(processReady.moyens),
     examplePublicFormationSlug,
+    exampleTrainingCourseId,
     exampleConvocationHref,
     exampleConvocationSentAt,
+    exampleExpertHref: null as string | null,
+    exampleExpertBilansHref: null as string | null,
     needAnalysesCompleteCount: 0,
     exampleNeedAnalysisOrgId: null as string | null,
   };
+
+  try {
+    const { data: jerome } = await supabase
+      .from("experts")
+      .select("id")
+      .ilike("email", JEROME_PICOT_EMAIL)
+      .maybeSingle();
+    const jeromeId = jerome?.id ? String(jerome.id) : "fcfb29ae-3398-421f-b4bf-9244b2be5572";
+    signals.exampleExpertHref = `/super/experts/${jeromeId}`;
+    signals.exampleExpertBilansHref = `/super/experts/${jeromeId}?tab=bilans`;
+  } catch (e) {
+    console.warn("[qualiopi/status] example expert Jérôme:", e);
+    signals.exampleExpertHref = "/super/experts/fcfb29ae-3398-421f-b4bf-9244b2be5572";
+    signals.exampleExpertBilansHref =
+      "/super/experts/fcfb29ae-3398-421f-b4bf-9244b2be5572?tab=bilans";
+  }
 
   try {
     const needRes = await supabase

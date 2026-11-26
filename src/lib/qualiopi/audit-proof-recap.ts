@@ -12,15 +12,15 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
   {
     indicatorId: 1,
     title: "Information publique accessible et vérifiable",
-    where: "Fiches catalogue B2B + coffre admin (convention, règlement, livret)",
-    how: "Ouvrir une fiche formation publique, puis Super → Qualiopi → Coffre : 3 modèles PDF déposés.",
-    href: "/super/crm/qualiopi/catalogue",
+    where: "Page publique des formations + Super → Formations",
+    how: "Ouvrir une fiche publique, puis https://www.byound.fr/super/formations.",
+    href: "/super/formations",
   },
   {
     indicatorId: 2,
     title: "Indicateurs de résultats diffusés",
-    where: "Bloc indicateurs sur fiche formation + questionnaires satisfaction sessions",
-    how: "Montrer la méthode de calcul sur la fiche, puis une session avec retours satisfaction complets.",
+    where: "Catalogue Qualiopi + bloc indicateurs sur fiche publique",
+    how: "Ouvrir /super/crm/qualiopi/catalogue, puis la fiche publique (#qualite).",
     href: "/super/crm/qualiopi/catalogue",
   },
   {
@@ -32,11 +32,25 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
     href: "/super/crm/programmation",
   },
   {
+    indicatorId: 11,
+    title: "Évaluation de l’atteinte des objectifs",
+    where: "Super → Formations (édition) → boutons évaluation à chaud / à froid",
+    how: "Ouvrir une formation au hasard dans /super/formations, cliquer « évaluation à chaud » puis « à froid ».",
+    href: "/super/formations",
+  },
+  {
     indicatorId: 12,
     title: "Engagement, ruptures, signalements VHD",
     where: "Process signalements + registre + sorties apprenant + alertes LMS",
     how: "Qualiopi → Qualité → Signalements (procédure prête) ; dossier → sorties / engagement.",
     href: "/super/crm/qualiopi/qualite",
+  },
+  {
+    indicatorId: 17,
+    title: "Moyens humains et techniques",
+    where: "Procédure moyens + Formateurs/experts (RH) + annuaire experts",
+    how: "Montrer la procédure Moyens, puis l’onglet Formateurs/experts pour les RH.",
+    href: "/super/crm/qualiopi/formateurs",
   },
   {
     indicatorId: 19,
@@ -46,11 +60,25 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
     href: "/super/crm/programmation",
   },
   {
+    indicatorId: 21,
+    title: "Compétences des intervenants",
+    where: "Fiche Jérôme Picot + onglet Bilans",
+    how: "Ouvrir /super/experts/{id} puis l’onglet Bilans (tests compétences).",
+    href: "/super/experts/fcfb29ae-3398-421f-b4bf-9244b2be5572?tab=bilans",
+  },
+  {
     indicatorId: 27,
     title: "Sous-traitance / portage tracés",
     where: "Qualiopi → Formateurs (statut emploi + contrats SST)",
     how: "Montrer un expert salarié ou indépendant/portage avec contrat signé + engagement qualité.",
     href: "/super/crm/qualiopi/formateurs",
+  },
+  {
+    indicatorId: 30,
+    title: "Recueil des appréciations",
+    where: "Test évaluation à chaud",
+    how: "Ouvrir /a/preview?kind=eval_chaud et montrer le questionnaire remis aux bénéficiaires.",
+    href: "/a/preview?kind=eval_chaud",
   },
   {
     indicatorId: 32,

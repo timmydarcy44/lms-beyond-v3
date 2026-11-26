@@ -96,6 +96,8 @@ export type QualiopiStatusSignals = {
    * → /business/formations/{slug} sur le site public.
    */
   examplePublicFormationSlug: string | null;
+  /** Formation CMS (id) pour ouvrir `/super/formations?edit=…` — ind. 11. */
+  exampleTrainingCourseId?: string | null;
   /**
    * Exemple de convocation (URL publique /doc?token=…) — ind. 9.
    * Complète le pack information : une preuve concrète remise au stagiaire.
@@ -103,6 +105,10 @@ export type QualiopiStatusSignals = {
   exampleConvocationHref?: string | null;
   /** Horodatage d’envoi de la convocation exemple. */
   exampleConvocationSentAt?: string | null;
+  /** Fiche expert preuve compétences (ex. Jérôme Picot) — ind. 21. */
+  exampleExpertHref?: string | null;
+  /** Onglet bilans de l’expert preuve — ind. 21. */
+  exampleExpertBilansHref?: string | null;
   /** Analyses du besoin complètes (compte client) — ind. 4. */
   needAnalysesCompleteCount?: number;
   /** Exemple d’org avec analyse complète pour deep-link preuve. */
@@ -197,36 +203,24 @@ function assessAuto(
   const sessionsComplete = ctx.sessions.filter(sessionComplete).length;
 
   switch (id) {
-    case 1:
-    case 2: {
+    case 1: {
       const published = Math.max(sig.coursesPublicTotal, 0);
       const complete = sig.coursesCompliantCount ?? 0;
       const publicHref =
-        publicFormationHref(
-          sig.examplePublicFormationSlug,
-          id === 2 ? "qualite" : undefined,
-        ) ?? "/super/crm/qualiopi/catalogue";
+        publicFormationHref(sig.examplePublicFormationSlug) ?? "/super/formations";
       const fiche = proof(
-        id === 2
-          ? "Indicateurs de résultats sur fiche publique"
-          : "Fiche formation publique (catalogue)",
+        "Page publique des formations",
         publicHref,
         null,
         `${complete} / ${Math.max(published, 1)} fiches complètes`,
       );
       const cms = proof(
-        "Catalogue Qualiopi (CMS)",
-        "/super/crm/qualiopi/catalogue",
+        "Gestion des formations (CMS)",
+        "/super/formations",
         null,
         null,
       );
-      const coffreProof = proof(
-        "Coffre admin (modèles PDF)",
-        "/super/crm/qualiopi?tab=coffre",
-        null,
-        `${ctx.coffre.deposited} / ${ctx.coffre.expected} modèles`,
-      );
-      const proofs = id === 1 ? [fiche, cms, coffreProof] : [fiche, cms];
+      const proofs = [fiche, cms];
       if (published > 0 && complete >= published) {
         return withManual({
           status: "proven",
@@ -234,7 +228,46 @@ function assessAuto(
           nextAction: { label: "Voir les preuves", href: publicHref },
         });
       }
-      if (complete > 0) {
+      if (complete > 0 || published > 0) {
+        return withManual({
+          status: "todo",
+          proofs,
+          nextAction: { label: "Compléter", href: "/super/formations" },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [cms],
+        nextAction: { label: "Compléter", href: "/super/formations" },
+      });
+    }
+    case 2: {
+      const published = Math.max(sig.coursesPublicTotal, 0);
+      const complete = sig.coursesCompliantCount ?? 0;
+      const publicHref =
+        publicFormationHref(sig.examplePublicFormationSlug, "qualite") ??
+        "/super/crm/qualiopi/catalogue";
+      const fiche = proof(
+        "Indicateurs de résultats sur fiche publique",
+        publicHref,
+        null,
+        `${complete} / ${Math.max(published, 1)} fiches complètes`,
+      );
+      const catalogue = proof(
+        "Catalogue Qualiopi (indicateurs)",
+        "/super/crm/qualiopi/catalogue",
+        null,
+        null,
+      );
+      const proofs = [catalogue, fiche];
+      if (published > 0 && complete >= published) {
+        return withManual({
+          status: "proven",
+          proofs,
+          nextAction: { label: "Voir les preuves", href: "/super/crm/qualiopi/catalogue" },
+        });
+      }
+      if (complete > 0 || published > 0) {
         return withManual({
           status: "todo",
           proofs,
@@ -242,8 +275,8 @@ function assessAuto(
         });
       }
       return withManual({
-        status: published > 0 ? "todo" : "missing",
-        proofs: published > 0 ? proofs : [cms, coffreProof],
+        status: "missing",
+        proofs: [catalogue],
         nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
       });
     }
@@ -446,45 +479,45 @@ function assessAuto(
       const froid = sig.evalFroidCompleted ?? 0;
       const responses = chaud + froid;
       const templatesOk = Boolean(sig.evalTemplatesReady);
-      const p = proof(
-        "Évaluations à chaud / à froid",
-        "/super/crm/programmation",
+      const courseId = sig.exampleTrainingCourseId;
+      const formationHref = courseId
+        ? `/super/formations?edit=${encodeURIComponent(courseId)}`
+        : "/super/formations";
+      const formation = proof(
+        "Formation CMS — boutons évaluation à chaud / à froid",
+        formationHref,
         null,
         templatesOk
           ? `${responses} réponse(s) · ${chaud} à chaud · ${froid} à froid · gabarits actifs`
           : `${responses} réponse(s)`,
       );
-      if (responses >= 1 || sessionsComplete >= 1) {
+      const evalChaud = proof(
+        "Aperçu évaluation à chaud",
+        "/a/preview?kind=eval_chaud",
+        null,
+        null,
+      );
+      const evalFroid = proof(
+        "Aperçu évaluation à froid",
+        "/a/preview?kind=eval_froid",
+        null,
+        null,
+      );
+      const proofs = [formation, evalChaud, evalFroid];
+      if (responses >= 1 || sessionsComplete >= 1 || templatesOk) {
         return withManual({
-          status: "proven",
-          proofs: [
-            p,
-            ...(sessionsComplete >= 1
-              ? [
-                  proof(
-                    "Émargements / clôtures",
-                    "/super/crm/qualiopi?tab=emargements",
-                    null,
-                    `${sessionsComplete} / ${Math.max(sessionsTotal, 1)}`,
-                  ),
-                ]
-              : []),
-          ],
-          nextAction: { label: "Voir la preuve", href: "/super/crm/programmation" },
-        });
-      }
-      // Dispositif en place (gabarits) mais pas encore de réponses collectées
-      if (templatesOk || sessionsTotal >= 1) {
-        return withManual({
-          status: "todo",
-          proofs: [p],
-          nextAction: { label: "Compléter", href: "/super/crm/programmation" },
+          status: responses >= 1 || sessionsComplete >= 1 ? "proven" : "todo",
+          proofs,
+          nextAction: {
+            label: responses >= 1 || sessionsComplete >= 1 ? "Voir les preuves" : "Compléter",
+            href: formationHref,
+          },
         });
       }
       return withManual({
         status: "missing",
-        proofs: [],
-        nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
+        proofs: [formation],
+        nextAction: { label: "Ajouter", href: formationHref },
       });
     }
     case 12: {
@@ -541,22 +574,29 @@ function assessAuto(
         moyensProc?.validated_at ?? null,
         null,
       );
-      const list = proof(
-        "Liste des procédures qualité",
-        "/super/crm/qualiopi/process",
+      const rh = proof(
+        "Formateurs / experts (ressources humaines)",
+        "/super/crm/qualiopi/formateurs",
+        null,
+        sig.approvedExperts > 0 ? `${sig.approvedExperts} expert(s) validé(s)` : null,
+      );
+      const experts = proof(
+        "Annuaire experts",
+        "/super/experts",
         null,
         null,
       );
+      const proofs = [procedure, rh, experts];
       if (sig.meansProcessReady || moyensProc) {
         return withManual({
           status: "proven",
-          proofs: [procedure, list],
+          proofs,
           nextAction: { label: "Voir les preuves", href: procedureHref },
         });
       }
       return withManual({
         status: "todo",
-        proofs: [procedure, list],
+        proofs,
         nextAction: { label: "Compléter", href: procedureHref },
       });
     }
@@ -626,22 +666,37 @@ function assessAuto(
         proofs: [],
         nextAction: { label: "Compléter", href: "/super/lms/suivi" },
       });
-    case 21:
-      return withManual(
-        sig.approvedExperts >= 2
-          ? {
-              status: "proven",
-              proofs: [proof("Experts validés", "/super/experts", null, `${sig.approvedExperts}`)],
-              nextAction: { label: "Voir la preuve", href: "/super/experts" },
-            }
-          : {
-              status: "todo",
-              proofs: [
-                proof("Experts validés", "/super/experts", null, `${sig.approvedExperts}`),
-              ],
-              nextAction: { label: "Compléter", href: "/super/experts" },
-            },
+    case 21: {
+      const expertHref =
+        sig.exampleExpertHref ?? "/super/experts/fcfb29ae-3398-421f-b4bf-9244b2be5572";
+      const bilansHref =
+        sig.exampleExpertBilansHref ?? `${expertHref}?tab=bilans`;
+      const fiche = proof(
+        "Fiche expert — Jérôme Picot",
+        expertHref,
+        null,
+        sig.approvedExperts > 0 ? `${sig.approvedExperts} expert(s) validé(s)` : null,
       );
+      const bilans = proof(
+        "Bilans — Jérôme Picot",
+        bilansHref,
+        null,
+        null,
+      );
+      const proofs = [fiche, bilans];
+      if (sig.approvedExperts >= 1) {
+        return withManual({
+          status: "proven",
+          proofs,
+          nextAction: { label: "Voir les preuves", href: expertHref },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs,
+        nextAction: { label: "Compléter", href: expertHref },
+      });
+    }
     case 22:
       return withManual(
         sig.formateurPlansCount >= 1 && sig.formateurActionsDoneCount >= 1
@@ -784,25 +839,45 @@ function assessAuto(
             },
       );
     case 30: {
+      const chaud = sig.evalChaudCompleted ?? 0;
       const sat = ctx.sessions.filter((s) => {
         const a = s.attendees ?? [];
         return a.length > 0 && a.every((x) => x.satisfaction_at || x.satisfaction_score != null);
       }).length;
-      return withManual(
-        sat >= 1
-          ? {
-              status: "proven",
-              proofs: [
-                proof("Satisfaction sessions", "/super/crm/qualiopi?tab=emargements", null, `${sat}`),
-              ],
-              nextAction: { label: "Voir la preuve", href: "/super/crm/qualiopi?tab=emargements" },
-            }
-          : {
-              status: "todo",
-              proofs: [],
-              nextAction: { label: "Compléter", href: "/super/crm/qualiopi?tab=emargements" },
-            },
+      const evalChaud = proof(
+        "Test évaluation à chaud (recueil des appréciations)",
+        "/a/preview?kind=eval_chaud",
+        null,
+        chaud > 0 ? `${chaud} réponse(s)` : null,
       );
+      const proofs = [
+        evalChaud,
+        ...(sat >= 1
+          ? [
+              proof(
+                "Satisfaction sessions",
+                "/super/crm/qualiopi?tab=emargements",
+                null,
+                `${sat}`,
+              ),
+            ]
+          : []),
+      ];
+      if (chaud >= 1 || sat >= 1 || Boolean(sig.evalTemplatesReady)) {
+        return withManual({
+          status: chaud >= 1 || sat >= 1 ? "proven" : "todo",
+          proofs,
+          nextAction: {
+            label: chaud >= 1 || sat >= 1 ? "Voir la preuve" : "Compléter",
+            href: "/a/preview?kind=eval_chaud",
+          },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs: [evalChaud],
+        nextAction: { label: "Compléter", href: "/a/preview?kind=eval_chaud" },
+      });
     }
     case 31: {
       const ind31 = sig.reclamationsIndicatorStatus;

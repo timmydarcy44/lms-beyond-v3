@@ -266,9 +266,9 @@ function InfoValueText({ value }: { value: string }) {
   );
 }
 
-/** FAQ : ne pas qualifier l’Open Badge de « certification ». */
+/** FAQ publique : Open Badge ≠ certification ; jamais OPCO / Qualiopi. */
 function sanitizeOpenBadgeFaqText(text: string): string {
-  return text
+  let out = text
     .replace(/Certification\s*&\s*Open Badge/gi, "Reconnaissance — Open Badge")
     .replace(/Certification vérifiable/gi, "Open Badge vérifiable")
     .replace(/une certification Open Badge/gi, "un Open Badge")
@@ -276,6 +276,13 @@ function sanitizeOpenBadgeFaqText(text: string): string {
     .replace(/certification Open Badge/gi, "Open Badge")
     .replace(/obtenir une certification/gi, "obtenir une reconnaissance")
     .replace(/Obtenir une certification/gi, "Obtenir une reconnaissance");
+  if (/\bopco\b|\bqualiopi\b/i.test(out)) {
+    if (/financ|prise en charge|OPCO/i.test(out)) {
+      return "Financement par l'entreprise cliente. Contactez-nous pour un devis adapté à votre contexte.";
+    }
+    out = out.replace(/\bOPCO\b/gi, "l'entreprise").replace(/\bQualiopi\b/gi, "qualité");
+  }
+  return out;
 }
 
 export function EdgeTrainingDetailPage({
@@ -858,7 +865,20 @@ export function EdgeTrainingDetailPage({
                 Le développement des compétences ne s&apos;arrête pas à la fin de la formation.
               </p>
               <div className="mt-8 max-w-xl">
-                <VerticalTimeline steps={AFTER_TRAINING_STEPS} accent={false} />
+                <VerticalTimeline
+                  steps={AFTER_TRAINING_STEPS.map((step) =>
+                    step.title === "Reconnaissance"
+                      ? {
+                          ...step,
+                          title: publicRecognition.hasOpenBadge ? "Open Badge" : "Attestation",
+                          description: publicRecognition.hasOpenBadge
+                            ? "Une preuve vérifiable des compétences (Open Badge Byound)."
+                            : "Attestation de fin de formation délivrée après validation.",
+                        }
+                      : step,
+                  )}
+                  accent={false}
+                />
               </div>
             </div>
           </section>

@@ -7,9 +7,11 @@
  * ne crée pas de nouvelle séance : on rattache les signaux à la séance ouverte.
  *
  * ## Temps connecté
- * Pour chaque séance : durée = (dernier événement − premier événement) + 1 min,
+ * Pour chaque séance (événements live) : durée = (dernier − premier) + 1 min,
  * plafonnée à {@link MAX_CONNECTED_PER_SESSION_MS} (4 h).
- * Total = somme des durées de séance.
+ * Sur données legacy (`learning_sessions`) : on croit `duration_seconds` quand
+ * le wall-clock `ended_at − started_at` est absurde (onglet abandonné) ;
+ * sinon max(durée, wall) pour absorber une durée sous-déclarée.
  *
  * ## Temps actif
  * Somme des intervalles entre deux heartbeats d’activité (onglet visible +
@@ -189,8 +191,114 @@ export function computeLearnerTimeMetrics(input: {
 }
 
 /**
+ * Fusionne des séances dont le début tombe dans le gap de la précédente
+ * (rafraîchissements / lignes orphelines espacées de quelques secondes).
+ */
+function mergeCloseLogicalSessions(sessions: LogicalSession[]): LogicalSession[] {
+  const sorted = [...sessions].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  if (sorted.length === 0) return [];
+
+  const out: LogicalSession[] = [];
+  let cur: LogicalSession = { ...sorted[0]! };
+
+  for (let i = 1; i < sorted.length; i++) {
+    const next = sorted[i]!;
+    const gap = next.startedAt.getTime() - cur.endedAt.getTime();
+    if (gap <= SESSION_GAP_MS) {
+      const endedAt = next.endedAt.getTime() > cur.endedAt.getTime() ? next.endedAt : cur.endedAt;
+      const connectedSeconds = connectedSecondsForSession(cur.startedAt, endedAt);
+      const activeSeconds = Math.min(cur.activeSeconds + next.activeSeconds, connectedSeconds);
+      cur = {
+        startedAt: cur.startedAt,
+        endedAt,
+        connectedSeconds,
+        activeSeconds,
+        eventCount: cur.eventCount + next.eventCount,
+      };
+    } else {
+      out.push(cur);
+      cur = { ...next };
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+/**
+ * Une ligne `learning_sessions` → une séance logique.
+ *
+ * Priorité aux durées mesurées par le client (`duration_seconds` /
+ * `duration_active_seconds`) quand le wall-clock `ended_at − started_at`
+ * est absurde (onglet laissé ouvert toute la nuit) — cas Anaïs.
+ *
+ * Si la durée stockée est sous-estimée face à un wall-clock raisonnable
+ * (cas Jérôme : 3 s stockés, 5 min réelles), on garde le wall-clock.
+ */
+export function sessionFromLegacyRow(row: {
+  started_at: string | null;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+  duration_active_seconds?: number | null;
+}): LogicalSession | null {
+  if (!row.started_at) return null;
+  const startedAt = toDate(row.started_at);
+  if (Number.isNaN(startedAt.getTime())) return null;
+
+  const maxConnected = MAX_CONNECTED_PER_SESSION_MS / 1000;
+  const gapSec = SESSION_GAP_MS / 1000;
+  const durSec = clampNonNeg(Number(row.duration_seconds) || 0);
+  const activeRaw = clampNonNeg(Number(row.duration_active_seconds) || 0);
+
+  let wallSec = 0;
+  let wallEnd: Date | null = null;
+  if (row.ended_at) {
+    const end = toDate(row.ended_at);
+    if (!Number.isNaN(end.getTime()) && end.getTime() >= startedAt.getTime()) {
+      wallEnd = end;
+      wallSec = connectedSecondsForSession(startedAt, end);
+    }
+  }
+
+  let connectedSeconds: number;
+  let endedAt: Date;
+
+  if (durSec > 0 && wallSec > Math.max(gapSec, durSec * 3)) {
+    // Onglet abandonné : wall >> durée mesurée → on croit le compteur client.
+    connectedSeconds = Math.min(durSec, maxConnected);
+    endedAt = new Date(startedAt.getTime() + connectedSeconds * 1000);
+  } else if (durSec <= 0 && wallSec > gapSec) {
+    // Fin lointaine sans durée mesurée → ne pas inventer 4 h.
+    connectedSeconds = SESSION_TAIL_MS / 1000;
+    endedAt = new Date(startedAt.getTime() + connectedSeconds * 1000);
+  } else if (wallSec > 0 || durSec > 0) {
+    // Normal : max(durée, wall) pour absorber une durée sous-déclarée.
+    connectedSeconds = Math.min(Math.max(durSec, wallSec), maxConnected);
+    endedAt =
+      wallEnd && wallSec >= durSec
+        ? wallEnd
+        : new Date(startedAt.getTime() + connectedSeconds * 1000);
+  } else {
+    connectedSeconds = SESSION_TAIL_MS / 1000;
+    endedAt = new Date(startedAt.getTime() + connectedSeconds * 1000);
+  }
+
+  const activeSeconds = Math.min(activeRaw, connectedSeconds);
+
+  return {
+    startedAt,
+    endedAt,
+    connectedSeconds,
+    activeSeconds,
+    eventCount: 1,
+  };
+}
+
+/**
  * Recalcule à partir des lignes `learning_sessions` historiques
  * (sans table de heartbeats). Ne modifie aucune donnée.
+ *
+ * Chaque ligne = une séance ; on fusionne ensuite les lignes proches
+ * (< 30 min) pour les rafraîchissements / orphelins.
  */
 export function metricsFromLegacySessionRows(
   rows: Array<{
@@ -200,21 +308,23 @@ export function metricsFromLegacySessionRows(
     duration_active_seconds?: number | null;
   }>,
 ): LearnerTimeMetrics {
-  const events: MetricEvent[] = [];
-  let legacyActive = 0;
-
+  const built: LogicalSession[] = [];
   for (const row of rows) {
-    if (row.started_at) events.push({ at: row.started_at, kind: "presence" });
-    if (row.ended_at) events.push({ at: row.ended_at, kind: "presence" });
-    // Si ended_at absent mais duration_seconds > 0, dériver une fin.
-    if (row.started_at && !row.ended_at && Number(row.duration_seconds) > 0) {
-      const start = toDate(row.started_at).getTime();
-      events.push({ at: new Date(start + Number(row.duration_seconds) * 1000), kind: "presence" });
-    }
-    legacyActive += Math.max(0, Number(row.duration_active_seconds) || 0);
+    const session = sessionFromLegacyRow(row);
+    if (session) built.push(session);
   }
 
-  return computeLearnerTimeMetrics({ events, legacyActiveSeconds: legacyActive });
+  const sessions = mergeCloseLogicalSessions(built);
+  const connectedSeconds = sessions.reduce((sum, s) => sum + s.connectedSeconds, 0);
+  let activeSeconds = sessions.reduce((sum, s) => sum + s.activeSeconds, 0);
+  if (activeSeconds > connectedSeconds) activeSeconds = connectedSeconds;
+
+  return {
+    sessionCount: sessions.length,
+    connectedSeconds,
+    activeSeconds,
+    sessions,
+  };
 }
 
 /** Vérifie l’invariant actif ≤ connecté. */

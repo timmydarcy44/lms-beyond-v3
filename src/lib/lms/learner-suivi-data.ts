@@ -3,6 +3,7 @@ import { looksLikeTestAccount } from "@/lib/control/test-account";
 import {
   formatDurationCompact,
   metricsFromLegacySessionRows,
+  sessionFromLegacyRow,
 } from "@/lib/lms/lms-metrics";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
 
@@ -311,25 +312,46 @@ export async function loadLearnerSuivi(options: {
     }
   }
 
-  // Last activity all-time (for relance) — light query
+  // Last activity all-time (for relance) — sessions + feuilles validées
   const lastActivityByUser = new Map<string, string>();
   const firstSeenByUser = new Map<string, string>();
+  const bumpLast = (userId: string, stamp: string | null | undefined) => {
+    const value = String(stamp ?? "").trim();
+    if (!userId || !value) return;
+    if (!lastActivityByUser.has(userId) || value > (lastActivityByUser.get(userId) ?? "")) {
+      lastActivityByUser.set(userId, value);
+    }
+  };
   {
     const { data: recentAll } = await db
       .from("learning_sessions")
-      .select("user_id, started_at, ended_at")
+      .select("user_id, started_at, ended_at, duration_seconds, duration_active_seconds")
       .order("started_at", { ascending: false })
       .limit(15000);
-    for (const row of (recentAll ?? []) as Array<{ user_id: string; started_at: string | null; ended_at: string | null }>) {
-      const stamp = row.ended_at || row.started_at;
-      if (!stamp) continue;
-      if (!lastActivityByUser.has(row.user_id) || stamp > (lastActivityByUser.get(row.user_id) ?? "")) {
-        lastActivityByUser.set(row.user_id, stamp);
+    for (const row of (recentAll ?? []) as Array<{
+      user_id: string;
+      started_at: string | null;
+      ended_at: string | null;
+      duration_seconds?: number | null;
+      duration_active_seconds?: number | null;
+    }>) {
+      const logical = sessionFromLegacyRow(row);
+      if (logical) {
+        bumpLast(row.user_id, logical.endedAt.toISOString());
+        bumpLast(row.user_id, logical.startedAt.toISOString());
+      } else {
+        bumpLast(row.user_id, row.started_at);
       }
       if (!firstSeenByUser.has(row.user_id) || (row.started_at && row.started_at < (firstSeenByUser.get(row.user_id) ?? ""))) {
         if (row.started_at) firstSeenByUser.set(row.user_id, row.started_at);
       }
     }
+  }
+  for (const row of (leavesRes.error ? [] : leavesRes.data ?? []) as Array<{
+    user_id: string;
+    completed_at: string | null;
+  }>) {
+    bumpLast(row.user_id, row.completed_at);
   }
 
   const sessionsByUser = new Map<string, typeof sessionRows>();
@@ -401,23 +423,14 @@ export async function loadLearnerSuivi(options: {
     const sessions = sessionsByUser.get(profile.id) ?? [];
     const metrics = metricsFromLegacySessionRows(sessions);
 
-    // Buckets semaine : répartir activeSeconds des séances legacy sur started_at
+    // Buckets semaine : temps actif des séances recalculées (même source que le total)
     const byDay = new Map<string, number>();
-    for (const s of sessions) {
-      if (!s.started_at) continue;
-      const day = s.started_at.slice(0, 10);
-      const t = Date.parse(s.started_at);
-      if (t < fourWeeksAgo.getTime()) continue;
-      const sec = Math.max(0, Number(s.duration_active_seconds) || 0);
-      byDay.set(day, (byDay.get(day) ?? 0) + sec);
+    for (const s of metrics.sessions) {
+      const day = s.startedAt.toISOString().slice(0, 10);
+      if (s.startedAt.getTime() < fourWeeksAgo.getTime()) continue;
+      byDay.set(day, (byDay.get(day) ?? 0) + s.activeSeconds);
     }
-    // Recaler les buckets pour respecter le total recalculé (proportionnel)
-    const rawWeek = weekBuckets(byDay, 4);
-    const rawSum = rawWeek.reduce((a, b) => a + b, 0);
-    const activeWeekBuckets =
-      rawSum > 0 && metrics.activeSeconds > 0
-        ? rawWeek.map((v) => Math.round((v / rawSum) * metrics.activeSeconds))
-        : rawWeek.map(() => 0);
+    const activeWeekBuckets = weekBuckets(byDay, 4);
 
     const leaves = leavesByUser.get(profile.id) ?? [];
     const periodLeaves = since

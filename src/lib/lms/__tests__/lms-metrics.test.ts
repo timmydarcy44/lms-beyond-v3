@@ -88,7 +88,7 @@ describe("lms-metrics", () => {
     ]);
     expect(assertActiveLeqConnected(metrics)).toBe(true);
     expect(metrics.activeSeconds).toBeLessThanOrEqual(metrics.connectedSeconds);
-    // Connecté recalculé depuis timestamps ≈ 5 min + 1 min + séance orpheline 1 min
+    // Connecté = max(durée, wall) ≈ 5 min + 1 min + séance orpheline 1 min
     expect(metrics.connectedSeconds).toBeGreaterThan(3);
   });
 
@@ -103,5 +103,37 @@ describe("lms-metrics", () => {
     const metrics = metricsFromLegacySessionRows(rows);
     expect(metrics.sessionCount).toBe(1);
     expect(metrics.connectedSeconds).toBeLessThanOrEqual(MAX_CONNECTED_PER_SESSION_MS / 1000);
+  });
+
+  it("cas Anaïs : onglet ouvert la nuit → croit duration_seconds, pas le wall-clock", () => {
+    const metrics = metricsFromLegacySessionRows([
+      {
+        started_at: "2026-11-25T15:10:13.537Z",
+        ended_at: "2026-11-26T05:48:19.947Z",
+        duration_seconds: 1311,
+        duration_active_seconds: 959,
+      },
+    ]);
+    expect(metrics.sessionCount).toBe(1);
+    expect(metrics.connectedSeconds).toBe(1311);
+    expect(metrics.activeSeconds).toBe(959);
+    expect(assertActiveLeqConnected(metrics)).toBe(true);
+    // Ne doit plus coller à 2 min (2 × 60 s) ni à 4 h de plafond wall-clock
+    expect(metrics.connectedSeconds).toBeGreaterThan(120);
+    expect(metrics.connectedSeconds).toBeLessThan(2 * 3600);
+  });
+
+  it("sans durée mesurée et fin lointaine → présence minimale (pas 4 h inventées)", () => {
+    const metrics = metricsFromLegacySessionRows([
+      {
+        started_at: "2026-11-25T10:00:00.000Z",
+        ended_at: "2026-11-26T02:00:00.000Z",
+        duration_seconds: 0,
+        duration_active_seconds: 0,
+      },
+    ]);
+    expect(metrics.sessionCount).toBe(1);
+    expect(metrics.connectedSeconds).toBe(60);
+    expect(metrics.activeSeconds).toBe(0);
   });
 });

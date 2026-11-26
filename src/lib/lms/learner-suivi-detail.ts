@@ -1093,15 +1093,21 @@ export async function loadLearnerSuiviDetail(
     });
   }
 
-  const lastActivityAt =
-    metrics.sessions[0]?.startedAt?.toISOString() ??
-    (sessionRows?.[0] as { started_at?: string } | undefined)?.started_at ??
-    null;
-  // Prefer latest from raw
-  let lastIso = lastActivityAt;
-  for (const row of sessionRows ?? []) {
-    const s = String((row as { started_at?: string }).started_at ?? "");
-    if (s && (!lastIso || s > lastIso)) lastIso = s;
+  // Dernière activité = max(fin de séance recalculée, complétion de feuille).
+  // On ignore le wall-clock brut (ended_at) : un onglet laissé ouvert la nuit
+  // ne doit pas compter comme activité à 5 h du matin.
+  let lastIso: string | null = null;
+  const consider = (value: string | null | undefined) => {
+    const stamp = String(value ?? "").trim();
+    if (!stamp) return;
+    if (!lastIso || stamp > lastIso) lastIso = stamp;
+  };
+  for (const s of metrics.sessions) {
+    consider(s.startedAt.toISOString());
+    consider(s.endedAt.toISOString());
+  }
+  for (const leaf of leafTimes) {
+    consider(leaf.completedAt);
   }
   const act = activityState(lastIso);
 

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Award, Clock, Search, Star, Users } from "lucide-react";
+import { Award, Clock, Search, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
@@ -95,12 +95,9 @@ function FormationCard({ course, audience }: { course: TrainingCoursePublic; aud
           <StarRating rating={course.rating} />
         </div>
 
-        <p className="mt-3 flex items-center gap-1.5 text-xs text-[#050505]/45">
-          <Users className="h-3.5 w-3.5" />
-          {audience === "life"
-            ? nextDatesLabel(course)
-            : `${course.companies_count} entreprises formées · Jusqu'à ${course.max_intra_participants ?? 12} participants`}
-        </p>
+        {audience === "life" ? (
+          <p className="mt-3 text-xs text-[#050505]/45">{nextDatesLabel(course)}</p>
+        ) : null}
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-5">
           <p className="text-sm font-semibold text-[#050505]">{course.price_label}</p>

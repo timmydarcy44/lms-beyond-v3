@@ -867,7 +867,7 @@ export function EdgeTrainingDetailPage({
               <div className="mt-8 max-w-xl">
                 <VerticalTimeline
                   steps={AFTER_TRAINING_STEPS.map((step) =>
-                    step.title === "Reconnaissance"
+                    step.title === "Open Badge"
                       ? {
                           ...step,
                           title: publicRecognition.hasOpenBadge ? "Open Badge" : "Attestation",

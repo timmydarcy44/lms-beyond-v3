@@ -62,6 +62,35 @@ export function formatFrDateShort(iso: string | Date | null | undefined): string
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 }
 
+/** Date calendaire FR avec année (procédures / prochaines revues). */
+export function formatFrDateWithYear(iso: string | Date | null | undefined): string {
+  if (!iso) return "—";
+  const raw = typeof iso === "string" ? iso.slice(0, 10) : null;
+  if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [y, m, day] = raw.split("-").map(Number);
+    return `${day} ${MONTHS_SHORT[(m ?? 1) - 1]} ${y}`;
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * Compare une date ISO `YYYY-MM-DD` (ou Date) au jour calendaire local.
+ * true seulement si la date est strictement avant aujourd’hui.
+ */
+export function isDateOnlyBeforeToday(iso: string | Date | null | undefined): boolean {
+  if (!iso) return false;
+  const raw =
+    typeof iso === "string"
+      ? iso.slice(0, 10)
+      : `${iso.getFullYear()}-${String(iso.getMonth() + 1).padStart(2, "0")}-${String(iso.getDate()).padStart(2, "0")}`;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return raw < today;
+}
+
 export function formatRelativeFr(iso: string | Date | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);

@@ -28,7 +28,12 @@ import {
   nextMajorVersion,
 } from "@/lib/qualiopi/procedure-status";
 import { PROCEDURE_VIDEO_SLOTS } from "@/lib/qualiopi/procedure-videos";
-import { formatFrDateShort, formatRelativeFr } from "@/lib/qualiopi/reclamation-format";
+import {
+  formatFrDateShort,
+  formatFrDateWithYear,
+  formatRelativeFr,
+  isDateOnlyBeforeToday,
+} from "@/lib/qualiopi/reclamation-format";
 
 type Section = {
   id: string;
@@ -328,7 +333,7 @@ export function QualiopiProceduresV2Panel() {
   };
 
   const reviewTone =
-    counts.nextReview && new Date(counts.nextReview).getTime() < Date.now() ? RED : MUTED;
+    counts.nextReview && isDateOnlyBeforeToday(counts.nextReview) ? RED : MUTED;
 
   return (
     <div className="space-y-5" style={{ color: TEXT, fontFamily: "Manrope, system-ui, sans-serif" }}>
@@ -370,7 +375,7 @@ export function QualiopiProceduresV2Panel() {
           },
           {
             label: counts.nextReview
-              ? `${formatFrDateShort(counts.nextReview)} prochaine revue`
+              ? `${formatFrDateWithYear(counts.nextReview)} prochaine revue`
               : "— prochaine revue",
             color: reviewTone,
           },
@@ -565,7 +570,7 @@ export function QualiopiProceduresV2Panel() {
                       <h2 className="text-[22px] font-extrabold leading-snug">{selected.title}</h2>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <span className="font-semibold" style={{ color: toneColor(displayProcedureStatus(selected).tone) }}>
-                          ● {displayProcedureStatus(selected).label} · v{selected.current_version}
+                          ● {displayProcedureStatus(selected).label}
                         </span>
                         {(selected.indicators ?? []).map((n) => (
                           <span key={n} className="rounded-full px-2 py-0.5 font-semibold" style={{ background: "rgba(169,155,255,.15)", color: "#C9C2FF" }}>
@@ -747,18 +752,18 @@ export function QualiopiProceduresV2Panel() {
                   <p className="mb-3 font-extrabold">Fiche du document</p>
                   <MetaRow label="Responsable" value={selected.owner_name || "—"} />
                   <MetaRow label="Validée par" value={selected.validated_by_name || "—"} />
-                  <MetaRow label="Date d’application" value={formatFrDateShort(selected.effective_date)} />
+                  <MetaRow label="Date d’application" value={formatFrDateWithYear(selected.effective_date)} />
                   <MetaRow
                     label="Prochaine revue"
                     value={
                       selected.next_review_at
-                        ? formatFrDateShort(selected.next_review_at)
+                        ? formatFrDateWithYear(selected.next_review_at)
                         : "À définir"
                     }
                     valueColor={
                       !selected.next_review_at
                         ? AMBER
-                        : new Date(selected.next_review_at).getTime() < Date.now()
+                        : isDateOnlyBeforeToday(selected.next_review_at)
                           ? RED
                           : MUTED
                     }

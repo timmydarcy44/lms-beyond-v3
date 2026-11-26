@@ -45,7 +45,7 @@ const SEED_META: Record<
   signalements: {
     slug: "signalements",
     title: "Signalements (violences, harcèlement, discriminations)",
-    indicators: [],
+    indicators: [12],
     legal: true,
   },
 };

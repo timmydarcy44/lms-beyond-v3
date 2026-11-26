@@ -1,3 +1,5 @@
+import { isDateOnlyBeforeToday } from "@/lib/qualiopi/reclamation-format";
+
 export const PROCEDURE_STATUSES = ["draft", "in_review", "validated", "archived"] as const;
 export type ProcedureStatus = (typeof PROCEDURE_STATUSES)[number];
 
@@ -16,11 +18,8 @@ export function displayProcedureStatus(row: {
   next_review_at?: string | null;
 }): { label: string; tone: ProcedureStatusTone } {
   const status = (row.status ?? "draft") as ProcedureStatus;
-  if (row.next_review_at) {
-    const d = new Date(row.next_review_at);
-    if (!Number.isNaN(d.getTime()) && d.getTime() < Date.now()) {
-      return { label: "Revue dépassée", tone: "red" };
-    }
+  if (row.next_review_at && isDateOnlyBeforeToday(row.next_review_at)) {
+    return { label: "Revue dépassée", tone: "red" };
   }
   if (status === "validated") {
     return { label: `Validée v${row.current_version || "1.0"}`, tone: "green" };

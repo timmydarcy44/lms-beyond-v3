@@ -501,8 +501,9 @@ async function buildStatus(force = false) {
         validated_at: p.validated_at ? String(p.validated_at) : null,
         indicators: Array.isArray(p.indicators) ? (p.indicators as number[]) : [],
       }));
+      const { isDateOnlyBeforeToday } = await import("@/lib/qualiopi/reclamation-format");
       signals.procedureReviewOverdue = procRes.data.some(
-        (p) => p.next_review_at && new Date(String(p.next_review_at)).getTime() < Date.now(),
+        (p) => p.next_review_at && isDateOnlyBeforeToday(String(p.next_review_at)),
       );
     }
   } catch (e) {

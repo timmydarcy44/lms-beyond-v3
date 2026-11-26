@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { OF_STAFF_OWNERS, normalizeOwnerLabel } from "@/lib/qualiopi/of-staff";
 import {
   mergeVeilleHighlightNote,
   type VeilleHighlight,
@@ -20,6 +21,11 @@ type Props = {
   onReload: () => Promise<void>;
 };
 
+function cleanOwner(value: string | null | undefined): string {
+  const normalized = normalizeOwnerLabel(value);
+  return normalized ?? "";
+}
+
 export function VeilleHighlightPlan({
   highlight,
   planBusy,
@@ -29,14 +35,26 @@ export function VeilleHighlightPlan({
 }: Props) {
   const parsed = splitVeilleHighlightNote(highlight.note);
   const [preface, setPreface] = useState(parsed.preface);
-  const [items, setItems] = useState<VeillePlanDraftItem[]>(parsed.planDraft?.items ?? []);
+  const [items, setItems] = useState<VeillePlanDraftItem[]>(
+    (parsed.planDraft?.items ?? []).map((item) => ({
+      ...item,
+      owner_name: cleanOwner(item.owner_name) || null,
+      selected: item.selected === true,
+    })),
+  );
   const [summary, setSummary] = useState(parsed.planDraft?.summary ?? "");
   const [paqBusy, setPaqBusy] = useState(false);
 
   useEffect(() => {
     const next = splitVeilleHighlightNote(highlight.note);
     setPreface(next.preface);
-    setItems(next.planDraft?.items ?? []);
+    setItems(
+      (next.planDraft?.items ?? []).map((item) => ({
+        ...item,
+        owner_name: cleanOwner(item.owner_name) || null,
+        selected: item.selected === true,
+      })),
+    );
     setSummary(next.planDraft?.summary ?? "");
   }, [highlight.id, highlight.note, highlight.updated_at]);
 
@@ -50,10 +68,25 @@ export function VeilleHighlightPlan({
   };
 
   const sendToPaq = async () => {
-    const selected = items.filter((item) => item.selected !== false && item.title.trim());
+    const selected = items.filter((item) => item.selected === true && item.title.trim());
     if (!selected.length) {
       toast.error("Cochez au moins une action retenue");
       return;
+    }
+    if (!preface.trim()) {
+      toast.error("Note de retravail obligatoire");
+      return;
+    }
+    const actionable = selected.filter((item) => !item.title.toLowerCase().includes("aucun impact"));
+    for (const item of actionable) {
+      if (!cleanOwner(item.owner_name)) {
+        toast.error(`Responsable OF obligatoire pour « ${item.title} »`);
+        return;
+      }
+      if (!item.due_at) {
+        toast.error(`Échéance obligatoire pour « ${item.title} »`);
+        return;
+      }
     }
     setPaqBusy(true);
     try {
@@ -64,13 +97,21 @@ export function VeilleHighlightPlan({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             decisionNote: preface,
-            items,
+            items: items.map((item) => ({
+              ...item,
+              owner_name: cleanOwner(item.owner_name) || null,
+              selected: item.selected === true,
+            })),
           }),
         },
       );
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || "Envoi PAQ impossible");
-      toast.success(`${selected.length} action(s) créée(s) dans le PAQ · information Traitée`);
+      toast.success(
+        json.noImpactOnly
+          ? "Décision enregistrée · information Traitée (aucun impact)"
+          : `${actionable.length} action(s) créée(s) dans le PAQ · information Traitée`,
+      );
       await onReload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Envoi PAQ impossible");
@@ -84,69 +125,80 @@ export function VeilleHighlightPlan({
       {items.length > 0 ? (
         <div className="rounded-lg border border-[#6E5BFF]/30 bg-[#6E5BFF]/10 px-3 py-3">
           <p className="text-[10px] font-bold uppercase tracking-wide text-[#c4bcff]">
-            Proposition IA (brouillon)
+            Proposition générée — à valider
           </p>
           {summary ? (
             <p className="mt-1 text-sm leading-relaxed text-[#e8e4ff]">{summary}</p>
           ) : null}
           <ul className="mt-3 space-y-3">
-            {items.map((item, index) => (
-              <li key={item.id} className="rounded-lg border border-white/10 bg-[#0B1122]/60 p-3">
-                <label className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={item.selected !== false}
-                    onChange={(event) => {
-                      const next = items.map((row, i) =>
-                        i === index ? { ...row, selected: event.target.checked } : row,
-                      );
-                      setItems(next);
-                    }}
-                  />
-                  <div className="min-w-0 flex-1 space-y-2">
+            {items.map((item, index) => {
+              const noImpact = item.title.toLowerCase().includes("aucun impact");
+              return (
+                <li key={item.id} className="rounded-lg border border-white/10 bg-[#0B1122]/60 p-3">
+                  <label className="flex items-start gap-2">
                     <input
-                      value={item.title}
+                      type="checkbox"
+                      className="mt-1"
+                      checked={item.selected === true}
                       onChange={(event) => {
                         const next = items.map((row, i) =>
-                          i === index ? { ...row, title: event.target.value } : row,
+                          i === index ? { ...row, selected: event.target.checked } : row,
                         );
                         setItems(next);
                       }}
-                      className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-sm text-white outline-none focus:border-[#6E5BFF]"
                     />
-                    <div className="flex flex-wrap gap-2">
+                    <div className="min-w-0 flex-1 space-y-2">
                       <input
-                        value={item.owner_name ?? ""}
+                        value={item.title}
                         onChange={(event) => {
                           const next = items.map((row, i) =>
-                            i === index
-                              ? { ...row, owner_name: event.target.value || null }
-                              : row,
+                            i === index ? { ...row, title: event.target.value } : row,
                           );
                           setItems(next);
                         }}
-                        placeholder="Responsable"
-                        className="min-w-[140px] flex-1 rounded-lg border border-white/10 bg-transparent px-2 py-1 text-xs text-white outline-none focus:border-[#6E5BFF]"
+                        className="w-full rounded-lg border border-white/10 bg-transparent px-2 py-1.5 text-sm text-white outline-none focus:border-[#6E5BFF]"
                       />
-                      <input
-                        type="date"
-                        value={item.due_at ?? ""}
-                        onChange={(event) => {
-                          const next = items.map((row, i) =>
-                            i === index
-                              ? { ...row, due_at: event.target.value || null }
-                              : row,
-                          );
-                          setItems(next);
-                        }}
-                        className="rounded-lg border border-white/10 bg-transparent px-2 py-1 text-xs text-white outline-none focus:border-[#6E5BFF]"
-                      />
+                      {!noImpact ? (
+                        <div className="flex flex-wrap gap-2">
+                          <select
+                            value={cleanOwner(item.owner_name)}
+                            onChange={(event) => {
+                              const next = items.map((row, i) =>
+                                i === index
+                                  ? { ...row, owner_name: event.target.value || null }
+                                  : row,
+                              );
+                              setItems(next);
+                            }}
+                            className="min-w-[160px] flex-1 rounded-lg border border-white/10 bg-[#0B1122] px-2 py-1 text-xs text-white outline-none focus:border-[#6E5BFF]"
+                          >
+                            <option value="">Responsable OF…</option>
+                            {OF_STAFF_OWNERS.map((owner) => (
+                              <option key={owner.id} value={owner.label}>
+                                {owner.label}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="date"
+                            value={item.due_at ?? ""}
+                            onChange={(event) => {
+                              const next = items.map((row, i) =>
+                                i === index
+                                  ? { ...row, due_at: event.target.value || null }
+                                  : row,
+                              );
+                              setItems(next);
+                            }}
+                            className="rounded-lg border border-white/10 bg-transparent px-2 py-1 text-xs text-white outline-none focus:border-[#6E5BFF]"
+                          />
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
-                </label>
-              </li>
-            ))}
+                  </label>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

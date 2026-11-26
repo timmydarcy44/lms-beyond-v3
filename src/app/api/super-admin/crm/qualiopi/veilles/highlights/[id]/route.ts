@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
+import { splitVeilleHighlightNote } from "@/lib/qualiopi/veille-shared";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,26 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   if ("theme" in body) {
     const { parseVeilleTheme } = await import("@/lib/qualiopi/veille-shared");
     patch.theme = parseVeilleTheme(body.theme) ?? "transversal";
+  }
+
+  if (body.status === "done") {
+    const nextNote =
+      typeof body.note === "string"
+        ? body.note
+        : (
+            await supabase
+              .from("crm_qualiopi_veille_highlights")
+              .select("note")
+              .eq("id", id)
+              .maybeSingle()
+          ).data?.note;
+    const { preface } = splitVeilleHighlightNote(nextNote);
+    if (!preface.trim()) {
+      return NextResponse.json(
+        { error: "Note de retravail obligatoire pour passer en Traité" },
+        { status: 400 },
+      );
+    }
   }
 
   const { data, error } = await supabase

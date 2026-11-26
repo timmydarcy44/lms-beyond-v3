@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { sendEmail } from "@/lib/email/resend-client";
+import { sentenceCaseName } from "@/lib/qualiopi/reclamation-format";
+import { normalizeReclamationBody } from "@/lib/qualiopi/reclamation-text";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const text = String(body.body ?? "").trim();
+  const text = normalizeReclamationBody(String(body.body ?? "")).trim();
   if (!text) return NextResponse.json({ error: "Message vide" }, { status: 400 });
 
   const templateKey = body.template_key ? String(body.template_key) : null;
@@ -41,6 +43,35 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const isTest = rec.is_test === true;
   const looksTestEmail = /@(example\.|byound\.test|test\.|mailinator\.)|\+test/i.test(to);
 
+  let authorName = "Équipe qualité";
+  let authorId: string | null = null;
+  try {
+    const userClient = await getServerClient();
+    const { data: auth } = userClient ? await userClient.auth.getUser() : { data: { user: null } };
+    authorId = auth.user?.id ?? null;
+    if (authorId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name, full_name, email")
+        .eq("id", authorId)
+        .maybeSingle();
+      const full =
+        [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+        String(profile?.full_name ?? "").trim();
+      if (full) {
+        authorName = sentenceCaseName(full);
+      } else if (auth.user?.user_metadata) {
+        const meta = auth.user.user_metadata as Record<string, unknown>;
+        const metaName =
+          [meta.first_name, meta.last_name].filter(Boolean).join(" ").trim() ||
+          String(meta.full_name ?? meta.name ?? "").trim();
+        if (metaName) authorName = sentenceCaseName(metaName);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
   // Garde-fou : pas d'e-mail vers un vrai client hors is_test / email test
   let emailSent: { ok: boolean; skipped?: boolean; error?: string } = { ok: true, skipped: true };
   if (to && (isTest || looksTestEmail || body.force_send === true)) {
@@ -53,7 +84,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const html = `
       <div style="font-family:system-ui,sans-serif;line-height:1.55;color:#111">
         <p>${text.replace(/\n/g, "<br/>")}</p>
-        <p style="color:#666;font-size:13px;margin-top:24px">Byound — Qualité</p>
+        <p style="color:#666;font-size:13px;margin-top:24px">
+          ${authorName}<br/>Byound — Qualité
+        </p>
       </div>`;
     const sent = await sendEmail({
       to,
@@ -71,17 +104,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   } else if (to && !isTest && !looksTestEmail) {
     // Enregistre la réponse sans envoyer (prod réel) — l'UI peut forcer plus tard
     emailSent = { ok: true, skipped: true };
-  }
-
-  let authorName = "Équipe qualité";
-  let authorId: string | null = null;
-  try {
-    const userClient = await getServerClient();
-    const { data: auth } = userClient ? await userClient.auth.getUser() : { data: { user: null } };
-    authorId = auth.user?.id ?? null;
-    if (auth.user?.email) authorName = auth.user.email.split("@")[0] || authorName;
-  } catch {
-    /* ignore */
   }
 
   const now = new Date().toISOString();

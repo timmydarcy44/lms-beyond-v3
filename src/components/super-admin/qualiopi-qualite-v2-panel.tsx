@@ -20,6 +20,7 @@ import {
   formatDurationHours,
   sentenceCaseName,
 } from "@/lib/qualiopi/reclamation-format";
+import { normalizeReclamationBody } from "@/lib/qualiopi/reclamation-text";
 import {
   deriveReclamationSource,
   RECLAMATION_SOURCE_LABELS,
@@ -82,6 +83,7 @@ type Action = {
   status: "todo" | "doing" | "done";
   source: string;
   reclamation_id?: string | null;
+  highlight_id?: string | null;
   reviewed_at: string | null;
 };
 
@@ -754,14 +756,14 @@ export function QualiopiQualiteV2Panel({ canAccessSignalements = true }: { canAc
                           <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: AMBER }}>
                             Note interne
                           </p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm">{m.body}</p>
+                          <p className="mt-1 whitespace-pre-wrap text-sm">{normalizeReclamationBody(m.body)}</p>
                         </div>
                       );
                     }
                     if (m.kind === "reply") {
                       return (
                         <div key={m.id} className="ml-8 rounded-[18px] px-4 py-3" style={{ background: "rgba(110,91,255,0.12)" }}>
-                          <p className="whitespace-pre-wrap text-sm">{m.body}</p>
+                          <p className="whitespace-pre-wrap text-sm">{normalizeReclamationBody(m.body)}</p>
                           <p className="mt-2 text-[11px]" style={{ color: MUTED }}>
                             Envoyé par {sentenceCaseName(m.author_name) || "Équipe"} · {formatFrDateTime(m.created_at)}
                           </p>
@@ -780,7 +782,7 @@ export function QualiopiQualiteV2Panel({ canAccessSignalements = true }: { canAc
                             ? ` · ${[selected.requester_role, selected.requester_company].filter(Boolean).map(sentenceCaseName).join(", ")}`
                             : ""}
                         </p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm">{m.body}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm">{normalizeReclamationBody(m.body)}</p>
                       </div>
                     );
                   })}
@@ -1270,7 +1272,23 @@ function PaqTab({
               <tr key={a.id} className="border-b" style={{ borderColor: BORDER }}>
                 <td className="py-3 font-semibold">{a.title}</td>
                 <td className="py-3" style={{ color: MUTED }}>
-                  {a.source}
+                  {a.source === "veille" || a.highlight_id ? (
+                    <a
+                      href={
+                        a.highlight_id
+                          ? `/super/crm/qualiopi/veilles?highlight=${a.highlight_id}`
+                          : "/super/crm/qualiopi/veilles"
+                      }
+                      className="underline"
+                      style={{ color: VIOLET }}
+                    >
+                      {a.cause?.startsWith("Veille ind.")
+                        ? a.cause.split(" · ")[0]
+                        : "Veille ind. 23/24/25"}
+                    </a>
+                  ) : (
+                    a.source
+                  )}
                   {a.reclamation_id ? (
                     <button type="button" className="ml-2 underline" style={{ color: VIOLET }} onClick={() => onOpenRec(a.reclamation_id!)}>
                       Voir réclamation
@@ -1278,7 +1296,7 @@ function PaqTab({
                   ) : null}
                 </td>
                 <td className="py-3" style={{ color: MUTED }}>
-                  {a.owner_name || "—"}
+                  {!a.owner_name || String(a.owner_name).toLowerCase() === "null" ? "—" : a.owner_name}
                 </td>
                 <td className="py-3" style={{ color: MUTED }}>
                   {a.due_at || "—"}

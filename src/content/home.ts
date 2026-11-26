@@ -112,7 +112,7 @@ export function getHomeContent(routes: EdgeMarketingRoutes, host?: string | null
           { label: "Former vos équipes", href: routes.businessFormerEquipes },
           { label: "Plateforme de compétences", href: routes.businessPlateformeCompetences },
           { label: "Open Badges", href: routes.businessOpenBadges },
-          { label: "Financement OPCO", href: routes.financementOpco },
+          { label: "Financement entreprise", href: routes.contact },
           { label: "Parlons de vos besoins", href: routes.contact },
         ],
       },

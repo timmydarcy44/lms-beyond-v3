@@ -3,6 +3,7 @@
 import {
   QUALIOPI_ELEARNING_3H_MODALITY,
   QUALIOPI_FINANCING_COPY,
+  QUALIOPI_FINANCING_OPCO_ADMIN,
 } from "@/lib/qualiopi/public-copy";
 
 /** Constantes partagées : contrôle, Preuves catalogue, fiche formation, one-pager. */
@@ -222,9 +223,10 @@ export const QUALIOPI_FICHE_STATUS_DOT: Record<
   empty: { color: "#EF4444", label: "Qualiopi : rien de saisi" },
 };
 
-/** Libellés financement (fiche catalogue + saisie en série). */
+/** Libellés financement (fiche catalogue + saisie en série — back-office). */
 export const QUALIOPI_FINANCING_OPTIONS = [
   QUALIOPI_FINANCING_COPY,
+  QUALIOPI_FINANCING_OPCO_ADMIN,
   "Fonds propres / entreprise",
   "Sur devis",
 ] as const;

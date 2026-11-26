@@ -31,7 +31,7 @@ export function EdgePremiumFooter() {
         { label: "Former vos équipes", href: R.businessFormerEquipes },
         { label: "Plateforme de compétences", href: R.businessPlateformeCompetences },
         { label: "Open Badges", href: R.businessOpenBadges },
-        { label: "Financement OPCO", href: R.financementOpco },
+        { label: "Financer vos formations", href: R.contact },
         { label: "Parlons de vos besoins", href: R.contact },
       ],
     },

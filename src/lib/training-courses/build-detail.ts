@@ -12,6 +12,7 @@ import {
   derivePedagogicalModalityFromFormats,
   pedagogicalModalityLabel,
 } from "@/lib/training-courses/qualiopi-fiche";
+import { buildPublicRecognition } from "@/lib/training-courses/public-recognition";
 
 /** En-tête formats : `formats[]` si présents, sinon libellé dérivé de `pedagogical_modality`. */
 export function buildHeaderFormatsLabel(course: {
@@ -51,7 +52,7 @@ export type TrainingCourseDetail = {
   pageBlocks: TrainingPageBlock[];
   formatsLabel: string;
   maxIntraParticipants: number;
-  badgeLabel: string;
+  badgeLabel: string | null;
   badgeImageUrl: string | null;
 };
 
@@ -142,7 +143,9 @@ export function buildTrainingCourseDetail(
     maxIntraParticipants: course.max_intra_participants ?? 12,
     sessions,
     faq: course.faq ?? [],
-    badgeLabel: badgeMeta?.name ?? course.badge_name ?? "Open Badge Byound",
+    badgeLabel: buildPublicRecognition(course, {
+      badgeMetaName: badgeMeta?.name ?? null,
+    }).badgeLabel,
     badgeImageUrl: badgeMeta?.imageUrl ?? null,
   };
 }

@@ -126,9 +126,9 @@ export const COMMERCIAL_IA_FAQ = [
 
   {
 
-    q: "Est-ce que je peux financer via mon OPCO ?",
+    q: "Comment financer le parcours ?",
 
-    a: "Oui, via un organisme certifié partenaire. On t'accompagne dans les démarches après ta postulation. Aucun paiement direct aujourd'hui.",
+    a: "Financement par l'entreprise cliente. Contactez-nous après votre postulation pour un devis adapté. Aucun paiement direct aujourd'hui.",
 
   },
 

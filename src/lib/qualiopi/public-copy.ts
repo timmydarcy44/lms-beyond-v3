@@ -14,22 +14,53 @@ export const QUALIOPI_HANDICAP_REFERENT_LINE =
 export const QUALIOPI_HANDICAP_REFERENT_SHORT =
   `Jessica Contentin · ${QUALIOPI_PUBLIC_CONTACT_EMAIL}`;
 
-/** Modalités de financement — une seule formulation partout. */
-export const QUALIOPI_FINANCING_COPY =
-  "Financement par l'entreprise cliente. Prise en charge OPCO possible après obtention de la certification Qualiopi (en cours).";
+/** Phrase publique par défaut — sans OPCO ni Qualiopi. */
+export const QUALIOPI_FINANCING_DEFAULT = "Financement par l'entreprise cliente.";
 
 /**
- * Front public uniquement : tant que Qualiopi n’est pas obtenue, on masque toute
- * présentation d’OPCO comme disponible et on force la phrase « en cours ».
- * Le back-office garde les valeurs réelles (OPCO sélectionnable).
+ * Option admin / back-office uniquement (conservée en base).
+ * Ne doit pas être affichée sur le front tant que `show_opco_public` est faux.
+ */
+export const QUALIOPI_FINANCING_OPCO_ADMIN =
+  "Financement entreprise et/ou prise en charge OPCO (selon éligibilité).";
+
+/** @deprecated alias — préférer QUALIOPI_FINANCING_DEFAULT sur le front. */
+export const QUALIOPI_FINANCING_COPY = QUALIOPI_FINANCING_DEFAULT;
+
+const OPCO_OR_QUALIOPI_RE = /\bopco\b|\bqualiopi\b/i;
+
+export function financingMentionsOpcoOrQualiopi(value: string | null | undefined): boolean {
+  return OPCO_OR_QUALIOPI_RE.test(String(value ?? ""));
+}
+
+type PublicFinancingOpts = {
+  /** Flag admin — désactivé par défaut : masque OPCO/Qualiopi sur le front. */
+  showOpcoPublic?: boolean;
+  qualiopiCertified?: boolean;
+};
+
+/**
+ * Front public uniquement.
+ * Par défaut (`showOpcoPublic = false`) : toujours la phrase entreprise, jamais OPCO/Qualiopi.
+ * Si `showOpcoPublic` est true : on peut afficher le texte fiche (y compris option OPCO admin).
+ * 2e argument : boolean (legacy = qualiopiCertified) ou options.
  */
 export function resolvePublicFinancingCopy(
   courseFinancing: string | null | undefined,
-  qualiopiCertified: boolean,
+  qualiopiCertifiedOrOpts?: boolean | PublicFinancingOpts,
 ): string {
-  if (!qualiopiCertified) return QUALIOPI_FINANCING_COPY;
+  const opts: PublicFinancingOpts =
+    typeof qualiopiCertifiedOrOpts === "boolean"
+      ? { showOpcoPublic: false, qualiopiCertified: qualiopiCertifiedOrOpts }
+      : (qualiopiCertifiedOrOpts ?? {});
+  const showOpcoPublic = opts.showOpcoPublic === true;
+  if (!showOpcoPublic) return QUALIOPI_FINANCING_DEFAULT;
   const raw = String(courseFinancing ?? "").trim();
-  return raw || QUALIOPI_FINANCING_COPY;
+  if (!raw) return QUALIOPI_FINANCING_DEFAULT;
+  if (!opts.qualiopiCertified && financingMentionsOpcoOrQualiopi(raw)) {
+    return QUALIOPI_FINANCING_DEFAULT;
+  }
+  return raw;
 }
 
 /** Délais d'accès — fiche catalogue / livret. */
@@ -71,3 +102,13 @@ export const QUALIOPI_ELEARNING_3H_METHODS = [
   "Exercice d'application",
   "Suivi des connexions et de la progression (LMS)",
 ] as const;
+
+/** Accessibilité — texte commun + contact référent en fin de bloc. */
+export const QUALIOPI_ACCESSIBILITY_BODY =
+  "Formation accessible aux personnes en situation de handicap. Adaptations possibles sur demande, en lien si besoin avec nos partenaires (Agefiph, Cap Emploi).";
+
+export const QUALIOPI_ACCESSIBILITY_CONTACT_LINE =
+  `Contact référent handicap : ${QUALIOPI_PUBLIC_CONTACT_EMAIL}`;
+
+export const QUALIOPI_ACCESSIBILITY_COPY =
+  `${QUALIOPI_ACCESSIBILITY_BODY} ${QUALIOPI_ACCESSIBILITY_CONTACT_LINE}`;

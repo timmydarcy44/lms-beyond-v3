@@ -32,7 +32,8 @@ import { parseExpertDocuments, parseExpertInternalNotes, parseExpertRegistration
 import { buildExpertTimeline, computeExpertKpis, getExpertCoverUrl, getExpertCvUrl, getExpertPortfolioUrl } from "@/lib/expert/expert-crm-utils";
 import {
   EXPECTED_EXPERT_DOCS,
-  docMatchesExpectedSlot,
+  INTERNAL_DOC_NA_LABEL,
+  expectedDocStatus,
 } from "@/lib/expert/expected-documents";
 import { expertProfileChecks, skillCards, skillLabels } from "@/lib/expert/fiche-profile";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
@@ -998,7 +999,9 @@ export function SuperExpertCrmDetail({
                 <p className="text-sm font-extrabold">Attendus</p>
                 <ul className="mt-3 space-y-2">
                   {EXPECTED_EXPERT_DOCS.map((item) => {
-                    const found = documents.some((doc) => docMatchesExpectedSlot(doc, item));
+                    const status = expectedDocStatus(documents, item, {
+                      employmentStatus: expert.employment_status,
+                    });
                     return (
                       <li
                         key={item.id}
@@ -1007,12 +1010,14 @@ export function SuperExpertCrmDetail({
                         <span className="font-medium text-[#E8ECF8]">{item.label}</span>
                         <span
                           className={
-                            found
+                            status === "ok"
                               ? "rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"
-                              : "rounded-full bg-red-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300"
+                              : status === "na"
+                                ? "rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#9AA3BD]"
+                                : "rounded-full bg-red-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-red-300"
                           }
                         >
-                          {found ? "OK" : "Manquant"}
+                          {status === "ok" ? "OK" : status === "na" ? INTERNAL_DOC_NA_LABEL : "Manquant"}
                         </span>
                       </li>
                     );

@@ -9,10 +9,12 @@ export {
   parseExpertInternalNotes,
 } from "@/lib/expert/admin-expert-types";
 
-const ADMIN_EXPERT_SELECT_LEGACY = ADMIN_EXPERT_SELECT.replace(",is_care_expert", "").replace(",open_badges", "");
+const ADMIN_EXPERT_SELECT_LEGACY = ADMIN_EXPERT_SELECT.replace(",is_care_expert", "")
+  .replace(",open_badges", "")
+  .replace(",employment_status", "");
 
 function isMissingOptionalColumn(message: string | undefined) {
-  return Boolean(message && /is_care_expert|open_badges/i.test(message));
+  return Boolean(message && /is_care_expert|open_badges|employment_status/i.test(message));
 }
 
 export async function getAdminExperts(status?: string | null): Promise<AdminExpertRow[]> {

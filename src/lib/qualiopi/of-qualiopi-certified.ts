@@ -33,6 +33,25 @@ export async function loadQualiopiCertified(service: SupabaseClient): Promise<bo
   return false;
 }
 
+/**
+ * Afficher OPCO sur le front public — désactivé par défaut.
+ * Stocké dans `of_settings.qualiopi_activities.show_opco_public` (pas de DDL).
+ */
+export function readShowOpcoPublicFromRow(row: Record<string, unknown> | null | undefined): boolean {
+  if (!row) return false;
+  const act = row.qualiopi_activities;
+  if (act && typeof act === "object" && typeof (act as { show_opco_public?: unknown }).show_opco_public === "boolean") {
+    return Boolean((act as { show_opco_public: boolean }).show_opco_public);
+  }
+  return false;
+}
+
+export async function loadShowOpcoPublic(service: SupabaseClient): Promise<boolean> {
+  const { data, error } = await service.from("of_settings").select("qualiopi_activities").limit(1).maybeSingle();
+  if (error || !data) return false;
+  return readShowOpcoPublicFromRow(data as Record<string, unknown>);
+}
+
 /** Fusionne le booléen dans le JSON activités (repli sans colonne). */
 export function mergeCertifiedIntoActivities(
   activities: Record<string, unknown>,

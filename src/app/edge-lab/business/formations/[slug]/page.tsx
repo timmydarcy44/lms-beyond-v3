@@ -75,10 +75,13 @@ export default async function Page({ params }: Props) {
 
   let resultsIndicatorsMethod: string | null = null;
   let qualiopiCertified = false;
+  let showOpcoPublic = false;
   try {
     const service = await getServiceRoleClientOrFallback();
     if (service) {
-      const { loadQualiopiCertified } = await import("@/lib/qualiopi/of-qualiopi-certified");
+      const { loadQualiopiCertified, loadShowOpcoPublic } = await import(
+        "@/lib/qualiopi/of-qualiopi-certified"
+      );
       const { data: ofRow } = await service
         .from("of_settings")
         .select("results_indicators_method, qualiopi_activities")
@@ -89,10 +92,12 @@ export default async function Page({ params }: Props) {
           ? ofRow.results_indicators_method
           : null;
       qualiopiCertified = await loadQualiopiCertified(service);
+      showOpcoPublic = await loadShowOpcoPublic(service);
     }
   } catch {
     resultsIndicatorsMethod = null;
     qualiopiCertified = false;
+    showOpcoPublic = false;
   }
 
   const jsonLd = {
@@ -110,6 +115,7 @@ export default async function Page({ params }: Props) {
         badgeMeta={badgeMeta}
         resultsIndicatorsMethod={resultsIndicatorsMethod}
         qualiopiCertified={qualiopiCertified}
+        showOpcoPublic={showOpcoPublic}
       />
     </EdgePremiumShell>
   );

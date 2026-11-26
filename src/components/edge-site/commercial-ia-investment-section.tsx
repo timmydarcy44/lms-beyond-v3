@@ -152,7 +152,7 @@ export function CommercialIaInvestmentSection({ selectedAddons, onToggleAddon }:
               dont {addonsTotal}€ d&apos;approfondissements personnalisés
             </p>
           ) : null}
-          <p className="mt-2 text-[13px] text-black/35">Financement OPCO — on t&apos;accompagne dans les démarches</p>
+          <p className="mt-2 text-[13px] text-black/35">Financement par l&apos;entreprise cliente — devis sur demande</p>
 
           <Link
             href={POSTULER_HREF}

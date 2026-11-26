@@ -106,7 +106,7 @@ export function buildTrainingModuleDetail(module: TrainingModule): TrainingModul
     faq: [
       {
         q: "La formation est-elle finançable ?",
-        a: "Oui — OPCO, plan de développement des compétences, CPF entreprise selon éligibilité.",
+        a: "Financement par l'entreprise cliente. Contactez-nous pour un devis adapté.",
       },
       {
         q: "Quelle certification est délivrée ?",

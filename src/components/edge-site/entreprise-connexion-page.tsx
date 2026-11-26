@@ -244,7 +244,7 @@ export function EntrepriseConnexionPage() {
           </div>
           <ul className="mb-6 space-y-3 text-[14px] font-semibold">
             {(formationIntent
-              ? ["Devis & convention Qualiopi", "SIRET et adresse entreprise", "Collaborateurs 100 % optionnels"]
+              ? ["Devis & convention de formation", "SIRET et adresse entreprise", "Collaborateurs 100 % optionnels"]
               : ["3 licences RH incluses", "Invitations en quelques clics", "Accès à Byound Online"]
             ).map((item) => (
               <li key={item} className="flex items-center gap-3">

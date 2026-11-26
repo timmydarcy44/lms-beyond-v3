@@ -543,7 +543,7 @@ export function PostulerApplicationForm({ parcoursSlug, parcoursTitre, parcoursP
                     ))}
                   </div>
                   {formData.financement === "oui" ? (
-                    <p className="mt-3 text-[13px] text-black/40">On t&apos;accompagne dans les démarches OPCO si besoin.</p>
+                    <p className="mt-3 text-[13px] text-black/40">On t&apos;accompagne pour monter le devis avec votre entreprise.</p>
                   ) : null}
                 </fieldset>
 

@@ -46,6 +46,7 @@ import {
   HERO_DIAGNOSTIC_BADGES,
 } from "@/lib/training-courses/qualiopi-content";
 import type { TrainingCoursePublic } from "@/lib/training-courses/types";
+import { buildPublicRecognition } from "@/lib/training-courses/public-recognition";
 
 const NAV_SECTIONS = [
   { id: "test", label: "Test" },
@@ -66,6 +67,8 @@ type Props = {
   resultsIndicatorsMethod?: string | null;
   /** of_settings.qualiopi_certified — front public OPCO. */
   qualiopiCertified?: boolean;
+  /** of_settings.qualiopi_activities.show_opco_public — désactivé par défaut. */
+  showOpcoPublic?: boolean;
 };
 
 function TrainingSectionNav({ items }: { items: { id: string; label: string }[] }) {
@@ -280,6 +283,7 @@ export function EdgeTrainingDetailPage({
   badgeMeta,
   resultsIndicatorsMethod = null,
   qualiopiCertified = false,
+  showOpcoPublic = false,
 }: Props) {
   const { links } = useEdgePremiumConfig();
   const detail = useMemo(
@@ -291,13 +295,27 @@ export function EdgeTrainingDetailPage({
   const heroImage = course.cover_url;
   const showPricing = isBlockVisible(detail, "pricing");
 
+  const publicRecognition = useMemo(
+    () =>
+      buildPublicRecognition(course, {
+        badgeMetaName: badgeMeta?.name ?? detail.badgeLabel,
+      }),
+    [course, badgeMeta, detail.badgeLabel],
+  );
   const pedagogicalObjectives = useMemo(() => buildPedagogicalObjectives(detail), [detail]);
-  const skillRows = useMemo(() => buildSkillLevelRows(detail), [detail]);
+  const skillRows = useMemo(
+    () =>
+      buildSkillLevelRows(
+        detail,
+        publicRecognition.badgeLabel ?? "Attestation de fin de formation",
+      ),
+    [detail, publicRecognition.badgeLabel],
+  );
   const evaluationModalities = useMemo(() => buildEvaluationModalities(detail), [detail]);
   const pedagogicalMethods = useMemo(() => buildPedagogicalMethods(detail), [detail]);
   const qualiopiInfo = useMemo(
-    () => buildQualiopiInfo(course, detail, { qualiopiCertified }),
-    [course, detail, qualiopiCertified],
+    () => buildQualiopiInfo(course, detail, { qualiopiCertified, showOpcoPublic }),
+    [course, detail, qualiopiCertified, showOpcoPublic],
   );
   const qualityIndicators = useMemo(
     () =>
@@ -667,7 +685,7 @@ export function EdgeTrainingDetailPage({
                 </div>
               ))}
 
-              {isBlockVisible(detail, "open_badge") && detail.badgeLabel ? (
+              {isBlockVisible(detail, "open_badge") && publicRecognition.hasOpenBadge && detail.badgeLabel ? (
                 <div className="rounded-[20px] border border-[#050505]/8 bg-white p-5 sm:col-span-2">
                   <p className="text-xs font-semibold uppercase tracking-wider text-[#050505]/40">
                     Reconnaissance — Open Badge
@@ -807,29 +825,30 @@ export function EdgeTrainingDetailPage({
             </div>
           </section>
 
-          {/* 12. RECONNAISSANCE */}
-          <section className="scroll-mt-40">
-            <div className="rounded-[24px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.06] to-white p-7">
-              <div className="flex items-center gap-4">
-                {detail.badgeImageUrl ? (
-                  <div className="relative h-16 w-16 overflow-hidden rounded-xl">
-                    <Image src={detail.badgeImageUrl} alt="" fill className="object-cover" unoptimized />
+          {/* 12. RECONNAISSANCE — même source que « Type de reconnaissance » / carte Tarifs */}
+          {publicRecognition.text && publicRecognition.text !== "À rédiger" ? (
+            <section className="scroll-mt-40">
+              <div className="rounded-[24px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.06] to-white p-7">
+                <div className="flex items-center gap-4">
+                  {publicRecognition.hasOpenBadge && detail.badgeImageUrl ? (
+                    <div className="relative h-16 w-16 overflow-hidden rounded-xl">
+                      <Image src={detail.badgeImageUrl} alt="" fill className="object-cover" unoptimized />
+                    </div>
+                  ) : (
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-edge-accent/10 text-edge-accent">
+                      <Award className="h-7 w-7" />
+                    </span>
+                  )}
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-[-0.02em]">Reconnaissance</h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#050505]/60">
+                      {publicRecognition.text}
+                    </p>
                   </div>
-                ) : (
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-edge-accent/10 text-edge-accent">
-                    <Award className="h-7 w-7" />
-                  </span>
-                )}
-                <div>
-                  <h2 className="text-xl font-semibold tracking-[-0.02em]">Reconnaissance</h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#050505]/60">
-                    Cette formation permet l&apos;obtention d&apos;un Open Badge Byound vérifiable en ligne
-                    attestant des compétences acquises.
-                  </p>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          ) : null}
 
           {/* 13. APRÈS LA FORMATION */}
           <section className="scroll-mt-40">

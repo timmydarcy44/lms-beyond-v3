@@ -187,7 +187,9 @@ export function ExpertsDirectory({
             header: "Docs",
             cell: (expert) => {
               const docs = parseExpertDocuments(expert.references);
-              const summary = summarizeExpectedDocs(docs);
+              const summary = summarizeExpectedDocs(docs, {
+                employmentStatus: (expert as { employment_status?: string | null }).employment_status,
+              });
               if (summary.received === 0) {
                 return <StatusPill label="Aucun doc" tone="danger" />;
               }

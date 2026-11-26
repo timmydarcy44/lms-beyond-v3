@@ -277,7 +277,7 @@ export const MARKETING_PAGES = {
     label: "Financement",
     hero: {
       title: "Financez votre parcours.",
-      subtitle: "Alternance, OPCO, aides régionales et solutions de paiement — nous vous guidons.",
+      subtitle: "Alternance, aides régionales et solutions de paiement — nous vous guidons.",
       tone: "dark",
     },
     sections: [

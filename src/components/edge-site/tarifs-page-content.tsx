@@ -175,8 +175,8 @@ const FAQ = [
     a: "Oui, vous composez votre formule librement.",
   },
   {
-    q: "Est-ce éligible aux financements OPCO ?",
-    a: "Nos interventions Byound sont éligibles au financement via votre OPCO. Contactez-nous pour un dossier.",
+    q: "Comment financer une formation Byound ?",
+    a: "Financement par l'entreprise cliente. Contactez-nous pour un devis adapté à votre contexte.",
   },
 ] as const;
 

@@ -10,17 +10,17 @@ import {
   QUALIOPI_RESULTS_FALLBACK,
   formatQualiopiTariff,
   pedagogicalModalityLabel,
-  recognitionTypeLabel,
   resolveResultsMethod,
 } from "@/lib/training-courses/qualiopi-fiche";
 import {
   resolveContactReferent,
   resolveHandicapReferent,
 } from "@/lib/training-courses/public-referents";
+import { buildPublicRecognition } from "@/lib/training-courses/public-recognition";
 import {
   QUALIOPI_ACCESS_DELAYS_COPY,
+  QUALIOPI_ACCESSIBILITY_COPY,
   QUALIOPI_COMPLAINTS_COPY,
-  QUALIOPI_FINANCING_COPY,
   QUALIOPI_SUCCESS_RATE_METHOD,
   resolvePublicFinancingCopy,
 } from "@/lib/qualiopi/public-copy";
@@ -106,12 +106,18 @@ const EVALUATION_MODES = [
 ];
 
 /** Tableau « Compétences développées » : compétence · niveau · évaluation · reconnaissance. */
-export function buildSkillLevelRows(detail: TrainingCourseDetail): SkillLevelRow[] {
+export function buildSkillLevelRows(
+  detail: TrainingCourseDetail,
+  recognitionLabel?: string | null,
+): SkillLevelRow[] {
+  const recognition =
+    String(recognitionLabel ?? "").trim() ||
+    (detail.badgeLabel ? detail.badgeLabel : "Attestation de fin de formation");
   return detail.competences.map((skill, index) => ({
     skill,
     level: index === 0 ? 5 : 4,
     evaluation: EVALUATION_MODES[index % EVALUATION_MODES.length],
-    recognition: "Open Badge Byound",
+    recognition,
   }));
 }
 
@@ -150,14 +156,11 @@ export type QualiopiInfoItem = {
   wide?: boolean;
 };
 
-const DEFAULT_ACCESSIBILITY =
-  "Formation accessible aux personnes en situation de handicap. Adaptations possibles sur demande, en lien si besoin avec nos partenaires (Agefiph, Cap Emploi).";
-
 /** Bloc « Informations » enrichi conforme Qualiopi. */
 export function buildQualiopiInfo(
   course: TrainingCoursePublic,
   detail: TrainingCourseDetail,
-  opts?: { qualiopiCertified?: boolean },
+  opts?: { qualiopiCertified?: boolean; showOpcoPublic?: boolean },
 ): QualiopiInfoItem[] {
   const modalityDetail = String(course.pedagogical_modality_detail ?? "").trim();
   const modalityShort =
@@ -166,11 +169,9 @@ export function buildQualiopiInfo(
     null;
   // Champ « Modalités pédagogiques » = détail saisi ; sinon libellé court / formats.
   const modalites = modalityDetail || modalityShort || "À rédiger";
-  const recognition = recognitionTypeLabel(course.recognition_type);
-  const recognitionDetail = String(course.recognition_detail ?? "").trim();
-  const recognitionValue = recognition
-    ? [recognition, recognitionDetail].filter(Boolean).join(" — ")
-    : "À rédiger";
+  const recognition = buildPublicRecognition(course, {
+    badgeMetaName: detail.badgeLabel,
+  });
   const publicConcerne = detail.audience.length
     ? detail.audience.join(" · ")
     : "Collaborateurs et managers concernés par la montée en compétences.";
@@ -183,17 +184,17 @@ export function buildQualiopiInfo(
     : null;
   const contactReferent = resolveContactReferent(course.contact_referent);
   const handicapReferent = resolveHandicapReferent(course.handicap_referent);
-  const financing = resolvePublicFinancingCopy(
-    course.financing_modalities,
-    Boolean(opts?.qualiopiCertified),
-  );
+  const financing = resolvePublicFinancingCopy(course.financing_modalities, {
+    showOpcoPublic: opts?.showOpcoPublic === true,
+    qualiopiCertified: Boolean(opts?.qualiopiCertified),
+  });
 
   return [
     { label: "Public concerné", value: publicConcerne, wide: true },
     { label: "Prérequis", value: course.prerequisites || "Aucun prérequis spécifique." },
     { label: "Durée", value: course.duration || "Sur mesure selon le diagnostic." },
     { label: "Modalités pédagogiques", value: modalites, wide: true },
-    { label: "Type de reconnaissance", value: recognitionValue, wide: true },
+    { label: "Type de reconnaissance", value: recognition.text, wide: true },
     {
       label: "Modalités de financement",
       value: financing,
@@ -206,7 +207,7 @@ export function buildQualiopiInfo(
     },
     {
       label: "Accessibilité handicap",
-      value: DEFAULT_ACCESSIBILITY,
+      value: QUALIOPI_ACCESSIBILITY_COPY,
       wide: true,
     },
     { label: "Délais d'accès", value: QUALIOPI_ACCESS_DELAYS_COPY, wide: true },

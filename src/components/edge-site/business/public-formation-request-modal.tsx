@@ -201,8 +201,7 @@ export function PublicFormationRequestModal({
                   defaultValue="direct"
                   disabled={loading}
                 >
-                  <option value="direct">Fonds propres</option>
-                  <option value="opco">OPCO</option>
+                  <option value="direct">Financement entreprise</option>
                 </select>
               </label>
               <label className="block text-sm">
@@ -212,7 +211,7 @@ export function PublicFormationRequestModal({
                   rows={3}
                   className={fieldClass}
                   disabled={loading}
-                  placeholder="Contexte, contraintes, OPCO…"
+                  placeholder="Contexte, contraintes, planning…"
                 />
               </label>
               {error ? <p className="text-sm text-red-600">{error}</p> : null}

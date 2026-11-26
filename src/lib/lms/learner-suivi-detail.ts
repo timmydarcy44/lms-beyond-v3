@@ -726,12 +726,34 @@ export async function loadLearnerSuiviDetail(
 
   // Feuilles chronologiques → temps contenu estimé (écarts bornés),
   // puis plafonné au temps actif/connecté mesuré (jamais > séances).
+  const leafLabelById = new Map<string, string>();
+  for (const section of outline) {
+    const sTitle = section.title || "Module";
+    for (const ch of section.chapters) {
+      const chTitle = ch.title || "Chapitre";
+      if (ch.id) leafLabelById.set(ch.id, `${sTitle} › ${chTitle}`);
+      for (const sub of ch.subchapters) {
+        if (sub.id) leafLabelById.set(sub.id, `${sTitle} › ${chTitle} › ${sub.title || "Leçon"}`);
+      }
+    }
+  }
+  const looksTechnicalId = (raw: string) =>
+    /^(sub)?chapter[-_]?\d/i.test(raw) || /^[0-9a-f-]{20,}$/i.test(raw);
+
   const leavesChrono = (leaves as Array<Record<string, unknown>>)
-    .map((l) => ({
-      leafId: String(l.leaf_id ?? ""),
-      title: String(l.leaf_title ?? "Contenu").trim() || "Contenu",
-      completedAt: String(l.completed_at ?? ""),
-    }))
+    .map((l) => {
+      const leafId = String(l.leaf_id ?? "");
+      const rawTitle = String(l.leaf_title ?? "").trim();
+      const fromOutline = leafLabelById.get(leafId);
+      const title =
+        fromOutline ||
+        (!rawTitle || looksTechnicalId(rawTitle) ? fromOutline || "Contenu" : rawTitle);
+      return {
+        leafId,
+        title,
+        completedAt: String(l.completed_at ?? ""),
+      };
+    })
     .filter((l) => l.leafId && l.completedAt)
     .sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
 

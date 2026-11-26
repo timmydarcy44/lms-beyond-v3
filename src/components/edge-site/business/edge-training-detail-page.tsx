@@ -64,6 +64,8 @@ type Props = {
   badgeMeta?: BadgeMeta | null;
   /** Méthode de calcul globale (of_settings.results_indicators_method). */
   resultsIndicatorsMethod?: string | null;
+  /** of_settings.qualiopi_certified — front public OPCO. */
+  qualiopiCertified?: boolean;
 };
 
 function TrainingSectionNav({ items }: { items: { id: string; label: string }[] }) {
@@ -277,6 +279,7 @@ export function EdgeTrainingDetailPage({
   course,
   badgeMeta,
   resultsIndicatorsMethod = null,
+  qualiopiCertified = false,
 }: Props) {
   const { links } = useEdgePremiumConfig();
   const detail = useMemo(
@@ -292,7 +295,10 @@ export function EdgeTrainingDetailPage({
   const skillRows = useMemo(() => buildSkillLevelRows(detail), [detail]);
   const evaluationModalities = useMemo(() => buildEvaluationModalities(detail), [detail]);
   const pedagogicalMethods = useMemo(() => buildPedagogicalMethods(detail), [detail]);
-  const qualiopiInfo = useMemo(() => buildQualiopiInfo(course, detail), [course, detail]);
+  const qualiopiInfo = useMemo(
+    () => buildQualiopiInfo(course, detail, { qualiopiCertified }),
+    [course, detail, qualiopiCertified],
+  );
   const qualityIndicators = useMemo(
     () =>
       buildQualityIndicators({

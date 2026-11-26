@@ -132,10 +132,10 @@ export function DocumentsView({ documents, folder }: { documents: ExpertDocument
                   key={document.id}
                   leading={<span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1E2130]"><FileText className="h-4 w-4" /></span>}
                   title={document.name}
-                  subtitle={`${document.folder === "contrat" ? "Contrat" : document.folder === "cv" ? "CV" : document.folder === "attestation" ? "Attestation" : document.folder === "modele" ? "Exemple de facture" : document.folder === "facture" ? "Facture" : "Document"} · ${document.status === "signed" ? `signé le ${when}` : document.status === "to_sign" ? `reçu le ${when}` : `déposé le ${when}`}`}
+                  subtitle={`${document.folder === "contrat" ? "Contrat" : document.folder === "cv" ? "CV" : document.folder === "attestation" ? "Attestation" : document.folder === "modele" ? "Exemple de facture" : document.folder === "facture" ? "Facture" : "Document"} · ${document.folder === "cv" ? `déposé le ${when}` : document.status === "signed" ? `signé le ${when}` : document.status === "to_sign" ? `reçu le ${when}` : `déposé le ${when}`}`}
                   trailing={
                     <span className="flex items-center gap-2">
-                      {expiry ? <StatusPill tone="alert">{expiry.label}</StatusPill> : <StatusPill tone={document.status === "to_sign" ? "solid" : document.status === "signed" ? "green" : "grey"}>{document.status === "to_sign" ? "À signer" : document.status === "signed" ? "Signé" : "Déposé"}</StatusPill>}
+                      {expiry ? <StatusPill tone="alert">{expiry.label}</StatusPill> : <StatusPill tone={document.folder === "cv" ? "grey" : document.status === "to_sign" ? "solid" : document.status === "signed" ? "green" : "grey"}>{document.folder === "cv" ? (document.status === "validated" ? "Validé" : "Déposé") : document.status === "to_sign" ? "À signer" : document.status === "signed" ? "Signé" : "Déposé"}</StatusPill>}
                       {document.url ? <a href={document.url} aria-label={`Télécharger ${document.name}`} className="rounded-full p-2 text-[#DADDE4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB4B8]"><Download className="h-4 w-4" /></a> : null}
                     </span>
                   }

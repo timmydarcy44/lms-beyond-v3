@@ -171,7 +171,7 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose, trackin
         ) : null}
         <div className="flex flex-1 flex-col items-center justify-center px-6">
           <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-10 text-center backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-300">Beyond Flash</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-300">Byound Flash</p>
             <p className="mt-4 text-3xl font-extrabold tracking-tight text-white">
               Cartes révisées : {reviewedCount}/{total}
             </p>
@@ -239,7 +239,7 @@ export function FlashcardPlayer({ cards, className, typingMode, onClose, trackin
       <div className="relative z-10 flex min-h-0 flex-1 flex-col px-4 pb-8 pt-14 sm:px-8">
         <div className="mx-auto w-full max-w-3xl shrink-0">
           <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-            <span>Beyond Flash</span>
+            <span>Byound Flash</span>
             <span className="tabular-nums">
               {index + 1}/{total}
             </span>

@@ -58,9 +58,10 @@ function quizColor(score: number | null): string {
 }
 
 function kpi(label: string, value: string, sub?: string) {
+  const valueClass = label.toLowerCase().includes("mail") ? "kpi-value kpi-value-email" : "kpi-value";
   return `<div class="kpi">
     <div class="kpi-label">${esc(label)}</div>
-    <div class="kpi-value">${esc(value)}</div>
+    <div class="${valueClass}" title="${esc(value)}">${esc(value)}</div>
     ${sub ? `<div class="kpi-sub">${esc(sub)}</div>` : ""}
   </div>`;
 }
@@ -425,6 +426,13 @@ export function buildSuiviReleveHtml(detail: SuiviLearnerDetail, generatedAtIso:
       font-size: 22px;
       font-weight: 800;
       letter-spacing: -0.03em;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .kpi-value-email {
+      font-size: 13px;
+      line-height: 1.3;
+      letter-spacing: 0;
     }
     .kpi-sub {
       margin-top: 4px;

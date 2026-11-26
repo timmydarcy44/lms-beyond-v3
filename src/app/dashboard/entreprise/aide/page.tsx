@@ -94,7 +94,7 @@ export default function EntrepriseAidePage() {
             <div>
               <p className="text-sm font-semibold text-gray-900">Réclamation qualité</p>
               <p className="text-xs text-gray-500">
-                Formation, parcours ou service — registre Qualiopi, réponse sous 15 jours ouvrés
+                Formation, parcours ou service — registre Qualiopi, accusé sous 2 jours ouvrés, réponse écrite sous 10 jours ouvrés
               </p>
             </div>
           </Link>

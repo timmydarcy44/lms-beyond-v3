@@ -35,6 +35,8 @@ type OfSettings = {
   reclamation_ack_business_days: string | null;
   reclamation_reply_business_days: string | null;
   signalement_ack_business_days: string | null;
+  /** true = front public affiche les financements réels (OPCO compris). */
+  qualiopi_certified: string | null;
 };
 
 /** Activités affichées dans les paramètres (hors flags techniques certifying / pfst). */
@@ -67,9 +69,10 @@ const EMPTY: OfSettings = {
   referent_qualite_user_id: "",
   referent_signalement_user_id: "",
   lms_inactive_alert_days: "7",
-  reclamation_ack_business_days: "5",
-  reclamation_reply_business_days: "15",
+  reclamation_ack_business_days: "2",
+  reclamation_reply_business_days: "10",
   signalement_ack_business_days: "2",
+  qualiopi_certified: "false",
 };
 
 export function OfSettingsForm() {
@@ -91,6 +94,14 @@ export function OfSettingsForm() {
         };
         if (json.settings) {
           const { qualiopi_activities, ...rest } = json.settings;
+          const certified =
+            typeof (json.settings as { qualiopi_certified?: boolean }).qualiopi_certified ===
+            "boolean"
+              ? Boolean((json.settings as { qualiopi_certified?: boolean }).qualiopi_certified)
+              : Boolean(
+                  (qualiopi_activities as { qualiopi_certified?: boolean } | null)
+                    ?.qualiopi_certified,
+                );
           setForm({
             ...EMPTY,
             ...Object.fromEntries(
@@ -99,6 +110,7 @@ export function OfSettingsForm() {
                 value == null ? "" : String(value),
               ]),
             ),
+            qualiopi_certified: certified ? "true" : "false",
           } as OfSettings);
           setActivities(parseActivityProfile(qualiopi_activities));
         }
@@ -312,6 +324,21 @@ export function OfSettingsForm() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="md:col-span-2 flex items-start justify-between gap-4 rounded-xl border border-[#262A4A] bg-[#0A0C1B]/60 p-4">
+            <div>
+              <Label className="text-[#F3F4FA]">Certification Qualiopi obtenue</Label>
+              <p className="mt-1 text-xs text-[#A3A8C7]">
+                Faux (défaut) : le site public et les documents remis au client affichent la phrase
+                « Qualiopi en cours » (OPCO non présenté comme disponible). Vrai : le front
+                réaffiche les modalités de financement réelles de chaque fiche.
+              </p>
+            </div>
+            <Switch
+              checked={form.qualiopi_certified === "true"}
+              onCheckedChange={(next) => set("qualiopi_certified", next ? "true" : "false")}
+            />
           </div>
 
           {(

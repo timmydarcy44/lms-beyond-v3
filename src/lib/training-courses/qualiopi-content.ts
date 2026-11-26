@@ -22,6 +22,7 @@ import {
   QUALIOPI_COMPLAINTS_COPY,
   QUALIOPI_FINANCING_COPY,
   QUALIOPI_SUCCESS_RATE_METHOD,
+  resolvePublicFinancingCopy,
 } from "@/lib/qualiopi/public-copy";
 
 export type DiagnosticStep = {
@@ -121,7 +122,8 @@ export type PedagogicalObjectivesBlock = {
 
 const ISSUE_PREFIX_RE =
   /^à l['’]issue de (cette |la )?formation[,:\s]*/i;
-const CAPABLE_PREFIX_RE = /^(le |la |l['’])?participant(e)? sera capable de\s*/i;
+const CAPABLE_PREFIX_RE =
+  /^(le |la |l['’])?(participant(e)?|stagiaire) sera capable de\s*/i;
 
 /** Objectifs pédagogiques — intro unique, sans doublon sur chaque item. */
 export function buildPedagogicalObjectives(detail: TrainingCourseDetail): PedagogicalObjectivesBlock {
@@ -155,6 +157,7 @@ const DEFAULT_ACCESSIBILITY =
 export function buildQualiopiInfo(
   course: TrainingCoursePublic,
   detail: TrainingCourseDetail,
+  opts?: { qualiopiCertified?: boolean },
 ): QualiopiInfoItem[] {
   const modalityDetail = String(course.pedagogical_modality_detail ?? "").trim();
   const modalityShort =
@@ -180,8 +183,10 @@ export function buildQualiopiInfo(
     : null;
   const contactReferent = resolveContactReferent(course.contact_referent);
   const handicapReferent = resolveHandicapReferent(course.handicap_referent);
-  const financing =
-    String(course.financing_modalities ?? "").trim() || QUALIOPI_FINANCING_COPY;
+  const financing = resolvePublicFinancingCopy(
+    course.financing_modalities,
+    Boolean(opts?.qualiopiCertified),
+  );
 
   return [
     { label: "Public concerné", value: publicConcerne, wide: true },

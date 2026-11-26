@@ -74,21 +74,25 @@ export default async function Page({ params }: Props) {
   const badgeMeta = await loadBadgeMeta(course.badge_class_id);
 
   let resultsIndicatorsMethod: string | null = null;
+  let qualiopiCertified = false;
   try {
     const service = await getServiceRoleClientOrFallback();
     if (service) {
+      const { loadQualiopiCertified } = await import("@/lib/qualiopi/of-qualiopi-certified");
       const { data: ofRow } = await service
         .from("of_settings")
-        .select("results_indicators_method")
+        .select("results_indicators_method, qualiopi_activities")
         .limit(1)
         .maybeSingle();
       resultsIndicatorsMethod =
         typeof ofRow?.results_indicators_method === "string"
           ? ofRow.results_indicators_method
           : null;
+      qualiopiCertified = await loadQualiopiCertified(service);
     }
   } catch {
     resultsIndicatorsMethod = null;
+    qualiopiCertified = false;
   }
 
   const jsonLd = {
@@ -105,6 +109,7 @@ export default async function Page({ params }: Props) {
         course={course}
         badgeMeta={badgeMeta}
         resultsIndicatorsMethod={resultsIndicatorsMethod}
+        qualiopiCertified={qualiopiCertified}
       />
     </EdgePremiumShell>
   );

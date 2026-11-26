@@ -162,7 +162,7 @@ export async function sendFormationDocument(
         meta: { dossier_id: params.dossierId, document_id: doc.id },
         to: p.email!,
         from: EDGE_COCKPIT_FROM,
-        replyTo: "contact@byound.fr",
+        replyTo: "jessica.contentin@byound.fr",
         subject: `Convocation — ${courseTitle || "votre formation Byound"}`,
         html: mail.html,
         attachments: [attachment],

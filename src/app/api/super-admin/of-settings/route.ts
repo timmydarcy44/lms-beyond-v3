@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { HANDICAP_REFERENT_CANDIDATES } from "@/lib/handicap/referent-candidates";
 import { parseActivityProfile } from "@/lib/qualiopi/activity-profile";
+import {
+  mergeCertifiedIntoActivities,
+  readQualiopiCertifiedFromRow,
+} from "@/lib/qualiopi/of-qualiopi-certified";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 const OF_SETTINGS_ID = "00000000-0000-4000-8000-000000000001";
@@ -84,8 +88,15 @@ export async function GET() {
     email: String(p.email ?? ""),
   }));
 
+  const settings = data
+    ? {
+        ...data,
+        qualiopi_certified: readQualiopiCertifiedFromRow(data as Record<string, unknown>),
+      }
+    : null;
+
   return NextResponse.json({
-    settings: data ?? null,
+    settings,
     handicapReferentOptions,
     staffOptions,
   });
@@ -176,6 +187,20 @@ export async function PATCH(req: NextRequest) {
         ? null
         : String(body.qualiopi_audit_at).slice(0, 10);
   }
+  let certifiedToStore: boolean | undefined;
+  if (body.qualiopi_certified !== undefined) {
+    const raw = body.qualiopi_certified;
+    certifiedToStore = raw === true || raw === "true" || raw === 1 || raw === "1";
+    patch.qualiopi_certified = certifiedToStore;
+  }
+
+  // Si le JSON activités est patché en même temps, y coller le flag (repli sans colonne).
+  if (certifiedToStore !== undefined && patch.qualiopi_activities) {
+    patch.qualiopi_activities = mergeCertifiedIntoActivities(
+      patch.qualiopi_activities as Record<string, unknown>,
+      certifiedToStore,
+    );
+  }
 
   let { data, error } = await service
     .from("of_settings")
@@ -183,10 +208,27 @@ export async function PATCH(req: NextRequest) {
     .select("*")
     .single();
 
+  if (error && /qualiopi_certified/i.test(error.message) && certifiedToStore !== undefined) {
+    delete patch.qualiopi_certified;
+    const currentAct =
+      (patch.qualiopi_activities as Record<string, unknown> | undefined) ??
+      parseActivityProfile(undefined);
+    patch.qualiopi_activities = mergeCertifiedIntoActivities(
+      currentAct as Record<string, unknown>,
+      certifiedToStore,
+    );
+    ({ data, error } = await service
+      .from("of_settings")
+      .upsert({ id: OF_SETTINGS_ID, ...patch }, { onConflict: "id" })
+      .select("*")
+      .single());
+  }
+
   if (error && /qualiopi_activities|qualiopi_audit/i.test(error.message)) {
     delete patch.qualiopi_activities;
     delete patch.qualiopi_audit_type;
     delete patch.qualiopi_audit_at;
+    delete patch.qualiopi_certified;
     ({ data, error } = await service
       .from("of_settings")
       .upsert({ id: OF_SETTINGS_ID, ...patch }, { onConflict: "id" })

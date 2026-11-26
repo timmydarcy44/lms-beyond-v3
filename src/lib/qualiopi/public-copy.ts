@@ -18,6 +18,20 @@ export const QUALIOPI_HANDICAP_REFERENT_SHORT =
 export const QUALIOPI_FINANCING_COPY =
   "Financement par l'entreprise cliente. Prise en charge OPCO possible après obtention de la certification Qualiopi (en cours).";
 
+/**
+ * Front public uniquement : tant que Qualiopi n’est pas obtenue, on masque toute
+ * présentation d’OPCO comme disponible et on force la phrase « en cours ».
+ * Le back-office garde les valeurs réelles (OPCO sélectionnable).
+ */
+export function resolvePublicFinancingCopy(
+  courseFinancing: string | null | undefined,
+  qualiopiCertified: boolean,
+): string {
+  if (!qualiopiCertified) return QUALIOPI_FINANCING_COPY;
+  const raw = String(courseFinancing ?? "").trim();
+  return raw || QUALIOPI_FINANCING_COPY;
+}
+
 /** Délais d'accès — fiche catalogue / livret. */
 export const QUALIOPI_ACCESS_DELAYS_COPY =
   "Intra : démarrage sous 3 à 4 semaines après acceptation du devis. Modules en ligne : accès sous 48 h ouvrées.";

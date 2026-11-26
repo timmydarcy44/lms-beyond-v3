@@ -165,7 +165,7 @@ export function CrmEmailsClient({
             {lockedRecipient.name}
             <span className="font-medium text-[#9AA3BD]">{lockedRecipient.email}</span>
           </p>
-          <p className="mt-2 text-[13px] text-[#9AA3BD]">Réponse à contact@byound.fr</p>
+          <p className="mt-2 text-[13px] text-[#9AA3BD]">Réponse à jessica.contentin@byound.fr</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -372,7 +372,7 @@ function InboxPreview({
             <div className="min-w-0 text-sm">
               <p className="font-extrabold text-[#12141C]">Byound <span className="font-medium text-[#5C6578]">&lt;noreply@byound.fr&gt;</span></p>
               <p className="mt-0.5 text-[#5C6578]">À {toName} · {toEmail}</p>
-              <p className="text-[#5C6578]">Répondre à contact@byound.fr</p>
+              <p className="text-[#5C6578]">Répondre à jessica.contentin@byound.fr</p>
             </div>
           </div>
         </div>

@@ -943,7 +943,7 @@ function PedagogyPanel({ data }: { data: SuiviLearnerDetail }) {
                     style={{ borderColor: BORDER }}
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-[12px] font-semibold">{leaf.title}</p>
+                      <p className="line-clamp-2 text-[12px] font-semibold" title={leaf.title}>{leaf.title}</p>
                       <p className="text-[10px]" style={{ color: TERT }}>
                         {leafKindLabel(leaf.kind)} ·{" "}
                         {fmtDate(leaf.completedAt, { dateStyle: "short", timeStyle: "short" })}

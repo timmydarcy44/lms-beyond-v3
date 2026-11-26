@@ -62,7 +62,8 @@ export const QUALIOPI_PROCESS_DOCS: Array<{
 Décrire comment toute réclamation relative à une action de formation est recueillie, traitée et clôturée.
 
 ## Canaux
-- Module Qualité dans /super/crm/qualiopi/qualite
+- Formulaire de réclamation dans les espaces apprenant et entreprise, enregistré automatiquement dans le registre Qualité
+- E-mail : jessica.contentin@byound.fr
 - Questionnaire de satisfaction (note basse)
 
 ## Délais
@@ -83,7 +84,7 @@ Registre des réclamations + cette procédure.
 Amélioration continue à partir des retours, réclamations, risques et veilles.
 
 ## Preuve
-Module /super/crm/qualiopi/qualite + registre des risques.
+Byound Control → Qualité → Plan d’amélioration (export PDF) + registre des risques.
 `,
   },
   {

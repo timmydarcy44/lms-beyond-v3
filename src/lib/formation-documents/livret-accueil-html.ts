@@ -1,7 +1,10 @@
 /**
- * Livret d'accueil Qualiopi — source unique HTML → PDF (version 1.1).
- * Aligné avec `src/lib/qualiopi/public-copy.ts`.
+ * Livret d'accueil Qualiopi — version 1.1.
+ * PDF canonique : `docs/formation-templates/Livret_accueil_Byound-v1.1.pdf`
+ * (HTML ci-dessous = repli si le fichier est absent).
  */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { BYOUND_COMPANY, companyPostalAddress } from "@/lib/company";
 import { renderHtmlToPdf } from "@/lib/formation-documents/html-pdf";
 import {
@@ -13,6 +16,12 @@ import {
   QUALIOPI_PUBLIC_CONTACT_EMAIL,
   QUALIOPI_SCHEDULE_COPY,
 } from "@/lib/qualiopi/public-copy";
+
+/** Chemin du PDF livret validé (audit). */
+export const LIVRET_ACCUEIL_PDF_PATH = path.join(
+  process.cwd(),
+  "docs/formation-templates/Livret_accueil_Byound-v1.1.pdf",
+);
 
 function esc(text: string): string {
   return String(text || "")
@@ -160,6 +169,12 @@ export function buildLivretAccueilHtml(): string {
     <h2>Réclamations</h2>
     <p>${esc(QUALIOPI_COMPLAINTS_COPY)}</p>
 
+    <h2>Signaler une situation de violence, de harcèlement ou de discrimination</h2>
+    <p>Tout stagiaire, formateur ou salarié peut signaler une situation de violence, de harcèlement ou de discrimination liée à une action de formation Byound.</p>
+    <div class="row"><div class="k">Canal</div><div>Formulaire « Signalement » dans l'espace apprenant (et espaces formateur / salarié le cas échéant).</div></div>
+    <div class="row"><div class="k">Référente</div><div>Jessica Contentin · ${esc(email)}</div></div>
+    <div class="row"><div class="k">Confidentialité</div><div>Le signalement est traité de façon confidentielle. Aucun e-mail de notification ne reprend le contenu du signalement.</div></div>
+
     <h2>Règlement intérieur</h2>
     <p>Les règles essentielles de vie en formation. Le règlement intérieur complet applicable aux stagiaires est remis avec le présent livret avant l'entrée en formation.</p>
     <div class="cards">
@@ -181,6 +196,20 @@ export function buildLivretAccueilHtml(): string {
 }
 
 export async function fillLivretAccueilPdf(): Promise<Buffer> {
+  try {
+    const staticPdf = await readFile(LIVRET_ACCUEIL_PDF_PATH);
+    if (
+      staticPdf.length > 1000 &&
+      staticPdf[0] === 0x25 &&
+      staticPdf[1] === 0x50 &&
+      staticPdf[2] === 0x44 &&
+      staticPdf[3] === 0x46
+    ) {
+      return staticPdf;
+    }
+  } catch {
+    /* fallback HTML → PDF */
+  }
   const html = buildLivretAccueilHtml();
   const pdf = await renderHtmlToPdf(html, { font: "manrope" });
   if (!pdf) throw new Error("Génération du livret d'accueil impossible");

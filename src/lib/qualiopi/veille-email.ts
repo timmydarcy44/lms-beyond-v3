@@ -31,7 +31,12 @@ export function buildVeilleWeeklyEmailHtml(input: {
       return `<li style="margin:0 0 16px;">
         <strong style="font-size:15px;">${escapeHtml(item.title)}</strong>
         ${meta ? `<p style="margin:2px 0 0;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.04em;">${escapeHtml(meta)}</p>` : ""}
-        <p style="margin:6px 0 0;color:#444;">${escapeHtml(item.summary)}</p>
+        <p style="margin:6px 0 0;color:#444;"><strong>Synthèse :</strong> ${escapeHtml(item.summary)}</p>
+        ${
+          item.recommendedAction
+            ? `<p style="margin:8px 0 0;padding:8px 10px;background:#f3f0ff;border-radius:8px;color:#3d2f9c;"><strong>Proposition :</strong> ${escapeHtml(item.recommendedAction)}</p>`
+            : ""
+        }
         ${link}
       </li>`;
     })
@@ -45,9 +50,9 @@ export function buildVeilleWeeklyEmailHtml(input: {
       <h1 style="margin:0 0 8px;font-size:24px;">${escapeHtml(input.title || "Veille formation continue")}</h1>
       <p style="margin:0 0 8px;color:#666;">Semaine du ${escapeHtml(input.weekStart)}</p>
       <p style="margin:0 0 24px;color:#333;">${escapeHtml(input.summary)}</p>
-      <h2 style="margin:0 0 12px;font-size:16px;">Actualités</h2>
+      <h2 style="margin:0 0 12px;font-size:16px;">Actualités · synthèse + proposition d’action</h2>
       <ul style="padding-left:18px;margin:0;">${items || "<li>Aucune actualité cette semaine.</li>"}</ul>
-      <p style="margin:24px 0 0;font-size:12px;color:#888;">Surligner les infos à retravailler dans /super/crm/qualiopi/veilles</p>
+      <p style="margin:24px 0 0;font-size:12px;color:#888;">Dans Byound Control → Veilles : surligne les infos à traiter (la proposition est reprise dans la note).</p>
     </div>
   </body>
 </html>`;

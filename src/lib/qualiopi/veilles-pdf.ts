@@ -126,13 +126,15 @@ export async function buildVeillesRegistrePdf(input: {
       const items = asItems(d.items).slice(0, 12);
       for (const item of items) {
         const title = String(item.title ?? "Sans titre");
-        const summary = String(item.summary ?? "").slice(0, 180);
+        const summary = String(item.summary ?? "").slice(0, 220);
+        const action = String(item.recommendedAction ?? "").slice(0, 180);
         const theme = item.theme ? String(item.theme) : "";
         line(
           `• ${title}${theme ? ` (${VEILLE_THEME_LABELS[theme as VeilleTheme] ?? theme})` : ""}`,
           { size: 8, bold: true },
         );
-        if (summary) line(`  ${summary}`, { size: 7, color: 80 });
+        if (summary) line(`  Synthèse : ${summary}`, { size: 7, color: 80 });
+        if (action) line(`  Proposition : ${action}`, { size: 7, color: 50 });
       }
       y += 3;
     }

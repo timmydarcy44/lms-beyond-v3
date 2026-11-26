@@ -23,6 +23,8 @@ async function synthesizeDigest(input: {
     id: itemId(index),
     title: snippet.title,
     summary: snippet.summary.slice(0, 420),
+    recommendedAction:
+      "Lire la source, décider si c’est à surligner (preuve Qualiopi) ou à ignorer pour cette semaine.",
     url: snippet.url ?? null,
     theme: "transversal",
     rag: snippet.rag,
@@ -41,13 +43,21 @@ async function synthesizeDigest(input: {
 
   const payload = await generateJSON(
     [
-      "Tu rédiges UNE veille unique pour un organisme de formation (Qualiopi).",
-      "Fusionne réglementaire, métier et pédagogie : ce sont des actualités / informations utiles, pas une liste de sites.",
+      "Tu rédiges UNE veille unique pour Byound, organisme de formation (Qualiopi, audit Certifopac).",
+      "Fusionne réglementaire, métier et pédagogie : actualités utiles, pas une liste de sites.",
       "Réponds uniquement en JSON.",
-      "Clés : title (string), summary (2 à 4 phrases sur les faits marquants), items (tableau de 5 à 10 actualités).",
-      "Chaque item : title (accroche d'actualité), summary (ce qui change + pourquoi ça compte pour un OF), theme (reglementaire|metier|pedagogie|transversal), rag (rag1|rag2), url (string ou null).",
-      "RAG 1 = contenus issus des sources prioritaires fournies. RAG 2 = web formation continue.",
-      "Priorise les faits issus du RAG 1. Ne liste pas de sites pour eux-mêmes. Français, factuel.",
+      "Clés racine : title (string), summary (2 à 4 phrases sur les faits marquants de la semaine), items (5 à 10 actualités).",
+      "Chaque item DOIT avoir :",
+      "- title : accroche courte",
+      "- summary : synthèse de ce que Byound a lu (2–4 phrases : faits + ce qui change pour un OF)",
+      "- recommendedAction : proposition concrète pour Timmy / Jessica — une seule phrase d’action.",
+      "  Exemples d’actions : « Surligner pour preuve ind. 23 », « Mettre à jour la procédure réclamations »,",
+      "  « Vérifier le livret / fiche financement OPCO », « Briefer les formateurs », « Ignorer (hors périmètre OF) »,",
+      "  « Ajouter au PAQ », « Mettre à jour le plan compétences formateurs ».",
+      "- theme : reglementaire|metier|pedagogie|transversal",
+      "- rag : rag1|rag2",
+      "- url : string ou null",
+      "RAG 1 = sources prioritaires. RAG 2 = web. Priorise le RAG 1. Français, factuel, actionnable.",
       "",
       "Extraits collectés :",
       JSON.stringify(
@@ -71,17 +81,18 @@ async function synthesizeDigest(input: {
             properties: {
               title: { type: "string" },
               summary: { type: "string" },
+              recommendedAction: { type: "string" },
               theme: { type: "string" },
               rag: { type: "string" },
               url: { type: ["string", "null"] },
             },
-            required: ["title", "summary"],
+            required: ["title", "summary", "recommendedAction"],
           },
         },
       },
       required: ["title", "summary", "items"],
     },
-    "Tu aides un organisme de formation à documenter sa veille Qualiopi sous forme d'actualités.",
+    "Tu aides Byound à lire sa veille Qualiopi et à décider quoi en faire concrètement.",
   );
 
   if (!payload || typeof payload !== "object") {
@@ -95,10 +106,14 @@ async function synthesizeDigest(input: {
   const rawItems = Array.isArray(payload.items) ? payload.items : [];
   const items: VeilleDigestItem[] = rawItems.slice(0, 12).map((row: Record<string, unknown>, index: number) => {
     const rag = parseVeilleRag(row.rag) ?? (index < 3 ? "rag1" : "rag2");
+    const recommendedAction =
+      String(row.recommendedAction ?? row.recommended_action ?? "").trim() ||
+      "Lire la source et décider : surligner (preuve) ou ignorer.";
     return {
       id: itemId(index),
       title: String(row.title ?? "").trim() || `Actualité ${index + 1}`,
       summary: String(row.summary ?? "").trim() || "",
+      recommendedAction,
       url: row.url ? String(row.url) : null,
       theme: parseVeilleTheme(row.theme) ?? "transversal",
       rag,

@@ -224,6 +224,7 @@ export function QualiopiVeillesPanel() {
     excerpt: string;
     url?: string | null;
     theme?: VeilleTheme | null;
+    note?: string | null;
   }) => {
     const res = await fetch("/api/super-admin/crm/qualiopi/veilles/highlights", {
       method: "POST",
@@ -235,19 +236,81 @@ export function QualiopiVeillesPanel() {
       toast.error(json.error || "Surlignage impossible");
       return;
     }
-    toast.success("Information surlignée");
+    toast.success(
+      payload.note?.trim()
+        ? "Information surlignée (proposition d’action dans la note)"
+        : "Information surlignée",
+    );
     await load();
   };
 
   const highlightItem = async (digest: VeilleDigest, item: VeilleDigestItem) => {
+    const note = item.recommendedAction?.trim()
+      ? `Proposition Byound : ${item.recommendedAction.trim()}`
+      : null;
     await saveHighlight({
       digest_id: digest.id,
       title: item.title,
       excerpt: item.summary,
       url: item.url ?? null,
       theme: (item.theme as VeilleTheme | null | undefined) ?? "transversal",
+      note,
     });
   };
+
+  const renderDigestItem = (digest: VeilleDigest, item: VeilleDigestItem) => (
+    <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+                item.rag === "rag1"
+                  ? "bg-[#F2C15A]/15 text-[#F2C15A]"
+                  : "bg-white/5 text-white/45",
+              )}
+            >
+              {item.rag === "rag1" ? "Sources prioritaires" : "Web"}
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-white">{item.title}</p>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-white/40">Synthèse</p>
+            <p className="mt-0.5 text-sm leading-relaxed text-white/70">{item.summary}</p>
+          </div>
+          {item.recommendedAction ? (
+            <div className="rounded-lg border border-[#6E5BFF]/30 bg-[#6E5BFF]/10 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#c4bcff]">
+                Proposition — quoi en faire
+              </p>
+              <p className="mt-0.5 text-sm leading-relaxed text-[#e8e4ff]">{item.recommendedAction}</p>
+            </div>
+          ) : null}
+          {item.url ? (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block text-xs text-[#9BB0FF] hover:underline"
+            >
+              Lire la source
+            </a>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void highlightItem(digest, item)}
+          className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
+        >
+          <Highlighter className="mr-1 h-3.5 w-3.5" />
+          Surligner
+        </Button>
+      </div>
+    </li>
+  );
 
   const highlightSelection = async () => {
     if (!latest) return;
@@ -322,8 +385,8 @@ export function QualiopiVeillesPanel() {
         <div>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">Veille Qualiopi</h1>
           <p className={cn("mt-1 max-w-2xl text-sm", QUALIOPI_MUTED)}>
-            Trois axes (ind. 23, 24, 25) : légale & réglementaire, compétences & métiers, innovations
-            pédagogiques. Recherche auto (sources + web) → synthèse → surlignage « Traité ».
+            Trois axes (ind. 23, 24, 25). Chaque actualité : synthèse de ce que Byound a lu +
+            proposition concrète (quoi en faire). Puis surlignage « Traité » si tu agis.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -475,48 +538,7 @@ export function QualiopiVeillesPanel() {
                         </p>
                       ) : (
                         <ul className="space-y-3">
-                          {items.map((item) => (
-                            <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 space-y-1.5">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span
-                                      className={cn(
-                                        "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-                                        item.rag === "rag1"
-                                          ? "bg-[#F2C15A]/15 text-[#F2C15A]"
-                                          : "bg-white/5 text-white/45",
-                                      )}
-                                    >
-                                      {item.rag === "rag1" ? "Sources prioritaires" : "Web"}
-                                    </span>
-                                  </div>
-                                  <p className="text-sm font-semibold text-white">{item.title}</p>
-                                  <p className="text-sm leading-relaxed text-white/65">{item.summary}</p>
-                                  {item.url ? (
-                                    <a
-                                      href={item.url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="inline-block text-xs text-[#9BB0FF] hover:underline"
-                                    >
-                                      Lire la source
-                                    </a>
-                                  ) : null}
-                                </div>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => void highlightItem(latest, item)}
-                                  className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
-                                >
-                                  <Highlighter className="mr-1 h-3.5 w-3.5" />
-                                  Surligner
-                                </Button>
-                              </div>
-                            </li>
-                          ))}
+                          {items.map((item) => renderDigestItem(latest, item))}
                         </ul>
                       )}
                     </div>
@@ -529,26 +551,7 @@ export function QualiopiVeillesPanel() {
                       Transversal
                     </h4>
                     <ul className="space-y-3">
-                      {itemsByTheme.transversal.map((item) => (
-                        <li key={item.id} className={cn(QUALIOPI_CARD_INNER, "p-4")}>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 space-y-1.5">
-                              <p className="text-sm font-semibold text-white">{item.title}</p>
-                              <p className="text-sm leading-relaxed text-white/65">{item.summary}</p>
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => void highlightItem(latest, item)}
-                              className="shrink-0 border-[#6E5BFF]/40 bg-[#6E5BFF]/10 text-[#d9d4ff] hover:bg-[#6E5BFF]/20"
-                            >
-                              <Highlighter className="mr-1 h-3.5 w-3.5" />
-                              Surligner
-                            </Button>
-                          </div>
-                        </li>
-                      ))}
+                      {itemsByTheme.transversal.map((item) => renderDigestItem(latest, item))}
                     </ul>
                   </div>
                 ) : null}

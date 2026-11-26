@@ -53,7 +53,13 @@ export const VEILLE_WEB_QUERIES = [
 export type VeilleDigestItem = {
   id: string;
   title: string;
+  /** Synthèse de l’article / information lue. */
   summary: string;
+  /**
+   * Proposition d’action pour Byound (quoi en faire concrètement :
+   * mettre à jour une procédure, surligner pour preuve Qualiopi, former, ignorer…).
+   */
+  recommendedAction?: string | null;
   url?: string | null;
   theme?: VeilleTheme | null;
   rag?: VeilleRag | null;

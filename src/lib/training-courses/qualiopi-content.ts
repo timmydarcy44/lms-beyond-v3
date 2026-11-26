@@ -8,6 +8,7 @@ import type { TrainingCourseDetail } from "@/lib/training-courses/build-detail";
 import type { TrainingCoursePublic } from "@/lib/training-courses/types";
 import {
   QUALIOPI_RESULTS_FALLBACK,
+  formatPublicTariffFaqAnswer,
   formatQualiopiTariff,
   pedagogicalModalityLabel,
   resolveResultsMethod,
@@ -17,12 +18,16 @@ import {
   resolveHandicapReferent,
 } from "@/lib/training-courses/public-referents";
 import { buildPublicRecognition } from "@/lib/training-courses/public-recognition";
+import type { TrainingCourseFaqItem } from "@/lib/training-courses/types";
 import {
-  QUALIOPI_ACCESS_DELAYS_COPY,
   QUALIOPI_ACCESSIBILITY_COPY,
   QUALIOPI_COMPLAINTS_COPY,
-  QUALIOPI_SUCCESS_RATE_METHOD,
+  QUALIOPI_FINANCING_FAQ_ANSWER,
+  QUALIOPI_SUCCESS_RATE_METHOD_BASE,
+  resolvePublicAccessDelaysCopy,
   resolvePublicFinancingCopy,
+  resolveSuccessRateMethod,
+  sanitizePublicBrandCopy,
 } from "@/lib/qualiopi/public-copy";
 
 export type DiagnosticStep = {
@@ -78,7 +83,33 @@ export const HERO_DIAGNOSTIC_BADGES = [
 
 /** Méthodes pédagogiques = uniquement la méthodologie saisie en CMS (/super). Pas de liste mock. */
 export function buildPedagogicalMethods(detail: TrainingCourseDetail): string[] {
-  return detail.methodology.map((m) => String(m ?? "").trim()).filter(Boolean);
+  return detail.methodology
+    .map((m) => sanitizePublicBrandCopy(String(m ?? "").trim()))
+    .filter(Boolean);
+}
+
+/**
+ * FAQ publique : tarif / prise en charge dérivés des champs fiche ;
+ * marque Beyond → Byound ; jamais OPCO / Qualiopi / facturation par collaborateur.
+ */
+export function resolvePublicFaqItems(
+  course: TrainingCoursePublic,
+  faq: TrainingCourseFaqItem[] | null | undefined,
+): TrainingCourseFaqItem[] {
+  const items = Array.isArray(faq) ? faq : [];
+  return items.map((item) => {
+    const q = sanitizePublicBrandCopy(String(item.q ?? "").trim());
+    let a = sanitizePublicBrandCopy(String(item.a ?? "").trim());
+    if (/quel est le tarif\b/i.test(q) || /facturé par collaborateur|abonnement\s+byound/i.test(a)) {
+      a = formatPublicTariffFaqAnswer(course);
+    } else if (
+      /prise en charge|comment (la |le )?financ/i.test(q) ||
+      /\bopco\b|\bqualiopi\b/i.test(a)
+    ) {
+      a = QUALIOPI_FINANCING_FAQ_ANSWER;
+    }
+    return { q, a };
+  });
 }
 
 /**
@@ -210,7 +241,11 @@ export function buildQualiopiInfo(
       value: QUALIOPI_ACCESSIBILITY_COPY,
       wide: true,
     },
-    { label: "Délais d'accès", value: QUALIOPI_ACCESS_DELAYS_COPY, wide: true },
+    {
+      label: "Délais d'accès",
+      value: resolvePublicAccessDelaysCopy(course.pedagogical_modality),
+      wide: true,
+    },
     { label: "Contact référent", value: contactReferent, wide: true },
     {
       label: "Réclamations",
@@ -254,11 +289,18 @@ export type QualityIndicator = {
 export const QUALITY_INDICATOR_METHODS: Record<QualityIndicatorKey, string> = {
   satisfaction:
     "Questionnaire de fin de formation : % de répondants satisfaits ou très satisfaits.",
-  success: QUALIOPI_SUCCESS_RATE_METHOD,
+  success: QUALIOPI_SUCCESS_RATE_METHOD_BASE,
   dropout: "% de participants n'ayant pas terminé la formation.",
   recommendation: "% de répondants qui recommanderaient la formation.",
   completion: "% d'heures réalisées sur le nombre d'heures prévues.",
 };
+
+export function qualityIndicatorMethods(hasOpenBadge: boolean): Record<QualityIndicatorKey, string> {
+  return {
+    ...QUALITY_INDICATOR_METHODS,
+    success: resolveSuccessRateMethod(hasOpenBadge),
+  };
+}
 
 const QUALITY_INDICATOR_LABELS: Record<QualityIndicatorKey, string> = {
   satisfaction: "Taux de satisfaction",
@@ -291,6 +333,8 @@ export function buildQualityIndicators(input?: {
   stats?: Partial<Record<QualityIndicatorKey, QualityIndicatorStat | null>> | null;
   /** @deprecated Preférer `stats`. */
   values?: Partial<Record<string, string | null>>;
+  /** Si false : aucune mention Open Badge dans la méthode « taux de réussite ». */
+  hasOpenBadge?: boolean;
 }): {
   available: boolean;
   fallbackMessage: string;
@@ -303,7 +347,8 @@ export function buildQualityIndicators(input?: {
   });
   const stats = input?.stats ?? {};
   const legacyValues = input?.values ?? {};
-  const keys = Object.keys(QUALITY_INDICATOR_METHODS) as QualityIndicatorKey[];
+  const methods = qualityIndicatorMethods(Boolean(input?.hasOpenBadge));
+  const keys = Object.keys(methods) as QualityIndicatorKey[];
   const indicators: QualityIndicator[] = keys.map((key) => {
     const fromStats = formatQualityIndicatorDisplay(stats[key] ?? null);
     const fromLegacy =
@@ -314,7 +359,7 @@ export function buildQualityIndicators(input?: {
       key,
       label: QUALITY_INDICATOR_LABELS[key],
       value: fromStats ?? fromLegacy,
-      method: QUALITY_INDICATOR_METHODS[key],
+      method: methods[key],
     };
   });
   const available = indicators.some((i) => i.value != null);
@@ -358,7 +403,8 @@ export function enrichInstructors(
       expertises: expertises.length ? expertises : ["Pédagogie", "Accompagnement professionnel"],
       years: "10+ ans d'expérience",
       certifications: ["Formateur certifié Byound"],
-      openBadges: ["Open Badge Byound"],
+      // Pas de mock Open Badge : uniquement si des badges réels sont saisis plus tard.
+      openBadges: [],
       domaines: domain ? [domain] : ["Développement des compétences"],
     };
   });

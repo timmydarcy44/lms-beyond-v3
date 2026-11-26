@@ -44,9 +44,11 @@ import {
   DIAGNOSTIC_STEPS,
   enrichInstructors,
   HERO_DIAGNOSTIC_BADGES,
+  resolvePublicFaqItems,
 } from "@/lib/training-courses/qualiopi-content";
 import type { TrainingCoursePublic } from "@/lib/training-courses/types";
 import { buildPublicRecognition } from "@/lib/training-courses/public-recognition";
+import { sanitizePublicBrandCopy } from "@/lib/qualiopi/public-copy";
 
 const NAV_SECTIONS = [
   { id: "test", label: "Test" },
@@ -320,6 +322,14 @@ export function EdgeTrainingDetailPage({
   );
   const evaluationModalities = useMemo(() => buildEvaluationModalities(detail), [detail]);
   const pedagogicalMethods = useMemo(() => buildPedagogicalMethods(detail), [detail]);
+  const publicFaq = useMemo(
+    () => resolvePublicFaqItems(course, detail.faq),
+    [course, detail.faq],
+  );
+  const whyChooseItems = useMemo(
+    () => detail.whyFollow.map((item) => sanitizePublicBrandCopy(item)).filter(Boolean),
+    [detail.whyFollow],
+  );
   const qualiopiInfo = useMemo(
     () => buildQualiopiInfo(course, detail, { qualiopiCertified, showOpcoPublic }),
     [course, detail, qualiopiCertified, showOpcoPublic],
@@ -330,8 +340,14 @@ export function EdgeTrainingDetailPage({
         ofSettingsMethod: resultsIndicatorsMethod,
         courseOverride: course.results_method_override,
         stats: course.quality_indicators ?? null,
+        hasOpenBadge: publicRecognition.hasOpenBadge,
       }),
-    [resultsIndicatorsMethod, course.results_method_override, course.quality_indicators],
+    [
+      resultsIndicatorsMethod,
+      course.results_method_override,
+      course.quality_indicators,
+      publicRecognition.hasOpenBadge,
+    ],
   );
   const enrichedTrainers = useMemo(() => enrichInstructors(detail, course), [detail, course]);
 
@@ -466,11 +482,11 @@ export function EdgeTrainingDetailPage({
                 {course.long_description}
               </p>
 
-              {isBlockVisible(detail, "why_choose") && detail.whyFollow.length > 0 ? (
+              {isBlockVisible(detail, "why_choose") && whyChooseItems.length > 0 ? (
                 <div className="rounded-[24px] border border-[#050505]/8 bg-white p-7">
                   <h3 className="text-lg font-semibold tracking-[-0.02em]">Pourquoi choisir cette formation</h3>
                   <ul className="mt-5 space-y-3">
-                    {detail.whyFollow.map((item) => (
+                    {whyChooseItems.map((item) => (
                       <li key={item} className="flex gap-3 text-sm leading-relaxed text-[#050505]/65">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-edge-accent" />
                         {item}
@@ -782,17 +798,19 @@ export function EdgeTrainingDetailPage({
                             ))}
                           </ul>
                         </div>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#050505]/40">Open Badges</p>
-                          <ul className="mt-1.5 space-y-1">
-                            {trainer.openBadges.map((b) => (
-                              <li key={b} className="flex items-center gap-1.5 text-xs text-[#050505]/65">
-                                <Award className="h-3.5 w-3.5 text-edge-accent" />
-                                {b}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                        {publicRecognition.hasOpenBadge && trainer.openBadges.length > 0 ? (
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#050505]/40">Open Badges</p>
+                            <ul className="mt-1.5 space-y-1">
+                              {trainer.openBadges.map((b) => (
+                                <li key={b} className="flex items-center gap-1.5 text-xs text-[#050505]/65">
+                                  <Award className="h-3.5 w-3.5 text-edge-accent" />
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -912,11 +930,11 @@ export function EdgeTrainingDetailPage({
           ) : null}
 
           {/* FAQ */}
-          {isBlockVisible(detail, "faq") && detail.faq.length > 0 ? (
+          {isBlockVisible(detail, "faq") && publicFaq.length > 0 ? (
             <section id="faq" className="scroll-mt-40 space-y-8">
               <h2 className="text-2xl font-semibold tracking-[-0.03em]">FAQ</h2>
               <div className="space-y-4">
-                {detail.faq.map((item) => (
+                {publicFaq.map((item) => (
                   <div key={item.q} className="rounded-[20px] border border-[#050505]/8 bg-white p-6">
                     <p className="font-medium">{sanitizeOpenBadgeFaqText(item.q)}</p>
                     <p className="mt-2 text-sm leading-relaxed text-[#050505]/60">

@@ -187,7 +187,7 @@ export function CommercialIaNarrativePage() {
             {COMMERCIAL_IA_HERO_SUBTITLE}
           </p>
           <p className="mt-4 text-center text-[12px] text-white/30">
-            45h · Open Badge IMS Global · Certifié Beyond
+            45h · Open Badge IMS Global · Certifié Byound
           </p>
           <button
             type="button"
@@ -354,7 +354,7 @@ export function CommercialIaNarrativePage() {
           className="mx-auto mb-7 h-[140px] w-[140px] rounded-lg border border-edge-red/30 bg-white/[0.04]"
           aria-hidden
         />
-        <p className="text-lg font-medium text-white">Commercial Augmenté par l&apos;IA — Certifié Beyond</p>
+        <p className="text-lg font-medium text-white">Commercial Augmenté par l&apos;IA — Certifié Byound</p>
         <ul className="mt-6 space-y-1 text-[13px] leading-loose text-white/40">
           <li>· Vérifiable en un clic sur LinkedIn</li>
           <li>· Pointe vers tes livrables réels</li>

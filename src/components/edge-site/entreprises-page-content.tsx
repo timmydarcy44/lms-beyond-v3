@@ -42,13 +42,13 @@ const STEPS = [
     step: "ÉTAPE 1",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&q=80",
     title: "On audite vos compétences",
-    text: "Chaque collaborateur reçoit un accès Beyond. En 12 minutes, il passe le test comportemental et compétences. Les résultats arrivent directement sur votre dashboard RH.",
+    text: "Chaque collaborateur reçoit un accès Byound. En 12 minutes, il passe le test comportemental et compétences. Les résultats arrivent directement sur votre dashboard RH.",
   },
   {
     step: "ÉTAPE 2",
     image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=900&q=80",
     title: "L'IA construit votre plan d'action",
-    text: "En fonction des résultats et de vos objectifs, Beyond propose un plan de développement personnalisé par collaborateur. Formation en ligne, coaching individuel ou intervention collective.",
+    text: "En fonction des résultats et de vos objectifs, Byound propose un plan de développement personnalisé par collaborateur. Formation en ligne, coaching individuel ou intervention collective.",
   },
   {
     step: "ÉTAPE 3",
@@ -77,7 +77,7 @@ const ADDONS = [
   {
     icon: TrendingUp,
     name: "Parcours Performance",
-    text: "3 mois d'accompagnement. 4 sessions collectives + suivi individuel + reporting Beyond mensuel.",
+    text: "3 mois d'accompagnement. 4 sessions collectives + suivi individuel + reporting Byound mensuel.",
     price: "À partir de 4 500€ HT",
     cta: "Demander un devis",
     popular: true,
@@ -85,7 +85,7 @@ const ADDONS = [
   {
     icon: User,
     name: "Coaching Individuel",
-    text: "Sessions de coaching individuel pour vos talents et managers clés. Suivi Beyond intégré.",
+    text: "Sessions de coaching individuel pour vos talents et managers clés. Suivi Byound intégré.",
     price: "150€ / session",
     cta: "Réserver une session",
     popular: false,
@@ -104,7 +104,7 @@ const PIPELINE = [
   {
     num: "01",
     title: "Test",
-    text: "Chaque collaborateur passe le test Beyond en 12 minutes. Profil comportemental DISC, compétences, axes de progression.",
+    text: "Chaque collaborateur passe le test Byound en 12 minutes. Profil comportemental DISC, compétences, axes de progression.",
   },
   {
     num: "02",

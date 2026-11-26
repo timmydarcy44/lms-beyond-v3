@@ -119,7 +119,7 @@ export function ParcoursNarrativePage({ parcours }: Props) {
               {parcours.promesse ?? parcours.description}
             </p>
             <p className="mt-4 text-center text-[12px] text-white/30">
-              {parcours.duree} · Open Badge IMS Global · Certifié Beyond
+              {parcours.duree} · Open Badge IMS Global · Certifié Byound
             </p>
             <button
               type="button"

@@ -309,3 +309,17 @@ export function formatQualiopiTariff(course: QualiopiFicheFields): string {
   }
   return "Sur devis";
 }
+
+/**
+ * Réponse FAQ « Quel est le tarif ? » — alignée sur la carte Tarifs (intra groupe).
+ * Ne jamais inventer un tarif / collaborateur ou un abonnement.
+ */
+export function formatPublicTariffFaqAnswer(
+  course: Pick<QualiopiFicheFields, "price_on_quote" | "intra_price" | "max_intra_participants">,
+): string {
+  const max = course.max_intra_participants ?? 12;
+  if (course.price_on_quote || course.intra_price == null) {
+    return `Tarif sur devis, calculé pour le groupe (jusqu'à ${max} participants en intra). Contactez-nous pour un devis.`;
+  }
+  return `${course.intra_price.toLocaleString("fr-FR")} € HT par groupe (intra, jusqu'à ${max} participants).`;
+}

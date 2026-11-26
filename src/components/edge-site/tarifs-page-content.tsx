@@ -115,7 +115,7 @@ const PARTICULIER_PLANS = [
       "Tout Parcours Certifiant",
       "Sessions coaching individuel",
       "Plan de développement sur-mesure",
-      "Suivi Beyond personnalisé",
+      "Suivi Byound personnalisé",
     ],
     cta: "Nous contacter",
     href: "/entreprises#contact",

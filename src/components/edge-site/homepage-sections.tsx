@@ -117,10 +117,10 @@ export function EdgeBeyondPartnershipSection() {
             id="edge-beyond-title"
             className="font-sf-pro-bold whitespace-nowrap text-[clamp(1.75rem,5.5vw,4.25rem)] uppercase leading-none tracking-[-0.04em] text-edge-black"
           >
-            Byound × Beyond
+            Byound
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-[clamp(1rem,1.8vw,1.2rem)] leading-relaxed text-black/50">
-            Un partenariat au service de votre développement
+            Former, évaluer et prouver la montée en compétences
           </p>
         </div>
 
@@ -132,13 +132,13 @@ export function EdgeBeyondPartnershipSection() {
               <span className="text-black/25">Mesurée.</span>
             </p>
             <p className="mt-4 max-w-md text-[16px] leading-[1.75] text-black/40">
-              Byound forme sur le terrain. Beyond évalue, mesure et prouve la montée en compétences — de
-              l&apos;orientation à la certification vérifiable.
+              Byound forme sur le terrain, évalue, mesure et prouve la montée en compétences — de
+              l&apos;orientation à la reconnaissance vérifiable.
             </p>
 
             <div className="mt-14 space-y-10 border-t border-black/[0.08] pt-12">
               <div>
-                <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-edge-black">Test Beyond</p>
+                <p className="text-[14px] font-semibold uppercase tracking-[0.16em] text-edge-black">Test Byound</p>
                 <p className="mt-3 max-w-md text-[16px] leading-relaxed text-black/45">
                   DISC, IDMC et soft skills en 12 minutes. Vos résultats alimentent un profil complet — visible par vous
                   et par vos RH.
@@ -171,7 +171,7 @@ export function EdgeBeyondPartnershipSection() {
           <div className="relative mx-auto w-full max-w-[760px] lg:mx-0 lg:max-w-none">
             <Image
               src={EDGE_BEYOND_LAPTOP_IMAGE_URL}
-              alt="Dashboard Beyond — Mes résultats : profil DISC, bilan IDMC et soft skills"
+              alt="Dashboard Byound — Mes résultats : profil DISC, bilan IDMC et soft skills"
               width={1280}
               height={800}
               className="h-auto w-full"
@@ -205,7 +205,7 @@ export function EntreprisesHomeSection() {
           <div className="rounded-2xl border border-black/[0.06] bg-white p-6">
             <p className="text-[13px] font-medium text-edge-black">Test</p>
             <p className="mt-3 text-[14px] leading-relaxed text-black/45">
-              Chaque collaborateur passe le test Beyond en 12 minutes. Profil comportemental, compétences, axes de
+              Chaque collaborateur passe le test Byound en 12 minutes. Profil comportemental, compétences, axes de
               progression.
             </p>
           </div>

@@ -140,7 +140,7 @@ export function CommercialIaInvestmentSection({ selectedAddons, onToggleAddon }:
           <p className="mb-2 mt-4 text-[11px] uppercase tracking-[0.2em] text-black/30">Parcours de base</p>
           <p className="text-[48px] font-medium leading-none text-edge-black">{total}€</p>
           <p className="mt-2 text-[13px] text-black/40">
-            45h · Open Badge IMS Global · Certifié Beyond
+            45h · Open Badge IMS Global · Certifié Byound
           </p>
           <ul className="mt-4 space-y-0 text-[12px] leading-[1.8] text-black/40">
             {PRICE_INCLUDED.map((item) => (

@@ -63,9 +63,40 @@ export function resolvePublicFinancingCopy(
   return raw;
 }
 
-/** Délais d'accès — fiche catalogue / livret. */
+/** Délais d'accès — présentiel / distanciel synchrone / blended. */
+export const QUALIOPI_ACCESS_DELAYS_INTRA =
+  "Intra : démarrage sous 3 à 4 semaines après acceptation du devis.";
+
+/** Délais d'accès — e-learning asynchrone. */
+export const QUALIOPI_ACCESS_DELAYS_ELEARNING =
+  "Accès sous 48 h ouvrées après validation de la commande.";
+
+/**
+ * @deprecated Livret général (tous formats). Sur les fiches catalogue, utiliser
+ * `resolvePublicAccessDelaysCopy` pour n'afficher qu'une seule ligne.
+ */
 export const QUALIOPI_ACCESS_DELAYS_COPY =
-  "Intra : démarrage sous 3 à 4 semaines après acceptation du devis. Modules en ligne : accès sous 48 h ouvrées.";
+  `${QUALIOPI_ACCESS_DELAYS_INTRA} ${QUALIOPI_ACCESS_DELAYS_ELEARNING}`;
+
+/** Une seule ligne selon la modalité pédagogique de la fiche. */
+export function resolvePublicAccessDelaysCopy(
+  pedagogicalModality: string | null | undefined,
+): string {
+  const m = String(pedagogicalModality ?? "").trim().toLowerCase();
+  if (
+    m === "elearning_asynchrone" ||
+    m.includes("elearning") ||
+    m.includes("e-learning") ||
+    m.includes("asynchrone")
+  ) {
+    return QUALIOPI_ACCESS_DELAYS_ELEARNING;
+  }
+  return QUALIOPI_ACCESS_DELAYS_INTRA;
+}
+
+/** FAQ / bloc financement — prise en charge (front public). */
+export const QUALIOPI_FINANCING_FAQ_ANSWER =
+  "Financement par l'entreprise cliente. Contactez-nous pour un devis adapté à votre contexte.";
 
 /** Horaires — livret (la convocation garde les horaires de session). */
 export const QUALIOPI_SCHEDULE_COPY =
@@ -88,9 +119,29 @@ export const QUALIOPI_ATTENDANCE_COPY =
 export const QUALIOPI_LIVRET_VERSION = "1.1";
 export const QUALIOPI_LIVRET_VERSION_LABEL = "Version 1.1 — novembre 2026";
 
-/** Taux de réussite — méthode affichée sur les fiches. */
-export const QUALIOPI_SUCCESS_RATE_METHOD =
-  "% de participants ayant validé le quiz final. L'Open Badge Byound reste un complément de reconnaissance.";
+/** Taux de réussite — méthode de base (sans Open Badge). */
+export const QUALIOPI_SUCCESS_RATE_METHOD_BASE =
+  "% de participants ayant validé le quiz final.";
+
+/** Complément uniquement si la fiche délivre un Open Badge. */
+export const QUALIOPI_SUCCESS_RATE_METHOD_OPEN_BADGE =
+  " L'Open Badge Byound reste un complément de reconnaissance.";
+
+/** @deprecated Préférer `resolveSuccessRateMethod(hasOpenBadge)`. */
+export const QUALIOPI_SUCCESS_RATE_METHOD = QUALIOPI_SUCCESS_RATE_METHOD_BASE;
+
+export function resolveSuccessRateMethod(hasOpenBadge: boolean): string {
+  return hasOpenBadge
+    ? `${QUALIOPI_SUCCESS_RATE_METHOD_BASE}${QUALIOPI_SUCCESS_RATE_METHOD_OPEN_BADGE}`
+    : QUALIOPI_SUCCESS_RATE_METHOD_BASE;
+}
+
+/** Remplace la marque « Beyond » par « Byound » sur les textes publics. */
+export function sanitizePublicBrandCopy(text: string): string {
+  return String(text ?? "")
+    .replace(/\bBeyond\b/g, "Byound")
+    .replace(/\bBEYOND\b/g, "BYOUND");
+}
 
 /** Modalités pédagogiques — module court e-learning 3 h (réel). */
 export const QUALIOPI_ELEARNING_3H_MODALITY =

@@ -82,12 +82,12 @@ export function buildTrainingModuleDetail(module: TrainingModule): TrainingModul
     methodology: [
       "Apports contextualisés et retours d'expérience terrain",
       "Ateliers pratiques en sous-groupes",
-      "Mises en situation filmées et débrief collectif",
+      "Mises en situation et débrief collectif",
       "Coaching individuel et plan d'action à 30 jours",
     ],
     exercises: [
       "Test individuel et analyse de cas réels",
-      "Jeux de rôle et simulations filmées",
+      "Jeux de rôle et simulations",
       "Travaux en binôme avec feedback formateur",
       "Quiz de validation des acquis en fin de module",
     ],

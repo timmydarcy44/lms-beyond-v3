@@ -112,7 +112,7 @@ export function getPillarMegaMenus(R: EdgeMarketingRoutes): PillarMegaMenuData[]
         title: "Tout votre learning, au même endroit.",
         description:
           "Byound Online, formations internes et parcours réunis dans un seul environnement.",
-        ctaLabel: "Découvrir Beyond",
+        ctaLabel: "Découvrir Byound",
         ctaHref: R.business,
       },
     },

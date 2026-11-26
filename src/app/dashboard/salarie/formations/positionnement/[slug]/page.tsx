@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth/session";
+import { resolveEffectiveSalarieActor } from "@/lib/control/learner-preview";
 import { listSalarieEnterpriseFormations } from "@/lib/salarie/enterprise-formations";
 import { SALARIE_PAGE_SHELL, SALARIE_PAGE_TITLE } from "@/lib/salarie/connect-nav";
 
@@ -15,9 +16,10 @@ export default async function SalariePositionnementPage({
   const session = await getSession();
   if (!session?.id) redirect("/login?next=/dashboard/salarie/formations");
   const { slug } = await params;
+  const { userId, email } = await resolveEffectiveSalarieActor(session.id, session.email);
   const formations = await listSalarieEnterpriseFormations({
-    userId: session.id,
-    email: session.email ?? null,
+    userId,
+    email,
   });
   const formation = formations.find((item) => item.slug === slug);
   if (!formation) notFound();

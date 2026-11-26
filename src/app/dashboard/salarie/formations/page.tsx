@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { SalarieFormationsBoard } from "@/components/salarie/salarie-formations-board";
 import { getSession } from "@/lib/auth/session";
+import { resolveEffectiveSalarieActor } from "@/lib/control/learner-preview";
 import { isJadeDemoEmail } from "@/lib/demo/jade-account";
 import {
   listSalarieAssignedFormations,
@@ -17,11 +18,13 @@ export default async function SalarieFormationsPage() {
     redirect("/login?next=/dashboard/salarie/formations");
   }
 
+  const { userId, email } = await resolveEffectiveSalarieActor(session.id, session.email);
+
   let formations: SalarieAssignedFormation[];
-  if (isJadeDemoEmail(session.email)) {
+  if (isJadeDemoEmail(email) || isJadeDemoEmail(session.email)) {
     const jade = await listSalarieEnterpriseFormations({
-      userId: session.id,
-      email: session.email ?? null,
+      userId,
+      email,
     });
     formations = jade.map((item) => ({
       id: item.id,
@@ -34,7 +37,7 @@ export default async function SalarieFormationsPage() {
       coverImage: null,
     }));
   } else {
-    formations = await listSalarieAssignedFormations(session.id, session.email);
+    formations = await listSalarieAssignedFormations(userId, email);
   }
 
   return <SalarieFormationsBoard formations={formations} />;

@@ -5,6 +5,7 @@ import { FormationStudio } from "@/app/catalog/formations/[slug]/formation-studi
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { LearningSessionTracker } from "@/components/learning-session-tracker";
 import { getSession } from "@/lib/auth/session";
+import { resolveEffectiveSalarieActor } from "@/lib/control/learner-preview";
 import { getLearnerContentDetail } from "@/lib/queries/apprenant";
 import { listSalarieAssignedFormations } from "@/lib/salarie/assigned-formations";
 import type { CourseBuilderSnapshot } from "@/types/course-builder";
@@ -19,7 +20,8 @@ export default async function SalarieFormationPage({ params }: { params: Promise
     redirect(`/login?next=${encodeURIComponent(`/dashboard/salarie/formations/${key}`)}`);
   }
 
-  const assigned = await listSalarieAssignedFormations(session.id, session.email);
+  const { userId, email } = await resolveEffectiveSalarieActor(session.id, session.email);
+  const assigned = await listSalarieAssignedFormations(userId, email);
   const row = assigned.find((item) => item.slug === key || item.id === key);
   if (!row) notFound();
 

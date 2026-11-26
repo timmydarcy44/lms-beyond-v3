@@ -4,6 +4,7 @@ import { LessonPlayView } from "@/components/apprenant/lesson-play-view";
 import { DyslexiaModeProvider } from "@/components/apprenant/dyslexia-mode-provider";
 import { LearningSessionTracker, LessonLeafSessionTracker } from "@/components/learning-session-tracker";
 import { getSession } from "@/lib/auth/session";
+import { resolveEffectiveSalarieActor } from "@/lib/control/learner-preview";
 import { getEdgeOnlineCourseDetailBySlug } from "@/lib/queries/edge-online-course-detail";
 import { listSalarieAssignedFormations } from "@/lib/salarie/assigned-formations";
 
@@ -14,7 +15,8 @@ export async function SalarieCoursePlayer({ slug, lessonId }: { slug: string; le
     redirect(`/login?next=${encodeURIComponent(`/dashboard/salarie/formations/${key}`)}`);
   }
 
-  const assigned = await listSalarieAssignedFormations(session.id, session.email);
+  const { userId, email } = await resolveEffectiveSalarieActor(session.id, session.email);
+  const assigned = await listSalarieAssignedFormations(userId, email);
   const allowed = assigned.some((item) => item.slug === key || item.id === key);
   if (!allowed) notFound();
 

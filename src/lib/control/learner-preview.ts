@@ -111,6 +111,35 @@ export async function resolveEffectiveSalarieUserId(
   return resolveEffectiveApprenantUserId(sessionUserId);
 }
 
+/**
+ * Identité effective (userId + email) pour les pages salarié en preview.
+ * Évite de lister les enrollments du staff RH à la place du collaborateur.
+ */
+export async function resolveEffectiveSalarieActor(
+  sessionUserId: string,
+  sessionEmail: string | null | undefined,
+): Promise<{
+  userId: string;
+  email: string | null;
+  preview: LearnerPreviewContext | null;
+}> {
+  const { userId, preview } = await resolveEffectiveSalarieUserId(sessionUserId);
+  let email = sessionEmail ?? null;
+  if (preview && userId !== sessionUserId) {
+    const { getServiceRoleClient } = await import("@/lib/supabase/server");
+    const db = getServiceRoleClient();
+    if (db) {
+      const { data: target } = await db
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .maybeSingle();
+      if (target?.email) email = String(target.email);
+    }
+  }
+  return { userId, email, preview };
+}
+
 export async function buildLearnerPreviewCookie(params: {
   staffId: string;
   targetUserId: string;

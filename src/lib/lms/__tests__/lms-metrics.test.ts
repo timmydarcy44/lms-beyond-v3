@@ -5,6 +5,7 @@ import {
   connectedSecondsForSession,
   contentTimeCapSeconds,
   activeSecondsFromHeartbeats,
+  enrichMetricsWithEvidence,
   estimateDurationsFromCompletionGaps,
   metricsFromLegacySessionRows,
   scaleDurationsToCap,
@@ -125,6 +126,46 @@ describe("lms-metrics", () => {
     // Ne doit plus coller à 2 min (2 × 60 s) ni à 4 h de plafond wall-clock
     expect(metrics.connectedSeconds).toBeGreaterThan(120);
     expect(metrics.connectedSeconds).toBeLessThan(2 * 3600);
+  });
+
+  it("cas Anaïs : validations + flashcards du soir comptent dans le temps Qualiopi", () => {
+    const metrics = enrichMetricsWithEvidence({
+      learningSessionRows: [
+        {
+          started_at: "2026-11-25T15:10:13.537Z",
+          ended_at: "2026-11-26T05:48:19.947Z",
+          duration_seconds: 1311,
+          duration_active_seconds: 959,
+        },
+      ],
+      flashcardRows: [
+        {
+          started_at: "2026-11-25T22:49:03.038Z",
+          completed_at: "2026-11-25T22:57:57.598Z",
+          duration_seconds: 534,
+        },
+        {
+          started_at: "2026-11-25T22:58:53.345Z",
+          completed_at: "2026-11-25T23:03:25.155Z",
+          duration_seconds: 272,
+        },
+      ],
+      leafCompletedAts: [
+        "2026-11-25T22:03:41.719Z",
+        "2026-11-25T22:31:33.734Z",
+        "2026-11-25T22:58:38.171Z",
+      ],
+    });
+    expect(assertActiveLeqConnected(metrics)).toBe(true);
+    // Après-midi (959) + soirée (flashcards / lecture) — plus d’une seule séance
+    expect(metrics.sessionCount).toBeGreaterThanOrEqual(2);
+    expect(metrics.activeSeconds).toBeGreaterThan(959 + 500);
+    // La soirée ne doit pas être avalée par le wall-clock de l’onglet abandonné
+    const evening = metrics.sessions.find(
+      (s) => s.startedAt.toISOString().startsWith("2026-11-25T22"),
+    );
+    expect(evening).toBeTruthy();
+    expect(evening!.activeSeconds).toBeGreaterThan(500);
   });
 
   it("sans durée mesurée et fin lointaine → présence minimale (pas 4 h inventées)", () => {

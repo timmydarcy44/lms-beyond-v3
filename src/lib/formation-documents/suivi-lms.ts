@@ -5,6 +5,7 @@ import {
   collectProgressLeafIds,
   type OutlineSection,
 } from "@/lib/courses/learner-outline-progress";
+import { enrichMetricsWithEvidence } from "@/lib/lms/lms-metrics";
 
 export const SUIVI_LMS_KIND = "suivi_lms";
 export const SUIVI_LMS_SESSION_KIND = "suivi_lms_session";
@@ -310,31 +311,117 @@ export async function buildParticipantSuivi(
     ...((sessionsQuery.data ?? []) as Array<Record<string, unknown>>),
     ...((courseSessions ?? []) as Array<Record<string, unknown>>),
   ];
+
+  const [{ data: flashRows }, { data: leafRows }] = await Promise.all([
+    service
+      .from("flashcard_study_sessions")
+      .select("started_at, completed_at, duration_seconds, course_id")
+      .eq("user_id", profileId)
+      .eq("course_id", params.lmsCourseId)
+      .order("completed_at", { ascending: true })
+      .limit(500),
+    service
+      .from("learner_leaf_completions")
+      .select("completed_at, leaf_id, leaf_title, course_id")
+      .eq("user_id", profileId)
+      .eq("course_id", params.lmsCourseId)
+      .order("completed_at", { ascending: true })
+      .limit(1000),
+  ]);
+
   const seenSession = new Set<string>();
+  const learningSessionRows: Array<{
+    started_at: string | null;
+    ended_at?: string | null;
+    duration_seconds?: number | null;
+    duration_active_seconds?: number | null;
+  }> = [];
+  for (const row of sessionRows) {
+    const key = `${row.started_at}|${row.content_id}|${row.duration_active_seconds}`;
+    if (seenSession.has(key)) continue;
+    seenSession.add(key);
+    learningSessionRows.push({
+      started_at: row.started_at ? String(row.started_at) : null,
+      ended_at: row.ended_at ? String(row.ended_at) : null,
+      duration_seconds: Number(row.duration_seconds) || 0,
+      duration_active_seconds: Number(row.duration_active_seconds) || 0,
+    });
+  }
+
+  const metrics = enrichMetricsWithEvidence({
+    learningSessionRows,
+    flashcardRows: (flashRows ?? []) as Array<{
+      started_at?: string | null;
+      completed_at?: string | null;
+      duration_seconds?: number | null;
+    }>,
+    leafCompletedAts: (leafRows ?? [])
+      .map((l) => String((l as { completed_at?: string | null }).completed_at ?? ""))
+      .filter(Boolean),
+  });
+
   const connections: SuiviConnection[] = [];
   const moduleAgg = new Map<string, SuiviModuleTime>();
   let totalActive = 0;
   let totalSec = 0;
 
+  // Map start → raw row for content labels when available
+  const byStart = new Map<string, Record<string, unknown>>();
   for (const row of sessionRows) {
-    const key = `${row.started_at}|${row.content_id}|${row.duration_active_seconds}`;
-    if (seenSession.has(key)) continue;
-    seenSession.add(key);
-    const cid = String(row.content_id ?? "");
-    const active = Math.max(0, Number(row.duration_active_seconds) || 0);
-    const total = Math.max(0, Number(row.duration_seconds) || 0);
+    const started = String(row.started_at ?? "");
+    if (started) byStart.set(started.slice(0, 19), row);
+  }
+  const flashWindows = (flashRows ?? [])
+    .map((f) => {
+      const row = f as {
+        started_at?: string | null;
+        completed_at?: string | null;
+      };
+      const start = Date.parse(String(row.started_at ?? row.completed_at ?? ""));
+      const end = Date.parse(String(row.completed_at ?? row.started_at ?? ""));
+      if (!Number.isFinite(start)) return null;
+      return { start, end: Number.isFinite(end) ? end : start };
+    })
+    .filter((x): x is { start: number; end: number } => Boolean(x));
+  const leafAts = (leafRows ?? [])
+    .map((l) => Date.parse(String((l as { completed_at?: string | null }).completed_at ?? "")))
+    .filter((t) => Number.isFinite(t));
+
+  for (const s of metrics.sessions) {
+    const active = s.activeSeconds;
+    const total = s.connectedSeconds;
     totalActive += active;
     totalSec += total;
-    const label =
+    const raw = byStart.get(s.startedAt.toISOString().slice(0, 19));
+    const cid = raw ? String(raw.content_id ?? params.lmsCourseId) : params.lmsCourseId;
+    const mid = s.startedAt.getTime() + (s.endedAt.getTime() - s.startedAt.getTime()) / 2;
+    const hitsFlash = flashWindows.some((w) => mid >= w.start - 60_000 && mid <= w.end + 60_000);
+    const hitsLeaf = leafAts.some(
+      (t) => t >= s.startedAt.getTime() - 60_000 && t <= s.endedAt.getTime() + 60_000,
+    );
+    let label =
       cid === params.lmsCourseId
         ? courseTitle
         : labels.get(cid) || `Contenu ${cid.slice(0, 8)}`;
+    let contentType = raw ? String(raw.content_type ?? "course") : "course";
+    if (!raw) {
+      if (hitsFlash && hitsLeaf) {
+        label = "Lecture + flashcards";
+        contentType = "reconstructed";
+      } else if (hitsFlash) {
+        label = "Flashcards";
+        contentType = "flashcards";
+      } else if (hitsLeaf) {
+        label = "Lecture / contenus validés";
+        contentType = "reconstructed";
+      }
+    }
     connections.push({
-      started_at: String(row.started_at ?? ""),
-      ended_at: row.ended_at ? String(row.ended_at) : null,
+      started_at: s.startedAt.toISOString(),
+      ended_at: s.endedAt.toISOString(),
       duration_seconds: total,
       duration_active_seconds: active,
-      content_type: String(row.content_type ?? ""),
+      content_type: contentType,
       content_id: cid,
       content_label: label,
     });

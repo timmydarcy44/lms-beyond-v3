@@ -327,6 +327,179 @@ export function metricsFromLegacySessionRows(
   };
 }
 
+/**
+ * Écart max pour reconstruire une séance à partir des validations de contenu
+ * hors `learning_sessions` (cas Anaïs : lecture le soir sans heartbeat).
+ * Plus large que {@link MAX_LEAF_CONTENT_DELTA_SEC} (affichage feuille).
+ */
+export const SESSION_RECONSTRUCTION_MAX_DELTA_SEC = 45 * 60;
+
+function sessionCoversInstant(session: LogicalSession, atMs: number): boolean {
+  const start = session.startedAt.getTime();
+  const end = session.endedAt.getTime() + SESSION_TAIL_MS;
+  return atMs >= start && atMs <= end;
+}
+
+/** Séance chronométrée (flashcards, etc.) → séance logique. */
+export function sessionFromTimedActivity(row: {
+  started_at?: string | null;
+  completed_at?: string | null;
+  ended_at?: string | null;
+  duration_seconds?: number | null;
+}): LogicalSession | null {
+  const startRaw = row.started_at || row.completed_at || row.ended_at;
+  if (!startRaw) return null;
+  const startedAt = toDate(startRaw);
+  if (Number.isNaN(startedAt.getTime())) return null;
+
+  const endRaw = row.completed_at || row.ended_at || row.started_at;
+  let endedAt = endRaw ? toDate(endRaw) : startedAt;
+  if (Number.isNaN(endedAt.getTime()) || endedAt.getTime() < startedAt.getTime()) {
+    endedAt = startedAt;
+  }
+
+  const durSec = clampNonNeg(Number(row.duration_seconds) || 0);
+  const wallSec = connectedSecondsForSession(startedAt, endedAt);
+  const connectedSeconds = Math.min(
+    Math.max(durSec, wallSec, SESSION_TAIL_MS / 1000),
+    MAX_CONNECTED_PER_SESSION_MS / 1000,
+  );
+  if (durSec > 0 && wallSec > Math.max(SESSION_GAP_MS / 1000, durSec * 3)) {
+    // Fin absurde → croire la durée mesurée
+    const connected = Math.min(durSec, MAX_CONNECTED_PER_SESSION_MS / 1000);
+    return {
+      startedAt,
+      endedAt: new Date(startedAt.getTime() + connected * 1000),
+      connectedSeconds: connected,
+      activeSeconds: connected,
+      eventCount: 1,
+    };
+  }
+
+  const activeSeconds = Math.min(durSec > 0 ? durSec : connectedSeconds, connectedSeconds);
+  return {
+    startedAt,
+    endedAt:
+      wallSec >= durSec
+        ? endedAt
+        : new Date(startedAt.getTime() + connectedSeconds * 1000),
+    connectedSeconds,
+    activeSeconds,
+    eventCount: 1,
+  };
+}
+
+/**
+ * Reconstruit des séances à partir de validations de feuilles non couvertes
+ * par les séances déjà retenues (trou Qualiopi si seuls les heartbeats comptent).
+ */
+export function sessionsFromUncoveredLeafCompletions(
+  completedAts: string[],
+  existingSessions: LogicalSession[],
+  maxDeltaSec: number = SESSION_RECONSTRUCTION_MAX_DELTA_SEC,
+): LogicalSession[] {
+  const times = completedAts
+    .map((iso) => ({ iso, ms: Date.parse(iso) }))
+    .filter((x) => Number.isFinite(x.ms))
+    .sort((a, b) => a.ms - b.ms);
+
+  const uncovered = times.filter(
+    (t) => !existingSessions.some((s) => sessionCoversInstant(s, t.ms)),
+  );
+  if (uncovered.length === 0) return [];
+
+  const clusters: Array<typeof uncovered> = [];
+  let current: typeof uncovered = [uncovered[0]!];
+  for (let i = 1; i < uncovered.length; i++) {
+    const prev = current[current.length - 1]!;
+    const next = uncovered[i]!;
+    if (next.ms - prev.ms > SESSION_GAP_MS) {
+      clusters.push(current);
+      current = [next];
+    } else {
+      current.push(next);
+    }
+  }
+  clusters.push(current);
+
+  const out: LogicalSession[] = [];
+  for (const cluster of clusters) {
+    const startedAt = new Date(cluster[0]!.ms);
+    const endedAt = new Date(cluster[cluster.length - 1]!.ms);
+    const connectedSeconds = connectedSecondsForSession(startedAt, endedAt);
+    const gapEstimates = estimateDurationsFromCompletionGaps(
+      cluster.map((c) => c.iso),
+      maxDeltaSec,
+    );
+    const fromGaps = gapEstimates.reduce<number>((sum, v) => sum + (v ?? 0), 0);
+    // Une validation isolée : crédit minimal (présence), pas 0.
+    const activeRaw =
+      fromGaps > 0
+        ? fromGaps
+        : cluster.length === 1
+          ? SESSION_TAIL_MS / 1000
+          : connectedSeconds;
+    out.push({
+      startedAt,
+      endedAt,
+      connectedSeconds,
+      activeSeconds: Math.min(activeRaw, connectedSeconds),
+      eventCount: cluster.length,
+    });
+  }
+  return out;
+}
+
+/**
+ * Enrichit les métriques `learning_sessions` avec flashcards + validations
+ * hors séance (évite de sous-estimer le temps Qualiopi).
+ */
+export function enrichMetricsWithEvidence(input: {
+  learningSessionRows: Array<{
+    started_at: string | null;
+    ended_at?: string | null;
+    duration_seconds?: number | null;
+    duration_active_seconds?: number | null;
+  }>;
+  flashcardRows?: Array<{
+    started_at?: string | null;
+    completed_at?: string | null;
+    ended_at?: string | null;
+    duration_seconds?: number | null;
+  }>;
+  leafCompletedAts?: string[];
+}): LearnerTimeMetrics {
+  const base = metricsFromLegacySessionRows(input.learningSessionRows);
+  const extras: LogicalSession[] = [...base.sessions];
+
+  for (const row of input.flashcardRows ?? []) {
+    const session = sessionFromTimedActivity(row);
+    if (!session) continue;
+    // Ignore si déjà entièrement couvert par une séance learning_sessions.
+    const mid = session.startedAt.getTime() + (session.endedAt.getTime() - session.startedAt.getTime()) / 2;
+    if (base.sessions.some((s) => sessionCoversInstant(s, mid))) continue;
+    extras.push(session);
+  }
+
+  const leafSessions = sessionsFromUncoveredLeafCompletions(
+    input.leafCompletedAts ?? [],
+    extras,
+  );
+  extras.push(...leafSessions);
+
+  const sessions = mergeCloseLogicalSessions(extras);
+  const connectedSeconds = sessions.reduce((sum, s) => sum + s.connectedSeconds, 0);
+  let activeSeconds = sessions.reduce((sum, s) => sum + s.activeSeconds, 0);
+  if (activeSeconds > connectedSeconds) activeSeconds = connectedSeconds;
+
+  return {
+    sessionCount: sessions.length,
+    connectedSeconds,
+    activeSeconds,
+    sessions,
+  };
+}
+
 /** Vérifie l’invariant actif ≤ connecté. */
 export function assertActiveLeqConnected(metrics: Pick<LearnerTimeMetrics, "activeSeconds" | "connectedSeconds">): boolean {
   return metrics.activeSeconds <= metrics.connectedSeconds;

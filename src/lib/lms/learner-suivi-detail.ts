@@ -3,9 +3,9 @@ import { looksLikeTestAccount } from "@/lib/control/test-account";
 import { isBtocRole } from "@/lib/control/btoc-client-file";
 import {
   contentTimeCapSeconds,
+  enrichMetricsWithEvidence,
   estimateDurationsFromCompletionGaps,
   formatDurationCompact,
-  metricsFromLegacySessionRows,
   scaleDurationsToCap,
   type LogicalSession,
 } from "@/lib/lms/lms-metrics";
@@ -408,7 +408,13 @@ export async function loadLearnerSuiviDetail(
   }
   if (!profileRes.data) return null;
 
-  const [{ data: sessionRows }, relanceRes, { data: enrollments }] = await Promise.all([
+  const [
+    { data: sessionRows },
+    relanceRes,
+    { data: enrollments },
+    flashEarlyRes,
+    leavesEarlyRes,
+  ] = await Promise.all([
     db
       .from("learning_sessions")
       .select(
@@ -457,6 +463,20 @@ export async function loadLearnerSuiviDetail(
       }
       return rich;
     })(),
+    db
+      .from("flashcard_study_sessions")
+      .select(
+        "id, course_id, scope_id, total_cards, known_count, unknown_count, card_results, duration_seconds, started_at, completed_at",
+      )
+      .eq("user_id", userId)
+      .order("completed_at", { ascending: false })
+      .limit(100),
+    db
+      .from("learner_leaf_completions")
+      .select("leaf_id, leaf_title, completed_at, course_id")
+      .eq("user_id", userId)
+      .order("completed_at", { ascending: false })
+      .limit(400),
   ]);
 
   let relancesRaw: Array<Record<string, unknown>> = (relanceRes.data ?? []) as Array<
@@ -513,15 +533,30 @@ export async function loadLearnerSuiviDetail(
     clientHref = `/super/entreprises/${companyId}`;
   }
 
-  const metrics = metricsFromLegacySessionRows(
-    (sessionRows ?? []).map((s) => ({
+  const flashEvidenceRows = flashEarlyRes.error
+    ? []
+    : ((flashEarlyRes.data ?? []) as Array<{
+        started_at?: string | null;
+        completed_at?: string | null;
+        duration_seconds?: number | null;
+      }>);
+  const leafEvidenceAts = leavesEarlyRes.error
+    ? []
+    : ((leavesEarlyRes.data ?? []) as Array<{ completed_at?: string | null }>)
+        .map((l) => String(l.completed_at ?? ""))
+        .filter(Boolean);
+
+  const metrics = enrichMetricsWithEvidence({
+    learningSessionRows: (sessionRows ?? []).map((s) => ({
       started_at: (s as { started_at?: string }).started_at ?? null,
       ended_at: (s as { ended_at?: string }).ended_at ?? null,
       duration_seconds: (s as { duration_seconds?: number }).duration_seconds ?? null,
       duration_active_seconds:
         (s as { duration_active_seconds?: number }).duration_active_seconds ?? null,
     })),
-  );
+    flashcardRows: flashEvidenceRows,
+    leafCompletedAts: leafEvidenceAts,
+  });
 
   // Cap + log invariant côté serveur (actif ≤ connecté déjà dans metrics)
   for (const s of metrics.sessions) {
@@ -536,6 +571,17 @@ export async function loadLearnerSuiviDetail(
     const started = String((row as { started_at?: string }).started_at ?? "");
     if (started) byStart.set(started.slice(0, 19), row as { content_type?: string | null });
   }
+  const flashWindows = flashEvidenceRows
+    .map((f) => {
+      const start = Date.parse(String(f.started_at ?? f.completed_at ?? ""));
+      const end = Date.parse(String(f.completed_at ?? f.started_at ?? ""));
+      if (!Number.isFinite(start)) return null;
+      return { start, end: Number.isFinite(end) ? end : start };
+    })
+    .filter((x): x is { start: number; end: number } => Boolean(x));
+  const leafWindows = leafEvidenceAts
+    .map((iso) => Date.parse(iso))
+    .filter((t) => Number.isFinite(t));
 
   const sessions: SuiviDetailSession[] = metrics.sessions
     .slice()
@@ -550,6 +596,14 @@ export async function loadLearnerSuiviDetail(
       else if (ct === "game" || ct === "serious_game") label = "Jeu";
       else if (ct === "flashcards") label = "Flashcards";
       else if (ct === "lesson" || ct === "chapter") label = "Lecture";
+      else {
+        const mid = s.startedAt.getTime() + (s.endedAt.getTime() - s.startedAt.getTime()) / 2;
+        const hitsFlash = flashWindows.some((w) => mid >= w.start - 60_000 && mid <= w.end + 60_000);
+        const hitsLeaf = leafWindows.some((t) => t >= s.startedAt.getTime() - 60_000 && t <= s.endedAt.getTime() + 60_000);
+        if (hitsFlash && hitsLeaf) label = "Lecture + flashcards";
+        else if (hitsFlash) label = "Flashcards";
+        else if (hitsLeaf) label = "Lecture / contenus validés";
+      }
       return {
         startedAt: s.startedAt.toISOString(),
         endedAt: s.endedAt.toISOString(),
@@ -592,13 +646,7 @@ export async function loadLearnerSuiviDetail(
   }
 
   // Leaves toutes formations → choisir le cours primaire par activité réelle
-  const allLeavesRes = await db
-    .from("learner_leaf_completions")
-    .select("leaf_id, leaf_title, completed_at, course_id")
-    .eq("user_id", userId)
-    .order("completed_at", { ascending: false })
-    .limit(400);
-  const allLeaves = (!allLeavesRes.error ? allLeavesRes.data : null) ?? [];
+  const allLeaves = (!leavesEarlyRes.error ? leavesEarlyRes.data : null) ?? [];
 
   const preferred =
     preferredCourseId && courses.some((c) => c.id === preferredCourseId)
@@ -905,19 +953,12 @@ export async function loadLearnerSuiviDetail(
     });
   }
 
-  // Flashcards + annotation carte par carte
+  // Flashcards + annotation carte par carte (déjà chargées pour le temps Qualiopi)
   const flashcards: SuiviFlashcardRow[] = [];
-  const flashRes = await db
-    .from("flashcard_study_sessions")
-    .select(
-      "id, course_id, scope_id, total_cards, known_count, unknown_count, card_results, duration_seconds, completed_at",
-    )
-    .eq("user_id", userId)
-    .order("completed_at", { ascending: false })
-    .limit(40);
-  if (!flashRes.error) {
+  const flashRowsForUi = flashEarlyRes.error ? [] : flashEarlyRes.data ?? [];
+  if (flashRowsForUi.length) {
     const cardIds = new Set<string>();
-    for (const row of flashRes.data ?? []) {
+    for (const row of flashRowsForUi) {
       const results = (row as { card_results?: Array<{ cardId?: string }> }).card_results ?? [];
       for (const item of results) {
         if (item?.cardId) cardIds.add(String(item.cardId));
@@ -935,7 +976,7 @@ export async function loadLearnerSuiviDetail(
     }
     const courseIds = [
       ...new Set(
-        (flashRes.data ?? [])
+        flashRowsForUi
           .map((r) => String((r as { course_id?: string | null }).course_id ?? ""))
           .filter(Boolean),
       ),
@@ -947,7 +988,7 @@ export async function loadLearnerSuiviDetail(
         courseTitleById.set(String((c as { id: string }).id), String((c as { title?: string }).title ?? "Formation"));
       }
     }
-    for (const row of flashRes.data ?? []) {
+    for (const row of flashRowsForUi) {
       const r = row as Record<string, unknown>;
       const known = Number(r.known_count) || 0;
       const unknown = Number(r.unknown_count) || 0;

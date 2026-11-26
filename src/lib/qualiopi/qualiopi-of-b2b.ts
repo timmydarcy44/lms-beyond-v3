@@ -118,21 +118,25 @@ Note process + annuaire partenaires + espace Handicap.
 ## Périmètre
 Document **OF** (pas une fiche par formation). Couvre les moyens mobilisés pour les prestations Business : distanciel / hybride via plateforme Byound, et moyens présentiels éventuels.
 
-## 1. Moyens humains
-- Direction / référent qualité / référent handicap / référent signalements
-- Intervenants (salariés, indépendants, portage) validés avant mission
-- Coordination pédagogique des sessions
+## Déroulement
+### Moyens humains
+Jessica Contentin, présidente, formatrice et référente handicap, coordonne les sessions. Les formateurs externes interviennent sous contrat de prestation (ex. : Jérôme Picot, leadership et commercial), après validation de leur CV et passage des trois tests Byound. Les commerciaux recueillent les besoins ; la présidente les valide.
 
-## 2. Moyens techniques & plateforme
-- Plateforme Byound / LMS (e-learning asynchrone : accès stagiaires, ressources, suivi de progression en autonomie, émargement numérique)
-- Coffre documentaire (conventions, attestations, enquêtes)
+### Moyens techniques
+- LMS Byound (parcours, ressources, quiz, jeux, suivi du temps et de la progression, relevé LMS individuel)
+- Byound Control (programmation, convocations, émargement électronique par demi-journée, documents signés électroniquement)
+- Visioconférence Google Meet lorsque une session synchrone est prévue
+- Matériel du formateur : ordinateur portable, vidéoprojecteur portable et câbles HDMI / USB-C
 
-## 3. Locaux & accessibilité (si présentiel)
-- Adresse(s) d’accueil
-- Capacité, matériel pédagogique, accessibilité PMR
-- Consignes sécurité / règlement intérieur
+### Locaux
+- Formations en intra dans les locaux du client (salle de réunion, vidéoprojecteur ou écran, wifi, accès PMR demandés à la signature de la convention)
+- Siège administratif au 134 rue Élise Deroche, 14760 Bretteville-sur-Odon : n’accueille pas de stagiaires en formation ; l’accessibilité PMR est assurée sur les lieux d’accueil client et via le LMS en distanciel
+- Formations à distance via le LMS
 
-## 4. Mise à jour
+### Continuité
+En cas d’indisponibilité d’un formateur, remplacement par un expert validé du réseau Byound, ou report de la session avec l’accord du client.
+
+## Mise à jour
 Revue annuelle ou à chaque changement majeur d’outil / d’effectif formateurs.
 `,
   },

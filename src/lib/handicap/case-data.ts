@@ -32,7 +32,7 @@ const EMPTY_CONTEXT: DisabilityCaseContext = {
   contactMessage: null,
 };
 
-/** VERDIER → Verdier ; Jean-PIERRE → Jean-Pierre */
+/** MOREAU → Moreau ; Jean-PIERRE → Jean-Pierre */
 export function toDisplayName(raw: string): string {
   return String(raw ?? "")
     .trim()

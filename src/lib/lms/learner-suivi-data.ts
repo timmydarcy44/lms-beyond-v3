@@ -1,8 +1,8 @@
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 import {
+  enrichMetricsWithEvidence,
   formatDurationCompact,
-  metricsFromLegacySessionRows,
   sessionFromLegacyRow,
 } from "@/lib/lms/lms-metrics";
 import { isCourseNodeVisible } from "@/lib/courses/visible-structure";
@@ -211,7 +211,8 @@ export async function loadLearnerSuivi(options: {
     .limit(20000);
   if (since) sessionsQuery = sessionsQuery.gte("started_at", since.toISOString());
 
-  const [sessionsRes, leavesRes, notesRes, transformsRes, enrollmentsRes] = await Promise.all([
+  const [sessionsRes, leavesRes, notesRes, transformsRes, enrollmentsRes, flashRes] =
+    await Promise.all([
     sessionsQuery,
     db
       .from("learner_leaf_completions")
@@ -225,6 +226,11 @@ export async function loadLearnerSuivi(options: {
       .order("created_at", { ascending: false })
       .limit(8000),
     db.from("enrollments").select("user_id, course_id, created_at").limit(8000),
+    db
+      .from("flashcard_study_sessions")
+      .select("user_id, started_at, completed_at, duration_seconds")
+      .order("completed_at", { ascending: false })
+      .limit(8000),
   ]);
 
   const sessionRows = (sessionsRes.data ?? []) as Array<{
@@ -377,6 +383,26 @@ export async function loadLearnerSuivi(options: {
     leavesByUser.set(row.user_id, list);
   }
 
+  const flashByUser = new Map<
+    string,
+    Array<{
+      started_at?: string | null;
+      completed_at?: string | null;
+      duration_seconds?: number | null;
+    }>
+  >();
+  for (const row of (flashRes.error ? [] : flashRes.data ?? []) as Array<{
+    user_id: string;
+    started_at?: string | null;
+    completed_at?: string | null;
+    duration_seconds?: number | null;
+  }>) {
+    const list = flashByUser.get(row.user_id) ?? [];
+    list.push(row);
+    flashByUser.set(row.user_id, list);
+    bumpLast(row.user_id, row.completed_at ?? row.started_at);
+  }
+
   const notesByUser = new Map<string, number>();
   if (!notesRes.error) {
     for (const row of (notesRes.data ?? []) as Array<{ user_id?: string | null; created_at?: string | null }>) {
@@ -421,7 +447,14 @@ export async function loadLearnerSuivi(options: {
     if (!isLearner && !hidden) continue;
 
     const sessions = sessionsByUser.get(profile.id) ?? [];
-    const metrics = metricsFromLegacySessionRows(sessions);
+    const leafRows = leavesByUser.get(profile.id) ?? [];
+    const metrics = enrichMetricsWithEvidence({
+      learningSessionRows: sessions,
+      flashcardRows: flashByUser.get(profile.id) ?? [],
+      leafCompletedAts: leafRows
+        .map((l) => String(l.completed_at ?? ""))
+        .filter(Boolean),
+    });
 
     // Buckets semaine : temps actif des séances recalculées (même source que le total)
     const byDay = new Map<string, number>();
@@ -433,9 +466,6 @@ export async function loadLearnerSuivi(options: {
     const activeWeekBuckets = weekBuckets(byDay, 4);
 
     const leaves = leavesByUser.get(profile.id) ?? [];
-    const periodLeaves = since
-      ? leaves.filter((l) => l.completed_at && l.completed_at >= since.toISOString())
-      : leaves;
 
     // Parcours principal = dernière activité (session course) ou dernière completion
     let courseId: string | null = null;

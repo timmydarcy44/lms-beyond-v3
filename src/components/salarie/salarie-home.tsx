@@ -85,6 +85,7 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [previewBlockedBilans, setPreviewBlockedBilans] = useState(false);
   const [badgeCelebration, setBadgeCelebration] = useState<{
     badgeName: string;
     badgeImageUrl: string | null;
@@ -104,6 +105,17 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("preview_blocked") === "bilans") {
+      setPreviewBlockedBilans(true);
+      params.delete("preview_blocked");
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
+      window.history.replaceState({}, "", next);
+    }
   }, []);
 
   useEffect(() => {
@@ -179,94 +191,23 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
   const active = tab ?? tabs[0]?.id ?? null;
 
   if (variant === "bilans") {
-    const pending = [
-      !home.bilans.disc ? { href: "/dashboard/salarie/test-disc", label: "Test comportemental" } : null,
-      !home.bilans.idmc ? { href: "/dashboard/salarie/test-idmc", label: "Test IDMC" } : null,
-      !home.bilans.soft ? { href: "/dashboard/salarie/test-soft-skills", label: "Soft skills" } : null,
-    ].filter((item): item is { href: string; label: string } => Boolean(item));
-
     return (
-      <div className={cn(manrope.className, "mx-auto w-full max-w-[980px] px-4 pb-16 pt-6 text-[#F4F5F7] sm:px-6")}>
-        <p className="text-[13px] text-[#8A8F98]">Espace salarié</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight">Mes bilans</h1>
-        <p className="mt-2 max-w-xl text-sm text-[#B5BAC6]">
-          Les résultats de vos tests. L&apos;accueil reste le résumé du jour.
-        </p>
-        <section className="mt-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-extrabold">{home.bilans.completed} sur {home.bilans.expected}</h2>
-            {home.analysis ? (
-              <button type="button" onClick={() => setAnalysisOpen(true)} className="text-sm font-semibold text-[#C9C2FF]">
-                Synthèse croisée
-              </button>
-            ) : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {home.bilans.disc ? (
-              <Link href="/dashboard/salarie/test-disc" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#E7782C] p-5 text-white">
-                <DatePill date={home.bilans.disc.takenAt} />
-                <p className="text-sm font-semibold text-white/80">Profil comportemental</p>
-                <p className="mt-2 text-[34px] font-extrabold leading-none">{home.bilans.disc.dominant}</p>
-                <div className="mt-6 space-y-2">
-                  {home.bilans.disc.bars.map((bar) => (
-                    <div key={bar.key} className="flex items-center gap-2 text-xs">
-                      <span className="w-4 font-bold">{bar.key}</span>
-                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/20">
-                        <span className="block h-full rounded-full bg-white" style={{ width: `${Math.max(0, Math.min(100, bar.value))}%` }} />
-                      </span>
-                      <span className="w-8 text-right">{Math.round(bar.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </Link>
-            ) : null}
-            {home.bilans.idmc ? (
-              <Link href="/dashboard/salarie/test-idmc" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#2F7CF6] p-5 text-white">
-                <DatePill date={home.bilans.idmc.takenAt} />
-                <p className="text-sm font-semibold text-white/80">Point fort</p>
-                <p className="mt-2 max-w-[220px] text-[26px] font-extrabold leading-tight">{home.bilans.idmc.strong}</p>
-                {home.bilans.idmc.weak ? <p className="mt-6 text-sm text-white/85">À renforcer : {home.bilans.idmc.weak}</p> : null}
-              </Link>
-            ) : null}
-            {home.bilans.soft ? (
-              <Link href="/soft-skills/resultats?from=salarie" className="relative min-h-[220px] overflow-hidden rounded-[26px] bg-[#14A38B] p-5 text-white">
-                <DatePill date={home.bilans.soft.takenAt} />
-                <p className="text-sm font-semibold text-white/80">Soft skills</p>
-                <ul className="mt-4 space-y-2">
-                  {home.bilans.soft.top.map((skill, index) => (
-                    <li key={skill} className="text-lg font-extrabold leading-tight">
-                      {index + 1}. {skill}
-                    </li>
-                  ))}
-                </ul>
-              </Link>
-            ) : null}
-            {pending.map((item) => (
-              <Link key={item.href} href={item.href} className="flex min-h-[220px] flex-col justify-between rounded-[26px] border border-[#262A36] bg-[#12141A] p-5">
-                <p className="text-sm text-[#B5BAC6]">Pas encore passé</p>
-                <p className="text-2xl font-extrabold">{item.label}</p>
-                <p className="text-sm font-semibold text-[#C9C2FF]">Commencer</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-        {analysisOpen && home.analysis ? (
-          <dialog open className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-4 sm:items-center" onClick={() => setAnalysisOpen(false)}>
-            <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-[28px] bg-[#12141A] p-6" onClick={(event) => event.stopPropagation()}>
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-lg font-extrabold">Synthèse croisée</h3>
-                <button type="button" aria-label="Fermer" onClick={() => setAnalysisOpen(false)}><X className="h-4 w-4" /></button>
-              </div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#DADDE4]">{home.analysis}</p>
-            </div>
-          </dialog>
-        ) : null}
+      <div className={cn(manrope.className, "mx-auto max-w-[980px] px-4 py-16 text-[#F4F5F7]")}>
+        <p className="text-sm text-[#B5BAC6]">Cette vue a déménagé.</p>
+        <Link href="/dashboard/salarie/bilans" className="mt-4 inline-flex text-sm font-semibold text-[#C9C2FF]">
+          Ouvrir Mes bilans →
+        </Link>
       </div>
     );
   }
 
   return (
     <div className={cn(manrope.className, "mx-auto w-full max-w-[980px] px-4 pb-16 pt-4 text-[#F4F5F7] sm:px-6")}>
+      {previewBlockedBilans ? (
+        <p className="mb-4 rounded-2xl border border-[#1C2443] bg-[#10183A] px-4 py-3 text-sm text-[#C9D4FF]">
+          Les résultats individuels (Mes bilans) ne sont pas accessibles en mode accompagnement.
+        </p>
+      ) : null}
       <header className="mb-5 flex items-center gap-3 pl-12 lg:pl-0">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] text-sm font-extrabold text-white">
           {home.profile.initials}
@@ -521,12 +462,6 @@ function RoundAction({ href, label, icon: Icon, primary = false }: { href: strin
       {label}
     </Link>
   );
-}
-
-function DatePill({ date }: { date: string | null }) {
-  const label = formatDate(date);
-  if (!label) return null;
-  return <span className="absolute right-4 top-4 rounded-full bg-black/20 px-2.5 py-1 text-[11px] font-semibold">{label}</span>;
 }
 
 function NextStepCard({ step, onNeed }: { step: EmployeeNextStep; onNeed: () => void }) {

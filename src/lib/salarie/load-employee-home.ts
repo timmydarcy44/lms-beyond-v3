@@ -15,6 +15,10 @@ import {
 import { maybeTriggerCrossProfileCompletion } from "@/lib/learner/cross-profile-completion";
 import { getLearnerEarnedOpenBadges } from "@/lib/openbadges/learner-visible-badges";
 import { listSalarieAssignedFormations } from "@/lib/salarie/assigned-formations";
+import {
+  buildMesBilansViewModel,
+  type MesBilansViewModel,
+} from "@/lib/salarie/build-mes-bilans";
 import { enterpriseVisibilityForEmployee } from "@/lib/salarie/enterprise-visibility";
 import { resolveEmployeeNextStep, type EmployeeNextStep } from "@/lib/salarie/employee-next-step";
 import { SOFT_SKILLS_QUESTIONS } from "@/lib/soft-skills/questions";
@@ -61,6 +65,8 @@ export type SalarieHomePayload = {
   }>;
   visibility: ReturnType<typeof enterpriseVisibilityForEmployee>;
   search: Array<{ label: string; href: string }>;
+  /** Détail Mes bilans v3 (scores expliqués). Null si non calculé. */
+  mesBilans: MesBilansViewModel | null;
 };
 
 const BILAN_LINKS = {
@@ -413,6 +419,19 @@ export async function loadSalarieHome(userId: string, email: string | null): Pro
     profileRow?.role || profileRow?.role_type,
   );
 
+  const mesBilans = buildMesBilansViewModel({
+    discScores: parsedDisc,
+    discTakenAt: discCard?.takenAt ?? null,
+    idmcAxes: axes,
+    idmcTakenAt: idmcCard?.takenAt ?? null,
+    softEntries,
+    softTakenAt: softCard?.takenAt ?? null,
+    softFlat,
+    assignedFormations: formation
+      ? [{ title: formation.title, href: formation.href }]
+      : formations.map((item) => ({ title: item.title, href: item.href })),
+  });
+
   return {
     profile: { firstName, lastName, initials: initials(firstName, lastName) },
     isTutor,
@@ -426,6 +445,7 @@ export async function loadSalarieHome(userId: string, email: string | null): Pro
     history,
     visibility: enterpriseVisibilityForEmployee(consent),
     search,
+    mesBilans,
   };
 }
 
@@ -443,5 +463,14 @@ function blankHome(): SalarieHomePayload {
     history: [],
     visibility: enterpriseVisibilityForEmployee(null),
     search: [],
+    mesBilans: buildMesBilansViewModel({
+      discScores: null,
+      discTakenAt: null,
+      idmcAxes: null,
+      idmcTakenAt: null,
+      softEntries: [],
+      softTakenAt: null,
+      softFlat: false,
+    }),
   };
 }

@@ -31,10 +31,20 @@ export async function GET() {
   }
 
   const home = await loadSalarieHome(userId, email);
+
+  // Preview accompagnement : pas de résultats individuels (Mes bilans exclus côté serveur).
+  if (preview && !preview.expired) {
+    return NextResponse.json({
+      ...home,
+      bilans: { completed: 0, expected: 3, disc: null, idmc: null, soft: null },
+      analysis: null,
+      mesBilans: null,
+      preview: { active: true, targetName: preview.targetName, targetUserId: preview.targetUserId },
+    });
+  }
+
   return NextResponse.json({
     ...home,
-    preview: preview
-      ? { active: true, targetName: preview.targetName, targetUserId: preview.targetUserId }
-      : null,
+    preview: null,
   });
 }

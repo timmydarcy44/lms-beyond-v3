@@ -6,6 +6,7 @@ import {
   JADE_IDMC_AXES,
   JADE_SOFT_SKILLS_RADAR,
 } from "@/lib/demo/jade-dashboard-mocks";
+import { buildMesBilansViewModel } from "@/lib/salarie/build-mes-bilans";
 import { resolveEmployeeNextStep } from "@/lib/salarie/employee-next-step";
 import { enterpriseVisibilityForEmployee } from "@/lib/salarie/enterprise-visibility";
 import type { SalarieHomePayload } from "@/lib/salarie/load-employee-home";
@@ -145,5 +146,15 @@ export function buildJadeSalarieHome(): SalarieHomePayload {
       { label: "Bilan IDMC", href: "/dashboard/salarie#bilans" },
       { label: "Soft skills", href: "/dashboard/salarie#bilans" },
     ],
+    mesBilans: buildMesBilansViewModel({
+      discScores: JADE_DISC_SCORES,
+      discTakenAt: daysAgo(18),
+      idmcAxes: JADE_IDMC_AXES,
+      idmcTakenAt: daysAgo(12),
+      softEntries: JADE_SOFT_SKILLS_RADAR.map((row) => ({ skill: row.skill, score: row.score })),
+      softTakenAt: daysAgo(6),
+      softFlat: false,
+      assignedFormations: [{ title: "CCP1 — Stratégie de prospection", href: formationHref }],
+    }),
   };
 }

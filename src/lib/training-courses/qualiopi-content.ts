@@ -69,47 +69,17 @@ export const HERO_DIAGNOSTIC_BADGES = [
   "Personnalisation du parcours",
 ] as const;
 
-/** Méthodes pédagogiques par défaut (fusionnées avec la méthodologie saisie). */
-const DEFAULT_PEDAGOGICAL_METHODS = [
-  "Apports courts",
-  "Mises en situation",
-  "Jeux de rôle",
-  "Feedback entre pairs",
-  "Co-développement",
-  "Coaching",
-  "Études de cas",
-  "Supports numériques",
-  "Plan de progression",
-  "Re-test à deux mois",
-  "LMS Byound",
-  "Parcours neuroadapté",
-  "Entretiens expérientiels",
-  "Jeux interactifs",
-];
-
-const REMOVED_PEDAGOGICAL_METHODS = new Set(["classe virtuelle"]);
-
+/** Méthodes pédagogiques = uniquement la méthodologie saisie en CMS (/super). Pas de liste mock. */
 export function buildPedagogicalMethods(detail: TrainingCourseDetail): string[] {
-  const fromCourse = detail.methodology.filter(Boolean);
-  const merged = [...fromCourse];
-  for (const method of DEFAULT_PEDAGOGICAL_METHODS) {
-    if (!merged.some((m) => m.toLowerCase() === method.toLowerCase())) merged.push(method);
-  }
-  return merged.filter((m) => !REMOVED_PEDAGOGICAL_METHODS.has(m.toLowerCase()));
+  return detail.methodology.map((m) => String(m ?? "").trim()).filter(Boolean);
 }
 
-/** Modalités d'évaluation (obligatoire Qualiopi). */
-export function buildEvaluationModalities(): string[] {
-  return [
-    "Positionnement initial Byound",
-    "Quiz intermédiaires",
-    "Cas pratiques",
-    "Exercices",
-    "Mise en situation",
-    "Évaluation finale",
-    "Validation des compétences",
-    "Attribution d'un Open Badge Byound",
-  ];
+/**
+ * Modalités d'évaluation — pas de liste mock.
+ * Tant qu’aucun champ CMS dédié n’existe, on n’affiche rien sur le front.
+ */
+export function buildEvaluationModalities(_detail?: TrainingCourseDetail): string[] {
+  return [];
 }
 
 export type SkillLevelRow = {

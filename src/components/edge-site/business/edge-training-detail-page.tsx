@@ -290,7 +290,7 @@ export function EdgeTrainingDetailPage({
 
   const pedagogicalObjectives = useMemo(() => buildPedagogicalObjectives(detail), [detail]);
   const skillRows = useMemo(() => buildSkillLevelRows(detail), [detail]);
-  const evaluationModalities = useMemo(() => buildEvaluationModalities(), []);
+  const evaluationModalities = useMemo(() => buildEvaluationModalities(detail), [detail]);
   const pedagogicalMethods = useMemo(() => buildPedagogicalMethods(detail), [detail]);
   const qualiopiInfo = useMemo(() => buildQualiopiInfo(course, detail), [course, detail]);
   const qualityIndicators = useMemo(
@@ -563,41 +563,45 @@ export function EdgeTrainingDetailPage({
             </section>
           ) : null}
 
-          {/* 6. MODALITÉS D'ÉVALUATION */}
-          <section className="scroll-mt-40">
-            <div className="rounded-[24px] border border-[#050505]/8 bg-white p-7">
-              <div className="flex items-center gap-2 text-edge-accent">
-                <Target className="h-4 w-4" />
-                <span className="text-xs font-semibold uppercase tracking-[0.16em]">Évaluation</span>
+          {/* 6. MODALITÉS D'ÉVALUATION — uniquement si renseignées (pas de mock) */}
+          {evaluationModalities.length > 0 ? (
+            <section className="scroll-mt-40">
+              <div className="rounded-[24px] border border-[#050505]/8 bg-white p-7">
+                <div className="flex items-center gap-2 text-edge-accent">
+                  <Target className="h-4 w-4" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em]">Évaluation</span>
+                </div>
+                <h2 className="mt-3 text-xl font-semibold tracking-[-0.02em]">Modalités d&apos;évaluation</h2>
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {evaluationModalities.map((item) => (
+                    <li key={item} className="flex gap-2.5 text-sm text-[#050505]/65">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-edge-accent" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <h2 className="mt-3 text-xl font-semibold tracking-[-0.02em]">Modalités d&apos;évaluation</h2>
-              <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-                {evaluationModalities.map((item) => (
-                  <li key={item} className="flex gap-2.5 text-sm text-[#050505]/65">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-edge-accent" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
+            </section>
+          ) : null}
 
-          {/* 7. MÉTHODES PÉDAGOGIQUES */}
-          <section className="scroll-mt-40">
-            <div className="rounded-[24px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.06] to-white p-7">
-              <h2 className="text-xl font-semibold tracking-[-0.02em]">Méthodes pédagogiques</h2>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {pedagogicalMethods.map((method) => (
-                  <span
-                    key={method}
-                    className="rounded-full border border-edge-accent/20 bg-white px-3 py-1.5 text-xs font-medium text-edge-accent"
-                  >
-                    {method}
-                  </span>
-                ))}
+          {/* 7. MÉTHODES PÉDAGOGIQUES — uniquement si renseignées en CMS */}
+          {pedagogicalMethods.length > 0 ? (
+            <section className="scroll-mt-40">
+              <div className="rounded-[24px] border border-edge-accent/15 bg-gradient-to-br from-edge-accent/[0.06] to-white p-7">
+                <h2 className="text-xl font-semibold tracking-[-0.02em]">Méthodes pédagogiques</h2>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {pedagogicalMethods.map((method) => (
+                    <span
+                      key={method}
+                      className="rounded-full border border-edge-accent/20 bg-white px-3 py-1.5 text-xs font-medium text-edge-accent"
+                    >
+                      {method}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          ) : null}
 
           {/* 8. ACCOMPAGNEMENT */}
           <section className="scroll-mt-40">

@@ -87,7 +87,7 @@ export function VeilleHighlightPlan({
             Proposition IA (brouillon)
           </p>
           {summary ? (
-            <p className="mt-1 text-sm leading-relaxed text-[#e8e4ff]/summary}</p>
+            <p className="mt-1 text-sm leading-relaxed text-[#e8e4ff]">{summary}</p>
           ) : null}
           <ul className="mt-3 space-y-3">
             {items.map((item, index) => (

@@ -1,4 +1,4 @@
-import { renderHtmlToPdf } from "@/lib/formation-documents/html-pdf";
+import { jsPDF } from "jspdf";
 import {
   VEILLE_AXES,
   VEILLE_THEME_LABELS,
@@ -6,20 +6,23 @@ import {
   type VeilleHighlight,
   type VeilleTheme,
 } from "@/lib/qualiopi/veille-shared";
-import {
-  Q_PDF,
-  escPdf,
-  fmtPdfDateTime,
-  fmtPdfDay,
-  qualiopiPdfShell,
-} from "@/lib/qualiopi/pdf-theme";
+
+function fmtDay(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 10);
+  return d.toLocaleDateString("fr-FR");
+}
 
 function asItems(raw: unknown): Array<Record<string, unknown>> {
   if (!Array.isArray(raw)) return [];
   return raw.filter((x) => x && typeof x === "object") as Array<Record<string, unknown>>;
 }
 
-/** Registre PDF des veilles Qualiopi (ind. 23 / 24 / 25) — design Revolut. */
+/**
+ * Registre PDF des veilles Qualiopi (ind. 23 / 24 / 25).
+ * jsPDF (sans Chromium) — fiable sur Vercel serverless.
+ */
 export async function buildVeillesRegistrePdf(input: {
   digests: VeilleDigest[];
   highlights: VeilleHighlight[];
@@ -29,95 +32,121 @@ export async function buildVeillesRegistrePdf(input: {
   const digests = input.digests ?? [];
   const highlights = input.highlights ?? [];
 
-  const doneByTheme = (theme: VeilleTheme) =>
-    highlights.filter((h) => (h.theme || "reglementaire") === theme && h.status === "done").length;
-  const savedByTheme = (theme: VeilleTheme) =>
-    highlights.filter((h) => (h.theme || "reglementaire") === theme).length;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const margin = 14;
+  const pageW = doc.internal.pageSize.getWidth();
+  const maxW = pageW - margin * 2;
+  let y = 16;
 
-  const axisCards = VEILLE_AXES.map((axis) => {
-    const done = doneByTheme(axis.theme);
-    const total = savedByTheme(axis.theme);
-    return `<div class="kpi">
-      <div class="l">Ind. ${escPdf(axis.indicatorId)}</div>
-      <div class="v" style="font-size:16px">${escPdf(axis.shortTitle)}</div>
-      <div class="s">${escPdf(done)} traité(s) / ${escPdf(total)} suivi(s)</div>
-    </div>`;
-  }).join("");
+  const ensure = (need: number) => {
+    if (y + need > 285) {
+      doc.addPage();
+      y = 16;
+    }
+  };
 
-  const highlightsRows =
-    highlights.length === 0
-      ? `<tr><td colspan="4" class="muted">Aucun surlignage enregistré.</td></tr>`
-      : highlights
-          .slice(0, 80)
-          .map((h) => {
-            const theme = (h.theme || "reglementaire") as VeilleTheme;
-            const axis = VEILLE_AXES.find((a) => a.theme === theme);
-            return `<tr>
-              <td><span class="pill">Ind. ${escPdf(axis?.indicatorId ?? "—")}</span></td>
-              <td>
-                <div style="font-weight:800">${escPdf(h.title)}</div>
-                <div class="muted" style="margin-top:3px;font-size:10px">${escPdf(VEILLE_THEME_LABELS[theme] ?? theme)} · ${escPdf(h.status)}</div>
-                <div class="muted" style="margin-top:4px;font-size:10px">${escPdf((h.excerpt || "").slice(0, 220))}</div>
-                ${h.url ? `<div class="muted" style="margin-top:3px;font-size:10px">${escPdf(h.url)}</div>` : ""}
-              </td>
-              <td class="muted" style="white-space:nowrap">${escPdf(fmtPdfDay(h.updated_at || h.created_at))}</td>
-              <td class="muted" style="font-size:10px">${escPdf((h.note || "—").slice(0, 120))}</td>
-            </tr>`;
-          })
-          .join("");
+  const line = (text: string, opts?: { bold?: boolean; size?: number; color?: number }) => {
+    const size = opts?.size ?? 10;
+    doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    doc.setTextColor(opts?.color ?? 20);
+    const wrapped = doc.splitTextToSize(text, maxW);
+    ensure(wrapped.length * (size * 0.4) + 2);
+    doc.text(wrapped, margin, y);
+    y += wrapped.length * (size * 0.4) + 2;
+  };
 
-  const digestsHtml = digests
-    .slice(0, 8)
-    .map((d) => {
-      const items = asItems(d.items);
-      const list = items
-        .slice(0, 12)
-        .map((item) => {
-          const title = String(item.title ?? "Sans titre");
-          const summary = String(item.summary ?? "").slice(0, 180);
-          const url = item.url ? String(item.url) : "";
-          const theme = item.theme ? String(item.theme) : "";
-          return `<li style="margin-bottom:8px">
-            <div style="font-weight:800">${escPdf(title)}</div>
-            ${theme ? `<div class="muted" style="font-size:10px">${escPdf(VEILLE_THEME_LABELS[theme as VeilleTheme] ?? theme)}</div>` : ""}
-            <div class="muted" style="font-size:10px;margin-top:2px">${escPdf(summary)}</div>
-            ${url ? `<div class="muted" style="font-size:10px">${escPdf(url)}</div>` : ""}
-          </li>`;
-        })
-        .join("");
-      return `<div class="card">
-        <h2>${escPdf(d.title || "Synthèse veille")}</h2>
-        <p class="muted" style="margin:4px 0 0;font-size:11px">Semaine du ${escPdf(fmtPdfDay(d.week_start))} · ${escPdf(d.kind)}</p>
-        ${d.summary ? `<p style="margin:10px 0 0;font-size:11.5px;font-weight:650;color:${Q_PDF.accentSoft}">${escPdf(d.summary)}</p>` : ""}
-        <ul style="margin:12px 0 0;padding-left:16px">${list || `<li class="muted">Aucun item</li>`}</ul>
-      </div>`;
-    })
-    .join("");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(80);
+  doc.text("Byound Control · Qualiopi", margin, y);
+  y += 7;
 
-  const inner = `
-    <header class="hero">
-      <div class="brand">
-        <div class="brand-mark">Byound Control</div>
-        <div class="brand-meta">Indicateurs 23 · 24 · 25<br/>${escPdf(fmtPdfDateTime(generatedAtIso))}</div>
-      </div>
-      <h1>Registre des veilles</h1>
-      <p class="sub">Preuves Qualiopi — légale & réglementaire, compétences & métiers, innovations pédagogiques</p>
-      <div class="kpis">${axisCards}<div class="kpi"><div class="l">Synthèses</div><div class="v">${escPdf(digests.length)}</div><div class="s">Digests exportés</div></div></div>
-    </header>
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(10);
+  doc.text("Registre des veilles", margin, y);
+  y += 7;
 
-    <div class="card">
-      <h2>Surlignages traités / suivis</h2>
-      <table class="data">
-        <thead><tr><th>Axe</th><th>Contenu</th><th>Date</th><th>Note</th></tr></thead>
-        <tbody>${highlightsRows}</tbody>
-      </table>
-    </div>
+  line(`Indicateurs 23 · 24 · 25 · Export du ${fmtDay(generatedAtIso)}`, {
+    size: 9,
+    color: 90,
+  });
+  line("Preuves — légale & réglementaire, compétences & métiers, innovations pédagogiques", {
+    size: 9,
+    color: 90,
+  });
+  y += 2;
 
-    ${digestsHtml || `<div class="card"><h2>Synthèses</h2><p class="muted">Aucune synthèse de veille.</p></div>`}
+  for (const axis of VEILLE_AXES) {
+    const done = highlights.filter(
+      (h) => (h.theme || "reglementaire") === axis.theme && h.status === "done",
+    ).length;
+    const total = highlights.filter((h) => (h.theme || "reglementaire") === axis.theme).length;
+    line(`Ind. ${axis.indicatorId} — ${axis.shortTitle} : ${done} traité(s) / ${total} suivi(s)`, {
+      bold: true,
+      size: 10,
+    });
+  }
+  line(`Synthèses exportées : ${digests.length}`, { size: 10, bold: true });
+  y += 3;
 
-    <footer class="foot">
-      Document généré pour l’audit Qualiopi (ind. 23, 24, 25) — Byound Control · ${escPdf(fmtPdfDateTime(generatedAtIso))}.
-    </footer>`;
+  line("Surlignages traités / suivis", { bold: true, size: 13 });
+  y += 1;
+  if (highlights.length === 0) {
+    line("Aucun surlignage enregistré.", { size: 9, color: 110 });
+  } else {
+    for (const h of highlights.slice(0, 80)) {
+      const theme = (h.theme || "reglementaire") as VeilleTheme;
+      const axis = VEILLE_AXES.find((a) => a.theme === theme);
+      ensure(22);
+      line(
+        `Ind. ${axis?.indicatorId ?? "—"} · ${VEILLE_THEME_LABELS[theme] ?? theme} · ${h.status} · ${fmtDay(h.updated_at || h.created_at)}`,
+        { size: 8, color: 100 },
+      );
+      line(String(h.title || "Sans titre"), { bold: true, size: 10 });
+      if (h.excerpt) line(String(h.excerpt).slice(0, 280), { size: 8, color: 70 });
+      if (h.note) line(`Note : ${String(h.note).slice(0, 160)}`, { size: 8, color: 70 });
+      if (h.url) line(String(h.url).slice(0, 120), { size: 7, color: 120 });
+      y += 2;
+    }
+  }
 
-  return renderHtmlToPdf(qualiopiPdfShell(inner), { font: "manrope", fullBleed: true });
+  y += 2;
+  line("Synthèses de veille", { bold: true, size: 13 });
+  y += 1;
+  if (digests.length === 0) {
+    line("Aucune synthèse de veille.", { size: 9, color: 110 });
+  } else {
+    for (const d of digests.slice(0, 12)) {
+      ensure(28);
+      line(String(d.title || "Synthèse veille"), { bold: true, size: 11 });
+      line(`Semaine du ${fmtDay(d.week_start)} · ${d.kind}`, { size: 8, color: 100 });
+      if (d.summary) line(String(d.summary).slice(0, 400), { size: 9, color: 50 });
+      const items = asItems(d.items).slice(0, 12);
+      for (const item of items) {
+        const title = String(item.title ?? "Sans titre");
+        const summary = String(item.summary ?? "").slice(0, 180);
+        const theme = item.theme ? String(item.theme) : "";
+        line(
+          `• ${title}${theme ? ` (${VEILLE_THEME_LABELS[theme as VeilleTheme] ?? theme})` : ""}`,
+          { size: 8, bold: true },
+        );
+        if (summary) line(`  ${summary}`, { size: 7, color: 80 });
+      }
+      y += 3;
+    }
+  }
+
+  ensure(12);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(120);
+  doc.text(
+    "Document généré pour l’audit Qualiopi (ind. 23, 24, 25) — Byound Control.",
+    margin,
+    y,
+  );
+
+  return Buffer.from(doc.output("arraybuffer"));
 }

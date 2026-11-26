@@ -51,22 +51,42 @@ export function QualiopiVeillesPanel() {
   const exportPdf = async () => {
     setExportBusy(true);
     try {
-      const res = await fetch("/api/super-admin/crm/qualiopi/veilles/export");
+      const res = await fetch("/api/super-admin/crm/qualiopi/veilles/export", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const contentType = res.headers.get("content-type") || "";
       if (!res.ok) {
-        const err = (await res.json().catch(() => null)) as { error?: string } | null;
-        toast.error(err?.error || "Export PDF veilles impossible");
+        const err = contentType.includes("application/json")
+          ? ((await res.json().catch(() => null)) as { error?: string } | null)
+          : null;
+        toast.error(err?.error || `Export PDF impossible (${res.status})`);
         return;
       }
       const blob = await res.blob();
+      const header = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+      const isPdf =
+        header.length >= 4 &&
+        header[0] === 0x25 &&
+        header[1] === 0x50 &&
+        header[2] === 0x44 &&
+        header[3] === 0x46;
+      if (!isPdf) {
+        toast.error("La réponse n’est pas un PDF valide");
+        return;
+      }
       const urlObject = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = urlObject;
       a.download = `registre-veilles-qualiopi-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.rel = "noopener";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(urlObject);
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(urlObject), 2_000);
       toast.success("PDF veilles téléchargé");
-    } catch {
-      toast.error("Export PDF veilles impossible");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export PDF veilles impossible");
     } finally {
       setExportBusy(false);
     }
@@ -319,7 +339,7 @@ export function QualiopiVeillesPanel() {
             ) : (
               <Download className="mr-2 h-4 w-4" />
             )}
-            Exporter PDF
+            Exporter en PDF
           </Button>
           <Button
             type="button"

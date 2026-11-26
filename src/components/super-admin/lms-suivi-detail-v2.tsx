@@ -152,7 +152,9 @@ export function LmsSuiviDetailV2({ initial }: Props) {
     window.open(`/api/super/lms/suivi/${data.userId}/export?format=csv`, "_blank");
   }
   function exportPdf() {
-    window.open(`/api/super/lms/suivi/${data.userId}/export?format=pdf`, "_blank");
+    const qs = new URLSearchParams({ format: "pdf", autoprint: "1" });
+    if (courseId) qs.set("courseId", courseId);
+    window.open(`/api/super/lms/suivi/${data.userId}/export?${qs.toString()}`, "_blank");
   }
 
   return (

@@ -2,8 +2,9 @@
 
 import { AXES_LABELS, IDMC_AXIS_KEYS, resolveIdmcAxisMasteryLevel } from "@/lib/idmc/idmc-display";
 import type { EmployeeTestResults } from "@/lib/entreprise/employee-profile-diagnostics";
+import { hasAnyTestResults } from "@/lib/entreprise/employee-profile-diagnostics";
 import { SectionCard, SectionHeader } from "@/components/super-admin/expert-fiche-ui";
-import { Award, Brain, Sparkles, Target } from "lucide-react";
+import { Award, Brain, Download, Sparkles, Target } from "lucide-react";
 
 const DISC_LABELS: Record<"D" | "I" | "S" | "C", string> = {
   D: "Décisionnel",
@@ -19,7 +20,13 @@ function formatDay(value: string | null | undefined) {
   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-export function ExpertCrmTestResults({ results }: { results: EmployeeTestResults }) {
+export function ExpertCrmTestResults({
+  results,
+  expertId,
+}: {
+  results: EmployeeTestResults;
+  expertId: string;
+}) {
   const disc = results.disc;
   const discEntries = disc
     ? (["D", "I", "S", "C"] as const)
@@ -31,11 +38,11 @@ export function ExpertCrmTestResults({ results }: { results: EmployeeTestResults
     return { key, label: AXES_LABELS[key], score, mastery: resolveIdmcAxisMasteryLevel(score) };
   }).sort((a, b) => b.score - a.score);
   const soft = [...results.soft_skills].sort((a, b) => b.score - a.score).slice(0, 8);
-  const hasAny =
-    Boolean(disc) ||
-    Boolean(results.idmc_axes && Object.values(results.idmc_axes).some((v) => Number(v) > 0)) ||
-    results.idmc_score != null ||
-    soft.length > 0;
+  const hasAny = hasAnyTestResults(results);
+
+  function openPdf() {
+    window.open(`/api/super/experts/${expertId}/bilan-pdf?autoprint=1`, "_blank");
+  }
 
   if (!hasAny) {
     return (
@@ -54,6 +61,19 @@ export function ExpertCrmTestResults({ results }: { results: EmployeeTestResults
   }
 
   return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-[#9AA3BD]">
+          Soft skills, DISC et IDMC — export PDF haute qualité
+        </p>
+        <button
+          type="button"
+          onClick={openPdf}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#26304F] bg-[#111831] px-4 py-2 text-sm font-extrabold text-[#F2F4FA] hover:border-[#6E5BFF]/40"
+        >
+          <Download className="h-3.5 w-3.5" /> Exporter le PDF
+        </button>
+      </div>
     <div className="grid gap-6 xl:grid-cols-3">
       <SectionCard color="#8B7BFF">
         <SectionHeader
@@ -139,6 +159,7 @@ export function ExpertCrmTestResults({ results }: { results: EmployeeTestResults
           )}
         </ul>
       </SectionCard>
+    </div>
     </div>
   );
 }

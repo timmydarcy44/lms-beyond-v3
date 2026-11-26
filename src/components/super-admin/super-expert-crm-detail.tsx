@@ -859,6 +859,7 @@ export function SuperExpertCrmDetail({
 
         {tab === "bilans" ? (
           <ExpertCrmTestResults
+            expertId={expert.id}
             results={
               testResults ?? {
                 disc: null,

@@ -19,6 +19,7 @@ import { AccountBesoinsTab } from "./account-besoins-tab";
 import { AccountAlternanceTab } from "./account-alternance-tab";
 import { OrganizationFeaturesPanel } from "@/components/super-admin/organization-features-panel";
 import { formatPersonName } from "@/lib/control/account-participants-format";
+import { deleteOrganizationAction } from "@/app/super/organisations/[id]/actions";
 
 type Detail = Awaited<ReturnType<typeof loadAccountDetail>>;
 
@@ -148,6 +149,7 @@ export function AccountFile({
   const [notice, setNotice] = useState<string | null>(null);
   const [passwordInviteBusy, setPasswordInviteBusy] = useState(false);
   const [clientViewBusy, setClientViewBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const kpis = useAccountKpis(detail);
 
   useEffect(() => {
@@ -227,6 +229,31 @@ export function AccountFile({
       setPasswordInviteBusy(false);
     }
   }
+
+  async function deleteAccount() {
+    if (!account?.id || deleteBusy) return;
+    if (!window.confirm(`Supprimer l'entreprise « ${account.name} » ? Cette action est irréversible.`)) {
+      return;
+    }
+    if (!window.confirm("CONFIRMATION FINALE : supprimer définitivement ce compte client et ses données liées ?")) {
+      return;
+    }
+    setDeleteBusy(true);
+    setActionsOpen(false);
+    try {
+      const result = await deleteOrganizationAction(account.id);
+      if (!result.success) {
+        setNotice(result.error || "Suppression impossible");
+        return;
+      }
+      router.push("/super/organisations");
+      router.refresh();
+    } catch {
+      setNotice("Suppression impossible");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
   const statusLabel =
     account.status === "demo" ? "Démo" : account.status === "active" ? "Actif" : "À configurer";
   const statusTone =
@@ -270,6 +297,14 @@ export function AccountFile({
               {clientViewBusy ? "Ouverture…" : "Voir comme le client ↗"}
             </button>
           )}
+          <button
+            type="button"
+            disabled={deleteBusy}
+            onClick={() => void deleteAccount()}
+            className="rounded-full border border-[#FF8A9B]/40 bg-[#3A1820] px-4 py-2 text-sm font-semibold text-[#FF8A9B] disabled:opacity-50"
+          >
+            {deleteBusy ? "Suppression…" : "Supprimer l'entreprise"}
+          </button>
         </div>
       ) : (
         <header
@@ -395,6 +430,14 @@ export function AccountFile({
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); openInvite(); }}>Inviter</button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("course"); openTab("courses"); }}>Accès LMS</button>
                       <button type="button" className="block w-full rounded-xl px-2 py-1.5 text-left" onClick={() => { setActionsOpen(false); setPanel("badge"); }}>Créer un Open Badge</button>
+                      <button
+                        type="button"
+                        disabled={deleteBusy}
+                        className="block w-full rounded-xl px-2 py-1.5 text-left font-semibold text-[#FF8A9B] disabled:opacity-50"
+                        onClick={() => void deleteAccount()}
+                      >
+                        {deleteBusy ? "Suppression…" : "Supprimer l'entreprise"}
+                      </button>
                     </span>
                   ) : null}
                 </span>

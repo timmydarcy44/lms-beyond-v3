@@ -73,23 +73,92 @@ export type VeilleDigestItem = {
 /** Marqueur stocké dans highlight.note pour le plan d’action généré. */
 export const VEILLE_ACTION_PLAN_MARKER = "## Plan d'action Byound";
 
+export type VeillePlanDraftItem = {
+  id: string;
+  title: string;
+  owner_name?: string | null;
+  due_at?: string | null;
+  selected?: boolean;
+};
+
+export type VeillePlanDraft = {
+  version: 1;
+  summary?: string;
+  items: VeillePlanDraftItem[];
+};
+
 export function splitVeilleHighlightNote(note: string | null | undefined): {
   preface: string;
   actionPlan: string | null;
+  planDraft: VeillePlanDraft | null;
 } {
   const raw = String(note ?? "").trim();
-  if (!raw) return { preface: "", actionPlan: null };
+  if (!raw) return { preface: "", actionPlan: null, planDraft: null };
   const idx = raw.indexOf(VEILLE_ACTION_PLAN_MARKER);
-  if (idx < 0) return { preface: raw, actionPlan: null };
+  if (idx < 0) return { preface: raw, actionPlan: null, planDraft: null };
+  const body = raw.slice(idx + VEILLE_ACTION_PLAN_MARKER.length).trim();
+  const planDraft = parseVeillePlanDraft(body);
   return {
     preface: raw.slice(0, idx).trim(),
-    actionPlan: raw.slice(idx + VEILLE_ACTION_PLAN_MARKER.length).trim() || null,
+    actionPlan: body || null,
+    planDraft,
   };
 }
 
-export function mergeVeilleHighlightNote(preface: string, actionPlan: string | null | undefined): string {
+export function parseVeillePlanDraft(raw: string | null | undefined): VeillePlanDraft | null {
+  const text = String(raw ?? "").trim();
+  if (!text) return null;
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as VeillePlanDraft;
+      if (parsed?.version === 1 && Array.isArray(parsed.items)) {
+        return {
+          version: 1,
+          summary: parsed.summary ? String(parsed.summary) : undefined,
+          items: parsed.items
+            .map((item, index) => ({
+              id: String(item.id || `a${index + 1}`),
+              title: String(item.title ?? "").trim(),
+              owner_name: item.owner_name ? String(item.owner_name) : null,
+              due_at: item.due_at ? String(item.due_at).slice(0, 10) : null,
+              selected: item.selected !== false,
+            }))
+            .filter((item) => item.title),
+        };
+      }
+    }
+  } catch {
+    // fallback below
+  }
+  const lines = text
+    .split("\n")
+    .map((line) => line.replace(/^[\s\-•*\d.)]+/, "").trim())
+    .filter((line) => line.length >= 8);
+  if (!lines.length) return null;
+  return {
+    version: 1,
+    items: lines.slice(0, 12).map((title, index) => ({
+      id: `a${index + 1}`,
+      title,
+      owner_name: null,
+      due_at: null,
+      selected: true,
+    })),
+  };
+}
+
+export function mergeVeilleHighlightNote(
+  preface: string,
+  actionPlan: string | VeillePlanDraft | null | undefined,
+): string {
   const head = preface.trim();
-  const plan = String(actionPlan ?? "").trim();
+  let plan = "";
+  if (actionPlan && typeof actionPlan === "object") {
+    plan = JSON.stringify(actionPlan, null, 2);
+  } else {
+    plan = String(actionPlan ?? "").trim();
+  }
   if (!plan) return head;
   const block = `${VEILLE_ACTION_PLAN_MARKER}\n${plan}`;
   return head ? `${head}\n\n${block}` : block;

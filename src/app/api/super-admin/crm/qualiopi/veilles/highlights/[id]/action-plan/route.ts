@@ -5,6 +5,7 @@ import {
   VEILLE_THEME_LABELS,
   mergeVeilleHighlightNote,
   splitVeilleHighlightNote,
+  type VeillePlanDraft,
   type VeilleTheme,
 } from "@/lib/qualiopi/veille-shared";
 import { getServiceRoleClient } from "@/lib/supabase/server";
@@ -12,7 +13,14 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** Génère un plan d’action Byound (FC / alternance) pour un surlignage. */
+function dueInDays(days: number | null | undefined): string | null {
+  if (!days || !Number.isFinite(days) || days <= 0) return null;
+  const d = new Date();
+  d.setDate(d.getDate() + Math.round(days));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Génère une proposition IA (brouillon) de plan d’action pour un surlignage. */
 export async function POST(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
@@ -37,15 +45,11 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
   const payload = await generateJSON(
     [
       "Tu es le responsable qualité / direction pédagogique de Byound (OF Qualiopi + CFA / alternance).",
-      "À partir d’une information de veille surlignée, propose un PLAN D’ACTION opérationnel.",
-      "Réponds uniquement en JSON avec la clé actionPlan (string).",
-      "actionPlan = texte structuré en français, 8 à 16 lignes, avec :",
-      "1) Enjeu pour Byound (formation continue et/ou alternance)",
-      "2) Actions concrètes numérotées (qui fait quoi : Timmy, Jessica, formateurs, process)",
-      "3) Preuves Qualiopi liées si pertinent (indicateurs 23/24/25 ou autres)",
-      "4) Délai sugeré (cette semaine / 15 jours / prochain PAQ)",
-      "5) Risque si on n’agit pas",
-      "Pas de markdown lourd, pas de titres # — utilise des lignes claires.",
+      "À partir d’une information de veille surlignée, propose un PLAN D’ACTION opérationnel (brouillon IA).",
+      "Réponds uniquement en JSON.",
+      "Clés : summary (2–3 phrases d’enjeu), actions (3 à 6 objets).",
+      "Chaque action : title (phrase d’action concrète), owner_name (Timmy|Jessica|Formateurs|null), due_days (nombre entier de jours, ex 7/15/30).",
+      "Formation continue ET/OU alternance si pertinent. Pas de blabla.",
       "",
       `Titre : ${String(highlight.title ?? "")}`,
       `Axe : ${themeLabel}`,
@@ -56,23 +60,55 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
     {
       type: "object",
       properties: {
-        actionPlan: { type: "string" },
+        summary: { type: "string" },
+        actions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              owner_name: { type: ["string", "null"] },
+              due_days: { type: ["number", "null"] },
+            },
+            required: ["title"],
+          },
+        },
       },
-      required: ["actionPlan"],
+      required: ["summary", "actions"],
     },
     "Tu produis des plans d’action OF actionnables pour Byound.",
   );
 
-  const actionPlan =
-    payload && typeof payload === "object"
-      ? String((payload as { actionPlan?: string }).actionPlan ?? "").trim()
-      : "";
+  const rawActions =
+    payload && typeof payload === "object" && Array.isArray((payload as { actions?: unknown }).actions)
+      ? ((payload as { actions: Array<Record<string, unknown>> }).actions)
+      : [];
 
-  if (!actionPlan) {
+  const items = rawActions
+    .slice(0, 8)
+    .map((row, index) => ({
+      id: `a${index + 1}`,
+      title: String(row.title ?? "").trim(),
+      owner_name: row.owner_name ? String(row.owner_name).trim() : null,
+      due_at: dueInDays(typeof row.due_days === "number" ? row.due_days : null),
+      selected: true,
+    }))
+    .filter((item) => item.title);
+
+  if (!items.length) {
     return NextResponse.json({ error: "Génération du plan d’action impossible" }, { status: 502 });
   }
 
-  const note = mergeVeilleHighlightNote(preface, actionPlan);
+  const planDraft: VeillePlanDraft = {
+    version: 1,
+    summary:
+      payload && typeof payload === "object"
+        ? String((payload as { summary?: string }).summary ?? "").trim() || undefined
+        : undefined,
+    items,
+  };
+
+  const note = mergeVeilleHighlightNote(preface, planDraft);
   const { data: updated, error: updateError } = await supabase
     .from("crm_qualiopi_veille_highlights")
     .update({
@@ -85,5 +121,5 @@ export async function POST(_req: NextRequest, context: { params: Promise<{ id: s
     .single();
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 });
-  return NextResponse.json({ highlight: updated, actionPlan });
+  return NextResponse.json({ highlight: updated, planDraft });
 }

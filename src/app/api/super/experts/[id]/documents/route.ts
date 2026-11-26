@@ -328,3 +328,95 @@ export async function POST(request: NextRequest, ctx: Ctx) {
   }
   return NextResponse.json({ ok: true, document: registered.edgeDoc });
 }
+
+/** Supprime un document (table + references + storage si possible). */
+export async function DELETE(request: NextRequest, ctx: Ctx) {
+  if (!(await isSuperAdmin())) {
+    return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
+  }
+  const { id: expertId } = await ctx.params;
+  const db = getServiceRoleClient();
+  if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const body = (await request.json().catch(() => ({}))) as { docId?: string; url?: string };
+  const docId = String(body.docId ?? "").trim();
+  const url = String(body.url ?? "").trim();
+  if (!docId && !url) {
+    return NextResponse.json({ error: "docId ou url requis" }, { status: 400 });
+  }
+
+  const { data: expert, error: expertErr } = await db
+    .from("experts")
+    .select("id, references")
+    .eq("id", expertId)
+    .maybeSingle();
+  if (expertErr || !expert) {
+    return NextResponse.json({ error: "Expert introuvable" }, { status: 404 });
+  }
+
+  const refs = Array.isArray(expert.references) ? [...(expert.references as unknown[])] : [];
+  const matches = (item: Record<string, unknown>) => {
+    const id = String(item.id ?? "");
+    const itemUrl = String(item.url ?? "");
+    if (docId && id === docId) return true;
+    if (url && itemUrl === url) return true;
+    return false;
+  };
+
+  const nextRefs: unknown[] = [];
+  let removedUrl: string | null = null;
+  for (const raw of refs) {
+    if (!raw || typeof raw !== "object") {
+      nextRefs.push(raw);
+      continue;
+    }
+    const item = raw as Record<string, unknown>;
+    if (item._type === "edge_registration_meta") {
+      const docs = Array.isArray(item.documents) ? (item.documents as Record<string, unknown>[]) : [];
+      const kept = docs.filter((d) => !matches(d));
+      if (kept.length !== docs.length) {
+        const hit = docs.find((d) => matches(d));
+        if (hit?.url) removedUrl = String(hit.url);
+      }
+      nextRefs.push({ ...item, documents: kept });
+      continue;
+    }
+    if (matches(item)) {
+      if (item.url) removedUrl = String(item.url);
+      continue;
+    }
+    nextRefs.push(item);
+  }
+
+  const { error: updateErr } = await db.from("experts").update({ references: nextRefs }).eq("id", expertId);
+  if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 400 });
+
+  if (docId) {
+    await db.from("expert_documents").delete().eq("expert_id", expertId).eq("id", docId);
+  } else if (url) {
+    await db.from("expert_documents").delete().eq("expert_id", expertId).eq("url", url);
+  }
+
+  const storageUrl = removedUrl || url;
+  if (storageUrl) {
+    try {
+      const marker = "/storage/v1/object/public/";
+      const idx = storageUrl.indexOf(marker);
+      if (idx >= 0) {
+        const rest = storageUrl.slice(idx + marker.length);
+        const slash = rest.indexOf("/");
+        if (slash > 0) {
+          const bucket = rest.slice(0, slash);
+          const path = decodeURIComponent(rest.slice(slash + 1));
+          await db.storage.from(bucket).remove([path]);
+        }
+      }
+    } catch {
+      // best-effort storage cleanup
+    }
+  }
+
+  revalidatePath("/super/experts");
+  revalidatePath(`/super/experts/${expertId}`);
+  return NextResponse.json({ ok: true });
+}

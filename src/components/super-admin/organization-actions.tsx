@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
-import { restrictOrganizationAction, deleteOrganizationAction } from "@/app/super/organisations/[orgId]/actions";
+import { restrictOrganizationAction, deleteOrganizationAction } from "@/app/super/organisations/[id]/actions";
 import { useRouter } from "next/navigation";
 
 type OrganizationActionsProps = {

@@ -14,13 +14,13 @@ import {
   VEILLE_AXES,
   VEILLE_KIND,
   VEILLE_THEME_LABELS,
-  splitVeilleHighlightNote,
   type VeilleDigest,
   type VeilleDigestItem,
   type VeilleHighlight,
   type VeilleSource,
   type VeilleTheme,
 } from "@/lib/qualiopi/veille-shared";
+import { VeilleHighlightPlan } from "@/components/super-admin/veille-highlight-plan";
 
 const HIGHLIGHT_THEMES: VeilleTheme[] = ["reglementaire", "metier", "pedagogie", "transversal"];
 const MS_90_DAYS = 90 * 24 * 60 * 60 * 1000;
@@ -110,7 +110,7 @@ export function QualiopiVeillesPanel() {
         toast.error(json.error || "Plan d’action impossible");
         return;
       }
-      toast.success("Plan d’action généré");
+      toast.success("Proposition IA (brouillon) générée");
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Plan d’action impossible");
@@ -738,15 +738,13 @@ export function QualiopiVeillesPanel() {
       <section className={cn(QUALIOPI_CARD, "p-5")}>
         <h2 className="text-lg font-semibold text-white">Informations surlignées</h2>
         <p className={cn("mt-1 text-sm", QUALIOPI_MUTED)}>
-          Choisissez l’axe (23 / 24 / 25) et passez en « Traité » pour prouver l’exploitation de la veille.
+          Proposition IA → note de retravail → Envoyer au PAQ (actions « À faire »). L’information passe en « Traité » une fois la décision prise.
         </p>
         <ul className="mt-4 space-y-3">
           {highlights.length === 0 ? (
             <li className={cn("text-sm", QUALIOPI_MUTED)}>Rien de surligné pour l’instant.</li>
           ) : (
-            highlights.map((row) => {
-              const { preface, actionPlan } = splitVeilleHighlightNote(row.note);
-              return (
+            highlights.map((row) => (
               <li key={row.id} className={cn(QUALIOPI_CARD_INNER, "space-y-3 p-4")}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-2">
@@ -792,51 +790,20 @@ export function QualiopiVeillesPanel() {
                     </select>
                   </div>
                 </div>
-                {actionPlan ? (
-                  <div className="rounded-lg border border-[#6E5BFF]/30 bg-[#6E5BFF]/10 px-3 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#c4bcff]">
-                      Plan d’action Byound
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[#e8e4ff]">
-                      {actionPlan}
-                    </p>
-                  </div>
-                ) : null}
-                <textarea
-                  key={`${row.id}-${row.updated_at}-note`}
-                  defaultValue={preface}
-                  placeholder="Note de retravail…"
-                  onBlur={(event) => {
-                    const nextPreface = event.target.value.trim();
-                    const nextNote = actionPlan
-                      ? `${nextPreface}${nextPreface ? "\n\n" : ""}## Plan d'action Byound\n${actionPlan}`
-                      : nextPreface;
-                    if (nextNote !== (row.note ?? "").trim()) {
-                      void updateHighlight(row.id, { note: nextNote });
-                    }
+                <VeilleHighlightPlan
+                  highlight={row}
+                  planBusy={planBusyId === row.id}
+                  onGeneratePlan={() => void createActionPlan(row.id)}
+                  onUpdateNote={async (note) => {
+                    await updateHighlight(row.id, { note });
                   }}
-                  className="min-h-20 w-full rounded-xl border border-white/10 bg-[#0B1122] px-3 py-2 text-sm text-white outline-none focus:border-[#6E5BFF]"
+                  onReload={load}
                 />
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={planBusyId === row.id}
-                    onClick={() => void createActionPlan(row.id)}
-                    className="bg-[#6E5BFF] text-white hover:bg-[#5a49e6]"
-                  >
-                    {planBusyId === row.id ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : null}
-                    Faire un plan d’action
-                  </Button>
-                  <button type="button" onClick={() => void deleteHighlight(row.id)} className="text-xs text-red-300 hover:underline">
-                    Supprimer
-                  </button>
-                </div>
+                <button type="button" onClick={() => void deleteHighlight(row.id)} className="text-xs text-red-300 hover:underline">
+                  Supprimer
+                </button>
               </li>
-              );
-            })
+            ))
           )}
         </ul>
       </section>

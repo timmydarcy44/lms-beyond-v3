@@ -9,6 +9,8 @@ import { DataTable, StatusPill } from "@/components/control/ui";
 import { formatEuroDelta, formatEurosHt } from "@/lib/control/policy";
 import { startClientView } from "@/lib/control/start-client-view";
 import type { ControlAccount, ControlCockpit } from "@/lib/control/load";
+import { deleteOrganizationAction } from "@/app/super/organisations/[id]/actions";
+import { toast } from "sonner";
 
 const VIEW_STORAGE_KEY = "byound.accounts.view";
 type ViewMode = "list" | "cards";
@@ -93,6 +95,32 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("list");
   const [clientViewBusyId, setClientViewBusyId] = useState<string | null>(null);
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+
+  async function deleteAccount(account: ControlAccount) {
+    if (deleteBusyId) return;
+    if (!window.confirm(`Supprimer l'entreprise « ${account.name} » ? Cette action est irréversible.`)) {
+      return;
+    }
+    if (!window.confirm("CONFIRMATION FINALE : supprimer définitivement ce compte client ?")) {
+      return;
+    }
+    setDeleteBusyId(account.id);
+    setOpenMenu(null);
+    try {
+      const result = await deleteOrganizationAction(account.id);
+      if (!result.success) {
+        toast.error(result.error || "Suppression impossible");
+        return;
+      }
+      toast.success("Entreprise supprimée");
+      router.refresh();
+    } catch {
+      toast.error("Suppression impossible");
+    } finally {
+      setDeleteBusyId(null);
+    }
+  }
 
   async function openAsClient(orgId: string) {
     if (clientViewBusyId) return;
@@ -443,6 +471,14 @@ export function AccountsCockpit({ data }: { data: ControlCockpit }) {
                           Comparer
                         </Link>
                       ) : null}
+                      <button
+                        type="button"
+                        disabled={deleteBusyId === account.id}
+                        className="block w-full rounded-xl px-2 py-1.5 text-left font-semibold text-[#FF8A9B] disabled:opacity-50"
+                        onClick={() => void deleteAccount(account)}
+                      >
+                        {deleteBusyId === account.id ? "Suppression…" : "Supprimer l'entreprise"}
+                      </button>
                     </span>
                   ) : null}
                   <ChevronRight className="h-4 w-4 text-[#6C7593]" />

@@ -52,13 +52,20 @@ export function resolveTrainingLocationLabel(params: {
 
   if (!raw) {
     const modality = String(params.modalityPresence ?? "").toLowerCase();
-    if (modality.includes("distan")) return "Distanciel / visioconférence";
+    if (modality.includes("distan") || modality.includes("elearning") || modality.includes("e-learning")) {
+      return "Distanciel asynchrone (plateforme Byound)";
+    }
     return null;
   }
 
   const lower = raw.toLowerCase();
-  if (lower.includes("distan") || lower.includes("visio")) {
-    return "Distanciel / visioconférence";
+  if (
+    lower.includes("distan") ||
+    lower.includes("elearning") ||
+    lower.includes("e-learning") ||
+    lower.includes("visio")
+  ) {
+    return "Distanciel asynchrone (plateforme Byound)";
   }
 
   if (isByoundPremises(lower)) {

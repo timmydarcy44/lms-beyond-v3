@@ -138,7 +138,7 @@ export function AccountFormationRequestWizard({
   const hasClientAddress = Boolean(addressLine.trim() && addressZip.trim() && addressCity.trim());
 
   const resolvedLocation = useMemo(() => {
-    if (modality === "distanciel") return "Distanciel / visio";
+    if (modality === "distanciel") return "Distanciel (e-learning asynchrone)";
     if (locationMode === "client") {
       return clientAddressLabel
         ? `Au sein des locaux du client — ${clientAddressLabel}`

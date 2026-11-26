@@ -136,8 +136,8 @@ export type OrganizationNeedAnalysis = {
 
 export const PLACE_MODE_LABEL: Record<Exclude<NeedAnalysisPlaceMode, "">, string> = {
   presentiel: "Présentiel",
-  visio: "Distanciel synchrone (visio)",
-  distanciel_asynchrone: "Distanciel asynchrone (LMS)",
+  visio: "Distanciel synchrone",
+  distanciel_asynchrone: "Distanciel asynchrone (plateforme Byound)",
   mixte: "Mixte",
   a_preciser: "À préciser",
 };

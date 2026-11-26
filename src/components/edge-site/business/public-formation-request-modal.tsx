@@ -189,7 +189,7 @@ export function PublicFormationRequestModal({
                   >
                     <option>Au sein de nos locaux</option>
                     <option>Au sein de vos locaux (Byound)</option>
-                    <option>Distanciel / visio</option>
+                    <option>Distanciel (e-learning asynchrone)</option>
                   </select>
                 </label>
               </div>

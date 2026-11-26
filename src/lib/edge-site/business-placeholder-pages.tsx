@@ -23,7 +23,7 @@ export const BUSINESS_PLACEHOLDER_PAGES = {
   "presentiel-distanciel": {
     title: "Présentiel & distanciel",
     description:
-      "Combinez sessions en salle, classes virtuelles et ressources asynchrones dans une expérience fluide.",
+      "Combinez sessions en salle et parcours e-learning asynchrones sur la plateforme Byound, suivis en autonomie.",
     label: "Former",
   },
   competences: {

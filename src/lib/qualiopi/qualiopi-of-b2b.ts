@@ -124,8 +124,7 @@ Document **OF** (pas une fiche par formation). Couvre les moyens mobilisés pour
 - Coordination pédagogique des sessions
 
 ## 2. Moyens techniques & plateforme
-- LMS Byound (accès stagiaires, ressources, suivi de progression, émargement numérique)
-- Outils de visioconférence / collaboration le cas échéant
+- Plateforme Byound / LMS (e-learning asynchrone : accès stagiaires, ressources, suivi de progression en autonomie, émargement numérique)
 - Coffre documentaire (conventions, attestations, enquêtes)
 
 ## 3. Locaux & accessibilité (si présentiel)

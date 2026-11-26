@@ -63,12 +63,19 @@ function locationHeadline(label: string | null | undefined): {
 } {
   const raw = String(label || "").trim();
   const lower = raw.toLowerCase();
-  if (!raw || lower.includes("distan") || lower.includes("visio")) {
+  if (
+    !raw ||
+    lower.includes("distan") ||
+    lower.includes("elearning") ||
+    lower.includes("e-learning") ||
+    lower.includes("visio") ||
+    lower.includes("plateforme byound")
+  ) {
     return {
-      title: "À distance",
-      address: "Le lien de visioconférence vous sera communiqué avant la session.",
-      chips: ["Visio"],
-      note: "Connectez-vous 5 minutes avant le début.",
+      title: "À distance — plateforme Byound",
+      address: "Parcours e-learning asynchrone sur la plateforme Byound, à suivre en autonomie.",
+      chips: ["E-learning", "Asynchrone"],
+      note: "Connectez-vous à votre espace Byound pour accéder à votre parcours.",
     };
   }
   if (lower.includes("byound") || lower.includes("nos locaux")) {

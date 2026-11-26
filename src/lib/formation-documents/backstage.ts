@@ -73,13 +73,20 @@ function locationDisplay(params: {
   const modality = String(params.modality || "").toLowerCase();
   if (
     modality.includes("distan") ||
+    modality.includes("elearning") ||
+    modality.includes("e-learning") ||
     lower.includes("distan") ||
+    lower.includes("elearning") ||
+    lower.includes("e-learning") ||
     lower.includes("visio") ||
     params.visioUrl
   ) {
     return {
-      kindLabel: "À distance",
-      detail: params.visioUrl || raw || "Lien visio communiqué séparément",
+      kindLabel: "À distance · plateforme Byound",
+      detail:
+        params.visioUrl ||
+        raw ||
+        "E-learning asynchrone sur la plateforme Byound (suivi en autonomie)",
     };
   }
   if (lower.includes("byound") || lower.includes("nos locaux")) {

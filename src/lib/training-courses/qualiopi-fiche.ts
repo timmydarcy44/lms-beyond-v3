@@ -111,7 +111,8 @@ export function derivePedagogicalModalityFromFormats(
   const hasB = f.some((x) => x.includes("blended") || x.includes("mixte"));
   if (hasB || (hasP && hasD)) return "mixte";
   if (hasP && !hasD) return "presentiel";
-  if (hasD && !hasP) return "distanciel_synchrone";
+  // Chez Byound, « Distanciel » = e-learning asynchrone sur la plateforme (pas de visio).
+  if (hasD && !hasP) return "elearning_asynchrone";
   return null;
 }
 
@@ -241,18 +242,18 @@ export const QUALIOPI_MODALITY_DETAIL_OPTIONS = [
   },
   {
     id: "standard_elearning",
-    label: "Parcours e-learning guidé",
-    text: "Modules asynchrones sur le LMS, quiz de validation et classes virtuelles de consolidation. Accompagnement tutoré, forum et points synchrones planifiés.",
+    label: "Parcours e-learning asynchrone",
+    text: "Parcours e-learning asynchrone sur la plateforme Byound : modules suivis en autonomie, à son rythme, avec activités interactives, quiz de validation et ressources téléchargeables. Suivi de progression automatisé ; support pédagogique à distance.",
   },
   {
     id: "elearning_asynchrone",
     label: "Formation e-learning asynchrone",
-    text: "Parcours 100 % e-learning asynchrone sur le LMS Byound : modules à son rythme, activités interactives, quiz de validation et ressources téléchargeables. Suivi de progression automatisé ; support pédagogique à distance.",
+    text: "Parcours 100 % e-learning asynchrone sur la plateforme Byound : modules à son rythme, en autonomie, activités interactives, quiz de validation et ressources téléchargeables. Suivi de progression automatisé ; support pédagogique à distance.",
   },
   {
     id: "elearning_accompagnement",
     label: "Formation e-learning + accompagnement",
-    text: "Modules e-learning asynchrones complétés par un accompagnement tutoré (visios, messages, points d’étape). Objectifs individualisés, feedbacks réguliers et consolidation en sessions synchrones courtes.",
+    text: "Modules e-learning asynchrones sur la plateforme Byound, suivis en autonomie, complétés par un accompagnement tutoré à distance (messages, points d’étape). Objectifs individualisés, feedbacks réguliers et suivi de progression sur la plateforme.",
   },
   {
     id: "standard_mixte",

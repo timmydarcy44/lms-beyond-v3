@@ -403,7 +403,9 @@ function RequestModal({
                     <option value="Au sein de vos locaux (Byound)">
                       Au sein de vos locaux (Byound)
                     </option>
-                    <option value="Distanciel / visio">Distanciel / visio</option>
+                    <option value="Distanciel (e-learning asynchrone)">
+                      Distanciel (e-learning asynchrone)
+                    </option>
                     <option value="Autre">Autre (à préciser)</option>
                   </select>
                 </label>

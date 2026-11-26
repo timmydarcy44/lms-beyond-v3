@@ -24,6 +24,14 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
     href: "/super/crm/qualiopi/catalogue",
   },
   {
+    indicatorId: 9,
+    title: "Informations remises au bénéficiaire",
+    where:
+      "Pack information (convention / règlement / livret) + Programmation + exemple de convocation",
+    how: "Ouvrir Programmation (dossier démarré), montrer les envois du pack, puis ouvrir une convocation exemple (/doc?token=…).",
+    href: "/super/crm/programmation",
+  },
+  {
     indicatorId: 12,
     title: "Engagement, ruptures, signalements VHD",
     where: "Process signalements + registre + sorties apprenant + alertes LMS",

@@ -87,14 +87,16 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
     indicatorId: number;
     href: string | null;
     label: string;
+    proofs: QualiopiStatusSnapshot["indicators"][number]["proofs"];
   } | null>(null);
 
   const openProofGuide = (
     indicatorId: number,
     href: string | null,
     label = "Ouvrir la preuve",
+    proofs: QualiopiStatusSnapshot["indicators"][number]["proofs"] = [],
   ) => {
-    setProofGuide({ indicatorId, href, label });
+    setProofGuide({ indicatorId, href, label, proofs });
   };
 
   const load = useCallback(async (refresh = false) => {
@@ -281,6 +283,7 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
         open={Boolean(proofGuide)}
         indicatorId={proofGuide?.indicatorId ?? null}
         proofHref={proofGuide?.href ?? null}
+        proofs={proofGuide?.proofs ?? []}
         actionLabel={proofGuide?.label}
         onClose={() => setProofGuide(null)}
       />
@@ -619,12 +622,22 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                           </p>
                                         )}
                                       </div>
+                                    ) : ind.proofs.length > 0 ? (
+                                      <ul className="mt-1.5 space-y-0.5">
+                                        {ind.proofs.map((p, idx) => (
+                                          <li
+                                            key={`${ind.indicatorId}-${idx}-${p.label}`}
+                                            className="text-[12.5px]"
+                                            style={{ color: MUTED }}
+                                          >
+                                            ◇ {p.label}
+                                            {p.counter ? ` · ${p.counter}` : ""}
+                                          </li>
+                                        ))}
+                                      </ul>
                                     ) : (
                                       <p className="mt-1 text-[12.5px]" style={{ color: MUTED }}>
-                                        ◇{" "}
-                                        {ind.proofs[0]
-                                          ? `${ind.proofs[0].label}${ind.proofs[0].counter ? ` · ${ind.proofs[0].counter}` : ""}`
-                                          : "Aucune preuve automatique"}
+                                        ◇ Aucune preuve automatique
                                       </p>
                                     )}
                                   </div>
@@ -675,12 +688,21 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                       <button
                                         type="button"
                                         onClick={() =>
-                                          openProofGuide(ind.indicatorId, proofHref, "Ouvrir la preuve")
+                                          openProofGuide(
+                                            ind.indicatorId,
+                                            proofHref,
+                                            ind.proofs.length > 1
+                                              ? "Voir les preuves"
+                                              : "Ouvrir la preuve",
+                                            ind.proofs,
+                                          )
                                         }
                                         className="inline-flex h-7 items-center rounded-full border px-3 text-[11px] font-semibold text-white/80"
                                         style={{ borderColor: BORDER }}
                                       >
-                                        Voir la preuve
+                                        {ind.proofs.length > 1
+                                          ? `Voir les preuves (${ind.proofs.length})`
+                                          : "Voir la preuve"}
                                       </button>
                                     ) : ind.nextAction ? (
                                       <button
@@ -692,7 +714,10 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                                             ind.nextAction!.label === "Compléter" ||
                                               ind.nextAction!.label === "Ajouter"
                                               ? ind.nextAction!.label
-                                              : "Ouvrir la preuve",
+                                              : ind.proofs.length > 1
+                                                ? "Voir les preuves"
+                                                : "Ouvrir la preuve",
+                                            ind.proofs,
                                           )
                                         }
                                         className="inline-flex h-7 items-center rounded-full px-3 text-[11px] font-semibold"
@@ -775,7 +800,10 @@ export function QualiopiOverviewV2({ tab, onTabChange, coffreSlot, emargementsSl
                               ? "Ajouter"
                               : item.nextAction!.label === "Compléter"
                                 ? "Compléter"
-                                : "Ouvrir la preuve",
+                                : item.proofs.length > 1
+                                  ? "Voir les preuves"
+                                  : "Ouvrir la preuve",
+                            item.proofs,
                           )
                         }
                         className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"

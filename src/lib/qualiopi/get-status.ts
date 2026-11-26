@@ -96,6 +96,13 @@ export type QualiopiStatusSignals = {
    * → /business/formations/{slug} sur le site public.
    */
   examplePublicFormationSlug: string | null;
+  /**
+   * Exemple de convocation (URL publique /doc?token=…) — ind. 9.
+   * Complète le pack information : une preuve concrète remise au stagiaire.
+   */
+  exampleConvocationHref?: string | null;
+  /** Horodatage d’envoi de la convocation exemple. */
+  exampleConvocationSentAt?: string | null;
   /** Analyses du besoin complètes (compte client) — ind. 4. */
   needAnalysesCompleteCount?: number;
   /** Exemple d’org avec analyse complète pour deep-link preuve. */
@@ -199,7 +206,7 @@ function assessAuto(
           sig.examplePublicFormationSlug,
           id === 2 ? "qualite" : undefined,
         ) ?? "/super/crm/qualiopi/catalogue";
-      const p = proof(
+      const fiche = proof(
         id === 2
           ? "Indicateurs de résultats sur fiche publique"
           : "Fiche formation publique (catalogue)",
@@ -207,23 +214,36 @@ function assessAuto(
         null,
         `${complete} / ${Math.max(published, 1)} fiches complètes`,
       );
+      const cms = proof(
+        "Catalogue Qualiopi (CMS)",
+        "/super/crm/qualiopi/catalogue",
+        null,
+        null,
+      );
+      const coffreProof = proof(
+        "Coffre admin (modèles PDF)",
+        "/super/crm/qualiopi?tab=coffre",
+        null,
+        `${ctx.coffre.deposited} / ${ctx.coffre.expected} modèles`,
+      );
+      const proofs = id === 1 ? [fiche, cms, coffreProof] : [fiche, cms];
       if (published > 0 && complete >= published) {
         return withManual({
           status: "proven",
-          proofs: [p],
-          nextAction: { label: "Voir la preuve", href: publicHref },
+          proofs,
+          nextAction: { label: "Voir les preuves", href: publicHref },
         });
       }
       if (complete > 0) {
         return withManual({
           status: "todo",
-          proofs: [p],
+          proofs,
           nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
         });
       }
       return withManual({
         status: published > 0 ? "todo" : "missing",
-        proofs: published > 0 ? [p] : [],
+        proofs: published > 0 ? proofs : [cms, coffreProof],
         nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
       });
     }
@@ -240,16 +260,22 @@ function assessAuto(
         null,
         completeCount > 0 ? `${completeCount} analyse(s) complète(s)` : null,
       );
+      const crm = proof(
+        "CRM / dossier formation (lien besoin → session)",
+        "/super/crm/programmation",
+        null,
+        null,
+      );
       if (completeCount >= 1) {
         return withManual({
           status: "proven",
-          proofs: [p],
-          nextAction: { label: "Voir la preuve", href },
+          proofs: [p, crm],
+          nextAction: { label: "Voir les preuves", href },
         });
       }
       return withManual({
         status: "missing",
-        proofs: [p],
+        proofs: [p, crm],
         nextAction: { label: "Ouvrir un compte client", href: "/super/organisations" },
       });
     }
@@ -257,22 +283,36 @@ function assessAuto(
       const publicHref =
         publicFormationHref(sig.examplePublicFormationSlug, "objectifs") ??
         "/super/crm/qualiopi/catalogue";
+      const competencesHref =
+        publicFormationHref(sig.examplePublicFormationSlug, "competences") ?? publicHref;
       const p = proof(
         "Objectifs pédagogiques (fiche publique)",
         publicHref,
         null,
         `${sig.coursesWithObjectives} formation(s)`,
       );
+      const competences = proof(
+        "Compétences · niveau · évaluation (fiche publique)",
+        competencesHref,
+        null,
+        null,
+      );
+      const cms = proof(
+        "Catalogue Qualiopi — objectifs CMS",
+        "/super/crm/qualiopi/catalogue",
+        null,
+        null,
+      );
       if (sig.coursesWithObjectives >= 1) {
         return withManual({
           status: "proven",
-          proofs: [p],
-          nextAction: { label: "Voir la preuve", href: publicHref },
+          proofs: [p, competences, cms],
+          nextAction: { label: "Voir les preuves", href: publicHref },
         });
       }
       return withManual({
         status: "todo",
-        proofs: [p],
+        proofs: [p, cms],
         nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
       });
     }
@@ -302,7 +342,57 @@ function assessAuto(
         nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
       });
     }
-    case 9:
+    case 9: {
+      // Multi-preuves alignées sur le support audit : pack + programmation + exemple convocation.
+      const sessionPack = ctx.sessions.filter(
+        (s) => s.convention_sent_at && s.reglement_sent_at && s.livret_sent_at,
+      ).length;
+      const complete = Math.max(sessionPack, sig.infoPackCompleteCount ?? 0);
+      const partial = Math.max(complete, sig.infoPackPartialCount ?? 0);
+      const pack = proof(
+        "Pack information (convention / règlement / livret)",
+        "/super/crm/programmation",
+        null,
+        `${complete} dossier(s) complets · ${partial} avec envoi`,
+      );
+      const pipeline = proof(
+        "Programmation — démarrage session / dossier formation",
+        "/super/crm/programmation",
+        null,
+        sessionsTotal > 0 ? `${sessionsTotal} session(s)` : null,
+      );
+      const convocation = sig.exampleConvocationHref
+        ? proof(
+            "Exemple de convocation (remise au stagiaire)",
+            sig.exampleConvocationHref,
+            sig.exampleConvocationSentAt ?? null,
+            null,
+          )
+        : null;
+      const proofs = [pack, pipeline, ...(convocation ? [convocation] : [])];
+      if (complete >= 1) {
+        return withManual({
+          status: "proven",
+          proofs,
+          nextAction: {
+            label: "Voir les preuves",
+            href: convocation?.href || "/super/crm/programmation",
+          },
+        });
+      }
+      if (partial >= 1 || sessionsTotal >= 1 || Boolean(convocation)) {
+        return withManual({
+          status: "todo",
+          proofs,
+          nextAction: { label: "Compléter", href: "/super/crm/programmation" },
+        });
+      }
+      return withManual({
+        status: "missing",
+        proofs: [pack, pipeline],
+        nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
+      });
+    }
     case 10: {
       const sessionPack = ctx.sessions.filter(
         (s) => s.convention_sent_at && s.reglement_sent_at && s.livret_sent_at,
@@ -310,42 +400,38 @@ function assessAuto(
       const complete = Math.max(sessionPack, sig.infoPackCompleteCount ?? 0);
       const partial = Math.max(complete, sig.infoPackPartialCount ?? 0);
       const handicapOk = sig.handicapProcessReady || sig.handicapProfilesCount >= 1;
-      const p = proof(
+      const pack = proof(
         "Pack information (convention / règlement / livret)",
         "/super/crm/programmation",
         null,
         `${complete} dossier(s) complets · ${partial} avec envoi`,
       );
-      // Ind. 10 : adaptation publics — pack info OU dossier handicap
-      if (complete >= 1 || (id === 10 && handicapOk && partial >= 1)) {
+      const handicap = handicapOk
+        ? proof(
+            "Adaptation / handicap",
+            "/super/crm/qualiopi/handicap",
+            null,
+            `${sig.handicapProfilesCount} fiche(s)`,
+          )
+        : null;
+      const proofs = [pack, ...(handicap ? [handicap] : [])];
+      if (complete >= 1 || (handicapOk && partial >= 1)) {
         return withManual({
           status: "proven",
-          proofs: [
-            p,
-            ...(id === 10 && handicapOk
-              ? [
-                  proof(
-                    "Adaptation / handicap",
-                    "/super/crm/qualiopi/handicap",
-                    null,
-                    `${sig.handicapProfilesCount} fiche(s)`,
-                  ),
-                ]
-              : []),
-          ],
+          proofs,
           nextAction: {
-            label: "Voir la preuve",
-            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/programmation",
+            label: "Voir les preuves",
+            href: handicapOk ? "/super/crm/qualiopi/handicap" : "/super/crm/programmation",
           },
         });
       }
-      if (partial >= 1 || sessionsTotal >= 1 || (id === 10 && handicapOk)) {
+      if (partial >= 1 || sessionsTotal >= 1 || handicapOk) {
         return withManual({
           status: "todo",
-          proofs: [p],
+          proofs,
           nextAction: {
             label: "Compléter",
-            href: id === 10 ? "/super/crm/qualiopi/handicap" : "/super/crm/programmation",
+            href: handicapOk ? "/super/crm/qualiopi/handicap" : "/super/crm/programmation",
           },
         });
       }
@@ -440,28 +526,40 @@ function assessAuto(
         },
       });
     }
-    case 17:
-      return withManual(
-        sig.meansProcessReady
-          ? {
-              status: "proven",
-              proofs: [
-                proof("Note moyens", "/super/crm/qualiopi/process?kind=moyens", null, null),
-              ],
-              nextAction: {
-                label: "Voir la preuve",
-                href: "/super/crm/qualiopi/process?kind=moyens",
-              },
-            }
-          : {
-              status: "todo",
-              proofs: [],
-              nextAction: {
-                label: "Compléter",
-                href: "/super/crm/qualiopi/process?kind=moyens",
-              },
-            },
+    case 17: {
+      const moyensProc = (sig.validatedProcedures ?? []).find(
+        (p) => Array.isArray(p.indicators) && p.indicators.includes(17),
       );
+      const procedureHref = moyensProc
+        ? `/super/crm/qualiopi/process?id=${moyensProc.id}`
+        : "/super/crm/qualiopi/process?kind=moyens";
+      const procedure = proof(
+        moyensProc
+          ? `Procédure Moyens matériels et locaux · v${moyensProc.current_version}`
+          : "Procédure Moyens matériels et locaux",
+        procedureHref,
+        moyensProc?.validated_at ?? null,
+        null,
+      );
+      const list = proof(
+        "Liste des procédures qualité",
+        "/super/crm/qualiopi/process",
+        null,
+        null,
+      );
+      if (sig.meansProcessReady || moyensProc) {
+        return withManual({
+          status: "proven",
+          proofs: [procedure, list],
+          nextAction: { label: "Voir les preuves", href: procedureHref },
+        });
+      }
+      return withManual({
+        status: "todo",
+        proofs: [procedure, list],
+        nextAction: { label: "Compléter", href: procedureHref },
+      });
+    }
     case 18:
       return withManual(
         sessionsTotal >= 1
@@ -474,15 +572,34 @@ function assessAuto(
                   null,
                   `${sessionsTotal}`,
                 ),
+                proof(
+                  "Dossier formation — intervenants assignés",
+                  "/super/crm/programmation",
+                  null,
+                  null,
+                ),
               ],
               nextAction: {
-                label: "Voir l’agenda",
+                label: "Voir les preuves",
                 href: "/super/crm/programmation?view=agenda",
               },
             }
           : {
               status: "todo",
-              proofs: [],
+              proofs: [
+                proof(
+                  "Agenda coordination (iCal)",
+                  "/super/crm/programmation?view=agenda",
+                  null,
+                  null,
+                ),
+                proof(
+                  "Dossier formation — intervenants assignés",
+                  "/super/crm/programmation",
+                  null,
+                  null,
+                ),
+              ],
               nextAction: {
                 label: "Ouvrir l’agenda",
                 href: "/super/crm/programmation?view=agenda",

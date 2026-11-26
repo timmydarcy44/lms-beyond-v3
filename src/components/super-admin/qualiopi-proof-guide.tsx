@@ -6,19 +6,26 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { QualiopiPlanExamples } from "@/components/super-admin/qualiopi-plan-examples";
 import { QUALIOPI_INDICATORS } from "@/lib/qualiopi/indicators";
+import type { QualiopiProofRef } from "@/lib/qualiopi/status-types";
 
 type Props = {
   open: boolean;
   indicatorId: number | null;
   proofHref: string | null;
+  proofs?: QualiopiProofRef[];
   actionLabel?: string;
   onClose: () => void;
 };
+
+function isExternalHref(href: string | null | undefined): boolean {
+  return Boolean(href && /^https?:\/\//i.test(href));
+}
 
 export function QualiopiProofGuide({
   open,
   indicatorId,
   proofHref,
+  proofs = [],
   actionLabel = "Ouvrir la preuve",
   onClose,
 }: Props) {
@@ -27,7 +34,9 @@ export function QualiopiProofGuide({
   if (!open || indicatorId == null) return null;
 
   const def = QUALIOPI_INDICATORS.find((i) => i.id === indicatorId);
-  const external = Boolean(proofHref && /^https?:\/\//i.test(proofHref));
+  const linkedProofs = proofs.filter((p) => p.href);
+  const primaryHref = proofHref ?? linkedProofs[0]?.href ?? null;
+  const external = isExternalHref(primaryHref);
 
   async function exportPdf() {
     setPdfBusy(true);
@@ -88,6 +97,41 @@ export function QualiopiProofGuide({
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+          {linkedProofs.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[12px] font-semibold text-[#C9C2FF]">
+                Preuves à montrer ({linkedProofs.length})
+              </p>
+              <ul className="space-y-1.5">
+                {linkedProofs.map((p, idx) => {
+                  const ext = isExternalHref(p.href);
+                  return (
+                    <li key={`${p.label}-${idx}`}>
+                      <a
+                        href={p.href!}
+                        target={ext ? "_blank" : undefined}
+                        rel={ext ? "noreferrer" : undefined}
+                        onClick={onClose}
+                        className="flex items-start justify-between gap-2 rounded-lg border border-[#1A2340] bg-[#111831] px-3 py-2 text-[12.5px] text-white hover:border-[#6E5BFF]/55"
+                      >
+                        <span className="min-w-0">
+                          <span className="font-semibold">{p.label}</span>
+                          {p.counter ? (
+                            <span className="mt-0.5 block text-[11px] text-[#9AA3BD]">
+                              {p.counter}
+                            </span>
+                          ) : null}
+                        </span>
+                        {ext ? (
+                          <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9AA3BD]" />
+                        ) : null}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
           <p className="text-[12px] font-semibold text-[#C9C2FF]">Processus attendu</p>
           <QualiopiPlanExamples indicatorId={indicatorId} compact />
         </div>
@@ -111,9 +155,9 @@ export function QualiopiProofGuide({
             <Download className="mr-1.5 h-3.5 w-3.5" />
             {pdfBusy ? "PDF…" : "Exporter PDF"}
           </Button>
-          {proofHref ? (
+          {primaryHref && linkedProofs.length <= 1 ? (
             <a
-              href={proofHref}
+              href={primaryHref}
               target={external ? "_blank" : undefined}
               rel={external ? "noreferrer" : undefined}
               className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#6E5BFF] px-3 text-sm font-semibold text-white hover:bg-[#5a49e6]"

@@ -4,6 +4,7 @@ import { loadDisabilityReferentContact } from "@/lib/handicap/referent-contact";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { getQualiopiStatus, type QualiopiStatusSignals } from "@/lib/qualiopi/get-status";
 import type { QualiopiDocument, QualiopiSession } from "@/lib/crm/qualiopi-shared";
+import { formationDocumentPublicUrl } from "@/lib/formation-documents/public-url";
 import { assessQualiopiFicheCompliance } from "@/lib/training-courses/qualiopi-fiche";
 import {
   scoreIndicator31,
@@ -251,6 +252,33 @@ async function buildStatus(force = false) {
   infoPackCompleteCount = Math.max(infoPackCompleteCount, sessionPackComplete);
   infoPackPartialCount = Math.max(infoPackPartialCount, sessionPackPartial);
 
+  /** Exemple de convocation publique pour multi-preuves ind. 9. */
+  let exampleConvocationHref: string | null = null;
+  let exampleConvocationSentAt: string | null = null;
+  try {
+    const { data: convRows } = await supabase
+      .from("formation_documents")
+      .select("access_token, sent_at, created_at")
+      .eq("kind", "convocation")
+      .not("access_token", "is", null)
+      .order("sent_at", { ascending: false, nullsFirst: false })
+      .limit(5);
+    const best =
+      (convRows ?? []).find((r) => r.sent_at && r.access_token) ??
+      (convRows ?? []).find((r) => r.access_token) ??
+      null;
+    if (best?.access_token) {
+      exampleConvocationHref = formationDocumentPublicUrl(String(best.access_token));
+      exampleConvocationSentAt = best.sent_at
+        ? String(best.sent_at)
+        : best.created_at
+          ? String(best.created_at)
+          : null;
+    }
+  } catch (e) {
+    console.warn("[qualiopi/status] example convocation:", e);
+  }
+
   const disabilityCasesCount = await safeCount(() =>
     supabase.from("disability_cases").select("id", { count: "exact", head: true }),
   );
@@ -397,6 +425,8 @@ async function buildStatus(force = false) {
     ),
     meansProcessReady: Boolean(processReady.moyens),
     examplePublicFormationSlug,
+    exampleConvocationHref,
+    exampleConvocationSentAt,
     needAnalysesCompleteCount: 0,
     exampleNeedAnalysisOrgId: null as string | null,
   };

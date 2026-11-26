@@ -85,7 +85,6 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [previewBlockedBilans, setPreviewBlockedBilans] = useState(false);
   const [badgeCelebration, setBadgeCelebration] = useState<{
     badgeName: string;
     badgeImageUrl: string | null;
@@ -105,17 +104,6 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("preview_blocked") === "bilans") {
-      setPreviewBlockedBilans(true);
-      params.delete("preview_blocked");
-      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ""}`;
-      window.history.replaceState({}, "", next);
-    }
   }, []);
 
   useEffect(() => {
@@ -203,11 +191,6 @@ export function SalarieHome({ variant = "home" }: { variant?: "home" | "bilans" 
 
   return (
     <div className={cn(manrope.className, "mx-auto w-full max-w-[980px] px-4 pb-16 pt-4 text-[#F4F5F7] sm:px-6")}>
-      {previewBlockedBilans ? (
-        <p className="mb-4 rounded-2xl border border-[#1C2443] bg-[#10183A] px-4 py-3 text-sm text-[#C9D4FF]">
-          Les résultats individuels (Mes bilans) ne sont pas accessibles en mode accompagnement.
-        </p>
-      ) : null}
       <header className="mb-5 flex items-center gap-3 pl-12 lg:pl-0">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#6E5BFF] text-sm font-extrabold text-white">
           {home.profile.initials}

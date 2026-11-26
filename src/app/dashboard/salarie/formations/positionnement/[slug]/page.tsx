@@ -27,7 +27,9 @@ export default async function SalariePositionnementPage({
   return (
     <div className={`${SALARIE_PAGE_SHELL} max-w-2xl`}>
       <p className="text-sm text-white/45">Test de positionnement</p>
-      <h1 className={`${SALARIE_PAGE_TITLE} mt-2`}>{formation.title}</h1>
+      <h1 className={`${SALARIE_PAGE_TITLE} mt-2`}>
+        {formation.title?.trim() || "Formation"}
+      </h1>
       <p className="mt-3 text-sm text-white/60">
         {formation.positioningDone
           ? "Ce test est déjà passé. Les résultats sont dans vos badges."

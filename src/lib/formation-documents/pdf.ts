@@ -12,6 +12,15 @@ import {
   formatHours,
   slotsFromDocContext,
 } from "@/lib/formation-documents/session-dates";
+import {
+  QUALIOPI_ACCESS_DELAYS_COPY,
+  QUALIOPI_ATTENDANCE_COPY,
+  QUALIOPI_COMPLAINTS_COPY,
+  QUALIOPI_FINANCING_COPY,
+  QUALIOPI_LIVRET_VERSION_LABEL,
+  QUALIOPI_PUBLIC_CONTACT_EMAIL,
+  QUALIOPI_SCHEDULE_COPY,
+} from "@/lib/qualiopi/public-copy";
 
 type BuildOpts = {
   ctx: DossierDocContext;
@@ -447,16 +456,20 @@ function buildProgramme(doc: jsPDF, ctx: DossierDocContext) {
 }
 
 function buildLivret(doc: jsPDF, ctx: DossierDocContext) {
+  // Fallback jsPDF — le livret produit en prod passe par livret-accueil-html.ts (v1.1).
   let y = drawHeader(doc, ctx, "Livret d'accueil");
   const margin = 18;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(40, 40, 50);
   const paras = [
-    `Bienvenue chez ${ctx.of.legal_name}. Ce livret regroupe les informations utiles pour votre parcours.`,
-    "Contact pédagogique : votre formateur vous sera présenté le jour J.",
-    "Référent handicap : contactez Byound pour toute demande d'aménagement.",
-    "Émargement : chaque demi-journée se signe depuis votre téléphone (code salle) ou sur l'appareil du formateur.",
+    `Bienvenue chez ${ctx.of.legal_name}. ${QUALIOPI_LIVRET_VERSION_LABEL}.`,
+    `Contact : ${QUALIOPI_PUBLIC_CONTACT_EMAIL}.`,
+    `Financement : ${QUALIOPI_FINANCING_COPY}`,
+    `Délais d'accès : ${QUALIOPI_ACCESS_DELAYS_COPY}`,
+    `Rythme : ${QUALIOPI_SCHEDULE_COPY}`,
+    `Émargement : ${QUALIOPI_ATTENDANCE_COPY}`,
+    `Réclamations : ${QUALIOPI_COMPLAINTS_COPY}`,
     "Règlement intérieur et CGV : joints à la convention ou disponibles sur demande.",
     `Lieu : ${ctx.session?.location_label || "communiqué avec la convocation"}.`,
   ];

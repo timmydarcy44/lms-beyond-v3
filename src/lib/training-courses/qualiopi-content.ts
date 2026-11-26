@@ -17,6 +17,12 @@ import {
   resolveContactReferent,
   resolveHandicapReferent,
 } from "@/lib/training-courses/public-referents";
+import {
+  QUALIOPI_ACCESS_DELAYS_COPY,
+  QUALIOPI_COMPLAINTS_COPY,
+  QUALIOPI_FINANCING_COPY,
+  QUALIOPI_SUCCESS_RATE_METHOD,
+} from "@/lib/qualiopi/public-copy";
 
 export type DiagnosticStep = {
   title: string;
@@ -113,11 +119,26 @@ export type PedagogicalObjectivesBlock = {
   objectives: string[];
 };
 
-/** Objectifs pédagogiques formulés en compétences observables. */
+const ISSUE_PREFIX_RE =
+  /^à l['’]issue de (cette |la )?formation[,:\s]*/i;
+const CAPABLE_PREFIX_RE = /^(le |la |l['’])?participant(e)? sera capable de\s*/i;
+
+/** Objectifs pédagogiques — intro unique, sans doublon sur chaque item. */
 export function buildPedagogicalObjectives(detail: TrainingCourseDetail): PedagogicalObjectivesBlock {
+  const objectives = detail.objectives
+    .map((raw) => {
+      let o = String(raw ?? "").trim();
+      o = o.replace(ISSUE_PREFIX_RE, "").replace(CAPABLE_PREFIX_RE, "").trim();
+      // Capitalise la première lettre après nettoyage.
+      if (o && o[0] === o[0].toLowerCase()) {
+        o = o.charAt(0).toUpperCase() + o.slice(1);
+      }
+      return o;
+    })
+    .filter(Boolean);
   return {
     intro: "À l'issue de cette formation, le participant sera capable de :",
-    objectives: detail.objectives,
+    objectives,
   };
 }
 
@@ -129,9 +150,6 @@ export type QualiopiInfoItem = {
 
 const DEFAULT_ACCESSIBILITY =
   "Formation accessible aux personnes en situation de handicap. Adaptations possibles sur demande, en lien si besoin avec nos partenaires (Agefiph, Cap Emploi).";
-
-const DEFAULT_COMPLAINTS =
-  "Pour toute réclamation : jessica.contentin@byound.fr — réponse sous 15 jours ouvrés.";
 
 /** Bloc « Informations » enrichi conforme Qualiopi. */
 export function buildQualiopiInfo(
@@ -162,6 +180,8 @@ export function buildQualiopiInfo(
     : null;
   const contactReferent = resolveContactReferent(course.contact_referent);
   const handicapReferent = resolveHandicapReferent(course.handicap_referent);
+  const financing =
+    String(course.financing_modalities ?? "").trim() || QUALIOPI_FINANCING_COPY;
 
   return [
     { label: "Public concerné", value: publicConcerne, wide: true },
@@ -171,7 +191,7 @@ export function buildQualiopiInfo(
     { label: "Type de reconnaissance", value: recognitionValue, wide: true },
     {
       label: "Modalités de financement",
-      value: String(course.financing_modalities ?? "").trim() || "À rédiger",
+      value: financing,
       wide: true,
     },
     { label: "Tarif", value: formatQualiopiTariff(course) },
@@ -184,11 +204,11 @@ export function buildQualiopiInfo(
       value: DEFAULT_ACCESSIBILITY,
       wide: true,
     },
-    { label: "Délais d'accès", value: "Accès sous 2 à 4 semaines après validation du diagnostic." },
+    { label: "Délais d'accès", value: QUALIOPI_ACCESS_DELAYS_COPY, wide: true },
     { label: "Contact référent", value: contactReferent, wide: true },
     {
       label: "Réclamations",
-      value: DEFAULT_COMPLAINTS,
+      value: QUALIOPI_COMPLAINTS_COPY,
       wide: true,
     },
     {
@@ -228,7 +248,7 @@ export type QualityIndicator = {
 export const QUALITY_INDICATOR_METHODS: Record<QualityIndicatorKey, string> = {
   satisfaction:
     "Questionnaire de fin de formation : % de répondants satisfaits ou très satisfaits.",
-  success: "% de participants ayant obtenu l'Open Badge Byound.",
+  success: QUALIOPI_SUCCESS_RATE_METHOD,
   dropout: "% de participants n'ayant pas terminé la formation.",
   recommendation: "% de répondants qui recommanderaient la formation.",
   completion: "% d'heures réalisées sur le nombre d'heures prévues.",

@@ -102,25 +102,34 @@ export async function generateFormationDocuments(
   for (const kind of kinds) {
     const row = await ensureDocRow(service, params.dossierId, kind, DOC_TITLES[kind]);
     // Coffre Qualiopi pour convention / règlement / livret ; CGV reste générée (absente du coffre)
-    let { buffer } = await resolveFormationPdfBuffer(service, {
-      kind,
-      ctx,
-      participantName:
-        kind === "convocation" || kind === "certificat" || kind === "attestation"
-          ? params.participantName
-          : null,
-      buildFallback: () =>
-        buildFormationDocumentPdf({
-          ctx,
-          kind,
-          participantName:
-            kind === "convocation" || kind === "certificat" || kind === "attestation"
-              ? params.participantName
-              : null,
-          attendedHalfDays: params.attendedHalfDays,
-          plannedHalfDays: params.plannedHalfDays,
-        }),
-    });
+    let buffer: Buffer;
+    try {
+      ({ buffer } = await resolveFormationPdfBuffer(service, {
+        kind,
+        ctx,
+        participantName:
+          kind === "convocation" || kind === "certificat" || kind === "attestation"
+            ? params.participantName
+            : null,
+        buildFallback: () =>
+          buildFormationDocumentPdf({
+            ctx,
+            kind,
+            participantName:
+              kind === "convocation" || kind === "certificat" || kind === "attestation"
+                ? params.participantName
+                : null,
+            attendedHalfDays: params.attendedHalfDays,
+            plannedHalfDays: params.plannedHalfDays,
+          }),
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/date d'émission.*postérieure/i.test(message)) {
+        return { results, error: message };
+      }
+      throw err;
+    }
 
     const isSignedRow =
       (kind === "devis" || kind === "convention") &&

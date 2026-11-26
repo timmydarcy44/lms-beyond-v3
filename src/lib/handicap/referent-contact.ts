@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  QUALIOPI_HANDICAP_REFERENT_SHORT,
+  QUALIOPI_PUBLIC_CONTACT_EMAIL,
+} from "@/lib/qualiopi/public-copy";
 
 export type DisabilityReferentContact = {
   userId: string | null;
@@ -10,14 +14,14 @@ export type DisabilityReferentContact = {
 
 const FALLBACK: DisabilityReferentContact = {
   userId: null,
-  displayName: "Référente handicap Byound",
-  email: "referent-handicap@byound.fr",
-  publicLine: "Référente handicap Byound · referent-handicap@byound.fr",
+  displayName: "Jessica Contentin",
+  email: QUALIOPI_PUBLIC_CONTACT_EMAIL,
+  publicLine: QUALIOPI_HANDICAP_REFERENT_SHORT,
 };
 
 /**
  * Coordonnées publiques de la référente : of_settings.referent_handicap_user_id → profiles.
- * Jamais de nom en dur Jessica / Timmy dans les documents.
+ * Fallback = contact Qualiopi unique (jessica.contentin@byound.fr).
  */
 export async function loadDisabilityReferentContact(
   service: SupabaseClient,
@@ -45,15 +49,13 @@ export async function loadDisabilityReferentContact(
     String(profile.full_name ?? "").trim() ||
     [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
     FALLBACK.displayName;
-  const email =
-    String(profile.email ?? "").trim().toLowerCase() ||
-    String(profile.reference_email ?? "").trim().toLowerCase() ||
-    FALLBACK.email;
+  // Contact public Qualiopi = adresse unique (pas l'email perso du profil).
+  const email = QUALIOPI_PUBLIC_CONTACT_EMAIL;
 
   return {
     userId,
     displayName,
     email,
-    publicLine: email ? `${displayName} · ${email}` : displayName,
+    publicLine: `${displayName} · ${email}`,
   };
 }

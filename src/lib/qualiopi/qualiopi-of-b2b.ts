@@ -66,8 +66,8 @@ Décrire comment toute réclamation relative à une action de formation est recu
 - Questionnaire de satisfaction (note basse)
 
 ## Délais
-- Accusé de réception sous 5 jours ouvrés
-- Réponse écrite sous 15 jours ouvrés
+- Accusé de réception sous 2 jours ouvrés
+- Réponse écrite sous 10 jours ouvrés
 
 ## Preuve
 Registre des réclamations + cette procédure.

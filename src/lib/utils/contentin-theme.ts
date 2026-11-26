@@ -21,6 +21,20 @@ export function isContentinEmail(email: string | null | undefined): boolean {
   return email === CONTENTIN_EMAIL;
 }
 
+/** Cookie / query : espace Byound Control vs cabinet Jessica. */
+export const SUPER_SPACE_COOKIE = "super_space";
+
+/** Routes du cabinet Jessica (header Jessica). Le reste de /super = Byound Control. */
+export function isJessicaCabinetPath(pathname: string | null | undefined): boolean {
+  const p = String(pathname || "");
+  if (p === "/super/jessica-dashboard" || p.startsWith("/super/jessica-")) return true;
+  if (p.startsWith("/super/catalogue-jessica")) return true;
+  if (p.startsWith("/super/gestion-client")) return true;
+  if (p === "/super/agenda" || p.startsWith("/super/agenda/")) return true;
+  if (p.startsWith("/super/blog")) return true;
+  return false;
+}
+
 export function getContentinThemeClasses(isContentin: boolean) {
   if (!isContentin) {
     return {

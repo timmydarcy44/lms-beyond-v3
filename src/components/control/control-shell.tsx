@@ -10,6 +10,15 @@ import { AiAssistantProvider, useAiAssistant } from "@/components/crm/ai-assista
 import { AlertsBadge } from "@/components/super-admin/alerts-badge";
 import { useSurface } from "@/components/theme/surface-toggle";
 import { CONTROL_CREATE_LINKS, CONTROL_NAV_SECTIONS, type ControlNavCounts } from "@/lib/control/nav";
+import { CONTENTIN_EMAIL, SUPER_SPACE_COOKIE } from "@/lib/utils/contentin-theme";
+
+function setSuperSpaceCookie(space: "byound" | "jessica") {
+  try {
+    document.cookie = `${SUPER_SPACE_COOKIE}=${space}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
 
 const manrope = Manrope({ subsets: ["latin"], display: "swap" });
 const NAV_KEY = "byound-control-nav";
@@ -134,6 +143,8 @@ function ControlFrame({
     return () => window.clearTimeout(timer);
   }, [query]);
 
+  const isContentin = userEmail.trim().toLowerCase() === CONTENTIN_EMAIL;
+  const homeHref = isContentin ? "/super?space=byound" : "/super";
   const homeActive = pathname === "/super";
   const formationTester = /^\/super\/lms\/formations\/[^/]+\/tester(?:\/|$)/.test(pathname);
   const formationBuilder = /^\/super\/lms\/formations\/.+/.test(pathname) && !formationTester;
@@ -154,14 +165,24 @@ function ControlFrame({
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <Link href="/super" className="flex items-center gap-2 px-5 pb-4 pt-5" onClick={() => setMobileNav(false)}>
+      <Link
+        href={homeHref}
+        className="flex items-center gap-2 px-5 pb-4 pt-5"
+        onClick={() => {
+          if (isContentin) setSuperSpaceCookie("byound");
+          setMobileNav(false);
+        }}
+      >
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#6E5BFF] text-sm font-extrabold text-white">B</span>
         <span className="text-[15px] font-extrabold text-white">Byound Control</span>
       </Link>
       <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 pb-4">
         <Link
-          href="/super"
-          onClick={() => setMobileNav(false)}
+          href={homeHref}
+          onClick={() => {
+            if (isContentin) setSuperSpaceCookie("byound");
+            setMobileNav(false);
+          }}
           className="block rounded-xl px-3 py-2 text-[14px] font-semibold"
           style={{ background: homeActive ? "#6E5BFF" : "transparent", color: homeActive ? "#fff" : "#C9D2E8" }}
         >
@@ -335,6 +356,16 @@ function ControlFrame({
               </div>
             ) : null}
           </div>
+          {isContentin ? (
+            <Link
+              href="/super/jessica-dashboard"
+              onClick={() => setSuperSpaceCookie("jessica")}
+              className="hidden h-10 shrink-0 items-center rounded-full border border-[#26304F] px-3 text-sm font-semibold text-[#C9D2E8] hover:bg-[#111831] sm:inline-flex"
+              title="Retour au cabinet Jessica"
+            >
+              Cabinet
+            </Link>
+          ) : null}
           <button
             type="button"
             onClick={toggle}

@@ -99,6 +99,19 @@ export async function resolveFormationPdfBuffer(
     if (filled) return { buffer: filled, source: "vault_filled" };
   }
 
+  // Livret d'accueil v1.1 — HTML source unique (public-copy), pas le PDF coffre figé.
+  if (params.kind === "livret") {
+    try {
+      const { fillLivretAccueilPdf } = await import(
+        "@/lib/formation-documents/livret-accueil-html"
+      );
+      const buffer = await fillLivretAccueilPdf();
+      return { buffer, source: "generated" };
+    } catch (err) {
+      console.warn("[formation-docs/vault] livret html failed:", err);
+    }
+  }
+
   if (isVaultStaticKind(params.kind)) {
     const vault = await fetchVaultTemplatePdf(service, params.kind as "reglement" | "livret");
     if (vault) return { buffer: vault.buffer, source: "vault" };

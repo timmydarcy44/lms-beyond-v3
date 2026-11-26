@@ -2,15 +2,14 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { SuperAdminEntrepriseNotice } from "@/components/super/super-admin-entreprise-notice";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
-import { JessicaHeader } from "@/components/jessica-contentin/jessica-header";
+import { ContentinSuperShell } from "@/components/jessica-contentin/contentin-super-shell";
 import { ControlShell } from "@/components/control/control-shell";
 import { getControlNavCounts } from "@/lib/control/nav-counts";
 import { BrandingProvider } from "@/components/super-admin/branding-provider";
 import { getSuperAdminBranding } from "@/lib/queries/super-admin-branding";
 import { getServerClient } from "@/lib/supabase/server";
-import { FloatingCreateButton } from "@/components/jessica-contentin/floating-create-button";
-import { CrmAreaWrapper } from "@/components/super-admin/crm-area-wrapper";
 import { CfaEntryNotifier } from "@/components/super-admin/cfa-entry-notifier";
+import { CONTENTIN_EMAIL } from "@/lib/utils/contentin-theme";
 import "./super-theme.css";
 
 export default async function SuperLayout({
@@ -30,37 +29,39 @@ export default async function SuperLayout({
     return null;
   }
   const { data: authData } = await supabase.auth.getUser();
-  const branding = authData?.user?.id 
+  const branding = authData?.user?.id
     ? await getSuperAdminBranding(authData.user.id)
     : null;
 
-  // Vérifier si c'est contentin.cabinet@gmail.com
   const { data: { user } } = await supabase.auth.getUser();
-  const isContentin = user?.email === "contentin.cabinet@gmail.com";
+  const isContentin = user?.email === CONTENTIN_EMAIL;
 
   const displayName =
     (typeof authData?.user?.user_metadata?.full_name === "string" && authData.user.user_metadata.full_name) ||
     (typeof authData?.user?.user_metadata?.name === "string" && authData.user.user_metadata.name) ||
     "";
-  const counts = isContentin
-    ? { pipelineLate: 0, admissionsReview: 0, expertsPending: 0, opcoToFile: 0 }
-    : await getControlNavCounts();
+  // Jessica peut ouvrir Byound Control : charger les compteurs réels.
+  const counts = await getControlNavCounts();
+
+  const notice = (
+    <Suspense fallback={null}>
+      <SuperAdminEntrepriseNotice />
+    </Suspense>
+  );
 
   return (
     <BrandingProvider initialBranding={branding}>
       <div className={isContentin ? "min-h-screen bg-white text-black" : "super-theme min-h-screen"}>
         {!isContentin && <CfaEntryNotifier />}
         {isContentin ? (
-          <>
-            <JessicaHeader />
-            <CrmAreaWrapper>
-              <Suspense fallback={null}>
-                <SuperAdminEntrepriseNotice />
-              </Suspense>
-              {children}
-            </CrmAreaWrapper>
-            <FloatingCreateButton />
-          </>
+          <ContentinSuperShell
+            counts={counts}
+            userName={displayName}
+            userEmail={user?.email ?? ""}
+            notice={notice}
+          >
+            {children}
+          </ContentinSuperShell>
         ) : (
           <Suspense fallback={null}>
             <ControlShell counts={counts} userName={displayName} userEmail={user?.email ?? ""}>

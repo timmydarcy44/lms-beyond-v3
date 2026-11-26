@@ -13,6 +13,11 @@ import {
 } from "@/lib/formation-documents/session-dates";
 import { formatParisClock, parisWallToUtc } from "@/lib/formation-documents/paris-time";
 import { BYOUND_PUBLIC_ORIGIN } from "@/lib/edge-site/byound-host";
+import {
+  QUALIOPI_ATTENDANCE_COPY,
+  QUALIOPI_HANDICAP_REFERENT_SHORT,
+  QUALIOPI_PUBLIC_CONTACT_EMAIL,
+} from "@/lib/qualiopi/public-copy";
 
 /** QR embarqué (data URL) — évite les carrés blancs (images externes non chargées par Puppeteer). */
 async function qrDataUrl(target: string, size = 140): Promise<string> {
@@ -133,9 +138,32 @@ export type ConvocationHtmlOpts = {
   /** Data URLs pré-générées (sinon générées dans fillConvocationPdf). */
   positionnementQrDataUrl?: string | null;
   reglementQrDataUrl?: string | null;
-  /** Référente handicap (of_settings) — jamais de nom en dur. */
+  /** Référente handicap (of_settings). */
   handicapReferentLine?: string | null;
+  /** Formateur affecté — affiché sous les objectifs ; masqué si absent. */
+  trainerName?: string | null;
 };
+
+/**
+ * Refuse une convocation émise après le premier jour de session
+ * (date d'émission > date de session, fuseau Europe/Paris).
+ */
+export function assertConvocationIssueDate(
+  ctx: DossierDocContext,
+  issuedAt: Date = new Date(),
+): void {
+  const first = [...ctx.slots]
+    .map((s) => s.slot_date)
+    .filter(Boolean)
+    .sort()[0];
+  if (!first) return;
+  const sessionDay = parisWallToUtc(first, 23, 59);
+  if (issuedAt.getTime() > sessionDay.getTime()) {
+    throw new Error(
+      `Convocation impossible : date d'émission (${formatDateAdmin(issuedAt)}) postérieure à la session (${first}).`,
+    );
+  }
+}
 
 export function buildConvocationHtml(
   ctx: DossierDocContext,
@@ -152,8 +180,10 @@ export function buildConvocationHtml(
   const days = sessionDays(slots);
   const dateLabel = slots.length ? formatDatesShort(slots) : "À confirmer";
   const hoursLabel = formatHours(slots) || "Selon planning";
-  const durationLabel =
-    ctx.course?.duration?.trim() || (slots.length ? formatDuration(slots) : "À confirmer");
+  // Durée = créneaux réels de la session (pas le libellé catalogue « 2,5 jours »).
+  const durationLabel = slots.length
+    ? formatDuration(slots)
+    : ctx.course?.duration?.trim() || "À confirmer";
   const formatLabel = formatPresence(ctx.dossier.modality_presence);
   const lieu = locationHeadline(ctx.session?.location_label);
   const lunch = lunchNote(ctx);
@@ -168,11 +198,8 @@ export function buildConvocationHtml(
         ]
   ).slice(0, 5);
   const prerequisites =
-    ctx.course?.prerequisites?.trim() ||
-    "Aucun. Une première expérience d'encadrement est un plus.";
-  const badgeLabel =
-    ctx.course?.level?.trim() ||
-    (ctx.course?.skills?.[0] ? `Open badge · ${ctx.course.skills[0]}` : null);
+    ctx.course?.prerequisites?.trim() || "Aucun prérequis spécifique.";
+  const trainerName = opts.trainerName?.trim() || null;
   const posUrl =
     opts.positionnementUrl?.trim() ||
     `${BYOUND_PUBLIC_ORIGIN}/dashboard/formateur`;
@@ -299,7 +326,7 @@ export function buildConvocationHtml(
       <div class="block">
         <h3>Ce que vous allez apprendre</h3>
         <ul class="objectives">${objectivesHtml}</ul>
-        ${badgeLabel ? `<div class="badge-line">${esc(badgeLabel)}</div>` : ""}
+        ${trainerName ? `<div class="badge-line">Formateur · ${esc(trainerName)}</div>` : ""}
         <div class="link">Programme complet : ${esc(programmeUrl.replace(/^https?:\/\//, ""))}</div>
       </div>
 
@@ -308,7 +335,7 @@ export function buildConvocationHtml(
         <div class="trio">
           <div class="card">
             <h4>Émargement</h4>
-            <p>Par demi-journée, sur votre téléphone, avec le code donné en salle.</p>
+            <p>${esc(QUALIOPI_ATTENDANCE_COPY)}</p>
           </div>
           <div class="card">
             <h4>Évaluation</h4>
@@ -349,13 +376,12 @@ export function buildConvocationHtml(
         <h3>Contacts et infos</h3>
         <div class="contact-row">
           <strong>Un empêchement, une question</strong>
-          <span>Équipe Byound · ${esc(BYOUND_COMPANY.email)}</span>
+          <span>Équipe Byound · ${esc(QUALIOPI_PUBLIC_CONTACT_EMAIL)}</span>
         </div>
         <div class="contact-row">
           <strong>Handicap ou besoin d'aménagement</strong>
           <span>${esc(
-            opts.handicapReferentLine?.trim() ||
-              "Référente handicap Byound · referent-handicap@byound.fr",
+            opts.handicapReferentLine?.trim() || QUALIOPI_HANDICAP_REFERENT_SHORT,
           )}</span>
         </div>
         <div class="contact-row">
@@ -380,11 +406,59 @@ export function buildConvocationHtml(
   return { html, ref };
 }
 
+async function resolveTrainerName(
+  dossierId: string,
+): Promise<string | null> {
+  try {
+    const { getServiceRoleClient } = await import("@/lib/supabase/server");
+    const service = getServiceRoleClient();
+    if (!service) return null;
+    const { data: dossier } = await service
+      .from("formation_dossiers")
+      .select("trainer_user_id")
+      .eq("id", dossierId)
+      .maybeSingle();
+    const trainerId = dossier?.trainer_user_id ? String(dossier.trainer_user_id) : null;
+    if (!trainerId) {
+      const { data: trainers } = await service
+        .from("formation_dossier_trainers")
+        .select("user_id")
+        .eq("dossier_id", dossierId)
+        .limit(1);
+      const uid = trainers?.[0]?.user_id ? String(trainers[0].user_id) : null;
+      if (!uid) return null;
+      const { data: profile } = await service
+        .from("profiles")
+        .select("full_name, first_name, last_name")
+        .eq("id", uid)
+        .maybeSingle();
+      return (
+        String(profile?.full_name ?? "").trim() ||
+        [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+        null
+      );
+    }
+    const { data: profile } = await service
+      .from("profiles")
+      .select("full_name, first_name, last_name")
+      .eq("id", trainerId)
+      .maybeSingle();
+    return (
+      String(profile?.full_name ?? "").trim() ||
+      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
 export async function fillConvocationPdf(
   ctx: DossierDocContext,
   opts: ConvocationHtmlOpts,
 ): Promise<Buffer | null> {
   try {
+    assertConvocationIssueDate(ctx, opts.issuedAt ?? new Date());
     const posUrl =
       opts.positionnementUrl?.trim() ||
       `${BYOUND_PUBLIC_ORIGIN}/dashboard/formateur`;
@@ -405,6 +479,8 @@ export async function fillConvocationPdf(
         handicapReferentLine = null;
       }
     }
+    const trainerName =
+      opts.trainerName?.trim() || (await resolveTrainerName(ctx.dossier.id));
     const [positionnementQrDataUrl, reglementQrDataUrl] = await Promise.all([
       opts.positionnementQrDataUrl || qrDataUrl(posUrl, 140),
       opts.reglementQrDataUrl || qrDataUrl(reglementUrl, 120),
@@ -412,6 +488,7 @@ export async function fillConvocationPdf(
     const { html } = buildConvocationHtml(ctx, {
       ...opts,
       handicapReferentLine,
+      trainerName,
       positionnementQrDataUrl,
       reglementQrDataUrl,
     });
@@ -420,6 +497,9 @@ export async function fillConvocationPdf(
       fullBleed: true,
     });
   } catch (err) {
+    if (err instanceof Error && /date d'émission.*postérieure/i.test(err.message)) {
+      throw err;
+    }
     console.error("[convocation-html] render failed:", err);
     return null;
   }

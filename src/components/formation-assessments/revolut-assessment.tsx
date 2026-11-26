@@ -233,8 +233,17 @@ export function RevolutAssessment({
 
       <header className="mb-6">
         <p className="text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: MUTED }}>
-          {title}
-          {courseTitle ? ` · ${courseTitle}` : ""}
+          {(() => {
+            const t = String(title || "").trim();
+            const c = String(courseTitle || "").trim();
+            if (!c) return t;
+            if (!t) return c;
+            // Évite « Formation X · Formation X » quand le template reprend le titre cours.
+            if (t.toLowerCase() === c.toLowerCase()) return t;
+            if (t.toLowerCase().includes(c.toLowerCase())) return t;
+            if (c.toLowerCase().includes(t.toLowerCase())) return c;
+            return `${t} · ${c}`;
+          })()}
         </p>
         <div
           className="mt-4 h-1.5 overflow-hidden rounded-full"

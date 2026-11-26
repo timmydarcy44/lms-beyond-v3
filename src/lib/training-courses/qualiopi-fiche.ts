@@ -1,5 +1,10 @@
 /** Champs Qualiopi fiche formation (ind. 1 & 2 — RNQ V10). */
 
+import {
+  QUALIOPI_ELEARNING_3H_MODALITY,
+  QUALIOPI_FINANCING_COPY,
+} from "@/lib/qualiopi/public-copy";
+
 /** Constantes partagées : contrôle, Preuves catalogue, fiche formation, one-pager. */
 export const CATALOGUE_PROOF_FIELDS = [
   { id: "objectives", label: "Objectifs (≥ 3)", required: true },
@@ -219,17 +224,18 @@ export const QUALIOPI_FICHE_STATUS_DOT: Record<
 
 /** Libellés financement (fiche catalogue + saisie en série). */
 export const QUALIOPI_FINANCING_OPTIONS = [
-  "OPCO",
-  "CPF",
-  "France Travail",
-  "Fonds propres",
-  "Plan de développement des compétences",
-  "Entreprise",
+  QUALIOPI_FINANCING_COPY,
+  "Fonds propres / entreprise",
   "Sur devis",
 ] as const;
 
 /** Descriptions de modalités pédagogiques — sélection unique (texte standard OF). */
 export const QUALIOPI_MODALITY_DETAIL_OPTIONS = [
+  {
+    id: "elearning_3h",
+    label: "Module e-learning 3 h (plateforme Byound)",
+    text: QUALIOPI_ELEARNING_3H_MODALITY,
+  },
   {
     id: "standard_atelier",
     label: "Ateliers & mises en situation",

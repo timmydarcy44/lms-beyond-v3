@@ -2,8 +2,11 @@ import { getServiceRoleClient } from "@/lib/supabase/server";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 import { isBtocRole } from "@/lib/control/btoc-client-file";
 import {
+  contentTimeCapSeconds,
+  estimateDurationsFromCompletionGaps,
   formatDurationCompact,
   metricsFromLegacySessionRows,
+  scaleDurationsToCap,
   type LogicalSession,
 } from "@/lib/lms/lms-metrics";
 import {
@@ -213,8 +216,6 @@ function asStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item ?? "").trim()).filter(Boolean);
 }
-
-const MAX_LEAF_DELTA_SEC = 45 * 60;
 
 type OutlineSection = {
   id: string;
@@ -675,7 +676,8 @@ export async function loadLearnerSuiviDetail(
   const outlineStats = outlineProgress(outline, completedLeaves, completedTitles);
   const modMeta = outlineStats.modules;
 
-  // Feuilles chronologiques → temps de lecture / quiz estimés (delta borné)
+  // Feuilles chronologiques → temps contenu estimé (écarts bornés),
+  // puis plafonné au temps actif/connecté mesuré (jamais > séances).
   const leavesChrono = (leaves as Array<Record<string, unknown>>)
     .map((l) => ({
       leafId: String(l.leaf_id ?? ""),
@@ -685,23 +687,21 @@ export async function loadLearnerSuiviDetail(
     .filter((l) => l.leafId && l.completedAt)
     .sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
 
-  const leafTimes: SuiviLeafTimeRow[] = leavesChrono.map((leaf, index) => {
-    let durationSeconds: number | null = null;
-    if (index > 0) {
-      const prev = leavesChrono[index - 1];
-      const delta = Math.round((Date.parse(leaf.completedAt) - Date.parse(prev.completedAt)) / 1000);
-      if (Number.isFinite(delta) && delta > 0 && delta <= MAX_LEAF_DELTA_SEC) {
-        durationSeconds = delta;
-      }
-    }
-    return {
-      leafId: leaf.leafId,
-      title: leaf.title,
-      kind: leafKind(leaf.title),
-      completedAt: leaf.completedAt,
-      durationSeconds,
-    };
-  });
+  const rawLeafDurations = estimateDurationsFromCompletionGaps(
+    leavesChrono.map((l) => l.completedAt),
+  );
+  const cappedLeafDurations = scaleDurationsToCap(
+    rawLeafDurations,
+    contentTimeCapSeconds(metrics),
+  );
+
+  const leafTimes: SuiviLeafTimeRow[] = leavesChrono.map((leaf, index) => ({
+    leafId: leaf.leafId,
+    title: leaf.title,
+    kind: leafKind(leaf.title),
+    completedAt: leaf.completedAt,
+    durationSeconds: cappedLeafDurations[index] ?? null,
+  }));
 
   // Quiz : submissions (score réel) + leaves quiz (durée estimée)
   const quizzes: SuiviQuizRow[] = [];
@@ -996,13 +996,28 @@ export async function loadLearnerSuiviDetail(
     let status: SuiviModuleRow["status"] = "todo";
     if (pct >= 100) status = "done";
     else if (pct > 0 || doneChapters > 0) status = "current";
+    const moduleLeafIds = new Set<string>([
+      id,
+      ...chapterIds,
+      ...section.chapters.flatMap((ch) => ch.subchapters.map((sub) => sub.id)),
+    ]);
+    const moduleTitles = [
+      title,
+      ...section.chapters.flatMap((ch) => [ch.title, ...ch.subchapters.map((sub) => sub.title)]),
+    ]
+      .map((t) => normalizeTitle(t))
+      .filter(Boolean);
     const relatedSeconds = leafTimes
-      .filter(
-        (l) =>
-          l.title.toLowerCase().includes(title.toLowerCase().slice(0, 18)) ||
-          l.leafId.includes(id) ||
-          chapterIds.some((cid) => l.leafId === cid || l.leafId.startsWith(cid)),
-      )
+      .filter((l) => {
+        if (moduleLeafIds.has(l.leafId)) return true;
+        if ([...moduleLeafIds].some((cid) => cid && (l.leafId.includes(cid) || cid.includes(l.leafId)))) {
+          return true;
+        }
+        const leafTitle = normalizeTitle(l.title);
+        return moduleTitles.some(
+          (t) => t && (leafTitle.includes(t.slice(0, 18)) || t.includes(leafTitle.slice(0, 18))),
+        );
+      })
       .reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0);
     const quizScore =
       quizzes.find((q) => q.title.toLowerCase().includes(title.toLowerCase().slice(0, 12)))?.percentage ??

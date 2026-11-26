@@ -3,11 +3,15 @@ import {
   assertActiveLeqConnected,
   computeLearnerTimeMetrics,
   connectedSecondsForSession,
+  contentTimeCapSeconds,
   activeSecondsFromHeartbeats,
+  estimateDurationsFromCompletionGaps,
   metricsFromLegacySessionRows,
+  scaleDurationsToCap,
   SESSION_GAP_MS,
   MAX_CONNECTED_PER_SESSION_MS,
   MAX_ACTIVE_INTERVAL_MS,
+  MAX_LEAF_CONTENT_DELTA_SEC,
 } from "@/lib/lms/lms-metrics";
 
 describe("lms-metrics", () => {
@@ -135,5 +139,32 @@ describe("lms-metrics", () => {
     expect(metrics.sessionCount).toBe(1);
     expect(metrics.connectedSeconds).toBe(60);
     expect(metrics.activeSeconds).toBe(0);
+  });
+
+  it("n’invente pas 45+ min de contenu entre deux validations", () => {
+    const t0 = "2026-11-25T15:00:00.000Z";
+    const t1 = new Date(Date.parse(t0) + 12 * 60 * 1000).toISOString();
+    const t2 = new Date(Date.parse(t1) + 40 * 60 * 1000).toISOString(); // > max delta
+    const estimated = estimateDurationsFromCompletionGaps([t0, t1, t2]);
+    expect(estimated[0]).toBeNull();
+    expect(estimated[1]).toBe(12 * 60);
+    expect(estimated[2]).toBeNull();
+    expect(MAX_LEAF_CONTENT_DELTA_SEC).toBe(20 * 60);
+  });
+
+  it("plafonne le temps contenu au temps actif (cas 54 min > 15 min)", () => {
+    const metrics = {
+      sessionCount: 1,
+      connectedSeconds: 1311,
+      activeSeconds: 959,
+      sessions: [],
+    };
+    const cap = contentTimeCapSeconds(metrics);
+    expect(cap).toBe(959);
+    const scaled = scaleDurationsToCap([null, 1800, 1440], cap);
+    const sum = scaled.reduce<number>((s, v) => s + (v ?? 0), 0);
+    expect(sum).toBeLessThanOrEqual(cap);
+    expect(sum).toBe(959);
+    expect(scaled[0]).toBeNull();
   });
 });

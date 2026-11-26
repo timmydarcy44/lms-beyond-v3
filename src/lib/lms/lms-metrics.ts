@@ -349,3 +349,68 @@ export function formatDurationCompact(totalSeconds: number): string {
   if (minutes > 0) return `${minutes} min`;
   return seconds > 0 ? `${seconds} s` : "—";
 }
+
+/**
+ * Écart max retenu entre deux validations de feuille pour estimer un temps
+ * de contenu. Au-delà = pause / onglet abandonné, pas du temps d’étude.
+ */
+export const MAX_LEAF_CONTENT_DELTA_SEC = 20 * 60;
+
+/**
+ * Estime une durée par validation à partir de l’écart avec la précédente.
+ * Première feuille = null (pas d’ancre). Écarts > maxDeltaSec = null.
+ */
+export function estimateDurationsFromCompletionGaps(
+  completedAts: string[],
+  maxDeltaSec: number = MAX_LEAF_CONTENT_DELTA_SEC,
+): Array<number | null> {
+  return completedAts.map((iso, index) => {
+    if (index === 0) return null;
+    const prev = completedAts[index - 1];
+    const delta = Math.round((Date.parse(iso) - Date.parse(prev)) / 1000);
+    if (!Number.isFinite(delta) || delta <= 0 || delta > maxDeltaSec) return null;
+    return delta;
+  });
+}
+
+/**
+ * Plafonne une liste de durées pour que leur somme ≤ `capSeconds`
+ * (ex. temps actif / connecté mesuré). Conserve les proportions.
+ */
+export function scaleDurationsToCap(
+  durations: Array<number | null>,
+  capSeconds: number,
+): Array<number | null> {
+  const cap = clampNonNeg(capSeconds);
+  const values = durations.map((d) => (d == null ? 0 : clampNonNeg(d)));
+  const raw = values.reduce((a, b) => a + b, 0);
+  if (raw === 0) return durations.map((d) => (d == null ? null : 0));
+  if (cap === 0) return durations.map((d) => (d == null ? null : 0));
+  if (raw <= cap) return durations.map((d, i) => (d == null ? null : values[i]!));
+
+  const factor = cap / raw;
+  const scaled = values.map((v) => (v > 0 ? Math.max(1, Math.round(v * factor)) : 0));
+  let sum = scaled.reduce((a, b) => a + b, 0);
+  // Corrige l’arrondi pour ne jamais dépasser le plafond.
+  if (sum > cap) {
+    const order = scaled
+      .map((v, i) => ({ v, i }))
+      .filter((x) => x.v > 0)
+      .sort((a, b) => b.v - a.v);
+    for (const item of order) {
+      if (sum <= cap) break;
+      scaled[item.i]! -= 1;
+      sum -= 1;
+    }
+  }
+  return durations.map((d, i) => (d == null ? null : scaled[i]!));
+}
+
+/**
+ * Plafond du temps contenu : on ne peut pas « lire » plus longtemps
+ * qu’on a été actif (sinon connecté).
+ */
+export function contentTimeCapSeconds(metrics: Pick<LearnerTimeMetrics, "activeSeconds" | "connectedSeconds">): number {
+  if (metrics.activeSeconds > 0) return metrics.activeSeconds;
+  return metrics.connectedSeconds;
+}

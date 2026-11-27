@@ -130,9 +130,9 @@ Jessica Contentin, présidente, formatrice et référente handicap, coordonne le
 - Matériel du formateur : ordinateur portable, vidéoprojecteur portable et câbles HDMI / USB-C
 
 ### Locaux
-- Formations en intra dans les locaux du client (salle de réunion, vidéoprojecteur ou écran, wifi, accès PMR demandés à la signature de la convention)
-- Siège administratif au 134 rue Élise Deroche, 14760 Bretteville-sur-Odon : n’accueille pas de stagiaires en formation ; l’accessibilité PMR est assurée sur les lieux d’accueil client et via le LMS en distanciel
-- Formations à distance via le LMS
+- Salle Byound (134 rue Élise Deroche, 14760 Bretteville-sur-Odon) : capacité jusqu’à 8 personnes, tables/chaises, wifi, écran ou vidéoprojecteur, paperboard et prises électriques.
+- Accès PMR : si la salle n’est pas adaptée au public concerné, report en locaux client accessibles PMR ou bascule en distanciel (LMS / Google Meet).
+- Consignes de sécurité rappelées en ouverture de session (issues de secours, extincteurs, plan d’évacuation) ; en intra, application des consignes du site client. Formations à distance via le LMS.
 
 ### Continuité
 En cas d’indisponibilité d’un formateur, remplacement par un expert validé du réseau Byound, ou report de la session avec l’accord du client.

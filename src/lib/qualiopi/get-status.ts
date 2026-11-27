@@ -19,6 +19,12 @@ import { TRAINING_FORMATION_BASE_PATH } from "@/lib/training-courses/types";
 
 const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000;
 
+/** Specimens PDF audit (public/qualiopi). */
+const QUALIOPI_SPECIMEN = {
+  harcelementPrevention: "/qualiopi/Byound_Business_Harcelement_Fiche_Prevention.pdf",
+  conventionExemple: "/qualiopi/Convention_exemple_Byound.pdf",
+} as const;
+
 /** Fiche publique catalogue (preuve ind. 1 / 2 / 5…). */
 function publicFormationHref(slug: string | null | undefined, hash?: string): string | null {
   const s = String(slug ?? "").trim();
@@ -388,6 +394,12 @@ function assessAuto(
         null,
         `${complete} dossier(s) complets · ${partial} avec envoi`,
       );
+      const convention = proof(
+        "Convention exemple (PDF)",
+        QUALIOPI_SPECIMEN.conventionExemple,
+        null,
+        null,
+      );
       const pipeline = proof(
         "Programmation — démarrage session / dossier formation",
         "/super/crm/programmation",
@@ -402,14 +414,14 @@ function assessAuto(
             null,
           )
         : null;
-      const proofs = [pack, pipeline, ...(convocation ? [convocation] : [])];
+      const proofs = [pack, convention, pipeline, ...(convocation ? [convocation] : [])];
       if (complete >= 1) {
         return withManual({
           status: "proven",
           proofs,
           nextAction: {
             label: "Voir les preuves",
-            href: convocation?.href || "/super/crm/programmation",
+            href: QUALIOPI_SPECIMEN.conventionExemple,
           },
         });
       }
@@ -422,7 +434,7 @@ function assessAuto(
       }
       return withManual({
         status: "missing",
-        proofs: [pack, pipeline],
+        proofs: [pack, convention, pipeline],
         nextAction: { label: "Ajouter", href: "/super/crm/programmation" },
       });
     }
@@ -439,6 +451,12 @@ function assessAuto(
         null,
         `${complete} dossier(s) complets · ${partial} avec envoi`,
       );
+      const convention = proof(
+        "Convention exemple (PDF)",
+        QUALIOPI_SPECIMEN.conventionExemple,
+        null,
+        null,
+      );
       const handicap = handicapOk
         ? proof(
             "Adaptation / handicap",
@@ -447,7 +465,7 @@ function assessAuto(
             `${sig.handicapProfilesCount} fiche(s)`,
           )
         : null;
-      const proofs = [pack, ...(handicap ? [handicap] : [])];
+      const proofs = [pack, convention, ...(handicap ? [handicap] : [])];
       if (complete >= 1 || (handicapOk && partial >= 1)) {
         return withManual({
           status: "proven",
@@ -521,6 +539,12 @@ function assessAuto(
       });
     }
     case 12: {
+      const ficheHarcelement = proof(
+        "Fiche harcèlement — prévention",
+        QUALIOPI_SPECIMEN.harcelementPrevention,
+        null,
+        null,
+      );
       if (sig.signalementsProcessReady) {
         return withManual({
           status: "proven",
@@ -531,19 +555,23 @@ function assessAuto(
               null,
               null,
             ),
+            ficheHarcelement,
             proof("Sorties tracées", "/super/crm/programmation", null, `${sig.exitsCount}`),
             proof("Registre signalements", "/super/crm/qualiopi/qualite#signalements", null, null),
           ],
           nextAction: {
-            label: "Voir la preuve",
-            href: "/super/crm/qualiopi/process?kind=signalements",
+            label: "Voir les preuves",
+            href: QUALIOPI_SPECIMEN.harcelementPrevention,
           },
         });
       }
       if (sig.exitsCount >= 1) {
         return withManual({
           status: "todo",
-          proofs: [proof("Sorties", "/super/crm/programmation", null, `${sig.exitsCount}`)],
+          proofs: [
+            ficheHarcelement,
+            proof("Sorties", "/super/crm/programmation", null, `${sig.exitsCount}`),
+          ],
           nextAction: {
             label: "Compléter",
             href: "/super/crm/qualiopi/process?kind=signalements",
@@ -552,7 +580,7 @@ function assessAuto(
       }
       return withManual({
         status: "missing",
-        proofs: [],
+        proofs: [ficheHarcelement],
         nextAction: {
           label: "Ajouter",
           href: "/super/crm/qualiopi/process?kind=signalements",

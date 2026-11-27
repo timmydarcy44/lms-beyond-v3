@@ -27,9 +27,9 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
     indicatorId: 9,
     title: "Informations remises au bénéficiaire",
     where:
-      "Pack information (convention / règlement / livret) + Programmation + exemple de convocation",
-    how: "Ouvrir Programmation (dossier démarré), montrer les envois du pack, puis ouvrir une convocation exemple (/doc?token=…).",
-    href: "/super/crm/programmation",
+      "Pack information + convention exemple PDF + Programmation + exemple de convocation",
+    how: "Ouvrir la convention exemple, puis Programmation (pack) et une convocation /doc?token=….",
+    href: "/qualiopi/Convention_exemple_Byound.pdf",
   },
   {
     indicatorId: 11,
@@ -41,9 +41,10 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
   {
     indicatorId: 12,
     title: "Engagement, ruptures, signalements VHD",
-    where: "Process signalements + registre + sorties apprenant + alertes LMS",
-    how: "Qualiopi → Qualité → Signalements (procédure prête) ; dossier → sorties / engagement.",
-    href: "/super/crm/qualiopi/qualite",
+    where:
+      "Procédure signalements + fiche prévention harcèlement + registre + sorties",
+    how: "Ouvrir la fiche harcèlement prévention, puis la procédure VHD et le registre Qualité.",
+    href: "/qualiopi/Byound_Business_Harcelement_Fiche_Prevention.pdf",
   },
   {
     indicatorId: 17,

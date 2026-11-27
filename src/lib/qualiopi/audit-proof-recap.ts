@@ -19,9 +19,9 @@ export const QUALIOPI_AUDIT_PROOF_RECAP: QualiopiAuditProofRecap[] = [
   {
     indicatorId: 2,
     title: "Indicateurs de résultats diffusés",
-    where: "Catalogue Qualiopi + bloc indicateurs sur fiche publique",
-    how: "Ouvrir /super/crm/qualiopi/catalogue, puis la fiche publique (#qualite).",
-    href: "/super/crm/qualiopi/catalogue",
+    where: "Bloc indicateurs sur fiche formation publique",
+    how: "Ouvrir la fiche publique (#qualite) et montrer les indicateurs de résultats.",
+    href: "/business/formations",
   },
   {
     indicatorId: 9,

@@ -250,40 +250,35 @@ function assessAuto(
     case 2: {
       const published = Math.max(sig.coursesPublicTotal, 0);
       const complete = sig.coursesCompliantCount ?? 0;
-      const publicHref =
-        publicFormationHref(sig.examplePublicFormationSlug, "qualite") ??
-        "/super/crm/qualiopi/catalogue";
+      const publicHref = publicFormationHref(sig.examplePublicFormationSlug, "qualite");
       const fiche = proof(
         "Indicateurs de résultats sur fiche publique",
         publicHref,
         null,
         `${complete} / ${Math.max(published, 1)} fiches complètes`,
       );
-      const catalogue = proof(
-        "Catalogue Qualiopi (indicateurs)",
-        "/super/crm/qualiopi/catalogue",
-        null,
-        null,
-      );
-      const proofs = [catalogue, fiche];
-      if (published > 0 && complete >= published) {
+      const proofs = publicHref ? [fiche] : [];
+      if (published > 0 && complete >= published && publicHref) {
         return withManual({
           status: "proven",
           proofs,
-          nextAction: { label: "Voir les preuves", href: "/super/crm/qualiopi/catalogue" },
+          nextAction: { label: "Voir la preuve", href: publicHref },
         });
       }
-      if (complete > 0 || published > 0) {
+      if ((complete > 0 || published > 0) && publicHref) {
         return withManual({
           status: "todo",
           proofs,
-          nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
+          nextAction: { label: "Voir la preuve", href: publicHref },
         });
       }
       return withManual({
         status: "missing",
-        proofs: [catalogue],
-        nextAction: { label: "Compléter", href: "/super/crm/qualiopi/catalogue" },
+        proofs: [],
+        nextAction: {
+          label: "Compléter",
+          href: "/super/crm/qualiopi/catalogue",
+        },
       });
     }
     case 4: {

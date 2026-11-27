@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { env } from "@/lib/env";
+import { JESSICA_CONTENTIN_PHONE_E164 } from "@/lib/jessica-contentin/studio-config";
 import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
@@ -396,7 +397,7 @@ export default function AProposPage() {
             "description": "Psychopédagogue certifiée en neuroéducation, spécialisée dans l'accompagnement des troubles du neurodéveloppement (DYS, TDA-H), harcèlement scolaire et phobie scolaire.",
             "url": "https://jessicacontentin.fr",
             "email": "contentin.cabinet@gmail.com",
-            "telephone": "+33683477174",
+            "telephone": JESSICA_CONTENTIN_PHONE_E164,
             "address": {
               "@type": "PostalAddress",
               "addressLocality": "Bretteville sur Odon",

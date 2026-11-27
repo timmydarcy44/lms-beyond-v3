@@ -10,6 +10,7 @@ import { AlternantsRecruitingSection } from "@/components/offres/public-offer";
 import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-shell";
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { getProgramContributors } from "@/lib/expert/program-contributors";
+import { QUALIOPI_ACCESSIBILITY_CONTACT_LINE } from "@/lib/qualiopi/public-copy";
 
 export const metadata: Metadata = {
   title: "Real Estate — Byound School",
@@ -348,7 +349,7 @@ export default async function NtcRealEstatePage() {
                 ))}
               </div>
               <p className="mt-8 text-sm leading-relaxed text-white/45">
-                Formation accessible aux personnes en situation de handicap selon les besoins et adaptations nécessaires. Référent handicap : Jessica Contentin — jessica.contentin@byound.fr
+                Formation accessible aux personnes en situation de handicap selon les besoins et adaptations nécessaires. {QUALIOPI_ACCESSIBILITY_CONTACT_LINE}
               </p>
             </div>
             <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-7 backdrop-blur sm:p-9">

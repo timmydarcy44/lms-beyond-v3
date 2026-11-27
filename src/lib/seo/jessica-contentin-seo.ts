@@ -3,6 +3,8 @@
  * Stratégie de référencement naturel optimisée pour devenir leader
  */
 
+import { JESSICA_CONTENTIN_PHONE_E164 } from "@/lib/jessica-contentin/studio-config";
+
 // Mots-clés principaux (Primary Keywords)
 export const PRIMARY_KEYWORDS = {
   psychopedagogue: [
@@ -267,7 +269,7 @@ export const STRUCTURED_DATA = {
       "latitude": "49.1478",
       "longitude": "-0.3756",
     },
-    "telephone": "+33683477174",
+    "telephone": JESSICA_CONTENTIN_PHONE_E164,
     "email": "contentin.cabinet@gmail.com",
     "priceRange": "€€",
     "areaServed": {
@@ -291,7 +293,7 @@ export const STRUCTURED_DATA = {
     "url": "https://jessicacontentin.fr",
     "image": "https://jessicacontentin.fr/jessica-contentin.jpg",
     "email": "contentin.cabinet@gmail.com",
-    "telephone": "+33683477174",
+    "telephone": JESSICA_CONTENTIN_PHONE_E164,
     "address": {
       "@type": "PostalAddress",
       "addressLocality": "Bretteville sur Odon",
@@ -328,7 +330,7 @@ export const STRUCTURED_DATA = {
     "name": "Cabinet de Psychopédagogie Jessica CONTENTIN",
     "description": "Cabinet de psychopédagogie spécialisé dans l'accompagnement des troubles du neurodéveloppement, harcèlement scolaire et phobie scolaire.",
     "url": "https://jessicacontentin.fr",
-    "telephone": "+33683477174",
+    "telephone": JESSICA_CONTENTIN_PHONE_E164,
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "41 C",

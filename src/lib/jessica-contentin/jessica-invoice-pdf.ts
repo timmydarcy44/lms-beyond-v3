@@ -1,6 +1,10 @@
 import { jsPDF } from "jspdf";
 import type { JessicaInvoiceLineItem } from "@/lib/jessica-contentin/jessica-invoice-shared";
 import { JESSICA_INVOICE_SECTION_TITLE_DEFAULT } from "@/lib/jessica-contentin/jessica-invoice-shared";
+import {
+  JESSICA_CONTENTIN_EMAIL,
+  JESSICA_CONTENTIN_PHONE,
+} from "@/lib/jessica-contentin/studio-config";
 
 export type JessicaInvoicePdfInput = {
   invoiceNumber: string;
@@ -24,8 +28,8 @@ const ISSUER = {
   rpps: "N°RPPS : 10109804632",
   address1: "134 rue Elise Deroche",
   address2: "14760 Bretteville-sur-odon",
-  phone: "0683477174",
-  email: "contentin.cabinet@gmail.com",
+  phone: JESSICA_CONTENTIN_PHONE,
+  email: JESSICA_CONTENTIN_EMAIL,
 };
 
 function formatEuro(amount: number): string {

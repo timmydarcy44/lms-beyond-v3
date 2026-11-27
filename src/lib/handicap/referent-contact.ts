@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   QUALIOPI_HANDICAP_REFERENT_SHORT,
   QUALIOPI_PUBLIC_CONTACT_EMAIL,
+  QUALIOPI_PUBLIC_CONTACT_PHONE,
 } from "@/lib/qualiopi/public-copy";
 
 export type DisabilityReferentContact = {
@@ -56,6 +57,6 @@ export async function loadDisabilityReferentContact(
     userId,
     displayName,
     email,
-    publicLine: `${displayName} · ${email}`,
+    publicLine: `${displayName} · ${email} · ${QUALIOPI_PUBLIC_CONTACT_PHONE}`,
   };
 }

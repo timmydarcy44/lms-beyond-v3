@@ -14,6 +14,7 @@ import {
   QUALIOPI_FINANCING_COPY,
   QUALIOPI_LIVRET_VERSION_LABEL,
   QUALIOPI_PUBLIC_CONTACT_EMAIL,
+  QUALIOPI_PUBLIC_CONTACT_PHONE,
   QUALIOPI_SCHEDULE_COPY,
 } from "@/lib/qualiopi/public-copy";
 
@@ -33,6 +34,8 @@ function esc(text: string): string {
 
 export function buildLivretAccueilHtml(): string {
   const email = QUALIOPI_PUBLIC_CONTACT_EMAIL;
+  const phone = QUALIOPI_PUBLIC_CONTACT_PHONE;
+  const jessicaContact = `Jessica Contentin · ${email} · ${phone}`;
   const address = companyPostalAddress();
   const siret = BYOUND_COMPANY.siret.replace(
     /(\d{3})(\d{3})(\d{3})(\d{5})/,
@@ -123,7 +126,7 @@ export function buildLivretAccueilHtml(): string {
       <div class="cell"><div class="lbl">SIREN</div><div class="val">${esc(BYOUND_COMPANY.siren.replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3"))}</div></div>
       <div class="cell"><div class="lbl">TVA intracommunautaire</div><div class="val">${esc(BYOUND_COMPANY.vat_intra)}</div></div>
       <div class="cell"><div class="lbl">Contact</div><div class="val">${esc(email)}</div></div>
-      <div class="cell"><div class="lbl">Référent handicap</div><div class="val">Jessica Contentin · ${esc(email)}</div></div>
+      <div class="cell"><div class="lbl">Référent handicap</div><div class="val">${esc(jessicaContact)}</div></div>
       <div class="cell"><div class="lbl">SIRET</div><div class="val">${esc(siret)}</div></div>
     </div>
 
@@ -164,7 +167,7 @@ export function buildLivretAccueilHtml(): string {
 
     <h2>Accessibilité et handicap</h2>
     <p>Byound Business s'engage à étudier toute demande d'aménagement pour un bénéficiaire en situation de handicap. Ces demandes doivent être signalées le plus tôt possible, avant l'entrée en formation.</p>
-    <p><strong>Référent handicap</strong> — Jessica Contentin · ${esc(email)}</p>
+    <p><strong>Référent handicap</strong> — ${esc(jessicaContact)}</p>
 
     <h2>Réclamations</h2>
     <p>${esc(QUALIOPI_COMPLAINTS_COPY)}</p>
@@ -172,7 +175,7 @@ export function buildLivretAccueilHtml(): string {
     <h2>Signaler une situation de violence, de harcèlement ou de discrimination</h2>
     <p>Tout stagiaire, formateur ou salarié peut signaler une situation de violence, de harcèlement ou de discrimination liée à une action de formation Byound.</p>
     <div class="row"><div class="k">Canal</div><div>Formulaire « Signalement » dans l'espace apprenant (et espaces formateur / salarié le cas échéant).</div></div>
-    <div class="row"><div class="k">Référente</div><div>Jessica Contentin · ${esc(email)}</div></div>
+    <div class="row"><div class="k">Référente</div><div>${esc(jessicaContact)}</div></div>
     <div class="row"><div class="k">Confidentialité</div><div>Le signalement est traité de façon confidentielle. Aucun e-mail de notification ne reprend le contenu du signalement.</div></div>
 
     <h2>Règlement intérieur</h2>

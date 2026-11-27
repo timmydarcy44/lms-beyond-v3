@@ -3,6 +3,12 @@ export const JESSICA_STUDIO_ORG_ID = "17d6def2-2422-4628-83ab-24b04746c19c";
 
 export const JESSICA_CONTENTIN_EMAIL = "contentin.cabinet@gmail.com";
 
+/** Téléphone public Jessica — source unique (site, SEO, factures). */
+export const JESSICA_CONTENTIN_PHONE = "0683477174";
+export const JESSICA_CONTENTIN_PHONE_DISPLAY = "06 83 47 71 74";
+export const JESSICA_CONTENTIN_PHONE_E164 = "+33683477174";
+export const JESSICA_CONTENTIN_PHONE_TEL = `tel:${JESSICA_CONTENTIN_PHONE_E164}`;
+
 export const JESSICA_STUDIO_ORG_SLUG = "jessicacontentin";
 
 export function isJessicaLmsHostname(hostname: string | null | undefined): boolean {

@@ -3,16 +3,25 @@
  * Toute mention visible par l’auditeur / le client doit importer depuis ici.
  */
 
+import {
+  JESSICA_CONTENTIN_PHONE_DISPLAY,
+  JESSICA_CONTENTIN_PHONE_E164,
+} from "@/lib/jessica-contentin/studio-config";
+
 export const QUALIOPI_PUBLIC_CONTACT_EMAIL = "jessica.contentin@byound.fr";
 
+/** Téléphone public Jessica (référente handicap / contact OF). */
+export const QUALIOPI_PUBLIC_CONTACT_PHONE = JESSICA_CONTENTIN_PHONE_DISPLAY;
+export const QUALIOPI_PUBLIC_CONTACT_PHONE_E164 = JESSICA_CONTENTIN_PHONE_E164;
+
 export const QUALIOPI_PUBLIC_CONTACT_LINE =
-  `Jessica Contentin — ${QUALIOPI_PUBLIC_CONTACT_EMAIL}`;
+  `Jessica Contentin — ${QUALIOPI_PUBLIC_CONTACT_EMAIL} — ${QUALIOPI_PUBLIC_CONTACT_PHONE}`;
 
 export const QUALIOPI_HANDICAP_REFERENT_LINE =
-  `Jessica Contentin — ${QUALIOPI_PUBLIC_CONTACT_EMAIL}, étude personnalisée de chaque situation.`;
+  `Jessica Contentin — ${QUALIOPI_PUBLIC_CONTACT_EMAIL} — ${QUALIOPI_PUBLIC_CONTACT_PHONE}, étude personnalisée de chaque situation.`;
 
 export const QUALIOPI_HANDICAP_REFERENT_SHORT =
-  `Jessica Contentin · ${QUALIOPI_PUBLIC_CONTACT_EMAIL}`;
+  `Jessica Contentin · ${QUALIOPI_PUBLIC_CONTACT_EMAIL} · ${QUALIOPI_PUBLIC_CONTACT_PHONE}`;
 
 /** Phrase publique par défaut — sans OPCO ni Qualiopi. */
 export const QUALIOPI_FINANCING_DEFAULT = "Financement par l'entreprise cliente.";
@@ -159,7 +168,7 @@ export const QUALIOPI_ACCESSIBILITY_BODY =
   "Formation accessible aux personnes en situation de handicap. Adaptations possibles sur demande, en lien si besoin avec nos partenaires (Agefiph, Cap Emploi).";
 
 export const QUALIOPI_ACCESSIBILITY_CONTACT_LINE =
-  `Contact référent handicap : ${QUALIOPI_PUBLIC_CONTACT_EMAIL}`;
+  `Contact référent handicap : ${QUALIOPI_PUBLIC_CONTACT_EMAIL} — ${QUALIOPI_PUBLIC_CONTACT_PHONE}`;
 
 export const QUALIOPI_ACCESSIBILITY_COPY =
   `${QUALIOPI_ACCESSIBILITY_BODY} ${QUALIOPI_ACCESSIBILITY_CONTACT_LINE}`;

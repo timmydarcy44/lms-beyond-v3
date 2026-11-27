@@ -11,6 +11,7 @@ import { JessicaFullWidthVideoSection } from "@/components/jessica-contentin/jes
 import { JessicaTroisPiliersSection } from "@/components/jessica-contentin/jessica-trois-piliers-section";
 import { JessicaParcoursSurMesureSection } from "@/components/jessica-contentin/jessica-parcours-sur-mesure-section";
 import { JessicaHomeContactForm } from "@/components/jessica-contentin/jessica-home-contact-form";
+import { JESSICA_CONTENTIN_PHONE_E164 } from "@/lib/jessica-contentin/studio-config";
 import { motion } from "framer-motion";
 import Script from "next/script";
 
@@ -119,7 +120,7 @@ export default function JessicaContentinHomePage() {
               "latitude": "49.1478",
               "longitude": "-0.3756",
             },
-            "telephone": "+33683477174",
+            "telephone": JESSICA_CONTENTIN_PHONE_E164,
             "email": "contentin.cabinet@gmail.com",
             "priceRange": "€€",
             "aggregateRating": {
@@ -155,7 +156,7 @@ export default function JessicaContentinHomePage() {
             "description": "Psychopédagogue certifiée en neuroéducation, spécialisée dans l'accompagnement des troubles du neurodéveloppement (DYS, TDA-H), harcèlement scolaire et phobie scolaire.",
             "url": "https://jessicacontentin.fr",
             "email": "contentin.cabinet@gmail.com",
-            "telephone": "+33683477174",
+            "telephone": JESSICA_CONTENTIN_PHONE_E164,
             "address": {
               "@type": "PostalAddress",
               "addressLocality": "Bretteville sur Odon",

@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  JESSICA_CONTENTIN_PHONE_DISPLAY,
+  JESSICA_CONTENTIN_PHONE_TEL,
+} from "@/lib/jessica-contentin/studio-config";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
 
@@ -47,7 +51,10 @@ export function JessicaContentinFooter() {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
               }}
             >
-              📞 06 83 47 71 74
+              📞{" "}
+              <a href={JESSICA_CONTENTIN_PHONE_TEL} className="hover:text-[#C6A664]">
+                {JESSICA_CONTENTIN_PHONE_DISPLAY}
+              </a>
             </p>
           </div>
 

@@ -5,6 +5,7 @@ import { ArrowRight, Clock, Euro, Users, Heart, Home, Baby, Coffee, BookOpen } f
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { InternalLinks } from "@/components/jessica-contentin/internal-links";
+import { JESSICA_CONTENTIN_PHONE_E164 } from "@/lib/jessica-contentin/studio-config";
 import Script from "next/script";
 
 const BOOKING_URL = "https://perfactive.fr/psychopedagogue/rocquancourt/jessica-contentin";
@@ -482,7 +483,7 @@ export default function ConsultationsPage() {
             "name": "Cabinet de Psychopédagogie Jessica CONTENTIN",
             "description": "Cabinet de psychopédagogie spécialisé dans l'accompagnement des troubles du neurodéveloppement, harcèlement scolaire et phobie scolaire.",
             "url": "https://jessicacontentin.fr",
-            "telephone": "+33683477174",
+            "telephone": JESSICA_CONTENTIN_PHONE_E164,
             "address": {
               "@type": "PostalAddress",
               "streetAddress": "134 rue Elise Deroche",

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Award, Clock, Search, Star } from "lucide-react";
+import { Award, Clock, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEdgePremiumConfig } from "@/components/edge-site/premium/edge-premium-config-context";
 import { EdgePremiumButton } from "@/components/edge-site/premium/edge-premium-button";
@@ -24,22 +24,6 @@ type Props = {
   initialCourses: TrainingCoursePublic[];
   audience?: Audience;
 };
-
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`Note ${rating} sur 5`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star
-          key={i}
-          className={cn(
-            "h-3.5 w-3.5",
-            i < Math.floor(rating) ? "fill-amber-400 text-amber-400" : "fill-amber-200 text-amber-200",
-          )}
-        />
-      ))}
-    </span>
-  );
-}
 
 function nextDatesLabel(course: TrainingCoursePublic) {
   const next = course.sessions?.map((session) => session.date).find(Boolean);
@@ -92,7 +76,6 @@ function FormationCard({ course, audience }: { course: TrainingCoursePublic; aud
             <Award className="h-3 w-3" />
             {course.badge_name ?? "Open Badge Byound"}
           </span>
-          <StarRating rating={course.rating} />
         </div>
 
         {audience === "life" ? (

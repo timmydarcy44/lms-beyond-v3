@@ -21,7 +21,7 @@ export function HomeHero({
         aria-hidden
       />
 
-      <div className="relative mx-4 mb-4 min-h-[640px] overflow-hidden rounded-[24px] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] md:min-h-[780px] md:rounded-[36px]">
+      <div className="relative mx-4 mb-4 min-h-[calc(100svh-76px-16px)] overflow-hidden rounded-[24px] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] md:rounded-[36px]">
         <Image
           src={imageSrc}
           alt="Une formatrice anime une séance avec un petit groupe autour d'une table"
@@ -34,12 +34,12 @@ export function HomeHero({
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(6,13,40,0.88) 0%, rgba(10,24,72,0.55) 32%, rgba(10,24,72,0.12) 58%, rgba(6,13,40,0.55) 100%)",
+              "linear-gradient(0deg, rgba(6,13,40,0.92) 0%, rgba(10,24,72,0.5) 38%, rgba(10,24,72,0.05) 65%)",
           }}
           aria-hidden
         />
 
-        <div className="relative z-10 flex min-h-[640px] flex-col justify-start p-6 pt-8 md:min-h-[780px] md:p-14 md:pt-16">
+        <div className="relative z-10 flex min-h-[calc(100svh-76px-16px)] flex-col justify-end p-6 pb-3 md:p-14 md:pb-4">
           <div className="max-w-[640px]">
             <h1 className="home-hero-in text-[44px] font-bold leading-[0.95] tracking-[-0.05em] text-white md:text-[clamp(48px,6.4vw,96px)]">
               La compétence, prouvée.

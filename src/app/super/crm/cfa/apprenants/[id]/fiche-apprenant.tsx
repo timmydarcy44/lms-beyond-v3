@@ -21,6 +21,7 @@ import { prefillFromParcours } from "@/lib/cfa/inscription-prefill";
 import { CFA_LEAD_SOURCES, getCfaLeadSourceLabel } from "@/lib/cfa/lead-sources";
 import {
   getCfaSpecializationLabel,
+  listPrivateFiles,
   type CfaApplication,
   type CfaApplicationStatus,
 } from "@/lib/cfa-applications";
@@ -59,8 +60,10 @@ const CERFA_FIELDS = [
 
 const DOCS = [
   ["identity", "Pièce d'identité", "CNI ou passeport, recto verso"],
+  ["transcript", "Relevé de notes", "Un fichier par relevé"],
+  ["attestation", "Attestation de réussite", "Si le diplôme n’est pas encore édité"],
+  ["diploma", "Diplôme", "Un fichier par diplôme"],
   ["social_security", "Carte Vitale", "Attestation de droits ou carte"],
-  ["diploma", "Diplôme", "Relevé de notes ou dernier diplôme"],
 ] as const;
 
 const SEX_OPTIONS = ["Masculin", "Féminin"];
@@ -409,7 +412,12 @@ export function FicheApprenant({ id }: { id: string }) {
       mediaDurationSec: r.mediaDurationSec,
     }),
   ).length;
-  const docsReceived = application ? DOCS.filter(([kind]) => application.administrative_document_urls?.[kind]).length : 0;
+  const docsReceived = application
+    ? DOCS.filter(
+        ([kind]) =>
+          listPrivateFiles(application.private_files, kind).length > 0 || Boolean(application.administrative_document_urls?.[kind]),
+      ).length
+    : 0;
 
   const checks = useMemo(() => {
     if (!application) return [];
@@ -655,7 +663,7 @@ export function FicheApprenant({ id }: { id: string }) {
           { id: "entreprise", label: "Entreprise et tuteur", state: placementLabel, color: "#6E5BFF", done: placed },
           { id: "candidature", label: "Candidature", state: `${challengeCount} / 3 réponses`, color: "#2F7CF6", done: challengeCount >= 3 },
           { id: "inscription", label: "Inscription", state: `${filledCerfa} / ${cerfaFieldTotal} champs`, color: "#14A37F", done: filledCerfa >= cerfaFieldTotal },
-          { id: "documents", label: "Documents", state: `${docsReceived} / 3 reçus`, color: "#E7A92C", done: docsReceived === DOCS.length },
+          { id: "documents", label: "Documents", state: `${docsReceived} / ${DOCS.length} reçus`, color: "#E7A92C", done: docsReceived === DOCS.length },
           { id: "entretien", label: "Entretien", state: (application as { interview_realized_at?: string | null }).interview_realized_at ? "Réalisé" : application.interview_at ? "Planifié" : "À planifier", color: "#D9459E", done: Boolean((application as { interview_realized_at?: string | null }).interview_realized_at || application.interview_at) },
         ].map((tile) => (
           <a key={tile.id} href={`#${tile.id}`} onClick={() => setOpenSections((current) => ({ ...current, [tile.id]: true }))} className={`min-w-[180px] rounded-[20px] border bg-[#111831] px-3 py-3 text-sm min-[900px]:min-w-0 ${visibleSection === tile.id ? "border-[#6E5BFF]" : "border-[#1A2340]"}`}>
@@ -1082,7 +1090,7 @@ export function FicheApprenant({ id }: { id: string }) {
               step="4 · Pièces justificatives"
               title="Documents"
               explain="Pièces à fournir avant la signature du contrat."
-              pill={`${docsReceived} / 3 reçus`}
+              pill={`${docsReceived} / ${DOCS.length} reçus`}
               color="#E7A92C"
               soft="#F6D68B"
               icon={<FolderOpen className="h-5 w-5" />}
@@ -1110,11 +1118,12 @@ export function FicheApprenant({ id }: { id: string }) {
             />
             <div className="mt-4 space-y-2">
               {DOCS.map(([kind, label, detail]) => {
-                const url = application.administrative_document_urls?.[kind];
-                const review = application.private_files?.[kind]?.review_status;
-                const note = application.private_files?.[kind]?.review_note;
-                const pill = !url ? "En attente" : review === "validated" ? "Validé" : review === "refused" ? "Refusé" : "Reçu";
-                const pillClass = !url ? "bg-[#1A2340] text-[#AEB6CC]" : review === "validated" ? "bg-[#14A37F] text-[#04140C]" : review === "refused" ? "border border-[#FF8A98] text-[#FF8A98]" : "bg-[#3A2A0E] text-[#F6D68B]";
+                const files = listPrivateFiles(application.private_files, kind);
+                const url = files[0]?.signed_url || application.administrative_document_urls?.[kind];
+                const review = files[0]?.review_status;
+                const note = files[0]?.review_note;
+                const pill = !url && files.length === 0 ? "En attente" : review === "validated" ? "Validé" : review === "refused" ? "Refusé" : files.length > 1 ? `${files.length} reçus` : "Reçu";
+                const pillClass = !url && files.length === 0 ? "bg-[#1A2340] text-[#AEB6CC]" : review === "validated" ? "bg-[#14A37F] text-[#04140C]" : review === "refused" ? "border border-[#FF8A98] text-[#FF8A98]" : "bg-[#3A2A0E] text-[#F6D68B]";
                 return (
                   <div key={kind} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#0B1122] px-4 py-3">
                     <div>
@@ -1124,7 +1133,14 @@ export function FicheApprenant({ id }: { id: string }) {
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <span className={`rounded-full px-2 py-1 text-[11px] font-extrabold ${pillClass}`}>{pill}</span>
-                      {url ? <a className="text-sm text-[#F6D68B]" href={url} target="_blank" rel="noreferrer">Voir</a> : null}
+                      {files.map((file, index) =>
+                        file.signed_url ? (
+                          <a key={`${file.path}-${index}`} className="text-sm text-[#F6D68B]" href={file.signed_url} target="_blank" rel="noreferrer">
+                            Voir{files.length > 1 ? ` ${index + 1}` : ""}
+                          </a>
+                        ) : null,
+                      )}
+                      {!files.length && url ? <a className="text-sm text-[#F6D68B]" href={url} target="_blank" rel="noreferrer">Voir</a> : null}
                       {url && review !== "validated" ? <button type="button" className="text-sm font-semibold text-[#6BE3C0]" onClick={() => void send("/api/super-admin/crm/cfa", "PATCH", { action: "review_document", id, kind, review: "validated" })}>Valider</button> : null}
                       {url && review !== "refused" ? <button type="button" className="text-sm font-semibold text-[#FF8A98]" onClick={() => setRefuseKind(kind)}>Refuser</button> : null}
                       {refuseKind === kind ? (

@@ -26,7 +26,31 @@ export type CfaPrivateFile = {
   signed_url?: string | null;
   review_status?: "received" | "validated" | "refused" | null;
   review_note?: string | null;
+  bucket?: string;
 };
+
+export const CFA_DOCUMENT_SLOTS = [
+  { kind: "cv", label: "CV", detail: "Un ou plusieurs fichiers" },
+  { kind: "identity", label: "Pièce d’identité", detail: "CNI ou passeport, recto verso" },
+  { kind: "transcript", label: "Relevé de notes", detail: "Un fichier par relevé" },
+  { kind: "attestation", label: "Attestation de réussite", detail: "Si le diplôme n’est pas encore édité" },
+  { kind: "diploma", label: "Diplôme", detail: "Un fichier par diplôme" },
+  { kind: "social_security", label: "Attestation de droits / carte Vitale", detail: "Sécurité sociale" },
+] as const;
+
+export type CfaDocumentKind = (typeof CFA_DOCUMENT_SLOTS)[number]["kind"];
+
+export function listPrivateFiles(
+  files: Record<string, CfaPrivateFile | CfaPrivateFile[] | null | undefined> | null | undefined,
+  kind: string,
+): CfaPrivateFile[] {
+  const raw = files?.[kind];
+  if (Array.isArray(raw)) {
+    return raw.filter((item): item is CfaPrivateFile => Boolean(item && item.path));
+  }
+  if (raw && typeof raw === "object" && raw.path) return [raw];
+  return [];
+}
 
 export const CFA_APPLICATION_STATUSES = [
   "prospect",
@@ -126,7 +150,7 @@ export type CfaApplication = {
   cerfa_data?: Record<string, string> | null;
   administrative_documents?: Record<string, string> | null;
   administrative_document_urls?: Record<string, string> | null;
-  private_files?: Record<string, CfaPrivateFile> | null;
+  private_files?: Record<string, CfaPrivateFile | CfaPrivateFile[]> | null;
   administrative_documents_submitted_at?: string | null;
   registration_fee_session_id?: string | null;
   registration_fee_paid_at?: string | null;

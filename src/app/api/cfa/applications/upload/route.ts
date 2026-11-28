@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { listPrivateFiles, type CfaPrivateFile } from "@/lib/cfa-applications";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
   const kind = String(formData?.get("kind") ?? "").trim();
   const file = formData?.get("file");
 
-  const documentKinds = ["identity", "social_security", "diploma"];
+  const documentKinds = ["identity", "social_security", "diploma", "transcript", "attestation"];
   const challengeKinds = ["cv", "motivation", "challenge_media"];
   if (
     !token ||
@@ -101,16 +102,19 @@ export async function POST(request: Request) {
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 });
 
   const fileKey = kind === "challenge_media" ? `challenge_${questionId || "media"}` : kind;
-  const privateFiles = {
-    ...(application.private_files as Record<string, unknown> | null),
-    [fileKey]: {
-      path,
-      bucket,
-      original_name: file.name.slice(0, 240),
-      mime_type: inferredType || file.type,
-      size_bytes: file.size,
-      uploaded_at: new Date().toISOString(),
-    },
+  const meta: CfaPrivateFile = {
+    path,
+    bucket,
+    original_name: file.name.slice(0, 240),
+    mime_type: inferredType || file.type,
+    size_bytes: file.size,
+    uploaded_at: new Date().toISOString(),
+  };
+  const currentFiles = (application.private_files ?? {}) as Record<string, CfaPrivateFile | CfaPrivateFile[]>;
+  const privateFiles: Record<string, CfaPrivateFile | CfaPrivateFile[]> = {
+    ...currentFiles,
+    [fileKey]:
+      kind === "challenge_media" ? meta : [...listPrivateFiles(currentFiles, fileKey), meta],
   };
   const patch: Record<string, unknown> = { private_files: privateFiles };
   if (kind === "cv") patch.cv_path = path;
@@ -128,5 +132,5 @@ export async function POST(request: Request) {
     .eq("id", application.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  return NextResponse.json({ path, bucket, file: privateFiles[fileKey] });
+  return NextResponse.json({ path, bucket, file: meta });
 }

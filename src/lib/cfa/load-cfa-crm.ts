@@ -33,7 +33,7 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
       const documents = (application.administrative_documents ?? {}) as Record<string, string>;
       const privateFiles = (application.private_files ?? {}) as Record<
         string,
-        { path?: string; bucket?: string; [key: string]: unknown }
+        { path?: string; bucket?: string; [key: string]: unknown } | Array<{ path?: string; bucket?: string; [key: string]: unknown }>
       >;
       const [cvSigned, motivationSigned, documentEntries, privateFileEntries, challengeV2Signed] = await Promise.all([
         application.cv_path
@@ -52,11 +52,17 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
         ),
         Promise.all(
           Object.entries(privateFiles).map(async ([kind, metadata]) => {
-            const bucket = String(metadata.bucket || "cfa-applications");
-            const signed = metadata.path
-              ? await db.storage.from(bucket).createSignedUrl(String(metadata.path), 3600)
-              : { data: null };
-            return [kind, { ...metadata, signed_url: signed.data?.signedUrl ?? null }] as const;
+            const items = Array.isArray(metadata) ? metadata : [metadata];
+            const signedItems = await Promise.all(
+              items.map(async (item) => {
+                const bucket = String(item?.bucket || "cfa-applications");
+                const signed = item?.path
+                  ? await db.storage.from(bucket).createSignedUrl(String(item.path), 3600)
+                  : { data: null };
+                return { ...item, signed_url: signed.data?.signedUrl ?? null };
+              }),
+            );
+            return [kind, signedItems.length === 1 && !Array.isArray(metadata) ? signedItems[0] : signedItems] as const;
           }),
         ),
         withSignedChallengeResponses(db, application.challenge_v2 as Record<string, unknown> | null),

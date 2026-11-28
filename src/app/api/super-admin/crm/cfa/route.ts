@@ -20,6 +20,7 @@ import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, revealCerfaField } from "@/lib/c
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
 import { cfaCandidaterUrl } from "@/lib/cfa/dossier-url";
 import { inviteCfaCandidateAccount } from "@/lib/cfa/invite-candidate-account";
+import { sendCfaProgramBrochureEmail } from "@/lib/cfa/send-program-brochure";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
 function escapeHtml(value: unknown): string {
@@ -213,6 +214,12 @@ export async function POST(request: NextRequest) {
         createdBy: actorId,
         proofUrl: href,
       });
+      await sendCfaProgramBrochureEmail(db, {
+        personId: String(data.id),
+        email: input.email,
+        firstName: input.firstName,
+        specialization: input.specialization,
+      });
     }
   }
 
@@ -396,12 +403,22 @@ export async function PATCH(request: NextRequest) {
     const kind = input.kind;
     const review = input.review;
     const current = await db.from("cfa_applications").select("private_files").eq("id", id).maybeSingle();
-    const files = { ...((current.data?.private_files ?? {}) as Record<string, Record<string, unknown>>) };
-    files[kind] = {
-      ...(files[kind] ?? {}),
-      review_status: review,
-      review_note: review === "refused" ? String(input.note ?? "").trim().slice(0, 400) : null,
-    };
+    const files = { ...((current.data?.private_files ?? {}) as Record<string, unknown>) };
+    const note = review === "refused" ? String(input.note ?? "").trim().slice(0, 400) : null;
+    const currentKind = files[kind];
+    if (Array.isArray(currentKind)) {
+      files[kind] = currentKind.map((item) => ({
+        ...(item as Record<string, unknown>),
+        review_status: review,
+        review_note: note,
+      }));
+    } else {
+      files[kind] = {
+        ...((currentKind && typeof currentKind === "object" ? currentKind : {}) as Record<string, unknown>),
+        review_status: review,
+        review_note: note,
+      };
+    }
     const { error } = await db.from("cfa_applications").update({ private_files: files }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     const actor = await getServerClient();

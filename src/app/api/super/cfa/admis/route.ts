@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { documentUploadSchema, parseInput } from "@/lib/cfa/fiche-input";
 import { loadCfaApplicationBoard, loadCfaCompanies } from "@/lib/cfa/load-cfa-crm";
+import { listPrivateFiles, type CfaPrivateFile } from "@/lib/cfa-applications";
 import { recordCfaTouch } from "@/lib/cfa/upsert-cfa-person";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
@@ -132,27 +133,31 @@ export async function POST(request: Request) {
   if (!application) return NextResponse.json({ error: "Dossier introuvable." }, { status: 404 });
 
   const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const key = ["identity", "social_security", "diploma"].includes(kind) ? kind : `scan_${Date.now()}`;
-  const path = `${application.id}/${key}${extension ? `.${extension}` : ""}`;
+  const key = ["identity", "social_security", "diploma", "transcript", "attestation", "cv"].includes(kind)
+    ? kind
+    : `scan_${Date.now()}`;
+  const path = `${application.id}/${key}-${crypto.randomUUID()}${extension ? `.${extension}` : ""}`;
   const bytes = await file.arrayBuffer();
   const { error: uploadError } = await ctx.db.storage
     .from("cfa-applications")
-    .upload(path, bytes, { contentType: file.type || "application/octet-stream", upsert: true });
+    .upload(path, bytes, { contentType: file.type || "application/octet-stream", upsert: false });
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 400 });
 
   const documents = {
     ...((application.administrative_documents ?? {}) as Record<string, string>),
     [key]: path,
   };
+  const currentFiles = (application.private_files ?? {}) as Record<string, CfaPrivateFile | CfaPrivateFile[]>;
+  const nextFile: CfaPrivateFile = {
+    path,
+    original_name: label.slice(0, 240),
+    mime_type: file.type,
+    size_bytes: file.size,
+    uploaded_at: new Date().toISOString(),
+  };
   const privateFiles = {
-    ...((application.private_files ?? {}) as Record<string, unknown>),
-    [key]: {
-      path,
-      original_name: label.slice(0, 240),
-      mime_type: file.type,
-      size_bytes: file.size,
-      uploaded_at: new Date().toISOString(),
-    },
+    ...currentFiles,
+    [key]: [...listPrivateFiles(currentFiles, key), nextFile],
   };
   const { error: updateError } = await ctx.db
     .from("cfa_applications")

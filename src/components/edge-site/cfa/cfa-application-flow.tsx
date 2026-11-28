@@ -4,9 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, CircleStop, Loader2, Mic, Sparkles, Upload, Video } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
+  CFA_DOCUMENT_SLOTS,
   CFA_SPECIALIZATIONS,
   getCfaSpecializationLabel,
+  listPrivateFiles,
   type CfaApplication,
+  type CfaDocumentKind,
 } from "@/lib/cfa-applications";
 import { cn } from "@/lib/utils";
 import { COUNTRY_OPTIONS } from "@/lib/country-options";
@@ -176,7 +179,7 @@ export function CfaApplicationFlow() {
 
   async function upload(
     file: File,
-    kind: "cv" | "motivation" | "identity" | "social_security" | "diploma",
+    kind: CfaDocumentKind | "motivation",
   ) {
     setBusy(true);
     const body = new FormData();
@@ -317,6 +320,85 @@ function Input({ label, value, onChange, type = "text", required = true, name }:
   return <label className="text-sm text-white/80">{label}<input name={name} className={cn(control, "mt-2")} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} /></label>;
 }
 
+function FileSlots({
+  app,
+  slots,
+  busy,
+  upload,
+}: {
+  app: CfaApplication;
+  slots: readonly { kind: CfaDocumentKind; label: string; detail: string }[];
+  busy: boolean;
+  upload: (file: File, kind: CfaDocumentKind | "motivation") => Promise<string | null>;
+}) {
+  const [files, setFiles] = useState<Record<string, Array<{ path: string; name: string }>>>(() => {
+    const next: Record<string, Array<{ path: string; name: string }>> = {};
+    for (const slot of slots) {
+      next[slot.kind] = listPrivateFiles(app.private_files, slot.kind).map((item) => ({
+        path: item.path,
+        name: item.original_name || item.path.split("/").pop() || "Fichier",
+      }));
+      if (slot.kind === "cv" && app.cv_path && !next.cv.length) {
+        next.cv = [{ path: app.cv_path, name: "CV" }];
+      }
+    }
+    return next;
+  });
+
+  async function addDocument(file: File, kind: CfaDocumentKind) {
+    const path = await upload(file, kind);
+    if (!path) return;
+    setFiles((current) => ({
+      ...current,
+      [kind]: [...(current[kind] ?? []), { path, name: file.name }],
+    }));
+  }
+
+  return (
+    <div className="grid gap-3">
+      {slots.map((slot) => {
+        const items = files[slot.kind] ?? [];
+        return (
+          <div key={slot.kind} className="rounded-2xl border border-white/10 px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">
+                  {items.length ? <Check className="mr-2 inline h-4 w-4 text-emerald-300" /> : <Upload className="mr-2 inline h-4 w-4 text-white/40" />}
+                  {slot.label}
+                </p>
+                <p className="mt-1 text-xs text-white/40">{slot.detail}</p>
+              </div>
+              <label className="cursor-pointer text-xs font-semibold text-[#8c86ff]">
+                {items.length ? "Ajouter un autre" : "Choisir"}
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  className="sr-only"
+                  disabled={busy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void addDocument(file, slot.kind);
+                  }}
+                />
+              </label>
+            </div>
+            {items.length ? (
+              <ul className="mt-3 space-y-1 text-xs text-white/70">
+                {items.map((item) => (
+                  <li key={item.path} className="truncate">
+                    {item.name}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CandidateDossier({
   app,
   busy,
@@ -326,26 +408,8 @@ function CandidateDossier({
   app: CfaApplication;
   busy: boolean;
   error: string;
-  upload: (
-    file: File,
-    kind: "cv" | "motivation" | "identity" | "social_security" | "diploma",
-  ) => Promise<string | null>;
+  upload: (file: File, kind: CfaDocumentKind | "motivation") => Promise<string | null>;
 }) {
-  const [documents, setDocuments] = useState<Record<string, string>>({
-    cv: app.cv_path ?? "",
-    identity: app.administrative_documents?.identity ?? "",
-    diploma: app.administrative_documents?.diploma ?? "",
-    social_security: app.administrative_documents?.social_security ?? "",
-  });
-
-  async function addDocument(
-    file: File,
-    kind: "cv" | "identity" | "diploma" | "social_security",
-  ) {
-    const path = await upload(file, kind);
-    if (path) setDocuments((current) => ({ ...current, [kind]: path }));
-  }
-
   const rows = [
     ["Prénom", app.first_name],
     ["Nom", app.last_name],
@@ -371,32 +435,8 @@ function CandidateDossier({
       </dl>
       <div className="mt-10">
         <h3 className="text-xl font-semibold">Pièces à déposer</h3>
-        <div className="mt-4 grid gap-3">
-          {(
-            [
-              ["cv", "CV"],
-              ["identity", "Pièce d’identité"],
-              ["diploma", "Relevé de notes, attestation ou diplôme"],
-              ["social_security", "Attestation de droits ou carte Vitale"],
-            ] as const
-          ).map(([kind, label]) => (
-            <label key={kind} className="flex min-h-16 cursor-pointer items-center justify-between rounded-2xl border border-white/10 px-4 text-sm">
-              <span>
-                {documents[kind] ? <Check className="mr-2 inline h-4 w-4 text-emerald-300" /> : <Upload className="mr-2 inline h-4 w-4 text-white/40" />}
-                {label}
-              </span>
-              <span className="text-xs text-[#8c86ff]">{documents[kind] ? "Ajouté" : "Choisir"}</span>
-              <input
-                type="file"
-                accept=".pdf,image/*"
-                className="sr-only"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void addDocument(file, kind);
-                }}
-              />
-            </label>
-          ))}
+        <div className="mt-4">
+          <FileSlots app={app} slots={CFA_DOCUMENT_SLOTS} busy={busy} upload={upload} />
         </div>
       </div>
       {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
@@ -603,10 +643,7 @@ function AdministrativeEnrollment({
   token: string;
   busy: boolean;
   error: string;
-  upload: (
-    file: File,
-    kind: "identity" | "social_security" | "diploma",
-  ) => Promise<string | null>;
+  upload: (file: File, kind: CfaDocumentKind | "motivation") => Promise<string | null>;
   save: (data: Record<string, string>) => void;
 }) {
   const [data, setData] = useState<Record<string, string>>({
@@ -619,19 +656,8 @@ function AdministrativeEnrollment({
     highLevelAthlete: "",
     ...(app.cerfa_data ?? {}),
   });
-  const [documents, setDocuments] = useState<Record<string, string>>(
-    app.administrative_documents ?? {},
-  );
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-
-  async function addDocument(
-    file: File,
-    kind: "identity" | "social_security" | "diploma",
-  ) {
-    const path = await upload(file, kind);
-    if (path) setDocuments((current) => ({ ...current, [kind]: path }));
-  }
 
   async function pay() {
     setPaymentBusy(true);
@@ -726,18 +752,13 @@ function AdministrativeEnrollment({
       </div>
       <div className="mt-10">
         <h3 className="text-xl font-semibold">Pièces justificatives</h3>
-        <div className="mt-4 grid gap-3">
-          {[
-            ["identity", "Pièce d’identité"],
-            ["social_security", "Attestation de droits ou carte Vitale"],
-            ["diploma", "Relevé de notes, attestation de réussite ou diplôme"],
-          ].map(([kind, label]) => (
-            <label key={kind} className="flex min-h-16 cursor-pointer items-center justify-between rounded-2xl border border-white/10 px-4 text-sm">
-              <span>{documents[kind] ? <Check className="mr-2 inline h-4 w-4 text-emerald-300" /> : <Upload className="mr-2 inline h-4 w-4 text-white/40" />}{label}</span>
-              <span className="text-xs text-[#8c86ff]">{documents[kind] ? "Ajouté" : "Choisir"}</span>
-              <input type="file" accept=".pdf,image/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addDocument(file, kind as "identity" | "social_security" | "diploma"); }} />
-            </label>
-          ))}
+        <div className="mt-4">
+          <FileSlots
+            app={app}
+            slots={CFA_DOCUMENT_SLOTS.filter((slot) => slot.kind !== "cv")}
+            busy={busy}
+            upload={upload}
+          />
         </div>
       </div>
       <div className="mt-10 rounded-3xl border border-[#7770ff]/30 bg-[#7770ff]/10 p-6">

@@ -41,14 +41,12 @@ export function HomeHero({
 
         <div className="relative z-10 flex min-h-[640px] flex-col justify-end p-6 md:min-h-[780px] md:p-14">
           <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:flex-wrap md:items-end">
-            <div className="max-w-[520px]">
+            <div className="max-w-[640px]">
               <h1 className="home-hero-in text-[44px] font-bold leading-[0.95] tracking-[-0.05em] text-white md:text-[clamp(48px,6.4vw,96px)]">
-                Vos compétences.
-                <br />
-                Votre prochaine étape.
+                La compétence, prouvée.
               </h1>
               <p className="home-hero-in home-hero-in-delay-1 mt-5 max-w-[520px] text-[19px] leading-[1.5] text-white/[0.82]">
-                Une école pour construire votre avenir. Des solutions pour faire grandir vos équipes.
+                On mesure ce que vous savez faire, on vous fait progresser, on le rend visible.
               </p>
             </div>
 

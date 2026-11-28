@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
@@ -15,6 +16,8 @@ import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/s
 import { getSession } from "@/lib/auth/session";
 import { looksLikeTestCfaEmail } from "@/lib/cfa/admission-draft";
 import { isCfaLeadSource } from "@/lib/cfa/lead-sources";
+import { upsertCfaPerson } from "@/lib/cfa/upsert-cfa-person";
+import { parseUtmAttribution } from "@/lib/cfa/utm-attribution";
 import { ensureDisabilityAccommodationRequest } from "@/lib/handicap/create-request";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
@@ -126,64 +129,46 @@ export async function POST(request: Request) {
   const cvPath = canShare ? String(matched?.cv_url ?? "").trim() || null : null;
   const leadSourceRaw = clean(body.leadSource, 40).toLowerCase();
   const leadSource = isCfaLeadSource(leadSourceRaw) ? leadSourceRaw : "website";
+  const cookieStore = await cookies();
+  let utm = parseUtmAttribution(body.utm);
+  if (!utm) {
+    try {
+      utm = parseUtmAttribution(JSON.parse(cookieStore.get("byound_school_utm")?.value || "null"));
+    } catch {
+      utm = null;
+    }
+  }
 
-  const inserted = await db
-    .from("cfa_applications")
-    .insert({
-      status: "challenge",
-      first_name: firstName,
-      last_name: lastName,
+  let data: Record<string, unknown> | null = null;
+  let error: { message: string; code?: string } | null = null;
+  try {
+    const upserted = await upsertCfaPerson(db, {
+      firstName,
+      lastName,
       email,
-      phone: phone || null,
-      age,
-      education_level: educationLevel,
+      phone,
       specialization,
-      profile_id: profileId || null,
-      origin,
-      cv_path: cvPath,
-      lead_source: leadSource,
-    })
-    .select("*")
-    .single();
-  const retryWithoutLead =
-    inserted.error && /lead_source|schema cache/i.test(inserted.error.message)
-      ? await db
-          .from("cfa_applications")
-          .insert({
-            status: "challenge",
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            phone: phone || null,
-            age,
-            education_level: educationLevel,
-            specialization,
-            profile_id: profileId || null,
-            origin,
-            cv_path: cvPath,
-          })
-          .select("*")
-          .single()
-      : inserted;
-  const retry =
-    retryWithoutLead.error && /profile_id|origin|schema cache/i.test(retryWithoutLead.error.message)
-      ? await db
-          .from("cfa_applications")
-          .insert({
-            status: "challenge",
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            phone: phone || null,
-            age,
-            education_level: educationLevel,
-            specialization,
-          })
-          .select("*")
-          .single()
-      : retryWithoutLead;
-  const data = retry.data;
-  const error = retry.error;
+      intendedStage: "candidate",
+      candidateStatus: "challenge",
+      sourceFamily: "web",
+      sourceChannel: "web_preregistration",
+      utm,
+      contactConsent: true,
+      touchType: "preregistration",
+      touchDetail: "Pré-inscription site",
+      extra: {
+        age,
+        education_level: educationLevel,
+        profile_id: profileId || null,
+        origin,
+        cv_path: cvPath,
+        lead_source: leadSource,
+      },
+    });
+    data = upserted.person;
+  } catch (cause) {
+    error = { message: cause instanceof Error ? cause.message : "Création impossible" };
+  }
   const birthDate = clean(body.birthDate, 12);
   if (!error && data?.id && /^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
     await db.from("cfa_applications").update({ birth_date: birthDate }).eq("id", data.id);
@@ -198,9 +183,11 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+  if (!data) return NextResponse.json({ error: "Création impossible." }, { status: 400 });
 
   const publicUrl = publicAppUrl();
   const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
+  const allowMail = looksLikeTestCfaEmail(email) || process.env.CFA_BLOCK_LIVE_MAILS !== "1";
   if (canShare && profileId && body.shareTests && typeof body.shareTests === "object") {
     const requested = body.shareTests as Record<string, unknown>;
     await grantCfaAssessmentShares(db, profileId, {
@@ -219,7 +206,7 @@ export async function POST(request: Request) {
     });
   }
   await Promise.all([
-    profileId
+    profileId || !allowMail
       ? Promise.resolve(true)
       : sendCfaEmail({
           to: email,
@@ -231,17 +218,19 @@ export async function POST(request: Request) {
             cta: { label: "Continuer ma candidature", href: resumeUrl },
           }),
         }),
-    sendCfaEmail({
-      to: CFA_ADMIN_EMAIL,
-      reply_to: email,
-      subject: `[CFA] Nouveau profil — ${firstName} ${lastName}`,
-      html: cfaEmailTemplate({
-        eyebrow: "Nouvelle candidature CFA",
-        title: `${escapeHtml(firstName)} ${escapeHtml(lastName)}`,
-        body: `<p>Un nouveau profil candidat vient d’être créé.</p><p><strong>Spécialisation :</strong> ${escapeHtml(getCfaSpecializationLabel(specialization))}<br><strong>Email :</strong> ${escapeHtml(email)}</p>`,
-        cta: { label: "Ouvrir le CRM CFA", href: `${publicUrl}/super/crm/cfa` },
-      }),
-    }),
+    looksLikeTestCfaEmail(email)
+      ? Promise.resolve(true)
+      : sendCfaEmail({
+          to: CFA_ADMIN_EMAIL,
+          reply_to: email,
+          subject: `[CFA] Nouveau profil — ${firstName} ${lastName}`,
+          html: cfaEmailTemplate({
+            eyebrow: "Nouvelle candidature CFA",
+            title: `${escapeHtml(firstName)} ${escapeHtml(lastName)}`,
+            body: `<p>Un nouveau profil candidat vient d’être créé.</p><p><strong>Spécialisation :</strong> ${escapeHtml(getCfaSpecializationLabel(specialization))}<br><strong>Email :</strong> ${escapeHtml(email)}</p>`,
+            cta: { label: "Ouvrir le CRM CFA", href: `${publicUrl}/super/crm/cfa` },
+          }),
+        }),
   ]);
 
   return NextResponse.json({

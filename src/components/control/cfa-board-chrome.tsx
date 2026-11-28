@@ -134,41 +134,39 @@ export function TestToggle({
   );
 }
 
-export function ViewSwitch({
+export function ViewSwitch<T extends string = "board" | "list">({
   value,
   onChange,
   boardLabel = "Tableau",
   listLabel = "Liste",
+  options,
 }: {
-  value: "board" | "list";
-  onChange: (next: "board" | "list") => void;
+  value: T;
+  onChange: (next: T) => void;
   boardLabel?: string;
   listLabel?: string;
+  options?: Array<{ id: T; label: string }>;
 }) {
+  const items = options ?? ([
+    { id: "board" as T, label: boardLabel },
+    { id: "list" as T, label: listLabel },
+  ]);
   return (
     <div className="flex overflow-hidden rounded-full border border-[#26304F] bg-[#0B1122] p-0.5 text-sm font-semibold">
-      <button
-        type="button"
-        onClick={() => onChange("board")}
-        className="rounded-full px-3 py-1.5"
-        style={{
-          background: value === "board" ? "#FFFFFF" : "transparent",
-          color: value === "board" ? "#0A0F1E" : "#6C7593",
-        }}
-      >
-        {boardLabel}
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("list")}
-        className="rounded-full px-3 py-1.5"
-        style={{
-          background: value === "list" ? "#FFFFFF" : "transparent",
-          color: value === "list" ? "#0A0F1E" : "#6C7593",
-        }}
-      >
-        {listLabel}
-      </button>
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onChange(item.id)}
+          className="rounded-full px-3 py-1.5"
+          style={{
+            background: value === item.id ? "#FFFFFF" : "transparent",
+            color: value === item.id ? "#0A0F1E" : "#6C7593",
+          }}
+        >
+          {item.label}
+        </button>
+      ))}
     </div>
   );
 }

@@ -23,6 +23,7 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [lead, setLead] = useState({ lastName: "", firstName: "", email: "", phone: "" });
+  const [contactConsent, setContactConsent] = useState(false);
 
   useEffect(() => {
     const mobileQuery = window.matchMedia("(max-width: 639px)");
@@ -53,7 +54,7 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
       const response = await fetch("/api/ecole/program-brochure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...lead, specialization: facts.specialization }),
+        body: JSON.stringify({ ...lead, specialization: facts.specialization, contactConsent: true }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Téléchargement impossible.");
@@ -170,6 +171,16 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
                 </label>
               ))}
             </div>
+            <label className="mt-3 flex items-start gap-2 text-sm text-white/70">
+              <input
+                required
+                type="checkbox"
+                checked={contactConsent}
+                onChange={(event) => setContactConsent(event.target.checked)}
+                className="mt-1"
+              />
+              J&apos;accepte d&apos;être recontacté·e par Byound School
+            </label>
             {formError ? <p className="mt-3 text-sm text-rose-300">{formError}</p> : null}
             <div className="mt-5 flex gap-2">
               <button
@@ -181,7 +192,7 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
               </button>
               <button
                 type="submit"
-                disabled={submitting || !facts.programPdfUrl}
+                disabled={submitting || !facts.programPdfUrl || !contactConsent}
                 className="h-11 flex-1 rounded-full bg-[#5b5cf6] text-sm font-semibold text-white disabled:opacity-50"
               >
                 {submitting ? "Envoi…" : "Télécharger"}

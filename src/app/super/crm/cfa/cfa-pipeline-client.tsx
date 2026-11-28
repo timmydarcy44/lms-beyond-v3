@@ -13,7 +13,6 @@ import {
 import { CfaCreateProspectModal } from "@/components/control/cfa-create-prospect-modal";
 import { EmptyState } from "@/components/control/chrome";
 import { formatPersonName, formatCompanyName } from "@/lib/cfa/format-org-name";
-import { getCfaLeadSourceLabel } from "@/lib/cfa/lead-sources";
 import {
   ADMISSION_BLOCKED_DAYS,
   ADMISSION_STAGES,
@@ -32,6 +31,11 @@ import {
   type CfaApplication,
 } from "@/lib/cfa-applications";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
+import {
+  CFA_CHANNEL_META,
+  CFA_SOURCE_CHANNELS,
+  originShortPrecision,
+} from "@/lib/cfa/person-origin";
 
 function stageOf(item: CfaApplication): AdmissionStageId | null {
   return admissionStageFromApplication({
@@ -90,12 +94,13 @@ function isBlocked(item: CfaApplication) {
 
 function readUrl() {
   if (typeof window === "undefined") {
-    return { filter: "all", stage: "all", q: "", showTest: false, view: "list" as const };
+    return { filter: "all", stage: "all", origin: "all", q: "", showTest: false, view: "list" as const };
   }
   const url = new URL(window.location.href);
   return {
     filter: url.searchParams.get("afilter") || "all",
     stage: url.searchParams.get("astage") || "all",
+    origin: url.searchParams.get("aorigin") || "all",
     q: url.searchParams.get("aq") || "",
     showTest: url.searchParams.get("test") === "1",
     view: url.searchParams.get("view") === "board" ? ("board" as const) : ("list" as const),
@@ -105,6 +110,7 @@ function readUrl() {
 function writeUrl(state: {
   filter: string;
   stage: string;
+  origin: string;
   q: string;
   showTest: boolean;
   view: "list" | "board";
@@ -114,6 +120,8 @@ function writeUrl(state: {
   else url.searchParams.set("afilter", state.filter);
   if (state.stage === "all") url.searchParams.delete("astage");
   else url.searchParams.set("astage", state.stage);
+  if (state.origin === "all") url.searchParams.delete("aorigin");
+  else url.searchParams.set("aorigin", state.origin);
   if (!state.q.trim()) url.searchParams.delete("aq");
   else url.searchParams.set("aq", state.q);
   if (!state.showTest) url.searchParams.delete("test");
@@ -140,6 +148,7 @@ export function CfaPipelineClient({
   const [view, setView] = useState<"list" | "board">(initial.view);
   const [filter, setFilter] = useState(initial.filter);
   const [stageFilter, setStageFilter] = useState(initial.stage);
+  const [originFilter, setOriginFilter] = useState(initial.origin);
   const [query, setQuery] = useState(initial.q);
   const [showTests, setShowTests] = useState(initial.showTest);
   const [activeStage, setActiveStage] = useState<string | null>(
@@ -148,6 +157,8 @@ export function CfaPipelineClient({
   const [proposeCompany, setProposeCompany] = useState<HostCompany | null>(null);
   const [remindTarget, setRemindTarget] = useState<CfaApplication | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CfaApplication | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,14 +196,31 @@ export function CfaPipelineClient({
   }, [load]);
 
   useEffect(() => {
-    writeUrl({ filter, stage: stageFilter, q: query, showTest: showTests, view });
-  }, [filter, stageFilter, query, showTests, view]);
+    writeUrl({ filter, stage: stageFilter, origin: originFilter, q: query, showTest: showTests, view });
+  }, [filter, stageFilter, originFilter, query, showTests, view]);
 
-  const tests = useMemo(() => applications.filter(isTestApp), [applications]);
-  const pool = useMemo(
-    () => (showTests ? applications : applications.filter((item) => !isTestApp(item))),
-    [applications, showTests],
+  const candidates = useMemo(
+    () => applications.filter((item) => item.status !== "prospect"),
+    [applications],
   );
+  const tests = useMemo(() => candidates.filter(isTestApp), [candidates]);
+  const pool = useMemo(
+    () => (showTests ? candidates : candidates.filter((item) => !isTestApp(item))),
+    [candidates, showTests],
+  );
+
+  const originCounts = useMemo(() => {
+    const rows = pool.filter((item) => item.status !== "rejected");
+    const map = new Map<string, { total: number; contract: number }>();
+    for (const item of rows) {
+      const key = item.source_channel || "unknown";
+      const current = map.get(key) ?? { total: 0, contract: 0 };
+      current.total += 1;
+      if (item.status === "contract") current.contract += 1;
+      map.set(key, current);
+    }
+    return map;
+  }, [pool]);
 
   const inProgress = useMemo(
     () => pool.filter((item) => item.status !== "rejected"),
@@ -234,10 +262,15 @@ export function CfaPipelineClient({
         const stage = stageOf(item);
         if (stage !== stageFilter) return false;
       }
+      if (originFilter !== "all") {
+        if (originFilter === "unknown") {
+          if (item.source_channel) return false;
+        } else if (item.source_channel !== originFilter) return false;
+      }
       const hay = `${item.first_name} ${item.last_name} ${item.email}`.toLowerCase();
       return hay.includes(query.trim().toLowerCase());
     });
-  }, [pool, filter, stageFilter, query]);
+  }, [pool, filter, stageFilter, originFilter, query]);
 
   const recruitingCompanies = useMemo(() => {
     return companies.filter((company) => {
@@ -275,6 +308,32 @@ export function CfaPipelineClient({
     openApp(item);
   }
 
+  function askDelete(item: CfaApplication, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    if (readOnly) return;
+    setDeleteTarget(item);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/super-admin/crm/cfa?id=${encodeURIComponent(deleteTarget.id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error || "Suppression impossible");
+        return;
+      }
+      setDeleteTarget(null);
+      await load();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-[1240px] space-y-5 px-6 py-8 text-[#F2F4FA]">
       <PageTitle
@@ -288,7 +347,7 @@ export function CfaPipelineClient({
                 onClick={() => setCreateOpen(true)}
                 className="h-10 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"
               >
-                + Ajouter un apprenant
+                + Ajouter un candidat
               </button>
             ) : null}
             <ViewSwitch value={view === "board" ? "board" : "list"} onChange={setView} boardLabel="Tableau" listLabel="Liste" />
@@ -330,6 +389,44 @@ export function CfaPipelineClient({
         }}
       />
 
+      <section className="rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="text-[17px] font-extrabold">D&apos;où viennent-ils ?</h2>
+          <p className="text-sm text-[#9AA3BD]">
+            {inProgress.length} candidat{inProgress.length > 1 ? "s" : ""} en cours
+          </p>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {[...CFA_SOURCE_CHANNELS, "unknown"].map((channel) => {
+            const stats = originCounts.get(channel) ?? { total: 0, contract: 0 };
+            if (stats.total === 0) return null;
+            const meta =
+              channel === "unknown"
+                ? { familyLabel: "", label: "Origine inconnue", color: "#6C7593" }
+                : CFA_CHANNEL_META[channel as (typeof CFA_SOURCE_CHANNELS)[number]];
+            return (
+              <button
+                key={channel}
+                type="button"
+                onClick={() => setOriginFilter(channel)}
+                className="rounded-2xl border border-[#1A2340] bg-[#0B1122] p-3 text-left"
+              >
+                {meta.familyLabel ? (
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#6C7593]">{meta.familyLabel}</p>
+                ) : null}
+                <p className="mt-1 text-sm font-semibold" style={{ color: meta.color }}>
+                  {meta.label}
+                </p>
+                <p className="mt-2 text-[22px] font-extrabold">{stats.total}</p>
+                <p className="text-xs text-[#6C7593]">
+                  {stats.contract} en contrat
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <div className="flex flex-wrap items-center gap-2">
         <FilterPill active={filter === "all" && stageFilter === "all"} count={pool.length} onClick={() => { setFilter("all"); setStageFilter("all"); setActiveStage(null); }}>
           Tous
@@ -363,6 +460,19 @@ export function CfaPipelineClient({
             </option>
           ))}
         </select>
+        <select
+          value={originFilter}
+          onChange={(e) => setOriginFilter(e.target.value)}
+          className="rounded-full border border-[#26304F] bg-[#111831] px-3 py-1.5 text-sm text-[#B7BED3]"
+        >
+          <option value="all">Origine : toutes</option>
+          {CFA_SOURCE_CHANNELS.map((channel) => (
+            <option key={channel} value={channel}>
+              {CFA_CHANNEL_META[channel].label}
+            </option>
+          ))}
+          <option value="unknown">Origine inconnue</option>
+        </select>
         <div className="ml-auto flex flex-wrap items-center gap-3">
           <input
             value={query}
@@ -381,7 +491,7 @@ export function CfaPipelineClient({
           ))}
         </div>
       ) : view === "board" ? (
-        <BoardView applications={filtered} onOpen={openApp} />
+        <BoardView applications={filtered} onOpen={openApp} onDelete={readOnly ? undefined : askDelete} />
       ) : filtered.length === 0 ? (
         pool.length === 0 ? (
           <EmptyState
@@ -393,7 +503,7 @@ export function CfaPipelineClient({
                   onClick={() => setCreateOpen(true)}
                   className="rounded-full bg-[#6E5BFF] px-4 py-2 text-sm font-semibold text-white"
                 >
-                  Ajouter un apprenant
+                  Ajouter un candidat
                 </button>
                 <Link href="/ecole/candidater" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0A0F1E]">
                   Formulaire public d&apos;admission
@@ -422,7 +532,7 @@ export function CfaPipelineClient({
         )
       ) : (
         <div className="overflow-hidden rounded-[24px] border border-[#1A2340] bg-[#111831]">
-          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.7fr)_minmax(0,1fr)_170px] gap-3 px-[22px] py-3 text-[12.5px] font-extrabold text-[#6C7593]">
+          <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1.7fr)_minmax(0,1fr)_220px] gap-3 px-[22px] py-3 text-[12.5px] font-extrabold text-[#6C7593]">
             <span>Candidat</span>
             <span>Où il en est</span>
             <span>Entreprise d&apos;accueil</span>
@@ -448,7 +558,7 @@ export function CfaPipelineClient({
                 key={item.id}
                 type="button"
                 onClick={() => openApp(item)}
-                className="grid w-full grid-cols-[minmax(0,1.2fr)_minmax(0,1.7fr)_minmax(0,1fr)_170px] items-center gap-3 border-t border-[#1A2340] px-[22px] py-[18px] text-left"
+                className="grid w-full grid-cols-[minmax(0,1.2fr)_minmax(0,1.7fr)_minmax(0,1fr)_220px] items-center gap-3 border-t border-[#1A2340] px-[22px] py-[18px] text-left"
               >
                 <span className="flex min-w-0 items-center gap-3">
                   <span
@@ -461,9 +571,9 @@ export function CfaPipelineClient({
                     <span className="block truncate text-[15px] font-extrabold text-[#F2F4FA]">{name}</span>
                     <span className="block truncate text-xs text-[#9AA3BD]">
                       {track}
-                      {item.lead_source ? ` · ${getCfaLeadSourceLabel(item.lead_source)}` : ""}
                       {created ? ` · ${created}` : ""}
                     </span>
+                    <OriginPill item={item} />
                   </span>
                 </span>
 
@@ -516,6 +626,20 @@ export function CfaPipelineClient({
                 </span>
 
                 <span className="flex items-center justify-end gap-2">
+                  {!readOnly ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Supprimer le dossier"
+                      onClick={(e) => askDelete(item, e)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") askDelete(item);
+                      }}
+                      className="rounded-full px-2 py-1 text-[11px] font-semibold text-[#FF8A9B] hover:bg-[#FF5D731A]"
+                    >
+                      Supprimer
+                    </span>
+                  ) : null}
                   <span
                     role="button"
                     tabIndex={0}
@@ -647,16 +771,71 @@ export function CfaPipelineClient({
           }}
         />
       ) : null}
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0F1E]/85 p-4">
+          <div className="w-full max-w-md rounded-[24px] border border-[#1A2340] bg-[#111831] p-5">
+            <h3 className="text-lg font-extrabold">Supprimer le dossier</h3>
+            <p className="mt-2 text-sm text-[#9AA3BD]">
+              {formatPersonName(`${deleteTarget.first_name} ${deleteTarget.last_name}`)} sera retiré des admissions.
+              Cette action est définitive.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 text-sm text-[#9AA3BD]"
+                disabled={deleting}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void confirmDelete()}
+                className="rounded-full bg-[#FF5D73] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {deleting ? "Suppression…" : "Supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function OriginPill({ item }: { item: CfaApplication }) {
+  const origin = originShortPrecision({
+    sourceChannel: item.source_channel,
+    sourceDetail: item.source_detail,
+    prescriberType: item.prescriber_type,
+    utmSource: item.utm_source,
+    createdByInitials: item.created_by_initials,
+    promotedFromProspect: item.promoted_from_prospect,
+    firstTouch: item.first_touch,
+  });
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1">
+      <span
+        className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
+        style={{ background: `${origin.color}22`, color: origin.color }}
+      >
+        {origin.pill}
+      </span>
+      {origin.detail ? <span className="text-[10px] text-[#9AA3BD]">{origin.detail}</span> : null}
+    </span>
   );
 }
 
 function BoardView({
   applications,
   onOpen,
+  onDelete,
 }: {
   applications: CfaApplication[];
   onOpen: (item: CfaApplication) => void;
+  onDelete?: (item: CfaApplication, e: React.MouseEvent) => void;
 }) {
   return (
     <div className="flex gap-3 overflow-x-auto pb-3">
@@ -679,12 +858,26 @@ function BoardView({
                   onClick={() => onOpen(item)}
                   className="w-full rounded-[18px] border border-[#1A2340] bg-[#111831] p-3 text-left"
                 >
-                  <p className="truncate text-sm font-semibold">
-                    {formatPersonName(`${item.first_name} ${item.last_name}`)}
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate text-sm font-semibold">
+                      {formatPersonName(`${item.first_name} ${item.last_name}`)}
+                    </p>
+                    {onDelete ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Supprimer le dossier"
+                        onClick={(e) => onDelete(item, e)}
+                        className="shrink-0 text-[11px] font-semibold text-[#FF8A9B]"
+                      >
+                        ×
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="truncate text-xs text-[#9AA3BD]">
                     {getCfaSpecializationFullLabel(item.specialization)}
                   </p>
+                  <OriginPill item={item} />
                 </button>
               ))}
             </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Building2, Calendar, ClipboardList, FolderOpen, ListChecks, Mail } from "lucide-react";
 import { Manrope } from "next/font/google";
 
@@ -189,6 +190,7 @@ function createdLabel(iso: string) {
 }
 
 export function FicheApprenant({ id }: { id: string }) {
+  const router = useRouter();
   const [application, setApplication] = useState<CfaApplication | null>(null);
   const [cerfa, setCerfa] = useState<Record<string, string>>({});
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -210,6 +212,8 @@ export function FicheApprenant({ id }: { id: string }) {
   const [admitBusy, setAdmitBusy] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [pickingCompany, setPickingCompany] = useState(false);
   const [pickingTutor, setPickingTutor] = useState(false);
   const [pendingTutorId, setPendingTutorId] = useState("");
@@ -604,6 +608,7 @@ export function FicheApprenant({ id }: { id: string }) {
               </button>
             ) : null}
             <button type="button" className="h-11 rounded-full border border-[#FF8A98] px-4 text-sm font-semibold text-[#FF8A98]" onClick={() => setRejectOpen(true)}>Marquer non retenu</button>
+            <button type="button" className="h-11 rounded-full border border-[#FF5D73] px-4 text-sm font-semibold text-[#FF8A98]" onClick={() => setDeleteOpen(true)}>Supprimer le dossier</button>
             <a href={`mailto:${application.email}`} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#26304F] px-4 text-sm font-semibold"><Mail className="h-4 w-4" />Envoyer un email</a>
             <a href="#entretien" onClick={() => setOpenSections((current) => ({ ...current, entretien: true }))} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#6E5BFF] px-4 text-sm font-extrabold text-white"><Calendar className="h-4 w-4" />Planifier l'entretien</a>
           </div>
@@ -1341,6 +1346,39 @@ export function FicheApprenant({ id }: { id: string }) {
               <button type="submit" className="h-10 rounded-full border border-[#FF8A98] px-4 text-sm font-extrabold text-[#FF8A98]">Confirmer</button>
             </div>
           </form>
+        </div>
+      ) : null}
+      {deleteOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-[26px] bg-[#111831] p-6">
+            <h2 className="text-xl font-extrabold">Supprimer le dossier</h2>
+            <p className="mt-2 text-sm text-[#AEB6CC]">
+              {displayName} sera retiré des admissions. Cette action est définitive.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" className="h-10 rounded-full px-4 text-sm" disabled={deleting} onClick={() => setDeleteOpen(false)}>Annuler</button>
+              <button
+                type="button"
+                disabled={deleting}
+                className="h-10 rounded-full bg-[#FF5D73] px-4 text-sm font-extrabold text-white disabled:opacity-50"
+                onClick={() => {
+                  setDeleting(true);
+                  void fetch(`/api/super-admin/crm/cfa?id=${encodeURIComponent(id)}`, { method: "DELETE" }).then(async (response) => {
+                    const result = await response.json().catch(() => ({}));
+                    setDeleting(false);
+                    if (!response.ok) {
+                      setDeleteOpen(false);
+                      setMessage(result.error || "Suppression impossible");
+                      return;
+                    }
+                    router.push("/super/crm/cfa");
+                  });
+                }}
+              >
+                {deleting ? "Suppression…" : "Supprimer"}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </main>

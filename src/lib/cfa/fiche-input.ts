@@ -79,20 +79,33 @@ export const saveLeadSourceSchema = z.object({
   leadSource: z.enum(leadSourceValues, { error: "Provenance invalide." }),
 });
 
+const humanChannels = ["phone", "jpo", "direct_meeting", "prescriber"] as const;
+const prescriberTypes = ["mission_locale", "france_travail", "cio", "autre"] as const;
+
 export const createManualApplicationSchema = z.object({
   action: z.literal("create_manual"),
   firstName: z.string().trim().min(1, "Le prénom est requis.").max(100),
   lastName: z.string().trim().min(1, "Le nom est requis.").max(100),
   email: z.string().trim().toLowerCase().email("L'e-mail n'est pas valide.").max(240),
   phone: z.string().trim().max(40).optional(),
+  specialization: z.enum(specializationValues, { error: "Spécialisation invalide." }),
+  placement: z.enum(["prospect", "candidate"]).default("candidate"),
+  sourceChannel: z.enum(humanChannels, { error: "Indiquez comment vous l'avez rencontré." }),
+  sourceDetail: z.string().trim().max(240).optional(),
+  prescriberType: z.enum(prescriberTypes).optional(),
+  prescriberOrg: z.string().trim().max(160).optional(),
+  prescriberContact: z.string().trim().max(160).optional(),
+  contactConsent: z
+    .boolean()
+    .refine((value) => value === true, { error: "Le consentement de recontact est obligatoire." }),
+  notifyCandidate: z.boolean().optional(),
   birthDate: z
     .string()
     .trim()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "La date de naissance est invalide."),
-  educationLevel: z.enum(educationValues, { error: "Niveau scolaire invalide." }),
-  specialization: z.enum(specializationValues, { error: "Spécialisation invalide." }),
-  leadSource: z.enum(leadSourceValues, { error: "Provenance invalide." }),
-  notifyCandidate: z.boolean().optional(),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "La date de naissance est invalide.")
+    .optional(),
+  educationLevel: z.enum(educationValues, { error: "Niveau scolaire invalide." }).optional(),
+  leadSource: z.enum(leadSourceValues, { error: "Provenance invalide." }).optional(),
 });
 
 export const fichePatchSchema = z.union([

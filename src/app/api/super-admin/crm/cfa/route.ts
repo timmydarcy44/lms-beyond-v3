@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { loadCfaApplicationBoard } from "@/lib/cfa/load-cfa-crm";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
+import { looksLikeTestCfaEmail } from "@/lib/cfa/admission-draft";
 import { admitCfaApplication, recordCfaAudit } from "@/lib/cfa/admit-application";
+import { findCfaPersonByEmail, recordCfaTouch, upsertCfaPerson } from "@/lib/cfa/upsert-cfa-person";
 import {
   createManualApplicationSchema,
   markFeeSchema,
@@ -79,100 +81,110 @@ function ageFromBirthDate(birthDate: string): number | null {
   return age;
 }
 
-/** Création manuelle d’un prospect (profil solo sans challenge). */
+/** Création manuelle d’un contact (Futurs candidats) ou d’un candidat (Admissions). */
 export async function POST(request: NextRequest) {
   if (!(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
   const body = await request.json().catch(() => null);
-  const parsed = parseInput(createManualApplicationSchema, body, "Complétez le profil du prospect.");
+  const parsed = parseInput(createManualApplicationSchema, body, "Complétez le profil.");
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const input = parsed.data;
 
-  const age = ageFromBirthDate(input.birthDate);
-  if (age == null) {
-    return NextResponse.json({ error: "La date de naissance doit correspondre à un âge entre 15 et 99 ans." }, { status: 400 });
+  if (input.sourceChannel === "prescriber" && !input.prescriberType) {
+    return NextResponse.json({ error: "Indiquez le type de prescripteur." }, { status: 400 });
+  }
+  if (input.sourceChannel === "jpo" && !input.sourceDetail?.trim()) {
+    return NextResponse.json({ error: "Indiquez la JPO." }, { status: 400 });
+  }
+  if (input.sourceChannel === "direct_meeting" && !input.sourceDetail?.trim()) {
+    return NextResponse.json({ error: "Indiquez le lieu de la rencontre." }, { status: 400 });
+  }
+  if (input.sourceChannel === "phone" && !input.sourceDetail?.trim()) {
+    return NextResponse.json({ error: "Précisez si l’appel est entrant ou sortant." }, { status: 400 });
   }
 
   const db = getServiceRoleClient();
   if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
 
-  const existing = await db
-    .from("profiles")
-    .select("id")
-    .ilike("email", input.email)
-    .maybeSingle();
-  const profileId = String((existing.data as { id?: string } | null)?.id ?? "").trim() || null;
-
-  const insertPayload: Record<string, unknown> = {
-    status: "interview",
-    first_name: input.firstName,
-    last_name: input.lastName,
-    email: input.email,
-    phone: input.phone?.trim() || null,
-    age,
-    birth_date: input.birthDate,
-    education_level: input.educationLevel,
-    specialization: input.specialization,
-    lead_source: input.leadSource,
-    profile_id: profileId,
-    origin: profileId ? "existing_account" : "direct",
-    challenge_answers: {},
-  };
-
-  let { data, error } = await db.from("cfa_applications").insert(insertPayload).select("*").single();
-  if (error && /lead_source|schema cache/i.test(error.message)) {
-    delete insertPayload.lead_source;
-    const retry = await db.from("cfa_applications").insert(insertPayload).select("*").single();
-    data = retry.data;
-    error = retry.error;
-    if (!error && data?.id) {
-      return NextResponse.json(
-        {
-          error:
-            "Appliquez la migration lead_source (20261120180000) pour enregistrer la provenance.",
-          application: data,
-        },
-        { status: 400 },
-      );
-    }
-  }
-  if (error && /birth_date|schema cache/i.test(error.message)) {
-    delete insertPayload.birth_date;
-    const retry = await db.from("cfa_applications").insert(insertPayload).select("*").single();
-    data = retry.data;
-    error = retry.error;
-  }
-  if (error && /profile_id|origin|schema cache/i.test(error.message)) {
-    delete insertPayload.profile_id;
-    delete insertPayload.origin;
-    const retry = await db.from("cfa_applications").insert(insertPayload).select("*").single();
-    data = retry.data;
-    error = retry.error;
-  }
-
-  if (error) {
-    if (error.code === "23505") {
-      return NextResponse.json(
-        { error: "Une candidature active existe déjà avec cette adresse e-mail." },
-        { status: 409 },
-      );
-    }
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  const duplicate = await findCfaPersonByEmail(db, input.email);
+  if (duplicate && duplicate.status !== "rejected") {
+    const stage = duplicate.status === "prospect" ? "prospect" : "candidate";
+    return NextResponse.json(
+      {
+        error: "Un dossier existe déjà avec cette adresse e-mail.",
+        duplicate: true,
+        application: duplicate,
+        stage,
+      },
+      { status: 409 },
+    );
   }
 
   const actor = await getServerClient();
   const actorUser = actor ? await actor.auth.getUser() : null;
+  const actorId = actorUser?.data.user?.id ?? null;
+  const extra: Record<string, unknown> = { challenge_answers: {} };
+  if (input.birthDate) {
+    extra.birth_date = input.birthDate;
+    extra.age = ageFromBirthDate(input.birthDate);
+  }
+  if (input.educationLevel) extra.education_level = input.educationLevel;
+  extra.lead_source =
+    input.sourceChannel === "jpo"
+      ? "jpo"
+      : input.sourceChannel === "phone"
+        ? "phone"
+        : input.sourceChannel === "prescriber"
+          ? "partner"
+          : "other";
+
+  const profile = await db.from("profiles").select("id").ilike("email", input.email).maybeSingle();
+  const profileId = String((profile.data as { id?: string } | null)?.id ?? "").trim() || null;
+  extra.profile_id = profileId;
+  extra.origin = profileId ? "existing_account" : "direct";
+
+  let result;
+  try {
+    result = await upsertCfaPerson(db, {
+      firstName: input.firstName,
+      lastName: input.lastName,
+      email: input.email,
+      phone: input.phone,
+      specialization: input.specialization,
+      intendedStage: input.placement,
+      candidateStatus: "profile",
+      sourceFamily: "human",
+      sourceChannel: input.sourceChannel,
+      sourceDetail: input.sourceDetail,
+      prescriberType: input.prescriberType,
+      prescriberOrg: input.prescriberOrg,
+      prescriberContact: input.prescriberContact,
+      createdBy: actorId,
+      contactConsent: true,
+      touchType: input.placement === "prospect" ? "created" : "created",
+      touchDetail: "Saisie manuelle",
+      extra,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Création impossible" },
+      { status: 400 },
+    );
+  }
+
+  const data = result.person;
   await recordCfaAudit(db, {
-    actorId: actorUser?.data.user?.id ?? null,
+    actorId,
     applicationId: String(data.id),
     action: "create_manual",
     oldValue: null,
-    newValue: input.leadSource,
+    newValue: input.sourceChannel,
   });
 
   let emailSent = false;
-  if (input.notifyCandidate) {
+  const canMail = looksLikeTestCfaEmail(input.email) || process.env.CFA_BLOCK_LIVE_MAILS !== "1";
+  if (input.placement === "candidate" && input.notifyCandidate !== false && canMail) {
     const resumeUrl = `${publicAppUrl()}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
     emailSent = await sendCandidateEmail({
       to: input.email,
@@ -184,6 +196,9 @@ export async function POST(request: NextRequest) {
         cta: { label: "Ouvrir mon dossier", href: resumeUrl },
       }),
     });
+    if (emailSent) {
+      await recordCfaTouch(db, { personId: String(data.id), type: "email_sent", detail: "Lien de dossier", createdBy: actorId });
+    }
   }
 
   return NextResponse.json({ application: data, emailSent }, { status: 201 });
@@ -539,4 +554,42 @@ export async function PATCH(request: NextRequest) {
   }
 
   return NextResponse.json({ application: data, emailSent });
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!(await isSuperAdmin())) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+  const url = new URL(request.url);
+  let id = url.searchParams.get("id")?.trim() ?? "";
+  if (!id) {
+    const body = await request.json().catch(() => null);
+    id = body && typeof body === "object" && "id" in body ? String((body as { id?: unknown }).id ?? "").trim() : "";
+  }
+  if (!id) return NextResponse.json({ error: "Dossier manquant." }, { status: 400 });
+
+  const db = getServiceRoleClient();
+  if (!db) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
+
+  const existing = await db
+    .from("cfa_applications")
+    .select("id, email, first_name, last_name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!existing.data) return NextResponse.json({ error: "Dossier introuvable." }, { status: 404 });
+
+  const actor = await getServerClient();
+  const actorUser = actor ? await actor.auth.getUser() : null;
+  await recordCfaAudit(db, {
+    actorId: actorUser?.data.user?.id ?? null,
+    applicationId: id,
+    action: "delete_application",
+    oldValue: String(existing.data.email ?? ""),
+    newValue: `${existing.data.first_name ?? ""} ${existing.data.last_name ?? ""}`.trim(),
+  });
+  await db.from("cfa_audit_events").delete().eq("application_id", id);
+
+  const { error } = await db.from("cfa_applications").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true });
 }

@@ -29,6 +29,7 @@ export type CfaPrivateFile = {
 };
 
 export const CFA_APPLICATION_STATUSES = [
+  "prospect",
   "brochure",
   "profile",
   "challenge",
@@ -45,6 +46,7 @@ export type CfaApplicationStatus = (typeof CFA_APPLICATION_STATUSES)[number];
 
 /** Libellés bruts DB. L’UI Admissions utilise admissionStatusLabel (regroupements). */
 export const CFA_STATUS_LABELS: Record<CfaApplicationStatus, string> = {
+  prospect: "Futur candidat",
   brochure: "Fiche cursus",
   profile: "Candidature",
   challenge: "Candidature",
@@ -137,6 +139,29 @@ export type CfaApplication = {
   origin?: "direct" | "existing_account" | null;
   /** Canal d’acquisition (JPO, Site web, SEA, SEO…). */
   lead_source?: string | null;
+  prospect_status?: "new" | "to_call" | "called" | "not_interested" | null;
+  source_family?: "web" | "human" | null;
+  source_channel?: string | null;
+  source_detail?: string | null;
+  prescriber_type?: string | null;
+  prescriber_org?: string | null;
+  prescriber_contact?: string | null;
+  brochure_id?: string | null;
+  formation_id?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  referrer?: string | null;
+  created_by?: string | null;
+  created_by_label?: string | null;
+  created_by_initials?: string | null;
+  contact_consent?: boolean | null;
+  contact_consent_at?: string | null;
+  first_touch?: string | null;
+  last_touch?: string | null;
+  follow_up_at?: string | null;
+  is_test?: boolean | null;
+  promoted_from_prospect?: boolean;
   placement?: {
     companyId: string;
     companyName: string;

@@ -6,6 +6,7 @@ import { looksLikeTestAccount, looksLikeTestDeal } from "@/lib/control/test-acco
 const EMPTY: ControlNavCounts = {
   pipelineLate: 0,
   admissionsReview: 0,
+  cfaProspectsNew: 0,
   expertsPending: 0,
   opcoToFile: 0,
   incomingDemandes: 0,
@@ -17,7 +18,7 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
   if (!db) return EMPTY;
   const today = new Date().toISOString().slice(0, 10);
 
-  const [pipeline, admissions, experts, incoming] = await Promise.all([
+  const [pipeline, admissions, experts, incoming, prospects] = await Promise.all([
     db
       .from("crm_pipeline_deals")
       .select("company_name, email, is_test")
@@ -33,6 +34,11 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
       .select("id, source, status")
       .eq("status", "qualification")
       .in("source", ["dashboard_request", "site_request"]),
+    db
+      .from("cfa_applications")
+      .select("email, first_name, last_name, is_test")
+      .eq("status", "prospect")
+      .eq("prospect_status", "new"),
   ]);
 
   let pipelineRows = pipeline.error ? [] : pipeline.data ?? [];
@@ -47,9 +53,18 @@ async function loadControlNavCounts(): Promise<ControlNavCounts> {
   const admissionRows = admissions.error ? [] : admissions.data ?? [];
   const expertRows = experts.error ? [] : experts.data ?? [];
   const incomingCount = incoming.error ? 0 : (incoming.data ?? []).length;
+  let prospectRows = prospects.error ? [] : prospects.data ?? [];
+  if (prospects.error && /prospect_status|is_test|schema cache/i.test(prospects.error.message)) {
+    prospectRows = [];
+  }
 
   return {
     pipelineLate: pipelineRows.filter((row) => !looksLikeTestDeal(row)).length,
+    cfaProspectsNew: prospectRows.filter(
+      (row) =>
+        row.is_test !== true &&
+        !looksLikeTestAccount({ email: row.email, name: `${row.first_name ?? ""} ${row.last_name ?? ""}` }),
+    ).length,
     admissionsReview: admissions.error
       ? 0
       : admissionRows.filter((row) => !looksLikeTestAccount({ email: row.email, name: `${row.first_name ?? ""} ${row.last_name ?? ""}` })).length,

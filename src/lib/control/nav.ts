@@ -1,6 +1,7 @@
 export type ControlNavCounts = {
   pipelineLate: number;
   admissionsReview: number;
+  cfaProspectsNew: number;
   expertsPending: number;
   opcoToFile: number;
   incomingDemandes: number;
@@ -79,6 +80,14 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
     label: "CFA",
     dot: "#CE0058",
     items: [
+      {
+        id: "futurs-candidats",
+        label: "Futurs candidats",
+        href: "/super/crm/cfa/prospects",
+        countKey: "cfaProspectsNew",
+        countTone: "queue",
+        match: under("/super/crm/cfa/prospects"),
+      },
       {
         id: "admissions",
         label: "Admissions",

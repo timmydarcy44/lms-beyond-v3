@@ -129,13 +129,48 @@ export async function loadCfaApplicationBoard(db: Db, access: "staff" | "admin" 
     });
   }
 
+  const creatorIds = [
+    ...new Set(
+      applications
+        .map((application) => String((application as { created_by?: string | null }).created_by ?? "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const creatorsQuery = creatorIds.length
+    ? await db.from("profiles").select("id, first_name, last_name, email, full_name").in("id", creatorIds)
+    : { data: [], error: null };
+  const creatorById = new Map(
+    ((creatorsQuery.error ? [] : creatorsQuery.data ?? []) as Array<{
+      id: string;
+      first_name?: string | null;
+      last_name?: string | null;
+      email?: string | null;
+      full_name?: string | null;
+    }>).map((row) => [row.id, row]),
+  );
+  const promotedQuery = appIds.length
+    ? await db.from("cfa_person_touches").select("person_id").eq("type", "stage_change").in("person_id", appIds)
+    : { data: [], error: null };
+  const promotedIds = new Set(
+    ((promotedQuery.error ? [] : promotedQuery.data ?? []) as Array<{ person_id: string }>).map((row) => row.person_id),
+  );
+
   const applicationsWithPlacement = applications.map((application) => {
     const id = String((application as { id: string }).id);
     const placement = placementByApp.get(id) ?? null;
+    const createdBy = String((application as { created_by?: string | null }).created_by ?? "").trim();
+    const creator = createdBy ? creatorById.get(createdBy) : null;
+    const first = String(creator?.first_name ?? creator?.full_name?.split(" ")[0] ?? "").trim();
+    const last = String(creator?.last_name ?? "").trim();
+    const initials = (first.charAt(0) + last.charAt(0)).toUpperCase() || String(creator?.email ?? "").slice(0, 2).toUpperCase();
+    const label = first && last ? `${first} ${last.slice(0, 1)}.` : first || null;
     return {
       ...application,
       placement,
       interview_accommodation_needed: accommodationByApp.get(id) === true,
+      created_by_initials: initials || null,
+      created_by_label: label,
+      promoted_from_prospect: promotedIds.has(id) || String((application as { first_touch?: string }).first_touch ?? "") === "web_brochure",
     };
   });
 

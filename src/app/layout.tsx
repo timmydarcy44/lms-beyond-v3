@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import PageViewTracker from "@/components/analytics/page-view-tracker";
+import { UtmCapture } from "@/components/edge-site/utm-capture";
 import { PomodoroProvider } from "@/components/apprenant/pomodoro-provider";
 import { AuthHashRedirect } from "@/components/auth/auth-hash-redirect";
 import { SupabaseProvider } from "@/components/providers/supabase-provider";
@@ -107,6 +108,7 @@ export default async function RootLayout({
             <Suspense fallback={null}>
               <PageViewTracker />
             </Suspense>
+            <UtmCapture />
             {children}
           </PomodoroProvider>
           <Toaster richColors position="top-center" />

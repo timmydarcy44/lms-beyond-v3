@@ -7,6 +7,7 @@ import { Building2, Calendar, ClipboardList, FolderOpen, ListChecks, Mail } from
 import { Manrope } from "next/font/google";
 
 import { CfaJuryChallengePanel } from "@/components/control/cfa-jury-challenge-panel";
+import { CfaPersonRegister } from "@/components/control/cfa-person-register";
 import { computeAdmissionEligibility } from "@/lib/cfa/admission-eligibility";
 import { isResponseComplete } from "@/lib/cfa/admission-challenge";
 import {
@@ -1161,6 +1162,7 @@ export function FicheApprenant({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-4 min-[1200px]:sticky min-[1200px]:top-4">
+          <CfaPersonRegister key={`${id}-${application?.updated_at ?? ""}`} personId={id} />
           <section className="rounded-[26px] border border-[#1A2340] bg-[#111831] p-5">
             <p className="text-sm text-[#AEB6CC]">Dossier complet</p>
             <p className="text-3xl font-extrabold">{checks.filter((item) => item.done).length}<span className="text-base text-[#5D6785]"> / {checks.length}</span></p>

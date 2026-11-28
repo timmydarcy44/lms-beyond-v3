@@ -2,21 +2,33 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendAccessCode } from "@/lib/cfa/access-code";
 import { grantUserRole } from "@/lib/auth/user-roles";
 import { syncTutorAssignment } from "@/lib/cfa/sync-tutor-assignment";
+import { appendCfaRegister, type CfaRegisterType } from "@/lib/cfa/person-register";
+
+function auditType(action: string): CfaRegisterType {
+  if (action.includes("email")) return "email_sent";
+  if (action.includes("placement") || action.includes("tutor") || action.includes("company")) return "placement";
+  if (action.includes("status") || action.includes("admit") || action === "create_manual") {
+    return action === "create_manual" ? "created" : "stage_change";
+  }
+  if (action.includes("document") || action.includes("review")) return "document";
+  return "field_change";
+}
 
 export async function recordCfaAudit(
   db: SupabaseClient,
   input: { actorId: string | null; applicationId: string; action: string; oldValue?: string | null; newValue?: string | null },
 ) {
-  const write = await db.from("cfa_audit_events").insert({
-    actor_id: input.actorId,
-    application_id: input.applicationId,
-    action: input.action,
-    old_value: input.oldValue ?? null,
-    new_value: input.newValue ?? null,
+  const detail = [input.action, input.oldValue ? `avant : ${input.oldValue}` : "", input.newValue ? `après : ${input.newValue}` : ""]
+    .filter(Boolean)
+    .join(" · ");
+  await appendCfaRegister(db, {
+    personId: input.applicationId,
+    type: auditType(input.action),
+    detail,
+    actorId: input.actorId,
+    proofUrl: input.newValue && /^https?:\/\//.test(input.newValue) ? input.newValue : null,
+    payload: { action: input.action, oldValue: input.oldValue ?? null, newValue: input.newValue ?? null },
   });
-  if (write.error && !/cfa_audit_events|schema cache/i.test(write.error.message)) {
-    console.error("[cfa-audit]", write.error.message);
-  }
 }
 
 /** Crée ou relie le compte apprenant au passage à admitted, puis prévient la personne. */

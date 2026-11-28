@@ -9,6 +9,7 @@ import {
 } from "@/lib/cfa-applications";
 import { getServiceRoleClient } from "@/lib/supabase/server";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
+import { cfaCandidaterUrl } from "@/lib/cfa/dossier-url";
 import { publicAppUrl } from "@/lib/env";
 import { sendAccessCode } from "@/lib/cfa/access-code";
 import { grantCfaAssessmentShares } from "@/lib/cfa/assessment-shares";
@@ -16,7 +17,7 @@ import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, presentCerfa } from "@/lib/cfa/s
 import { getSession } from "@/lib/auth/session";
 import { looksLikeTestCfaEmail } from "@/lib/cfa/admission-draft";
 import { isCfaLeadSource } from "@/lib/cfa/lead-sources";
-import { upsertCfaPerson } from "@/lib/cfa/upsert-cfa-person";
+import { recordCfaTouch, upsertCfaPerson } from "@/lib/cfa/upsert-cfa-person";
 import { parseUtmAttribution } from "@/lib/cfa/utm-attribution";
 import { ensureDisabilityAccommodationRequest } from "@/lib/handicap/create-request";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
@@ -79,6 +80,25 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Candidature introuvable." }, { status: 404 });
+
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  if (request.nextUrl.searchParams.get("from") === "mail") {
+    const already = await db
+      .from("cfa_person_touches")
+      .select("id")
+      .eq("person_id", data.id)
+      .eq("type", "email_opened")
+      .gte("created_at", dayStart.toISOString())
+      .limit(1);
+    if (!already.data?.length) {
+      await recordCfaTouch(db, {
+        personId: String(data.id),
+        type: "email_opened",
+        detail: "Clic sur le lien du mail",
+      });
+    }
+  }
 
   return NextResponse.json({
     application: { ...data, cerfa_data: presentCerfa((data.cerfa_data ?? {}) as Record<string, string>, "owner") },
@@ -186,7 +206,7 @@ export async function POST(request: Request) {
   if (!data) return NextResponse.json({ error: "Création impossible." }, { status: 400 });
 
   const publicUrl = publicAppUrl();
-  const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
+  const resumeUrl = cfaCandidaterUrl(String(data.resume_token ?? ""));
   const allowMail = looksLikeTestCfaEmail(email) || process.env.CFA_BLOCK_LIVE_MAILS !== "1";
   if (canShare && profileId && body.shareTests && typeof body.shareTests === "object") {
     const requested = body.shareTests as Record<string, unknown>;

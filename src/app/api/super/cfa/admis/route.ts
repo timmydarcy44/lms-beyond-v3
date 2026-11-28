@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/session";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { documentUploadSchema, parseInput } from "@/lib/cfa/fiche-input";
 import { loadCfaApplicationBoard, loadCfaCompanies } from "@/lib/cfa/load-cfa-crm";
+import { recordCfaTouch } from "@/lib/cfa/upsert-cfa-person";
 import { getServerClient, getServiceRoleClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ async function authorize() {
     return { error: NextResponse.json({ error: "Service indisponible" }, { status: 503 }) };
   }
   const schoolId = await resolveSchoolIdForEcoleDashboard(session.id, session.email, supabase);
-  return { db, schoolId };
+  return { db, schoolId, actorId: session.id };
 }
 
 export async function GET() {
@@ -90,6 +91,16 @@ export async function PATCH(request: Request) {
 
   const { error: updateError } = await ctx.db.from("cfa_applications").update({ cerfa_data: cerfa }).eq("id", id);
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 });
+  const changes = [
+    body && "curriculumId" in body ? `Cursus : ${String(body.curriculumId || "aucun")}` : "",
+    body && "companyId" in body ? `Entreprise : ${String(body.companyId || "aucune")}` : "",
+  ].filter(Boolean);
+  await recordCfaTouch(ctx.db, {
+    personId: id,
+    type: body && "companyId" in body ? "placement" : "curriculum",
+    detail: changes.join(" · "),
+    createdBy: ctx.actorId,
+  });
   return NextResponse.json({ ok: true });
 }
 
@@ -148,5 +159,12 @@ export async function POST(request: Request) {
     .update({ administrative_documents: documents, private_files: privateFiles })
     .eq("id", id);
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 });
+  await recordCfaTouch(ctx.db, {
+    personId: id,
+    type: "document",
+    detail: `Dépôt : ${label}`,
+    createdBy: ctx.actorId,
+    proofUrl: path,
+  });
   return NextResponse.json({ ok: true });
 }

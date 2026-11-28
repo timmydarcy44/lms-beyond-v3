@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { looksLikeTestCfaEmail } from "@/lib/cfa/admission-draft";
+import { appendCfaRegister, type CfaRegisterType } from "@/lib/cfa/person-register";
 import {
   isCfaSourceChannel,
   shouldPromoteStage,
@@ -45,20 +46,19 @@ export async function recordCfaTouch(
   db: SupabaseClient,
   input: {
     personId: string;
-    type: CfaTouchType;
+    type: CfaTouchType | CfaRegisterType;
     detail?: string | null;
     createdBy?: string | null;
+    proofUrl?: string | null;
   },
 ) {
-  const write = await db.from("cfa_person_touches").insert({
-    person_id: input.personId,
-    type: input.type,
-    detail: input.detail ?? null,
-    created_by: input.createdBy ?? null,
+  await appendCfaRegister(db, {
+    personId: input.personId,
+    type: input.type as CfaRegisterType,
+    detail: input.detail,
+    actorId: input.createdBy,
+    proofUrl: input.proofUrl,
   });
-  if (write.error && !/cfa_person_touches|schema cache/i.test(write.error.message)) {
-    console.error("[cfa-touch]", write.error.message);
-  }
 }
 
 function keepFirst(current: unknown, incoming: unknown) {

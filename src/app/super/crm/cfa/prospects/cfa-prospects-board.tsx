@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CfaCreateProspectModal } from "@/components/control/cfa-create-prospect-modal";
 import { FilterPill, PageTitle } from "@/components/control/cfa-board-chrome";
 import { EmptyState } from "@/components/control/chrome";
+import { CfaPersonRegister } from "@/components/control/cfa-person-register";
 import { formatPersonName } from "@/lib/cfa/format-org-name";
 import { getCfaSpecializationFullLabel, type CfaApplication } from "@/lib/cfa-applications";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
@@ -18,14 +19,6 @@ import {
   type CfaProspectStatus,
   type CfaSourceChannel,
 } from "@/lib/cfa/person-origin";
-
-type Touch = {
-  id: string;
-  person_id: string;
-  type: string;
-  detail: string | null;
-  created_at: string;
-};
 
 const STATUS_FILTERS: Array<{ id: "all" | CfaProspectStatus; label: string }> = [
   { id: "all", label: "Tous" },
@@ -51,22 +44,9 @@ function statusTone(status: string) {
   return { bg: "#6E5BFF22", color: "#B9AFFF" };
 }
 
-function touchLabel(type: string, detail: string | null) {
-  if (type === "brochure_download") return "Plaquette téléchargée";
-  if (type === "preregistration") return "Pré-inscription";
-  if (type === "email_sent") return "E-mail envoyé";
-  if (type === "email_opened") return "E-mail ouvert";
-  if (type === "call") return "Appel";
-  if (type === "meeting") return "Rencontre";
-  if (type === "stage_change") return "Passage en candidature";
-  if (type === "follow_up") return detail || "Rappel conseillé sous 48 h";
-  return detail || "Création";
-}
-
 export function CfaProspectsBoard() {
   const [prospects, setProspects] = useState<CfaApplication[]>([]);
   const [monthPeople, setMonthPeople] = useState<CfaApplication[]>([]);
-  const [touches, setTouches] = useState<Touch[]>([]);
   const [actorLabel, setActorLabel] = useState("l’équipe");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -86,7 +66,6 @@ export function CfaProspectsBoard() {
       if (!response.ok) throw new Error(json.error || "Chargement impossible");
       setProspects(json.prospects ?? []);
       setMonthPeople(json.monthPeople ?? []);
-      setTouches(json.touches ?? []);
       if (json.actor?.label) setActorLabel(json.actor.label);
       setSelectedId((current) => current ?? json.prospects?.[0]?.id ?? null);
     } catch (cause) {
@@ -143,11 +122,6 @@ export function CfaProspectsBoard() {
       return { channel, count: rows.length, passed };
     }).filter((row) => row.count > 0);
   }, [monthPeople, showTests]);
-
-  const selectedTouches = useMemo(
-    () => touches.filter((item) => item.person_id === selected?.id).slice(0, 12),
-    [touches, selected],
-  );
 
   async function patch(action: string, extra: Record<string, unknown> = {}) {
     if (!selected) return;
@@ -361,19 +335,7 @@ export function CfaProspectsBoard() {
               </div>
 
               <div className="mt-5">
-                <p className="text-sm font-extrabold">Historique</p>
-                <ul className="mt-2 space-y-2 text-sm text-[#C9D2E8]">
-                  {selectedTouches.length === 0 ? <li className="text-[#6C7593]">Aucun événement.</li> : null}
-                  {selectedTouches.map((touch) => (
-                    <li key={touch.id} className="flex gap-2">
-                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#6E5BFF]" />
-                      <span>
-                        {touchLabel(touch.type, touch.detail)}
-                        <span className="block text-xs text-[#6C7593]">{relativeReceivedLabel(touch.created_at)}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <CfaPersonRegister key={`${selected.id}-${loading ? "1" : "0"}`} personId={selected.id} />
               </div>
 
               {selected.contact_consent ? (
@@ -401,7 +363,11 @@ export function CfaProspectsBoard() {
                     À rappeler
                   </button>
                 )}
-                <a href={`mailto:${selected.email}`} className="rounded-full border border-[#26304F] px-3 py-2 text-sm font-semibold">
+                <a
+                  href={`mailto:${selected.email}`}
+                  onClick={() => void patch("log_exchange", { exchangeType: "email_sent", detail: `Mailto ${selected.email}` })}
+                  className="rounded-full border border-[#26304F] px-3 py-2 text-sm font-semibold"
+                >
                   Écrire
                 </a>
                 <button

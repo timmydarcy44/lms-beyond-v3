@@ -18,7 +18,7 @@ import {
 } from "@/lib/cfa/fiche-input";
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, revealCerfaField } from "@/lib/cfa/sensitive";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
-import { publicAppUrl } from "@/lib/env";
+import { cfaCandidaterUrl } from "@/lib/cfa/dossier-url";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
 function escapeHtml(value: unknown): string {
@@ -174,18 +174,16 @@ export async function POST(request: NextRequest) {
   }
 
   const data = result.person;
-  await recordCfaAudit(db, {
-    actorId,
-    applicationId: String(data.id),
-    action: "create_manual",
-    oldValue: null,
-    newValue: input.sourceChannel,
-  });
+  let resumeToken = String(data.resume_token ?? "").trim();
+  if (!resumeToken) {
+    const tokenRow = await db.from("cfa_applications").select("resume_token").eq("id", data.id).maybeSingle();
+    resumeToken = String((tokenRow.data as { resume_token?: string } | null)?.resume_token ?? "").trim();
+  }
 
   let emailSent = false;
   const canMail = looksLikeTestCfaEmail(input.email) || process.env.CFA_BLOCK_LIVE_MAILS !== "1";
-  if (input.placement === "candidate" && input.notifyCandidate !== false && canMail) {
-    const resumeUrl = `${publicAppUrl()}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
+  if (input.placement === "candidate" && input.notifyCandidate !== false && canMail && resumeToken) {
+    const resumeUrl = cfaCandidaterUrl(resumeToken);
     emailSent = await sendCandidateEmail({
       to: input.email,
       subject: "Votre dossier d’admission Byound School",
@@ -195,9 +193,16 @@ export async function POST(request: NextRequest) {
         body: `<p>Bonjour ${escapeHtml(input.firstName)},</p><p>L’équipe Byound School a ouvert votre dossier d’admission. Vous pouvez le consulter et compléter les prochaines étapes via votre lien personnel.</p>`,
         cta: { label: "Ouvrir mon dossier", href: resumeUrl },
       }),
+      text: `Bonjour ${input.firstName},\n\nVotre dossier d’admission Byound School est ouvert.\nOuvrir mon dossier : ${resumeUrl}\n`,
     });
     if (emailSent) {
-      await recordCfaTouch(db, { personId: String(data.id), type: "email_sent", detail: "Lien de dossier", createdBy: actorId });
+      await recordCfaTouch(db, {
+        personId: String(data.id),
+        type: "email_sent",
+        detail: "Lien de dossier",
+        createdBy: actorId,
+        proofUrl: resumeUrl,
+      });
     }
   }
 
@@ -519,8 +524,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (status === "administrative" && data?.email) {
-    const publicUrl = publicAppUrl();
-    const resumeUrl = `${publicUrl}/ecole/candidater?resume=${encodeURIComponent(String(data.resume_token))}`;
+    const resumeUrl = cfaCandidaterUrl(String(data.resume_token ?? ""));
     emailSent = await sendCandidateEmail({
       to: String(data.email),
       subject: "Finalisez votre inscription Byound",
@@ -530,7 +534,17 @@ export async function PATCH(request: NextRequest) {
         body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Votre candidature est acceptée. Finalisez votre inscription en complétant les éléments manquants (numéro de sécurité sociale, état civil, adresse…) puis en déposant :</p><ul style="padding-left:20px;line-height:1.8"><li>votre pièce d’identité ;</li><li>votre attestation de droits à la Sécurité sociale ou votre carte Vitale ;</li><li>votre relevé de notes du bac, votre attestation de réussite ou votre dernier diplôme.</li></ul><p>Les frais d’inscription sont de <strong>250 €</strong>. Ils seront remboursés à la signature de votre contrat d’alternance, après validation de la période d’essai.</p>`,
         cta: { label: "Finaliser mon inscription", href: resumeUrl },
       }),
+      text: `Bonjour ${data.first_name},\n\nFinalisez votre inscription : ${resumeUrl}\n`,
     });
+    if (emailSent) {
+      await recordCfaTouch(db, {
+        personId: id,
+        type: "email_sent",
+        detail: "Lien finalisation d’inscription",
+        createdBy: actorUser?.data.user?.id ?? null,
+        proofUrl: resumeUrl,
+      });
+    }
   }
 
   if (interviewScheduled && data?.email && data.interview_at) {
@@ -587,7 +601,6 @@ export async function DELETE(request: NextRequest) {
     oldValue: String(existing.data.email ?? ""),
     newValue: `${existing.data.first_name ?? ""} ${existing.data.last_name ?? ""}`.trim(),
   });
-  await db.from("cfa_audit_events").delete().eq("application_id", id);
 
   const { error } = await db.from("cfa_applications").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

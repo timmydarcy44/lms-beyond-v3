@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { FilterPill, PageTitle, ViewSwitch } from "@/components/control/cfa-board-chrome";
 import { EmptyState } from "@/components/control/chrome";
+import { CfaPersonRegister } from "@/components/control/cfa-person-register";
 import { formatCompanyName, formatPersonName } from "@/lib/cfa/format-org-name";
 import {
   getCfaSpecializationFullLabel,
@@ -96,6 +97,8 @@ export function AdmisBoard() {
   const [query, setQuery] = useState(initial.q);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [registerTick, setRegisterTick] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,11 +189,14 @@ export function AdmisBoard() {
       }
     }
     await load();
+    setRegisterTick((tick) => tick + 1);
   }
 
   function openStudent(student: CfaApplication) {
     router.push(`/super/crm/cfa/apprenants/${student.id}`);
   }
+
+  const selected = students.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
 
   const selectClass =
     "h-9 w-full rounded-xl border border-[#26304F] bg-[#0B1122] px-2 text-xs text-[#EEF1F8]";
@@ -304,7 +310,9 @@ export function AdmisBoard() {
             )
           }
         />
-      ) : view === "list" ? (
+      ) : (
+        <div className="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_340px]">
+        {view === "list" ? (
         <div className="overflow-hidden rounded-[24px] border border-[#1A2340] bg-[#111831]">
           <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_90px] gap-3 px-[22px] py-3 text-[12.5px] font-extrabold text-[#6C7593]">
             <span>Apprenti</span>
@@ -318,8 +326,9 @@ export function AdmisBoard() {
               <button
                 key={student.id}
                 type="button"
-                onClick={() => openStudent(student)}
-                className="grid w-full grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_90px] items-center gap-3 border-t border-[#1A2340] px-[22px] py-[16px] text-left"
+                onClick={() => setSelectedId(student.id)}
+                onDoubleClick={() => openStudent(student)}
+                className={`grid w-full grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_90px] items-center gap-3 border-t border-[#1A2340] px-[22px] py-[16px] text-left ${selected?.id === student.id ? "bg-[#1A2340]" : ""}`}
               >
                 <span className="flex min-w-0 items-center gap-3">
                   <span
@@ -356,8 +365,9 @@ export function AdmisBoard() {
               <button
                 key={student.id}
                 type="button"
-                onClick={() => openStudent(student)}
-                className="rounded-[22px] border border-[#1A2340] bg-[#111831] p-4 text-left"
+                onClick={() => setSelectedId(student.id)}
+                onDoubleClick={() => openStudent(student)}
+                className={`rounded-[22px] border p-4 text-left ${selected?.id === student.id ? "border-[#6E5BFF] bg-[#161D38]" : "border-[#1A2340] bg-[#111831]"}`}
               >
                 <div className="flex items-start gap-3">
                   <span
@@ -396,8 +406,9 @@ export function AdmisBoard() {
                     <button
                       key={student.id}
                       type="button"
-                      onClick={() => openStudent(student)}
-                      className="w-full rounded-[18px] border border-[#1A2340] bg-[#111831] p-3 text-left"
+                      onClick={() => setSelectedId(student.id)}
+                      onDoubleClick={() => openStudent(student)}
+                      className={`w-full rounded-[18px] border p-3 text-left ${selected?.id === student.id ? "border-[#6E5BFF] bg-[#161D38]" : "border-[#1A2340] bg-[#111831]"}`}
                     >
                       <p className="truncate text-sm font-semibold">{name}</p>
                       <StudentMeta student={student} />
@@ -410,6 +421,20 @@ export function AdmisBoard() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+          {selected ? (
+            <aside className="space-y-3 min-[1100px]:sticky min-[1100px]:top-4">
+              <button
+                type="button"
+                onClick={() => openStudent(selected)}
+                className="h-10 w-full rounded-full bg-white text-sm font-extrabold text-[#0A0F1E]"
+              >
+                Ouvrir la fiche
+              </button>
+              <CfaPersonRegister key={`${selected.id}-${registerTick}`} personId={selected.id} />
+            </aside>
+          ) : null}
         </div>
       )}
     </div>

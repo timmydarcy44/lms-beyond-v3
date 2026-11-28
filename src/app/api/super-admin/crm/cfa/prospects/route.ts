@@ -83,6 +83,18 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (body?.action === "log_exchange") {
+    const type = String((body as { exchangeType?: string }).exchangeType ?? "note");
+    const detail = String((body as { detail?: string }).detail ?? "Échange");
+    await recordCfaTouch(db, {
+      personId: id,
+      type: type === "email_sent" ? "email_sent" : type === "call" ? "call" : "note",
+      detail,
+      createdBy: actor.id,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   if (body?.action === "set_status") {
     const status = String(body.prospectStatus ?? "");
     if (!["new", "to_call", "called", "not_interested"].includes(status)) {

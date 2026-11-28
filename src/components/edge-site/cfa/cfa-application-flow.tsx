@@ -105,7 +105,10 @@ export function CfaApplicationFlow() {
       if (resume) localStorage.setItem(TOKEN_KEY, resume);
       setToken(saved);
       try {
-        const response = await fetch(`/api/cfa/applications?token=${encodeURIComponent(saved)}`);
+        const fromMail = params.get("from") === "mail";
+        const response = await fetch(
+          `/api/cfa/applications?token=${encodeURIComponent(saved)}${fromMail ? "&from=mail" : ""}`,
+        );
         if (!response.ok) throw new Error();
         const data = await response.json();
         setApp(data.application);
@@ -116,7 +119,7 @@ export function CfaApplicationFlow() {
         setLoading(false);
       }
     })();
-  }, [resume]);
+  }, [resume, params]);
 
   useEffect(() => {
     const sessionId = params.get("session_id");

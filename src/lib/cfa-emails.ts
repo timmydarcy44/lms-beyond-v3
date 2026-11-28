@@ -1,4 +1,4 @@
-import { buildEdgeEmailShell, edgeEmailButton } from "@/lib/emails/edge-email-shell";
+import { buildEdgeEmailShell, edgeEmailButton, escapeEdgeEmailHtml } from "@/lib/emails/edge-email-shell";
 
 type CfaEmailTemplateOptions = {
   eyebrow?: string;
@@ -22,9 +22,13 @@ export function cfaDarkEmailTemplate({ eyebrow, title, body }: CfaEmailTemplateO
 }
 
 export function cfaEmailTemplate({ eyebrow, title, body, cta }: CfaEmailTemplateOptions): string {
-  const action = cta ? edgeEmailButton(cta.label, cta.href) : "";
+  const href = String(cta?.href ?? "").trim();
+  const fallback = href
+    ? `<p style="margin:24px 0 0;font-size:16px;line-height:1.5;"><a href="${escapeEdgeEmailHtml(href)}" target="_blank" rel="noopener noreferrer" style="color:#111111;font-weight:700;text-decoration:underline;">${escapeEdgeEmailHtml(cta!.label)}</a></p><p style="margin:8px 0 0;font-size:13px;line-height:1.55;color:#8A8F98;word-break:break-all;"><a href="${escapeEdgeEmailHtml(href)}" target="_blank" rel="noopener noreferrer" style="color:#5C6370;text-decoration:underline;">${escapeEdgeEmailHtml(href)}</a></p>`
+    : "";
   return buildEdgeEmailShell({
     title,
-    bodyHtml: `${bodyWithEyebrow(eyebrow, body, "light")}${action}`,
+    bodyHtml: `${bodyWithEyebrow(eyebrow, body, "light")}${fallback}`,
+    cta: href ? { label: cta!.label, href } : undefined,
   });
 }

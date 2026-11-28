@@ -35,12 +35,22 @@ export function edgeEmailBrand(tone: EdgeEmailTone = "light"): string {
 export function edgeEmailButton(label: string, href: string, tone: EdgeEmailTone = "light"): string {
   const background = tone === "dark" ? "#FFFFFF" : "#111111";
   const color = tone === "dark" ? "#111111" : "#FFFFFF";
+  const safeHref = escapeEdgeEmailHtml(href);
+  const safeLabel = escapeEdgeEmailHtml(label);
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0 0;">
-    <tr><td style="background:${background};border-radius:8px;">
-      <a href="${href}" target="_blank" rel="noopener noreferrer"
-         style="display:inline-block;padding:14px 22px;font-size:15px;font-weight:700;color:${color};text-decoration:none;letter-spacing:-0.02em;">
-        ${escapeEdgeEmailHtml(label)}
+    <tr><td>
+      <!--[if mso]>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${safeHref}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="12%" fillcolor="${background}" stroke="f">
+        <w:anchorlock/>
+        <center style="color:${color};font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">${safeLabel}</center>
+      </v:roundrect>
+      <![endif]-->
+      <!--[if !mso]><!-->
+      <a href="${safeHref}" target="_blank" rel="noopener noreferrer"
+         style="background:${background};border-radius:8px;display:inline-block;padding:14px 22px;font-size:15px;font-weight:700;color:${color};text-decoration:none;letter-spacing:-0.02em;">
+        ${safeLabel}
       </a>
+      <!--<![endif]-->
     </td></tr>
   </table>`;
 }

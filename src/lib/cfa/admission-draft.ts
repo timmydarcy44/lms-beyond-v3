@@ -10,6 +10,7 @@ import {
 } from "@/lib/cfa/admission-challenge";
 import { DELAI_DECISION, DELAI_REFERENTE_HANDICAP } from "@/lib/cfa/admission-delays";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
+import { cfaCandidaterUrl } from "@/lib/cfa/dossier-url";
 import { getCfaSpecializationLabel } from "@/lib/cfa-applications";
 import { publicAppUrl } from "@/lib/env";
 import { ensureDisabilityAccommodationRequest } from "@/lib/handicap/create-request";
@@ -250,7 +251,7 @@ export async function sendContinueLaterEmail(input: {
   resumeToken: string;
   isTest: boolean;
 }) {
-  const resumeUrl = `${publicAppUrl()}/ecole/candidater?resume=${encodeURIComponent(input.resumeToken)}`;
+  const resumeUrl = cfaCandidaterUrl(input.resumeToken);
   await sendCfaEmail(
     {
       to: input.email,

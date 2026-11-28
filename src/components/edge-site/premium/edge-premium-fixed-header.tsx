@@ -31,11 +31,13 @@ export function EdgePremiumFixedHeader({
   return (
     <div
       className={cn(
-        "fixed inset-x-0 top-0 z-50 bg-transparent transition-[background-color,box-shadow,backdrop-filter] duration-300",
+        "fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow] duration-300",
         solidChrome &&
           (light
             ? "bg-white shadow-[0_1px_0_rgba(0,0,0,0.06)]"
-            : "bg-[#060D28]/80 shadow-[0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md"),
+            : "bg-[#060D28] shadow-[0_1px_0_rgba(255,255,255,0.06)]"),
+        !light &&
+          "bg-[#060D28] [background-image:radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(80,120,255,0.18),transparent_70%)]",
       )}
     >
       {showTopBar ? <EdgePremiumTopBar solid={solidChrome} light={light} /> : null}

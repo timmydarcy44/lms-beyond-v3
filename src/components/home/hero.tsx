@@ -21,7 +21,7 @@ export function HomeHero({
         aria-hidden
       />
 
-      <div className="relative m-4 min-h-[calc(100svh-32px)] overflow-hidden rounded-[24px] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] md:rounded-[36px]">
+      <div className="relative mx-4 mb-4 min-h-[calc(100svh-76px-16px)] overflow-hidden rounded-[24px] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] md:rounded-[36px]">
         <Image
           src={imageSrc}
           alt="Une formatrice anime une séance avec un petit groupe autour d'une table"
@@ -39,7 +39,7 @@ export function HomeHero({
           aria-hidden
         />
 
-        <div className="relative z-10 flex min-h-[calc(100svh-32px)] flex-col justify-end p-6 pb-3 md:p-14 md:pb-4">
+        <div className="relative z-10 flex min-h-[calc(100svh-76px-16px)] flex-col justify-end p-6 pb-3 md:p-14 md:pb-4">
           <div className="max-w-[640px]">
             <h1 className="home-hero-in text-[44px] font-bold leading-[0.95] tracking-[-0.05em] text-white md:text-[clamp(48px,6.4vw,96px)]">
               La compétence, prouvée.

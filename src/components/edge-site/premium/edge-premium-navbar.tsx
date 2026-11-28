@@ -119,12 +119,18 @@ export function EdgePremiumNavbar({
       className={cn(
         "relative z-50 isolate overflow-visible transition-all duration-300",
         light
-          ? overlay && !isSolid
-            ? "border-b border-transparent bg-transparent"
-            : "border-b border-black/[0.06] bg-white"
-          : overlay && !isSolid
-            ? "border-b border-transparent !bg-transparent"
-            : "border-b border-white/[0.06] bg-[#060D28]",
+          ? cn(
+              overlay && !isSolid
+                ? "border-b border-transparent bg-transparent"
+                : "border-b border-black/[0.06] bg-white",
+              !overlay && "border-b border-black/[0.06] bg-white",
+            )
+          : cn(
+              overlay && !isSolid
+                ? "border-b border-transparent bg-transparent"
+                : "border-b border-white/[0.06] bg-[#060D28]",
+              !overlay && "border-b border-white/[0.06] bg-[#060D28]",
+            ),
       )}
       onMouseLeave={scheduleMegaClose}
     >

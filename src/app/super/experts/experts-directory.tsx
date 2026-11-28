@@ -7,6 +7,7 @@ import { AddExpertDialog } from "@/components/admin/experts/add-expert-dialog";
 import { EmptyState, SegmentedFilter } from "@/components/control/chrome";
 import { DataTable, PageHeader, RolePill, StatusPill } from "@/components/control/ui";
 import { CFA_SPECIALIZATIONS } from "@/lib/cfa-applications";
+import { isCareDemoEmail, isCareDemoExpertId } from "@/lib/care/demo-profiles";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 import type { AdminExpertRow } from "@/lib/expert/admin-expert-types";
 import { parseExpertDocuments } from "@/lib/expert/admin-expert-types";
@@ -59,17 +60,28 @@ export function ExpertsDirectory({
   experts,
   activeFilter,
   startAdd = false,
+  title = "Formateurs et experts",
+  subtitle,
+  hideExtras = false,
+  basePath = "/super/experts",
 }: {
   experts: AdminExpertRow[];
   activeFilter: string;
   startAdd?: boolean;
+  title?: string;
+  subtitle?: string;
+  hideExtras?: boolean;
+  basePath?: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [showTests, setShowTests] = useState(false);
   const [page, setPage] = useState(1);
   const activeExperts = experts.filter((expert) => expert.is_active !== false);
-  const tests = activeExperts.filter((expert) => looksLikeTestAccount({ email: expert.email, name: displayName(expert) }));
+  const tests = activeExperts.filter((expert) => {
+    if (isCareDemoEmail(expert.email) || isCareDemoExpertId(expert.id)) return false;
+    return looksLikeTestAccount({ email: expert.email, name: displayName(expert) });
+  });
   const base = showTests
     ? activeExperts
     : activeExperts.filter((expert) => !tests.some((item) => item.id === expert.id));
@@ -94,24 +106,28 @@ export function ExpertsDirectory({
 
   function choose(id: string) {
     setPage(1);
-    router.replace(id === "all" ? "/super/experts" : `/super/experts?status=${id}`);
+    router.replace(id === "all" ? basePath : `${basePath}?status=${id}`);
   }
 
   return (
     <div className="mx-auto max-w-[1240px] space-y-5 px-6 py-8">
       <PageHeader
-        title="Formateurs et experts"
-        subtitle={`${base.length} profil${base.length > 1 ? "s" : ""} · ${pending} en attente de validation`}
+        title={title}
+        subtitle={subtitle ?? `${base.length} profil${base.length > 1 ? "s" : ""} · ${pending} en attente de validation`}
         actions={
           <>
-            <a href="/super/open-badges/badgeclasses/new" className="rounded-full border border-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#C4BAFF]">
-              Créer un Open Badge
-            </a>
-            <AddExpertDialog initialOpen={startAdd} label="Ajouter un profil" />
+            {hideExtras ? null : (
+              <a href="/super/open-badges/badgeclasses/new" className="rounded-full border border-[#6E5BFF] px-4 py-2 text-sm font-semibold text-[#C4BAFF]">
+                Créer un Open Badge
+              </a>
+            )}
+            <AddExpertDialog initialOpen={startAdd} label={hideExtras ? "Ajouter un coach" : "Ajouter un profil"} />
           </>
         }
       />
-      <a href="/super/experts/appartenances" className="inline-block text-sm text-[#C4BAFF]">Appartenances par pôle</a>
+      {hideExtras ? null : (
+        <a href="/super/experts/appartenances" className="inline-block text-sm text-[#C4BAFF]">Appartenances par pôle</a>
+      )}
       <SegmentedFilter
         value={activeFilter}
         onChange={choose}

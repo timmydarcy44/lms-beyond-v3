@@ -27,6 +27,7 @@ const DEFAULT_OPEN: Record<string, boolean> = {
   business: true,
   cfa: true,
   particulier: true,
+  care: true,
   formation: true,
   qualite: false,
 };

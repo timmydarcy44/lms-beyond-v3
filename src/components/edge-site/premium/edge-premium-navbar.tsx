@@ -128,13 +128,13 @@ export function EdgePremiumNavbar({
           : cn(
               overlay && !isSolid
                 ? "border-b border-transparent bg-transparent"
-                : "border-b border-white/[0.06] bg-[#070b1f]",
-              !overlay && "border-b border-white/[0.06] bg-[#070b1f]",
+                : "border-b border-white/[0.06] bg-[#060D28]",
+              !overlay && "border-b border-white/[0.06] bg-[#060D28]",
             ),
       )}
       onMouseLeave={scheduleMegaClose}
     >
-      <div className="relative z-50 mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8 lg:gap-4 lg:px-10">
+      <div className="relative z-50 mx-auto flex max-w-[1360px] items-center justify-between gap-3 px-8 py-[18px] lg:gap-4">
         <EdgePremiumLogo light={light} />
 
         <nav className="hidden items-center lg:flex" aria-label="Navigation principale">
@@ -149,16 +149,16 @@ export function EdgePremiumNavbar({
               (key === "particuliers" && pathname.includes("/particuliers")) ||
               (key === "plateforme" && pathname.includes("/business/diagnostics"));
             const triggerClass = cn(
-              "inline-flex items-center gap-1 rounded-full text-sm transition-colors",
+              "inline-flex items-center gap-1 rounded-full text-[15px] transition-colors",
               open || current
                 ? light
                   ? "bg-black/5 px-3 py-2 font-bold text-neutral-950"
                   : key === "ecole" && open
-                    ? "bg-white/[0.08] px-3 py-2 font-bold text-white"
-                    : "bg-white/10 px-3 py-2 font-bold text-white"
+                    ? "bg-white/[0.08] px-3 py-2 font-medium text-white"
+                    : "bg-white/10 px-3 py-2 font-medium text-white"
                 : light
                   ? "px-2.5 py-2 font-medium text-neutral-700 hover:text-neutral-950 xl:px-3"
-                  : "px-2.5 py-2 font-medium text-white/60 hover:text-white xl:px-3",
+                  : "px-2.5 py-2 font-medium text-white/75 hover:text-white xl:px-3",
             );
             if (menu.href) {
               return (
@@ -225,14 +225,14 @@ export function EdgePremiumNavbar({
           <Link
             href="/offres"
             className={cn(
-              "rounded-full px-3 py-2 text-sm transition-colors",
+              "rounded-full px-3 py-2 text-[15px] transition-colors",
               pathname.startsWith("/offres")
                 ? light
                   ? "bg-black/5 font-bold text-neutral-950"
-                  : "bg-white/10 font-bold text-white"
+                  : "bg-white/10 font-medium text-white"
                 : light
                   ? "font-medium text-neutral-700 hover:text-neutral-950"
-                  : "font-medium text-white/60 hover:text-white",
+                  : "font-medium text-white/75 hover:text-white",
             )}
           >
             Offres d&apos;emploi
@@ -240,10 +240,10 @@ export function EdgePremiumNavbar({
           <Link
             href={routes.tarifs}
             className={cn(
-              "px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
+              "px-2.5 py-2 text-[15px] font-medium transition-colors xl:px-3",
               light
                 ? "text-neutral-700 hover:text-neutral-950"
-                : "text-white/60 hover:text-white",
+                : "text-white/75 hover:text-white",
             )}
           >
             Tarifs
@@ -251,24 +251,24 @@ export function EdgePremiumNavbar({
           <Link
             href={routes.aPropos}
             className={cn(
-              "px-2.5 py-2 text-sm font-medium transition-colors xl:px-3",
+              "px-2.5 py-2 text-[15px] font-medium transition-colors xl:px-3",
               light
                 ? "text-neutral-700 hover:text-neutral-950"
-                : "text-white/60 hover:text-white",
+                : "text-white/75 hover:text-white",
             )}
           >
             À propos
           </Link>
         </nav>
 
-        <div className="hidden items-center gap-4 lg:flex xl:gap-5">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:gap-4">
           <Link
             href={loginHref}
             className={cn(
-              "text-sm font-medium transition-colors",
+              "rounded-full px-3 py-2.5 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:px-[18px] sm:py-3 sm:text-[15px]",
               light
-                ? "text-neutral-700 hover:text-neutral-950"
-                : "text-white/60 hover:text-white",
+                ? "bg-black/[0.06] text-neutral-950 hover:bg-black/10 focus-visible:outline-neutral-950"
+                : "bg-white/10 text-white hover:bg-white/[0.18] focus-visible:outline-white",
             )}
           >
             Connexion
@@ -276,29 +276,31 @@ export function EdgePremiumNavbar({
           <EdgePremiumButton
             href={primaryCta.href}
             variant={light ? "primary" : "white"}
-            shape="revolut"
-            className="!px-5 !py-2.5 !text-sm"
+            shape="pill"
+            className={cn(
+              "!px-3 !py-2.5 !text-[13px] !font-semibold sm:!px-[18px] sm:!py-3 sm:!text-[15px]",
+              !light && "!text-[#060D28]",
+            )}
           >
             {primaryCta.label}
           </EdgePremiumButton>
+          <button
+            type="button"
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full lg:hidden",
+              light ? "text-neutral-950" : "text-white",
+            )}
+            aria-expanded={mobileOpen}
+            aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            onClick={() => setMobileOpen((o) => !o)}
+          >
+            {mobileOpen ? (
+              <span className="text-2xl leading-none">×</span>
+            ) : (
+              <span className="text-xl leading-none">≡</span>
+            )}
+          </button>
         </div>
-
-        <button
-          type="button"
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-full lg:hidden",
-            light ? "text-neutral-950" : "text-white",
-          )}
-          aria-expanded={mobileOpen}
-          aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
-          onClick={() => setMobileOpen((o) => !o)}
-        >
-          {mobileOpen ? (
-            <span className="text-2xl leading-none">×</span>
-          ) : (
-            <span className="text-xl leading-none">≡</span>
-          )}
-        </button>
       </div>
 
       {neoMenu ? (

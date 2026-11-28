@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { isSuperAdmin } from "@/lib/auth/super-admin";
 import { isHandicapPortfolioOnlyRoleType } from "@/lib/auth/school-role-type-guards";
 import { BtocClientFileView } from "@/components/control/btoc-client-file";
+import { isCareAudience } from "@/lib/control/care-audience";
 import { isBtocRole, loadBtocClientFile } from "@/lib/control/btoc-client-file";
 import { getUserFullDetails } from "@/lib/queries/super-admin";
 import { getLearnerDossier } from "@/lib/queries/learner-dossier";
@@ -27,7 +28,7 @@ export default async function UserDetailsPage({
   if (service) {
     let { data: roleRow } = await service
       .from("profiles")
-      .select("role, role_type")
+      .select("id, email, full_name, role, role_type")
       .eq("id", userId)
       .maybeSingle();
 
@@ -37,6 +38,11 @@ export default async function UserDetailsPage({
       !isBtocRole(
         (roleRow as { role?: string }).role,
         (roleRow as { role_type?: string | null }).role_type,
+        {
+          id: userId,
+          email: (roleRow as { email?: string | null }).email,
+          name: (roleRow as { full_name?: string | null }).full_name,
+        },
       )
     ) {
       try {
@@ -51,14 +57,23 @@ export default async function UserDetailsPage({
           ["PARTICULIER", "particulier", "btoc"].includes(metaRole) ||
           source === "crm_btoc" ||
           (source === "crm_edge" && ["PARTICULIER", "particulier", "btoc"].includes(metaRole));
-        if (looksBtoc) {
+        if (
+          looksBtoc &&
+          !isCareAudience({
+            id: userId,
+            email: (roleRow as { email?: string | null }).email,
+            name: (roleRow as { full_name?: string | null }).full_name,
+            role: (roleRow as { role?: string }).role,
+            roleType: (roleRow as { role_type?: string | null }).role_type,
+          })
+        ) {
           await service
             .from("profiles")
             .update({ role_type: "particulier" })
             .eq("id", userId);
           ({ data: roleRow } = await service
             .from("profiles")
-            .select("role, role_type")
+            .select("id, email, full_name, role, role_type")
             .eq("id", userId)
             .maybeSingle());
         }
@@ -71,6 +86,11 @@ export default async function UserDetailsPage({
       isBtocRole(
         (roleRow as { role?: string } | null)?.role,
         (roleRow as { role_type?: string } | null)?.role_type,
+        {
+          id: userId,
+          email: (roleRow as { email?: string | null } | null)?.email,
+          name: (roleRow as { full_name?: string | null } | null)?.full_name,
+        },
       )
     ) {
       const staff = await getServerClient();

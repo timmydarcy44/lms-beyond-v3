@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/server";
-import type { AssessmentQuestion } from "@/lib/formation-assessments/types";
+import {
+  isQuestionVisible,
+  type AssessmentQuestion,
+} from "@/lib/formation-assessments/types";
 import { scoreAssessmentAnswers } from "@/lib/formation-assessments/score";
 
 type Ctx = { params: Promise<{ token: string }> };
@@ -105,6 +108,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const now = new Date().toISOString();
   const complete = Boolean(body?.complete);
+  if (complete) {
+    const missing = questions.find(
+      (q) =>
+        q.required &&
+        isQuestionVisible(q, merged) &&
+        !String(merged[q.id] ?? "").trim(),
+    );
+    if (missing) {
+      return NextResponse.json({ error: "Merci de préciser votre réponse." }, { status: 400 });
+    }
+  }
   const score = complete ? scoreAssessmentAnswers(questions, merged) : null;
 
   const { data: updated, error } = await service

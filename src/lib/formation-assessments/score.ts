@@ -13,8 +13,8 @@ export function scoreAssessmentAnswers(
     if (raw == null || raw === "") continue;
 
     if (q.type === "scale" || q.type === "nps") {
-      const min = q.min ?? (q.type === "nps" ? 0 : 1);
-      const high = q.max ?? (q.type === "nps" ? 10 : 5);
+      const min = q.min ?? 1;
+      const high = q.max ?? 5;
       const value = Number(raw);
       if (!Number.isFinite(value)) continue;
       max += high - min;

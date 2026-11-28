@@ -84,10 +84,11 @@ export const EVAL_CHAUD_QUESTIONS: AssessmentQuestion[] = [
   // 6 Global
   {
     id: "c6_note",
-    prompt: "Note globale de la formation (0 = très insatisfait, 10 = très satisfait)",
+    prompt: "Note globale de la formation (1 = très insatisfait, 5 = très satisfait)",
     type: "nps",
-    min: 0,
-    max: 10,
+    min: 1,
+    max: 5,
+    labels: ["Très insatisfait", "Très satisfait"],
   },
   {
     id: "c6_reco",
@@ -96,13 +97,8 @@ export const EVAL_CHAUD_QUESTIONS: AssessmentQuestion[] = [
     options: ["Oui", "Non"],
   },
   {
-    id: "c6_apprecie",
-    prompt: "Ce que vous avez le plus apprécié :",
-    type: "text",
-  },
-  {
-    id: "c6_ameliorer",
-    prompt: "Ce que nous pourrions améliorer :",
+    id: "c6_commentaires",
+    prompt: "Commentaires :",
     type: "text",
   },
   {
@@ -169,10 +165,11 @@ export const EVAL_FROID_QUESTIONS: AssessmentQuestion[] = [
   },
   {
     id: "f5_note",
-    prompt: "Note globale de la formation aujourd'hui (0 = très insatisfait, 10 = très satisfait)",
+    prompt: "Note globale de la formation aujourd'hui (1 = très insatisfait, 5 = très satisfait)",
     type: "nps",
-    min: 0,
-    max: 10,
+    min: 1,
+    max: 5,
+    labels: ["Très insatisfait", "Très satisfait"],
   },
   {
     id: "f5_reco",
@@ -181,8 +178,8 @@ export const EVAL_FROID_QUESTIONS: AssessmentQuestion[] = [
     options: ["Oui", "Non"],
   },
   {
-    id: "f5_modifier",
-    prompt: "Avec le recul, que faudrait-il ajouter ou modifier dans la formation ?",
+    id: "f5_commentaires",
+    prompt: "Commentaires :",
     type: "text",
   },
   {
@@ -194,6 +191,71 @@ export const EVAL_FROID_QUESTIONS: AssessmentQuestion[] = [
   {
     id: "f6_sujet",
     prompt: "Si oui, sur quel sujet ?",
+    type: "text",
+  },
+];
+
+const OUI4 = ["Oui", "Plutôt oui", "Plutôt non", "Non"] as const;
+const NEGATIVE = ["Plutôt non", "Non"];
+
+/** Questionnaire de satisfaction envoyé au formateur en fin de session. */
+export const EVAL_FORMATEUR_QUESTIONS: AssessmentQuestion[] = [
+  {
+    id: "intro",
+    prompt:
+      "Votre retour sur cette session nous aide à améliorer l'organisation pédagogique. Quelques minutes suffisent.",
+    type: "section",
+    sectionLabel: "Satisfaction formateur",
+  },
+  {
+    id: "t1_positionnement",
+    prompt: "Le test de positionnement des salariés reflète-t-il le niveau en cours de formation ?",
+    type: "single",
+    options: [...OUI4],
+  },
+  {
+    id: "t1_positionnement_pourquoi",
+    prompt: "Pourquoi ?",
+    type: "text",
+    required: true,
+    showWhen: { questionId: "t1_positionnement", values: [...NEGATIVE] },
+  },
+  {
+    id: "t2_besoin",
+    prompt:
+      "L'analyse du besoin était-elle en adéquation avec les besoins exprimés pendant la formation ?",
+    type: "single",
+    options: [...OUI4],
+  },
+  {
+    id: "t2_besoin_pourquoi",
+    prompt: "Pourquoi ?",
+    type: "text",
+    required: true,
+    showWhen: { questionId: "t2_besoin", values: [...NEGATIVE] },
+  },
+  {
+    id: "t3_elements",
+    prompt: "Avez-vous reçu les éléments de la session au moins 7 jours avant ?",
+    type: "single",
+    options: ["Oui", "Non"],
+  },
+  {
+    id: "t4_backstage",
+    prompt: "Le Backstage formateur vous a-t-il permis de bien organiser votre session ?",
+    type: "single",
+    options: [...OUI4],
+  },
+  {
+    id: "t4_backstage_pourquoi",
+    prompt: "Pourquoi ?",
+    type: "text",
+    required: true,
+    showWhen: { questionId: "t4_backstage", values: [...NEGATIVE] },
+  },
+  {
+    id: "t5_commentaires",
+    prompt: "Commentaires :",
     type: "text",
   },
 ];

@@ -21,7 +21,7 @@ export type ControlNavItem = {
 };
 
 export type ControlNavSection = {
-  id: "business" | "cfa" | "particulier" | "formation" | "qualite";
+  id: "business" | "cfa" | "particulier" | "care" | "formation" | "qualite";
   label: string;
   dot: string;
   items: ControlNavItem[];
@@ -151,10 +151,41 @@ export const CONTROL_NAV_SECTIONS: ControlNavSection[] = [
       },
       {
         id: "clients-btoc",
-        label: "Client BtoC",
+        label: "Clients online",
         href: "/super/utilisateurs?role=btoc",
         match: (pathname, role) =>
-          pathname === "/super/utilisateurs" && role === "btoc",
+          pathname === "/super/utilisateurs" && (role === "btoc" || role === "online"),
+      },
+      {
+        id: "formations-online",
+        label: "Formations online",
+        href: "/super/formations-online",
+        match: under("/super/formations-online"),
+      },
+    ],
+  },
+  {
+    id: "care",
+    label: "Care",
+    dot: "#5EDCC3",
+    items: [
+      {
+        id: "care-formations",
+        label: "Formations",
+        href: "/super/care/formations",
+        match: under("/super/care/formations"),
+      },
+      {
+        id: "care-prospects",
+        label: "Prospects",
+        href: "/super/care/prospects",
+        match: under("/super/care/prospects"),
+      },
+      {
+        id: "care-coach",
+        label: "Coach",
+        href: "/super/care/coach",
+        match: under("/super/care/coach"),
       },
     ],
   },

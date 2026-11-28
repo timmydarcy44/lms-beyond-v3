@@ -11,6 +11,7 @@ import {
   type AssessmentKind,
 } from "@/lib/formation-assessments/types";
 import { assessmentUrl, ensureAssessmentAttempt } from "@/lib/formation-assessments/ensure";
+import { resolveTrainerEmail } from "@/lib/formation-assessments/synth";
 import { loadDossierDocContext } from "@/lib/formation-documents/context";
 
 export async function sendAssessmentInvites(
@@ -61,6 +62,43 @@ export async function sendAssessmentInvites(
       tags: { type: `formation-${params.kind}`, dossier_id: params.dossierId },
     });
     if (!result.success) errors.push(result.error || email);
+    else sent += 1;
+    return { sent, errors };
+  }
+
+  if (params.kind === "eval_formateur") {
+    const trainerEmail = await resolveTrainerEmail(service, params.dossierId);
+    if (!trainerEmail) return { sent: 0, errors: ["Formateur sans e-mail"] };
+    const { data: dossier } = await service
+      .from("formation_dossiers")
+      .select("trainer_user_id")
+      .eq("id", params.dossierId)
+      .maybeSingle();
+    const attempt = await ensureAssessmentAttempt(service, {
+      dossierId: params.dossierId,
+      kind: params.kind,
+      profileId: dossier?.trainer_user_id ? String(dossier.trainer_user_id) : null,
+    });
+    if (params.onlyPending && attempt.status === "completed") {
+      return { sent: 0, errors: [] };
+    }
+    const url = assessmentUrl(attempt.access_token);
+    const html = buildEdgeEmailShell({
+      title: "Votre avis sur la session",
+      preheader: `Questionnaire formateur — ${course}`,
+      bodyHtml: `${edgeEmailParagraph("Bonjour,")}${edgeEmailParagraph(
+        `La formation « ${escapeEdgeEmailHtml(course)} » vient de se terminer. Merci de répondre à ce court questionnaire de satisfaction.`,
+      )}`,
+      cta: { label: "Répondre au questionnaire", href: url },
+    });
+    const result = await sendEmail({
+      to: trainerEmail,
+      from: EDGE_COCKPIT_FROM,
+      subject: `Votre avis sur la session — ${course}`,
+      html,
+      tags: { type: "formation-eval-formateur", dossier_id: params.dossierId },
+    });
+    if (!result.success) errors.push(result.error || trainerEmail);
     else sent += 1;
     return { sent, errors };
   }

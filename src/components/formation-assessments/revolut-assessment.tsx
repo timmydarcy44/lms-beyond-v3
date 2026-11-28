@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import type { AssessmentQuestion } from "@/lib/formation-assessments/types";
+import {
+  isQuestionVisible,
+  type AssessmentQuestion,
+} from "@/lib/formation-assessments/types";
 
 /** Palette type Revolut — violet, overlays, contraste chaud. */
 const PURPLE = "#7B61FF";
@@ -16,6 +19,36 @@ const MUTED = "#B7A9D9";
 const CHIP = "rgba(255,255,255,0.06)";
 const CHIP_HOVER = "rgba(123, 97, 255, 0.22)";
 const WHITE = "#FFFFFF";
+
+const LIGHT = {
+  bg: "#FFFFFF",
+  text: "#111111",
+  muted: "#333333",
+  card: "#FFFFFF",
+  cardBorder: "#E4E4E4",
+  chip: "#F3F3F3",
+  chipHover: "#EBEBEB",
+  accent: "#111111",
+  accentSoft: "#F3F3F3",
+  accentText: "#FFFFFF",
+  glow: "transparent",
+  blob: false,
+} as const;
+
+const DARK = {
+  bg: BG,
+  text: TEXT,
+  muted: MUTED,
+  card: CARD,
+  cardBorder: CARD_BORDER,
+  chip: CHIP,
+  chipHover: CHIP_HOVER,
+  accent: PURPLE,
+  accentSoft: PURPLE_SOFT,
+  accentText: WHITE,
+  glow: PURPLE_GLOW,
+  blob: true,
+} as const;
 
 export type RevolutAssessmentProps = {
   title: string;
@@ -34,27 +67,38 @@ export type RevolutAssessmentProps = {
   ) => Promise<{ score_pct?: number | null } | void>;
 };
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({
+  children,
+  light = false,
+}: {
+  children: React.ReactNode;
+  light?: boolean;
+}) {
+  const theme = light ? LIGHT : DARK;
   return (
     <main
       className="relative min-h-screen overflow-hidden px-4 py-6"
-      style={{ background: BG, color: TEXT }}
+      style={{ background: theme.bg, color: theme.text }}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full blur-3xl"
-        style={{ background: PURPLE_GLOW, opacity: 0.55 }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-32 -right-20 h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "rgba(236, 72, 153, 0.28)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full blur-3xl"
-        style={{ background: "rgba(99, 102, 241, 0.18)" }}
-      />
+      {theme.blob ? (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full blur-3xl"
+            style={{ background: PURPLE_GLOW, opacity: 0.55 }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-32 -right-20 h-80 w-80 rounded-full blur-3xl"
+            style={{ background: "rgba(236, 72, 153, 0.28)" }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full blur-3xl"
+            style={{ background: "rgba(99, 102, 241, 0.18)" }}
+          />
+        </>
+      ) : null}
       <div className="relative mx-auto flex min-h-[88vh] max-w-md flex-col">{children}</div>
     </main>
   );
@@ -93,10 +137,14 @@ export function RevolutAssessment({
   initialScore = null,
   onPersist,
 }: RevolutAssessmentProps) {
+  const light = kind === "eval_formateur";
+  const theme = light ? LIGHT : DARK;
+
   const firstUnanswered = (() => {
     if (alreadyDone) return 0;
     const idx = questions.findIndex((q) => {
-      if (q.type === "section" || q.type === "text") return false;
+      if (!isQuestionVisible(q, initialAnswers)) return false;
+      if (q.type === "section" || (q.type === "text" && !q.required)) return false;
       const v = initialAnswers[q.id];
       return v == null || v === "";
     });
@@ -112,9 +160,16 @@ export function RevolutAssessment({
   const [done, setDone] = useState(alreadyDone);
   const [score, setScore] = useState<number | null>(initialScore);
 
-  const total = questions.length;
-  const question = questions[index];
-  const progress = total ? Math.round(((index + (done ? 1 : 0)) / total) * 100) : 0;
+  const visible = questions.filter((q) => isQuestionVisible(q, answers));
+  const visibleIndex = Math.max(
+    0,
+    visible.findIndex((q) => q.id === questions[index]?.id),
+  );
+  const total = visible.length;
+  const question = questions[index] && isQuestionVisible(questions[index], answers)
+    ? questions[index]
+    : visible[visibleIndex] ?? visible[0];
+  const progress = total ? Math.round(((visibleIndex + (done ? 1 : 0)) / total) * 100) : 0;
   const rawValue = question ? answers[question.id] : undefined;
   const value =
     question && (question.type === "nps" || question.type === "scale") && rawValue != null && rawValue !== ""
@@ -124,7 +179,7 @@ export function RevolutAssessment({
   const canNext = useMemo(() => {
     if (!question) return false;
     if (question.type === "section") return true;
-    if (question.type === "text") return true;
+    if (question.type === "text") return !question.required || Boolean(String(value ?? "").trim());
     if (question.type === "multi") return Array.isArray(value) && value.length > 0;
     if (question.type === "nps" || question.type === "scale") {
       return value != null && value !== "" && Number.isFinite(Number(value));
@@ -159,7 +214,9 @@ export function RevolutAssessment({
     if (!question) return;
     setBusy(true);
     setError(null);
-    const isLast = index >= total - 1;
+    const currentVisible = questions.filter((q) => isQuestionVisible(q, answersRef.current));
+    const currentVisibleIndex = currentVisible.findIndex((q) => q.id === question.id);
+    const isLast = currentVisibleIndex >= currentVisible.length - 1;
     const snapshot = { ...answersRef.current };
     try {
       if (onPersist && !preview) {
@@ -169,7 +226,9 @@ export function RevolutAssessment({
           void onPersist(payload, false).catch((e) => {
             console.warn("[assessment] persist step", e);
           });
-          setIndex((i) => i + 1);
+          const nextId = currentVisible[currentVisibleIndex + 1]?.id;
+          const nextFull = questions.findIndex((q) => q.id === nextId);
+          setIndex(nextFull >= 0 ? nextFull : index + 1);
           return;
         }
         const result = await onPersist(payload, true);
@@ -178,7 +237,9 @@ export function RevolutAssessment({
       } else if (isLast) {
         setDone(true);
       } else {
-        setIndex((i) => i + 1);
+        const nextId = currentVisible[currentVisibleIndex + 1]?.id;
+        const nextFull = questions.findIndex((q) => q.id === nextId);
+        setIndex(nextFull >= 0 ? nextFull : index + 1);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -190,28 +251,29 @@ export function RevolutAssessment({
   if (done) {
     const copy = thankYouCopy({ kind, firstName, courseTitle, title });
     return (
-      <Shell>
+      <Shell light={light}>
         <div className="flex flex-1 flex-col items-center justify-center px-2 py-12 text-center">
           <div
-            className="flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold shadow-[0_0_40px_rgba(123,97,255,0.55)]"
+            className="flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold"
             style={{
-              background: `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`,
-              color: WHITE,
+              background: light ? theme.accent : `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`,
+              color: theme.accentText,
+              boxShadow: light ? "none" : "0 0 40px rgba(123,97,255,0.55)",
             }}
           >
             ✓
           </div>
           <h1 className="mt-8 text-4xl font-semibold tracking-tight">{copy.headline}</h1>
-          <p className="mt-4 max-w-sm text-[15px] leading-relaxed" style={{ color: MUTED }}>
+          <p className="mt-4 max-w-sm text-[15px] leading-relaxed" style={{ color: theme.muted }}>
             {copy.body}
           </p>
-          {score != null && kind !== "positionnement" ? (
-            <p className="mt-5 text-sm font-medium" style={{ color: PURPLE }}>
+          {score != null && kind !== "positionnement" && kind !== "eval_formateur" ? (
+            <p className="mt-5 text-sm font-medium" style={{ color: theme.accent }}>
               Score indicatif · {score}&nbsp;%
             </p>
           ) : null}
           {preview ? (
-            <p className="mt-8 text-xs" style={{ color: MUTED }}>
+            <p className="mt-8 text-xs" style={{ color: theme.muted }}>
               Mode aperçu — aucune réponse n&apos;a été enregistrée.
             </p>
           ) : null}
@@ -221,18 +283,22 @@ export function RevolutAssessment({
   }
 
   return (
-    <Shell>
+    <Shell light={light}>
       {preview ? (
         <p
           className="mb-3 self-center rounded-full px-3 py-1 text-center text-[11px] font-semibold uppercase tracking-wide"
-          style={{ background: PURPLE_SOFT, color: "#D6CCFF", border: `1px solid ${CARD_BORDER}` }}
+          style={{
+            background: theme.accentSoft,
+            color: theme.muted,
+            border: `1px solid ${theme.cardBorder}`,
+          }}
         >
-          Aperçu apprenant
+          {light ? "Aperçu formateur" : "Aperçu apprenant"}
         </p>
       ) : null}
 
       <header className="mb-6">
-        <p className="text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: MUTED }}>
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em]" style={{ color: theme.muted }}>
           {(() => {
             const t = String(title || "").trim();
             const c = String(courseTitle || "").trim();
@@ -253,13 +319,13 @@ export function RevolutAssessment({
             className="h-full rounded-full transition-all duration-300"
             style={{
               width: `${Math.max(progress, 8)}%`,
-              background: `linear-gradient(90deg, ${PURPLE}, #C084FC)`,
-              boxShadow: `0 0 12px ${PURPLE_GLOW}`,
+              background: light ? theme.accent : `linear-gradient(90deg, ${PURPLE}, #C084FC)`,
+              boxShadow: light ? "none" : `0 0 12px ${PURPLE_GLOW}`,
             }}
           />
         </div>
-        <p className="mt-2 text-xs" style={{ color: MUTED }}>
-          {index + 1} / {total}
+        <p className="mt-2 text-xs" style={{ color: theme.muted }}>
+          {visibleIndex + 1} / {total}
         </p>
       </header>
 
@@ -267,34 +333,39 @@ export function RevolutAssessment({
         <section
           className="flex flex-1 flex-col rounded-[28px] p-6 backdrop-blur-xl"
           style={{
-            background: CARD,
-            border: `1px solid ${CARD_BORDER}`,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+            background: theme.card,
+            border: `1px solid ${theme.cardBorder}`,
+            boxShadow: light
+              ? "0 10px 40px rgba(0,0,0,0.06)"
+              : "0 20px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
           }}
         >
           {question.sectionLabel ? (
             <p
               className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em]"
-              style={{ color: "#C4B5FD" }}
+              style={{ color: light ? theme.muted : "#C4B5FD" }}
             >
               {question.sectionLabel}
             </p>
           ) : null}
-          <h1 className="text-[26px] font-semibold leading-[1.25] tracking-tight">
+          <h1
+            className="text-[26px] font-semibold leading-[1.25] tracking-tight"
+            style={{ color: theme.text }}
+          >
             {question.prompt}
           </h1>
 
           <div className="mt-8 flex flex-1 flex-col gap-3">
             {question.type === "section" ? (
-              <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
+              <p className="text-sm leading-relaxed" style={{ color: theme.muted }}>
                 Appuyez sur Continuer pour commencer.
               </p>
             ) : null}
 
             {question.type === "nps" || question.type === "scale"
               ? (() => {
-                  const min = question.min ?? (question.type === "nps" ? 0 : 1);
-                  const max = question.max ?? (question.type === "nps" ? 10 : 5);
+                  const min = question.min ?? 1;
+                  const max = question.max ?? 5;
                   const nums = Array.from({ length: max - min + 1 }, (_, i) => min + i);
                   /** Likert courte : lignes pleine largeur (évite les mauvais taps). NPS : grille aérée. */
                   const vertical = nums.length <= 6;
@@ -307,7 +378,7 @@ export function RevolutAssessment({
                       {(lowLabel || highLabel) && !vertical ? (
                         <div
                           className="flex justify-between gap-3 text-[11px] font-medium"
-                          style={{ color: MUTED }}
+                          style={{ color: theme.muted }}
                         >
                           <span>{lowLabel}</span>
                           <span className="text-right">{highLabel}</span>
@@ -340,14 +411,16 @@ export function RevolutAssessment({
                               }
                               style={{
                                 background: selected
-                                  ? `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`
-                                  : CHIP,
-                                color: selected ? WHITE : TEXT,
+                                  ? light
+                                    ? theme.accent
+                                    : `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`
+                                  : theme.chip,
+                                color: selected ? theme.accentText : theme.text,
                                 border: selected
-                                  ? `1px solid ${PURPLE}`
-                                  : "1px solid rgba(255,255,255,0.1)",
+                                  ? `1px solid ${theme.accent}`
+                                  : `1px solid ${theme.cardBorder}`,
                                 minHeight: vertical ? 60 : 58,
-                                boxShadow: selected
+                                boxShadow: selected && !light
                                   ? `0 8px 24px ${PURPLE_GLOW}`
                                   : "none",
                               }}
@@ -358,16 +431,18 @@ export function RevolutAssessment({
                                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
                                     style={{
                                       background: selected
-                                        ? "rgba(255,255,255,0.18)"
-                                        : PURPLE_SOFT,
-                                      color: selected ? WHITE : "#D6CCFF",
+                                        ? light
+                                          ? "rgba(255,255,255,0.18)"
+                                          : "rgba(255,255,255,0.18)"
+                                        : theme.accentSoft,
+                                      color: selected ? theme.accentText : theme.muted,
                                     }}
                                   >
                                     {n}
                                   </span>
                                   <span
                                     className="text-[15px] font-medium"
-                                    style={{ color: selected ? WHITE : MUTED }}
+                                    style={{ color: selected ? theme.accentText : theme.muted }}
                                   >
                                     {sideLabel || "\u00A0"}
                                   </span>
@@ -395,20 +470,22 @@ export function RevolutAssessment({
                       className="rounded-2xl px-4 py-4 text-left text-[15px] font-medium transition active:scale-[0.99]"
                       style={{
                         background: selected
-                          ? `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`
-                          : CHIP,
-                        color: selected ? WHITE : TEXT,
+                          ? light
+                            ? theme.accent
+                            : `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`
+                          : theme.chip,
+                        color: selected ? theme.accentText : theme.text,
                         border: selected
-                          ? `1px solid ${PURPLE}`
-                          : "1px solid rgba(255,255,255,0.1)",
+                          ? `1px solid ${theme.accent}`
+                          : `1px solid ${theme.cardBorder}`,
                         minHeight: 56,
-                        boxShadow: selected ? `0 8px 24px ${PURPLE_GLOW}` : "none",
+                        boxShadow: selected && !light ? `0 8px 24px ${PURPLE_GLOW}` : "none",
                       }}
                       onMouseEnter={(e) => {
-                        if (!selected) e.currentTarget.style.background = CHIP_HOVER;
+                        if (!selected) e.currentTarget.style.background = theme.chipHover;
                       }}
                       onMouseLeave={(e) => {
-                        if (!selected) e.currentTarget.style.background = CHIP;
+                        if (!selected) e.currentTarget.style.background = theme.chip;
                       }}
                     >
                       {opt}
@@ -428,14 +505,16 @@ export function RevolutAssessment({
                       className="rounded-2xl px-4 py-4 text-left text-[15px] font-medium transition active:scale-[0.99]"
                       style={{
                         background: selected
-                          ? `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`
-                          : CHIP,
-                        color: selected ? WHITE : TEXT,
+                          ? light
+                            ? theme.accent
+                            : `linear-gradient(145deg, ${PURPLE}, ${PURPLE_DEEP})`
+                          : theme.chip,
+                        color: selected ? theme.accentText : theme.text,
                         border: selected
-                          ? `1px solid ${PURPLE}`
-                          : "1px solid rgba(255,255,255,0.1)",
+                          ? `1px solid ${theme.accent}`
+                          : `1px solid ${theme.cardBorder}`,
                         minHeight: 56,
-                        boxShadow: selected ? `0 8px 24px ${PURPLE_GLOW}` : "none",
+                        boxShadow: selected && !light ? `0 8px 24px ${PURPLE_GLOW}` : "none",
                       }}
                     >
                       {opt}
@@ -450,18 +529,22 @@ export function RevolutAssessment({
                 onChange={(e) => setValue(e.target.value)}
                 rows={5}
                 placeholder="Votre réponse…"
-                className="w-full rounded-2xl px-4 py-3 text-[15px] outline-none placeholder:text-[#8B7DB8]"
+                className="w-full rounded-2xl px-4 py-3 text-[15px] outline-none"
                 style={{
-                  background: CHIP,
-                  border: `1px solid ${CARD_BORDER}`,
-                  color: TEXT,
+                  background: theme.chip,
+                  border: `1px solid ${theme.cardBorder}`,
+                  color: theme.text,
                   minHeight: 128,
                 }}
               />
             ) : null}
           </div>
 
-          {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+          {error ? (
+            <p className="mt-4 text-sm" style={{ color: light ? "#B42318" : "#FCA5A5" }}>
+              {error}
+            </p>
+          ) : null}
 
           <button
             type="button"
@@ -469,13 +552,13 @@ export function RevolutAssessment({
             onClick={() => void goNext()}
             className="mt-8 w-full rounded-full py-4 text-[15px] font-semibold disabled:opacity-35"
             style={{
-              background: `linear-gradient(135deg, ${PURPLE}, ${PURPLE_DEEP})`,
-              color: WHITE,
+              background: light ? theme.accent : `linear-gradient(135deg, ${PURPLE}, ${PURPLE_DEEP})`,
+              color: theme.accentText,
               minHeight: 54,
-              boxShadow: canNext ? `0 10px 28px ${PURPLE_GLOW}` : "none",
+              boxShadow: canNext && !light ? `0 10px 28px ${PURPLE_GLOW}` : "none",
             }}
           >
-            {index >= total - 1
+            {visibleIndex >= total - 1
               ? "Terminer"
               : question.type === "section"
                 ? "Continuer"

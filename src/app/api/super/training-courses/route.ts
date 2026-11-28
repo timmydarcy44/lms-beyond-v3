@@ -5,8 +5,8 @@ import { getServiceRoleClientOrFallback } from "@/lib/supabase/server";
 const SELECT_COLS_LEGACY =
   "id,slug,title,short_description,long_description,domain,cover_url,duration,level,formats,objectives,skills,program,program_structure,prerequisites,audience,intra_price,inter_price,max_intra_participants,badge_name,badge_class_id,meta_description,seo_tags,faq,why_choose,instructors,page_blocks,sessions,benefits,case_studies,deliverables,methodology,illustrations,trainer_id,trainer_name,trainer_headline,trainer_photo_url,is_active,created_at,updated_at";
 const SELECT_COLS_BASE = `${SELECT_COLS_LEGACY},recognition_type,recognition_detail,pedagogical_modality,pedagogical_modality_detail,financing_modalities,price_on_quote,results_method_override`;
-const SELECT_COLS = `${SELECT_COLS_BASE},lms_course_id`;
-const SELECT_COLS_NO_LMS = SELECT_COLS_BASE;
+const SELECT_COLS = `${SELECT_COLS_BASE},lms_course_id,catalog_surfaces`;
+const SELECT_COLS_NO_LMS = `${SELECT_COLS_BASE},catalog_surfaces`;
 
 export async function GET() {
   const isAdmin = await isSuperAdmin();
@@ -36,8 +36,17 @@ export async function GET() {
       .order("title", { ascending: true }));
   }
 
+  if (error && /catalog_surfaces/i.test(error.message)) {
+    selectCols = selectCols.replace(/,?catalog_surfaces/, "");
+    ({ data, error } = await supabase
+      .from("training_courses")
+      .select(selectCols)
+      .is("organization_id", null)
+      .order("title", { ascending: true }));
+  }
+
   if (error && /lms_course_id/i.test(error.message)) {
-    selectCols = selectCols.includes("recognition_type") ? SELECT_COLS_NO_LMS : SELECT_COLS_LEGACY;
+    selectCols = selectCols.includes("recognition_type") ? SELECT_COLS_NO_LMS.replace(/,?catalog_surfaces/, "") : SELECT_COLS_LEGACY;
     ({ data, error } = await supabase
       .from("training_courses")
       .select(selectCols)
@@ -87,35 +96,36 @@ export async function POST(request: NextRequest) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
       const slug = slugBase || `formation-${Date.now()}`;
+      const surfaces = Array.isArray(body.catalog_surfaces)
+        ? (body.catalog_surfaces as unknown[]).map((item) => String(item)).filter(Boolean)
+        : null;
+      const insertRow: Record<string, unknown> = {
+        slug,
+        title,
+        is_active: false,
+        max_intra_participants: 12,
+        instructors: [],
+        program_structure: [],
+        sessions: [],
+        updated_at: new Date().toISOString(),
+      };
+      if (surfaces?.length) insertRow.catalog_surfaces = surfaces;
 
       let { data, error } = await supabase
         .from("training_courses")
-        .insert({
-          slug,
-          title,
-          is_active: false,
-          max_intra_participants: 12,
-          instructors: [],
-          program_structure: [],
-          sessions: [],
-          updated_at: new Date().toISOString(),
-        })
+        .insert(insertRow)
         .select(SELECT_COLS)
         .single();
+
+      if (error && /catalog_surfaces/i.test(error.message)) {
+        const { catalog_surfaces: _surfaces, ...withoutSurfaces } = insertRow;
+        ({ data, error } = await supabase.from("training_courses").insert(withoutSurfaces).select(SELECT_COLS).single());
+      }
 
       if (error && /lms_course_id/i.test(error.message)) {
         ({ data, error } = await supabase
           .from("training_courses")
-          .insert({
-            slug,
-            title,
-            is_active: false,
-            max_intra_participants: 12,
-            instructors: [],
-            program_structure: [],
-            sessions: [],
-            updated_at: new Date().toISOString(),
-          })
+          .insert(insertRow)
           .select(SELECT_COLS_BASE)
           .single());
       }

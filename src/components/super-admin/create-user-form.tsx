@@ -58,7 +58,7 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
           toast.success("Utilisateur créé — un email de création de mot de passe a été envoyé");
         } else if (isBtoc) {
           toast.success(
-            "Client BtoC créé. Utilisez « Demander à créer un mot de passe » sur la fiche quand vous êtes prêt.",
+            "Client online créé. Utilisez « Demander à créer un mot de passe » sur la fiche quand vous êtes prêt.",
           );
         } else {
           toast.success("Utilisateur créé avec succès");
@@ -137,10 +137,10 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
 
       {isBtoc ? (
         <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-          <p className="font-semibold text-gray-900">Particulier B2C</p>
+          <p className="font-semibold text-gray-900">Client online</p>
           <p className="mt-1 text-gray-600">
-            Aucun email à la création. Le client apparaît tout de suite dans Client BtoC. Envoyez le
-            lien depuis la fiche avec « Demander à créer un mot de passe ».
+            Achat de formations à l’unité. Aucun email à la création. Le client apparaît tout de suite
+            dans Clients online. Envoyez le lien depuis la fiche avec « Demander à créer un mot de passe ».
           </p>
         </div>
       ) : (
@@ -183,7 +183,7 @@ export function CreateUserForm({ defaultRole }: CreateUserFormProps = {}) {
               Création...
             </>
           ) : isBtoc ? (
-            "Créer le client BtoC"
+            "Créer le client online"
           ) : (
             "Créer l'utilisateur"
           )}

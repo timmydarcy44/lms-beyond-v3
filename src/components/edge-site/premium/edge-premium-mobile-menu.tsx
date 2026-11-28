@@ -207,13 +207,10 @@ export function EdgePremiumMobileMenu({
         <div className="mx-auto flex max-w-lg flex-col gap-3">
           <Link
             href={loginHref}
-            className={cn(
-              "flex h-[52px] items-center justify-center rounded-2xl text-[15px] font-semibold transition",
-              "border border-white/12 text-white hover:bg-white/[0.06]",
-            )}
+            className="flex h-[52px] items-center justify-center rounded-full bg-white/10 text-[15px] font-medium text-white transition hover:bg-white/[0.18] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             onClick={onClose}
           >
-            Se connecter
+            Connexion
           </Link>
           <EdgePremiumButton
             href={discoverHref}

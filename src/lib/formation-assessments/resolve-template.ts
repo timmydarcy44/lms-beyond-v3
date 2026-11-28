@@ -2,13 +2,33 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   EVAL_CHAUD_QUESTIONS,
   EVAL_FROID_QUESTIONS,
+  EVAL_FORMATEUR_QUESTIONS,
 } from "@/lib/formation-assessments/byound-eval-questions";
 import type { AssessmentKind, AssessmentQuestion } from "@/lib/formation-assessments/types";
+
+function fallbackTitle(kind: string) {
+  if (kind === "eval_chaud") return "Évaluation à chaud";
+  if (kind === "eval_froid") return "Évaluation à froid";
+  if (kind === "eval_formateur") return "Satisfaction formateur";
+  return kind;
+}
 
 function fallbackQuestions(kind: string): AssessmentQuestion[] | null {
   if (kind === "eval_chaud") return EVAL_CHAUD_QUESTIONS;
   if (kind === "eval_froid") return EVAL_FROID_QUESTIONS;
+  if (kind === "eval_formateur") return EVAL_FORMATEUR_QUESTIONS;
   return null;
+}
+
+function pickQuestions(dbQ: AssessmentQuestion[], fallback: AssessmentQuestion[] | null) {
+  if (!fallback) return dbQ;
+  if (!dbQ.length) return fallback;
+  const staleScale = dbQ.some((q) => q.type === "nps" && (q.max ?? 10) > 5);
+  const staleCopy = dbQ.some((q) =>
+    /plus apprécié|pourrions améliorer|ajouter ou modifier/i.test(q.prompt),
+  );
+  if (staleScale || staleCopy) return fallback;
+  return dbQ.length >= 8 ? dbQ : fallback;
 }
 
 export type ResolvedAssessmentTemplate = {
@@ -72,7 +92,7 @@ export async function resolveAssessmentTemplate(
       return {
         id: `fallback-${kind}`,
         kind: kind as AssessmentKind,
-        title: kind === "eval_chaud" ? "Évaluation à chaud" : "Évaluation à froid",
+        title: fallbackTitle(kind),
         questions: fb,
         training_course_id: null,
         source: "global",
@@ -83,7 +103,7 @@ export async function resolveAssessmentTemplate(
       id: String(anyTpl!.id),
       kind: String(anyTpl!.kind) as AssessmentKind,
       title: String(anyTpl!.title),
-      questions: dbQ.length >= 8 || !fb ? dbQ : fb,
+      questions: pickQuestions(dbQ, fb),
       training_course_id: anyTpl!.training_course_id
         ? String(anyTpl!.training_course_id)
         : null,
@@ -93,8 +113,7 @@ export async function resolveAssessmentTemplate(
 
   const dbQuestions = (globalTpl.questions ?? []) as AssessmentQuestion[];
   const fallback = fallbackQuestions(kind);
-  const questions =
-    dbQuestions.length >= 8 || !fallback ? dbQuestions : fallback;
+  const questions = pickQuestions(dbQuestions, fallback);
 
   return {
     id: String(globalTpl.id),

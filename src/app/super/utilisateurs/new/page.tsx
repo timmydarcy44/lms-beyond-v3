@@ -24,7 +24,7 @@ export default async function CreateUserPage({
           {defaultRole === "admin"
             ? "Créer un Administrateur"
             : isBtoc
-              ? "Nouvelle inscription Client BtoC"
+              ? "Nouvelle inscription client online"
               : "Créer un Utilisateur"}
         </h1>
         <p className="text-sm text-gray-600">
@@ -37,7 +37,7 @@ export default async function CreateUserPage({
       <Card className="border-gray-200 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-gray-900">
-            {isBtoc ? "Nouveau client BtoC" : "Nouvel Utilisateur"}
+            {isBtoc ? "Nouveau client online" : "Nouvel Utilisateur"}
           </CardTitle>
           <CardDescription className="text-gray-600">
             Remplissez les informations ci-dessous pour créer un utilisateur

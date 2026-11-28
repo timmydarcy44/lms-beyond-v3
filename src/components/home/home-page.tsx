@@ -1,6 +1,5 @@
 import { Manrope } from "next/font/google";
 import { headers } from "next/headers";
-import { EDGE_HERO_IMAGE_URL } from "@/lib/edge-site/constants";
 import { HomeExperts } from "@/components/home/experts";
 import { HomeFigures } from "@/components/home/figures";
 import { HomeFinalCta } from "@/components/home/final-cta";
@@ -44,7 +43,7 @@ export async function HomePage() {
       <HomeHero
         schoolHref={content.hero.school}
         businessHref={content.hero.business}
-        imageSrc={EDGE_HERO_IMAGE_URL}
+        imageSrc="/images/hero-formation.jpg"
       />
       <HomeSocialProof />
       <HomeUniverses

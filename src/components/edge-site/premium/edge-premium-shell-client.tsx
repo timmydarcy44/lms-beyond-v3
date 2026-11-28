@@ -28,7 +28,7 @@ export function EdgePremiumShellClient({
         className={
           navChrome === "light"
             ? "min-h-screen bg-white font-sans antialiased"
-            : "min-h-screen bg-[#070b1f] font-sans antialiased"
+            : "min-h-screen bg-[#060D28] font-sans antialiased"
         }
       >
         <EdgePremiumFixedHeader
@@ -36,7 +36,17 @@ export function EdgePremiumShellClient({
           navChrome={navChrome}
           showTopBar={showTopBar}
         />
-        <main className={overlayNav ? undefined : "pt-16 lg:pt-[100px]"}>{children}</main>
+        <main
+          className={
+            overlayNav
+              ? undefined
+              : showTopBar
+                ? "pt-16 lg:pt-[100px]"
+                : "pt-[76px]"
+          }
+        >
+          {children}
+        </main>
         {showFooter ? <EdgePremiumFooter /> : null}
       </div>
     </EdgePremiumConfigProvider>

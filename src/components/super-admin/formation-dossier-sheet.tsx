@@ -1834,6 +1834,7 @@ export function FormationDossierSheet({
                       ["eval_chaud", "Envoyer éval. à chaud"],
                       ["eval_froid", "Envoyer éval. à froid"],
                       ["questionnaire_entreprise", "Questionnaire entreprise"],
+                      ["eval_formateur", "Satisfaction formateur"],
                     ] as const
                   ).map(([kind, label]) => (
                     <Button

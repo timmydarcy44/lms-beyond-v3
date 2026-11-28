@@ -1,3 +1,5 @@
+import { isCareAudience } from "@/lib/control/care-audience";
+
 /** Libellés affichés pour les rôles `profiles` / `org_memberships`. */
 export const CRM_ROLE_LABELS: Record<string, string> = {
   learner: "Apprenant",
@@ -8,15 +10,17 @@ export const CRM_ROLE_LABELS: Record<string, string> = {
   admin: "Administrateur",
   tutor: "Tuteur",
   super_admin: "Super administrateur",
-  btoc: "B2C",
+  btoc: "Online",
   entreprise: "Entreprise",
   admin_hr: "Admin RH",
   manager: "Manager",
   client: "Client",
   ecole: "École",
   mentor: "Mentor",
-  PARTICULIER: "Particulier B2C",
-  particulier: "Particulier",
+  PARTICULIER: "Client online",
+  particulier: "Client online",
+  care_patient: "Patient Care",
+  patient: "Patient Care",
   demo: "Démo",
   instructor_assistant: "Assistant formateur",
   expert: "Expert",
@@ -92,7 +96,7 @@ export type CrmUserListItem = {
   testCount: number;
 };
 
-/** Rôles « apprenant / particulier » acceptés en Client BtoC (exclut tuteur, club, etc.). */
+/** Rôles « apprenant / particulier » acceptés en client online (exclut tuteur, club, Care…). */
 const CRM_BTOC_LEARNER_ROLES = new Set([
   "learner",
   "student",
@@ -103,10 +107,25 @@ const CRM_BTOC_LEARNER_ROLES = new Set([
 ]);
 
 /**
- * Client BtoC = particulier / apprenant uniquement.
- * `role_type=particulier` seul ne suffit pas (beaucoup de comptes legacy mal tagués : tuteur, club…).
+ * Client online = achat de formations à l’unité.
+ * Pas les patients / coachs Care, même si `role_type` est (à tort) `particulier`.
  */
-export function isCrmBtocUser(user: { role?: string | null; roleType?: string | null }) {
+export function isCrmBtocUser(user: {
+  id?: string | null;
+  email?: string | null;
+  fullName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: string | null;
+  roleType?: string | null;
+}) {
+  const name = [user.firstName, user.lastName, user.fullName]
+    .map((part) => String(part ?? "").trim())
+    .filter((part) => part && part !== "—")
+    .join(" ");
+  if (isCareAudience({ id: user.id, email: user.email, name, role: user.role, roleType: user.roleType })) {
+    return false;
+  }
   const role = String(user.role ?? "").trim();
   const roleType = String(user.roleType ?? "").trim().toLowerCase();
   if (!CRM_BTOC_LEARNER_ROLES.has(role)) return false;

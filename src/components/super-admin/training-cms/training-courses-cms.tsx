@@ -42,6 +42,7 @@ import {
   type TrainingAiGeneratedContent,
 } from "@/components/super-admin/training-cms/training-ai-generate-modal";
 import { edgeMarketingHref } from "@/lib/edge-site/edge-marketing-path";
+import { isCareCatalogCourse } from "@/lib/training-courses/care-catalog";
 import {
   assessQualiopiFicheCompliance,
   QUALIOPI_FICHE_STATUS_DOT,
@@ -211,12 +212,13 @@ function stateToPayload(state: CmsState) {
   };
 }
 
-type Catalog = "business" | "online";
+type Catalog = "business" | "online" | "care";
 
 export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const online = catalog === "online";
+  const care = catalog === "care";
   const [courses, setCourses] = useState<TrainingCourseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -281,13 +283,18 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
     }
   }, [searchParams, courses]);
 
+  const catalogCourses = useMemo(() => {
+    if (care) return courses.filter(isCareCatalogCourse);
+    return courses;
+  }, [courses, care]);
+
   const domains = useMemo(() => {
-    const set = new Set(courses.map((c) => c.domain).filter(Boolean) as string[]);
+    const set = new Set(catalogCourses.map((c) => c.domain).filter(Boolean) as string[]);
     return ["all", ...Array.from(set).sort()];
-  }, [courses]);
+  }, [catalogCourses]);
 
   const filtered = useMemo(() => {
-    return courses.filter((c) => {
+    return catalogCourses.filter((c) => {
       if (domainFilter !== "all" && c.domain !== domainFilter) return false;
       if (!search.trim()) return true;
       const q = search.toLowerCase();
@@ -297,7 +304,7 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
         (c.domain ?? "").toLowerCase().includes(q)
       );
     });
-  }, [courses, domainFilter, search]);
+  }, [catalogCourses, domainFilter, search]);
 
   const selected = courses.find((c) => c.id === selectedId) ?? null;
 
@@ -455,7 +462,11 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
       const res = await fetch("/api/super/training-courses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create-blank", title: title.trim() }),
+        body: JSON.stringify({
+          action: "create-blank",
+          title: title.trim(),
+          ...(care ? { catalog_surfaces: ["care"] } : {}),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur");
@@ -711,14 +722,16 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
           <div className="flex items-center gap-2 text-[#635BFF]">
             <BookOpen className="h-5 w-5" />
             <span className="text-xs font-semibold uppercase tracking-wider">
-              {online ? "CMS Online" : "CMS Formations Byound"}
+              {care ? "CMS Care" : online ? "CMS Online" : "CMS Formations Byound"}
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">
-            {online ? "Formations Online" : "Gestion des formations"}
+            {care ? "Formations Care" : online ? "Formations Online" : "Gestion des formations"}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            {online
+            {care
+              ? "Catalogue Byound Care : formations destinées aux patients, familles et coachs."
+              : online
               ? "Reprenez toutes les formations accessibles aux particuliers : programme, durée, prix et prochaines dates."
               : "Créez des fiches formation professionnelles — structure publique, sans contenu LMS."}
           </p>
@@ -1039,6 +1052,14 @@ export function TrainingCoursesCms({ catalog = "business" }: { catalog?: Catalog
                         className="underline hover:text-gray-800"
                       >
                         Aperçu éval. à froid
+                      </a>
+                      <a
+                        href="/a/preview?kind=eval_formateur"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline hover:text-gray-800"
+                      >
+                        Aperçu satisfaction formateur
                       </a>
                     </p>
                   </div>

@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCareAudience } from "@/lib/control/care-audience";
 import { buildCoffreSnapshot, type CoffreSnapshot } from "@/lib/formation-documents/coffre";
 import { looksLikeTestAccount } from "@/lib/control/test-account";
 
@@ -58,10 +59,15 @@ const BTOC_LEARNER_ROLES = new Set([
 ]);
 
 /**
- * Client BtoC = apprenant / particulier uniquement.
- * Ignore tuteur, club, praticien… même si `role_type` est (à tort) `particulier`.
+ * Client online = apprenant / particulier qui achète des formations à l’unité.
+ * Ignore tuteur, club, Care… même si `role_type` est (à tort) `particulier`.
  */
-export function isBtocRole(role: string | null | undefined, roleType?: string | null) {
+export function isBtocRole(
+  role: string | null | undefined,
+  roleType?: string | null,
+  person?: { id?: string | null; email?: string | null; name?: string | null },
+) {
+  if (isCareAudience({ role, roleType, ...person })) return false;
   const r = String(role ?? "").trim();
   const rt = String(roleType ?? "").trim().toLowerCase();
   if (!BTOC_LEARNER_ROLES.has(r)) return false;

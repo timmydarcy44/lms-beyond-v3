@@ -1,89 +1,89 @@
 import Image from "next/image";
-import { Award } from "lucide-react";
-import { ButtonPill } from "@/components/home/ui";
+import Link from "next/link";
 
 export function HomeHero({
   schoolHref,
   businessHref,
-  imageSrc,
+  imageSrc = "/images/hero-formation.jpg",
 }: {
   schoolHref: string;
   businessHref: string;
-  imageSrc: string;
+  imageSrc?: string;
 }) {
-
   return (
-    <section className="relative min-h-[100svh] overflow-hidden bg-[#070C1C] text-white lg:min-h-[720px]">
-      <div className="absolute inset-0">
+    <section className="relative bg-[#060D28] text-white">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[50vh]"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(80,120,255,0.18), transparent 70%)",
+        }}
+        aria-hidden
+      />
+
+      <div className="relative mx-4 mb-4 min-h-[640px] overflow-hidden rounded-[24px] shadow-[0_0_0_1px_rgba(255,255,255,0.08)] md:min-h-[780px] md:rounded-[36px]">
         <Image
           src={imageSrc}
-          alt="Étudiante Byound souriante, carnet Byound à la main"
+          alt="Une formatrice anime une séance avec un petit groupe autour d'une table"
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[center_22%] lg:object-[30%_30%]"
+          className="object-cover object-[70%_center] md:object-[center_30%]"
         />
         <div
-          className="pointer-events-none absolute inset-0 hidden lg:block"
+          className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(90deg, #070C1C 0%, #070C1CF0 26%, #070C1CA6 44%, #070C1C1A 64%, transparent 78%)",
+              "linear-gradient(0deg, rgba(6,13,40,0.92) 0%, rgba(10,24,72,0.5) 38%, rgba(10,24,72,0.05) 65%)",
           }}
           aria-hidden
         />
-        <div
-          className="pointer-events-none absolute inset-0 lg:hidden"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(7,12,28,0.28) 0%, rgba(7,12,28,0.04) 18%, rgba(7,12,28,0.08) 40%, rgba(7,12,28,0.78) 68%, #070C1C 100%)",
-          }}
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-40 lg:block"
-          style={{ background: "linear-gradient(0deg, #070C1C, transparent)" }}
-          aria-hidden
-        />
-      </div>
 
-      <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1240px] items-end px-6 pb-8 pt-24 lg:min-h-[720px] lg:items-center lg:py-28">
-        <div className="flex max-w-[860px] flex-col gap-6 lg:gap-7">
-        <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-bold">
-          <span className="text-[#6BE39B]" aria-hidden>●</span>
-          École et entreprises · Caen
-        </p>
-        <h1 className="max-w-[860px] text-[44px] font-extrabold leading-[1.02] tracking-[-2.2px] sm:text-[clamp(48px,5.6vw,82px)] sm:tracking-[-2.6px]">
-          <span className="block whitespace-nowrap sm:whitespace-normal lg:whitespace-nowrap">Vos compétences.</span>
-          <span className="block text-[#A99BFF] lg:whitespace-nowrap">Votre prochaine étape.</span>
-        </h1>
-        <p className="max-w-[480px] text-[19px] leading-relaxed text-[#DADDE4]">
-          Une école pour construire votre avenir. Des solutions pour développer vos équipes.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <ButtonPill href={schoolHref} variant="white" className="w-full sm:w-auto">
-            Découvrir l&apos;école →
-          </ButtonPill>
-          <ButtonPill href={businessHref} variant="outline-light" className="w-full sm:w-auto">
-            Solutions entreprises
-          </ButtonPill>
-        </div>
-        </div>
-      </div>
+        <div className="relative z-10 flex min-h-[640px] flex-col justify-end p-6 md:min-h-[780px] md:p-14">
+          <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:flex-wrap md:items-end">
+            <div className="max-w-[520px]">
+              <h1 className="home-hero-in text-[44px] font-bold leading-[0.95] tracking-[-0.05em] text-white md:text-[clamp(48px,6.4vw,96px)]">
+                Vos compétences.
+                <br />
+                Votre prochaine étape.
+              </h1>
+              <p className="home-hero-in home-hero-in-delay-1 mt-5 max-w-[520px] text-[19px] leading-[1.5] text-white/[0.82]">
+                Une école pour construire votre avenir. Des solutions pour faire grandir vos équipes.
+              </p>
+            </div>
 
-      <div className="pointer-events-none absolute right-4 top-[108px] hidden w-[210px] rounded-[22px] bg-white p-4 text-[#07080B] shadow-[0_24px_60px_rgba(0,0,0,0.35)] min-[1180px]:block xl:right-10 xl:w-[230px]" aria-hidden>
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2A2312]">
-          <Award className="text-[#F2CF6B]" strokeWidth={2} />
-        </div>
-        <p className="mt-4 text-[11px] font-bold text-[#6B6F7A]">Open Badge obtenu</p>
-        <p className="text-[15px] font-extrabold">Négociation</p>
-      </div>
-      <div className="pointer-events-none absolute bottom-[88px] right-8 hidden w-[230px] rounded-[24px] border border-white/12 bg-[rgba(12,13,18,0.9)] p-4 text-white shadow-[0_24px_60px_rgba(0,0,0,0.35)] min-[1180px]:block xl:right-16" aria-hidden>
-        <p className="text-[11px] font-bold text-[#B5BAC6]">Compétences validées · CCP1</p>
-        <p className="mt-2 text-[44px] font-extrabold leading-none">4 / 6</p>
-        <div className="mt-4 flex gap-1">
-          {Array.from({ length: 6 }, (_, index) => (
-            <span key={index} className={index < 4 ? "h-1.5 flex-1 rounded-full bg-[#8B7BFF]" : "h-1.5 flex-1 rounded-full bg-[#262A36]"} />
-          ))}
+            <div className="home-hero-in home-hero-in-delay-2 flex w-full flex-col items-start gap-4 md:w-auto md:items-end">
+              <div className="flex items-center gap-3 rounded-[20px] border border-white/[0.28] bg-white/16 px-[18px] py-3.5 backdrop-blur-[24px]">
+                <span
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-[#C9CDD6]"
+                  style={{
+                    background: "#0A0A0C",
+                    boxShadow: "inset 0 0 0 3px #0A0A0C, inset 0 0 0 4px #7C5CFF",
+                  }}
+                  aria-hidden
+                />
+                <span>
+                  <span className="block text-[12px] text-white/85">Open Badge obtenu</span>
+                  <span className="block text-[15px] font-bold text-white">Négociation</span>
+                </span>
+              </div>
+
+              <div className="flex w-full flex-col gap-3 sm:w-auto md:items-end">
+                <Link
+                  href={schoolHref}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-white px-[26px] py-4 text-[16px] font-semibold text-[#060D28] transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:w-auto"
+                >
+                  Découvrir l&apos;école
+                </Link>
+                <Link
+                  href={businessHref}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-white/16 px-[26px] py-4 text-[16px] font-semibold text-white backdrop-blur-md transition hover:bg-white/24 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:w-auto"
+                >
+                  Entreprises
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

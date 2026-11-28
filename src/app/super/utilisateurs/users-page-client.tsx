@@ -14,7 +14,7 @@ const COLORS = ["#6E5BFF", "#8DB8FF", "#5EDCC3", "#F2CF6B", "#FF8A9B"];
 const GROUPS = [
   { id: "all", label: "Tous", roles: null },
   { id: "learner", label: "Apprenants", roles: ["learner", "student", "apprenant"] },
-  { id: "btoc", label: "Client BtoC", roles: ["btoc", "particulier", "PARTICULIER"] },
+  { id: "btoc", label: "Clients online", roles: ["btoc", "particulier", "PARTICULIER"] },
   { id: "instructor", label: "Formateurs", roles: ["instructor", "formateur"] },
   { id: "tutor", label: "Tuteurs", roles: ["tutor"] },
   { id: "expert", label: "Experts", roles: ["expert"] },
@@ -79,8 +79,8 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: { initial
   }, [pool, group, query]);
   const pageCount = Math.max(1, Math.ceil(rows.length / 40));
   const visible = rows.slice((page - 1) * 40, page * 40);
-  const title = mode === "particuliers" ? "Clients BtoC" : mode === "apprenants" ? "Apprenants" : mode === "tuteurs" ? "Tuteurs" : "Contacts";
-  const noun = mode === "particuliers" ? "client BtoC" : mode === "apprenants" ? "apprenant" : mode === "tuteurs" ? "tuteur" : "contact";
+  const title = mode === "particuliers" ? "Clients online" : mode === "apprenants" ? "Apprenants" : mode === "tuteurs" ? "Tuteurs" : "Contacts";
+  const noun = mode === "particuliers" ? "client online" : mode === "apprenants" ? "apprenant" : mode === "tuteurs" ? "tuteur" : "contact";
   const counts = Object.fromEntries(
     GROUPS.map((item) => [
       item.id,
@@ -92,7 +92,11 @@ export function UsersPageClient({ initialUsers, initialRole = "all" }: { initial
     <div className="mx-auto max-w-[1240px] space-y-5 px-6 py-8">
       <PageHeader
         title={title}
-        subtitle={`${rows.length} ${noun}${rows.length > 1 ? "s" : ""}`}
+        subtitle={
+          mode === "particuliers"
+            ? `${rows.length} ${noun}${rows.length > 1 ? "s" : ""} · achats de formations à l’unité`
+            : `${rows.length} ${noun}${rows.length > 1 ? "s" : ""}`
+        }
         actions={
           <a
             href={mode === "particuliers" ? "/super/utilisateurs/new?audience=btoc" : "/super/utilisateurs/new"}

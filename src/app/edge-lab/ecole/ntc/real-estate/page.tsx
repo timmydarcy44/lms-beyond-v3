@@ -11,7 +11,6 @@ import { EdgePremiumShell } from "@/components/edge-site/premium/edge-premium-sh
 import { getByoundProgramFacts } from "@/lib/byound-school/program-facts-server";
 import { getProgramContributors } from "@/lib/expert/program-contributors";
 import { QUALIOPI_ACCESSIBILITY_CONTACT_LINE } from "@/lib/qualiopi/public-copy";
-import { QUALIOPI_ACCESSIBILITY_CONTACT_LINE } from "@/lib/qualiopi/public-copy";
 
 export const metadata: Metadata = {
   title: "Real Estate — Byound School",

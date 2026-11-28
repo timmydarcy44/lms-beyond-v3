@@ -5,14 +5,13 @@ import { resolveAssessmentTemplate } from "@/lib/formation-assessments/resolve-t
 
 /** Aperçu questionnaire (staff) — sans tentative persistée. */
 export async function GET(req: NextRequest) {
-  if (!(await isSuperAdmin())) {
+  const url = new URL(req.url);
+  const kind = String(url.searchParams.get("kind") || "positionnement").trim();
+  if (kind !== "eval_formateur" && !(await isSuperAdmin())) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
   const service = getServiceRoleClient();
   if (!service) return NextResponse.json({ error: "Service indisponible" }, { status: 503 });
-
-  const url = new URL(req.url);
-  const kind = String(url.searchParams.get("kind") || "positionnement").trim();
   const courseId = String(url.searchParams.get("courseId") || "").trim() || null;
 
   const template = await resolveAssessmentTemplate(service, {

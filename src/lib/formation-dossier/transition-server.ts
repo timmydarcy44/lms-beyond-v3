@@ -331,6 +331,11 @@ export async function transitionFormationDossier(
           kind: "eval_chaud",
           onlyPending: true,
         });
+        await sendAssessmentInvites(service, {
+          dossierId: params.dossierId,
+          kind: "eval_formateur",
+          onlyPending: true,
+        });
       }
     }
   } catch (error) {

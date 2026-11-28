@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, CircleStop, Loader2, Mic, Sparkles, Upload, Video } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -44,15 +44,19 @@ export function CfaApplicationFlow() {
   const memOnly = params.get("track") === "mem";
   const remOnly = params.get("track") === "rem";
   const rdcOnly = params.get("track") === "rdc";
-  const specializationOptions = ntcOnly
-    ? CFA_SPECIALIZATIONS.filter((item) => NTC_SPECIALIZATIONS.has(item.value))
-    : memOnly
-      ? CFA_SPECIALIZATIONS.filter((item) => MEM_SPECIALIZATIONS.has(item.value))
-      : remOnly
-        ? CFA_SPECIALIZATIONS.filter((item) => REM_SPECIALIZATIONS.has(item.value))
-        : rdcOnly
-          ? CFA_SPECIALIZATIONS.filter((item) => RDC_SPECIALIZATIONS.has(item.value))
-          : CFA_SPECIALIZATIONS;
+  const specializationOptions = useMemo(
+    () =>
+      ntcOnly
+        ? CFA_SPECIALIZATIONS.filter((item) => NTC_SPECIALIZATIONS.has(item.value))
+        : memOnly
+          ? CFA_SPECIALIZATIONS.filter((item) => MEM_SPECIALIZATIONS.has(item.value))
+          : remOnly
+            ? CFA_SPECIALIZATIONS.filter((item) => REM_SPECIALIZATIONS.has(item.value))
+            : rdcOnly
+              ? CFA_SPECIALIZATIONS.filter((item) => RDC_SPECIALIZATIONS.has(item.value))
+              : [...CFA_SPECIALIZATIONS],
+    [ntcOnly, memOnly, remOnly, rdcOnly],
+  );
   const specializationGroups = [...new Set(specializationOptions.map((item) => item.group))];
   const [app, setApp] = useState<CfaApplication | null>(null);
   const [token, setToken] = useState("");
@@ -73,8 +77,6 @@ export function CfaApplicationFlow() {
       : "",
   });
   const [connected, setConnected] = useState(false);
-  const [availableTests, setAvailableTests] = useState<Array<"disc" | "idmc" | "soft">>([]);
-  const [shareTests, setShareTests] = useState({ disc: false, idmc: false, soft: false });
   const [shareCompanies, setShareCompanies] = useState(false);
 
   useEffect(() => {
@@ -95,7 +97,6 @@ export function CfaApplicationFlow() {
               phone: data.phone || current.phone,
             }));
             if (data.cvName) setCvName(data.cvName);
-            setAvailableTests(Array.isArray(data.tests) ? data.tests : []);
           }
         } catch {
           /* la candidature reste possible sans compte */
@@ -120,6 +121,15 @@ export function CfaApplicationFlow() {
       }
     })();
   }, [resume, params]);
+
+  useEffect(() => {
+    if (!requested) return;
+    setProfile((current) => {
+      if (current.specialization) return current;
+      const allowed = specializationOptions.some((item) => item.value === requested);
+      return allowed ? { ...current, specialization: requested } : current;
+    });
+  }, [requested, specializationOptions]);
 
   useEffect(() => {
     const sessionId = params.get("session_id");
@@ -217,9 +227,9 @@ export function CfaApplicationFlow() {
       }}
     >
       <div className="mx-auto max-w-5xl text-[#F2F4FA]">
-        <p className="text-sm font-semibold text-[#A99BFF]">Byound School · Admission</p>
+        <p className="text-sm font-semibold text-[#A99BFF]">Byound · Admission</p>
         <h1 className="mt-3 text-[clamp(2.2rem,5vw,3.25rem)] font-extrabold leading-[1.05] tracking-[-0.04em]">
-          {app ? "Ta candidature Byound School" : "Crée ton profil Byound."}
+          {app ? "Ta candidature Byound" : "Crée ton profil Byound."}
         </h1>
         <p className="mt-3 text-[#9AA3BD]">Ton potentiel d’abord. L’entreprise et le financement viennent après l’admission.</p>
         <AdmissionFrieze current={friezeFromStatus(app?.status ?? "profile")} />
@@ -228,25 +238,30 @@ export function CfaApplicationFlow() {
           {!app ? (
             <form onSubmit={(event) => {
               event.preventDefault();
-              if (!profile.specialization) {
+              const form = new FormData(event.currentTarget);
+              const firstName = String(form.get("firstName") ?? "").trim() || profile.firstName.trim();
+              const lastName = String(form.get("lastName") ?? "").trim() || profile.lastName.trim();
+              const email = String(form.get("email") ?? "").trim() || profile.email.trim();
+              const phone = String(form.get("phone") ?? "").trim() || profile.phone.trim();
+              const birthDate = String(form.get("birthDate") ?? "").trim() || profile.birthDate.trim();
+              const educationLevel = String(form.get("educationLevel") ?? "").trim() || profile.educationLevel.trim();
+              const specialization = String(form.get("specialization") ?? "").trim() || profile.specialization.trim();
+              if (!specialization) {
                 setError("Choisis une spécialisation.");
                 return;
               }
-              const born = new Date(profile.birthDate);
-              const today = new Date();
-              let age = today.getFullYear() - born.getFullYear();
-              if (today.getMonth() < born.getMonth() || (today.getMonth() === born.getMonth() && today.getDate() < born.getDate())) age -= 1;
-              void send("POST", { ...profile, age, shareTests });
+              void send("POST", { firstName, lastName, email, phone, birthDate, educationLevel, specialization });
             }}>
               <Title overline="Profil · environ 2 minutes">Dis-nous qui tu es.</Title>
               <p className="mt-3 text-sm text-[#9AA3BD]">{connected ? "Ton compte Byound a rempli le nom, l’e-mail et le téléphone. Tu peux les corriger." : "Aucune entreprise n’est demandée à cette étape."}</p>
+              <input type="hidden" name="specialization" value={profile.specialization} />
               <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                <Input label="Prénom" value={profile.firstName} onChange={(value) => setProfile({ ...profile, firstName: value })} />
-                <Input label="Nom" value={profile.lastName} onChange={(value) => setProfile({ ...profile, lastName: value })} />
-                <Input label="Email" type="email" value={profile.email} onChange={(value) => setProfile({ ...profile, email: value })} />
-                <Input label="Téléphone (optionnel)" type="tel" value={profile.phone} onChange={(value) => setProfile({ ...profile, phone: value })} required={false} />
-                <Input label="Date de naissance" type="date" value={profile.birthDate} onChange={(value) => setProfile({ ...profile, birthDate: value })} />
-                <label className="text-sm text-white/80">Niveau d’études<select className={cn(control, "mt-2")} value={profile.educationLevel} onChange={(event) => setProfile({ ...profile, educationLevel: event.target.value })} required><option value="" className="text-black">Sélectionner</option>{["Bac en cours","Bac obtenu","Bac+1","Bac+2","Bac+3 ou plus"].map((level) => <option key={level} className="text-black">{level}</option>)}</select></label>
+                <Input name="firstName" label="Prénom" value={profile.firstName} onChange={(value) => setProfile({ ...profile, firstName: value })} />
+                <Input name="lastName" label="Nom" value={profile.lastName} onChange={(value) => setProfile({ ...profile, lastName: value })} />
+                <Input name="email" label="Email" type="email" value={profile.email} onChange={(value) => setProfile({ ...profile, email: value })} />
+                <Input name="phone" label="Téléphone (optionnel)" type="tel" value={profile.phone} onChange={(value) => setProfile({ ...profile, phone: value })} required={false} />
+                <Input name="birthDate" label="Date de naissance" type="date" value={profile.birthDate} onChange={(value) => setProfile({ ...profile, birthDate: value })} />
+                <label className="text-sm text-white/80">Niveau d’études<select name="educationLevel" className={cn(control, "mt-2")} value={profile.educationLevel} onChange={(event) => setProfile({ ...profile, educationLevel: event.target.value })} required><option value="" className="text-black">Sélectionner</option>{["Bac en cours","Bac obtenu","Bac+1","Bac+2","Bac+3 ou plus"].map((level) => <option key={level} value={level} className="text-black">{level}</option>)}</select></label>
               </div>
               <p className="mb-3 mt-6 text-sm text-white/80">Spécialisation visée</p>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -262,28 +277,18 @@ export function CfaApplicationFlow() {
                 ))}
               </div>
               {connected && cvName ? <p className="mt-4 text-sm text-white/60">CV du compte : {cvName}</p> : null}
-              {availableTests.length ? (
-                <fieldset className="mt-6 rounded-2xl border border-white/10 p-4">
-                  <legend className="px-1 text-sm font-semibold">Partager mes tests avec le CFA</legend>
-                  <p className="mt-2 text-sm text-white/45">Facultatif. Chaque test reste privé tant que vous ne l’activez pas.</p>
-                  <div className="mt-4 space-y-3">
-                    {availableTests.map((test) => (
-                      <label key={test} className="flex items-center justify-between gap-3 text-sm">
-                        <span>{test === "disc" ? "DISC" : test === "idmc" ? "IDMC" : "Soft skills"}</span>
-                        <input type="checkbox" checked={shareTests[test]} onChange={(event) => setShareTests((current) => ({ ...current, [test]: event.target.checked }))} className="h-4 w-4" />
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ) : null}
               <Submit busy={busy} error={error}>Commencer le challenge</Submit>
             </form>
+          ) : null}
+
+          {app?.status === "profile" ? (
+            <CandidateDossier app={app} busy={busy} error={error} upload={upload} />
           ) : null}
 
           {app && !["profile", "challenge", "brochure", "dossier"].includes(app.status) ? (
             <label className="mb-8 flex items-start gap-3 rounded-2xl border border-white/10 p-4 text-sm text-white/80">
               <input type="checkbox" checked={shareCompanies} onChange={(event) => { const next = event.target.checked; setShareCompanies(next); void send("PATCH", { token, action: "share_companies", shareWithCompanies: next }); }} className="mt-1 h-4 w-4" />
-              <span>J'accepte que mon profil soit transmis aux entreprises partenaires de Byound School.</span>
+              <span>J'accepte que mon profil soit transmis aux entreprises partenaires de Byound.</span>
             </label>
           ) : null}
           {app && ["interview","review"].includes(app.status) ? <Waiting review={app.status === "review"} /> : null}
@@ -308,8 +313,96 @@ function Title({ overline, children }: { overline: string; children: React.React
   return <><p className="text-xs font-semibold text-[#A99BFF]">{overline}</p><h2 className="mt-3 text-3xl font-semibold tracking-[-.04em]">{children}</h2></>;
 }
 
-function Input({ label, value, onChange, type = "text", required = true }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
-  return <label className="text-sm text-white/80">{label}<input className={cn(control, "mt-2")} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} /></label>;
+function Input({ label, value, onChange, type = "text", required = true, name }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; name?: string }) {
+  return <label className="text-sm text-white/80">{label}<input name={name} className={cn(control, "mt-2")} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} /></label>;
+}
+
+function CandidateDossier({
+  app,
+  busy,
+  error,
+  upload,
+}: {
+  app: CfaApplication;
+  busy: boolean;
+  error: string;
+  upload: (
+    file: File,
+    kind: "cv" | "motivation" | "identity" | "social_security" | "diploma",
+  ) => Promise<string | null>;
+}) {
+  const [documents, setDocuments] = useState<Record<string, string>>({
+    cv: app.cv_path ?? "",
+    identity: app.administrative_documents?.identity ?? "",
+    diploma: app.administrative_documents?.diploma ?? "",
+    social_security: app.administrative_documents?.social_security ?? "",
+  });
+
+  async function addDocument(
+    file: File,
+    kind: "cv" | "identity" | "diploma" | "social_security",
+  ) {
+    const path = await upload(file, kind);
+    if (path) setDocuments((current) => ({ ...current, [kind]: path }));
+  }
+
+  const rows = [
+    ["Prénom", app.first_name],
+    ["Nom", app.last_name],
+    ["E-mail", app.email],
+    ["Téléphone", app.phone || "—"],
+    ["Cursus", getCfaSpecializationLabel(app.specialization)],
+    ["Niveau d’études", app.education_level || "—"],
+  ] as const;
+
+  return (
+    <div>
+      <Title overline="Ton dossier">Dépose tes fichiers.</Title>
+      <p className="mt-3 text-sm text-[#9AA3BD]">
+        Tes informations ont déjà été enregistrées. Ajoute tes pièces pour que l’équipe Byound puisse avancer.
+      </p>
+      <dl className="mt-8 grid gap-3 sm:grid-cols-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+            <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">{label}</dt>
+            <dd className="mt-1 text-sm font-semibold">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-10">
+        <h3 className="text-xl font-semibold">Pièces à déposer</h3>
+        <div className="mt-4 grid gap-3">
+          {(
+            [
+              ["cv", "CV"],
+              ["identity", "Pièce d’identité"],
+              ["diploma", "Relevé de notes, attestation ou diplôme"],
+              ["social_security", "Attestation de droits ou carte Vitale"],
+            ] as const
+          ).map(([kind, label]) => (
+            <label key={kind} className="flex min-h-16 cursor-pointer items-center justify-between rounded-2xl border border-white/10 px-4 text-sm">
+              <span>
+                {documents[kind] ? <Check className="mr-2 inline h-4 w-4 text-emerald-300" /> : <Upload className="mr-2 inline h-4 w-4 text-white/40" />}
+                {label}
+              </span>
+              <span className="text-xs text-[#8c86ff]">{documents[kind] ? "Ajouté" : "Choisir"}</span>
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void addDocument(file, kind);
+                }}
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+      {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
+      {busy ? <p className="mt-3 text-sm text-white/45">Envoi en cours…</p> : null}
+    </div>
+  );
 }
 
 function SelectField({

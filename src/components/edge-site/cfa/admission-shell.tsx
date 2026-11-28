@@ -43,7 +43,7 @@ export function AdmissionShell({
             </Link>
             <span className="hidden h-5 w-px bg-[#26304F] sm:block" aria-hidden />
             <p className="truncate text-sm font-semibold text-[#F2F4FA]/90">
-              Candidature Byound School
+              Candidature Byound
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">

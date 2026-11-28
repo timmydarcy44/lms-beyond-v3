@@ -199,7 +199,7 @@ export function CfaChallengeParcoursFlow({
           .finally(() => setBusy(false));
       }}
     >
-      <p className="text-sm font-semibold text-[#A99BFF]">Byound School · Admission</p>
+      <p className="text-sm font-semibold text-[#A99BFF]">Byound · Admission</p>
       <h1 className="mt-3 text-[clamp(2.2rem,5vw,3.25rem)] font-extrabold leading-[1.05] tracking-[-0.04em]">
         Montre-nous comment tu penses.
       </h1>

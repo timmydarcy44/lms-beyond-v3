@@ -255,7 +255,7 @@ export async function sendContinueLaterEmail(input: {
   await sendCfaEmail(
     {
       to: input.email,
-      subject: "Reprends ta candidature Byound School",
+      subject: "Reprends ta candidature Byound",
       html: cfaEmailTemplate({
         eyebrow: "Continuer plus tard",
         title: "On t’a envoyé un lien pour reprendre où tu en étais.",

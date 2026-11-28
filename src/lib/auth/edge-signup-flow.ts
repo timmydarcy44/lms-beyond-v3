@@ -80,7 +80,11 @@ export function resolveEdgeFlowFromNextPath(nextPath: string | null | undefined)
   if (decoded.includes("/dashboard/expert")) {
     return "expert";
   }
-  if (decoded.includes("/dashboard/apprenant") || decoded.includes("/particuliers")) {
+  if (
+    decoded.includes("/dashboard/apprenant") ||
+    decoded.includes("/particuliers") ||
+    decoded.includes("/ecole/candidater")
+  ) {
     return "particulier";
   }
   return null;

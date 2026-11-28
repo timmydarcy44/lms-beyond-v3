@@ -19,6 +19,7 @@ import {
 import { SENSITIVE_KEY_ERROR, mergeSealedCerfa, revealCerfaField } from "@/lib/cfa/sensitive";
 import { cfaEmailTemplate } from "@/lib/cfa-emails";
 import { cfaCandidaterUrl } from "@/lib/cfa/dossier-url";
+import { inviteCfaCandidateAccount } from "@/lib/cfa/invite-candidate-account";
 import { syncCfaApplicationHandicapProfile } from "@/lib/handicap/sync";
 
 function escapeHtml(value: unknown): string {
@@ -183,25 +184,34 @@ export async function POST(request: NextRequest) {
   let emailSent = false;
   const canMail = looksLikeTestCfaEmail(input.email) || process.env.CFA_BLOCK_LIVE_MAILS !== "1";
   if (input.placement === "candidate" && input.notifyCandidate !== false && canMail && resumeToken) {
-    const resumeUrl = cfaCandidaterUrl(resumeToken);
+    const invited = await inviteCfaCandidateAccount(db, {
+      email: input.email,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      resumeToken,
+    });
+    if (invited.profileId && invited.profileId !== data.profile_id) {
+      await db.from("cfa_applications").update({ profile_id: invited.profileId, origin: "existing_account" }).eq("id", data.id);
+    }
+    const href = invited.passwordSetupUrl || cfaCandidaterUrl(resumeToken);
     emailSent = await sendCandidateEmail({
       to: input.email,
-      subject: "Votre dossier d’admission Byound School",
+      subject: "Crée ton mot de passe Byound",
       html: cfaEmailTemplate({
         eyebrow: "Admission",
-        title: "Votre dossier est ouvert.",
-        body: `<p>Bonjour ${escapeHtml(input.firstName)},</p><p>L’équipe Byound School a ouvert votre dossier d’admission. Vous pouvez le consulter et compléter les prochaines étapes via votre lien personnel.</p>`,
-        cta: { label: "Ouvrir mon dossier", href: resumeUrl },
+        title: "Crée ton mot de passe.",
+        body: `<p>Bonjour ${escapeHtml(input.firstName)},</p><p>L’équipe Byound a ouvert ton dossier d’admission. Crée d’abord ton mot de passe, puis dépose tes fichiers. Ton nom, ton cursus et tes coordonnées seront déjà remplis.</p>`,
+        cta: { label: "Créer mon mot de passe", href },
       }),
-      text: `Bonjour ${input.firstName},\n\nVotre dossier d’admission Byound School est ouvert.\nOuvrir mon dossier : ${resumeUrl}\n`,
+      text: `Bonjour ${input.firstName},\n\nCrée ton mot de passe Byound, puis dépose tes fichiers :\n${href}\n`,
     });
     if (emailSent) {
       await recordCfaTouch(db, {
         personId: String(data.id),
         type: "email_sent",
-        detail: "Lien de dossier",
+        detail: "Invitation mot de passe + dossier",
         createdBy: actorId,
-        proofUrl: resumeUrl,
+        proofUrl: href,
       });
     }
   }
@@ -562,7 +572,7 @@ export async function PATCH(request: NextRequest) {
       html: cfaEmailTemplate({
         eyebrow: "Entretien d’admission",
         title: "Votre entretien est planifié.",
-        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<div style="margin-top:24px;padding:18px;border-radius:16px;background:#f7f7f8;line-height:1.7"><strong>Adresse</strong><br/>Byound School<br/>134 Rue Elise Déroche<br/>14760 - Bretteville sur Odon</div><p style="margin-top:28px">À très bientôt,<br>L’équipe Byound</p>`,
+        body: `<p>Bonjour ${escapeHtml(data.first_name)},</p><p>Nous avons rendez-vous le <strong>${escapeHtml(appointment)}</strong>.</p>${note}<div style="margin-top:24px;padding:18px;border-radius:16px;background:#f7f7f8;line-height:1.7"><strong>Adresse</strong><br/>Byound<br/>134 Rue Elise Déroche<br/>14760 - Bretteville sur Odon</div><p style="margin-top:28px">À très bientôt,<br>L’équipe Byound</p>`,
       }),
     });
   }

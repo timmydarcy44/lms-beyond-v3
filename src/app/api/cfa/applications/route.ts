@@ -33,6 +33,20 @@ function isSpecialization(value: string) {
   return CFA_SPECIALIZATIONS.some((item) => item.value === value);
 }
 
+function ageFromBirthDate(value: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const born = new Date(year, month - 1, day);
+  if (born.getFullYear() !== year || born.getMonth() !== month - 1 || born.getDate() !== day) return null;
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) age -= 1;
+  return age;
+}
+
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -115,22 +129,21 @@ export async function POST(request: Request) {
   const phone = clean(body.phone, 40);
   const educationLevel = clean(body.educationLevel, 160);
   const specialization = clean(body.specialization, 60);
-  const age = Number(body.age);
+  const birthDate = clean(body.birthDate, 12);
+  const age = ageFromBirthDate(birthDate) ?? (Number.isInteger(Number(body.age)) ? Number(body.age) : NaN);
 
-  if (
-    !firstName ||
-    !lastName ||
-    !EMAIL_RE.test(email) ||
-    !Number.isInteger(age) ||
-    age < 15 ||
-    age > 99 ||
-    !educationLevel ||
-    !isSpecialization(specialization)
-  ) {
-    return NextResponse.json(
-      { error: "Complétez tous les champs du profil avec des informations valides." },
-      { status: 400 },
-    );
+  if (!firstName) return NextResponse.json({ error: "Indique ton prénom." }, { status: 400 });
+  if (!lastName) return NextResponse.json({ error: "Indique ton nom." }, { status: 400 });
+  if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "Indique un e-mail valide." }, { status: 400 });
+  if (!educationLevel) return NextResponse.json({ error: "Indique ton niveau d’études." }, { status: 400 });
+  if (!isSpecialization(specialization)) {
+    return NextResponse.json({ error: "Choisis une spécialisation." }, { status: 400 });
+  }
+  if (!Number.isInteger(age) || Number.isNaN(age)) {
+    return NextResponse.json({ error: "Indique ta date de naissance." }, { status: 400 });
+  }
+  if (age < 15 || age > 99) {
+    return NextResponse.json({ error: "L’admission est ouverte à partir de 15 ans. Vérifie ta date de naissance." }, { status: 400 });
   }
 
   const db = getServiceRoleClient();
@@ -179,6 +192,7 @@ export async function POST(request: Request) {
       extra: {
         age,
         education_level: educationLevel,
+        birth_date: birthDate || null,
         profile_id: profileId || null,
         origin,
         cv_path: cvPath,

@@ -19,7 +19,7 @@ function ApprenantAccessForm() {
   if (sent) {
     return (
       <div className="w-full max-w-md rounded-[28px] bg-white p-8 text-[#111] shadow-xl">
-        <p className="text-sm font-extrabold">Byound School</p>
+        <p className="text-sm font-extrabold">Byound</p>
         <EntrepriseCodeScreen
           email={sent.email}
           length={sent.digits}
@@ -57,7 +57,7 @@ function ApprenantAccessForm() {
           .finally(() => setBusy(false));
       }}
     >
-      <p className="text-sm font-extrabold">Byound School</p>
+      <p className="text-sm font-extrabold">Byound</p>
       <h1 className="mt-6 text-3xl font-extrabold tracking-tight">Votre espace apprenant</h1>
       <p className="mt-3 text-sm text-[#5C6370]">
         Indiquez l’e-mail de votre admission. Si vous avez déjà reçu un code, vous pourrez le saisir à l’étape suivante.

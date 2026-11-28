@@ -144,7 +144,7 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
             onSubmit={(event) => void requestPdf(event)}
             className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#0c1730] p-6 text-white shadow-[0_30px_80px_rgba(0,6,20,0.45)]"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">Byound School</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8c86ff]">Byound</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">Télécharger le programme</h2>
             <p className="mt-2 text-sm leading-relaxed text-white/60">
               Indiquez vos coordonnées pour recevoir la fiche du cursus.
@@ -179,7 +179,7 @@ export function ProgramFactsCard({ facts }: { facts: ByoundProgramFacts }) {
                 onChange={(event) => setContactConsent(event.target.checked)}
                 className="mt-1"
               />
-              J&apos;accepte d&apos;être recontacté·e par Byound School
+              J&apos;accepte d&apos;être recontacté·e par Byound
             </label>
             {formError ? <p className="mt-3 text-sm text-rose-300">{formError}</p> : null}
             <div className="mt-5 flex gap-2">

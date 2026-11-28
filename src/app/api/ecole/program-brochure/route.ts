@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
   if (!contactConsent) {
     return NextResponse.json(
-      { error: "Merci d’accepter d’être recontacté·e par Byound School." },
+      { error: "Merci d’accepter d’être recontacté·e par Byound." },
       { status: 400 },
     );
   }
@@ -102,9 +102,9 @@ export async function POST(request: NextRequest) {
     if (looksLikeTestCfaEmail(email) || process.env.CFA_BLOCK_LIVE_MAILS !== "1") {
       const cursus = getCfaSpecializationLabel(specialization);
       const html = cfaDarkEmailTemplate({
-        eyebrow: "Byound School",
+        eyebrow: "Byound",
         title: "Merci pour votre téléchargement.",
-        body: `<p style="margin:0 0 14px">Bonjour ${escapeHtml(firstName)},</p><p style="margin:0">Vous venez de télécharger la fiche du cursus <strong style="color:#ffffff">${escapeHtml(cursus)}</strong>. L’équipe Byound School reste à votre disposition pour échanger sur cette formation.</p>`,
+        body: `<p style="margin:0 0 14px">Bonjour ${escapeHtml(firstName)},</p><p style="margin:0">Vous venez de télécharger la fiche du cursus <strong style="color:#ffffff">${escapeHtml(cursus)}</strong>. L’équipe Byound reste à votre disposition pour échanger sur cette formation.</p>`,
       });
       const sent = await sendEmail({
         to: email,

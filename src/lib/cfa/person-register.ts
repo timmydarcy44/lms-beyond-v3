@@ -40,7 +40,7 @@ export type CfaActorSnapshot = {
 
 const SITE_ACTOR: CfaActorSnapshot = {
   id: null,
-  name: "Site Byound School (automatique)",
+  name: "Site Byound (automatique)",
   email: null,
 };
 

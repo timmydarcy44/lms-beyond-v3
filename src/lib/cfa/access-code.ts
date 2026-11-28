@@ -99,9 +99,9 @@ function message(input: {
   }
   if (input.context === "apprenant_admitted_new") {
     return {
-      subject: "Vous êtes admis chez Byound School",
+      subject: "Vous êtes admis chez Byound",
       html: shell(
-        "Vous êtes admis chez Byound School",
+        "Vous êtes admis chez Byound",
         `<p>Bonjour ${escapeHtml(input.firstName)}, votre espace est prêt.</p><p style="margin:12px 0 0;color:#5C6370;">Entrez ce code sur la page de connexion pour accéder à votre espace, puis définissez votre mot de passe.</p>`,
         input.code,
         { label: "Accéder à mon espace", href: input.accessUrl || "https://www.byound.fr/apprenant/connexion" },
@@ -132,7 +132,7 @@ function message(input: {
   }
   if (input.context === "apprenant_admitted_existing") {
     return {
-      subject: "Votre parcours Byound School est disponible",
+      subject: "Votre parcours Byound est disponible",
       html: shell(
         "Parcours disponible",
         `<p>Votre parcours est disponible dans votre espace.</p>`,
@@ -269,7 +269,7 @@ export async function sendAccessCode(
       ? (input.learnerName?.trim() ?? "")
       : (input.learnerName || `${input.firstName} ${input.lastName}`.trim()),
     companyName: input.companyName || "",
-    cfaName: input.cfaName || "Byound School",
+    cfaName: input.cfaName || "Byound",
     code,
     accessUrl,
   });

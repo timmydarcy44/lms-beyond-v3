@@ -79,9 +79,10 @@ export async function POST(request: Request) {
 
   const candidatureUpload =
     challengeKinds.includes(kind) &&
-    (application?.status === "dossier" || application?.status === "challenge");
+    (application?.status === "dossier" || application?.status === "challenge" || application?.status === "profile");
   const administrativeUpload =
-    documentKinds.includes(kind) && application?.status === "administrative";
+    documentKinds.includes(kind) &&
+    (application?.status === "administrative" || application?.status === "profile");
   if (!application || (!candidatureUpload && !administrativeUpload)) {
     return NextResponse.json({ error: "Téléversement non autorisé." }, { status: 403 });
   }
